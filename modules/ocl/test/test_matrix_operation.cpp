@@ -132,7 +132,7 @@ typedef ConvertToTestBase ConvertTo;
 TEST_P(ConvertTo, Accuracy)
 {
     if((src_depth == CV_64F || dst_depth == CV_64F) &&
-            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }
@@ -228,7 +228,7 @@ typedef CopyToTestBase CopyTo;
 TEST_P(CopyTo, Without_mask)
 {
     if((src.depth() == CV_64F) &&
-            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }
@@ -246,7 +246,7 @@ TEST_P(CopyTo, Without_mask)
 TEST_P(CopyTo, With_mask)
 {
     if(src.depth() == CV_64F &&
-        !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+        !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }
@@ -342,7 +342,7 @@ typedef SetToTestBase SetTo;
 TEST_P(SetTo, Without_mask)
 {
     if(depth == CV_64F &&
-            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }
@@ -360,7 +360,7 @@ TEST_P(SetTo, Without_mask)
 TEST_P(SetTo, With_mask)
 {
     if(depth == CV_64F &&
-            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+            !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }
@@ -430,7 +430,7 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
 TEST_P(convertC3C4, Accuracy)
 {
     if(depth == CV_64F &&
-        !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::Context::CL_DOUBLE))
+        !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
     {
         return; // returns silently
     }

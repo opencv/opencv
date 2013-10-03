@@ -45,51 +45,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        void cv::ocl::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int &, int &, int &, int &)
-        {
-            throw_nogpu();
-        }
-        cv::ocl::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int)
-        {
-            throw_nogpu();
-        }
-        cv::ocl::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float,
-            float, float, int, int)
-        {
-            throw_nogpu();
-        }
-
-        void cv::ocl::StereoConstantSpaceBP::operator()(const oclMat &, const oclMat &, oclMat &)
-        {
-            throw_nogpu();
-        }
-    }
-}
-
-#else /* !defined (HAVE_OPENCL) */
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *stereocsbp;
-    }
-
-}
 namespace cv
 {
     namespace ocl
@@ -150,10 +110,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int), (void *)&rthis.min_disp_th));
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int), (void *)&left.step));
                 openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int), (void *)&rthis.ndisp));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
 
@@ -200,9 +160,9 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_int),  (void *)&rthis.min_disp_th));
                 openCLSafeCall(clSetKernelArg(kernel, 15, sizeof(cl_int),  (void *)&cdisp_step1));
                 openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_int),  (void *)&msg_step));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 3, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 3, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
 
@@ -235,10 +195,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&disp_step));
                 openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&rthis.ndisp));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void get_first_initial_global_caller(uchar *data_cost_selected, uchar *disp_selected_pyr,
@@ -270,10 +230,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&disp_step));
                 openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&rthis.ndisp));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
 
@@ -340,10 +300,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&rthis.max_data_term));
                 openCLSafeCall(clSetKernelArg(kernel, 15, sizeof(cl_int),  (void *)&left.step));
                 openCLSafeCall(clSetKernelArg(kernel, 16, sizeof(cl_int),  (void *)&rthis.min_disp_th));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void compute_data_cost_reduce_caller(uchar *disp_selected_pyr, uchar *data_cost,
@@ -391,10 +351,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 17, sizeof(cl_float), (void *)&rthis.max_data_term));
                 openCLSafeCall(clSetKernelArg(kernel, 18, sizeof(cl_int),  (void *)&left.step));
                 openCLSafeCall(clSetKernelArg(kernel, 19, sizeof(cl_int),  (void *)&rthis.min_disp_th));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 3, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 3, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void compute_data_cost(uchar *disp_selected_pyr, uchar *data_cost, StereoConstantSpaceBP &rthis,
@@ -458,10 +418,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 20, sizeof(cl_int), (void *)&disp_step2));
                 openCLSafeCall(clSetKernelArg(kernel, 21, sizeof(cl_int), (void *)&msg_step1));
                 openCLSafeCall(clSetKernelArg(kernel, 22, sizeof(cl_int), (void *)&msg_step2));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -500,10 +460,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int),  (void *)&disp_step));
                 openCLSafeCall(clSetKernelArg(kernel, 13, sizeof(cl_int),  (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 14, sizeof(cl_float), (void *)&rthis.disc_single_jump));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
             static void calc_all_iterations(uchar *u, uchar *d, uchar *l, uchar *r, uchar *data_cost_selected,
@@ -552,10 +512,10 @@ namespace cv
                 openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int), (void *)&nr_plane));
                 openCLSafeCall(clSetKernelArg(kernel, 11, sizeof(cl_int), (void *)&msg_step));
                 openCLSafeCall(clSetKernelArg(kernel, 12, sizeof(cl_int), (void *)&disp_step));
-                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getoclCommandQueue(), kernel, 2, NULL,
+                openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)getClCommandQueuePtr(), kernel, 2, NULL,
                     globalThreads, localThreads, 0, NULL, NULL));
 
-                clFinish(*(cl_command_queue*)getoclCommandQueue());
+                clFinish(*(cl_command_queue*)getClCommandQueuePtr());
                 openCLSafeCall(clReleaseKernel(kernel));
             }
         }
@@ -755,5 +715,3 @@ void cv::ocl::StereoConstantSpaceBP::operator()(const oclMat &left, const oclMat
     operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out,
         left, right, disp);
 }
-
-#endif /* !defined (HAVE_OPENCL) */

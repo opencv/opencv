@@ -48,25 +48,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
-
-//helper routines
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *filtering_boxFilter;
-extern const char *filter_sep_row;
-extern const char *filter_sep_col;
-extern const char *filtering_laplacian;
-extern const char *filtering_morph;
-extern const char *filtering_adaptive_bilateral;
-}
-}
 
 namespace
 {
@@ -1430,7 +1415,7 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
 
 void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, double scale)
 {
-    if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
+    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.type() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
         return;

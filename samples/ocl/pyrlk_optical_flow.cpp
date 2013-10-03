@@ -86,13 +86,6 @@ static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<
 
 int main(int argc, const char* argv[])
 {
-    static std::vector<Info> ocl_info;
-    ocl::getDevice(ocl_info);
-    //if you want to use undefault device, set it here
-    setDevice(ocl_info[0]);
-
-    //set this to save kernel compile time from second time you run
-    ocl::setBinpath("./");
     const char* keys =
         "{ h   | help     | false           | print help message }"
         "{ l   | left     |                 | specify left image }"
@@ -109,7 +102,7 @@ int main(int argc, const char* argv[])
     if (cmd.get<bool>("help"))
     {
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
-        cout << "Avaible options:" << endl;
+        cout << "Available options:" << endl;
         cmd.printParams();
         return 0;
     }

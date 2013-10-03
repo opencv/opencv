@@ -72,7 +72,7 @@ int main( int argc, const char** argv )
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        cout << "Avaible options:" << endl;
+        cout << "Available options:" << endl;
         cmd.printParams();
         return 0;
     }
@@ -120,16 +120,6 @@ int main( int argc, const char** argv )
 
 
     cvNamedWindow( "result", 1 );
-    vector<ocl::Info> oclinfo;
-    int devnums = ocl::getDevice(oclinfo);
-    if( devnums < 1 )
-    {
-        std::cout << "no device found\n";
-        return -1;
-    }
-    //if you want to use undefault device, set it here
-    //setDevice(oclinfo[0]);
-    ocl::setBinpath("./");
     if( capture )
     {
         cout << "In capture ..." << endl;

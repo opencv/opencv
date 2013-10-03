@@ -57,8 +57,7 @@ namespace cv
 {
     namespace ocl
     {
-        using std::auto_ptr;
-        enum
+        enum DeviceType
         {
             CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
             CVCL_DEVICE_TYPE_CPU         = (1 << 1),
@@ -93,94 +92,112 @@ namespace cv
         //return -1 if the target type is unsupported, otherwise return 0
         CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT);
 
-        //this class contains ocl runtime information
-        class CV_EXPORTS Info
+        // these classes contain OpenCL runtime information
+
+        struct PlatformInfo;
+
+        struct DeviceInfo
         {
-        public:
-            struct Impl;
-            Impl *impl;
+            int _id; // reserved, don't use it
 
-            Info();
-            Info(const Info &m);
-            ~Info();
-            void release();
-            Info &operator = (const Info &m);
-            std::vector<string> DeviceName;
+            DeviceType deviceType;
+            std::string deviceProfile;
+            std::string deviceVersion;
+            std::string deviceName;
+            std::string deviceVendor;
+            int deviceVendorId;
+            std::string deviceDriverVersion;
+            std::string deviceExtensions;
+
+            size_t maxWorkGroupSize;
+            std::vector<size_t> maxWorkItemSizes;
+            int maxComputeUnits;
+            size_t localMemorySize;
+
+            int deviceVersionMajor;
+            int deviceVersionMinor;
+
+            bool haveDoubleSupport;
+            bool isUnifiedMemory; // 1 means integrated GPU, otherwise this value is 0
+
+            std::string compilationExtraOptions;
+
+            const PlatformInfo* platform;
+
+            DeviceInfo();
         };
+
+        struct PlatformInfo
+        {
+            int _id; // reserved, don't use it
+
+            std::string platformProfile;
+            std::string platformVersion;
+            std::string platformName;
+            std::string platformVendor;
+            std::string platformExtensons;
+
+            int platformVersionMajor;
+            int platformVersionMinor;
+
+            std::vector<const DeviceInfo*> devices;
+
+            PlatformInfo();
+        };
+
         //////////////////////////////// Initialization & Info ////////////////////////
-        //this function may be obsoleted
-        //CV_EXPORTS cl_device_id getDevice();
-        //the function must be called before any other cv::ocl::functions, it initialize ocl runtime
-        //each Info relates to an OpenCL platform
-        //there is one or more devices in each platform, each one has a separate name
-        CV_EXPORTS int getDevice(std::vector<Info> &oclinfo, int devicetype = CVCL_DEVICE_TYPE_GPU);
+        typedef std::vector<const PlatformInfo*> PlatformsInfo;
 
-        //set device you want to use, optional function after getDevice be called
-        //the devnum is the index of the selected device in DeviceName vector of INfo
-        CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
+        CV_EXPORTS int getOpenCLPlatforms(PlatformsInfo& platforms);
 
-        //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
-        //returns cl_context *
-        CV_EXPORTS void* getoclContext();
-        //returns cl_command_queue *
-        CV_EXPORTS void* getoclCommandQueue();
+        typedef std::vector<const DeviceInfo*> DevicesInfo;
 
-        //explicit call clFinish. The global command queue will be used.
-        CV_EXPORTS void finish();
+        CV_EXPORTS int getOpenCLDevices(DevicesInfo& devices, int deviceType = CVCL_DEVICE_TYPE_GPU,
+                const PlatformInfo* platform = NULL);
 
-        //this function enable ocl module to use customized cl_context and cl_command_queue
-        //getDevice also need to be called before this function
-        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
-
-        //returns true when global OpenCL context is initialized
-        CV_EXPORTS bool initialized();
+        // set device you want to use
+        CV_EXPORTS void setDevice(const DeviceInfo* info);
 
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
-        //////////////////////////////// OpenCL context ////////////////////////
-        //This is a global singleton class used to represent a OpenCL context.
+        enum FEATURE_TYPE
+        {
+            FEATURE_CL_DOUBLE = 1,
+            FEATURE_CL_UNIFIED_MEM,
+            FEATURE_CL_VER_1_2
+        };
+
+        // Represents OpenCL context, interface
         class CV_EXPORTS Context
         {
         protected:
-            Context();
-            friend class auto_ptr<Context>;
-            friend bool initialized();
-        private:
-            static auto_ptr<Context> clCxt;
-            static int val;
+            Context() { }
+            ~Context() { }
         public:
-            ~Context();
-            void release();
-            Info::Impl* impl;
-
             static Context* getContext();
-            static void setContext(Info &oclinfo);
 
-            enum {CL_DOUBLE, CL_UNIFIED_MEM, CL_VER_1_2};
-            bool supportsFeature(int ftype) const;
-            size_t computeUnits() const;
-            void* oclContext();
-            void* oclCommandQueue();
+            bool supportsFeature(FEATURE_TYPE featureType) const;
+            const DeviceInfo& getDeviceInfo() const;
+
+            const void* getOpenCLContextPtr() const;
+            const void* getOpenCLCommandQueuePtr() const;
+            const void* getOpenCLDeviceIDPtr() const;
         };
 
-        //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
+        inline const void *getClContextPtr()
+        {
+            return Context::getContext()->getOpenCLContextPtr();
+        }
 
-        //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
+        inline const void *getClCommandQueuePtr()
+        {
+            return Context::getContext()->getOpenCLCommandQueuePtr();
+        }
+
+        bool CV_EXPORTS supportsFeature(FEATURE_TYPE featureType);
+
+        void CV_EXPORTS finish();
 
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
@@ -198,12 +215,11 @@ namespace cv
             CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
             CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
             CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
-            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
         //! set where binary cache to be saved to
-        CV_EXPORTS void setBinpath(const char *path);
+        CV_EXPORTS void setBinaryPath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
@@ -384,7 +400,7 @@ namespace cv
             uchar *dataend;
 
             //! OpenCL context associated with the oclMat object.
-            Context *clCxt;
+            Context *clCxt; // TODO clCtx
             //add offset for handle ROI, calculated in byte
             int offset;
             //add wholerows and wholecols for the whole matrix, datastart and dataend are no longer used
@@ -1878,11 +1894,6 @@ namespace cv
             oclMat temp4;
             oclMat temp5;
         };
-
-        static inline size_t divUp(size_t total, size_t grain)
-        {
-            return (total + grain - 1) / grain;
-        }
 
         /*!***************K Nearest Neighbour*************!*/
         class CV_EXPORTS KNearestNeighbour: public CvKNearest

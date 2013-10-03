@@ -46,30 +46,19 @@
 //M*/
 
 #include "precomp.hpp"
-
-#define ALIGN 32
-#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-////////////////////////////////////////////////////////////////////////
-//////////////////////////////// oclMat ////////////////////////////////
-////////////////////////////////////////////////////////////////////////
+#define ALIGN 32
+#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
 
 // helper routines
 namespace cv
 {
     namespace ocl
     {
-        /////////////////////////// OpenCL kernel strings ///////////////////////////
-
-        extern const char *operator_copyToM;
-        extern const char *operator_convertTo;
-        extern const char *operator_setTo;
-        extern const char *operator_setToM;
-        extern const char *convertC3C4;
         extern DevMemType gDeviceMemType;
         extern DevMemRW gDeviceMemRW;
     }
@@ -134,7 +123,6 @@ void cv::ocl::oclMat::upload(const Mat &m)
     Size wholeSize;
     Point ofs;
     m.locateROI(wholeSize, ofs);
-
     create(wholeSize, m.type());
 
     if (m.channels() == 3)
@@ -142,13 +130,12 @@ void cv::ocl::oclMat::upload(const Mat &m)
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
                                      (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
         openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
         convert_C3C4(temp, *this);
-
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
@@ -197,13 +184,12 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
         int pitch = wholecols * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
                                      (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
         convert_C4C3(*this, temp);
         openCLMemcpy2D(clCxt, m.data, m.step, temp, pitch, wholecols * m.elemSize(), wholerows, clMemcpyDeviceToHost, 3);
-
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
@@ -319,7 +305,7 @@ static void convert_run(const oclMat &src, oclMat &dst, double alpha, double bet
 
 void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double beta ) const
 {
-    if (!clCxt->supportsFeature(Context::CL_DOUBLE) &&
+    if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) &&
             (depth() == CV_64F || dst.depth() == CV_64F))
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
@@ -380,7 +366,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) &&
         dst.offset == 0 && dst.cols == dst.wholecols)
     {
         const int sizeofMap[][7] =
@@ -392,7 +378,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
             };
         int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
 
-        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
+        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
                             (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
                             0, dst.step * dst.rows, 0, NULL, NULL);
     }
