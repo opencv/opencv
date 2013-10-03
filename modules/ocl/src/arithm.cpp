@@ -89,11 +89,11 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
-    std::string kernelName = op_type == ABS_DIFF ? "arithm_absdiff" : "arithm_binary_op";
+    std::string kernelName = "arithm_binary_op";
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const WTypeMap[] = { "short", "short", "int", "int", "int", "float", "double" };
-    const char operationsMap[] = { '+', '-', '*', '/', '-' };
+    const char * const funcMap[] = { "FUNC_ADD", "FUNC_SUB", "FUNC_MUL", "FUNC_DIV", "FUNC_ABS_DIFF" };
     const char * const channelMap[] = { "", "", "2", "4", "4" };
     bool haveScalar = use_scalar || src2.empty();
 
@@ -105,12 +105,12 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
     else if (op_type == MUL)
         WDepth = hasDouble && (depth == CV_32S || depth == CV_64F) ? CV_64F : CV_32F;
 
-    std::string buildOptions = format("-D T=%s%s -D WT=%s%s -D convertToT=convert_%s%s%s -D Operation=%c"
-                                      " -D convertToWT=convert_%s%s",
+    std::string buildOptions = format("-D T=%s%s -D WT=%s%s -D convertToT=convert_%s%s%s -D %s "
+                                      "-D convertToWT=convert_%s%s",
                                       typeMap[depth], channelMap[oclChannels],
                                       WTypeMap[WDepth], channelMap[oclChannels],
                                       typeMap[depth], channelMap[oclChannels], (depth >= CV_32F ? "" : (depth == CV_32S ? "_rte" : "_sat_rte")),
-                                      operationsMap[op_type], WTypeMap[WDepth], channelMap[oclChannels]);
+                                      funcMap[op_type], WTypeMap[WDepth], channelMap[oclChannels]);
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -124,6 +124,9 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
         args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
 
         kernelName += "_mat";
+
+        if (haveScalar)
+            buildOptions += " -D HAVE_SCALAR";
     }
 
     if (haveScalar)
@@ -145,9 +148,6 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
 
         kernelName += "_mask";
     }
-
-    if (op_type == DIV)
-        kernelName += "_div";
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));

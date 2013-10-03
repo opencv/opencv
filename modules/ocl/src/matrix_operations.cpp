@@ -366,23 +366,23 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) &&
-        dst.offset == 0 && dst.cols == dst.wholecols)
-    {
-        const int sizeofMap[][7] =
-            {
-                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
-                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
-                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
-                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
-            };
-        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
+//    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+//        dst.offset == 0 && dst.cols == dst.wholecols)
+//    {
+//        const int sizeofMap[][7] =
+//            {
+//                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
+//                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
+//                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
+//                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
+//            };
+//        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
 
-        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
-                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
-                            0, dst.step * dst.rows, 0, NULL, NULL);
-    }
-    else
+//        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
+//                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
+//                            0, dst.step * dst.rows, 0, NULL, NULL);
+//    }
+//    else
 #endif
     {
         oclMat m(mat);
