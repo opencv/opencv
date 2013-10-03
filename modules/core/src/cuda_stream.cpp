@@ -197,7 +197,7 @@ cv::cuda::Stream::operator bool_type() const
 
 
 ////////////////////////////////////////////////////////////////
-// Stream
+// Event
 
 #ifndef HAVE_CUDA
 
