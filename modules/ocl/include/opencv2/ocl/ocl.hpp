@@ -410,6 +410,7 @@ namespace cv
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
         //! adds one matrix to another with scale (dst = src1 * alpha + src2 * beta + gama)
+        // supports all data types
         CV_EXPORTS void addWeighted(const oclMat &src1, double  alpha, const oclMat &src2, double beta, double gama, oclMat &dst);
 
         //! adds one matrix to another (dst = src1 + src2)
@@ -456,17 +457,17 @@ namespace cv
         CV_EXPORTS void absdiff(const oclMat &src1, const Scalar &s, oclMat &dst);
 
         //! computes mean value and standard deviation of all or selected array elements
-        // supports except CV_32F,CV_64F
+        // supports all data types
         CV_EXPORTS void meanStdDev(const oclMat &mtx, Scalar &mean, Scalar &stddev);
 
         //! computes norm of array
         // supports NORM_INF, NORM_L1, NORM_L2
-        // supports only CV_8UC1 type
+        // supports all data types
         CV_EXPORTS double norm(const oclMat &src1, int normType = NORM_L2);
 
         //! computes norm of the difference between two arrays
         // supports NORM_INF, NORM_L1, NORM_L2
-        // supports only CV_8UC1 type
+        // supports all data types
         CV_EXPORTS double norm(const oclMat &src1, const oclMat &src2, int normType = NORM_L2);
 
         //! reverses the order of the rows, columns or both in a matrix
@@ -474,7 +475,6 @@ namespace cv
         CV_EXPORTS void flip(const oclMat &src, oclMat &dst, int flipCode);
 
         //! computes sum of array elements
-        // disabled until fix crash
         // support all types
         CV_EXPORTS Scalar sum(const oclMat &m);
         CV_EXPORTS Scalar absSum(const oclMat &m);
@@ -483,7 +483,6 @@ namespace cv
         //! finds global minimum and maximum array elements and returns their values
         // support all C1 types
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
-        CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         // support all C1 types
@@ -582,7 +581,7 @@ namespace cv
         // support only CV_32FC1 type
         CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
 
-        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
+        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code, int dcn = 0);
 
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));

@@ -521,13 +521,13 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
 }
 
 template <typename T, typename WT>
-void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
-                                             const oclMat &mask, oclMat &buf)
+void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
 {
     size_t groupnum = src.clCxt->computeUnits();
     CV_Assert(groupnum != 0);
 
     int dbsize = groupnum * 2 * src.elemSize();
+    oclMat buf;
     ensureSizeIsEnough(1, dbsize, CV_8UC1, buf);
 
     cl_mem buf_data = reinterpret_cast<cl_mem>(buf.data);
@@ -549,15 +549,9 @@ void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
     }
 }
 
+typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask);
+
 void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
-{
-    oclMat buf;
-    minMax_buf(src, minVal, maxVal, mask, buf);
-}
-
-typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf);
-
-void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf)
 {
     CV_Assert(src.channels() == 1);
     CV_Assert(src.size() == mask.size() || mask.empty());
@@ -571,7 +565,7 @@ void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, cons
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
 
-    static minMaxFunc functab[8] =
+    static minMaxFunc functab[] =
     {
         arithmetic_minMax<uchar, int>,
         arithmetic_minMax<char, int>,
@@ -583,9 +577,10 @@ void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, cons
         0
     };
 
-    minMaxFunc func;
-    func = functab[src.depth()];
-    func(src, minVal, maxVal, mask, buf);
+    minMaxFunc func = functab[src.depth()];
+    CV_Assert(func != 0);
+
+    func(src, minVal, maxVal, mask);
 }
 
 //////////////////////////////////////////////////////////////////////////////

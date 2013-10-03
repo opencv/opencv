@@ -3,6 +3,16 @@ Matrix Reductions
 
 .. highlight:: cpp
 
+ocl::absSum
+---------------
+Returns the sum of absolute values for matrix elements.
+
+.. ocv:function:: Scalar ocl::absSum(const oclMat &m)
+
+    :param m: The Source image of all depth.
+
+Counts the abs sum of matrix elements for each channel. Supports all data types.
+
 ocl::countNonZero
 ---------------------
 Returns the number of non-zero elements in src
@@ -11,7 +21,7 @@ Returns the number of non-zero elements in src
 
     :param src: Single-channel array
 
-Counts non-zero array elements.
+Counts non-zero array elements. Supports all data types.
 
 ocl::minMax
 ------------------
@@ -49,26 +59,6 @@ Returns void
 
 The functions minMaxLoc find minimum and maximum element values and their positions. The extremums are searched across the whole array, or, if mask is not an empty array, in the specified array region. The functions do not work with multi-channel arrays.
 
-ocl::Sum
-------------------
-Returns the sum of matrix elements for each channel
-
-.. ocv:function:: Scalar ocl::sum(const oclMat &m)
-
-    :param m: The Source image of all depth.
-
-Counts the sum of matrix elements for each channel.
-
-ocl::absSum
----------------
-Returns the sum of absolute values for matrix elements.
-
-.. ocv:function:: Scalar ocl::absSum(const oclMat &m)
-
-    :param m: The Source image of all depth.
-
-Counts the abs sum of matrix elements for each channel.
-
 ocl::sqrSum
 ------------------
 Returns the squared sum of matrix elements for each channel
@@ -77,4 +67,14 @@ Returns the squared sum of matrix elements for each channel
 
     :param m: The Source image of all depth.
 
-Counts the squared sum of matrix elements for each channel.
+Counts the squared sum of matrix elements for each channel. Supports all data types.
+
+ocl::sum
+------------------
+Returns the sum of matrix elements for each channel
+
+.. ocv:function:: Scalar ocl::sum(const oclMat &m)
+
+    :param m: The Source image of all depth.
+
+Counts the sum of matrix elements for each channel.
