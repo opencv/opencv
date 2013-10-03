@@ -135,8 +135,6 @@ App::App(CommandLineParser& cmd)
 
 void App::run()
 {
-    vector<ocl::Info> oclinfo;
-    ocl::getDevice(oclinfo);
     running = true;
     VideoWriter video_writer;
 
