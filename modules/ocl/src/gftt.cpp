@@ -221,7 +221,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         cornerMinEigenVal_dxdy(image, eig_, Dx_, Dy_, blockSize, 3);
 
     double maxVal = 0;
-    minMax_buf(eig_, 0, &maxVal, oclMat(), minMaxbuf_);
+    minMax(eig_, NULL, &maxVal);
 
     ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 
