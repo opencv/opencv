@@ -134,7 +134,7 @@ protected:
     void startPipeline();
     void stopPipeline();
     void restartPipeline();
-    void setFilter(const char* prop, int type, int v1, int v2 = NULL);
+    void setFilter(const char* prop, int type, int v1, int v2 = 0);
     void removeFilter(const char *filter);
     static void newPad(GstElement *myelement,
                        GstPad     *pad,
