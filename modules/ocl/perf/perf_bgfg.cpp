@@ -191,7 +191,7 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
         TEST_CYCLE()
         {
             cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
-            mog2->set("detectShadows", false);
+            mog2->setDetectShadows(false);
             foreground.release();
 
             for (int i = 0; i < nFrame; i++)
@@ -253,7 +253,7 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
         TEST_CYCLE()
         {
             cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
-            mog2->set("detectShadows", false);
+            mog2->setDetectShadows(false);
             foreground.release();
             background.release();
             for (int i = 0; i < nFrame; i++)
