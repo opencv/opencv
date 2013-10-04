@@ -135,7 +135,7 @@ public:
             computeBitmaps(pyr0[level], tb1, eb1);
             computeBitmaps(pyr1[level], tb2, eb2);
 
-            int min_err = pyr0[level].total();
+            int min_err = (int)pyr0[level].total();
             Point new_shift(shift);
             for(int i = -1; i <= 1; i++) {
                 for(int j = -1; j <= 1; j++) {
@@ -253,7 +253,7 @@ protected:
         calcHist(&img, 1, &channels, Mat(), hist, 1, &hist_size, ranges);
         float *ptr = hist.ptr<float>();
         int median = 0, sum = 0;
-        int thresh = img.total() / 2;
+        int thresh = (int)img.total() / 2;
         while(sum < thresh && median < LDR_SIZE) {
             sum += static_cast<int>(ptr[median]);
             median++;

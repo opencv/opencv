@@ -406,9 +406,9 @@ bool TiffDecoder::readHdrData(Mat& img)
     TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
     TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
     int size = 3 * m_width * m_height * sizeof (float);
-    int strip_size = 3 * m_width * rows_per_strip;
+    tstrip_t strip_size = 3 * m_width * rows_per_strip;
     float *ptr = img.ptr<float>();
-    for (size_t i = 0; i < TIFFNumberOfStrips(tif); i++, ptr += strip_size)
+    for (tstrip_t i = 0; i < TIFFNumberOfStrips(tif); i++, ptr += strip_size)
     {
         TIFFReadEncodedStrip(tif, i, ptr, size);
         size -= strip_size * sizeof(float);
