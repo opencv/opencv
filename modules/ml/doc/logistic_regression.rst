@@ -123,7 +123,7 @@ The constructors.
 
 .. ocv:function:: LogisticRegression::LogisticRegression()
 
-.. ocv:function:: LogisticRegression::LogisticRegression(cv::InputArray data_ip, cv::InputArray labels_ip, const LogisticRegressionParams& params);
+.. ocv:function:: LogisticRegression::LogisticRegression(cv::InputArray data_ip, cv::InputArray labels_ip, const LogisticRegressionParams& params)
 
     :param data: The data variable of type ``CV_32F``. Each data instance has to be arranged per across different rows.
 
@@ -148,7 +148,7 @@ LogisticRegression::predict
 ---------------------------
 Predicts responses for input samples and returns a float type.
 
-.. ocv:function:: void LogisticRegression::predict( cv::InputArray data, cv::OutputArray predicted_labels ) const;
+.. ocv:function:: void LogisticRegression::predict( cv::InputArray data, cv::OutputArray predicted_labels ) const
 
     :param data: The input data for the prediction algorithm. The ``data`` variable should be of type ``CV_32F``.
 
