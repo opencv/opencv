@@ -44,13 +44,12 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <iostream>
+#include "opencl_kernels.hpp"
+
 namespace cv
 {
 namespace ocl
 {
-extern const char *moments;
-
 // The function calculates center of gravity and the central second order moments
 static void icvCompleteMomentState( CvMoments* moments )
 {
@@ -106,7 +105,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
 
         bool is_float = CV_SEQ_ELTYPE(contour) == CV_32FC2;
 
-        if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE) && is_float)
+        if (!cv::ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE) && is_float)
         {
             CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
         }
@@ -146,7 +145,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
 
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
-        if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+        if (!cv::ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
         {
             for (int i = 0; i < contour->total; ++i)
             {
@@ -230,7 +229,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
             CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
     }
 
-    if( !moments )
+    if( !mom )
         CV_Error( CV_StsNullPtr, "" );
 
     memset( mom, 0, sizeof(*mom));

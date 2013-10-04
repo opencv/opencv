@@ -44,19 +44,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *build_warps;
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps

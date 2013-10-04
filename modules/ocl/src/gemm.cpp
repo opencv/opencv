@@ -43,7 +43,6 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
 
 namespace cv { namespace ocl {
@@ -134,7 +133,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     int offb    = src2.offset;
     int offc    = dst.offset;
 
-    cl_command_queue clq = (cl_command_queue)src1.clCxt->oclCommandQueue();
+    cl_command_queue clq = *(cl_command_queue*)src1.clCxt->getOpenCLCommandQueuePtr();
     switch(src1.type())
     {
     case CV_32FC1:

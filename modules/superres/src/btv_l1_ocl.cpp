@@ -56,6 +56,7 @@ cv::Ptr<cv::superres::SuperResolution> cv::superres::createSuperResolution_BTVL1
 }
 
 #else
+#include "opencl_kernels.hpp"
 
 using namespace std;
 using namespace cv;
@@ -67,8 +68,6 @@ namespace cv
 {
     namespace ocl
     {
-        extern const char* superres_btvl1;
-
         float* btvWeights_ = NULL;
         size_t btvWeights_size = 0;
     }
@@ -232,7 +231,7 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
     cl_mem c_btvRegWeights;
     size_t count = btvWeights_size * sizeof(float);
     c_btvRegWeights = openCLCreateBuffer(clCxt, CL_MEM_READ_ONLY, count);
-    int cl_safe_check = clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), c_btvRegWeights, 1, 0, count, btvWeights_, 0, NULL, NULL);
+    int cl_safe_check = clEnqueueWriteBuffer(getClCommandQueue(clCxt), c_btvRegWeights, 1, 0, count, btvWeights_, 0, NULL, NULL);
     CV_Assert(cl_safe_check == CL_SUCCESS);
 
     args.push_back(make_pair(sizeof(cl_mem), (void*)&src_.data));
