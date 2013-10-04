@@ -179,10 +179,7 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8 ,1};
-                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
-                    divUp(h, localThreads[1]) *localThreads[1],
-                    1
-                };
+                size_t globalThreads[] = { roundUp(w, localThreads[0]), roundUp(h, localThreads[1]), 1 };
 
                 int disp_step = msg_step * h;
                 openCLVerifyKernel(clCxt, kernel, localThreads);
@@ -274,11 +271,8 @@ namespace cv
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
-                size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
-                    divUp(h, localThreads[1]) *localThreads[1],
-                    1
-                };
+                size_t localThreads[]  = { 32, 8, 1 };
+                size_t globalThreads[] = { roundUp(w, localThreads[0]), roundUp(h, localThreads[1]), 1 };
 
                 int disp_step1 = msg_step1 * h;
                 int disp_step2 = msg_step2 * h2;
@@ -387,10 +381,7 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
-                    divUp(h, localThreads[1]) *localThreads[1],
-                    1
-                };
+                size_t globalThreads[] = { roundUp(w, localThreads[0]), roundUp(h, localThreads[1]), 1 };
 
                 int disp_step1 = msg_step1 * h;
                 int disp_step2 = msg_step2 * h2;
@@ -490,11 +481,8 @@ namespace cv
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
                 //size_t blockSize = 256;
-                size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = {divUp(disp.cols, localThreads[0]) *localThreads[0],
-                    divUp(disp.rows, localThreads[1]) *localThreads[1],
-                    1
-                };
+                size_t localThreads[]  = { 32, 8, 1 };
+                size_t globalThreads[] = { roundUp(disp.cols, localThreads[0]), roundUp(disp.rows, localThreads[1]), 1 };
 
                 int step_size = disp.step / disp.elemSize();
                 int disp_step = disp.rows * msg_step;
