@@ -51,6 +51,24 @@
 #endif
 #endif
 
+#if defined (FUNC_ADD)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) + scalar[0]);
+#endif
+
+#if defined (FUNC_SUB)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) - scalar[0]);
+#endif
+
+#if defined (FUNC_MUL)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) * scalar[0]);
+#endif
+
+#if defined (FUNC_DIV)
+#define EXPRESSION T zero = (T)(0); \
+    dst[dst_index] = src2[src2_index] == zero ? zero : \
+    convertToT(convertToWT(src1[src1_index]) / scalar[0]);
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// Add with scalar with mask ////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
@@ -72,7 +90,7 @@ __kernel void arithm_binary_op_scalar_mask(__global T *src1, int src1_step, int 
             int src1_index = mad24(y, src1_step, x + src1_offset);
             int dst_index = mad24(y, dst_step, dst_offset + x);
 
-            dst[dst_index] = convertToT(convertToWT(src1[src1_index]) Operation scalar[0]);
+            EXPRESSION
         }
     }
 }
