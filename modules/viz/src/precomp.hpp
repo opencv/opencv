@@ -125,7 +125,6 @@
 #undef __DEPRECATED_DISABLED__
 #endif
 
-#include <opencv2/ts.hpp>
 #include <opencv2/core.hpp>
 
 namespace cv
