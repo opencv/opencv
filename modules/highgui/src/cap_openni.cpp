@@ -270,13 +270,13 @@ private:
 
         virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData )
         {
-            cv::Ptr<xn::DepthMetaData> depthPtr = new xn::DepthMetaData;
+            cv::Ptr<xn::DepthMetaData> depthPtr = cv::makePtr<xn::DepthMetaData>();
             depthPtr->CopyFrom(depthMetaData);
             depthQueue.push(depthPtr);
         }
         virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData )
         {
-            cv::Ptr<xn::ImageMetaData> imagePtr = new xn::ImageMetaData;
+            cv::Ptr<xn::ImageMetaData> imagePtr = cv::makePtr<xn::ImageMetaData>();
             imagePtr->CopyFrom(imageMetaData);
             imageQueue.push(imagePtr);
         }
@@ -329,7 +329,7 @@ private:
 
         virtual inline void pushDepthMetaData( xn::DepthMetaData& depthMetaData )
         {
-            cv::Ptr<xn::DepthMetaData> depthPtr = new xn::DepthMetaData, tmp;
+            cv::Ptr<xn::DepthMetaData> depthPtr = cv::makePtr<xn::DepthMetaData>(), tmp;
             depthPtr->CopyFrom(depthMetaData);
 
             tbb::mutex mtx;
@@ -347,7 +347,7 @@ private:
 
         virtual inline void pushImageMetaData( xn::ImageMetaData& imageMetaData )
         {
-            cv::Ptr<xn::ImageMetaData> imagePtr = new xn::ImageMetaData, tmp;
+            cv::Ptr<xn::ImageMetaData> imagePtr = cv::makePtr<xn::ImageMetaData>(), tmp;
             imagePtr->CopyFrom(imageMetaData);
 
             tbb::mutex mtx;
@@ -872,7 +872,7 @@ bool CvCapture_OpenNI::setCommonProperty( int propIdx, double propValue )
             // start synchronization
             if( approxSyncGrabber.empty() )
             {
-                approxSyncGrabber = new ApproximateSyncGrabber( context, depthGenerator, imageGenerator, maxBufferSize, isCircleBuffer, maxTimeDuration );
+                approxSyncGrabber.reset(new ApproximateSyncGrabber( context, depthGenerator, imageGenerator, maxBufferSize, isCircleBuffer, maxTimeDuration ));
             }
             else
             {
@@ -1175,8 +1175,8 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
     int cols = depthMetaData.XRes(), rows = depthMetaData.YRes();
     cv::Mat pointCloud_XYZ( rows, cols, CV_32FC3, cv::Scalar::all(badPoint) );
 
-    cv::Ptr<XnPoint3D> proj = new XnPoint3D[cols*rows];
-    cv::Ptr<XnPoint3D> real = new XnPoint3D[cols*rows];
+    std::vector<XnPoint3D> proj(cols*rows);
+    std::vector<XnPoint3D> real(cols*rows);
     for( int y = 0; y < rows; y++ )
     {
         for( int x = 0; x < cols; x++ )
@@ -1187,7 +1187,7 @@ IplImage* CvCapture_OpenNI::retrievePointCloudMap()
             proj[ind].Z = depth.at<unsigned short>(y, x);
         }
     }
-    depthGenerator.ConvertProjectiveToRealWorld(cols*rows, proj, real);
+    depthGenerator.ConvertProjectiveToRealWorld(cols*rows, &proj.front(), &real.front());
 
     for( int y = 0; y < rows; y++ )
     {
