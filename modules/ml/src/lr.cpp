@@ -226,7 +226,6 @@ void LogisticRegression::predict( cv::InputArray _ip_data, cv::OutputArray _outp
     cv::Mat labels;
     cv::Mat labels_c;
     cv::Mat temp_pred;
-    
     cv::Mat pred_m = cv::Mat::zeros(data_t.rows, thetas.rows, data.type());
 
     if(thetas.rows == 1)
