@@ -168,7 +168,7 @@ TEST_P(mog2, Update)
     cv::ocl::oclMat foreground = createMat_ocl(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = createBackgroundSubtractorMOG2();
-    mog2_gold->set("detectShadows", detectShadow);
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -210,7 +210,7 @@ TEST_P(mog2, getBackgroundImage)
     cv::ocl::oclMat foreground;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = createBackgroundSubtractorMOG2();
-    mog2_gold->set("detectShadows", detectShadow);
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
