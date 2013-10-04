@@ -609,12 +609,14 @@ public:
 protected:
 
     LogisticRegressionParams params;
-    cv::Mat learnt_thetas;    
+    cv::Mat learnt_thetas;
     std::string default_model_name;
     std::map<int, int> forward_mapper;
     std::map<int, int> reverse_mapper;
+
     cv::Mat labels_o;
     cv::Mat labels_n;
+
     static cv::Mat calc_sigmoid(const cv::Mat& data);
     virtual double compute_cost(const cv::Mat& data, const cv::Mat& labels, const cv::Mat& init_theta);
     virtual cv::Mat compute_batch_gradient(const cv::Mat& data, const cv::Mat& labels, const cv::Mat& init_theta);
