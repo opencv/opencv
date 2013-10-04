@@ -318,7 +318,7 @@ set( CMAKE_SYSTEM_VERSION 1 )
 # rpath makes low sence for Android
 set( CMAKE_SKIP_RPATH TRUE CACHE BOOL "If set, runtime paths are not added when using shared libraries." )
 
-set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r8e -r8d -r8c -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
+set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r9 -r8e -r8d -r8c -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
  if( CMAKE_HOST_WIN32 )
   file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
@@ -484,7 +484,9 @@ else()
  message( FATAL_ERROR "Cross-compilation on your platform is not supported by this cmake toolchain" )
 endif()
 
-if( NOT ANDROID_NDK_HOST_X64 )
+# CMAKE_HOST_SYSTEM_PROCESSOR on MacOS X always says i386 on Intel platform
+# So we do not trust ANDROID_NDK_HOST_X64 on Apple hosts
+if( NOT ANDROID_NDK_HOST_X64 AND NOT CMAKE_HOST_APPLE)
  set( ANDROID_NDK_HOST_SYSTEM_NAME ${ANDROID_NDK_HOST_SYSTEM_NAME2} )
 endif()
 
