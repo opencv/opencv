@@ -1141,7 +1141,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
         CvSize sz;
 
         cv::Rect roi, roi2;
-        cv::Mat imgroi, imgroisq;
         cv::ocl::oclMat resizeroi, gimgroi, gimgroisq;
 
         for( int i = 0; i < m_loopcount; i++ )
