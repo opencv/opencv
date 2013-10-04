@@ -67,7 +67,7 @@ while True:
 
         fn['modifiers'] = []  # modifiers
         fn['ret'] = ret
-        fn['calling'] = []  # calling
+        fn['calling'] = calling
 
         # print 'modifiers='+' '.join(modifiers)
         # print 'ret='+' '.join(type)
@@ -112,7 +112,7 @@ ctx['CL_FN_ENUMS'] = generateEnums(fns)
 ctx['CL_FN_NAMES'] = generateNames(fns)
 ctx['CL_FN_DEFINITIONS'] = generateFnDefinition(fns)
 ctx['CL_FN_PTRS'] = generatePtrs(fns)
-ctx['CL_FN_SWITCH'] = generateTemplates(15, 'opencl_fn', 'opencl_check_fn')
+ctx['CL_FN_SWITCH'] = generateTemplates(15, 'opencl_fn', 'opencl_check_fn', 'CL_API_CALL')
 
 sys.stdout = outfile_impl
 ProcessTemplate('template/cl_runtime_impl_opencl.hpp.in', ctx)
