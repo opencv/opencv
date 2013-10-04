@@ -11,6 +11,17 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
+macro(ocv_check_environment_variables)
+  foreach(_var ${ARGN})
+    if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
+      set(__value "$ENV{${_var}}")
+      file(TO_CMAKE_PATH "${__value}" __value) # Assume that we receive paths
+      set(${_var} "${__value}")
+      message(STATUS "Update variable ${_var} from environment: ${${_var}}")
+    endif()
+  endforeach()
+endmacro()
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   set(__add_before "")
