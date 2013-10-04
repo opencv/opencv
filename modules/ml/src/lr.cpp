@@ -58,76 +58,73 @@
 using namespace cv;
 using namespace std;
 
-CvLR_TrainParams::CvLR_TrainParams()
+LogisticRegressionParams::LogisticRegressionParams()
 {
     term_crit = CvTermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 10000, 0.001);
+    alpha = 0.001;
+    num_iters = 10;
+    norm = LogisticRegression::REG_L2;
+    regularized = 1;
+    train_method = LogisticRegression::BATCH;
+    mini_batch_size = 1;
 }
 
-CvLR_TrainParams::CvLR_TrainParams(double _alpha, int _num_iters, int _norm, int _regularized, int _train_method, int _minibatchsize):
- alpha(_alpha), num_iters(_num_iters), norm(_norm), regularized(_regularized), train_method(_train_method), minibatchsize(_minibatchsize)
-///////////////////////////////////////////////////
-// CvLR_TrainParams::CvLR_TrainParams(double _alpha, int _num_iters, int _norm, int _debug, int _regularized, int _train_method, int _minibatchsize):
-//  alpha(_alpha), num_iters(_num_iters), norm(_norm), debug(_debug), regularized(_regularized), train_method(_train_method), minibatchsize(_minibatchsize)
-///////////////////////////////////////////////////
+LogisticRegressionParams::LogisticRegressionParams(double _alpha, int _num_iters, int _norm, int _regularized, int _train_method, int _mini_batch_size):
+ alpha(_alpha), num_iters(_num_iters), norm(_norm), regularized(_regularized), train_method(_train_method), mini_batch_size(_mini_batch_size)
 {
     term_crit = CvTermCriteria(TermCriteria::COUNT + TermCriteria::EPS, num_iters, 0.001);
 }
 
-CvLR_TrainParams::~CvLR_TrainParams()
-{
-
-}
-
-CvLR::CvLR()
+LogisticRegression::LogisticRegression()
 {
     default_model_name = "my_lr";
-    // set_default_params();
 }
 
-
-CvLR::CvLR(const cv::Mat& _data, const cv::Mat& _labels, const CvLR_TrainParams& _params)
+LogisticRegression::LogisticRegression(cv::InputArray data, cv::InputArray labels, const LogisticRegressionParams& pms)
 {
-    this->params = _params;
+    this->params = pms;
     default_model_name = "my_lr";
-    train(_data, _labels);
+    train(data, labels);
 }
 
-CvLR::~CvLR()
+LogisticRegression::~LogisticRegression()
 {
     clear();
 }
 
-
-bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
+bool LogisticRegression::train(cv::InputArray data_ip, cv::InputArray labels_ip)
 {
+    clear();
+    cv::Mat _data_i = data_ip.getMat();
+    cv::Mat _labels_i = labels_ip.getMat();
+
     CV_Assert( !_labels_i.empty() && !_data_i.empty());
 
-    // check the number of colums
-    CV_Assert( _labels_i.cols == 1);
-
+    // check the number of columns
     if(_labels_i.cols != 1)
     {
-        cv::error(Error::StsBadArg, "_labels_i should be a column matrix", "cv::ml::CvLR::train", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "_labels_i should be a column matrix", "cv::ml::LogisticRegression::train", __FILE__, __LINE__);
     }
+
     // check data type.
     // data should be of floating type CV_32FC1
 
     if((_data_i.type() != CV_32FC1) || (_labels_i.type() != CV_32FC1))
     {
-        cv::error(Error::StsBadArg, "train: data and labels must be a floating point matrix", "cv::ml::CvLR::train", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "train: data and labels must be a floating point matrix", "cv::ml::LogisticRegression::train", __FILE__, __LINE__);
     }
 
     bool ok = false;
 
     cv::Mat labels;
 
-    //CvLR::set_label_map(_labels_i);
     set_label_map(_labels_i);
     int num_classes = this->forward_mapper.size();
 
     // add a column of ones
     cv::Mat data_t = cv::Mat::zeros(_data_i.rows, _data_i.cols+1, CV_32F);
     vconcat(cv::Mat(_data_i.rows, 1, _data_i.type(), Scalar::all(1.0)), data_t.col(0));
+
     for (int i=1;i<data_t.cols;i++)
     {
         vconcat(_data_i.col(i-1), data_t.col(i));
@@ -135,12 +132,12 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
 
     if(num_classes < 2)
     {
-        cv::error(Error::StsBadArg, "train: data should have atleast 2 classes", "cv::ml::CvLR::train", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "train: data should have atleast 2 classes", "cv::ml::LogisticRegression::train", __FILE__, __LINE__);
     }
 
     if(_labels_i.rows != _data_i.rows)
     {
-        cv::error(Error::StsBadArg, "train: number of rows in data and labels should be the equal", "cv::ml::CvLR::train", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "train: number of rows in data and labels should be the equal", "cv::ml::LogisticRegression::train", __FILE__, __LINE__);
     }
 
 
@@ -154,15 +151,10 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
 
     if(num_classes == 2)
     {
-        //data_t.convertTo(data, CV_32F);
         labels_l.convertTo(labels, CV_32F);
-
-        //cv::Mat new_theta = CvLR::compute_batch_gradient(data, labels, init_theta);
         cv::Mat new_theta = compute_batch_gradient(data_t, labels, init_theta);
-
         thetas = new_theta.t();
     }
-
     else
     {
         /* take each class and rename classes you will get a theta per class
@@ -172,73 +164,53 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
         for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
         {
             new_local_labels = (labels_l == it->second)/255;
-            // cout<<"processing class "<<it->second<<endl;
-            // data_t.convertTo(data, CV_32F);
             new_local_labels.convertTo(labels, CV_32F);
-            // cout<<"initial theta: "<<init_theta<<endl;
 
             cv::Mat new_theta = compute_batch_gradient(data_t, labels, init_theta);
 
-            // cout<<"learnt theta: "<<new_theta<<endl;
             hconcat(new_theta.t(), thetas.row(ii));
             ii += 1;
         }
-
     }
 
     this->learnt_thetas = thetas.clone();
     if( cvIsNaN( (double)cv::sum(this->learnt_thetas)[0] ) )
     {
-        cv::error(Error::StsBadArg, "train: check training parameters. Invalid training classifier","cv::ml::CvLR::train", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "train: check training parameters. Invalid training classifier","cv::ml::LogisticRegression::train", __FILE__, __LINE__);
     }
-
     ok = true;
-
     return ok;
 }
 
-float CvLR::predict(const Mat& _data)
-{
-    cv::Mat pred_labs;
-    pred_labs = cv::Mat::zeros(1,1, _data.type());
 
-    if(_data.rows >1)
-    {
-        cv::error(Error::StsBadArg, "predict: _data should have only 1 row", "cv::ml::CvLR::predict", __FILE__, __LINE__);
-    }
-
-
-    predict(_data, pred_labs);
-
-    return static_cast<float>(pred_labs.at<int>(0,0));
-}
-
-float CvLR::predict(const cv::Mat& _data, cv::Mat& _pred_labs)
+void LogisticRegression::predict( cv::InputArray _ip_data, cv::OutputArray _output_predicted_labels ) const
 {
     /* returns a class of the predicted class
     class names can be 1,2,3,4, .... etc */
-    cv::Mat thetas;
+
+    cv::Mat thetas, data, pred_labs;
+    data = _ip_data.getMat();
 
     // check if learnt_mats array is populated
     if(this->learnt_thetas.total()<=0)
     {
-        cv::error(Error::StsBadArg, "predict: classifier should be trained first", "cv::ml::CvLR::predict", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "predict: classifier should be trained first", "cv::ml::LogisticRegression::predict", __FILE__, __LINE__);
     }
-    if(_data.type() != CV_32F)
+    if(data.type() != CV_32F)
     {
-        cv::error(Error::StsBadArg, "predict: _data must be of floating type","cv::ml::CvLR::predict",__FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "predict: data must be of floating type","cv::ml::LogisticRegression::predict",__FILE__, __LINE__);
     }
 
     // add a column of ones
-    cv::Mat data_t = cv::Mat::zeros(_data.rows, _data.cols+1, CV_32F);
+    cv::Mat data_t = cv::Mat::zeros(data.rows, data.cols+1, CV_32F);
     for (int i=0;i<data_t.cols;i++)
     {
         if(i==0)
         {
-            vconcat(cv::Mat(_data.rows, 1, _data.type(), Scalar::all(1.0)), data_t.col(i));
+            vconcat(cv::Mat(data.rows, 1, data.type(), Scalar::all(1.0)), data_t.col(i));
             continue;
         }
-        vconcat(_data.col(i-1), data_t.col(i));
+        vconcat(data.col(i-1), data_t.col(i));
     }
 
     this->learnt_thetas.convertTo(thetas, CV_32F);
@@ -254,74 +226,65 @@ float CvLR::predict(const cv::Mat& _data, cv::Mat& _pred_labs)
     cv::Mat labels;
     cv::Mat labels_c;
     cv::Mat temp_pred;
-
-    cv::Mat pred_m = cv::Mat::zeros(data_t.rows, thetas.rows, _data.type());
+    
+    cv::Mat pred_m = cv::Mat::zeros(data_t.rows, thetas.rows, data.type());
 
     if(thetas.rows == 1)
     {
         temp_pred = calc_sigmoid(data_t*thetas.t());
         CV_Assert(temp_pred.cols==1);
+
         // if greater than 0.5, predict class 0 or predict class 1
         temp_pred = (temp_pred>0.5)/255;
         temp_pred.convertTo(labels_c, CV_32S);
     }
-
     else
     {
         for(int i = 0;i<thetas.rows;i++)
         {
-            // temp_pred = CvLR::calc_sigmoid(data_t * thetas.row(i).t());
             temp_pred = calc_sigmoid(data_t * thetas.row(i).t());
             cv::vconcat(temp_pred, pred_m.col(i));
         }
-
         for(int i = 0;i<pred_m.rows;i++)
         {
             temp_pred = pred_m.row(i);
             minMaxLoc( temp_pred, &min_val, &max_val, &min_loc, &max_loc, Mat() );
             labels.push_back(max_loc.x);
         }
-
         labels.convertTo(labels_c, CV_32S);
     }
-
-    _pred_labs = remap_labels(labels_c, this->reverse_mapper);
-
-    // convert _pred_labs to integer type
-
-    _pred_labs.convertTo(_pred_labs, CV_32S);
-
-    return 0.0;
+    pred_labs = remap_labels(labels_c, this->reverse_mapper);
+    // convert pred_labs to integer type
+    pred_labs.convertTo(pred_labs, CV_32S);
+    pred_labs.copyTo(_output_predicted_labels);
 }
 
-cv::Mat CvLR::calc_sigmoid(const Mat& data)
+cv::Mat LogisticRegression::calc_sigmoid(const Mat& data)
 {
     cv::Mat dest;
     cv::exp(-data, dest);
     return 1.0/(1.0+dest);
 }
 
-double CvLR::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+double LogisticRegression::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
 
     int llambda = 0;
     int m;
     int n;
-
     double cost = 0;
     double rparameter = 0;
-
     cv::Mat gradient;
     cv::Mat theta_b;
     cv::Mat theta_c;
+    cv::Mat d_a;
+    cv::Mat d_b;
 
     m = _data.rows;
     n = _data.cols;
 
     gradient = cv::Mat::zeros( _init_theta.rows, _init_theta.cols, _init_theta.type());
-
     theta_b = _init_theta(Range(1, n), Range::all());
-
     cv::multiply(theta_b, theta_b, theta_c, 1);
 
     if(this->params.regularized > 0)
@@ -329,7 +292,7 @@ double CvLR::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv
         llambda = 1;
     }
 
-    if(this->params.norm == CvLR::REG_L1)
+    if(this->params.norm == LogisticRegression::REG_L1)
     {
         rparameter = (llambda/(2*m)) * cv::sum(theta_b)[0];
     }
@@ -339,16 +302,13 @@ double CvLR::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv
         rparameter = (llambda/(2*m)) * cv::sum(theta_c)[0];
     }
 
-
-    // cv::Mat d_a = LogisticRegression::CvLR::calc_sigmoid(_data* _init_theta);
-    cv::Mat d_a = calc_sigmoid(_data* _init_theta);
+    d_a = calc_sigmoid(_data* _init_theta);
 
 
     cv::log(d_a, d_a);
     cv::multiply(d_a, _labels, d_a);
 
-    // cv::Mat d_b = 1 - LogisticRegression::CvLR::calc_sigmoid(_data * _init_theta);
-    cv::Mat d_b = 1 - calc_sigmoid(_data * _init_theta);
+    d_b = 1 - calc_sigmoid(_data * _init_theta);
     cv::log(d_b, d_b);
     cv::multiply(d_b, 1-_labels, d_b);
 
@@ -358,35 +318,27 @@ double CvLR::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv
     return cost;
 }
 
-cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+cv::Mat LogisticRegression::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
     // implements batch gradient descent
-
     if(this->params.alpha<=0)
     {
-        cv::error(Error::StsBadArg, "compute_batch_gradient: check training parameters for the classifier","cv::ml::CvLR::compute_batch_gradient", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "compute_batch_gradient: check training parameters for the classifier","cv::ml::LogisticRegression::compute_batch_gradient", __FILE__, __LINE__);
     }
 
     if(this->params.num_iters <= 0)
     {
-        cv::error(Error::StsBadArg,"compute_batch_gradient: number of iterations cannot be zero or a negative number","cv::ml::CvLR::compute_batch_gradient",__FILE__,__LINE__);
+        cv::error(Error::StsBadArg,"compute_batch_gradient: number of iterations cannot be zero or a negative number","cv::ml::LogisticRegression::compute_batch_gradient",__FILE__,__LINE__);
     }
 
     int llambda = 0;
-    ///////////////////////////////////////////////////
     double ccost;
-    ///////////////////////////////////////////////////
     int m, n;
-
     cv::Mat pcal_a;
     cv::Mat pcal_b;
     cv::Mat pcal_ab;
     cv::Mat gradient;
     cv::Mat theta_p = _init_theta.clone();
-
-    // cout<<"_data size "<<_data.rows<<", "<<_data.cols<<endl;
-    // cout<<"_init_theta size "<<_init_theta.rows<<", "<<_init_theta.cols<<endl;
-
     m = _data.rows;
     n = _data.cols;
 
@@ -401,23 +353,8 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
 
         if( cvIsNaN( ccost ) )
         {
-            cv::error(Error::StsBadArg, "compute_batch_gradient: check training parameters. Invalid training classifier","cv::ml::CvLR::compute_batch_gradient", __FILE__, __LINE__);
+            cv::error(Error::StsBadArg, "compute_batch_gradient: check training parameters. Invalid training classifier","cv::ml::LogisticRegression::compute_batch_gradient", __FILE__, __LINE__);
         }
-
-        ///////////////////////////////////////////////////
-        // cout<<"calculated cost: "<<ccost<<endl;
-        // if(this->params.debug == 1 && i%(this->params.num_iters/2)==0) //
-        // {
-        //     cout<<"iter: "<<i<<endl;
-        //     cout<<"cost: "<<ccost<<endl;
-        //     cout<<"alpha"<<this->params.alpha<<endl;
-        //     cout<<"num_iters"<<this->params.num_iters<<endl;
-        //     cout<<"norm"<<this->params.norm<<endl;
-        //     cout<<"debug"<<this->params.debug<<endl;
-        //     cout<<"regularized"<<this->params.regularized<<endl;
-        //     cout<<"train_method"<<this->params.train_method<<endl;
-        // }
-        ///////////////////////////////////////////////////
 
         pcal_b = calc_sigmoid((_data*theta_p) - _labels);
 
@@ -433,7 +370,6 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
 
         gradient.row(0) = ((float)1/m) * sum(pcal_ab)[0];
 
-
         pcal_b = _data(Range::all(), Range(1,n));
 
         //cout<<"for each training data entry"<<endl;
@@ -447,38 +383,27 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
         }
 
         theta_p = theta_p - ( static_cast<double>(this->params.alpha)/m)*gradient;
-        //cout<<"updated theta_p"<<endl;
     }
-
     return theta_p;
 }
 
-
-cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
+cv::Mat LogisticRegression::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _labels, const cv::Mat& _init_theta)
 {
     // implements batch gradient descent
-
     int lambda_l = 0;
     double ccost;
-
     int m, n;
-
     int j = 0;
-    int size_b = this->params.minibatchsize;
+    int size_b = this->params.mini_batch_size;
 
-    // if(this->minibatchsize == 0)
-    // {
-    //     cv::error(Error::StsDivByZero, "compute_mini_batch_gradient: set CvLR::MINI_BATCH value to a non-zero number (and less than number of samples in a given class) ", "cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
-    // }
-
-    if(this->params.minibatchsize <= 0 || this->params.alpha == 0)
+    if(this->params.mini_batch_size <= 0 || this->params.alpha == 0)
     {
-        cv::error(Error::StsBadArg, "compute_mini_batch_gradient: check training parameters for the classifier","cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
+        cv::error(Error::StsBadArg, "compute_mini_batch_gradient: check training parameters for the classifier","cv::ml::LogisticRegression::compute_mini_batch_gradient", __FILE__, __LINE__);
     }
 
     if(this->params.num_iters <= 0)
     {
-        cv::error(Error::StsBadArg,"compute_mini_batch_gradient: number of iterations cannot be zero or a negative number","cv::ml::CvLR::compute_mini_batch_gradient",__FILE__,__LINE__);
+        cv::error(Error::StsBadArg,"compute_mini_batch_gradient: number of iterations cannot be zero or a negative number","cv::ml::LogisticRegression::compute_mini_batch_gradient",__FILE__,__LINE__);
     }
 
     cv::Mat pcal_a;
@@ -512,26 +437,10 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
 
         ccost = compute_cost(data_d, labels_l, theta_p);
 
-
         if( cvIsNaN( ccost ) == 1)
         {
-            cv::error(Error::StsBadArg, "compute_mini_batch_gradient: check training parameters. Invalid training classifier","cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
+            cv::error(Error::StsBadArg, "compute_mini_batch_gradient: check training parameters. Invalid training classifier","cv::ml::LogisticRegression::compute_mini_batch_gradient", __FILE__, __LINE__);
         }
-
-        ///////////////////////////////////////////////////
-        // if(this->params.debug == 1 && i%(this->params.term_crit.max_iter/2)==0)
-        // {
-        //     cout<<"iter: "<<i<<endl;
-        //     cout<<"cost: "<<ccost<<endl;
-        //     cout<<"alpha"<<this->params.alpha<<endl;
-        //     cout<<"num_iters"<<this->params.num_iters<<endl;
-        //     cout<<"norm"<<this->params.norm<<endl;
-        //     cout<<"debug"<<this->params.debug<<endl;
-        //     cout<<"regularized"<<this->params.regularized<<endl;
-        //     cout<<"train_method"<<this->params.train_method<<endl;
-        //     cout<< "minibatchsize"<<this->params.minibatchsize<<endl;
-        // }
-        ///////////////////////////////////////////////////
 
         pcal_b = calc_sigmoid((data_d*theta_p) - labels_l);
 
@@ -552,16 +461,13 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
         for(int k = 1;k<gradient.rows;k++)
         {
             pcal_b = data_d(Range::all(), Range(k,k+1));
-
             cv::multiply(pcal_a, pcal_b, pcal_ab, 1);
-
             gradient.row(k) = (1.0/m)*cv::sum(pcal_ab)[0] + (lambda_l/m) * theta_p.row(k);
         }
 
-
         theta_p = theta_p - ( static_cast<double>(this->params.alpha)/m)*gradient;
 
-        j+=this->params.minibatchsize;
+        j+=this->params.mini_batch_size;
 
         if(j+size_b>_data.rows)
         {
@@ -569,45 +475,12 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
             break;
         }
     }
-
     return theta_p;
 }
 
-
-std::map<int, int> CvLR::get_label_map(const cv::Mat& _labels_i)
+bool LogisticRegression::set_label_map(const cv::Mat& _labels_i)
 {
-    // this function creates two maps to map user defined labels to program friendsly labels
-    // two ways.
-
-    cv::Mat labels;
-    int ii = 0;
-
-    _labels_i.convertTo(labels, CV_32S);
-
-    for(int i = 0;i<labels.rows;i++)
-    {
-        this->forward_mapper[labels.at<int>(i)] += 1;
-    }
-
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
-    {
-        this->forward_mapper[it->first] = ii;
-        ii += 1;
-    }
-
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
-    {
-        this->reverse_mapper[it->second] = it->first;
-    }
-
-    return this->forward_mapper;
-}
-
-bool CvLR::set_label_map(const cv::Mat& _labels_i)
-{
-    // this function creates two maps to map user defined labels to program friendsly labels
-    // two ways.
-
+    // this function creates two maps to map user defined labels to program friendly labels two ways.
     int ii = 0;
     cv::Mat labels;
     bool ok = false;
@@ -639,7 +512,7 @@ bool CvLR::set_label_map(const cv::Mat& _labels_i)
     return ok;
 }
 
-cv::Mat CvLR::remap_labels(const Mat& _labels_i, std::map<int, int> lmap)
+cv::Mat LogisticRegression::remap_labels(const Mat& _labels_i, const std::map<int, int>& lmap)
 {
     cv::Mat labels;
     _labels_i.convertTo(labels, CV_32S);
@@ -650,105 +523,86 @@ cv::Mat CvLR::remap_labels(const Mat& _labels_i, std::map<int, int> lmap)
 
     for(int i =0;i<labels.rows;i++)
     {
-        new_labels.at<int>(i,0) = lmap[labels.at<int>(i,0)];
+        new_labels.at<int>(i,0) = lmap.find(labels.at<int>(i,0))->second;
     }
-
     return new_labels;
 }
 
-
-bool CvLR::set_default_params()
-{
-    // set default parameters for the Logisitic Regression classifier
-    this->params.alpha = 1.0;
-    this->params.term_crit.max_iter = 10000;
-    this->params.norm = CvLR::REG_L2;
-    ///////////////////////////////////////////////////
-    // this->params.debug = 1;
-    ///////////////////////////////////////////////////
-    this->params.regularized = 1;
-    this->params.train_method = CvLR::MINI_BATCH;
-    this->params.minibatchsize = 10;
-
-    return true;
-}
-
-void CvLR::clear()
+void LogisticRegression::clear()
 {
     this->learnt_thetas.release();
     this->labels_o.release();
     this->labels_n.release();
 }
 
-void CvLR::read( CvFileStorage* fs, CvFileNode* node )
+void LogisticRegression::write(FileStorage& fs) const
 {
-    CvMat *newData;
-    CvMat *o_labels;
-    CvMat *n_labels;
+    CV_Assert(fs.isOpened() == 1);
 
-
-    this->params.alpha = cvReadRealByName(fs, node,"alpha", 1.0);
-    this->params.num_iters = cvReadIntByName(fs, node,"iterations", 1000);
-    this->params.norm = cvReadIntByName(fs, node,"norm", 1);
-    // this->params.debug = cvReadIntByName(fs, node,"debug", 1);
-    this->params.regularized = cvReadIntByName(fs, node,"regularized", 1);
-    this->params.train_method = cvReadIntByName(fs, node,"train_method", 0);
-
-    if(this->params.train_method == CvLR::MINI_BATCH)
+    string desc = "Logisitic Regression Classifier";
+    fs<<"classifier"<<desc.c_str();
+    fs<<"alpha"<<this->params.alpha;
+    fs<<"iterations"<<this->params.num_iters;
+    fs<<"norm"<<this->params.norm;
+    fs<<"regularized"<<this->params.regularized;
+    fs<<"train_method"<<this->params.train_method;
+    if(this->params.train_method == LogisticRegression::MINI_BATCH)
     {
-        this->params.minibatchsize = cvReadIntByName(fs, node,"mini_batch_size", 1);
+        fs<<"mini_batch_size"<<this->params.mini_batch_size;
+    }
+    fs<<"learnt_thetas"<<this->learnt_thetas;
+    fs<<"n_labels"<<this->labels_n;
+    fs<<"o_labels"<<this->labels_o;
+}
+
+void LogisticRegression::read(const FileNode& fn )
+{
+    // check if empty
+    if(fn.empty())
+    {
+        cv::error(Error::StsBadArg, "read: empty FileNode object","cv::ml::LogisticRegression::read", __FILE__, __LINE__);
     }
 
-    newData = (CvMat*)cvReadByName( fs, node, "learnt_thetas" );
-    o_labels = (CvMat*)cvReadByName( fs, node, "o_labels" );
-    n_labels = (CvMat*)cvReadByName( fs, node, "n_labels" );
+    this->params.alpha = (double)fn["alpha"];
+    this->params.num_iters = (int)fn["iterations"];
+    this->params.norm = (int)fn["norm"];
+    this->params.regularized = (int)fn["regularized"];
+    this->params.train_method = (int)fn["train_method"];
 
-    this->learnt_thetas = cv::Mat(newData->rows, newData->cols, CV_32F, newData->data.db);
-    this->labels_o = cv::Mat(o_labels->rows, o_labels->cols, CV_32S, o_labels->data.ptr);
-    this->labels_n = cv::Mat(n_labels->rows, n_labels->cols, CV_32S, n_labels->data.ptr);
+    if(this->params.train_method == LogisticRegression::MINI_BATCH)
+    {
+        this->params.mini_batch_size = (int)fn["mini_batch_size"];
+    }
+
+    fn["learnt_thetas"] >> this->learnt_thetas;
+    fn["o_labels"] >> this->labels_o;
+    fn["n_labels"] >> this->labels_n;
 
     for(int ii =0;ii<labels_o.rows;ii++)
     {
         this->forward_mapper[labels_o.at<int>(ii,0)] = labels_n.at<int>(ii,0);
         this->reverse_mapper[labels_n.at<int>(ii,0)] = labels_o.at<int>(ii,0);
     }
-
 }
 
-void CvLR::write( CvFileStorage* fs, const char* name ) const
+void LogisticRegression::save(string filepath) const
 {
-    string desc = "Logisitic Regression Classifier";
+    FileStorage fs;
+    fs.open(filepath.c_str(),FileStorage::WRITE);
+    write(fs);
+    fs.release();
 
-    cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_LR );
-
-    cvWriteString( fs, "classifier", desc.c_str());
-    cvWriteReal(fs,"alpha",this->params.alpha);
-    cvWriteInt(fs,"iterations",this->params.num_iters);
-    cvWriteInt(fs,"norm",this->params.norm);
-    // cvWriteInt(fs,"debug",this->params.debug);
-    cvWriteInt(fs,"regularized",this->params.regularized);
-    cvWriteInt(fs,"train_method",this->params.train_method);
-
-    if(this->params.train_method == CvLR::MINI_BATCH)
-    {
-        cvWriteInt(fs,"mini_batch_size",this->params.minibatchsize);
-    }
-
-    CvMat mat_learnt_thetas = this->learnt_thetas;
-    CvMat o_labels = this->labels_o;
-    CvMat n_labels = this->labels_n;
-
-    cvWrite(fs, "learnt_thetas", &mat_learnt_thetas );
-    cvWrite(fs, "n_labels", &n_labels);
-    cvWrite(fs, "o_labels", &o_labels);
-
-    cvEndWriteStruct(fs);
+}
+void LogisticRegression::load(const string filepath)
+{
+    FileStorage fs;
+    fs.open(filepath.c_str(),FileStorage::READ);
+    FileNode fn = fs.root();
+    read(fn);
 }
 
-
-cv::Mat CvLR::get_learnt_mat()
+cv::Mat LogisticRegression::get_learnt_thetas() const
 {
     return this->learnt_thetas;
 }
-
 /* End of file. */
