@@ -2207,8 +2207,8 @@ typedef CvANN_MLP_TrainParams ANN_MLP_TrainParams;
 typedef CvANN_MLP NeuralNet_MLP;
 typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
-typedef CvLR_TrainParams LogisticRegression_TrainParams;
-typedef CvLR LogisticRegression;
+typedef LogisticRegressionParams LRParams;
+typedef LogisticRegression LR;
 
 
 template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
