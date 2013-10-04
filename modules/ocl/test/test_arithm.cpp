@@ -535,7 +535,7 @@ TEST_P(Absdiff, Mat)
     }
 }
 
-TEST_P(Absdiff, Mat_Scalar)
+TEST_P(Absdiff, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
