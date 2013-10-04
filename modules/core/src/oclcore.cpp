@@ -575,30 +575,24 @@ typedef struct _cl_buffer_region {
 #define CL_CALLBACK CV_STDCALL
 
 #if defined(__APPLE__)
-#include <mach-o/dyld.h>
+#include <dlfcn.h>
 
 static void* initOpenCLAndLoad(const char* funcname)
 {
     static bool initialized = false;
-    static const struct mach_header* handle = 0;
+    static void* handle = 0;
     if (!handle)
     {
         if(!initialized)
         {
-            handle = NSAddImage("/System/Library/Frameworks/OpenСL.framework/Versions/Current/OpenСL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
+            handle = dlopen("/System/Library/Frameworks/OpenСL.framework/Versions/Current/OpenСL", RTLD_LAZY);
             initialized = true;
         }
         if(!handle)
             return 0;
     }
 
-    // prepend a '_' for the Unix C symbol mangling convention
-    char buf[1024];
-    sprintf(buf, "_%s", funcname);
-
-    NSSymbol symbol = NSLookupSymbolInImage(handle, buf, NSLOOKUPSYMBOLINIMAGE_OPTION_BIND |
-                                            NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
-    return symbol ? NSAddressOfSymbol(symbol) : 0;
+    return dlsym(handle, funcname);
 }
 
 #elif defined WIN32 || defined _WIN32
@@ -677,9 +671,28 @@ static void* initOpenCLAndLoad(const char*)
         { \
             funcname##_p = (funcname##_t)initOpenCLAndLoad(#funcname); \
             if( !funcname##_p ) \
-                return CL_NOT_IMPLEMENTED; \
+                return OPENCV_CL_NOT_IMPLEMENTED; \
         } \
-        return funcname_p args; \
+        return funcname##_p args; \
+    }
+
+
+#define OCL_FUNC_P(rettype, funcname, argsdecl, args) \
+    typedef rettype (CV_STDCALL * funcname##_t) argsdecl; \
+    static rettype funcname argsdecl \
+    { \
+        static funcname##_t funcname##_p = 0; \
+        if( !funcname##_p ) \
+        { \
+            funcname##_p = (funcname##_t)initOpenCLAndLoad(#funcname); \
+            if( !funcname##_p ) \
+            { \
+                if( errcode_ret ) \
+                    *errcode_ret = OPENCV_CL_NOT_IMPLEMENTED; \
+                return 0; \
+            } \
+        } \
+        return funcname##_p args; \
     }
 
 OCL_FUNC(cl_int, clGetPlatformIDs,
@@ -708,7 +721,7 @@ OCL_FUNC(cl_int, clGetDeviceInfo,
     size_t * param_value_size_ret),
     (device, param_name, param_value_size, param_value, param_value_size_ret))
 
-OCL_FUNC(cl_context, clCreateContext,
+OCL_FUNC_P(cl_context, clCreateContext,
     (const cl_context_properties * properties,
     cl_uint num_devices,
     const cl_device_id * devices,
@@ -717,7 +730,7 @@ OCL_FUNC(cl_context, clCreateContext,
     cl_int * errcode_ret),
     (properties, num_devices, devices, pfn_notify, user_data, errcode_ret))
 
-OCL_FUNC(cl_context, clCreateContextFromType,
+OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
     void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *),
@@ -738,7 +751,7 @@ OCL_FUNC(cl_int, clGetContextInfo,
     (context, param_name, param_value_size, 
     param_value, param_value_size_ret))
     
-OCL_FUNC(cl_command_queue, clCreateCommandQueue,
+OCL_FUNC_P(cl_command_queue, clCreateCommandQueue,
     (cl_context context, 
     cl_device_id device, 
     cl_command_queue_properties properties,
@@ -757,7 +770,7 @@ OCL_FUNC(cl_int, clGetCommandQueueInfo,
     size_t * param_value_size_ret),
     (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
     
-OCL_FUNC(cl_mem, clCreateBuffer,
+OCL_FUNC_P(cl_mem, clCreateBuffer,
     (cl_context context,
     cl_mem_flags flags,
     size_t size,
@@ -765,7 +778,7 @@ OCL_FUNC(cl_mem, clCreateBuffer,
     cl_int * errcode_ret),
     (context, flags, size, host_ptr, errcode_ret))
 
-OCL_FUNC(cl_mem, clCreateSubBuffer,
+OCL_FUNC_P(cl_mem, clCreateSubBuffer,
     (cl_mem buffer,
     cl_mem_flags flags,
     cl_buffer_create_type buffer_create_type,
@@ -773,7 +786,7 @@ OCL_FUNC(cl_mem, clCreateSubBuffer,
     cl_int * errcode_ret),
     (buffer, flags, buffer_create_type, buffer_create_info, errcode_ret))
 
-OCL_FUNC(cl_mem, clCreateImage,
+OCL_FUNC_P(cl_mem, clCreateImage,
     (cl_context context,
     cl_mem_flags flags,
     const cl_image_format * image_format,
@@ -811,7 +824,7 @@ OCL_FUNC(cl_int, clGetImageInfo,
     size_t * param_value_size_ret),
     (image, param_name, param_value_size, param_value, param_value_size_ret))
 
-OCL_FUNC(cl_program, clCreateProgramWithSource,
+OCL_FUNC_P(cl_program, clCreateProgramWithSource,
     (cl_context context,
     cl_uint count,
     const char ** strings,
@@ -819,7 +832,7 @@ OCL_FUNC(cl_program, clCreateProgramWithSource,
     cl_int * errcode_ret),
     (context, count, strings, lengths, errcode_ret))
 
-OCL_FUNC(cl_program, clCreateProgramWithBinary,
+OCL_FUNC_P(cl_program, clCreateProgramWithBinary,
     (cl_context context,
     cl_uint num_devices,
     const cl_device_id * device_list,
@@ -860,7 +873,7 @@ OCL_FUNC(cl_int, clGetProgramBuildInfo,
     size_t * param_value_size_ret),
     (program, device, param_name, param_value_size, param_value, param_value_size_ret))
                       
-OCL_FUNC(cl_kernel, clCreateKernel,
+OCL_FUNC_P(cl_kernel, clCreateKernel,
     (cl_program program,
     const char * kernel_name,
     cl_int * errcode_ret),
@@ -910,7 +923,7 @@ OCL_FUNC(cl_int, clGetKernelWorkGroupInfo,
     size_t * param_value_size_ret),
     (kernel, device, param_name, param_value_size, param_value, param_value_size_ret))
                          
-OCL_FUNC(cl_int, clFinish, (cl_command_queue command_queue))
+OCL_FUNC(cl_int, clFinish, (cl_command_queue command_queue), (command_queue))
 
 OCL_FUNC(cl_int, clEnqueueReadBuffer,
     (cl_command_queue command_queue,
@@ -1105,7 +1118,7 @@ OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
     (command_queue, src_buffer, dst_image, src_offset, dst_origin,
     region, num_events_in_wait_list, event_wait_list, event))
 
-OCL_FUNC(void*, clEnqueueMapBuffer,
+OCL_FUNC_P(void*, clEnqueueMapBuffer,
     (cl_command_queue command_queue,
     cl_mem buffer,
     cl_bool blocking_map, 
@@ -1119,7 +1132,7 @@ OCL_FUNC(void*, clEnqueueMapBuffer,
     (command_queue, buffer, blocking_map, map_flags, offset, size,
     num_events_in_wait_list, event_wait_list, event, errcode_ret))
 
-OCL_FUNC(void*, clEnqueueMapImage,
+OCL_FUNC_P(void*, clEnqueueMapImage,
     (cl_command_queue command_queue,
     cl_mem image, 
     cl_bool blocking_map, 
@@ -1154,7 +1167,7 @@ OCL_FUNC(cl_int, clEnqueueNDRangeKernel,
     const size_t * local_work_size,
     cl_uint num_events_in_wait_list,
     const cl_event * event_wait_list,
-    cl_event * event)
+    cl_event * event),
     (command_queue, kernel, work_dim, global_work_offset, global_work_size,
     local_work_size, num_events_in_wait_list, event_wait_list, event))
 

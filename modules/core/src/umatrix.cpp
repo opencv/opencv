@@ -272,13 +272,13 @@ void UMat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, step, 0);
+            u = a->allocate(dims, size, _type, step.p, 0);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, step, 0);
+                u = a0->allocate(dims, size, _type, step.p, 0);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -304,7 +304,7 @@ void UMat::deallocate()
 
 
 UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
@@ -323,7 +323,7 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
     {
         CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end && _rowRange.end <= m.rows );
         rows = _rowRange.size();
-        data += step*_rowRange.start;
+        offset += step*_rowRange.start;
         flags |= SUBMATRIX_FLAG;
     }
 
@@ -331,7 +331,7 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
     {
         CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end && _colRange.end <= m.cols );
         cols = _colRange.size();
-        data += _colRange.start*elemSize();
+        offset += _colRange.start*elemSize();
         flags &= cols < m.cols ? ~CONTINUOUS_FLAG : -1;
         flags |= SUBMATRIX_FLAG;
     }
@@ -349,20 +349,18 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
 
 UMat::UMat(const UMat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
-    data(m.data + roi.y*m.step[0]), refcount(m.refcount),
-    datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit),
-    allocator(m.allocator), size(&rows)
+    allocator(m.allocator), u(m.u), offset(m.offset + roi.y*m.step[0]), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
     flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
     flags |= roi.height == 1 ? CONTINUOUS_FLAG : 0;
 
     size_t esz = CV_ELEM_SIZE(flags);
-    data += roi.x*esz;
+    offset += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(u->urefcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
@@ -376,20 +374,8 @@ UMat::UMat(const UMat& m, const Rect& roi)
 }
 
 
-UMat::UMat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
-{
-    flags |= CV_MAT_TYPE(_type);
-    data = datastart = (uchar*)_data;
-    setSize(*this, _dims, _sizes, _steps, true);
-    finalizeHdr(*this);
-}
-
-
 UMat::UMat(const UMat& m, const Range* ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
 {
     int i, d = m.dims;
 
@@ -406,7 +392,7 @@ UMat::UMat(const UMat& m, const Range* ranges)
         if( r != Range::all() && r != Range(0, size.p[i]))
         {
             size.p[i] = r.end - r.start;
-            data += r.start*step.p[i];
+            offset += r.start*step.p[i];
             flags |= SUBMATRIX_FLAG;
         }
     }
@@ -423,12 +409,12 @@ UMat UMat::diag(int d) const
     if( d >= 0 )
     {
         len = std::min(cols - d, rows);
-        m.data += esz*d;
+        m.offset += esz*d;
     }
     else
     {
         len = std::min(rows + d, cols);
-        m.data -= step[0]*d;
+        m.offset -= step[0]*d;
     }
     CV_DbgAssert( len > 0 );
 
@@ -451,7 +437,7 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
 {
     CV_Assert( dims <= 2 && step[0] > 0 );
     size_t esz = elemSize(), minstep;
-    ptrdiff_t delta1 = data - datastart, delta2 = dataend - datastart;
+    ptrdiff_t delta1 = (ptrdiff_t)offset, delta2 = (ptrdiff_t)u->size;
 
     if( delta1 == 0 )
         ofs.x = ofs.y = 0;
@@ -459,7 +445,7 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
     {
         ofs.y = (int)(delta1/step[0]);
         ofs.x = (int)((delta1 - step[0]*ofs.y)/esz);
-        CV_DbgAssert( data == datastart + ofs.y*step[0] + ofs.x*esz );
+        CV_DbgAssert( offset == (size_t)(ofs.y*step[0] + ofs.x*esz) );
     }
     minstep = (ofs.x + cols)*esz;
     wholeSize.height = (int)((delta2 - minstep)/step[0] + 1);
@@ -477,7 +463,7 @@ UMat& UMat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     locateROI( wholeSize, ofs );
     int row1 = std::max(ofs.y - dtop, 0), row2 = std::min(ofs.y + rows + dbottom, wholeSize.height);
     int col1 = std::max(ofs.x - dleft, 0), col2 = std::min(ofs.x + cols + dright, wholeSize.width);
-    data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
+    offset += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
     if( esz*cols == step[0] || rows == 1 )
@@ -568,9 +554,10 @@ int UMat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) co
 }
 
 
-UMat UMat::cross(InputArray _m) const
+UMat UMat::cross(InputArray) const
 {
-    CV_Error(CV_StsNotImplemented, "")
+    CV_Error(CV_StsNotImplemented, "");
+    return UMat();
 }
 
 

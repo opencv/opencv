@@ -55,7 +55,7 @@
 namespace cv
 {
 
-enum { ACCESS_READ=1, ACCESS_WRITE=2 };
+enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25, ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW };
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
 
@@ -69,7 +69,7 @@ public:
         KIND_SHIFT = 16,
         FIXED_TYPE = 0x8000 << KIND_SHIFT,
         FIXED_SIZE = 0x4000 << KIND_SHIFT,
-        KIND_MASK = ~(FIXED_TYPE|FIXED_SIZE) - (1 << KIND_SHIFT) + 1,
+        KIND_MASK = 31 << KIND_SHIFT,
 
         NONE              = 0 << KIND_SHIFT,
         MAT               = 1 << KIND_SHIFT,
@@ -82,7 +82,8 @@ public:
         CUDA_MEM          = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT,
         OCL_MAT           =10 << KIND_SHIFT,
-        UMAT              =11 << KIND_SHIFT,
+        UMAT              =OCL_MAT,
+        STD_VECTOR_UMAT   =11 << KIND_SHIFT,
         UEXPR             =12 << KIND_SHIFT
     };
 
@@ -102,10 +103,11 @@ public:
     _InputArray(const gpu::CudaMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
     _InputArray(const UMat& um);
+    _InputArray(const std::vector<UMat>& umv);
     _InputArray(const UMatExpr& uexpr);
 
-    virtual Mat getMat(int i=-1, int accessFlags=ACCESS_READ+ACCESS_WRITE) const;
-    virtual UMat getUMat(int i=-1) const;
+    virtual Mat getMat(int idx=-1) const;
+    virtual UMat getUMat(int idx=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
     virtual gpu::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
@@ -160,6 +162,7 @@ public:
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
     _OutputArray(UMat& m);
+    _OutputArray(std::vector<UMat>& vec);
 
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
@@ -174,6 +177,7 @@ public:
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
     _OutputArray(const UMat& m);
+    _OutputArray(const std::vector<UMat>& vec);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
@@ -191,16 +195,50 @@ public:
     virtual ~_OutputArray();
 };
 
+
+class CV_EXPORTS _InputOutputArray : public _OutputArray
+{
+public:
+    _InputOutputArray();
+    _InputOutputArray(Mat& m);
+    _InputOutputArray(std::vector<Mat>& vec);
+    _InputOutputArray(gpu::GpuMat& d_mat);
+    _InputOutputArray(ogl::Buffer& buf);
+    _InputOutputArray(gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
+    template<typename _Tp> _InputOutputArray(std::vector<_Tp>& vec);
+    template<typename _Tp> _InputOutputArray(std::vector<std::vector<_Tp> >& vec);
+    template<typename _Tp> _InputOutputArray(std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp> _InputOutputArray(Mat_<_Tp>& m);
+    template<typename _Tp> _InputOutputArray(_Tp* vec, int n);
+    template<typename _Tp, int m, int n> _InputOutputArray(Matx<_Tp, m, n>& matx);
+    _InputOutputArray(UMat& m);
+    _InputOutputArray(std::vector<UMat>& vec);
+
+    _InputOutputArray(const Mat& m);
+    _InputOutputArray(const std::vector<Mat>& vec);
+    _InputOutputArray(const gpu::GpuMat& d_mat);
+    _InputOutputArray(const ogl::Buffer& buf);
+    _InputOutputArray(const gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _InputOutputArray(const cudev::GpuMat_<_Tp>& m);
+    template<typename _Tp> _InputOutputArray(const std::vector<_Tp>& vec);
+    template<typename _Tp> _InputOutputArray(const std::vector<std::vector<_Tp> >& vec);
+    template<typename _Tp> _InputOutputArray(const std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp> _InputOutputArray(const Mat_<_Tp>& m);
+    template<typename _Tp> _InputOutputArray(const _Tp* vec, int n);
+    template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
+    _InputOutputArray(const UMat& m);
+    _InputOutputArray(const std::vector<UMat>& vec);
+};
+
 typedef const _InputArray& InputArray;
 typedef InputArray InputArrayOfArrays;
 typedef const _OutputArray& OutputArray;
 typedef OutputArray OutputArrayOfArrays;
-typedef OutputArray InputOutputArray;
-typedef OutputArray InputOutputArrayOfArrays;
+typedef const _InputOutputArray& InputOutputArray;
+typedef InputOutputArray InputOutputArrayOfArrays;
 
-CV_EXPORTS OutputArray noArray();
-
-
+CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
@@ -221,7 +259,8 @@ public:
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
 
-    virtual UMatData* allocate(int dims, const int* sizes, int type, int flags) const = 0;
+    virtual UMatData* allocate(int dims, const int* sizes,
+                               int type, size_t* step, int flags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
     virtual bool map(UMatData* data, int mapflags) const = 0;
     virtual bool unmap(UMatData* data, int mapflags, bool async) const = 0;
@@ -564,14 +603,6 @@ public:
     //! builds matrix from comma initializer
     template<typename _Tp> explicit Mat(const MatCommaInitializer_<_Tp>& commaInitializer);
 
-    // //! converts old-style CvMat to the new matrix; the data is not copied by default
-    // Mat(const CvMat* m, bool copyData=false);
-    // //! converts old-style CvMatND to the new matrix; the data is not copied by default
-    // Mat(const CvMatND* m, bool copyData=false);
-    // //! converts old-style IplImage to the new matrix; the data is not copied by default
-    // Mat(const IplImage* img, bool copyData=false);
-    //Mat(const void* img, bool copyData=false);
-
     //! download data from GpuMat
     explicit Mat(const gpu::GpuMat& m);
 
@@ -580,6 +611,9 @@ public:
     //! assignment operators
     Mat& operator = (const Mat& m);
     Mat& operator = (const MatExpr& expr);
+
+    //! retrieve UMat from Mat
+    UMat getUMat(int accessFlags) const;
 
     //! returns a new matrix header for the specified row
     Mat row(int y) const;
@@ -1066,10 +1100,6 @@ public:
 
     //! copy constructor
     UMat(const UMat& m);
-    //! constructor for matrix headers pointing to user-allocated data
-    UMat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP);
-    UMat(Size size, int type, void* data, size_t step=AUTO_STEP);
-    UMat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0);
 
     //! creates a matrix header for a part of the bigger matrix
     UMat(const UMat& m, const Range& rowRange, const Range& colRange=Range::all());
@@ -1093,6 +1123,8 @@ public:
     //! assignment operators
     UMat& operator = (const UMat& m);
     UMat& operator = (const UMatExpr& expr);
+
+    Mat getMat(int flags) const;
 
     //! returns a new matrix header for the specified row
     UMat row(int y) const;

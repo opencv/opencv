@@ -52,6 +52,12 @@ namespace cv
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
+inline _InputArray::_InputArray() : flags(0), obj(0) {}
+inline _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
+inline _InputArray::_InputArray(const UMat& m) : flags(UMAT), obj((void*)&m) {}
+inline _InputArray::_InputArray(const std::vector<UMat>& vec)
+    : flags(STD_VECTOR_UMAT), obj((void*)&vec) {}
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
     : flags(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec)
@@ -82,6 +88,11 @@ _InputArray::_InputArray(const Mat_<_Tp>& m)
     : flags(FIXED_TYPE + MAT + DataType<_Tp>::type), obj((void*)&m)
 {}
 
+
+inline _OutputArray::_OutputArray() {}
+inline _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
+inline _OutputArray::_OutputArray(UMat& m) : _InputArray(m) {}
+inline _OutputArray::_OutputArray(std::vector<UMat>& vec) : _InputArray(vec) {}
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
