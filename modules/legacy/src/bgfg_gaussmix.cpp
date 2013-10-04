@@ -413,6 +413,11 @@ CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 CV_INLINE int _icvUpdateGMM(float* data, int nD,
                             unsigned char* pModesUsed,
                             CvPBGMMGaussian* pGMM,
@@ -600,6 +605,10 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
 
     return bBackground;
 }
+
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic pop
+#endif
 
 // a bit more efficient implementation for common case of 3 channel (rgb) images
 CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
