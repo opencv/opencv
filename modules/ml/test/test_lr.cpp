@@ -73,9 +73,8 @@ static bool calculateError( const Mat& _p_labels, const Mat& _o_labels, float& e
 
     CV_Assert(_p_labels_temp.total() == _o_labels_temp.total());
     CV_Assert(_p_labels_temp.rows == _o_labels_temp.rows);
-    Mat result = (_p_labels_temp == _o_labels_temp)/255;
 
-    accuracy = (float)cv::sum(result)[0]/result.rows;
+    accuracy = (float)cv::countNonZero(_p_labels_temp == _o_labels_temp)/_p_labels_temp.rows;
     error = 1 - accuracy;
     return true;
 }
@@ -133,25 +132,23 @@ void CV_LRTest::run( int /*start_from*/ )
          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
           3, 3, 3, 3, 3);
 
-    CvLR_TrainParams params = CvLR_TrainParams();
     Mat responses1, responses2;
     float error = 0.0f;
 
-    CvLR_TrainParams params1 = CvLR_TrainParams();
-    CvLR_TrainParams params2 = CvLR_TrainParams();
+    LogisticRegressionParams params1 = LogisticRegressionParams();
+    LogisticRegressionParams params2 = LogisticRegressionParams();
 
     params1.alpha = 1.0;
     params1.num_iters = 10001;
-    params1.norm = CvLR::REG_L2;
-    // params1.debug = 1;
+    params1.norm = LogisticRegression::REG_L2;
     params1.regularized = 1;
-    params1.train_method = CvLR::BATCH;
-    params1.minibatchsize = 10;
+    params1.train_method = LogisticRegression::BATCH;
+    params1.mini_batch_size = 10;
 
     // run LR classifier train classifier
     data.convertTo(data, CV_32FC1);
     labels.convertTo(labels, CV_32FC1);
-    CvLR lr1(data, labels, params1);
+    LogisticRegression lr1(data, labels, params1);
 
     // predict using the same data
     lr1.predict(data, responses1);
@@ -164,7 +161,6 @@ void CV_LRTest::run( int /*start_from*/ )
         ts->printf(cvtest::TS::LOG, "Bad prediction labels\n" );
         test_code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
-
     else if(error > 0.05f)
     {
         ts->printf(cvtest::TS::LOG, "Bad accuracy of (%f)\n", error);
@@ -173,14 +169,13 @@ void CV_LRTest::run( int /*start_from*/ )
 
     params2.alpha = 1.0;
     params2.num_iters = 9000;
-    params2.norm = CvLR::REG_L2;
-    // params2.debug = 1;
+    params2.norm = LogisticRegression::REG_L2;
     params2.regularized = 1;
-    params2.train_method = CvLR::MINI_BATCH;
-    params2.minibatchsize = 10;
+    params2.train_method = LogisticRegression::MINI_BATCH;
+    params2.mini_batch_size = 10;
 
     // now train using mini batch gradient descent
-    CvLR lr2(data, labels, params2);
+    LogisticRegression lr2(data, labels, params2);
     lr2.predict(data, responses2);
     responses2.convertTo(responses2, CV_32S);
 
@@ -191,7 +186,6 @@ void CV_LRTest::run( int /*start_from*/ )
         ts->printf(cvtest::TS::LOG, "Bad prediction labels\n" );
         test_code = cvtest::TS::FAIL_INVALID_OUTPUT;
     }
-
     else if(error > 0.06f)
     {
         ts->printf(cvtest::TS::LOG, "Bad accuracy of (%f)\n", error);
@@ -257,7 +251,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
           3, 3, 3, 3, 3);
 
-    CvLR_TrainParams params = CvLR_TrainParams();
+    // LogisticRegressionParams params = LogisticRegressionParams();
 
     Mat responses1, responses2;
     Mat learnt_mat1, learnt_mat2;
@@ -265,28 +259,26 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 
     float errorCount = 0.0;
 
-    CvLR_TrainParams params1 = CvLR_TrainParams();
-    CvLR_TrainParams params2 = CvLR_TrainParams();
+    LogisticRegressionParams params1 = LogisticRegressionParams();
 
     params1.alpha = 1.0;
     params1.num_iters = 10001;
-    params1.norm = CvLR::REG_L2;
-    // params1.debug = 1;
+    params1.norm = LogisticRegression::REG_L2;
     params1.regularized = 1;
-    params1.train_method = CvLR::BATCH;
-    params1.minibatchsize = 10;
+    params1.train_method = LogisticRegression::BATCH;
+    params1.mini_batch_size = 10;
 
     data.convertTo(data, CV_32FC1);
     labels.convertTo(labels, CV_32FC1);
 
     // run LR classifier train classifier
-    CvLR lr1(data, labels, params1);
-    CvLR lr2;
-    learnt_mat1 = lr1.get_learnt_mat();
+    LogisticRegression lr1(data, labels, params1);
+    LogisticRegression lr2;
+    learnt_mat1 = lr1.get_learnt_thetas();
+
     lr1.predict(data, responses1);
     // now save the classifier
 
-    // Write out
     string filename = cv::tempfile(".xml");
     try
     {
@@ -312,10 +304,9 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
 
     lr2.predict(data, responses2);
 
-    learnt_mat2 = lr2.get_learnt_mat();
+    learnt_mat2 = lr2.get_learnt_thetas();
 
-    // compare difference in prediction outputs before and after loading from disk
-    pred_result1 = (responses1 == responses2)/255;
+    CV_Assert(responses1.rows == responses2.rows);
 
     // compare difference in learnt matrices before and after loading from disk
     comp_learnt_mats = (learnt_mat1 == learnt_mat2);
@@ -326,9 +317,8 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // compare difference in prediction outputs and stored inputs
     // check if there is any difference between computed learnt mat and retreived mat
 
-    errorCount += 1 - (float)cv::sum(pred_result1)[0]/pred_result1.rows;
+    errorCount += 1 - (float)cv::countNonZero(responses1 == responses2)/responses1.rows;
     errorCount += 1 - (float)cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
-
 
     if(errorCount>0)
     {
