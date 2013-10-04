@@ -1,16 +1,60 @@
 ///////////////////////////////////////////////////////////////////////////////////////
-// sample_logistic_regression.cpp
 // IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
 
-// This is a sample program demostrating classification of digits 0 and 1 using Logistic Regression
+// This is a implementation of the Logistic Regression algorithm in C++ in OpenCV.
 
 // AUTHOR:
 // Rahul Kavi rahulkavi[at]live[at]com
 //
+
+// contains a subset of data from the popular Iris Dataset (taken from "http://archive.ics.uci.edu/ml/datasets/Iris")
+
+// # You are free to use, change, or redistribute the code in any way you wish for
+// # non-commercial purposes, but please maintain the name of the original author.
+// # This code comes with no warranty of any kind.
+
+// #
+// # You are free to use, change, or redistribute the code in any way you wish for
+// # non-commercial purposes, but please maintain the name of the original author.
+// # This code comes with no warranty of any kind.
+
+// # Logistic Regression ALGORITHM
+
+
+//                           License Agreement
+//                For Open Source Computer Vision Library
+
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+
+//   * Redistributions of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+
+//   * Redistributions in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
 
 #include <iostream>
 
@@ -76,17 +120,11 @@ int main()
 
     cout<<"initializing Logisitc Regression Parameters\n"<<endl;
 
-    CvLR_TrainParams params = CvLR_TrainParams();
-
-    params.alpha = 0.001;
-    params.num_iters = 10;
-    params.norm = CvLR::REG_L2;
-    params.regularized = 1;
-    params.train_method = CvLR::BATCH;
+    LogisticRegressionParams params = LogisticRegressionParams(0.001, 10, LogisticRegression::REG_L2, 1, LogisticRegression::BATCH, 1);
 
     cout<<"training Logisitc Regression classifier\n"<<endl;
 
-    CvLR lr_(data_train, labels_train, params);
+    LogisticRegression lr_(data_train, labels_train, params);
     lr_.predict(data_test, responses);
     labels_test.convertTo(labels_test, CV_32S);
 
@@ -106,7 +144,7 @@ int main()
     lr_.save("NewLR_Trained.xml");
 
     // load the classifier onto new object
-    CvLR lr2;
+    LogisticRegression lr2;
     cout<<"loading a new classifier"<<endl;
 
     lr2.load("NewLR_Trained.xml");
@@ -119,8 +157,7 @@ int main()
     lr2.predict(data_test, responses2);
 
     // calculate accuracy
-    result = (labels_test == responses2)/255;
-    cout<<"accuracy using loaded classifier: "<<((double)cv::sum(result)[0]/result.rows)*100<<"%\n";
+    cout<<"accuracy using loaded classifier: "<<100 * (float)cv::countNonZero(labels_test == responses2)/responses2.rows<<"%"<<endl;
     waitKey(0);
 
     return 0;
