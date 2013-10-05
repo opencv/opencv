@@ -119,3 +119,34 @@ install(FILES ${hdrs} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/opencv2/python
 
 install(FILES src2/gen2.py DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT main)
 install(FILES src2/hdr_parser.py DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT main)
+
+# ---------------------------------------------------------
+# compilation for tests of external module support
+
+set(cv2test_module cv2test)
+set(external_test_opencv_hdrs
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/externalmodule/cv2test.hpp")
+
+set(external_test_cv2_generated_hdrs
+    "${CMAKE_CURRENT_BINARY_DIR}/cv2test_generated_funcs.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv2test_generated_func_tab.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv2test_generated_types.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv2test_generated_type_reg.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv2test_generated_const_reg.h")
+
+add_custom_command(
+   OUTPUT ${external_test_cv2_generated_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" cv2test ${CMAKE_CURRENT_BINARY_DIR} ${external_test_opencv_hdrs}
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
+   DEPENDS ${external_test_opencv_hdrs})
+
+add_library(${cv2test_module} SHARED test/externalmodule/cv2test.cpp test/externalmodule/cv2test_module.cpp ${external_test_cv2_generated_hdrs})
+target_link_libraries(${cv2test_module} ${PYTHON_LIBRARIES})
+target_link_libraries(${cv2test_module} ${OPENCV_MODULE_${the_module}_DEPS})
+
+set_target_properties(${cv2test_module} PROPERTIES
+                      PREFIX ""
+                      OUTPUT_NAME ${cv2test_module}
+                      SUFFIX ${CVPY_SUFFIX})
+# ---------------------------------------------------------
