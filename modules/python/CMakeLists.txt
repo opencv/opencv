@@ -15,7 +15,8 @@ ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_vi
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
-    ${PYTHON_NUMPY_INCLUDE_DIRS}
+    "${PYTHON_NUMPY_INCLUDE_DIRS}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/python"
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
@@ -44,15 +45,15 @@ if(HAVE_opencv_nonfree)
 endif()
 
 set(cv2_generated_hdrs
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_func_tab.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_const_reg.h")
+    "${CMAKE_CURRENT_BINARY_DIR}/cv_generated_funcs.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv_generated_func_tab.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv_generated_types.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv_generated_type_reg.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/cv_generated_const_reg.h")
 
 add_custom_command(
    OUTPUT ${cv2_generated_hdrs}
-   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+   COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py" cv ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/gen2.py
    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src2/hdr_parser.py
    DEPENDS ${opencv_hdrs})
@@ -112,3 +113,9 @@ install(TARGETS ${the_module}
         LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
         ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
         )
+
+file(GLOB hdrs "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/python/*")
+install(FILES ${hdrs} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/opencv2/python" COMPONENT main)
+
+install(FILES src2/gen2.py DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT main)
+install(FILES src2/hdr_parser.py DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT main)
