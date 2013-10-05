@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <bindings.dsl.h>
 #include <opencv_generated.hpp>
-module OpenCVRaw.Consts where
+module OpenCV.Consts where
 #strict_import
 import Foreign.C
 import Foreign.C.Types

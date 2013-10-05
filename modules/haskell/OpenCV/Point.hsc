@@ -2,10 +2,10 @@
 #include <bindings.dsl.h>
 #include <point.hpp>
 
-module OpenCVRaw.Point where
+module OpenCV.Point where
 #strict_import
 
-import OpenCVRaw.Types
+import OpenCV.Types
 
 #opaque_t Point3i
 #opaque_t Point3f

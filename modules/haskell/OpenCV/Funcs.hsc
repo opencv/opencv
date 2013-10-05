@@ -1,11 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <bindings.dsl.h>
 #include <opencv_generated.hpp>
-module OpenCVRaw.Funcs where
+module OpenCV.Funcs where
 #strict_import
 import Foreign.C
 import Foreign.C.Types
-import OpenCVRaw.Types
+import OpenCV.Types
 #ccall cv_create_BFMatcher , CInt -> CInt -> IO (Ptr <BFMatcher>)
 #ccall cv_create_BRISK , CInt -> CInt -> CFloat -> IO (Ptr <BRISK>)
 #ccall cv_create_BRISK5 , Ptr <vector_float> -> Ptr <vector_int> -> CFloat -> CFloat -> Ptr <vector_int> -> IO (Ptr <BRISK>)

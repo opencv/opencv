@@ -1,10 +1,10 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <bindings.dsl.h>
 #include <mat.hpp>
-module OpenCVRaw.Mat where
+module OpenCV.Mat where
 #strict_import
 
-import OpenCVRaw.Types
+import OpenCV.Types
 import Foreign
 
 #num CV_64FC1

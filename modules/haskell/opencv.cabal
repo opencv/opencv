@@ -1,7 +1,7 @@
-name:                opencv-raw
+name:                opencv
 version:             0.1.0.0
-synopsis:            Raw Haskell bindings to OpenCV >= 2.0
-homepage:            www.github.com/arjuncomar/opencv-raw.git
+synopsis:            OpenCV Computer Vision Library (Haskell Bindings)
+homepage:            www.github.com/itseez/opencv.git
 license:             BSD3
 license-file:        LICENSE
 author:              Arjun Comar
@@ -10,26 +10,22 @@ category:            AI, Machine Vision
 build-type:          Custom
 cabal-version:       >=1.10
 
-source-repository head
-    type: git
-    location: git://github.com/arjuncomar/opencv-raw.git
-
 library
     include-dirs:           cbits/
     includes:               cbits/opencv_generated.hpp
-                          , cbits/cpptypes.hpp
                           , cbits/mat.hpp
+                          , cbits/point.hpp
     c-sources:              cbits/opencv_generated.cpp
                           , cbits/cpptypes.cpp
                           , cbits/mat.cpp
+                          , cbits/point.cpp
     cc-options:             -fpermissive
     ghc-options:            -pgml g++
-    exposed-modules:        OpenCVRaw.Types
-                          , OpenCVRaw.Consts
-                          , OpenCVRaw.Funcs
-                          , OpenCVRaw.CppTypes
-                          , OpenCVRaw.Mat
-                          , OpenCVRaw.Point
+    exposed-modules:        OpenCV.Types
+                          , OpenCV.Consts
+                          , OpenCV.Funcs
+                          , OpenCV.Mat
+                          , OpenCV.Point
     pkgconfig-depends:      opencv
     build-depends:          base >=4.6 && <4.7
                           , bindings-DSL >= 1.0.17 && <= 1.1
