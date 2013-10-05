@@ -22,8 +22,8 @@ library
     c-sources:              cbits/opencv_generated.cpp
                           , cbits/cpptypes.cpp
                           , cbits/mat.cpp
-    cc-options:             -fpermissive -O3
-    ghc-options:            -pgml g++ -O2
+    cc-options:             -fpermissive
+    ghc-options:            -pgml g++
     exposed-modules:        OpenCVRaw.Types
                           , OpenCVRaw.Consts
                           , OpenCVRaw.Funcs

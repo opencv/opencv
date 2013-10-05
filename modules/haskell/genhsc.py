@@ -99,16 +99,16 @@ class HSCWrapperGen(object):
             hsc.write("#include <bindings.dsl.h>\n")
             hsc.write("#include <opencv_generated.hpp>\n")
 
-        self.hsc_types.write("module OpenCVRaw.Types where\n")
-        self.hsc_consts.write("module OpenCVRaw.Consts where\n")
-        self.hsc_funcs.write("module OpenCVRaw.Funcs where\n")
+        self.hsc_types.write("module OpenCV.Types where\n")
+        self.hsc_consts.write("module OpenCV.Consts where\n")
+        self.hsc_funcs.write("module OpenCV.Funcs where\n")
 
         for hsc in [self.hsc_types, self.hsc_consts, self.hsc_funcs]:
             hsc.write("#strict_import\n")
             hsc.write("import Foreign.C\n")
             hsc.write("import Foreign.C.Types\n")
 
-        self.hsc_funcs.write("import OpenCVRaw.Types\n")
+        self.hsc_funcs.write("import OpenCV.Types\n")
 
     def save(self, dstdir, outfile, buf):
         f = open(dstdir + outfile + ".hsc", "wt")
@@ -144,7 +144,7 @@ class HSCWrapperGen(object):
 if __name__ == "__main__":
     header_dir = "/usr/local/include/"
     dstdir = "cbits/"
-    hscdstdir = "OpenCVRaw/"
+    hscdstdir = "OpenCV/"
     headers = None
     if len(sys.argv) > 1:
         header_dir = sys.argv[1]

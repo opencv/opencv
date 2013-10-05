@@ -80,7 +80,7 @@ FastFeatureDetector* cv_create_FastFeatureDetector3(int threshold, bool nonmaxSu
 	return new FastFeatureDetector(threshold, nonmaxSuppression, type);
 }
 FlannBasedMatcher* cv_create_FlannBasedMatcher(flann_IndexParams* indexParams, flann_SearchParams* searchParams) {
-	return new FlannBasedMatcher(indexParams, searchParams);
+	return new FlannBasedMatcher(Ptr<flann_IndexParams>(indexParams), Ptr<flann_SearchParams>(searchParams));
 }
 GFTTDetector* cv_create_GFTTDetector(int maxCorners, double qualityLevel, double minDistance, int blockSize, bool useHarrisDetector, double k) {
 	return new GFTTDetector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
@@ -89,7 +89,7 @@ void cv_GaussianBlur(Mat* src, Mat* dst, Size* ksize, double sigmaX, double sigm
 	cv::GaussianBlur(*src, *dst, *ksize, sigmaX, sigmaY, borderType);
 }
 GridAdaptedFeatureDetector* cv_create_GridAdaptedFeatureDetector(FeatureDetector* detector, int maxTotalKeypoints, int gridRows, int gridCols) {
-	return new GridAdaptedFeatureDetector(detector, maxTotalKeypoints, gridRows, gridCols);
+	return new GridAdaptedFeatureDetector(Ptr<FeatureDetector>(detector), maxTotalKeypoints, gridRows, gridCols);
 }
 HOGDescriptor* cv_create_HOGDescriptor() {
 	return new HOGDescriptor();
@@ -167,7 +167,7 @@ Params* cv_create_Params() {
 	return new Params();
 }
 PyramidAdaptedFeatureDetector* cv_create_PyramidAdaptedFeatureDetector(FeatureDetector* detector, int maxLevel) {
-	return new PyramidAdaptedFeatureDetector(detector, maxLevel);
+	return new PyramidAdaptedFeatureDetector(Ptr<FeatureDetector>(detector), maxLevel);
 }
 Vec3d* cv_RQDecomp3x3(Mat* src, Mat* mtxR, Mat* mtxQ, Mat* Qx, Mat* Qy, Mat* Qz) {
 	return new Vec3d(cv::RQDecomp3x3(*src, *mtxR, *mtxQ, *Qx, *Qy, *Qz));
@@ -629,7 +629,7 @@ bool cv_findChessboardCorners(Mat* image, Size* patternSize, Mat* corners, int f
 	return cv::findChessboardCorners(*image, *patternSize, *corners, flags);
 }
 bool cv_findCirclesGrid(Mat* image, Size* patternSize, Mat* centers, int flags, FeatureDetector* blobDetector) {
-	return cv::findCirclesGrid(*image, *patternSize, *centers, flags, blobDetector);
+	return cv::findCirclesGrid(*image, *patternSize, *centers, flags, Ptr<FeatureDetector>(blobDetector));
 }
 void cv_findContours(Mat* image, vector_Mat* contours, Mat* hierarchy, int mode, int method, Point* offset) {
 	cv::findContours(*image, *contours, *hierarchy, mode, method, *offset);
@@ -1187,7 +1187,7 @@ bool cv_VideoCapture_set(VideoCapture* self, int propId, double value) {
 	return self->set(propId, value);
 }
 void cv_Algorithm_setAlgorithm(Algorithm* self, String* name, Algorithm* value) {
-	self->setAlgorithm(*name, value);
+	self->setAlgorithm(*name, Ptr<Algorithm>(value));
 }
 void cv_BackgroundSubtractorGMG_setBackgroundPrior(BackgroundSubtractorGMG* self, double bgprior) {
 	self->setBackgroundPrior(bgprior);
