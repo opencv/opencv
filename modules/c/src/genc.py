@@ -316,7 +316,6 @@ class CWrapperGenerator(object):
                              typeinfo.name.replace("*", "")))
 
     def prep_src(self):
-        self.source.write("#include \"opencv_generated.hpp\"\n")
         self.source.write("using namespace cv;\n")
         self.source.write("using namespace std;\n")
         self.source.write("using namespace flann;\n")
@@ -326,6 +325,9 @@ class CWrapperGenerator(object):
     def prep_header(self):
         self.header.write("#ifndef __OPENCV_GENERATED_HPP\n")
         self.header.write("#define __OPENCV_GENERATED_HPP\n")
+        self.header.write("#include <opencv2/opencv.hpp>\n")
+        self.header.write("#include <opencv2/nonfree.hpp>\n")
+        self.header.write("#include <vector>\n")
         self.header.write("using namespace cv;\n")
         self.header.write("using namespace std;\n")
         self.header.write("using namespace flann;\n")
@@ -333,6 +335,7 @@ class CWrapperGenerator(object):
         self.header.write("extern \"C\" {\n")
         self.header.write("typedef char* c_string;\n")
         self.header.write("typedef SimpleBlobDetector::Params Params;\n")
+        self.header.write("typedef linemod::Detector Detector;\n")
 
     def finalize_and_write(self, output_path):
         self.header.write("}\n")
@@ -341,14 +344,11 @@ class CWrapperGenerator(object):
         self.save(output_path, "opencv_generated.hpp", self.header)
         self.save(output_path, "opencv_generated.cpp", self.source)
 
-    def readHeaders(self, header_dir, srcfiles):
+    def readHeaders(self, srcfiles):
         parser = hdr_parser.CppHeaderParser()
-        if not header_dir.endswith('/'):
-            header_dir += '/'
 
-        self.header.write("#include <vector>\n")
         for hdr in srcfiles:
-            decls = parser.parse(header_dir + hdr)
+            decls = parser.parse(hdr)
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):
@@ -358,13 +358,12 @@ class CWrapperGenerator(object):
                 else:
                     self.add_func(decl)
 
-    def gen(self, header_dir, srcfiles, output_path):
+    def gen(self, srcfiles, output_path):
         self.clear()
 
         if not srcfiles:
             srcfiles = hdr_parser.opencv_hdr_list
-        self.header.write("#include <opencv2/opencv.hpp>\n")
-        self.readHeaders(header_dir, srcfiles)
+        self.readHeaders(srcfiles)
         self.prep_header()
         self.prep_src()
 
@@ -391,15 +390,12 @@ class CWrapperGenerator(object):
 
 
 if __name__ == "__main__":
-    header_dir = "."
     srcfiles = None
     dstdir = "."
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
-        header_dir = sys.argv[2]
-    if len(sys.argv) > 3:
-        srcfiles = sys.argv[3:]
+        srcfiles = sys.argv[2:]
 
     generator = CWrapperGenerator()
-    generator.gen(header_dir, srcfiles, dstdir)
+    generator.gen(srcfiles, dstdir)

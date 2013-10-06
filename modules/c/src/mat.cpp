@@ -84,13 +84,13 @@ void cv_Mat_assignTo_t(Mat*self, Mat* m, int t) {
 Mat* cv_Mat_setTo(Mat* self, Scalar* value) {
     Mat* m = new Mat;
     *m = *value;
-    self->setTo(*m);
+    return new Mat(self->setTo(*m));
 }
 
 Mat* cv_Mat_setTo_masked(Mat* self, Scalar* value, Mat* mask) {
     Mat* m = new Mat;
     *m = *value;
-    self->setTo(*m, *mask);
+    return new Mat(self->setTo(*m, *mask));
 }
 
 Mat* cv_Mat_reshape(Mat* self, int cn) {
