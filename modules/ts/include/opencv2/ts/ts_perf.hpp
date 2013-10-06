@@ -247,7 +247,18 @@ typedef struct CV_EXPORTS performance_metrics
     };
 
     performance_metrics();
+    void clear();
 } performance_metrics;
+
+
+/*****************************************************************************************\
+*                           Strategy for performance measuring                            *
+\*****************************************************************************************/
+enum PERF_STRATEGY
+{
+    PERF_STRATEGY_BASE = 0,
+    PERF_STRATEGY_SIMPLE = 1,
+};
 
 
 /*****************************************************************************************\
@@ -264,6 +275,9 @@ public:
     static void RecordRunParameters();
     static std::string getDataPath(const std::string& relativePath);
     static std::string getSelectedImpl();
+
+    static enum PERF_STRATEGY getPerformanceStrategy();
+    static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
 
 protected:
     virtual void PerfTestBody() = 0;
