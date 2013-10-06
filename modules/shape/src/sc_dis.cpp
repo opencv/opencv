@@ -44,11 +44,11 @@
  * Implementation of the paper Shape Matching and Object Recognition Using Shape Contexts
  * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013.
  */
-#include <limits>
 
 #include "precomp.hpp"
 #include "opencv2/core.hpp"
 #include "scd_def.hpp"
+#include <limits>
 
 namespace cv
 {
