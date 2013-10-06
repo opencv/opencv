@@ -724,7 +724,14 @@ bool supportsFeature(FEATURE_TYPE featureType)
 struct __Module
 {
     __Module() { /* moved to Context::getContext(): initializeOpenCLDevices(); */ }
-    ~__Module() { ContextImpl::cleanupContext(); }
+    ~__Module()
+    {
+#if defined(WIN32) && defined(CVAPI_EXPORTS)
+        // nothing, see DllMain
+#else
+        ContextImpl::cleanupContext();
+#endif
+    }
 };
 static __Module __module;
 
@@ -742,6 +749,7 @@ BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved)
     {
         if (lpReserved != NULL) // called after ExitProcess() call
             cv::ocl::__termination = true;
+        cv::ocl::ContextImpl::cleanupContext();
     }
     return TRUE;
 }
