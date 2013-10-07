@@ -398,6 +398,7 @@ private:
     Stream(const Ptr<Impl>& impl);
 
     friend struct StreamAccessor;
+    friend class BufferPool;
 };
 
 class CV_EXPORTS Event

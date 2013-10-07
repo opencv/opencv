@@ -56,9 +56,9 @@ namespace
 {
     void func1(const GpuMat& src, GpuMat& dst, Stream& stream)
     {
-        BufferAllocator bufAlloc(stream);
+        BufferPool pool(stream);
 
-        GpuMat buf(&bufAlloc);
+        GpuMat buf = pool.getBuffer(src.size(), CV_32FC(src.channels()));
 
         src.convertTo(buf, CV_32F, 1.0 / 255.0, stream);
 
@@ -67,13 +67,13 @@ namespace
 
     void func2(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
     {
-        BufferAllocator bufAlloc(stream);
+        BufferPool pool(stream);
 
-        GpuMat buf1(&bufAlloc);
+        GpuMat buf1 = pool.getBuffer(src1.size(), CV_32FC(src1.channels()));
 
         func1(src1, buf1, stream);
 
-        GpuMat buf2(&bufAlloc);
+        GpuMat buf2 = pool.getBuffer(src2.size(), CV_32FC(src2.channels()));
 
         func1(src2, buf2, stream);
 

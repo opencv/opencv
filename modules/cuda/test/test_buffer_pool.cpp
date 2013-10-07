@@ -52,7 +52,7 @@ using namespace testing;
 using namespace cv;
 using namespace cv::cuda;
 
-struct BufferPool : TestWithParam<DeviceInfo>
+struct BufferPoolTest : TestWithParam<DeviceInfo>
 {
 };
 
@@ -60,9 +60,9 @@ namespace
 {
     void func1(const GpuMat& src, GpuMat& dst, Stream& stream)
     {
-        BufferAllocator bufAlloc(stream);
+        BufferPool pool(stream);
 
-        GpuMat buf(&bufAlloc);
+        GpuMat buf = pool.getBuffer(src.size(), CV_32FC(src.channels()));
 
         src.convertTo(buf, CV_32F, 1.0 / 255.0, stream);
 
@@ -71,17 +71,17 @@ namespace
 
     void func2(const GpuMat& src, GpuMat& dst, Stream& stream)
     {
-        BufferAllocator bufAlloc(stream);
+        BufferPool pool(stream);
 
-        GpuMat buf1(&bufAlloc);
+        GpuMat buf1 = pool.getBuffer(saturate_cast<int>(src.rows * 0.5), saturate_cast<int>(src.cols * 0.5), src.type());
 
         cuda::resize(src, buf1, Size(), 0.5, 0.5, cv::INTER_NEAREST, stream);
 
-        GpuMat buf2(&bufAlloc);
+        GpuMat buf2 = pool.getBuffer(buf1.size(), CV_32FC(buf1.channels()));
 
         func1(buf1, buf2, stream);
 
-        GpuMat buf3(&bufAlloc);
+        GpuMat buf3 = pool.getBuffer(src.size(), buf2.type());
 
         cuda::resize(buf2, buf3, src.size(), 0, 0, cv::INTER_NEAREST, stream);
 
@@ -89,7 +89,7 @@ namespace
     }
 }
 
-CUDA_TEST_P(BufferPool, Test)
+CUDA_TEST_P(BufferPoolTest, SimpleUsage)
 {
     DeviceInfo devInfo = GetParam();
     setDevice(devInfo.deviceID());
@@ -115,6 +115,6 @@ CUDA_TEST_P(BufferPool, Test)
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPool, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Stream, BufferPoolTest, ALL_DEVICES);
 
 #endif // HAVE_CUDA

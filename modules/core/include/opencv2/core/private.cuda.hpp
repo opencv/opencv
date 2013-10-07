@@ -92,22 +92,34 @@ namespace cv { namespace cuda
 {
     class MemoryStack;
 
-    class CV_EXPORTS BufferAllocator : public GpuMat::Allocator
+    class CV_EXPORTS StackAllocator : public GpuMat::Allocator
     {
     public:
-        explicit BufferAllocator(Stream& stream);
-        ~BufferAllocator();
+        explicit StackAllocator(cudaStream_t stream);
+        ~StackAllocator();
 
         bool allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize);
         void free(uchar* devPtr, int* refcount);
 
     private:
-        BufferAllocator(const BufferAllocator&);
-        BufferAllocator& operator =(const BufferAllocator&);
+        StackAllocator(const StackAllocator&);
+        StackAllocator& operator =(const StackAllocator&);
 
+        cudaStream_t stream_;
         MemoryStack* memStack_;
-        Stream stream_;
         size_t alignment_;
+    };
+
+    class CV_EXPORTS BufferPool
+    {
+    public:
+        explicit BufferPool(Stream& stream);
+
+        GpuMat getBuffer(int rows, int cols, int type);
+        GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+    private:
+        GpuMat::Allocator* allocator_;
     };
 
     CV_EXPORTS void setBufferAllocatorUsage(bool on);

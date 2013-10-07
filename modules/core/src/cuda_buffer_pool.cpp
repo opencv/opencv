@@ -299,14 +299,14 @@ namespace
 }
 
 /////////////////////////////////////////////////////////////
-/// BufferAllocator
+/// StackAllocator
 
 namespace
 {
     bool enableMemoryPool = true;
 }
 
-cv::cuda::BufferAllocator::BufferAllocator(Stream& stream) : memStack_(0), stream_(stream)
+cv::cuda::StackAllocator::StackAllocator(cudaStream_t stream) : stream_(stream), memStack_(0)
 {
     if (enableMemoryPool)
     {
@@ -318,19 +318,12 @@ cv::cuda::BufferAllocator::BufferAllocator(Stream& stream) : memStack_(0), strea
     }
 }
 
-namespace
+cv::cuda::StackAllocator::~StackAllocator()
 {
-    void CUDART_CB returnMemStackCallback(cudaStream_t, cudaError_t, void* userData)
-    {
-        MemoryStack* memStack = static_cast<MemoryStack*>(userData);
-        memStack->pool->returnMemStack(memStack);
-    }
-}
+    cudaStreamSynchronize(stream_);
 
-cv::cuda::BufferAllocator::~BufferAllocator()
-{
     if (memStack_ != 0)
-        CV_CUDEV_SAFE_CALL( cudaStreamAddCallback(StreamAccessor::getStream(stream_), returnMemStackCallback, memStack_, 0) );
+        memStack_->pool->returnMemStack(memStack_);
 }
 
 namespace
@@ -344,7 +337,7 @@ namespace
     }
 }
 
-bool cv::cuda::BufferAllocator::allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize)
+bool cv::cuda::StackAllocator::allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize)
 {
     if (memStack_ == 0)
         return false;
@@ -376,7 +369,7 @@ bool cv::cuda::BufferAllocator::allocate(uchar** devPtr, size_t* step, int** ref
     return true;
 }
 
-void cv::cuda::BufferAllocator::free(uchar* devPtr, int* refcount)
+void cv::cuda::StackAllocator::free(uchar* devPtr, int* refcount)
 {
     if (memStack_ == 0)
         return;
@@ -411,6 +404,16 @@ void cv::cuda::allocateMemoryPool(int deviceId, size_t stackSize, int stackCount
     }
 
     setDevice(currentDevice);
+}
+
+/////////////////////////////////////////////////////////////
+/// BufferPool
+
+GpuMat cv::cuda::BufferPool::getBuffer(int rows, int cols, int type)
+{
+    GpuMat buf(allocator_);
+    buf.create(rows, cols, type);
+    return buf;
 }
 
 #endif
