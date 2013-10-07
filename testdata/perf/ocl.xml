@@ -7946,4 +7946,186 @@
       <x>0</x>
       <y>1433</y>
       <val>1.</val></rng2></best_label></KNNFixture_KNN--KNN---4000->
+ <!-- resumed -->
+
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--1--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--1--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--1--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--1--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--2--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--2--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--2--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--2--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--4--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--4--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--4--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x720--4--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--1--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--1--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--1--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--1--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--2--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--2--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--2--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--2--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--4--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--4--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--4--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1280x1024--4--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--1--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--1--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--1--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--1--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--2--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--2--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--2--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--2--10->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--4--1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--4--1->
+<Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--4--10->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--4--10->
 </opencv_storage>
