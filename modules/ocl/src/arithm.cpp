@@ -57,10 +57,10 @@ using namespace cv;
 using namespace cv::ocl;
 
 //////////////////////////////////////////////////////////////////////////////
-/////////////////////// add subtract multiply divide /////////////////////////
+/////////////// add subtract multiply divide min max /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-enum { ADD = 0, SUB, MUL, DIV, ABS_DIFF };
+enum { ADD = 0, SUB, MUL, DIV, ABS_DIFF, MIN, MAX };
 
 static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const Scalar & scalar, const oclMat & mask,
                             oclMat &dst, int op_type, bool use_scalar = false)
@@ -75,7 +75,7 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
 
     CV_Assert(src2.empty() || (!src2.empty() && src1.type() == src2.type() && src1.size() == src2.size()));
     CV_Assert(mask.empty() || (!mask.empty() && mask.type() == CV_8UC1 && mask.size() == src1.size()));
-    CV_Assert(op_type >= ADD && op_type <= ABS_DIFF);
+    CV_Assert(op_type >= ADD && op_type <= MAX);
 
     dst.create(src1.size(), src1.type());
 
@@ -93,7 +93,7 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const WTypeMap[] = { "short", "short", "int", "int", "int", "float", "double" };
-    const char * const funcMap[] = { "FUNC_ADD", "FUNC_SUB", "FUNC_MUL", "FUNC_DIV", "FUNC_ABS_DIFF" };
+    const char * const funcMap[] = { "FUNC_ADD", "FUNC_SUB", "FUNC_MUL", "FUNC_DIV", "FUNC_ABS_DIFF", "FUNC_MIN", "FUNC_MAX" };
     const char * const channelMap[] = { "", "", "2", "4", "4" };
     bool haveScalar = use_scalar || src2.empty();
 
@@ -203,6 +203,16 @@ void cv::ocl::divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double
 void cv::ocl::divide(double scalar, const oclMat &src, oclMat &dst)
 {
     arithmetic_run_generic(src, oclMat(), Scalar::all(scalar), oclMat(), dst, DIV);
+}
+
+void cv::ocl::min(const oclMat &src1, const oclMat &src2, oclMat &dst)
+{
+    arithmetic_run_generic(src1, src2, Scalar::all(0), oclMat(), dst, MIN);
+}
+
+void cv::ocl::max(const oclMat &src1, const oclMat &src2, oclMat &dst)
+{
+    arithmetic_run_generic(src1, src2, Scalar::all(0), oclMat(), dst, MAX);
 }
 
 //////////////////////////////////////////////////////////////////////////////

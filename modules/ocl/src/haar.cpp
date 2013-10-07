@@ -926,7 +926,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             loopcount = 1;
             n_factors = 1;
             sizev.push_back(minSize);
-            scalev.push_back( min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
+            scalev.push_back( std::min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
 
         }
         detect_piramid_info *scaleinfo = (detect_piramid_info *)malloc(sizeof(detect_piramid_info) * loopcount);
@@ -1555,7 +1555,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
         {
             loopcount = 1;
             sizev.push_back(minSize);
-            scalev.push_back( min(cvRound(minSize.width / winSize0.width), cvRound(minSize.height / winSize0.height)) );
+            scalev.push_back( std::min(cvRound(minSize.width / winSize0.width), cvRound(minSize.height / winSize0.height)) );
         }
 
         ((OclBuffers *)buffers)->pbuffer = openCLCreateBuffer(cv::ocl::Context::getContext(), CL_MEM_READ_ONLY,
