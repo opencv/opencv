@@ -113,7 +113,7 @@ By initializing this structure, one can set all the parameters required for Logi
 
 LogisticRegression
 ------------------
-.. ocv:class:: LogisticRegression : public CvStatModel
+.. ocv:class:: LogisticRegression
 
 Implements Logistic Regression classifier.
 
