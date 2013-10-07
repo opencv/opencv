@@ -1301,7 +1301,7 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
+            //            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
             //            {
             //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
             //            }
