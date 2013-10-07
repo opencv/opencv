@@ -251,7 +251,6 @@ TEST_P(Sparse, Mat)
             cv::Point2i b = nextPts_gold[i];
 
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
-            //float errdiff = std::abs(err[i] - err_gold[i]);
             float errdiff = 0.0f;
 
             if (!eq || errdiff > 1e-1)
@@ -262,12 +261,10 @@ TEST_P(Sparse, Mat)
     double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
 
     ASSERT_LE(bad_ratio, 0.02f);
-
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(
-    Values(false, true),
-    Values(false, true)));
+INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(Bool(), Bool()));
+
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlow
 
