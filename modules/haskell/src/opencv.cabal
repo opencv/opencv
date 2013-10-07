@@ -1,6 +1,6 @@
 name:                opencv
-version:             0.1.0.0
-synopsis:            OpenCV Computer Vision Library (Haskell Bindings)
+version:             3.0.0
+synopsis:            Haskell Bindings for OpenCV
 homepage:            www.github.com/itseez/opencv.git
 license:             BSD3
 license-file:        LICENSE
@@ -10,24 +10,20 @@ category:            AI, Machine Vision
 build-type:          Custom
 cabal-version:       >=1.10
 
+source-repository head
+    type: git
+    location: git://github.com/itseez/opencv.git
+
 library
-    include-dirs:           cbits/
-    includes:               cbits/opencv_generated.hpp
-                          , cbits/mat.hpp
-                          , cbits/point.hpp
-    c-sources:              cbits/opencv_generated.cpp
-                          , cbits/cpptypes.cpp
-                          , cbits/mat.cpp
-                          , cbits/point.cpp
     cc-options:             -fpermissive
     ghc-options:            -pgml g++
-    exposed-modules:        OpenCV.Types
+    exposed-modules:        OpenCV
+    other-modules:          OpenCV.Types
                           , OpenCV.Consts
                           , OpenCV.Funcs
                           , OpenCV.Mat
                           , OpenCV.Point
-    pkgconfig-depends:      opencv
     build-depends:          base >=4.6 && <4.7
                           , bindings-DSL >= 1.0.17 && <= 1.1
-                          , Cabal >=1.16
+                          , Cabal >=1.10
     default-language:       Haskell2010

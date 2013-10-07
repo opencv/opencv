@@ -7,6 +7,7 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/types.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/persistence.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/utility.hpp"
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/mat.hpp"
     "${OPENCV_MODULE_opencv_flann_LOCATION}/include/opencv2/flann/miniflann.hpp"
     "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/opencv2/imgproc.hpp"
     "${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/background_segm.hpp"

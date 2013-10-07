@@ -397,6 +397,9 @@ endif()
 # --- Matlab/Octave ---
 include(cmake/OpenCVFindMatlab.cmake)
 
+# --- HASKELL ---
+include(cmake/OpenCVDetectHaskell.cmake)
+
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -840,6 +843,12 @@ status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE
 if (MATLAB_FOUND)
   status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
 endif()
+
+# ========================== Haskell ================================
+status("")
+status("    Haskell")
+status("       ghc:"        GHC_EXECUTABLE      THEN "${GHC_EXECUTABLE} (ver ${GHC_VERSION})"       ELSE NO)
+status("       cabal:"      CABAL_EXECUTABLE    THEN "${CABAL_EXECUTABLE} (ver ${CABAL_VERSION})"   ELSE NO)
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)
