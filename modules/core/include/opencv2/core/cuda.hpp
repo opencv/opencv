@@ -276,6 +276,10 @@ CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr
 
 CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
 
+//! BufferPool management (must be called before Stream creation)
+CV_EXPORTS void setBufferPoolUsage(bool on);
+CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
+
 //////////////////////////////// CudaMem ////////////////////////////////
 
 // CudaMem is limited cv::Mat with page locked memory allocation.

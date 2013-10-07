@@ -378,12 +378,12 @@ void cv::cuda::StackAllocator::free(uchar* devPtr, int* refcount)
     fastFree(refcount);
 }
 
-void cv::cuda::setBufferAllocatorUsage(bool on)
+void cv::cuda::setBufferPoolUsage(bool on)
 {
     enableMemoryPool = on;
 }
 
-void cv::cuda::allocateMemoryPool(int deviceId, size_t stackSize, int stackCount)
+void cv::cuda::setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount)
 {
     const int currentDevice = getDevice();
 

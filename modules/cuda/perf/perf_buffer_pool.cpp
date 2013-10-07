@@ -95,10 +95,10 @@ PERF_TEST_P(Sz, BufferPool, CUDA_TYPICAL_MAT_SIZES)
     GpuMat src1(host_src), src2(host_src);
     GpuMat dst;
 
-    setBufferAllocatorUsage(useBufferPool);
+    setBufferPoolUsage(useBufferPool);
     if (useBufferPool && first)
     {
-        allocateMemoryPool(-1, 25 * 1024 * 1024, 2);
+        setBufferPoolConfig(-1, 25 * 1024 * 1024, 2);
         first = false;
     }
 

@@ -122,9 +122,6 @@ namespace cv { namespace cuda
         GpuMat::Allocator* allocator_;
     };
 
-    CV_EXPORTS void setBufferAllocatorUsage(bool on);
-    CV_EXPORTS void allocateMemoryPool(int deviceId, size_t stackSize, int stackCount);
-
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
         if (code < 0)
