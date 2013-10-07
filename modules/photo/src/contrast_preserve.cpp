@@ -51,13 +51,6 @@
 using namespace std;
 using namespace cv;
 
-double norm_m(double);
-
-double norm_m(double E)
-{
-    return sqrt(pow(E,2));
-}
-
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 {
     Mat I = _src.getMat();
@@ -78,6 +71,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         return;
     }
 
+    // Parameter Setting
     int maxIter = 15;
     int iterCount = 0;
     double tol = .0001;
@@ -91,11 +85,11 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     img = Mat(I.size(),CV_32FC3);
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
+    // Initialization
     obj.init();
 
     vector <double> Cg;
     vector < vector <double> > polyGrad;
-    vector < vector <double> > bc;
     vector < vector < int > > comb;
 
     vector <double> alf;
@@ -103,6 +97,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     obj.grad_system(img,polyGrad,Cg,comb);
     obj.weak_order(img,alf);
 
+    // Solver
     Mat Mt = Mat(polyGrad.size(),polyGrad[0].size(), CV_32FC1);
     obj.wei_update_matrix(polyGrad,Cg,Mt);
 
@@ -111,7 +106,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     //////////////////////////////// main loop starting ////////////////////////////////////////
 
-    while(norm_m(E-pre_E) > tol)
+    while(sqrt(pow(E-pre_E,2)) > tol)
     {
         iterCount +=1;
         pre_E = E;
@@ -136,8 +131,8 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         double ans1 = 0.0;
         for(unsigned int i =0;i<alf.size();i++)
         {
-            ans = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(sigma,2));
-            ans1 =((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(sigma,2));
+            ans = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
+            ans1 =((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
             G_pos.push_back(ans);
             G_neg.push_back(ans1);
         }
@@ -201,36 +196,15 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 
     Mat lab = Mat(img.size(),CV_8UC3);
     Mat color = Mat(img.size(),CV_8UC3);
-    Mat l = Mat(img.size(),CV_8UC1);
-    Mat a = Mat(img.size(),CV_8UC1);
-    Mat b = Mat(img.size(),CV_8UC1);
 
     cvtColor(I,lab,COLOR_BGR2Lab);
 
-    int h1 = img.size().height;
-    int w1 = img.size().width;
+    vector <Mat> lab_channel;
+    split(lab,lab_channel);
 
-    for(int i =0;i<h1;i++)
-        for(int j=0;j<w1;j++)
-        {
-            l.at<uchar>(i,j) = lab.at<uchar>(i,j*3+0);
-            a.at<uchar>(i,j) = lab.at<uchar>(i,j*3+1);
-            b.at<uchar>(i,j) = lab.at<uchar>(i,j*3+2);
-        }
+    dst.copyTo(lab_channel[0]);
 
-    for(int i =0;i<h1;i++)
-        for(int j=0;j<w1;j++)
-        {
-            l.at<uchar>(i,j) = dst.at<uchar>(i,j);
-        }
-
-    for(int i =0;i<h1;i++)
-        for(int j=0;j<w1;j++)
-        {
-            lab.at<uchar>(i,j*3+0) = l.at<uchar>(i,j);
-            lab.at<uchar>(i,j*3+1) = a.at<uchar>(i,j);
-            lab.at<uchar>(i,j*3+2) = b.at<uchar>(i,j);
-        }
+    merge(lab_channel,lab);
 
     cvtColor(lab,color_boost,COLOR_Lab2BGR);
 }
