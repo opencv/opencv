@@ -42,22 +42,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
 
 static bool use_cpu_sorter = true;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *imgproc_gftt;
-    }
-}
 
 namespace
 {
@@ -221,7 +212,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         cornerMinEigenVal_dxdy(image, eig_, Dx_, Dy_, blockSize, 3);
 
     double maxVal = 0;
-    minMax_buf(eig_, 0, &maxVal, oclMat(), minMaxbuf_);
+    minMax(eig_, NULL, &maxVal);
 
     ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 
@@ -338,7 +329,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &poin
     CV_DbgAssert(points.type() == CV_32FC2);
     points_v.resize(points.cols);
     openCLSafeCall(clEnqueueReadBuffer(
-        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()),
+        *(cl_command_queue*)getClCommandQueuePtr(),
         reinterpret_cast<cl_mem>(points.data),
         CL_TRUE,
         0,

@@ -232,7 +232,16 @@ foreach(__opttype OPT DBG)
       endif()
     endif()
 
-    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES})
+
+    if(${CUDA_VERSION} VERSION_LESS "5.5")
+      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_npp_LIBRARY})
+    else()
+      find_cuda_helper_libs(nppc)
+      find_cuda_helper_libs(nppi)
+      find_cuda_helper_libs(npps)
+      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
+    endif()
 
     if(OpenCV_USE_CUBLAS)
       list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUBLAS_LIBRARIES})

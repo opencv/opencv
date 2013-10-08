@@ -26,9 +26,6 @@ int main( int argc, const char** argv )
         return -1;
     }
 
-    std::vector<ocl::Info> infos;
-    ocl::getDevice(infos);
-
     ocl::oclMat dsrc(src), dABFilter, dBFilter;
 
     Size ksize(ks, ks);

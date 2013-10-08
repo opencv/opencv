@@ -1,0 +1,10 @@
+@CL_FN_ENUMS@
+@CL_FN_NAMES@
+
+namespace {
+@CL_FN_SWITCH@
+}
+
+@CL_FN_DEFINITIONS@
+
+@CL_FN_PTRS@

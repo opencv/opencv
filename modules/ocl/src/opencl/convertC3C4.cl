@@ -32,22 +32,22 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
+
 #if defined (DOUBLE_SUPPORT)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+
 __kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows,
                     int dstStep_in_piexl,int pixel_end)
 {
     int id = get_global_id(0);
-    //int pixel_end = mul24(cols -1 , rows -1);
     int3 pixelid = (int3)(mul24(id,3),mad24(id,3,1),mad24(id,3,2));
     pixelid = clamp(pixelid,0,pixel_end);
     GENTYPE4 pixel0, pixel1, pixel2, outpix0,outpix1,outpix2,outpix3;
+
     pixel0 = src[pixelid.x];
     pixel1 = src[pixelid.y];
     pixel2 = src[pixelid.z];
-
 
     outpix0 = (GENTYPE4)(pixel0.x,pixel0.y,pixel0.z,0);
     outpix1 = (GENTYPE4)(pixel0.w,pixel1.x,pixel1.y,0);
@@ -56,17 +56,19 @@ __kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTY
 
     int4 outy = (id<<2)/cols;
     int4 outx = (id<<2)%cols;
-    outx.y++;
-    outx.z+=2;
-    outx.w+=3;
-    outy = select(outy,outy+1,outx>=cols);
-    outx = select(outx,outx-cols,outx>=cols);
-    //outpix3 = select(outpix3, outpix0, (uchar4)(outy.w>=rows));
-    //outpix2 = select(outpix2, outpix0, (uchar4)(outy.z>=rows));
-    //outpix1 = select(outpix1, outpix0, (uchar4)(outy.y>=rows));
-    //outx = select(outx,(int4)outx.x,outy>=rows);
-    //outy = select(outy,(int4)outy.x,outy>=rows);
+
+    outx += (int4)(0, 1, 2, 3);
+    outy = select(outy, outy+1, outx>=cols);
+    outx = select(outx, outx-cols, outx>=cols);
+
+    // when cols == 1
+    outy = select(outy, outy + 1, outx >= cols);
+    outx = select(outx, outx-cols, outx >= cols);
+    outy = select(outy, outy + 1, outx >= cols);
+    outx = select(outx, outx-cols, outx >= cols);
+
     int4 addr = mad24(outy,(int4)dstStep_in_piexl,outx);
+
     if(outx.w<cols && outy.w<rows)
     {
         dst[addr.x] = outpix0;
@@ -91,20 +93,26 @@ __kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTY
     }
 }
 
-
-
-
 __kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows,
                     int srcStep_in_pixel,int pixel_end)
 {
     int id = get_global_id(0)<<2;
     int y = id / cols;
     int x = id % cols;
+
     int4 x4 = (int4)(x,x+1,x+2,x+3);
     int4 y4 = select((int4)y,(int4)(y+1),x4>=(int4)cols);
-    y4=clamp(y4,(int4)0,(int4)(rows-1));
     x4 = select(x4,x4-(int4)cols,x4>=(int4)cols);
-    int4 addr = mad24(y4,(int4)srcStep_in_pixel,x4);
+
+    // when cols == 1
+    y4 = select(y4, y4 + 1,x4>=(int4)cols);
+    x4 = select(x4, x4 - (int4)cols,x4>=(int4)cols);
+    y4 = select(y4, y4 + 1,x4>=(int4)cols);
+    x4 = select(x4, x4-(int4)cols,x4>=(int4)cols);
+
+    y4=clamp(y4,(int4)0,(int4)(rows-1));
+    int4 addr = mad24(y4, (int4)srcStep_in_pixel, x4);
+
     GENTYPE4 pixel0,pixel1,pixel2,pixel3, outpixel1, outpixel2;
     pixel0 = src[addr.x];
     pixel1 = src[addr.y];
@@ -120,9 +128,11 @@ __kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTY
     outpixel2.y = pixel3.x;
     outpixel2.z = pixel3.y;
     outpixel2.w = pixel3.z;
+
     int4 outaddr = mul24(id>>2 , 3);
     outaddr.y++;
     outaddr.z+=2;
+
     if(outaddr.z <= pixel_end)
     {
         dst[outaddr.x] = pixel0;

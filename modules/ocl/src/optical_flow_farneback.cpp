@@ -45,22 +45,13 @@
 
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include "opencv2/video/tracking.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
 #define MIN_SIZE 32
-
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *optical_flow_farneback;
-}
-}
 
 namespace cv {
 namespace ocl {
