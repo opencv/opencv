@@ -472,7 +472,7 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -517,7 +517,7 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
     args.push_back(make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f, degree = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -559,7 +559,7 @@ static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -708,7 +708,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
 
 #else
 
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sv_total, CV_32FC1);
     }
@@ -845,7 +845,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sample_count, CV_32FC1);
     }
@@ -1093,7 +1093,7 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
         results[i] = (Qfloat) * src.ptr<float>(row_idx, i);
     }
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         for(int i = 0; i < vcount; i++)
         {
