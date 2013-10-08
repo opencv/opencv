@@ -50,10 +50,9 @@ using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
 ///////K-NEAREST NEIGHBOR//////////////////////////
-static void genTrainData(Mat& trainData, int trainDataRow, int trainDataCol,
+static void genTrainData(cv::RNG& rng, Mat& trainData, int trainDataRow, int trainDataCol,
                          Mat& trainLabel = Mat().setTo(Scalar::all(0)), int nClasses = 0)
 {
-    cv::RNG &rng = TS::ptr()->get_rng();
     cv::Size size(trainDataCol, trainDataRow);
     trainData = randomMat(rng, size, CV_32FC1, 1.0, 1000.0, false);
     if(nClasses != 0)
@@ -85,10 +84,10 @@ TEST_P(KNN, Accuracy)
 {
     Mat trainData, trainLabels;
     const int trainDataRow = 500;
-    genTrainData(trainData, trainDataRow, trainDataCol, trainLabels, nClass);
+    genTrainData(rng, trainData, trainDataRow, trainDataCol, trainLabels, nClass);
 
     Mat testData, testLabels;
-    genTrainData(testData, testDataRow, trainDataCol);
+    genTrainData(rng, testData, testDataRow, trainDataCol);
 
     KNearestNeighbour knn_ocl;
     CvKNearest knn_cpu;
@@ -130,7 +129,6 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
     int svm_type;
     Mat src, labels, samples, labels_predict;
     int K;
-    cv::RNG rng ;
 
     virtual void SetUp()
     {
@@ -138,7 +136,6 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
         kernel_type = GET_PARAM(0);
         svm_type = GET_PARAM(1);
         K = GET_PARAM(2);
-        rng = TS::ptr()->get_rng();
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
         src.create(size, CV_32FC1);
         labels.create(1, size.height, CV_32SC1);
@@ -160,7 +157,7 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
             {
                 Mat cur_row_header = src.row(row_idx + 1 + j);
                 center_row_header.copyTo(cur_row_header);
-                Mat tmpmat = randomMat(rng, cur_row_header.size(), cur_row_header.type(), 1, 100, false);
+                Mat tmpmat = randomMat(cur_row_header.size(), cur_row_header.type(), 1, 100, false);
                 cur_row_header += tmpmat;
                 labels.at<int>(0, row_idx + 1 + j) = i;
             }
@@ -187,7 +184,7 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
             {
                 Mat cur_row_header = samples.row(row_idx + 1 + j);
                 center_row_header.copyTo(cur_row_header);
-                Mat tmpmat = randomMat(rng, cur_row_header.size(), cur_row_header.type(), 1, 100, false);
+                Mat tmpmat = randomMat(cur_row_header.size(), cur_row_header.type(), 1, 100, false);
                 cur_row_header += tmpmat;
                 labels_predict.at<int>(0, row_idx + 1 + j) = i;
             }

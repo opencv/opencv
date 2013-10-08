@@ -51,8 +51,6 @@ using namespace cv;
 using namespace testing;
 #ifdef HAVE_OPENCL
 
-extern string workdir;
-
 ///////////////////// HOG /////////////////////////////
 PARAM_TEST_CASE(HOG, Size, int)
 {

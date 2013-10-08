@@ -54,9 +54,6 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-extern string workdir;
-
-
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
 namespace
@@ -153,9 +150,8 @@ TEST_P(TVL1, Accuracy)
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
-    cv::RNG &rng = TS::ptr()->get_rng();
-    cv::Mat flowx = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
-    cv::Mat flowy = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowx = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowy = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
     cv::ocl::oclMat d_flowx(flowx), d_flowy(flowy);
     d_alg(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
 

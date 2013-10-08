@@ -90,12 +90,11 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int, bool)
         channels = GET_PARAM(1);
         use_roi = GET_PARAM(2);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
 
         for (int i = 0; i < channels; ++i)
-            mat[i] = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        dst = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
+            mat[i] = randomMat(size, CV_MAKETYPE(type, 1), 5, 16, false);
+        dst = randomMat(size, CV_MAKETYPE(type, channels), 5, 16, false);
     }
 
     void random_roi()
@@ -103,7 +102,6 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int, bool)
         if (use_roi)
         {
             //randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, mat[0].cols);
             roirows = rng.uniform(1, mat[0].rows);
 
@@ -191,19 +189,17 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int, bool)
         channels = GET_PARAM(1);
         use_roi = GET_PARAM(2);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
 
-        mat  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
+        mat  = randomMat(size, CV_MAKETYPE(type, channels), 5, 16, false);
         for (int i = 0; i < channels; ++i)
-            dst[i] = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);    }
+            dst[i] = randomMat(size, CV_MAKETYPE(type, 1), 5, 16, false);    }
 
     void random_roi()
     {
         if (use_roi)
         {
             //randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, mat.cols);
             roirows = rng.uniform(1, mat.rows);
             srcx    = rng.uniform(0, mat.cols - roicols);
