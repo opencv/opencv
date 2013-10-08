@@ -15,7 +15,7 @@
  * =====================================================================================
  */
 
-#include <opencv_generated.hpp>
+#include <opencv2/c/opencv_generated.hpp>
 
 extern "C" {
     Point* cv_create_Point(int x, int y);

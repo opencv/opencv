@@ -39,34 +39,48 @@ set(opencv_hdr_dirs
     "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/"
     "${OPENCV_MODULE_opencv_bioinspired_LOCATION}/include/"
     "${OPENCV_MODULE_opencv_stitching_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_superres_LOCATION}/include/"
     "${OPENCV_MODULE_opencv_ts_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/"
     )
     
 
 if(HAVE_opencv_nonfree)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
+                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp"
+  )
 endif()
 
 set(c_generated_sources
-    "${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.hpp"
-    "${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.cpp")
+    "${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/opencv_generated.hpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/opencv_generated.cpp"
+)
 
-set(c_wrapper_headers
-    "${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/mat.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/point.hpp"
-    )
+set(c_wrapper_header
+    "${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/opencv_generated.hpp"
+)
 
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/opencv2/c/ )
 add_custom_command(
     OUTPUT ${c_generated_sources}
     COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/src/genc.py" ${CMAKE_CURRENT_BINARY_DIR} ${opencv_hdrs}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.hpp ${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.cpp ${CMAKE_CURRENT_BINARY_DIR}/src
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/ ${CMAKE_BINARY_DIR}/include/
+    COMMAND ${CMAKE_COMMAND} -E copy ${c_wrapper_header} ${CMAKE_BINARY_DIR}/include/opencv2/c/
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.hpp ${CMAKE_CURRENT_BINARY_DIR}/opencv_generated.cpp
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/genc.py
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/hdr_parser.py
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/opencv.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.hpp
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.hpp
     DEPENDS ${opencv_hdrs}
 )
 
-include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR} 
+include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR}/include 
                         "${CMAKE_SOURCE_DIR}/include"
                         ${opencv_hdr_dirs})
 set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/mat.cpp" APPEND PROPERTY OBJECT_DEPENDS ${c_generated_sources})
@@ -78,5 +92,4 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
-install(FILES ${c_wrapper_headers} DESTINATION include/opencv2/c/)
-install(FILES "src/opencv.h" DESTINATION include/opencv2)
+install(FILES ${c_wrapper_header} DESTINATION include/opencv2/c/)

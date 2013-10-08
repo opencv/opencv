@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <bindings.dsl.h>
-#include <point.hpp>
+#include <opencv2/opencv.h>
 
 module OpenCV.Point where
 #strict_import

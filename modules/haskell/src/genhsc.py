@@ -149,6 +149,7 @@ class HSCWrapperGen(object):
         self.types = {}
         self.funcs = {}
         self.consts = {}
+        self.gentypes = {}
         self.hsc_types = StringIO()
         self.hsc_funcs = StringIO()
         self.hsc_consts = StringIO()
@@ -172,9 +173,9 @@ class HSCWrapperGen(object):
         if name in exceptions:
             name = exceptions[name]
 
-        if not (name in self.types or name in simple_types):
+        if not (name in self.gentypes or name in simple_types):
             self.hsc_types.write("#opaque_t %s\n" % name)
-            self.types[name] = typeinfo
+            self.gentypes[name] = typeinfo
 
     def gen_func(self, func):
         code = "#ccall %s , " % (func.get_wrapper_name(),)
@@ -193,7 +194,7 @@ class HSCWrapperGen(object):
         for hsc in [self.hsc_types, self.hsc_consts, self.hsc_funcs]:
             hsc.write("{-# LANGUAGE ForeignFunctionInterface #-}\n")
             hsc.write("#include <bindings.dsl.h>\n")
-            hsc.write("#include <opencv_generated.hpp>\n")
+            hsc.write("#include <opencv2/opencv.h>\n")
 
         self.hsc_types.write("module OpenCV.Types where\n")
         self.hsc_consts.write("module OpenCV.Consts where\n")

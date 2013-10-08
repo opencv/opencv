@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <bindings.dsl.h>
-#include <mat.hpp>
+#include <opencv2/opencv.h>
 module OpenCV.Mat where
 #strict_import
 

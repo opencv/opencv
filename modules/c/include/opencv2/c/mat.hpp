@@ -15,7 +15,7 @@
  * =====================================================================================
  */
 
-#include <opencv_generated.hpp>
+#include <opencv2/c/opencv_generated.hpp>
 
 extern "C" {
 Mat* cv_create_Mat();

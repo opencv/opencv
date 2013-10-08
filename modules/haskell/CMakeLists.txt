@@ -22,14 +22,30 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/opencv2/objdetect.hpp"
     "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/opencv2/contrib.hpp"
     "${OPENCV_MODULE_opencv_bioinspired_LOCATION}/include/opencv2/bioinspired.hpp"
-    "${OPENCV_MODULE_opencv_stitching_LOCATION}/include/opencv2/stitching.hpp"
     "${OPENCV_MODULE_opencv_superres_LOCATION}/include/opencv2/superres.hpp"
-    "${OPENCV_MODULE_opencv_ts_LOCATION}/include/opencv2/ts.hpp"
 )
 
+set(opencv_hdr_dirs
+    "${OPENCV_MODULE_opencv_core_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_flann_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_imgproc_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_video_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_photo_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_highgui_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_ml_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_features2d_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_calib3d_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_objdetect_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_contrib_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_bioinspired_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_stitching_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_superres_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_ts_LOCATION}/include/"
+    "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/"
+    )
 if(HAVE_opencv_nonfree)
-  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
+    list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
+                                "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp")
 endif()
 
 set(haskell_generated_sources
@@ -44,8 +60,10 @@ set(haskell_sources
 )
 
 set(haskell_build_files
+    "${CMAKE_CURRENT_BINARY_DIR}/OpenCV.hs"
     "${CMAKE_CURRENT_BINARY_DIR}/Setup.hs"
     "${CMAKE_CURRENT_BINARY_DIR}/opencv.cabal"
+    "${CMAKE_CURRENT_BINARY_DIR}/LICENSE"
 )    
 
 # Copy necessary files over to the build directory.
@@ -73,15 +91,18 @@ add_custom_command(
 )
 
 add_custom_target(haskell ALL
-    COMMAND ${CMAKE_COMMAND} -E echo "Generating Haskell bindings."
+    COMMAND ${CMAKE_COMMAND} -E echo Generating Haskell bindings if necessary.
     DEPENDS ${haskell_generated_sources}
     DEPENDS ${haskell_sources}
     DEPENDS ${haskell_build_files}
+    DEPENDS opencv_c
 )
 
+set(includes)
+foreach(hdr ${opencv_hdr_dirs})
+    list(APPEND includes "--extra-include-dirs=${hdr} ")
+endforeach()
 
-install(CODE "message(\"Installing dependencies for Haskell bindings.\")")
 install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR} ${CABAL_EXECUTABLE} install \"--global\" \"--only-dependencies\")")
-install(CODE "message(\"Installing Haskell bindings.\")")
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR} ${CABAL_EXECUTABLE} install \"--global\" \"--with-gcc=${CMAKE_CXX_COMPILER}\" \"--extra-include-dirs=${OPENCV_INCLUDE_INSTALL_PATH}\" \"--extra-lib-dirs=${OPENCV_LIB_INSTALL_PATH}\")")
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR} ${CABAL_EXECUTABLE} install \"--global\" \"--with-gcc=${CMAKE_CXX_COMPILER}\" \"--extra-include-dirs=${CMAKE_BINARY_DIR}/include\" ${includes} \"--extra-lib-dirs=${CMAKE_BINARY_DIR}/lib\" \"--gcc-options=${CMAKE_C_FLAGS}${CMAKE_CXX_FLAGS}\")")
 endif()

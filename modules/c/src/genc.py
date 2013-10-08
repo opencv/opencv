@@ -316,6 +316,7 @@ class CWrapperGenerator(object):
                              typeinfo.name.replace("*", "")))
 
     def prep_src(self):
+        self.source.write("#include <opencv2/c/opencv_generated.hpp>\n")
         self.source.write("using namespace cv;\n")
         self.source.write("using namespace std;\n")
         self.source.write("using namespace flann;\n")

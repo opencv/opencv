@@ -846,9 +846,9 @@ endif()
 
 # ========================== Haskell ================================
 status("")
-status("    Haskell")
-status("       ghc:"        GHC_EXECUTABLE      THEN "${GHC_EXECUTABLE} (ver ${GHC_VERSION})"       ELSE NO)
-status("       cabal:"      CABAL_EXECUTABLE    THEN "${CABAL_EXECUTABLE} (ver ${CABAL_VERSION})"   ELSE NO)
+status("  Haskell")
+status("    ghc:"        GHC_EXECUTABLE      THEN "${GHC_EXECUTABLE} (ver ${GHC_VERSION})"       ELSE NO)
+status("    cabal:"      CABAL_EXECUTABLE    THEN "${CABAL_EXECUTABLE} (ver ${CABAL_VERSION})"   ELSE NO)
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)
