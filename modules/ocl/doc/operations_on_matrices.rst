@@ -7,7 +7,7 @@ ocl::abs
 ------------------
 Returns void
 
-.. ocv:function:: void ocl::absdiff(const oclMat& src, oclMat& dst)
+.. ocv:function:: void ocl::abs(const oclMat& src, oclMat& dst)
 
     :param src: input array.
 

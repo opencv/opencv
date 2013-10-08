@@ -219,10 +219,10 @@ void cv::ocl::max(const oclMat &src1, const oclMat &src2, oclMat &dst)
 /////////////////////////////Abs, Absdiff ////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-void cv::ocl::abs(const oclMat &src1, oclMat &dst)
+void cv::ocl::abs(const oclMat &src, oclMat &dst)
 {
     // explicitly uses use_scalar (even if zero) so that the correct kernel is used
-    arithmetic_run_generic(src1, oclMat(), Scalar(), oclMat(), dst, ABS, true);
+    arithmetic_run_generic(src, oclMat(), Scalar(), oclMat(), dst, ABS, true);
 }
 
 void cv::ocl::absdiff(const oclMat &src1, const oclMat &src2, oclMat &dst)
