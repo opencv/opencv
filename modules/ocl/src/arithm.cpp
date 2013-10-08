@@ -60,7 +60,7 @@ using namespace cv::ocl;
 /////////////// add subtract multiply divide min max /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-enum { ADD = 0, SUB, MUL, DIV, ABS_DIFF, MIN, MAX };
+enum { ADD = 0, SUB, MUL, DIV, ABS, ABS_DIFF, MIN, MAX };
 
 static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const Scalar & scalar, const oclMat & mask,
                             oclMat &dst, int op_type, bool use_scalar = false)
@@ -93,7 +93,7 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const WTypeMap[] = { "short", "short", "int", "int", "int", "float", "double" };
-    const char * const funcMap[] = { "FUNC_ADD", "FUNC_SUB", "FUNC_MUL", "FUNC_DIV", "FUNC_ABS_DIFF", "FUNC_MIN", "FUNC_MAX" };
+    const char * const funcMap[] = { "FUNC_ADD", "FUNC_SUB", "FUNC_MUL", "FUNC_DIV", "FUNC_ABS", "FUNC_ABS_DIFF", "FUNC_MIN", "FUNC_MAX" };
     const char * const channelMap[] = { "", "", "2", "4", "4" };
     bool haveScalar = use_scalar || src2.empty();
 
@@ -216,8 +216,14 @@ void cv::ocl::max(const oclMat &src1, const oclMat &src2, oclMat &dst)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-///////////////////////////////// Absdiff ////////////////////////////////////
+/////////////////////////////Abs, Absdiff ////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+void cv::ocl::abs(const oclMat &src1, oclMat &dst)
+{
+    // explicitly uses use_scalar (even if zero) so that the correct kernel is used
+    arithmetic_run_generic(src1, oclMat(), Scalar(), oclMat(), dst, ABS, true);
+}
 
 void cv::ocl::absdiff(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {

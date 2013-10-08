@@ -68,6 +68,12 @@
     dst[dst_index] = src1[src1_index] == zero ? zero : convertToT(scalar[0] / convertToWT(src1[src1_index]));
 #endif
 
+#if defined (FUNC_ABS)
+#define EXPRESSION \
+    T value = (src1[src1_index] > 0) ? src1[src1_index] : -src1[src1_index]; \
+    dst[dst_index] = value;
+#endif
+
 #if defined (FUNC_ABS_DIFF)
 #define EXPRESSION WT value = convertToWT(src1[src1_index]) - scalar[0]; \
     value = value > (WT)(0) ? value : -value; \
@@ -92,5 +98,6 @@ __kernel void arithm_binary_op_scalar (__global T *src1, int src1_step, int src1
         int dst_index = mad24(y, dst_step, x + dst_offset);
 
         EXPRESSION
+
     }
 }

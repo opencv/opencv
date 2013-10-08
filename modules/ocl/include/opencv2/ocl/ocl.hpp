@@ -473,6 +473,10 @@ namespace cv
         // supports all data types
         CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
 
+        //! computes element-wise absolute values of an array (dst = abs(src))
+        // supports all data types
+        CV_EXPORTS void abs(const oclMat &src, oclMat &dst);
+
         //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
         // supports all data types
         CV_EXPORTS void absdiff(const oclMat &src1, const oclMat &src2, oclMat &dst);
