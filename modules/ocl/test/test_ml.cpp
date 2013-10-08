@@ -289,9 +289,11 @@ TEST_P(SVM_OCL, Accuracy)
         }
     }
 }
+// TODO FIXIT: CvSVM::EPS_SVR case is crashed inside CPU implementation
+// Anonymous enums are not supported well so cast them to 'int'
 INSTANTIATE_TEST_CASE_P(OCL_ML, SVM_OCL, testing::Combine(
-                            Values(CvSVM::LINEAR, CvSVM::POLY, CvSVM::RBF, CvSVM::SIGMOID),
-                            Values(CvSVM::C_SVC, CvSVM::NU_SVC, CvSVM::ONE_CLASS, CvSVM::EPS_SVR, CvSVM::NU_SVR),
+                            Values((int)CvSVM::LINEAR, (int)CvSVM::POLY, (int)CvSVM::RBF, (int)CvSVM::SIGMOID),
+                            Values((int)CvSVM::C_SVC, (int)CvSVM::NU_SVC, (int)CvSVM::ONE_CLASS, (int)CvSVM::NU_SVR),
                             Values(2, 3, 4)
                         ));
 #endif // HAVE_OPENCL
