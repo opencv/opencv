@@ -1,11 +1,8 @@
 set(the_description "Haskell Bindings")
 
-if(ANDROID OR IOS OR NOT GHC_EXECUTABLE OR NOT CABAL_EXECUTABLE)
-  ocv_module_disable(haskell)
-endif()
+if(NOT ANDROID AND NOT IOS AND GHC_EXECUTABLE AND CABAL_EXECUTABLE)
 
-ocv_define_module(haskell BINDINGS opencv_c)
-
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/OpenCV")
 set(opencv_hdrs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core.hpp"
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp"
@@ -44,34 +41,27 @@ set(haskell_generated_sources
 set(haskell_sources
     "${CMAKE_CURRENT_BINARY_DIR}/OpenCV/Mat.hsc"
     "${CMAKE_CURRENT_BINARY_DIR}/OpenCV/Point.hsc"
+)
+
+set(haskell_build_files
     "${CMAKE_CURRENT_BINARY_DIR}/Setup.hs"
     "${CMAKE_CURRENT_BINARY_DIR}/opencv.cabal"
-)
+)    
 
 # Copy necessary files over to the build directory.
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/OpenCV/Mat.hsc"
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/OpenCV/Mat.hsc" ${CMAKE_CURRENT_BINARY_DIR}/OpenCV/
-)
+foreach(file_i ${haskell_sources})
+    get_filename_component(name_i ${file_i} NAME)
+    if(NOT EXISTS ${file_i})
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/OpenCV/${name_i} ${CMAKE_CURRENT_BINARY_DIR}/OpenCV COPYONLY)
+    endif()
+endforeach()
 
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/OpenCV/Point.hsc"
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/OpenCV/Point.hsc" ${CMAKE_CURRENT_BINARY_DIR}/OpenCV/
-)
-
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Setup.hs"
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/Setup.hs" ${CMAKE_CURRENT_BINARY_DIR}/OpenCV/
-)
-
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencv.cabal"
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/Setup.hs" ${CMAKE_CURRENT_BINARY_DIR}/OpenCV/
-)
+foreach(file_i ${haskell_build_files})
+    get_filename_component(name_i ${file_i} NAME)
+    if(NOT EXISTS ${file_i})
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/${name_i} ${CMAKE_CURRENT_BINARY_DIR}/ COPYONLY)
+    endif()
+endforeach()
 
 # generate ffi wrappers
 add_custom_command(
@@ -82,7 +72,16 @@ add_custom_command(
     DEPENDS ${opencv_hdrs}
 )
 
-add_dependencies(${the_module} ${haskell_generated_sources} ${haskell_sources})
+add_custom_target(haskell ALL
+    COMMAND ${CMAKE_COMMAND} -E echo "Generating Haskell bindings."
+    DEPENDS ${haskell_generated_sources}
+    DEPENDS ${haskell_sources}
+    DEPENDS ${haskell_build_files}
+)
 
-install(CODE "execute_process(COMMAND \"${CABAL_EXECUTABLE} install --global --only-dependencies\")")
-install(CODE "execute_process(COMMAND \"${CABAL_EXECUTABLE} install --global --with-gcc=${CMAKE_CXX_COMPILER} --extra-include-dirs=${OPENCV_MODULE_opencv_c_LOCATION} \")")
+
+install(CODE "message(\"Installing dependencies for Haskell bindings.\")")
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR} ${CABAL_EXECUTABLE} install \"--global\" \"--only-dependencies\")")
+install(CODE "message(\"Installing Haskell bindings.\")")
+install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR} ${CABAL_EXECUTABLE} install \"--global\" \"--with-gcc=${CMAKE_CXX_COMPILER}\" \"--extra-include-dirs=${OPENCV_INCLUDE_INSTALL_PATH}\" \"--extra-lib-dirs=${OPENCV_LIB_INSTALL_PATH}\")")
+endif()

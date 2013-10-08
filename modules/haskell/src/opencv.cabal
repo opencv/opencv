@@ -15,6 +15,7 @@ source-repository head
     location: git://github.com/itseez/opencv.git
 
 library
+    extra-libraries:        opencv_c
     cc-options:             -fpermissive
     ghc-options:            -pgml g++
     exposed-modules:        OpenCV
