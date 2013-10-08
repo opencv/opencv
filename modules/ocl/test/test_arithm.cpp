@@ -481,6 +481,22 @@ TEST_P(Max, Mat)
     }
 }
 
+//////////////////////////////// Abs /////////////////////////////////////////////////////
+
+typedef ArithmTestBase Abs;
+
+TEST_P(Abs, Abs)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        dst1_roi = cv::abs(src1_roi);
+        cv::ocl::abs(gsrc1, gdst1);
+        Near(0);
+    }
+}
+
 //////////////////////////////// Absdiff /////////////////////////////////////////////////
 
 typedef ArithmTestBase Absdiff;
@@ -1483,6 +1499,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(testing::Range(CV_8U, CV_USRTYPE1),
 INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Min, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Max, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Abs, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
