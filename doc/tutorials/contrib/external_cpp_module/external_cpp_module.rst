@@ -28,8 +28,6 @@ We generate bindings for the following C++ code, containing a single function an
 
      CV_EXPORTS_W int image_height(const cv::Mat& image);
 
-     class 
+     class
 
    }
-
-
