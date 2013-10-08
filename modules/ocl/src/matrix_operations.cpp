@@ -362,8 +362,8 @@ static std::vector<uchar> cvt2(const cv::Scalar & s)
 {
     std::vector<uchar> _buf(sizeof(CLT));
     CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
-    buf->s0 = saturate_cast<PT>(s[0]);
-    buf->s1 = saturate_cast<PT>(s[1]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
     return _buf;
 }
 
@@ -372,10 +372,10 @@ static std::vector<uchar> cvt4(const cv::Scalar & s)
 {
     std::vector<uchar> _buf(sizeof(CLT));
     CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
-    buf->s0 = saturate_cast<PT>(s[0]);
-    buf->s1 = saturate_cast<PT>(s[1]);
-    buf->s2 = saturate_cast<PT>(s[2]);
-    buf->s3 = saturate_cast<PT>(s[3]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    buf->s[2] = saturate_cast<PT>(s[2]);
+    buf->s[3] = saturate_cast<PT>(s[3]);
     return _buf;
 }
 
