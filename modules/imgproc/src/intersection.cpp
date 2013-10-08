@@ -49,7 +49,7 @@ namespace cv
 
 int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
 {
-    const float samePointEps = 0.00001; // used to test if two points are the same
+    const float samePointEps = 0.00001f; // used to test if two points are the same
 
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];

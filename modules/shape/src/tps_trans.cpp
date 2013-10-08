@@ -212,9 +212,9 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     }
 
     // Organizing the correspondent points in matrix style //
-    Mat shape1(matches.size(),2,CV_32F); // transforming shape
-    Mat shape2(matches.size(),2,CV_32F); // target shape
-    for (size_t i=0; i<matches.size(); i++)
+    Mat shape1((int)matches.size(),2,CV_32F); // transforming shape
+    Mat shape2((int)matches.size(),2,CV_32F); // target shape
+    for (int i=0, end = (int)matches.size(); i<end; i++)
     {
         Point2f pt1=pts1.at<Point2f>(0,matches[i].queryIdx);
         shape1.at<float>(i,0) = pt1.x;
@@ -229,11 +229,11 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
 
     //Building K and P (Neede to buil L)
-    Mat matK(matches.size(),matches.size(),CV_32F);
-    Mat matP(matches.size(),3,CV_32F);
-    for (size_t i=0; i<matches.size(); i++)
+    Mat matK((int)matches.size(),(int)matches.size(),CV_32F);
+    Mat matP((int)matches.size(),3,CV_32F);
+    for (int i=0, end=(int)matches.size(); i<end; i++)
     {
-        for (size_t j=0; j<matches.size(); j++)
+        for (int j=0; j<end; j++)
         {
             if (i==j)
             {
@@ -251,19 +251,19 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
     }
 
     //Building L
-    Mat matL=Mat::zeros(matches.size()+3,matches.size()+3,CV_32F);
-    Mat matLroi(matL, Rect(0,0,matches.size(),matches.size())); //roi for K
+    Mat matL=Mat::zeros((int)matches.size()+3,(int)matches.size()+3,CV_32F);
+    Mat matLroi(matL, Rect(0,0,(int)matches.size(),(int)matches.size())); //roi for K
     matK.copyTo(matLroi);
-    matLroi = Mat(matL,Rect(matches.size(),0,3,matches.size())); //roi for P
+    matLroi = Mat(matL,Rect((int)matches.size(),0,3,(int)matches.size())); //roi for P
     matP.copyTo(matLroi);
     Mat matPt;
     transpose(matP,matPt);
-    matLroi = Mat(matL,Rect(0,matches.size(),matches.size(),3)); //roi for P'
+    matLroi = Mat(matL,Rect(0,(int)matches.size(),(int)matches.size(),3)); //roi for P'
     matPt.copyTo(matLroi);
 
     //Building B (v|0)
-    Mat matB = Mat::zeros(matches.size()+3,2,CV_32F);
-    for (size_t i=0; i<matches.size(); i++)
+    Mat matB = Mat::zeros((int)matches.size()+3,2,CV_32F);
+    for (int i=0, end = (int)matches.size(); i<end; i++)
     {
         matB.at<float>(i,0) = shape2.at<float>(i,0); //x's
         matB.at<float>(i,1) = shape2.at<float>(i,1); //y's

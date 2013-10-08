@@ -44,9 +44,11 @@
  * Implementation of the paper Shape Matching and Object Recognition Using Shape Contexts
  * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013.
  */
+
 #include "precomp.hpp"
 #include "opencv2/core.hpp"
 #include "scd_def.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -65,10 +67,10 @@ public:
         comparer=_comparer;
         iterations=_iterations;
         transformer=_transformer;
-        bendingEnergyWeight=0.3;
-        imageAppearanceWeight=0.0;
-        shapeContextWeight=1.0;
-        sigma=10;
+        bendingEnergyWeight=0.3f;
+        imageAppearanceWeight=0.0f;
+        shapeContextWeight=1.0f;
+        sigma=10.0f;
         name_ = "ShapeDistanceExtractor.SCD";
     }
 
@@ -503,7 +505,7 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
     std::vector<float> d(costMatrix.rows), pred(costMatrix.rows), v(costMatrix.rows);
 
-    const float LOWV=1e-10;
+    const float LOWV = 1e-10f;
     bool unassignedfound;
     int  i=0, imin=0, numfree=0, prvnumfree=0, f=0, i0=0, k=0, freerow=0;
     int  j=0, j1=0, j2=0, endofpath=0, last=0, low=0, up=0;
