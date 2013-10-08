@@ -75,13 +75,13 @@ CV_HaussTest::~CV_HaussTest()
 vector<Point2f> CV_HaussTest::normalizeContour(const vector<Point> &contour)
 {
     vector<Point2f> output(contour.size());
-    Mat disMat(contour.size(),contour.size(),CV_32F);
+    Mat disMat((int)contour.size(),(int)contour.size(),CV_32F);
     Point2f meanpt(0,0);
     float meanVal=1;
 
-    for (size_t ii=0; ii<contour.size(); ii++)
+    for (int ii=0, end1 = (int)contour.size(); ii<end1; ii++)
     {
-        for (size_t jj=0; jj<contour.size(); jj++)
+        for (int jj=0, end2 = (int)contour.size(); end2; jj++)
         {
             if (ii==jj) disMat.at<float>(ii,jj)=0;
             else
@@ -128,7 +128,7 @@ vector <Point> CV_HaussTest::convertContourType(const Mat& currentQuery, int n)
     }
 
     // In case actual number of points is less than n
-    for (int add=contoursQuery.size()-1; add<n; add++)
+    for (int add=(int)contoursQuery.size()-1; add<n; add++)
     {
         contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
     }
@@ -160,14 +160,14 @@ void CV_HaussTest::mpegTest()
     listShapeNames(namesHeaders);
 
     // distance matrix //
-    Mat distanceMat=Mat::zeros(NSN*namesHeaders.size(), NSN*namesHeaders.size(), CV_32F);
+    Mat distanceMat=Mat::zeros(NSN*(int)namesHeaders.size(), NSN*(int)namesHeaders.size(), CV_32F);
 
     // query contours (normal v flipped, h flipped) and testing contour //
     vector<Point> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
 
     // reading query and computing its properties //
     int counter=0;
-    const int loops=NSN*namesHeaders.size()*NSN*namesHeaders.size();
+    const int loops=NSN*(int)namesHeaders.size()*NSN*(int)namesHeaders.size();
     for (size_t n=0; n<namesHeaders.size(); n++)
     {
         for (int i=1; i<=NSN; i++)
@@ -195,8 +195,8 @@ void CV_HaussTest::mpegTest()
                     counter++;
                     if (nt==n && it==i)
                     {
-                        distanceMat.at<float>(NSN*n+i-1,
-                                              NSN*nt+it-1)=0;
+                        distanceMat.at<float>(NSN*(int)n+i-1,
+                                              NSN*(int)nt+it-1)=0;
                         continue;
                     }
                     // read testing image //
@@ -212,9 +212,9 @@ void CV_HaussTest::mpegTest()
                     std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
                     std::cout<<"Computing shape distance between "<<namesHeaders[n]<<i<<
                                " and "<<namesHeaders[nt]<<it<<": ";
-                    distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
+                    distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)=
                             computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting);
-                    std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
+                    std::cout<<distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)<<std::endl;
                 }
             }
         }

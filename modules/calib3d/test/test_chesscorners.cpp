@@ -208,7 +208,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     }
 
     int progress = 0;
-    int max_idx = board_list.size()/2;
+    int max_idx = (int)board_list.size()/2;
     double sum_error = 0.0;
     int count = 0;
 
