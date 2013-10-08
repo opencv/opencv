@@ -344,7 +344,7 @@ typedef struct CvGaussBGStatModel2Data
 //shadow detection performed per pixel
 // should work for rgb data, could be usefull for gray scale and depth data as well
 //  See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
-CV_INLINE int _icvRemoveShadowGMM(const float* data, const int nD,
+CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
                                   unsigned char nModes,
                                   CvPBGMMGaussian* pGMM,
                                   float m_fTb,
@@ -352,13 +352,15 @@ CV_INLINE int _icvRemoveShadowGMM(const float* data, const int nD,
                                   float m_fTau)
 {
     float tWeight = 0;
+    float numerator, denominator;
     // check all the components  marked as background:
     for (int iModes=0;iModes<nModes;iModes++)
     {
+
         CvPBGMMGaussian g=pGMM[iModes];
 
-        float numerator = 0.0f;
-        float denominator = 0.0f;
+        numerator = 0.0f;
+        denominator = 0.0f;
         for (int iD=0;iD<nD;iD++)
         {
             numerator   += data[iD]  * g.mean[iD];
@@ -413,7 +415,7 @@ CV_INLINE int _icvRemoveShadowGMM(const float* data, const int nD,
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
-CV_INLINE int _icvUpdateGMM(const float* data, const int nD,
+CV_INLINE int _icvUpdateGMM(float* data, int nD,
                             unsigned char* pModesUsed,
                             CvPBGMMGaussian* pGMM,
                             int m_nM,
@@ -536,14 +538,10 @@ CV_INLINE int _icvUpdateGMM(const float* data, const int nD,
     //go through all modes
     //////
 
-    if (nModes > 0)
+    //renormalize weights
+    for (iMode = 0; iMode < nModes; iMode++)
     {
-        const float inv = 1.0f / totalWeight;
-        //renormalize weights
-        for (iMode = 0; iMode < nModes; iMode++)
-        {
-            pGMM[iMode].weight = pGMM[iMode].weight * inv;
-        }
+        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
     }
 
     //make new mode if needed and exit
@@ -722,14 +720,10 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
     //go through all modes
     //////
 
-    if (nModes > 0)
+    //renormalize weights
+    for (iMode = 0; iMode < nModes; iMode++)
     {
-        const float inv = 1.0f / totalWeight;
-        //renormalize weights
-        for (iMode = 0; iMode < nModes; iMode++)
-        {
-            pGMM[iMode].weight = pGMM[iMode].weight * inv;
-        }
+        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
     }
 
     //make new mode if needed and exit
@@ -837,7 +831,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_8U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const uchar* sptr  = src->data.ptr + src->step*y;
+                    uchar* sptr = src->data.ptr + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -857,7 +851,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const short* sptr = src->data.s + src->step*y;
+                    short* sptr = src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -877,7 +871,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
+                    unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -897,7 +891,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const int* sptr = src->data.i + src->step*y;
+                    int* sptr = src->data.i + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -917,7 +911,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const float* sptr = src->data.fl + src->step*y;
+                    float* sptr = src->data.fl + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -935,7 +929,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_64F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const double* sptr = src->data.db + src->step*y;
+                    double* sptr = src->data.db + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -960,13 +954,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_8U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const uchar* sptr = src->data.ptr + src->step*y;
+                    uchar* sptr = src->data.ptr + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -980,13 +974,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const short* sptr = src->data.s + src->step*y;
+                    short* sptr = src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1000,13 +994,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
+                    unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1020,13 +1014,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const int* sptr = src->data.i + src->step*y;
+                    int* sptr = src->data.i + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1040,7 +1034,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const float* sptr = src->data.fl + src->step*y;
+                    float* sptr = src->data.fl + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -1058,13 +1052,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_64F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    const double* sptr = src->data.db + src->step*y;
+                    double* sptr = src->data.db + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
