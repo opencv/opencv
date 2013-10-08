@@ -160,32 +160,49 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     }
 }
 
-void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers)
+void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType, const oclMat &indices)
 {
-    //if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
-    //{
-    //    CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
-    //    return;
-    //}
+    bool is_label_row_major = false;
+    ensureSizeIsEnough(1, src.rows, CV_32FC1, dists);
+    if(labels.empty() || (!labels.empty() && labels.rows == src.rows && labels.cols == 1))
+    {
+        ensureSizeIsEnough(src.rows, 1, CV_32SC1, labels);
+        is_label_row_major = true;
+    }
+    CV_Assert(distType == NORM_L1 || distType == NORM_L2);
 
-    Context  *clCxt = src.clCxt;
-    int labels_step = (int)(labels.step/labels.elemSize());
-    string kernelname = "distanceToCenters";
-    int threadNum = src.rows > 256 ? 256 : src.rows;
-    size_t localThreads[3]  = {1, threadNum, 1};
-    size_t globalThreads[3] = {1, src.rows, 1};
+    std::stringstream build_opt_ss;
+    build_opt_ss
+        << (distType == NORM_L1 ? "-D L1_DIST" : "-D L2_DIST")
+        << (indices.empty() ? "" : " -D USE_INDEX");
+
+    String build_opt = build_opt_ss.str();
+    const int feature_step = (int)(centers.step / centers.elemSize());
+    const int label_step   = is_label_row_major ? (int)(labels.step / labels.elemSize()) : 1;
+    String kernelname = "distanceToCenters";
+
+    const int number_of_input = indices.empty() ? src.rows : indices.size().area();
+
+    size_t localThreads[3]  = {256, 1, 1};
+    size_t globalThreads[3] = {number_of_input, 1, 1};
 
     vector<pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_int), (void *)&labels_step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&centers.rows));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&labels.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&centers.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&centers.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&dists.data));
+    if(!indices.empty())
+    {
+        args.push_back(make_pair(sizeof(cl_mem), (void *)&indices.data));
+    }
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&labels.data));
+    args.push_back(make_pair(sizeof(cl_mem), (void *)&dists.data));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&centers.cols));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&feature_step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&label_step));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&number_of_input));
+    args.push_back(make_pair(sizeof(cl_int), (void *)&centers.rows));
 
-    openCLExecuteKernel(clCxt, &kmeans_kernel, kernelname, globalThreads, localThreads, args, -1, -1, NULL);
+    openCLExecuteKernel(Context::getContext(), &kmeans_kernel,
+                        kernelname, globalThreads, localThreads, args, -1, -1, build_opt.c_str());
 }
 ///////////////////////////////////k - means /////////////////////////////////////////////////////////
 double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
