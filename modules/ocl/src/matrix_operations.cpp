@@ -362,8 +362,8 @@ static std::vector<uchar> cvt2(const cv::Scalar & s)
 {
     std::vector<uchar> _buf(sizeof(CLT));
     CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
-    buf->s0 = saturate_cast<PT>(s[0]);
-    buf->s1 = saturate_cast<PT>(s[1]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
     return _buf;
 }
 
@@ -372,10 +372,10 @@ static std::vector<uchar> cvt4(const cv::Scalar & s)
 {
     std::vector<uchar> _buf(sizeof(CLT));
     CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
-    buf->s0 = saturate_cast<PT>(s[0]);
-    buf->s1 = saturate_cast<PT>(s[1]);
-    buf->s2 = saturate_cast<PT>(s[2]);
-    buf->s3 = saturate_cast<PT>(s[3]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    buf->s[2] = saturate_cast<PT>(s[2]);
+    buf->s[3] = saturate_cast<PT>(s[3]);
     return _buf;
 }
 
@@ -426,14 +426,14 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) && dst.isContinuous())
-    {
-        std::vector<uchar> p = ::scalarToCLVector(scalar, dst.type());
-        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
-                (cl_mem)dst.data, (void*)&p[0], p.size(),
-                0, dst.step * dst.rows, 0, NULL, NULL);
-    }
-    else
+//    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) && dst.isContinuous())
+//    {
+//        std::vector<uchar> p = ::scalarToCLVector(scalar, dst.type());
+//        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
+//                (cl_mem)dst.data, (void*)&p[0], p.size(),
+//                0, dst.step * dst.rows, 0, NULL, NULL);
+//    }
+//    else
 #endif
     {
         oclMat m(mat);
