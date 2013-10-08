@@ -337,7 +337,7 @@ namespace
     }
 }
 
-bool cv::cuda::StackAllocator::allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize)
+bool cv::cuda::StackAllocator::allocate(GpuMat* mat, int rows, int cols, size_t elemSize)
 {
     if (memStack_ == 0)
         return false;
@@ -361,21 +361,20 @@ bool cv::cuda::StackAllocator::allocate(uchar** devPtr, size_t* step, int** refc
     if (ptr == 0)
         return false;
 
-    *devPtr = ptr;
-    *step = pitch;
-
-    *refcount = static_cast<int*>(fastMalloc(sizeof(int)));
+    mat->data = ptr;
+    mat->step = pitch;
+    mat->refcount = (int*) fastMalloc(sizeof(int));
 
     return true;
 }
 
-void cv::cuda::StackAllocator::free(uchar* devPtr, int* refcount)
+void cv::cuda::StackAllocator::free(GpuMat* mat)
 {
     if (memStack_ == 0)
         return;
 
-    memStack_->returnMemory(devPtr);
-    fastFree(refcount);
+    memStack_->returnMemory(mat->datastart);
+    fastFree(mat->refcount);
 }
 
 void cv::cuda::setBufferPoolUsage(bool on)

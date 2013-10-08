@@ -66,8 +66,9 @@ public:
     public:
         virtual ~Allocator() {}
 
-        virtual bool allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize) = 0;
-        virtual void free(uchar* devPtr, int* refcount) = 0;
+        // allocator must fill data, step and refcount fields
+        virtual bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize) = 0;
+        virtual void free(GpuMat* mat) = 0;
     };
 
     //! default allocator

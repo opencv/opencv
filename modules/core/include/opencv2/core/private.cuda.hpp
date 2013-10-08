@@ -98,8 +98,8 @@ namespace cv { namespace cuda
         explicit StackAllocator(cudaStream_t stream);
         ~StackAllocator();
 
-        bool allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize);
-        void free(uchar* devPtr, int* refcount);
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
+        void free(GpuMat* mat);
 
     private:
         StackAllocator(const StackAllocator&);
