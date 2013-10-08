@@ -348,6 +348,7 @@ Scalar cv::ocl::sum(const oclMat &src)
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
+        return Scalar::all(0);
     }
     static sumFunc functab[3] =
     {
@@ -356,11 +357,7 @@ Scalar cv::ocl::sum(const oclMat &src)
         arithmetic_sum<double>
     };
 
-    bool hasDouble = src.clCxt->supportsFeature(FEATURE_CL_DOUBLE);
     int ddepth = std::max(src.depth(), CV_32S);
-    if (!hasDouble && ddepth == CV_64F)
-        ddepth = CV_32F;
-
     sumFunc func = functab[ddepth - CV_32S];
     return func(src, SUM, ddepth);
 }
@@ -370,7 +367,9 @@ Scalar cv::ocl::absSum(const oclMat &src)
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
+        return cv::Scalar::all(0);
     }
+
     static sumFunc functab[3] =
     {
         arithmetic_sum<int>,
@@ -378,11 +377,7 @@ Scalar cv::ocl::absSum(const oclMat &src)
         arithmetic_sum<double>
     };
 
-    bool hasDouble = src.clCxt->supportsFeature(FEATURE_CL_DOUBLE);
     int ddepth = std::max(src.depth(), CV_32S);
-    if (!hasDouble && ddepth == CV_64F)
-        ddepth = CV_32F;
-
     sumFunc func = functab[ddepth - CV_32S];
     return func(src, ABS_SUM, ddepth);
 }
@@ -392,17 +387,16 @@ Scalar cv::ocl::sqrSum(const oclMat &src)
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
+        return cv::Scalar::all(0);
     }
     static sumFunc functab[3] =
     {
         arithmetic_sum<int>,
-        arithmetic_sum<double>,
+        arithmetic_sum<float>,
         arithmetic_sum<double>
     };
 
-    bool hasDouble = src.clCxt->supportsFeature(FEATURE_CL_DOUBLE);
-    int ddepth = src.depth() <= CV_32S ? CV_32S : (hasDouble ? CV_64F : CV_32F);
-
+    int ddepth = src.depth() <= CV_32S ? CV_32S : CV_64F;
     sumFunc func = functab[ddepth - CV_32S];
     return func(src, SQR_SUM, ddepth);
 }
@@ -523,6 +517,7 @@ void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oc
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
+        return;
     }
 
     static minMaxFunc functab[] =
@@ -553,13 +548,17 @@ double cv::ocl::norm(const oclMat &src1, int normType)
     return norm(src1, oclMat(), normType);
 }
 
-static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & src2, oclMat & diff)
+static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & src2, oclMat & diff, int ntype)
 {
     CV_Assert(src1.step % src1.elemSize() == 0 && (src2.empty() || src2.step % src2.elemSize() == 0));
     Context *clCxt = src1.clCxt;
 
-    int ddepth = CV_64F;
+    int ddepth = std::max(src1.depth(), CV_32S);
+    if (ntype == NORM_L2)
+        ddepth = std::max<int>(CV_32F, ddepth);
+
     diff.create(src1.size(), CV_MAKE_TYPE(ddepth, src1.channels()));
+    CV_Assert(diff.step % diff.elemSize() == 0);
 
     int oclChannels = src1.oclchannels(), sdepth = src1.depth();
     int src1step1 = src1.step / src1.elemSize(), src1offset1 = src1.offset / src1.elemSize();
@@ -622,7 +621,8 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
     int cn = src1.channels();
     double r = 0;
     oclMat diff;
-    arithm_absdiff_nonsaturate_run(src1, src2, diff);
+
+    arithm_absdiff_nonsaturate_run(src1, src2, diff, normType);
 
     switch (normType)
     {
