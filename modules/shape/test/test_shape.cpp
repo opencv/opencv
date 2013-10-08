@@ -46,13 +46,13 @@ using namespace std;
 
 const int angularBins=12;
 const int radialBins=4;
-const float minRad=0.2;
+const float minRad=0.2f;
 const float maxRad=2;
 const int NSN=5;//10;//20; //number of shapes per class
 const int NP=120; //number of points sympliying the contour
-const float outlierWeight=0.1;
+const float outlierWeight=0.1f;
 const int numOutliers=20;
-const float CURRENT_MAX_ACCUR=95.0; //99% and 100% reached in several tests, 95 is fixed as minimum boundary
+const float CURRENT_MAX_ACCUR=95; //99% and 100% reached in several tests, 95 is fixed as minimum boundary
 
 class CV_ShapeTest : public cvtest::BaseTest
 {
@@ -95,7 +95,7 @@ vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n
     }
 
     // In case actual number of points is less than n
-    for (int add=contoursQuery.size()-1; add<n; add++)
+    for (int add=(int)contoursQuery.size()-1; add<n; add++)
     {
         contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
     }
@@ -126,7 +126,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     //waitKey(0);
     Ptr <ShapeContextDistanceExtractor> mysc = createShapeContextDistanceExtractor(angularBins, radialBins, minRad, maxRad);
     //Ptr <HistogramCostExtractor> cost = createNormHistogramCostExtractor(cv::DIST_L1);
-    Ptr <HistogramCostExtractor> cost = createChiHistogramCostExtractor(30,0.15);
+    Ptr <HistogramCostExtractor> cost = createChiHistogramCostExtractor(30,0.15f);
     //Ptr <HistogramCostExtractor> cost = createEMDHistogramCostExtractor();
     //Ptr <HistogramCostExtractor> cost = createEMDL1HistogramCostExtractor();
     mysc->setIterations(1);
@@ -148,14 +148,14 @@ void CV_ShapeTest::mpegTest()
     listShapeNames(namesHeaders);
 
     // distance matrix //
-    Mat distanceMat=Mat::zeros(NSN*namesHeaders.size(), NSN*namesHeaders.size(), CV_32F);
+    Mat distanceMat=Mat::zeros(NSN*(int)namesHeaders.size(), NSN*(int)namesHeaders.size(), CV_32F);
 
     // query contours (normal v flipped, h flipped) and testing contour //
     vector<Point2f> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
 
     // reading query and computing its properties //
     int counter=0;
-    const int loops=NSN*namesHeaders.size()*NSN*namesHeaders.size();
+    const int loops=NSN*(int)namesHeaders.size()*NSN*(int)namesHeaders.size();
     for (size_t n=0; n<namesHeaders.size(); n++)
     {
         for (int i=1; i<=NSN; i++)
@@ -184,8 +184,8 @@ void CV_ShapeTest::mpegTest()
                     counter++;
                     if (nt==n && it==i)
                     {
-                        distanceMat.at<float>(NSN*n+i-1,
-                                              NSN*nt+it-1)=0;
+                        distanceMat.at<float>(NSN*(int)n+i-1,
+                                              NSN*(int)nt+it-1)=0;
                         continue;
                     }
                     // read testing image //
@@ -200,9 +200,9 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
                     std::cout<<"Computing shape distance between "<<namesHeaders[n]<<i<<
                                " and "<<namesHeaders[nt]<<it<<": ";
-                    distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
+                    distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)=
                             computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting);
-                    std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
+                    std::cout<<distanceMat.at<float>(NSN*(int)n+i-1, NSN*(int)nt+it-1)<<std::endl;
                 }
             }
         }

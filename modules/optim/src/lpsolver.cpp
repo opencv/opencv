@@ -84,11 +84,12 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     //return the optimal solution
     z.create(c.cols,1,CV_64FC1);
     MatIterator_<double> it=z.begin<double>();
+    unsigned int nsize = (unsigned int)N.size();
     for(int i=1;i<=c.cols;i++,it++){
-        if(indexToRow[i]<N.size()){
+        if(indexToRow[i]<nsize){
             *it=0;
         }else{
-            *it=b.at<double>(indexToRow[i]-N.size(),b.cols-1);
+            *it=b.at<double>(indexToRow[i]-nsize,b.cols-1);
         }
     }
 
@@ -102,7 +103,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         *it=it[-1]+1;
     }
     B.resize(b.rows);
-    B[0]=N.size();
+    B[0]=(int)N.size();
     for (std::vector<int>::iterator it = B.begin()+1 ; it != B.end(); ++it){
         *it=it[-1]+1;
     }
@@ -151,8 +152,9 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     dprintf(("\tAFTER INNER_SIMPLEX\n"));
     print_simplex_state(c,b,v,N,B);
 
-    if(indexToRow[0]>=N.size()){
-        int iterator_offset=indexToRow[0]-N.size();
+    unsigned int nsize = (unsigned int)N.size();
+    if(indexToRow[0]>=nsize){
+        int iterator_offset=indexToRow[0]-nsize;
         if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
@@ -176,14 +178,14 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     c=0;
     v=0;
     for(int I=1;I<old_c.cols;I++){
-        if(indexToRow[I]<N.size()){
+        if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
             c(0,iterator_offset)+=old_c(0,I);
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
-            int iterator_offset=indexToRow[I]-N.size();
+            int iterator_offset=indexToRow[I]-nsize;
             c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
             v+=old_c(0,I)*b(iterator_offset,b.cols-1);
             print_matrix(c);

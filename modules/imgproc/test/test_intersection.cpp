@@ -376,8 +376,8 @@ void CV_RotatedRectangleIntersectionTest::test7()
 
     rect1.center.x = 0;
     rect1.center.y = 0;
-    rect1.size.width = 12.34;
-    rect1.size.height = 56.78;
+    rect1.size.width = 12.34f;
+    rect1.size.height = 56.78f;
     rect1.angle = 0;
 
     rect2.center.x = 0;
@@ -464,7 +464,7 @@ void CV_RotatedRectangleIntersectionTest::test9()
     rect2.center.x = 2;
     rect2.center.y = 0;
     rect2.size.width = 2;
-    rect2.size.height = 123.45;
+    rect2.size.height = 123.45f;
     rect2.angle = 0;
 
     vector<Point2f> vertices;
