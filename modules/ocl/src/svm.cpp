@@ -98,10 +98,10 @@ static int icvCmpSparseVecElems( const void* a, const void* b )
 {
     return ((CvSparseVecElem32f*)a)->idx - ((CvSparseVecElem32f*)b)->idx;
 }
-void cvPreparePredictData( const CvArr* sample, int dims_all, const CvMat* comp_idx,
+void cvPreparePredictData_ocl( const CvArr* sample, int dims_all, const CvMat* comp_idx,
                            int class_count, const CvMat* prob, float** row_sample,
                            int as_sparse CV_DEFAULT(0) );
-void  cvPreparePredictData( const CvArr* _sample, int dims_all,
+void  cvPreparePredictData_ocl( const CvArr* _sample, int dims_all,
                             const CvMat* comp_idx, int class_count,
                             const CvMat* prob, float** _row_sample,
                             int as_sparse )
@@ -109,7 +109,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
     float* row_sample = 0;
     int* inverse_comp_idx = 0;
 
-    CV_FUNCNAME( "cvPreparePredictData" );
+    CV_FUNCNAME( "cvPreparePredictData_ocl" );
 
     __CV_BEGIN__;
 
@@ -476,7 +476,7 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -521,7 +521,7 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f, degree = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -563,7 +563,7 @@ static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -612,7 +612,7 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
     float gamma = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         gamma = (float)gamma1;
         args.push_back(std::make_pair(sizeof(cl_float), (void* )&gamma));
@@ -650,7 +650,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
         class_count = class_labels ? class_labels->cols :
                       params.svm_type == ONE_CLASS ? 1 : 0;
 
-        CV_CALL( cvPreparePredictData(&sample, var_all, var_idx,
+        CV_CALL( cvPreparePredictData_ocl(&sample, var_all, var_idx,
                                       class_count, 0, &row_sample ));
         for(int j = 0; j < var_count; ++j)
         {
@@ -712,7 +712,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
 
 #else
 
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sv_total, CV_32FC1);
     }
@@ -748,7 +748,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     if(params.kernel_type == CvSVM::RBF)
     {
         sv_.upload(sv_temp);
-        if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
         {
             dst = oclMat(sample_count, sv_total, CV_32FC1);
         }
@@ -849,7 +849,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sample_count, CV_32FC1);
     }
@@ -886,7 +886,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     if(params->kernel_type == CvSVM::RBF)
     {
         src_e = src;
-        if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
         {
             dst = oclMat(sample_count, sample_count, CV_32FC1);
         }
@@ -1097,7 +1097,7 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
         results[i] = (Qfloat) * src.ptr<float>(row_idx, i);
     }
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         for(int i = 0; i < vcount; i++)
         {
@@ -1115,7 +1115,7 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
 }
 void CvSVMKernel_ocl::calc_rbf( int vcount, const int row_idx, Qfloat* results, Mat& src)
 {
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         for(int m = 0; m < vcount; m++)
         {
