@@ -373,9 +373,8 @@ void LDetector::getMostStable2D(const Mat& image, vector<KeyPoint>& keypoints,
                 double dx = kpt.pt.x - kpt0.pt.x, dy = kpt.pt.y - kpt0.pt.y;
                 if( dx*dx + dy*dy <= d2*(1 << kpt.octave*2) )
                 {
-                    float inv = 1.0f / (kpt.response+1);
-                    keypoints[k] = KeyPoint((kpt.pt.x*kpt.response + kpt0.pt.x)*inv,
-                                            (kpt.pt.y*kpt.response + kpt0.pt.y)*inv,
+                    keypoints[k] = KeyPoint((kpt.pt.x*kpt.response + kpt0.pt.x)/(kpt.response+1),
+                                            (kpt.pt.y*kpt.response + kpt0.pt.y)/(kpt.response+1),
                                             kpt.size, -1.f, kpt.response + 1, kpt.octave);
                     break;
                 }
@@ -980,7 +979,7 @@ void FernClassifier::trainFromSingleView(const Mat& image,
         for( j = 0; j < nsamples; j++ )
         {
             KeyPoint kpt = keypoints[j];
-            float scale = (1.f/(1<<30)) * (1<<(30-kpt.octave));/* 1.f/(1 << kpt.octave) */
+            float scale = 1.f/(1 << kpt.octave);
             Point2f pt((float)((M[0]*kpt.pt.x + M[1]*kpt.pt.y + M[2])*scale),
                        (float)((M[3]*kpt.pt.x + M[4]*kpt.pt.y + M[5])*scale));
             getRectSubPix(pyr[kpt.octave], patchSize, pt, patch, patch.type());
@@ -1517,9 +1516,8 @@ bool PlanarObjectDetector::operator()(const vector<Mat>& pyr, const vector<KeyPo
     {
         KeyPoint kpt = keypoints[i];
         CV_Assert(0 <= kpt.octave && kpt.octave < (int)pyr.size());
-        float inv = (1.0f/(1 << 30)) * (1 << (30-kpt.octave)); /* 1.0f/(1 << kpt.octave) */
-        kpt.pt.x *= inv;
-        kpt.pt.y *= inv;
+        kpt.pt.x /= (float)(1 << kpt.octave);
+        kpt.pt.y /= (float)(1 << kpt.octave);
         int k = fernClassifier(pyr[kpt.octave], kpt.pt, signature);
         if( k >= 0 && (bestMatches[k] < 0 || signature[k] > maxLogProb[k]) )
         {
