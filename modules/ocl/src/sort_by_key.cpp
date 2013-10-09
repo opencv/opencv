@@ -43,18 +43,16 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
+using namespace cv;
+using namespace cv::ocl;
 
 namespace cv
 {
 namespace ocl
 {
-
-extern const char * kernel_sort_by_key;
-extern const char * kernel_stablesort_by_key;
-extern const char * kernel_radix_sort_by_key;
-
 void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, int method, bool isGreaterThan);
 
 //TODO(pengx17): change this value depending on device other than a constant

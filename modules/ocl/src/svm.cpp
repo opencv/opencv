@@ -43,8 +43,12 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 using namespace cv;
 using namespace ocl;
+
+namespace cv { namespace ocl {
 
 #if 1
 typedef float Qfloat;
@@ -54,14 +58,6 @@ typedef double Qfloat;
 #define QFLOAT_TYPE CV_64F
 #endif
 
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *svm;
-}
-}
 class CvSVMKernel_ocl: public CvSVMKernel
 {
 public:
@@ -476,7 +472,7 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -521,7 +517,7 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f, degree = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -563,7 +559,7 @@ static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
@@ -612,7 +608,7 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
     float gamma = 0.0f;
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         gamma = (float)gamma1;
         args.push_back(std::make_pair(sizeof(cl_float), (void* )&gamma));
@@ -712,7 +708,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
 
 #else
 
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sv_total, CV_32FC1);
     }
@@ -748,7 +744,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     if(params.kernel_type == CvSVM::RBF)
     {
         sv_.upload(sv_temp);
-        if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
         {
             dst = oclMat(sample_count, sv_total, CV_32FC1);
         }
@@ -849,7 +845,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         dst = oclMat(sample_count, sample_count, CV_32FC1);
     }
@@ -886,7 +882,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     if(params->kernel_type == CvSVM::RBF)
     {
         src_e = src;
-        if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
         {
             dst = oclMat(sample_count, sample_count, CV_32FC1);
         }
@@ -1053,7 +1049,7 @@ void CvSVMKernel_ocl::calc( int vcount, const int row_idx, Qfloat* results, Mat&
     //int j;
     (this->*calc_func_ocl)( vcount, row_idx, results, src);
 
-#if defined HAVE_CLAMDBLAS
+// FIXIT #if defined HAVE_CLAMDBLAS
     const Qfloat max_val = (Qfloat)(FLT_MAX * 1e-3);
     int j;
     for( j = 0; j < vcount; j++ )
@@ -1063,7 +1059,7 @@ void CvSVMKernel_ocl::calc( int vcount, const int row_idx, Qfloat* results, Mat&
             results[j] = max_val;
         }
     }
-#endif
+// FIXIT #endif
 }
 bool CvSVMKernel_ocl::create( const CvSVMParams* _params, Calc_ocl _calc_func, Calc _calc_func1 )
 {
@@ -1097,7 +1093,7 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
         results[i] = (Qfloat) * src.ptr<float>(row_idx, i);
     }
 #else
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         for(int i = 0; i < vcount; i++)
         {
@@ -1115,7 +1111,7 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
 }
 void CvSVMKernel_ocl::calc_rbf( int vcount, const int row_idx, Qfloat* results, Mat& src)
 {
-    if(!Context::getContext()->supportsFeature(Context::CL_DOUBLE))
+    if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         for(int m = 0; m < vcount; m++)
         {
@@ -1140,14 +1136,14 @@ void CvSVMKernel_ocl::calc_poly( int vcount, const int row_idx, Qfloat* results,
 
     calc_non_rbf_base( vcount, row_idx, results, src);
 
-#if defined HAVE_CLAMDBLAS
+//FIXIT #if defined HAVE_CLAMDBLAS
 
     CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
     if( vcount > 0 )
     {
         cvPow( &R, &R, params->degree );
     }
-#endif
+//FIXIT #endif
 }
 
 
@@ -1155,11 +1151,11 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
 {
     calc_non_rbf_base( vcount, row_idx, results, src);
     // TODO: speedup this
-#if defined HAVE_CLAMDBLAS
+//FIXIT #if defined HAVE_CLAMDBLAS
     for(int j = 0; j < vcount; j++ )
     {
         Qfloat t = results[j];
-        double e = exp(-fabs(t));
+        double e = ::exp(-fabs(t));
         if( t > 0 )
         {
             results[j] = (Qfloat)((1. - e) / (1. + e));
@@ -1169,7 +1165,7 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
             results[j] = (Qfloat)((e - 1.) / (e + 1.));
         }
     }
-#endif
+//FIXIT #endif
 }
 CvSVM_OCL::CvSVM_OCL()
 {
@@ -1199,3 +1195,5 @@ void CvSVM_OCL::create_solver( )
 {
     solver = new CvSVMSolver_ocl(&params);
 }
+
+} }

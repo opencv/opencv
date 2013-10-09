@@ -220,8 +220,8 @@ PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
 
         cv::RNG &rng = TS::ptr()->get_rng();
 
-        src1 = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
-        src2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, -15440, 14450, false);
+        src1 = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 2, 11, false);
+        src2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, -1540, 1740, false);
         dst1 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
         dst2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
         mask = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), CV_8UC1, 0, 2, false);
@@ -464,7 +464,6 @@ TEST_P(Mul, Scalar)
     }
 }
 
-
 TEST_P(Mul, Mat_Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
@@ -507,7 +506,6 @@ TEST_P(Div, Scalar)
     }
 }
 
-
 TEST_P(Div, Mat_Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
@@ -537,7 +535,7 @@ TEST_P(Absdiff, Mat)
     }
 }
 
-TEST_P(Absdiff, Mat_Scalar)
+TEST_P(Absdiff, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -753,7 +751,7 @@ TEST_P(MinMax, MAT)
     }
 }
 
-TEST_P(MinMax, DISABLED_MASK)
+TEST_P(MinMax, MASK)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1022,7 +1020,7 @@ TEST_P(MinMaxLoc, MASK)
 
 typedef ArithmTestBase Sum;
 
-TEST_P(Sum, DISABLED_MAT)
+TEST_P(Sum, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1031,7 +1029,121 @@ TEST_P(Sum, DISABLED_MAT)
         Scalar cpures = cv::sum(src1_roi);
         Scalar gpures = cv::ocl::sum(gsrc1);
 
-        //check results
+        // check results
+        EXPECT_NEAR(cpures[0], gpures[0], 0.1);
+        EXPECT_NEAR(cpures[1], gpures[1], 0.1);
+        EXPECT_NEAR(cpures[2], gpures[2], 0.1);
+        EXPECT_NEAR(cpures[3], gpures[3], 0.1);
+    }
+}
+
+typedef ArithmTestBase SqrSum;
+
+template <typename T, typename WT>
+static Scalar sqrSum(const Mat & src)
+{
+    Scalar sum = Scalar::all(0);
+    int cn = src.channels();
+    WT data[4] = { 0, 0, 0, 0 };
+
+    int cols = src.cols * cn;
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const T * const sdata = src.ptr<T>(y);
+        for (int x = 0; x < cols; )
+            for (int i = 0; i < cn; ++i, ++x)
+            {
+                WT t = static_cast<WT>(sdata[x]);
+                data[i] += t * t;
+            }
+    }
+
+    for (int i = 0; i < cn; ++i)
+        sum[i] = static_cast<double>(data[i]);
+
+    return sum;
+}
+
+typedef Scalar (*sumFunc)(const Mat &);
+
+TEST_P(SqrSum, MAT)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        static sumFunc funcs[] = { sqrSum<uchar, int>,
+                                 sqrSum<char, int>,
+                                 sqrSum<ushort, int>,
+                                 sqrSum<short, int>,
+                                 sqrSum<int, int>,
+                                 sqrSum<float, double>,
+                                 sqrSum<double, double>,
+                                 0 };
+
+        sumFunc func = funcs[src1_roi.depth()];
+        CV_Assert(func != 0);
+
+        Scalar cpures = func(src1_roi);
+        Scalar gpures = cv::ocl::sqrSum(gsrc1);
+
+        // check results
+        EXPECT_NEAR(cpures[0], gpures[0], 1.0);
+        EXPECT_NEAR(cpures[1], gpures[1], 1.0);
+        EXPECT_NEAR(cpures[2], gpures[2], 1.0);
+        EXPECT_NEAR(cpures[3], gpures[3], 1.0);
+    }
+}
+
+typedef ArithmTestBase AbsSum;
+
+template <typename T, typename WT>
+static Scalar absSum(const Mat & src)
+{
+    Scalar sum = Scalar::all(0);
+    int cn = src.channels();
+    WT data[4] = { 0, 0, 0, 0 };
+
+    int cols = src.cols * cn;
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const T * const sdata = src.ptr<T>(y);
+        for (int x = 0; x < cols; )
+            for (int i = 0; i < cn; ++i, ++x)
+            {
+                WT t = static_cast<WT>(sdata[x]);
+                data[i] += t >= 0 ? t : -t;
+            }
+    }
+
+    for (int i = 0; i < cn; ++i)
+        sum[i] = static_cast<double>(data[i]);
+
+    return sum;
+}
+
+TEST_P(AbsSum, MAT)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        static sumFunc funcs[] = { absSum<uchar, int>,
+                                 absSum<char, int>,
+                                 absSum<ushort, int>,
+                                 absSum<short, int>,
+                                 absSum<int, int>,
+                                 absSum<float, double>,
+                                 absSum<double, double>,
+                                 0 };
+
+        sumFunc func = funcs[src1_roi.depth()];
+        CV_Assert(func != 0);
+
+        Scalar cpures = func(src1_roi);
+        Scalar gpures = cv::ocl::absSum(gsrc1);
+
+        // check results
         EXPECT_NEAR(cpures[0], gpures[0], 0.1);
         EXPECT_NEAR(cpures[1], gpures[1], 0.1);
         EXPECT_NEAR(cpures[2], gpures[2], 0.1);
@@ -1059,17 +1171,27 @@ TEST_P(CountNonZero, MAT)
 
 typedef ArithmTestBase Phase;
 
-TEST_P(Phase, DISABLED_Mat)
+TEST_P(Phase, angleInDegrees)
 {
-    for (int angelInDegrees = 0; angelInDegrees < 2; angelInDegrees++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
-        for (int j = 0; j < LOOP_TIMES; j++)
-        {
-            random_roi();
-            cv::phase(src1_roi, src2_roi, dst1_roi, angelInDegrees ? true : false);
-            cv::ocl::phase(gsrc1, gsrc2, gdst1, angelInDegrees ? true : false);
-            Near(1e-2);
-        }
+        random_roi();
+        cv::phase(src1_roi, src2_roi, dst1_roi, true);
+        cv::ocl::phase(gsrc1, gsrc2, gdst1, true);
+
+        Near(1e-2);
+    }
+}
+
+TEST_P(Phase, angleInRadians)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::phase(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::phase(gsrc1, gsrc2, gdst1);
+
+        Near(1e-2);
     }
 }
 
@@ -1301,32 +1423,136 @@ TEST_P(AddWeighted, Mat)
     }
 }
 
+//////////////////////////////// setIdentity /////////////////////////////////////////////////
+
+typedef ArithmTestBase SetIdentity;
+
+TEST_P(SetIdentity, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::setIdentity(dst1_roi, val);
+        cv::ocl::setIdentity(gdst1, val);
+
+        Near(0);
+    }
+}
+
+//////////////////////////////// meanStdDev /////////////////////////////////////////////////
+
+typedef ArithmTestBase MeanStdDev;
+
+TEST_P(MeanStdDev, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        Scalar cpu_mean, cpu_stddev;
+        Scalar gpu_mean, gpu_stddev;
+
+        cv::meanStdDev(src1_roi, cpu_mean, cpu_stddev);
+        cv::ocl::meanStdDev(gsrc1, gpu_mean, gpu_stddev);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 0.1);
+            EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
+        }
+    }
+}
+
+//////////////////////////////// Norm /////////////////////////////////////////////////
+
+typedef ArithmTestBase Norm;
+
+TEST_P(Norm, NORM_INF)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_INF;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
+TEST_P(Norm, NORM_L1)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_L1;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
+TEST_P(Norm, NORM_L2)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_L2;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
-INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 
 #endif // HAVE_OPENCL

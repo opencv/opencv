@@ -146,18 +146,10 @@ int main(int argc, char* argv[])
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        std::cout << "Avaible options:" << std::endl;
+        std::cout << "Available options:" << std::endl;
         cmd.printMessage();
         return 0;
     }
-
-    std::vector<cv::ocl::Info> info;
-    if(cv::ocl::getDevice(info) == 0)
-    {
-        std::cout << "Error: Did not find a valid OpenCL device!" << std::endl;
-        return -1;
-    }
-    ocl::setDevice(info[0]);
 
     Mat cpu_img1, cpu_img2, cpu_img1_grey, cpu_img2_grey;
     oclMat img1, img2;
@@ -191,7 +183,7 @@ int main(int argc, char* argv[])
     {
         std::cout
                 << "Device name:"
-                << info[0].DeviceName[0]
+                << cv::ocl::Context::getContext()->getDeviceInfo().deviceName
                 << std::endl;
     }
     double surf_time = 0.;

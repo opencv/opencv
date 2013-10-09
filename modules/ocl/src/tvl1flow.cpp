@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Jin Ma, jin@multicorewareinc.com
+//        Jin Ma, jin@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -42,20 +42,11 @@
 //
 //M*/
 
-
 #include "precomp.hpp"
-using namespace std;
+#include "opencl_kernels.hpp"
+
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char* tvl1flow;
-    }
-}
 
 cv::ocl::OpticalFlowDual_TVL1_OCL::OpticalFlowDual_TVL1_OCL()
 {
@@ -228,7 +219,7 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::procOneScale(const oclMat &I0, const ocl
     {
         warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c);
 
-        double error = numeric_limits<double>::max();
+        double error = std::numeric_limits<double>::max();
         double prev_error = 0;
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
@@ -243,7 +234,7 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::procOneScale(const oclMat &I0, const ocl
             }
             else
             {
-                error = numeric_limits<double>::max();
+                error = std::numeric_limits<double>::max();
                 prev_error -= scaledEpsilon;
             }
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);

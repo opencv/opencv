@@ -72,7 +72,7 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
     double reductionFactor;
     double samplingStrength;
 
-    std::vector<cv::ocl::Info> infos;
+    cv::ocl::DevicesInfo infos;
 
     virtual void SetUp()
     {
@@ -84,8 +84,8 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
 
         if(!oclInit)
         {
-            cv::ocl::getDevice(infos);
-            std::cout << "Device name:" << infos[0].DeviceName[0] << std::endl;
+            cv::ocl::getOpenCLDevices(infos);
+            std::cout << "Device name:" << infos[0]->deviceName << std::endl;
             oclInit = true;
         }
     }

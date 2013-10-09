@@ -43,20 +43,11 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
-using namespace ocl;
-
-namespace cv
-{
-namespace ocl
-{
-////////////////////////////////////OpenCL kernel strings//////////////////////////
-extern const char *kmeans_kernel;
-}
-}
+using namespace cv::ocl;
 
 static void generateRandomCenter(const std::vector<Vec2f>& box, float* center, RNG& rng)
 {

@@ -285,13 +285,11 @@ int main(int argc, char** argv)
     string outfile = cmd.get<string>("o");
     if(inputName.empty())
     {
-        cout << "Avaible options:" << endl;
+        cout << "Available options:" << endl;
         cmd.printMessage();
         return 0;
     }
 
-    vector<ocl::Info> info;
-    CV_Assert(ocl::getDevice(info));
     int iterations = 10;
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares_cpu, squares_ocl;

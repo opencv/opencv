@@ -15,6 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
+//    Jia Haipeng, jiahaipeng95@gmail.com
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -29,7 +31,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -42,46 +44,50 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
+#endif
 
-using namespace cv;
-using namespace cv::ocl;
-
-namespace cv
+__kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_step, int src1_offset,
+                         __global srcT *src2, int src2_step, int src2_offset,
+                         __global dstT *dst, int dst_step, int dst_offset,
+                         int cols, int rows)
 {
-    namespace ocl
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
     {
-        class ProgramCache
-        {
-        protected:
-            ProgramCache();
-            friend class std::auto_ptr<ProgramCache>;
-            static std::auto_ptr<ProgramCache> programCache;
+        int src1_index = mad24(y, src1_step, x + src1_offset);
+        int src2_index = mad24(y, src2_step, x + src2_offset);
+        int dst_index  = mad24(y, dst_step, x + dst_offset);
 
-        public:
-            ~ProgramCache();
-            static ProgramCache *getProgramCache()
-            {
-                if( NULL == programCache.get())
-                    programCache.reset(new ProgramCache());
-                return programCache.get();
-            }
+        dstT t0 = convertToDstT(src1[src1_index]);
+        dstT t1 = convertToDstT(src2[src2_index]);
+        dstT t2 = t0 - t1;
 
-            //lookup the binary given the file name
-            cl_program progLookup(String srcsign);
+        dst[dst_index] = t2 >= 0 ? t2 : -t2;
+    }
+}
 
-            //add program to the cache
-            void addProgram(String srcsign, cl_program program);
-            void releaseProgram();
+__kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int src1_offset,
+                         __global dstT *dst, int dst_step, int dst_offset,
+                         int cols, int rows)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-            std::map <String, cl_program> codeCache;
-            unsigned int cacheSize;
-            //The presumed watermark for the cache volume (256MB). Is it enough?
-            //We may need more delicate algorithms when necessary later.
-            //Right now, let's just leave it along.
-            static const unsigned MAX_PROG_CACHE_SIZE = 1024;
-        };
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, src1_step, x + src1_offset);
+        int dst_index  = mad24(y, dst_step, x + dst_offset);
 
-    }//namespace ocl
+        dstT t0 = convertToDstT(src1[src1_index]);
 
-}//namespace cv
+        dst[dst_index] = t0 >= 0 ? t0 : -t0;
+    }
+}

@@ -44,24 +44,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-////////////////////////////////////////////////////////////////////////
-///////////////// oclMat merge and split ///////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *merge_mat;
-        extern const char *split_mat;
-    }
-}
 namespace cv
 {
     namespace ocl
@@ -70,7 +56,7 @@ namespace cv
         {
             static void merge_vector_run(const oclMat *mat_src, size_t n, oclMat &mat_dst)
             {
-                if(!mat_dst.clCxt->supportsFeature(Context::CL_DOUBLE) && mat_dst.type() == CV_64F)
+                if(!mat_dst.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && mat_dst.type() == CV_64F)
                 {
                     CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
                     return;
@@ -165,7 +151,7 @@ namespace cv
             static void split_vector_run(const oclMat &mat_src, oclMat *mat_dst)
             {
 
-                if(!mat_src.clCxt->supportsFeature(Context::CL_DOUBLE) && mat_src.type() == CV_64F)
+                if(!mat_src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && mat_src.type() == CV_64F)
                 {
                     CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
                     return;
