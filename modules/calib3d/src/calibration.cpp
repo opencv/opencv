@@ -326,10 +326,9 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
 
     if( CV_MAT_TYPE(A->type) == CV_32F )
     {
+        int i1 = 0, i2 = 0;/* int i1 = i / N,  i2 = i % N; */
         for( i = 0; i < M*N; i++ )
         {
-            int i1 = i / N,  i2 = i % N;
-
             if( dABdA )
             {
                 float* dcda = (float*)(dABdA->data.ptr + dABdA->step*i);
@@ -351,14 +350,17 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                 for( j = 0; j < L; j++ )
                     dcdb[j*N + i2] = a[j];
             }
+            i2++;
+            if (i2 >= N) {
+                i1++, i2=0;
+            }
         }
     }
     else
     {
+        int i1 = 0, i2 = 0;/* int i1 = i / N,  i2 = i % N; */
         for( i = 0; i < M*N; i++ )
         {
-            int i1 = i / N,  i2 = i % N;
-
             if( dABdA )
             {
                 double* dcda = (double*)(dABdA->data.ptr + dABdA->step*i);
@@ -379,6 +381,10 @@ CV_IMPL void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, Cv
                     dcdb[j] = 0;
                 for( j = 0; j < L; j++ )
                     dcdb[j*N + i2] = a[j];
+            }
+            i2++;
+            if (i2 >= N) {
+                i1++, i2=0;
             }
         }
     }
