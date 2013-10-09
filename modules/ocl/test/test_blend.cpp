@@ -88,7 +88,7 @@ PARAM_TEST_CASE(Blend, cv::Size, MatType/*, UseRoi*/)
     }
 };
 
-TEST_P(Blend, Accuracy)
+OCL_TEST_P(Blend, Accuracy)
 {
     int depth = CV_MAT_DEPTH(type);
 

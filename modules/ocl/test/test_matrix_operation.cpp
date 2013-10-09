@@ -126,7 +126,7 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType, int, bool)
 
 typedef ConvertToTestBase ConvertTo;
 
-TEST_P(ConvertTo, Accuracy)
+OCL_TEST_P(ConvertTo, Accuracy)
 {
     if((src_depth == CV_64F || dst_depth == CV_64F) &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -219,7 +219,7 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, int, bool)
 
 typedef CopyToTestBase CopyTo;
 
-TEST_P(CopyTo, Without_mask)
+OCL_TEST_P(CopyTo, Without_mask)
 {
     if((src.depth() == CV_64F) &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -237,7 +237,7 @@ TEST_P(CopyTo, Without_mask)
     }
 }
 
-TEST_P(CopyTo, With_mask)
+OCL_TEST_P(CopyTo, With_mask)
 {
     if(src.depth() == CV_64F &&
         !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -331,7 +331,7 @@ PARAM_TEST_CASE(SetToTestBase, MatType, int, bool)
 
 typedef SetToTestBase SetTo;
 
-TEST_P(SetTo, Without_mask)
+OCL_TEST_P(SetTo, Without_mask)
 {
     if(depth == CV_64F &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -349,7 +349,7 @@ TEST_P(SetTo, Without_mask)
     }
 }
 
-TEST_P(SetTo, With_mask)
+OCL_TEST_P(SetTo, With_mask)
 {
     if(depth == CV_64F &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -417,7 +417,7 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
     }
 };
 
-TEST_P(convertC3C4, Accuracy)
+OCL_TEST_P(convertC3C4, Accuracy)
 {
     if(depth == CV_64F &&
         !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))

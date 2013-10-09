@@ -44,12 +44,16 @@
 //M*/
 
 #include "test_precomp.hpp"
+
 #ifdef HAVE_OPENCL
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
+
 ///////K-NEAREST NEIGHBOR//////////////////////////
+
 static void genTrainData(cv::RNG& rng, Mat& trainData, int trainDataRow, int trainDataCol,
                          Mat& trainLabel = Mat().setTo(Scalar::all(0)), int nClasses = 0)
 {
@@ -80,7 +84,7 @@ PARAM_TEST_CASE(KNN, int, Size, int, bool)
     }
 };
 
-TEST_P(KNN, Accuracy)
+OCL_TEST_P(KNN, Accuracy)
 {
     Mat trainData, trainLabels;
     const int trainDataRow = 500;
@@ -118,10 +122,14 @@ TEST_P(KNN, Accuracy)
         EXPECT_MAT_NEAR(Mat(best_label_ocl), best_label_cpu, 0.0);
     }
 }
+
 INSTANTIATE_TEST_CASE_P(OCL_ML, KNN, Combine(Values(6, 5), Values(Size(200, 400), Size(300, 600)),
     Values(4, 3), Values(false, true)));
 
 ////////////////////////////////SVM/////////////////////////////////////////////////
+
+#ifdef HAVE_CLAMDBLAS
+
 PARAM_TEST_CASE(SVM_OCL, int, int, int)
 {
     cv::Size size;
@@ -193,7 +201,8 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
         labels_predict.convertTo(labels_predict, CV_32FC1);
     }
 };
-TEST_P(SVM_OCL, Accuracy)
+
+OCL_TEST_P(SVM_OCL, Accuracy)
 {
     CvSVMParams params;
     params.degree = 0.4;
@@ -289,11 +298,15 @@ TEST_P(SVM_OCL, Accuracy)
         }
     }
 }
+
 // TODO FIXIT: CvSVM::EPS_SVR case is crashed inside CPU implementation
 // Anonymous enums are not supported well so cast them to 'int'
+
 INSTANTIATE_TEST_CASE_P(OCL_ML, SVM_OCL, testing::Combine(
                             Values((int)CvSVM::LINEAR, (int)CvSVM::POLY, (int)CvSVM::RBF, (int)CvSVM::SIGMOID),
                             Values((int)CvSVM::C_SVC, (int)CvSVM::NU_SVC, (int)CvSVM::ONE_CLASS, (int)CvSVM::NU_SVR),
                             Values(2, 3, 4)
                         ));
+#endif // HAVE_CLAMDBLAS
+
 #endif // HAVE_OPENCL

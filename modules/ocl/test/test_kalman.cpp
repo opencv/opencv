@@ -43,7 +43,11 @@
 //M*/
 
 #include "test_precomp.hpp"
+
 #ifdef HAVE_OPENCL
+
+#ifdef HAVE_CLAMDBLAS
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
@@ -51,6 +55,7 @@ using namespace testing;
 using namespace std;
 
 //////////////////////////////////////////////////////////////////////////
+
 PARAM_TEST_CASE(Kalman, int, int)
 {
     int size_;
@@ -62,7 +67,7 @@ PARAM_TEST_CASE(Kalman, int, int)
     }
 };
 
-TEST_P(Kalman, Accuracy)
+OCL_TEST_P(Kalman, Accuracy)
 {
     const int Dim = size_;
     const int Steps = iteration;
@@ -139,6 +144,9 @@ TEST_P(Kalman, Accuracy)
     //test end
     EXPECT_MAT_NEAR(kalman_filter_cpu.statePost, kalman_filter_ocl.statePost, 0);
 }
+
 INSTANTIATE_TEST_CASE_P(OCL_Video, Kalman, Combine(Values(3, 7), Values(30)));
+
+#endif // HAVE_CLAMDBLAS
 
 #endif // HAVE_OPENCL
