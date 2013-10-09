@@ -462,7 +462,7 @@ TEST_P(Min, Mat)
         random_roi();
 
         dst1_roi = cv::min(src1_roi, src2_roi);
-        cv::ocl::min(gsrc1, gsrc2, gdst1);
+        cv::ocl::min(gsrc1_roi, gsrc2_roi, gdst1_roi);
         Near(0);
     }
 }
@@ -476,7 +476,7 @@ TEST_P(Max, Mat)
         random_roi();
 
         dst1_roi = cv::min(src1_roi, src2_roi);
-        cv::ocl::min(gsrc1, gsrc2, gdst1);
+        cv::ocl::min(gsrc1_roi, gsrc2_roi, gdst1_roi);
         Near(0);
     }
 }
@@ -492,7 +492,7 @@ TEST_P(Abs, Abs)
         random_roi();
 
         dst1_roi = cv::abs(src1_roi);
-        cv::ocl::abs(gsrc1, gdst1);
+        cv::ocl::abs(gsrc1_roi, gdst1_roi);
         Near(0);
     }
 }
