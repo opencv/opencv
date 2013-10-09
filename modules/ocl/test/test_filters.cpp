@@ -145,7 +145,7 @@ struct Blur : FilterTestBase
     }
 };
 
-TEST_P(Blur, Mat)
+OCL_TEST_P(Blur, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -172,7 +172,7 @@ struct Laplacian : FilterTestBase
     }
 };
 
-TEST_P(Laplacian, Accuracy)
+OCL_TEST_P(Laplacian, Accuracy)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -205,7 +205,7 @@ struct ErodeDilate : FilterTestBase
 
 };
 
-TEST_P(ErodeDilate, Mat)
+OCL_TEST_P(ErodeDilate, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -244,7 +244,7 @@ struct Sobel : FilterTestBase
     }
 };
 
-TEST_P(Sobel, Mat)
+OCL_TEST_P(Sobel, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -274,7 +274,7 @@ struct Scharr : FilterTestBase
     }
 };
 
-TEST_P(Scharr, Mat)
+OCL_TEST_P(Scharr, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -307,7 +307,7 @@ struct GaussianBlur : FilterTestBase
     }
 };
 
-TEST_P(GaussianBlur, Mat)
+OCL_TEST_P(GaussianBlur, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -339,7 +339,7 @@ struct Filter2D : FilterTestBase
     }
 };
 
-TEST_P(Filter2D, Mat)
+OCL_TEST_P(Filter2D, Mat)
 {
     cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -370,7 +370,7 @@ struct Bilateral : FilterTestBase
     }
 };
 
-TEST_P(Bilateral, Mat)
+OCL_TEST_P(Bilateral, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -400,7 +400,7 @@ struct AdaptiveBilateral : FilterTestBase
     }
 };
 
-TEST_P(AdaptiveBilateral, Mat)
+OCL_TEST_P(AdaptiveBilateral, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {

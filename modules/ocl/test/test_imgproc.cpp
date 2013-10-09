@@ -453,7 +453,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
 
 struct equalizeHist : ImgprocTestBase {};
 
-TEST_P(equalizeHist, Mat)
+OCL_TEST_P(equalizeHist, Mat)
 {
     if (mat1.type() != CV_8UC1 || mat1.type() != dst.type())
     {
@@ -477,7 +477,7 @@ TEST_P(equalizeHist, Mat)
 
 struct CopyMakeBorder : ImgprocTestBase {};
 
-TEST_P(CopyMakeBorder, Mat)
+OCL_TEST_P(CopyMakeBorder, Mat)
 {
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
     int top = rng.uniform(0, 10);
@@ -532,7 +532,7 @@ TEST_P(CopyMakeBorder, Mat)
 
 struct cornerMinEigenVal : ImgprocTestBase {};
 
-TEST_P(cornerMinEigenVal, Mat)
+OCL_TEST_P(cornerMinEigenVal, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -554,7 +554,7 @@ TEST_P(cornerMinEigenVal, Mat)
 
 struct cornerHarris : ImgprocTestBase {};
 
-TEST_P(cornerHarris, Mat)
+OCL_TEST_P(cornerHarris, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -576,7 +576,7 @@ TEST_P(cornerHarris, Mat)
 
 struct integral : ImgprocTestBase {};
 
-TEST_P(integral, Mat1)
+OCL_TEST_P(integral, Mat1)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -588,7 +588,7 @@ TEST_P(integral, Mat1)
     }
 }
 
-TEST_P(integral, Mat2)
+OCL_TEST_P(integral, Mat2)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -690,7 +690,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
 
 struct WarpAffine : WarpTestBase {};
 
-TEST_P(WarpAffine, Mat)
+OCL_TEST_P(WarpAffine, Mat)
 {
     static const double coeffs[2][3] =
     {
@@ -718,7 +718,7 @@ TEST_P(WarpAffine, Mat)
 
 struct WarpPerspective : WarpTestBase {};
 
-TEST_P(WarpPerspective, Mat)
+OCL_TEST_P(WarpPerspective, Mat)
 {
     static const double coeffs[3][3] =
     {
@@ -887,7 +887,7 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     }
 };
 
-TEST_P(Remap, Mat)
+OCL_TEST_P(Remap, Mat)
 {
     if((interpolation == 1 && map1Type == CV_16SC2) || (map1Type == CV_32FC1 && map2Type == nulltype) || (map1Type == CV_16SC2 && map2Type == CV_32FC1) || (map1Type == CV_32FC2 && map2Type == CV_32FC1))
     {
@@ -1012,7 +1012,7 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
 
 };
 
-TEST_P(Resize, Mat)
+OCL_TEST_P(Resize, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1105,7 +1105,7 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
 
 };
 
-TEST_P(Threshold, Mat)
+OCL_TEST_P(Threshold, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1206,7 +1206,7 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
 /////////////////////////meanShiftFiltering/////////////////////////////
 struct meanShiftFiltering : meanShiftTestBase {};
 
-TEST_P(meanShiftFiltering, Mat)
+OCL_TEST_P(meanShiftFiltering, Mat)
 {
 
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -1227,7 +1227,7 @@ TEST_P(meanShiftFiltering, Mat)
 ///////////////////////////meanShiftProc//////////////////////////////////
 struct meanShiftProc : meanShiftTestBase {};
 
-TEST_P(meanShiftProc, Mat)
+OCL_TEST_P(meanShiftProc, Mat)
 {
 
     for(int j = 0; j < LOOP_TIMES; j++)
@@ -1315,7 +1315,7 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
 ///////////////////////////calcHist///////////////////////////////////////
 struct calcHist : histTestBase {};
 
-TEST_P(calcHist, Mat)
+OCL_TEST_P(calcHist, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1354,7 +1354,7 @@ PARAM_TEST_CASE(CLAHE, cv::Size, double)
     }
 };
 
-TEST_P(CLAHE, Accuracy)
+OCL_TEST_P(CLAHE, Accuracy)
 {
     cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit, gridSize);
     clahe->apply(g_src, g_dst);
@@ -1477,7 +1477,7 @@ void conv2( cv::Mat x, cv::Mat y, cv::Mat z)
             dstdata[i * (z.step >> 2) + j] = temp;
         }
 }
-TEST_P(Convolve, Mat)
+OCL_TEST_P(Convolve, Mat)
 {
     if(mat1.type() != CV_32FC1)
     {
@@ -1512,7 +1512,7 @@ PARAM_TEST_CASE(ColumnSum, cv::Size)
     }
 };
 
-TEST_P(ColumnSum, Accuracy)
+OCL_TEST_P(ColumnSum, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_32FC1, 0, 255);
     cv::ocl::oclMat d_dst;

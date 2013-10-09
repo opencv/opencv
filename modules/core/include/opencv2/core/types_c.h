@@ -264,7 +264,9 @@ enum {
  CV_GpuNotSupported=           -216,
  CV_GpuApiCallError=           -217,
  CV_OpenGlNotSupported=        -218,
- CV_OpenGlApiCallError=        -219
+ CV_OpenGlApiCallError=        -219,
+ CV_OpenCLDoubleNotSupported=  -220,
+ CV_OpenCLInitError=           -221
 };
 
 /****************************************************************************************\

@@ -98,7 +98,7 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
         }
     }
 };
-TEST_P(Kmeans, Mat){
+OCL_TEST_P(Kmeans, Mat){
 
     if(flags & KMEANS_USE_INITIAL_LABELS)
     {

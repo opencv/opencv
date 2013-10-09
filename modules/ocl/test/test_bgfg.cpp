@@ -90,7 +90,7 @@ PARAM_TEST_CASE(mog, UseGray, LearningRate, bool)
     }
 };
 
-TEST_P(mog, Update)
+OCL_TEST_P(mog, Update)
 {
     std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
@@ -151,7 +151,7 @@ PARAM_TEST_CASE(mog2, UseGray, DetectShadow, bool)
     }
 };
 
-TEST_P(mog2, Update)
+OCL_TEST_P(mog2, Update)
 {
     std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
@@ -192,7 +192,7 @@ TEST_P(mog2, Update)
     }
 }
 
-TEST_P(mog2, getBackgroundImage)
+OCL_TEST_P(mog2, getBackgroundImage)
 {
     if (useGray)
         return;

@@ -35,7 +35,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
 };
 
 
-TEST_P(MomentsTest, Mat)
+OCL_TEST_P(MomentsTest, Mat)
 {
     bool binaryImage = 0;
 
