@@ -94,10 +94,10 @@ static int icvCmpSparseVecElems( const void* a, const void* b )
 {
     return ((CvSparseVecElem32f*)a)->idx - ((CvSparseVecElem32f*)b)->idx;
 }
-void cvPreparePredictData( const CvArr* sample, int dims_all, const CvMat* comp_idx,
+void cvPreparePredictData_ocl( const CvArr* sample, int dims_all, const CvMat* comp_idx,
                            int class_count, const CvMat* prob, float** row_sample,
                            int as_sparse CV_DEFAULT(0) );
-void  cvPreparePredictData( const CvArr* _sample, int dims_all,
+void  cvPreparePredictData_ocl( const CvArr* _sample, int dims_all,
                             const CvMat* comp_idx, int class_count,
                             const CvMat* prob, float** _row_sample,
                             int as_sparse )
@@ -105,7 +105,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
     float* row_sample = 0;
     int* inverse_comp_idx = 0;
 
-    CV_FUNCNAME( "cvPreparePredictData" );
+    CV_FUNCNAME( "cvPreparePredictData_ocl" );
 
     __CV_BEGIN__;
 
@@ -646,7 +646,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
         class_count = class_labels ? class_labels->cols :
                       params.svm_type == ONE_CLASS ? 1 : 0;
 
-        CV_CALL( cvPreparePredictData(&sample, var_all, var_idx,
+        CV_CALL( cvPreparePredictData_ocl(&sample, var_all, var_idx,
                                       class_count, 0, &row_sample ));
         for(int j = 0; j < var_count; ++j)
         {
