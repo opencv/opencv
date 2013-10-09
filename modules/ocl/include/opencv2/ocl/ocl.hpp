@@ -457,6 +457,14 @@ namespace cv
         // supports all data types
         CV_EXPORTS void divide(double scale, const oclMat &src1, oclMat &dst);
 
+        //! computes element-wise minimum of the two arrays (dst = min(src1, src2))
+        // supports all data types
+        CV_EXPORTS void min(const oclMat &src1, const oclMat &src2, oclMat &dst);
+
+        //! computes element-wise maximum of the two arrays (dst = max(src1, src2))
+        // supports all data types
+        CV_EXPORTS void max(const oclMat &src1, const oclMat &src2, oclMat &dst);
+
         //! compares elements of two arrays (dst = src1 <cmpop> src2)
         // supports all data types
         CV_EXPORTS void compare(const oclMat &src1, const oclMat &src2, oclMat &dst, int cmpop);
@@ -464,6 +472,10 @@ namespace cv
         //! transposes the matrix
         // supports all data types
         CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
+
+        //! computes element-wise absolute values of an array (dst = abs(src))
+        // supports all data types
+        CV_EXPORTS void abs(const oclMat &src, oclMat &dst);
 
         //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
         // supports all data types
