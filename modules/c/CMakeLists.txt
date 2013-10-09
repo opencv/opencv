@@ -64,12 +64,14 @@ set(headers
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/rect.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/size.hpp"
 )
 
 set(sources
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/rect.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/size.cpp"
 )
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/)
