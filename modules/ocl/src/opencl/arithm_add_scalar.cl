@@ -70,7 +70,7 @@
 
 #if defined (FUNC_ABS)
 #define EXPRESSION \
-    T value = (src1[src1_index] > 0) ? src1[src1_index] : -src1[src1_index]; \
+    T value = src1[src1_index] > (T)(0) ? src1[src1_index] : -src1[src1_index]; \
     dst[dst_index] = value;
 #endif
 
