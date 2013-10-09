@@ -81,44 +81,55 @@ int main(int argc, char **argv)
     const char *keys =
         "{ h | false              | print help message }"
         "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
-        "{ p | 0                  | set platform id i.e. -p=0}"
+        "{ p | -1                 | set platform id i.e. -p=0}"
         "{ d | 0                  | set device id i.e. -d=0}";
 
-    CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<string>("h")=="true")
+    if (getenv("OPENCV_OPENCL_DEVICE") == NULL) // TODO Remove this after buildbot updates
     {
-        cout << "Available options besides google test options:" << endl;
-        cmd.printMessage();
-        return 0;
-    }
-    string type = cmd.get<String>("t");
-    unsigned int pid = cmd.get<unsigned int>("p");
-    int device = cmd.get<int>("d");
+        CommandLineParser cmd(argc, argv, keys);
+        if (cmd.has("help"))
+        {
+            cout << "Available options besides google test option:" << endl;
+            cmd.printMessage();
+            return 0;
+        }
+        string type = cmd.get<string>("type");
+        int pid = cmd.get<int>("platform");
+        int device = cmd.get<int>("device");
 
-    print_info();
-    int flag = CVCL_DEVICE_TYPE_GPU;
-    if(type == "cpu")
-    {
-        flag = CVCL_DEVICE_TYPE_CPU;
-    }
-    std::vector<cv::ocl::Info> oclinfo;
-    int devnums = getDevice(oclinfo, flag);
-    if(devnums <= device || device < 0)
-    {
-        std::cout << "device invalid\n";
-        return -1;
-    }
-    if(pid >= oclinfo.size())
-    {
-        std::cout << "platform invalid\n";
-        return -1;
+        print_info();
+        int flag = CVCL_DEVICE_TYPE_GPU;
+        if(type == "cpu")
+        {
+            flag = CVCL_DEVICE_TYPE_CPU;
+        }
+
+        cv::ocl::PlatformsInfo platformsInfo;
+        cv::ocl::getOpenCLPlatforms(platformsInfo);
+        if (pid >= (int)platformsInfo.size())
+        {
+            std::cout << "platform is invalid\n";
+            return 1;
+        }
+
+        cv::ocl::DevicesInfo devicesInfo;
+        int devnums = cv::ocl::getOpenCLDevices(devicesInfo, flag, (pid < 0) ? NULL : platformsInfo[pid]);
+        if (device < 0 || device >= devnums)
+        {
+            std::cout << "device/platform invalid\n";
+            return 1;
+        }
+
+        cv::ocl::setDevice(devicesInfo[device]);
     }
 
-    setDevice(oclinfo[pid], device);
-    setBinaryDiskCache(CACHE_UPDATE);
+    const DeviceInfo& deviceInfo = cv::ocl::Context::getContext()->getDeviceInfo();
 
-    cout << "Platform name:" << oclinfo[pid].PlatformName << endl;
-    cout << "Device type:" << type << endl << "Device name:" << oclinfo[pid].DeviceName[device] << endl;
+    cout << "Device type: " << (deviceInfo.deviceType == CVCL_DEVICE_TYPE_CPU ?
+                "CPU" :
+                (deviceInfo.deviceType == CVCL_DEVICE_TYPE_GPU ? "GPU" : "unknown")) << endl
+         << "Platform name: " << deviceInfo.platform->platformName << endl
+         << "Device name: " << deviceInfo.deviceName << endl;
     return RUN_ALL_TESTS();
 }
 

@@ -6,7 +6,7 @@ if(APPLE)
 else(APPLE)
   #find_package(OpenCL QUIET)
 
-  if (NOT OPENCL_FOUND)
+  if(NOT OPENCL_FOUND)
     find_path(OPENCL_ROOT_DIR
               NAMES OpenCL/cl.h CL/cl.h include/CL/cl.h include/nvidia-current/CL/cl.h
               PATHS ENV OCLROOT ENV AMDAPPSDKROOT ENV CUDA_PATH ENV INTELOCLSDKROOT
@@ -20,32 +20,7 @@ else(APPLE)
               DOC "OpenCL include directory"
               NO_DEFAULT_PATH)
 
-    if(WIN32)
-      if(X86_64)
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win64 lib/x86_64 lib/x64)
-      elseif(X86)
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win32 lib/x86)
-      else()
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib)
-      endif()
-    elseif(UNIX)
-      if(X86_64)
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib64 lib)
-      elseif(X86)
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib32 lib)
-      else()
-        set(OPENCL_POSSIBLE_LIB_SUFFIXES lib)
-      endif()
-    else()
-      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib)
-    endif()
-
-    find_library(OPENCL_LIBRARY
-              NAMES OpenCL
-              HINTS ${OPENCL_ROOT_DIR}
-              PATH_SUFFIXES ${OPENCL_POSSIBLE_LIB_SUFFIXES}
-              DOC "OpenCL library"
-              NO_DEFAULT_PATH)
+    set(OPENCL_LIBRARY "OPENCL_DYNAMIC_LOAD")
 
     mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
     include(FindPackageHandleStandardArgs)
@@ -54,20 +29,30 @@ else(APPLE)
 endif(APPLE)
 
 if(OPENCL_FOUND)
-  set(HAVE_OPENCL 1)
-  set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
-  set(OPENCL_LIBRARIES    ${OPENCL_LIBRARY})
-
-  if(WIN32 AND X86_64)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64/import)
-  elseif(WIN32)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
+  try_compile(HAVE_OPENCL11
+    "${OpenCV_BINARY_DIR}"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/opencl11.cpp"
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}"
+    )
+  if(NOT HAVE_OPENCL11)
+    message(STATUS "OpenCL 1.1 not found, ignore OpenCL SDK")
+    return()
+  endif()
+  try_compile(HAVE_OPENCL12
+    "${OpenCV_BINARY_DIR}"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/opencl12.cpp"
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}"
+    )
+  if(NOT HAVE_OPENCL12)
+    message(STATUS "OpenCL 1.2 not found, will use OpenCL 1.1")
   endif()
 
-  if(X86_64 AND UNIX)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64)
-  elseif(X86 AND UNIX)
-    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32)
+  set(HAVE_OPENCL 1)
+  set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
+  if(OPENCL_LIBRARY MATCHES "OPENCL_DYNAMIC_LOAD")
+    unset(OPENCL_LIBRARIES)
+  else()
+    set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
   endif()
 
   if(WITH_OPENCLAMDFFT)
@@ -84,16 +69,9 @@ if(OPENCL_FOUND)
               PATH_SUFFIXES include
               DOC "clAmdFft include directory")
 
-    find_library(CLAMDFFT_LIBRARY
-              NAMES clAmdFft.Runtime
-              HINTS ${CLAMDFFT_ROOT_DIR}
-              PATH_SUFFIXES ${CLAMD_POSSIBLE_LIB_SUFFIXES}
-              DOC "clAmdFft library")
-
-    if(CLAMDFFT_LIBRARY AND CLAMDFFT_INCLUDE_DIR)
+    if(CLAMDFFT_INCLUDE_DIR)
       set(HAVE_CLAMDFFT 1)
       list(APPEND OPENCL_INCLUDE_DIRS "${CLAMDFFT_INCLUDE_DIR}")
-      list(APPEND OPENCL_LIBRARIES    "${CLAMDFFT_LIBRARY}")
     endif()
   endif()
 
@@ -111,16 +89,9 @@ if(OPENCL_FOUND)
               PATH_SUFFIXES include
               DOC "clAmdFft include directory")
 
-    find_library(CLAMDBLAS_LIBRARY
-              NAMES clAmdBlas
-              HINTS ${CLAMDBLAS_ROOT_DIR}
-              PATH_SUFFIXES ${CLAMD_POSSIBLE_LIB_SUFFIXES}
-              DOC "clAmdBlas library")
-
-    if(CLAMDBLAS_LIBRARY AND CLAMDBLAS_INCLUDE_DIR)
+    if(CLAMDBLAS_INCLUDE_DIR)
       set(HAVE_CLAMDBLAS 1)
       list(APPEND OPENCL_INCLUDE_DIRS "${CLAMDBLAS_INCLUDE_DIR}")
-      list(APPEND OPENCL_LIBRARIES    "${CLAMDBLAS_LIBRARY}")
     endif()
   endif()
 endif()

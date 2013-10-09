@@ -51,6 +51,29 @@
 #endif
 #endif
 
+#if defined (FUNC_ADD)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) + scalar[0]);
+#endif
+
+#if defined (FUNC_SUB)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) - scalar[0]);
+#endif
+
+#if defined (FUNC_MUL)
+#define EXPRESSION dst[dst_index] = convertToT(convertToWT(src1[src1_index]) * scalar[0]);
+#endif
+
+#if defined (FUNC_DIV)
+#define EXPRESSION T zero = (T)(0); \
+    dst[dst_index] = src1[src1_index] == zero ? zero : convertToT(scalar[0] / convertToWT(src1[src1_index]));
+#endif
+
+#if defined (FUNC_ABS_DIFF)
+#define EXPRESSION WT value = convertToWT(src1[src1_index]) - scalar[0]; \
+    value = value > (WT)(0) ? value : -value; \
+    dst[dst_index] = convertToT(value);
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// Add with scalar /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
@@ -68,44 +91,6 @@ __kernel void arithm_binary_op_scalar (__global T *src1, int src1_step, int src1
         int src1_index = mad24(y, src1_step, x + src1_offset);
         int dst_index = mad24(y, dst_step, x + dst_offset);
 
-        dst[dst_index] = convertToT(convertToWT(src1[src1_index]) Operation scalar[0]);
-    }
-}
-
-__kernel void arithm_absdiff_scalar(__global T *src1, int src1_step, int src1_offset,
-                         __global WT *src2,
-                         __global T *dst, int dst_step, int dst_offset,
-                         int cols, int rows)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < cols && y < rows)
-    {
-        int src1_index = mad24(y, src1_step, x + src1_offset);
-        int dst_index  = mad24(y, dst_step, x + dst_offset);
-
-        WT value = convertToWT(src1[src1_index]) - src2[0];
-        value = value > (WT)(0) ? value : -value;
-        dst[dst_index] = convertToT(value);
-    }
-}
-
-// scalar divide to matrix
-__kernel void arithm_binary_op_scalar_div(__global T *src1, int src1_step, int src1_offset,
-                               __global WT *scalar,
-                               __global T *dst,  int dst_step,  int dst_offset,
-                               int cols, int rows)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < cols && y < rows)
-    {
-        int src1_index = mad24(y, src1_step, x + src1_offset);
-        int dst_index = mad24(y, dst_step, x + dst_offset);
-
-        T zero = (T)(0);
-        dst[dst_index] = src1[src1_index] == zero ? zero : convertToT(scalar[0] / convertToWT(src1[src1_index]));
+        EXPRESSION
     }
 }

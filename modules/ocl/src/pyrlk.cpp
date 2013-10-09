@@ -46,19 +46,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-    namespace ocl
-    {
-        extern const char *pyrlk;
-        extern const char *pyrlk_no_image;
-        extern const char *pyr_down;
-    }
-}
 
 struct dim3
 {
@@ -163,7 +154,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
         std::stringstream idxStr;
         idxStr << kernelName.c_str() << "_C" << I.oclchannels() << "_D" << I.depth();
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str().c_str());
-        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        int wave_size = (int)queryWaveFrontSize(kernel);
         openCLSafeCall(clReleaseKernel(kernel));
 
         static char opt[32] = {0};
@@ -246,7 +237,7 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
                      level, /*block, */patch, winSize, iters);
     }
 
-    clFinish((cl_command_queue)prevImg.clCxt->oclCommandQueue());
+    clFinish(*(cl_command_queue*)prevImg.clCxt->getOpenCLCommandQueuePtr());
 
     if(errMat)
         delete err;
@@ -370,5 +361,5 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
     uPyr_[idx].copyTo(u);
     vPyr_[idx].copyTo(v);
 
-    clFinish((cl_command_queue)prevImg.clCxt->oclCommandQueue());
+    clFinish(*(cl_command_queue*)prevImg.clCxt->getOpenCLCommandQueuePtr());
 }

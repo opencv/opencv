@@ -43,19 +43,11 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-    namespace ocl
-    {
-        extern const char *imgproc_columnsum;
-    }
-}
 
 void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
 {

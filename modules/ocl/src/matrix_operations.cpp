@@ -46,69 +46,36 @@
 //M*/
 
 #include "precomp.hpp"
-
-#define ALIGN 32
-#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
 
-////////////////////////////////////////////////////////////////////////
-//////////////////////////////// oclMat ////////////////////////////////
-////////////////////////////////////////////////////////////////////////
+#define ALIGN 32
+#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
 
-//helper routines
+// helper routines
 namespace cv
 {
     namespace ocl
     {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *operator_copyToM;
-        extern const char *operator_convertTo;
-        extern const char *operator_setTo;
-        extern const char *operator_setToM;
-        extern const char *convertC3C4;
         extern DevMemType gDeviceMemType;
         extern DevMemRW gDeviceMemRW;
     }
 }
 
-
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
+
 static void convert_C3C4(const cl_mem &src, oclMat &dst)
 {
-    int dstStep_in_pixel = dst.step1() / dst.oclchannels();
-    int pixel_end = dst.wholecols * dst.wholerows - 1;
     Context *clCxt = dst.clCxt;
-    String kernelName = "convertC3C4";
-    char compile_option[32];
-    switch(dst.depth())
-    {
-    case 0:
-        sprintf(compile_option, "-D GENTYPE4=uchar4");
-        break;
-    case 1:
-        sprintf(compile_option, "-D GENTYPE4=char4");
-        break;
-    case 2:
-        sprintf(compile_option, "-D GENTYPE4=ushort4");
-        break;
-    case 3:
-        sprintf(compile_option, "-D GENTYPE4=short4");
-        break;
-    case 4:
-        sprintf(compile_option, "-D GENTYPE4=int4");
-        break;
-    case 5:
-        sprintf(compile_option, "-D GENTYPE4=float4");
-        break;
-    case 6:
-        sprintf(compile_option, "-D GENTYPE4=double4");
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
-    }
+    int pixel_end = dst.wholecols * dst.wholerows - 1;
+    int dstStep_in_pixel = dst.step1() / dst.oclchannels();
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    std::string buildOptions = format("-D GENTYPE4=%s4", typeMap[dst.depth()]);
+
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
@@ -117,46 +84,24 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dstStep_in_pixel));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&pixel_end));
 
-    size_t globalThreads[3] = {((dst.wholecols * dst.wholerows + 3) / 4 + 255) / 256 * 256, 1, 1};
-    size_t localThreads[3] = {256, 1, 1};
+    size_t globalThreads[3] = { divUp(dst.wholecols * dst.wholerows, 4), 1, 1 };
+    size_t localThreads[3] = { 256, 1, 1 };
 
-    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
+    openCLExecuteKernel(clCxt, &convertC3C4, "convertC3C4", globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
+
 ////////////////////////////////////////////////////////////////////////
 // convert_C4C3
+
 static void convert_C4C3(const oclMat &src, cl_mem &dst)
 {
     int srcStep_in_pixel = src.step1() / src.oclchannels();
     int pixel_end = src.wholecols * src.wholerows - 1;
     Context *clCxt = src.clCxt;
-    String kernelName = "convertC4C3";
-    char compile_option[32];
-    switch(src.depth())
-    {
-    case 0:
-        sprintf(compile_option, "-D GENTYPE4=uchar4");
-        break;
-    case 1:
-        sprintf(compile_option, "-D GENTYPE4=char4");
-        break;
-    case 2:
-        sprintf(compile_option, "-D GENTYPE4=ushort4");
-        break;
-    case 3:
-        sprintf(compile_option, "-D GENTYPE4=short4");
-        break;
-    case 4:
-        sprintf(compile_option, "-D GENTYPE4=int4");
-        break;
-    case 5:
-        sprintf(compile_option, "-D GENTYPE4=float4");
-        break;
-    case 6:
-        sprintf(compile_option, "-D GENTYPE4=double4");
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
-    }
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    std::string buildOptions = format("-D GENTYPE4=%s4", typeMap[src.depth()]);
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
@@ -166,10 +111,10 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcStep_in_pixel));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&pixel_end));
 
-    size_t globalThreads[3] = {((src.wholecols * src.wholerows + 3) / 4 + 255) / 256 * 256, 1, 1};
-    size_t localThreads[3] = {256, 1, 1};
+    size_t globalThreads[3] = { divUp(src.wholecols * src.wholerows, 4), 1, 1};
+    size_t localThreads[3] = { 256, 1, 1 };
 
-    openCLExecuteKernel(clCxt, &convertC3C4, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
+    openCLExecuteKernel(clCxt, &convertC3C4, "convertC4C3", globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::oclMat::upload(const Mat &m)
@@ -186,18 +131,17 @@ void cv::ocl::oclMat::upload(const Mat &m)
         int err;
         cl_mem temp;
         if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP){
-            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+            temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
                                   (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
             openCLVerifyCall(err);
             openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step,
                            wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
         }
         else{
-            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
+            temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
                                   (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, m.datastart, &err);
             openCLVerifyCall(err);
         }
-
 
         convert_C3C4(temp, *this);
         openCLSafeCall(clReleaseMemObject(temp));
@@ -247,11 +191,6 @@ cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
 void cv::ocl::oclMat::download(cv::Mat &m) const
 {
     CV_DbgAssert(!this->empty());
-    //   int t = type();
-    //   if(download_channels == 3)
-    //{
-    //	t = CV_MAKETYPE(depth(), 3);
-    //}
     m.create(wholerows, wholecols, type());
 
     if(m.channels() == 3)
@@ -259,36 +198,19 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
         int pitch = wholecols * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
                                      (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
         convert_C4C3(*this, temp);
         openCLMemcpy2D(clCxt, m.data, m.step, temp, pitch, wholecols * m.elemSize(), wholerows, clMemcpyDeviceToHost, 3);
-        //int* cputemp=new int[wholecols*wholerows * 3];
-        //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
-        //						0, wholecols*wholerows * 3* sizeof(int), cputemp, 0, NULL, NULL));
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
-        //						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
-        //for(int i=0;i<wholerows;i++)
-        //{
-        //	int *a = cputemp+i*wholecols * 3,*b = cpudata + i*this->step/sizeof(int);
-        //	for(int j=0;j<wholecols;j++)
-        //	{
-        //		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
-        //			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
-        //			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
-        //	}
-        //}
-        //delete []cputemp;
-        //delete []cpudata;
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
     {
         openCLMemcpy2D(clCxt, m.data, m.step, data, step, wholecols * elemSize(), wholerows, clMemcpyDeviceToHost);
     }
+
     Size wholesize;
     Point ofs;
     locateROI(wholesize, ofs);
@@ -311,6 +233,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
     };
+
     char compile_option[32];
     sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
     size_t localThreads[3] = {16, 16, 1};
@@ -354,6 +277,7 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////// ConvertTo ////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
+
 static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
     String kernelName = "convert_to";
@@ -392,9 +316,10 @@ static void convert_run(const oclMat &src, oclMat &dst, double alpha, double bet
     openCLExecuteKernel(dst.clCxt , &operator_convertTo, kernelName, globalThreads,
                         localThreads, args, -1, -1, buildOptions);
 }
+
 void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double beta ) const
 {
-    if (!clCxt->supportsFeature(Context::CL_DOUBLE) &&
+    if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) &&
             (depth() == CV_64F || dst.depth() == CV_64F))
     {
         CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
@@ -455,23 +380,23 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, Stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
-        dst.offset == 0 && dst.cols == dst.wholecols)
-    {
-        const int sizeofMap[][7] =
-            {
-                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
-                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
-                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
-                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
-            };
-        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
+//    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+//        dst.offset == 0 && dst.cols == dst.wholecols)
+//    {
+//        const int sizeofMap[][7] =
+//            {
+//                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
+//                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
+//                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
+//                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
+//            };
+//        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
 
-        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
-                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
-                            0, dst.step * dst.rows, 0, NULL, NULL);
-    }
-    else
+//        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
+//                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
+//                            0, dst.step * dst.rows, 0, NULL, NULL);
+//    }
+//    else
 #endif
     {
         oclMat m(mat);
@@ -607,8 +532,7 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
-                            rows, rw_type, mem_type, hptr);
+        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows, rw_type, mem_type);
 
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;

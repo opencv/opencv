@@ -203,6 +203,7 @@ private:
 #define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
+#define SANITY_CHECK_NOTHING() this->setVerified();
 
 class CV_EXPORTS GpuPerf
 {
@@ -339,12 +340,13 @@ private:
         friend class TestBase;
     };
     friend class _declareHelper;
-    friend class Regression;
 
     bool verified;
 
 public:
     _declareHelper declare;
+
+    void setVerified() { this->verified = true; }
 };
 
 template<typename T> class TestBaseWithParam: public TestBase, public ::testing::WithParamInterface<T> {};

@@ -48,21 +48,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <stdio.h>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *haarobjectdetect;
-extern const char *haarobjectdetectbackup;
-extern const char *haarobjectdetect_scaled2;
-}
-}
 
 /* these settings affect the quality of detection: change with care */
 #define CV_ADJUST_FEATURES  1
@@ -742,7 +731,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
     if( gimg.cols < minSize.width || gimg.rows < minSize.height )
         CV_Error(CV_StsError, "Image too small");
 
-    cl_command_queue qu = reinterpret_cast<cl_command_queue>(Context::getContext()->oclCommandQueue());
+    cl_command_queue qu = getClCommandQueue(Context::getContext());
     if( (flags & CV_HAAR_SCALE_IMAGE) )
     {
         CvSize winSize0 = cascade->orig_window_size;
@@ -785,7 +774,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
 
         size_t blocksize = 8;
         size_t localThreads[3] = { blocksize, blocksize , 1 };
-        size_t globalThreads[3] = { grp_per_CU *(gsum.clCxt->computeUnits()) *localThreads[0],
+        size_t globalThreads[3] = { grp_per_CU *(gsum.clCxt->getDeviceInfo().maxComputeUnits) *localThreads[0],
                                     localThreads[1], 1
                                   };
         int outputsz = 256 * globalThreads[0] / localThreads[0];
@@ -944,7 +933,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         int grp_per_CU = 12;
         size_t blocksize = 8;
         size_t localThreads[3] = { blocksize, blocksize , 1 };
-        size_t globalThreads[3] = { grp_per_CU *gsum.clCxt->computeUnits() *localThreads[0],
+        size_t globalThreads[3] = { grp_per_CU *gsum.clCxt->getDeviceInfo().maxComputeUnits *localThreads[0],
                                     localThreads[1], 1 };
         int outputsz = 256 * globalThreads[0] / localThreads[0];
         int nodenum = (datasize - sizeof(GpuHidHaarClassifierCascade) -

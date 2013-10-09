@@ -428,8 +428,8 @@ endmacro()
 # Usage:
 # ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
-  file(GLOB lib_srcs     "src/*.cpp")
-  file(GLOB lib_int_hdrs "src/*.hpp" "src/*.h")
+  file(GLOB_RECURSE lib_srcs     "src/*.cpp")
+  file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
@@ -445,22 +445,23 @@ macro(ocv_glob_module_sources)
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
+  source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
+
   file(GLOB cl_kernels "src/opencl/*.cl")
 
   if(HAVE_OPENCL AND cl_kernels)
     ocv_include_directories(${OPENCL_INCLUDE_DIRS})
     add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp"
-      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
+      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
       DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
-    source_group("Src\\OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
-    list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
+    source_group("OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
+    list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
   endif()
 
   ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
                                  SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 
-  source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 endmacro()
