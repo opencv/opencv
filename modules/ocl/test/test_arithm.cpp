@@ -1466,7 +1466,7 @@ TEST_P(Norm, NORM_L1)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_NEAR(cpuRes, gpuRes, 0.2);
         }
 }
 
