@@ -127,14 +127,14 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
             temp1.push_back(val + Cg[i]);
         }
 
-        double ans = 0.0;
-        double ans1 = 0.0;
+        double pos = 0.0;
+        double neg = 0.0;
         for(unsigned int i =0;i<alf.size();i++)
         {
-            ans = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
-            ans1 =((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
-            G_pos.push_back(ans);
-            G_neg.push_back(ans1);
+            pos = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(obj.sigma,2));
+            neg = ((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(obj.sigma,2));
+            G_pos.push_back(pos);
+            G_neg.push_back(neg);
         }
 
         vector <double> EXPsum;
