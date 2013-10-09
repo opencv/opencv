@@ -313,8 +313,8 @@ CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
             float alpha = 0.2, float beta = 0.4);
 
     CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst,
-            double low_threshold, double high_threshold,
-            int kernel_size);
+            double low_threshold = 30, double high_threshold = 45,
+            int kernel_size = 3);
 
     CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,
             float sigma_s = 60, float sigma_r = 0.4);

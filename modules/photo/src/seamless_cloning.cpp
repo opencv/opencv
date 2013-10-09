@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
 #include <stdlib.h>
 
@@ -148,19 +149,7 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
-    int channel = 3;
-    for(int i=0;i<mask.size().height;i++)
-        for(int j=0;j<mask.size().width;j++)
-        {
-            if(gray.at<uchar>(i,j) == 255)
-            {
-                for(int c=0;c<channel;c++)
-                {
-                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
-                }
-            }
-
-        }
+    src.copyTo(cs_mask,gray);
 
     Cloning obj;
     obj.local_color_change(src,cs_mask,gray,blend,red,green,blue);
@@ -186,19 +175,7 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
-    int channel = 3;
-    for(int i=0;i<mask.size().height;i++)
-        for(int j=0;j<mask.size().width;j++)
-        {
-            if(gray.at<uchar>(i,j) == 255)
-            {
-                for(int c=0;c<channel;c++)
-                {
-                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
-                }
-            }
-
-        }
+    src.copyTo(cs_mask,gray);
 
     Cloning obj;
     obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
@@ -223,19 +200,7 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
 
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
-    int channel = 3;
-    for(int i=0;i<mask.size().height;i++)
-        for(int j=0;j<mask.size().width;j++)
-        {
-            if(gray.at<uchar>(i,j) == 255)
-            {
-                for(int c=0;c<channel;c++)
-                {
-                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
-                }
-            }
-
-        }
+    src.copyTo(cs_mask,gray);
 
     Cloning obj;
     obj.texture_flatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
