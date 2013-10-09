@@ -60,7 +60,17 @@ set(c_wrapper_header
     "${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/opencv_generated.hpp"
 )
 
+set(headers
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/rect.hpp"
+)
 
+set(sources
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/rect.cpp"
+)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/opencv2/c/ )
@@ -75,21 +85,21 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/genc.py
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/hdr_parser.py
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/opencv.h
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.hpp
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.hpp
+    DEPENDS ${headers}
     DEPENDS ${opencv_hdrs}
 )
 
 include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR}/include 
                         "${CMAKE_SOURCE_DIR}/include"
                         ${opencv_hdr_dirs})
-set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/mat.cpp" APPEND PROPERTY OBJECT_DEPENDS ${c_generated_sources})
-set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/point.cpp" APPEND PROPERTY OBJECT_DEPENDS ${c_generated_sources})
+set_property(SOURCE ${sources} APPEND PROPERTY OBJECT_DEPENDS ${c_generated_sources})
 
-add_dependencies(${the_module} ${c_generated_sources})
+add_dependencies(${the_module} ${c_generated_sources} ${sources} ${headers})
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
 install(FILES ${c_wrapper_header} DESTINATION include/opencv2/c/)
+install(FILES ${headers} DESTINATION include/opencv2/c/)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/opencv.h DESTINATION include/opencv2/)
