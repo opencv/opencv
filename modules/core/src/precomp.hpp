@@ -50,6 +50,7 @@
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #include <assert.h>
 #include <ctype.h>
@@ -214,6 +215,14 @@ inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
+
+struct TLSData
+{
+    RNG rng;
+    ocl::Context oclContext;
+
+    static TLSData* get();
+};
 
 }
 

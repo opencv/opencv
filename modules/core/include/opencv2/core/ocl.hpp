@@ -39,12 +39,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPENCL_CORE_HPP__
-#define __OPENCV_OPENCL_CORE_HPP__
+#ifndef __OPENCV_OPENCL_HPP__
+#define __OPENCV_OPENCL_HPP__
 
 #include "opencv2/core.hpp"
 
-namespace cv { namespace cl {
+namespace cv { namespace ocl {
 
 CV_EXPORTS bool haveOpenCL();
 CV_EXPORTS bool useOpenCL();
@@ -68,6 +68,8 @@ protected:
 };
 
 
+class CV_EXPORTS Queue;
+
 class CV_EXPORTS Context
 {
 public:
@@ -79,22 +81,26 @@ public:
         DEVICE_TYPE_ACCELERATOR = (1 << 3),
         DEVICE_TYPE_ALL         = 0xFFFFFFFF
     };
-    
-    Context(const Platform& p, int ctype);
+
+    Context();
+    Context(const Platform& p, int dtype);
     ~Context();
     Context(const Context& c);
     Context& operator = (const Context& c);
 
-    bool empty() const;
+    bool create(const Platform& p, int dtype);
+    size_t ndevices() const;
+    void* device(size_t idx) const;
     
     static Context& getDefault();
+    static Queue& getDefaultQueue();
     
-    template<typename _Tp> _Tp deviceProp(int prop) const
-    { _Tp val; deviceProp(prop, &val, sizeof(val)); return val; }
+    template<typename _Tp> _Tp deviceProp(void* d, int prop) const
+    { _Tp val; deviceProp(d, prop, &val, sizeof(val)); return val; }
     
     void* ptr() const;
 protected:
-    void deviceProp(int prop, void* val, size_t sz);
+    void deviceProp(void* d, int prop, void* val, size_t sz);
 
     struct Impl;
     Impl* p;
@@ -104,13 +110,13 @@ protected:
 class CV_EXPORTS Queue
 {
 public:
+    Queue();
     Queue(const Context& ctx);
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
     
-    static Queue& getDefault();
-    
+    bool create(const Context& ctx);
     void finish();
     void* ptr() const;
     
@@ -165,7 +171,7 @@ public:
 class CV_EXPORTS KernelArg
 {
 public:
-    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, CONSTANT=8 };
+    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8 };
     KernelArg(int _flags, UMat* _m, void* _obj=0, size_t _sz=0);
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
@@ -188,14 +194,18 @@ class CV_EXPORTS Kernel
 public:
     class CV_EXPORTS Callback
     {
-    virtual ~Callback() {}
-    virtual void operator()() = 0;
+    public:
+        virtual ~Callback() {}
+        virtual void operator()() = 0;
     };
 
+    Kernel();
     Kernel(const Context& ctx, Program& prog, const char* kname, const char* buildopts);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
+
+    void create(const Context& ctx, Program& prog, const char* kname, const char* buildopts);
 
     int set(int i, const void* value, size_t sz);
     int set(int i, const UMat& m);
@@ -207,8 +217,10 @@ public:
     void runTask(Queue& q, bool async, const Ptr<Callback>& cleanupCallback=Ptr<Callback>());
 
     void* ptr() const;
-protected:
+
     struct Impl;
+
+protected:
     Impl* p;
 };
 
@@ -238,21 +250,15 @@ public:
     Program(const Program& prog);
     Program& operator = (const Program& prog);
     
-    bool build(const char* buildopts, const Context& ctx);
+    void* build(const Context& ctx, const char* buildopts);
     
     String getErrMsg() const;
-    
-    // non-constant method
-    Kernel get(const char* name, const char* buildopts, const Context& ctx);
     
 protected:
     struct Impl;
     Impl* p;
 };
 
-
 }}
 
 #endif
-
-
