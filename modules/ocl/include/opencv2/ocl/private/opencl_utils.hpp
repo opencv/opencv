@@ -10,14 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Guoping Long, longguoping@gmail.com
-//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -32,10 +26,10 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -45,59 +39,72 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
+#define __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4127 4267 4324 4244 4251 4710 4711 4514 4996 )
-#endif
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
-
-#include "cvconfig.h"
-
-#if defined(BUILD_SHARED_LIBS) && (defined WIN32 || defined _WIN32 || defined WINCE)
-#define CL_RUNTIME_EXPORT __declspec(dllexport)
-#else
-#define CL_RUNTIME_EXPORT
-#endif
-
-#include <map>
-#include <iostream>
-#include <limits>
+#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 #include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <stdio.h>
+#include <string>
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/core_c.h"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/ocl/ocl.hpp"
+namespace cl_utils {
 
-#include "opencv2/core/internal.hpp"
-
-#define __ATI__
-
-#if defined (HAVE_OPENCL)
-
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
-#include "opencv2/ocl/private/util.hpp"
-#include "safe_call.hpp"
-
-#else /* defined(HAVE_OPENCL) */
-
-static inline void throw_nogpu()
+inline cl_int getPlatforms(std::vector<cl_platform_id>& platforms)
 {
-    CV_Error(CV_GpuNotSupported, "The library is compilled without OpenCL support.\n");
+    cl_uint n = 0;
+
+    cl_int err = ::clGetPlatformIDs(0, NULL, &n);
+    if (err != CL_SUCCESS)
+        return err;
+
+    platforms.clear(); platforms.resize(n);
+    err = ::clGetPlatformIDs(n, &platforms[0], NULL);
+    if (err != CL_SUCCESS)
+        return err;
+
+    return CL_SUCCESS;
 }
 
-#endif /* defined(HAVE_OPENCL) */
+inline cl_int getDevices(cl_platform_id platform, cl_device_type type, std::vector<cl_device_id>& devices)
+{
+    cl_uint n = 0;
 
-using namespace std;
+    cl_int err = ::clGetDeviceIDs(platform, type, 0, NULL, &n);
+    if (err != CL_SUCCESS)
+        return err;
 
-#endif /* __OPENCV_PRECOMP_H__ */
+    devices.clear(); devices.resize(n);
+    err = ::clGetDeviceIDs(platform, type, n, &devices[0], NULL);
+    if (err != CL_SUCCESS)
+        return err;
+
+    return CL_SUCCESS;
+}
+
+
+
+
+template <typename Functor, typename ObjectType, typename T>
+inline cl_int getScalarInfo(Functor f, ObjectType obj, cl_uint name, T& param)
+{
+    return f(obj, name, sizeof(T), &param, NULL);
+}
+
+template <typename Functor, typename ObjectType>
+inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string& param)
+{
+    ::size_t required;
+    cl_int err = f(obj, name, 0, NULL, &required);
+    if (err != CL_SUCCESS)
+        return err;
+
+    param.resize(required);
+    err = f(obj, name, required, &param.at(0), NULL);
+    if (err != CL_SUCCESS)
+        return err;
+
+    return CL_SUCCESS;
+};
+
+} // namespace cl_utils
+
+#endif // __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
