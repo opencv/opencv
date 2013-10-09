@@ -72,61 +72,100 @@ void UMatData::unlock()
     umatLocks[(size_t)(void*)this % UMAT_NLOCKS].unlock();
 }
 
-/*
 class StdUMatAllocator : public MatAllocator
 {
 public:
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step, int flags) const
+    UMatData* allocate(int dims, const int* sizes, int type, size_t* step, int) const
     {
         size_t total = CV_ELEM_SIZE(type);
-        for( int i = 0; i < dims; i++ )
+        size_t wholestep[CV_MAX_DIM];
+        int i;
+        for( i = dims-1; i >= 0; i++ )
+        {
+            wholestep[i] = total;
+            if( step )
+                step[i] = total;
             total *= sizes[i];
+        }
         total = alignSize(total, (int)sizeof(void*));
         uchar* data = (uchar*)fastMalloc(total + sizeof(UMatData));
         UMatData* u = (UMatData*)(data + total);
         u->init();
+        u->dims = dims;
+        u->data = data;
+        u->size = total;
+        for( i = 0; i < 3; i++ )
+            u->wholestep[i] = wholestep[i];
+        u->refcount = 1;
 
-        size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-        data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*u));
-        u = (int*)(data + totalsize);
-        u->init();
-        refcount = &u->refcount;
-        *refcount = 1;
+        return u;
     }
 
-    void deallocate(UMatData* data) const
+    void deallocate(UMatData* u) const
     {
-        
+        if(u)
+            fastFree(u->data);
     }
 
-    bool map(UMatData* data, int mapflags) const
+    bool map(UMatData*, int) const
     {
-
+        return true;
     }
 
-    bool unmap(UMatData* data, int mapflags, bool async) const
+    bool unmap(UMatData* u, int, bool) const
     {
-
+        deallocate(u);
+        return true;
     }
 
-    void download(UMatData* data, void* dst, size_t srcofs[], size_t sz[], size_t dststep[], bool async) const
+    void download(UMatData* u, void* dstptr, size_t srcofs[],
+                  size_t sz[], size_t dststep[], bool) const
     {
-
+        if(!u)
+            return;
+        int i, isz[CV_MAX_DIM];
+        uchar* srcptr = u->data;
+        for( i = 0; i < u->dims; i++ )
+        {
+            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
+                      srcofs[i] + sz[i] <= u->wholestep[i] );
+            if( sz[i] == 0 )
+                return;
+            srcptr += srcofs[i]*u->wholestep[i];
+            isz[i] = (int)u->wholestep[i];
+        }
+        Mat src(u->dims, isz, CV_8U, u->data, u->wholestep);
+        Mat dst(u->dims, isz, CV_8U, dstptr, dststep);
+        src.copyTo(dst);
     }
 
-    void upload(UMatData* data, const void* src, size_t dstofs[], size_t sz[], size_t srcstep[], bool async) const
+    void upload(UMatData* u, const void* srcptr, size_t dstofs[],
+                size_t sz[], size_t srcstep[], bool) const
     {
-
+        if(!u)
+            return;
+        int i, isz[CV_MAX_DIM];
+        uchar* dstptr = u->data;
+        for( i = 0; i < u->dims; i++ )
+        {
+            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
+                      dstofs[i] + sz[i] <= u->wholestep[i] );
+            if( sz[i] == 0 )
+                return;
+            dstptr += dstofs[i]*u->wholestep[i];
+            isz[i] = (int)u->wholestep[i];
+        }
+        Mat src(u->dims, isz, CV_8U, (void*)srcptr, srcstep);
+        Mat dst(u->dims, isz, CV_8U, dstptr, u->wholestep);
+        src.copyTo(dst);
     }
 };
 
-
-MatAllocator* UMat::stdAllocator()
+MatAllocator* UMat::getStdAllocator()
 {
-    static StdMatAllocator allocator;
+    static StdUMatAllocator allocator;
     return &allocator;
 }
-*/ 
 
 void swap( UMat& a, UMat& b )
 {
@@ -267,7 +306,7 @@ void UMat::create(int d, const int* _sizes, int _type)
 
     if( total() > 0 )
     {
-        MatAllocator *a = allocator, *a0 = stdAllocator();
+        MatAllocator *a = allocator, *a0 = getStdAllocator();
         if(!a)
             a = a0;
         try
@@ -299,7 +338,7 @@ void UMat::copySize(const UMat& m)
 
 void UMat::deallocate()
 {
-    (allocator ? allocator : stdAllocator())->deallocate(u);
+    (allocator ? allocator : getStdAllocator())->deallocate(u);
 }
 
 
@@ -360,7 +399,7 @@ UMat::UMat(const UMat& m, const Rect& roi)
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
     if( u )
-        CV_XADD(u->urefcount, 1);
+        CV_XADD(&(u->urefcount), 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 

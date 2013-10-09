@@ -111,6 +111,7 @@ public:
     virtual void getMatVector(std::vector<Mat>& mv) const;
     virtual gpu::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
+    void* getObj() const;
 
     virtual int kind() const;
     virtual Size size(int i=-1) const;
@@ -122,9 +123,13 @@ public:
 
     virtual ~_InputArray();
 
+protected:
     int flags;
     void* obj;
     Size sz;
+
+    void init(int _flags, const void* _obj);
+    void init(int _flags, const void* _obj, Size _sz);
 };
 
 
@@ -191,8 +196,6 @@ public:
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void release() const;
     virtual void clear() const;
-
-    virtual ~_OutputArray();
 };
 
 
@@ -850,7 +853,7 @@ public:
     //! custom allocator
     MatAllocator* allocator;
     //! and the standard allocator
-    static MatAllocator* stdAllocator();
+    static MatAllocator* getStdAllocator();
 
     //! interaction with UMat
     UMatData* u;
@@ -1261,7 +1264,7 @@ public:
     //! custom allocator
     MatAllocator* allocator;
     //! and the standard allocator
-    static MatAllocator* stdAllocator();
+    static MatAllocator* getStdAllocator();
 
     // black-box container of UMat data
     UMatData* u;

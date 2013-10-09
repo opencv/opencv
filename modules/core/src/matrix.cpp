@@ -138,7 +138,7 @@ public:
 };
 
 
-MatAllocator* Mat::stdAllocator()
+MatAllocator* Mat::getStdAllocator()
 {
     static StdMatAllocator allocator;
     return &allocator;
@@ -300,7 +300,7 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( total() > 0 )
     {
-        MatAllocator *a = allocator, *a0 = stdAllocator();
+        MatAllocator *a = allocator, *a0 = getStdAllocator();
 #ifdef HAVE_TGPU
         if( !a || a == tegra::getAllocator() )
             a = tegra::getAllocator(d, _sizes, _type);
@@ -336,7 +336,7 @@ void Mat::copySize(const Mat& m)
 
 void Mat::deallocate()
 {
-    (allocator ? allocator : stdAllocator())->unmap(u, 0, false);
+    (allocator ? allocator : getStdAllocator())->unmap(u, 0, false);
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
@@ -1017,15 +1017,6 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
                                         Input/Output Array
 \*************************************************************************************************/
 
-_InputArray::_InputArray(const std::vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
-_InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
-_InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
-_InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
-_InputArray::_InputArray(const ogl::Buffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const gpu::CudaMem& cuda_mem) : flags(CUDA_MEM), obj((void*)&cuda_mem) {}
-
-_InputArray::~_InputArray() {}
-
 Mat _InputArray::getMat(int i) const
 {
     int k = kind();
@@ -1385,6 +1376,12 @@ size_t _InputArray::total(int i) const
         return ((const Mat*)obj)->total();
     }
 
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->total();
+    }
+
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
@@ -1404,6 +1401,9 @@ int _InputArray::type(int i) const
 
     if( k == MAT )
         return ((const Mat*)obj)->type();
+
+    if( k == UMAT )
+        return ((const UMat*)obj)->type();
 
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
@@ -1452,6 +1452,9 @@ bool _InputArray::empty() const
     if( k == MAT )
         return ((const Mat*)obj)->empty();
 
+    if( k == UMAT )
+        return ((const UMat*)obj)->empty();
+
     if( k == EXPR )
         return false;
 
@@ -1492,19 +1495,6 @@ bool _InputArray::empty() const
     return -1;
 }
 
-
-_OutputArray::_OutputArray(std::vector<Mat>& vec) : _InputArray(vec) {}
-_OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
-_OutputArray::_OutputArray(ogl::Buffer& buf) : _InputArray(buf) {}
-_OutputArray::_OutputArray(gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {}
-
-_OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const std::vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
-_OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const ogl::Buffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {flags |= FIXED_SIZE|FIXED_TYPE;}
-
-_OutputArray::~_OutputArray() {}
 
 bool _OutputArray::fixedSize() const
 {
@@ -1568,6 +1558,13 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
         ((Mat*)obj)->create(rows, cols, mtype);
         return;
     }
+    if( k == UMAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((UMat*)obj)->size.operator()() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((UMat*)obj)->type() == mtype);
+        ((UMat*)obj)->create(rows, cols, mtype);
+        return;
+    }
     if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == Size(cols, rows));
@@ -1612,6 +1609,40 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
             }
 
             if( dims == 2 && m.dims == 2 && m.data &&
+                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
+                return;
+        }
+
+        if(fixedType())
+        {
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                mtype = m.type();
+            else
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+        }
+        if(fixedSize())
+        {
+            CV_Assert(m.dims == dims);
+            for(int j = 0; j < dims; ++j)
+                CV_Assert(m.size[j] == sizes[j]);
+        }
+        m.create(dims, sizes, mtype);
+        return;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        UMat& m = *(UMat*)obj;
+        if( allowTransposed )
+        {
+            if( !m.isContinuous() )
+            {
+                CV_Assert(!fixedType() && !fixedSize());
+                m.release();
+            }
+
+            if( dims == 2 && m.dims == 2 && !m.empty() &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
