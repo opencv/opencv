@@ -23,6 +23,32 @@ Returns the number of non-zero elements in src
 
 Counts non-zero array elements. Supports all data types.
 
+ocl::min
+------------------
+
+.. ocv:function:: void ocl::min(const oclMat &src1, const oclMat &src2, oclMat &dst)
+
+    :param src1: the first input array.
+
+    :param src2: the second input array, must be the same size and same type as ``src1``.
+
+    :param dst: the destination array, it will have the same size and same type as ``src1``.
+
+Computes element-wise minima of two arrays. Supports all data types.
+
+ocl::max
+------------------
+
+.. ocv:function:: void ocl::max(const oclMat &src1, const oclMat &src2, oclMat &dst)
+
+    :param src1: the first input array.
+
+    :param src2: the second input array, must be the same size and same type as ``src1``.
+
+    :param dst: the destination array, it will have the same size and same type as ``src1``.
+
+Computes element-wise maxima of two arrays. Supports all data types.
+
 ocl::minMax
 ------------------
 Returns void
