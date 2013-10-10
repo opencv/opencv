@@ -47,8 +47,6 @@
 
 using namespace std;
 
-#ifdef HAVE_CLAMDFFT
-
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
@@ -102,9 +100,6 @@ OCL_TEST_P(Dft, R2CthenC2R)
     EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4);
 }
 
-
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Dft, testing::Combine(
                             testing::Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(25, 20), cv::Size(512, 1), cv::Size(1024, 768)),
                             testing::Values(0, (int)cv::DFT_ROWS, (int)cv::DFT_SCALE) ));
-
-#endif // HAVE_CLAMDFFT
