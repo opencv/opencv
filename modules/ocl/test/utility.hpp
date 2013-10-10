@@ -291,10 +291,12 @@ CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REA
         } \
         catch (const cv::Exception & ex) \
         { \
-            if (ex.code != CV_OpenCLDoubleNotSupported) \
-               throw; \
-            else \
+            if (ex.code == CV_OpenCLDoubleNotSupported)\
                 std::cout << "Test skipped (selected device does not support double)" << std::endl; \
+            else if (ex.code == CV_OpenCLNoAMDBlasFft) \
+                std::cout << "Test skipped (AMD Blas / Fft libraries are not available)" << std::endl; \
+            else \
+                throw; \
         } \
     } \
     \

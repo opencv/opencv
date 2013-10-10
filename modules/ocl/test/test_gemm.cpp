@@ -42,12 +42,13 @@
 //
 //M*/
 
-
 #include "test_precomp.hpp"
+
 using namespace std;
-#ifdef HAVE_CLAMDBLAS
+
 ////////////////////////////////////////////////////////////////////////////
 // GEMM
+
 PARAM_TEST_CASE(Gemm, int, cv::Size, int)
 {
     int      type;
@@ -81,4 +82,3 @@ INSTANTIATE_TEST_CASE_P(ocl_gemm, Gemm, testing::Combine(
                             testing::Values(CV_32FC1, CV_32FC2/*, CV_64FC1, CV_64FC2*/),
                             testing::Values(cv::Size(20, 20), cv::Size(300, 300)),
                             testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)(cv::GEMM_1_T + cv::GEMM_2_T))));
-#endif

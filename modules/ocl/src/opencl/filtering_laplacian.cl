@@ -211,7 +211,7 @@ __kernel void filter2D(
     barrier(CLK_LOCAL_MEM_FENCE);
     if(globalRow < rows && globalCol < cols)
     {
-        T_SUM sum = (T_SUM)SUM_ZERO;
+        T_SUM sum = (T_SUM)(SUM_ZERO);
         int filterIdx = 0;
         for(int i = 0; i < FILTER_SIZE; i++)
         {
@@ -291,7 +291,7 @@ __kernel void filter2D_3x3(
 
                 T_IMG data = src[mad24(selected_row, src_step, selected_cols)];
                 int con = selected_row >= 0 && selected_row < wholerows && selected_cols >= 0 && selected_cols < wholecols;
-                data = con ? data : 0;
+                data = con ? data : (T_IMG)(0);
                 local_data[mad24(i, LOCAL_MEM_STEP, lX)] = data;
 
                 if(lX < (ANX << 1))
@@ -300,7 +300,7 @@ __kernel void filter2D_3x3(
 
                     data  = src[mad24(selected_row, src_step, selected_cols)];
                     con = selected_row >= 0 && selected_row < wholerows && selected_cols >= 0 && selected_cols < wholecols;
-                    data = con ? data : 0;
+                    data = con ? data : (T_IMG)(0);
                     local_data[mad24(i, LOCAL_MEM_STEP, lX) + groupX_size] = data;
                 }
 #else
