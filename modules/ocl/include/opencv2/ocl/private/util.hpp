@@ -189,24 +189,6 @@ inline size_t roundUp(size_t sz, size_t n)
     return result;
 }
 
-//! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt,
-        const cv::ocl::ProgramEntry* source, string kernelName,
-        size_t globalThreads[3], size_t localThreads[3],
-        std::vector< std::pair<size_t, const void *> > &args,
-        int channels, int depth, const char *build_options,
-        bool finish = true, bool measureKernelTime = false,
-        bool cleanUp = true);
-
-//! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt,
-        const cv::ocl::ProgramEntry* source, const int numFiles, string kernelName,
-        size_t globalThreads[3], size_t localThreads[3],
-        std::vector< std::pair<size_t, const void *> > &args,
-        int channels, int depth, const char *build_options,
-        bool finish = true, bool measureKernelTime = false,
-        bool cleanUp = true);
-
 }//namespace ocl
 }//namespace cv
 

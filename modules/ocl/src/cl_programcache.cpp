@@ -52,7 +52,6 @@
 
 namespace cv { namespace ocl {
 
-#define MAX_PROG_CACHE_SIZE 1024
 /*
  * The binary caching system to eliminate redundant program source compilation.
  * Strictly, this is not a cache because we do not implement evictions right now.
@@ -276,7 +275,7 @@ struct ProgramFileCache
     bool writeConfigurationToFile(const string& options, std::vector<char>& buf)
     {
         if (hash_ == NULL)
-            return true; // don't save dynamic kernels
+            return true; // don't save programs without hash
 
         if (!f.is_open())
         {
@@ -454,7 +453,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
 {
     stringstream src_sign;
 
-    src_sign << (int64)(source->programStr);
+    src_sign << source->name;
     src_sign << getClContext(ctx);
     if (NULL != build_options)
     {
@@ -499,14 +498,9 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
     cl_program program = programFileCache.getOrBuildProgram(ctx, source, all_build_options);
 
     //Cache the binary for future use if build_options is null
-    if( (this->cacheSize += 1) < MAX_PROG_CACHE_SIZE)
     {
         cv::AutoLock lockCache(mutexCache);
         this->addProgram(src_sign.str(), program);
-    }
-    else
-    {
-        cout << "Warning: code cache has been full.\n";
     }
     return program;
 }

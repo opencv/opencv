@@ -221,6 +221,33 @@ namespace cv
         //! set where binary cache to be saved to
         CV_EXPORTS void setBinaryPath(const char *path);
 
+        struct ProgramSource
+        {
+            const char* name;
+            const char* programStr;
+            const char* programHash;
+
+            // Cache in memory by name (should be unique). Caching on disk disabled.
+            inline ProgramSource(const char* _name, const char* _programStr)
+                : name(_name), programStr(_programStr), programHash(NULL)
+            {
+            }
+
+            // Cache in memory by name (should be unique). Caching on disk uses programHash mark.
+            inline ProgramSource(const char* _name, const char* _programStr, const char* _programHash)
+                : name(_name), programStr(_programStr), programHash(_programHash)
+            {
+            }
+        };
+
+        //! Calls OpenCL kernel. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+        //! Deprecated, will be replaced
+        CV_EXPORTS void openCLExecuteKernelInterop(Context *clCxt,
+                const cv::ocl::ProgramSource& source, string kernelName,
+                size_t globalThreads[3], size_t localThreads[3],
+                std::vector< std::pair<size_t, const void *> > &args,
+                int channels, int depth, const char *build_options);
+
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
         class CV_EXPORTS oclMat
