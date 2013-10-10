@@ -46,9 +46,6 @@ int main(int argc, char** argv)
     createTrackbar("Tile Size", "CLAHE", &tilesize, 32, (TrackbarCallback)TSize_Callback);
     createTrackbar("Clip Limit", "CLAHE", &cliplimit, 20, (TrackbarCallback)Clip_Callback);
 
-    vector<ocl::Info> info;
-    CV_Assert(ocl::getDevice(info));
-
     Mat frame, outframe;
     ocl::oclMat d_outframe;
 

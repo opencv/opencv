@@ -44,19 +44,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iomanip>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        extern const char *blend_linear;
-    }
-}
 
 void cv::ocl::blendLinear(const oclMat &img1, const oclMat &img2, const oclMat &weights1, const oclMat &weights2,
                           oclMat &result)

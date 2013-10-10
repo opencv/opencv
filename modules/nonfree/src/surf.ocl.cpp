@@ -43,9 +43,10 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <cstdio>
 
 #ifdef HAVE_OPENCV_OCL
+#include <cstdio>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -54,14 +55,11 @@ namespace cv
 {
     namespace ocl
     {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *surf;
-
-        const char noImage2dOption [] = "-D DISABLE_IMAGE2D";
+        static const char noImage2dOption[] = "-D DISABLE_IMAGE2D";
 
         static bool use_image2d = false;
 
-        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernelSURF(Context *clCxt, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
             size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             char optBuf [100] = {0};
@@ -73,7 +71,7 @@ namespace cv
             }
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optBufPtr);
-            size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
+            size_t wave_size = queryWaveFrontSize(kernel);
             CV_Assert(clReleaseKernel(kernel) == CL_SUCCESS);
             sprintf(optBufPtr, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optBufPtr);
@@ -596,7 +594,7 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
 
     if(sumTex)
     {
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
     }
     else
     {

@@ -282,8 +282,6 @@ TEST_F(SuperResolution, BTVL1_CUDA)
 
 TEST_F(SuperResolution, BTVL1_OCL)
 {
-    std::vector<cv::ocl::Info> infos;
-    cv::ocl::getDevice(infos);
     RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
 }
 

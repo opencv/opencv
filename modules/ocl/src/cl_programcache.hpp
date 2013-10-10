@@ -7,11 +7,14 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -21,9 +24,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,25 +42,45 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
-typedef ::testing::TestWithParam<cv::Size> normFixture;
+namespace cv {
+namespace ocl {
 
-TEST_P(normFixture, DISABLED_accuracy)
+class ProgramCache
 {
-    const cv::Size srcSize = GetParam();
+protected:
+    ProgramCache();
+    ~ProgramCache();
+    friend class std::auto_ptr<ProgramCache>;
+public:
+    static ProgramCache *getProgramCache();
 
-    cv::Mat src1(srcSize, CV_8UC1), src2(srcSize, CV_8UC1);
-    cv::randu(src1, 0, 2);
-    cv::randu(src2, 0, 2);
+    cl_program getProgram(const Context *ctx, const cv::ocl::ProgramEntry* source,
+                          const char *build_options);
 
-    cv::ocl::oclMat oclSrc1(src1), oclSrc2(src2);
+    void releaseProgram();
+protected:
+    //lookup the binary given the file name
+    // (with acquired mutexCache)
+    cl_program progLookup(const String& srcsign);
 
-    double value = cv::norm(src1, src2, cv::NORM_INF);
-    double oclValue = cv::ocl::norm(oclSrc1, oclSrc2, cv::NORM_INF);
+    //add program to the cache
+    // (with acquired mutexCache)
+    void addProgram(const String& srcsign, cl_program program);
 
-    ASSERT_EQ(value, oclValue);
-}
+    std::map <String, cl_program> codeCache;
+    unsigned int cacheSize;
 
-INSTANTIATE_TEST_CASE_P(oclNormTest, normFixture,
-                        ::testing::Values(cv::Size(500, 500), cv::Size(1000, 1000)));
+    //The presumed watermark for the cache volume (256MB). Is it enough?
+    //We may need more delicate algorithms when necessary later.
+    //Right now, let's just leave it along.
+    static const unsigned MAX_PROG_CACHE_SIZE = 1024;
+
+    // acquire both mutexes in this order: 1) mutexFiles 2) mutexCache
+    static cv::Mutex mutexFiles;
+    static cv::Mutex mutexCache;
+};
+
+}//namespace ocl
+}//namespace cv

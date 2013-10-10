@@ -45,6 +45,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
@@ -56,14 +57,6 @@ using namespace cv::ocl;
 #ifndef FLT_EPSILON
 #define FLT_EPSILON     1.192092896e-07F
 #endif
-
-namespace cv
-{
-namespace ocl
-{
-extern const char *cvt_color;
-}
-}
 
 namespace
 {
