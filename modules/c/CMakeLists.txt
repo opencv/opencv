@@ -23,7 +23,7 @@ set(opencv_hdrs
     "${OPENCV_MODULE_opencv_stitching_LOCATION}/include/opencv2/stitching.hpp"
     "${OPENCV_MODULE_opencv_superres_LOCATION}/include/opencv2/superres.hpp"
     "${OPENCV_MODULE_opencv_ts_LOCATION}/include/opencv2/ts.hpp"
-    )
+)
 
 set(opencv_hdr_dirs
     "${OPENCV_MODULE_opencv_core_LOCATION}/include/"
@@ -42,13 +42,13 @@ set(opencv_hdr_dirs
     "${OPENCV_MODULE_opencv_superres_LOCATION}/include/"
     "${OPENCV_MODULE_opencv_ts_LOCATION}/include/"
     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/"
-    )
+)
     
 
 if(HAVE_opencv_nonfree)
-  list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
-                              "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp"
-  )
+    list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/features2d.hpp"
+                            "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree.hpp"
+    )
 endif()
 
 set(c_generated_sources
@@ -68,10 +68,10 @@ set(headers
 )
 
 set(sources
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/mat.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/point.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/rect.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/opencv2/c/size.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/mat.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/point.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/rect.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/size.cpp"
 )
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/opencv2/c/)

@@ -24,7 +24,7 @@ library
                           , OpenCV.Funcs
                           , OpenCV.Mat
                           , OpenCV.Point
-    build-depends:          base >=4.6 && <4.7
+    build-depends:          base >=4.6 && <5
                           , bindings-DSL >= 1.0.17 && <= 1.1
                           , Cabal >=1.10
     default-language:       Haskell2010
