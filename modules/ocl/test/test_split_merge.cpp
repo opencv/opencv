@@ -139,7 +139,7 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int, bool)
 
 struct Merge : MergeTestBase {};
 
-TEST_P(Merge, Accuracy)
+OCL_TEST_P(Merge, Accuracy)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -238,7 +238,7 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int, bool)
 
 struct Split : SplitTestBase {};
 
-TEST_P(Split, Accuracy)
+OCL_TEST_P(Split, Accuracy)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {

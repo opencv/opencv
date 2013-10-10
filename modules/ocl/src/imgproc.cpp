@@ -977,7 +977,7 @@ namespace cv
             CV_Assert(src.type() == CV_8UC1);
             if(!src.clCxt->supportsFeature(ocl::FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(CV_OpenCLDoubleNotSupported, "select device don't support double");
                 return;
             }
 
@@ -1168,7 +1168,7 @@ namespace cv
         {
             if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(CV_OpenCLDoubleNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
@@ -1187,7 +1187,7 @@ namespace cv
         {
             if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
+                CV_Error(CV_OpenCLDoubleNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
@@ -1301,10 +1301,11 @@ namespace cv
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
-            //            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
-            //            {
-            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            //            }
+//            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
+//            {
+//                CV_Error( CV_OpenCLDoubleNotSupportedNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
+//                return;
+//            }
 
             dstr.create( src.size(), CV_8UC4 );
             dstsp.create( src.size(), CV_16SC2 );
