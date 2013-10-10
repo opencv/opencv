@@ -83,15 +83,6 @@ namespace cv
             DEVICE_MEM_PM           //persistent memory
         };
 
-        //Get the global device memory and read/write type
-        //return 1 if unified memory system supported, otherwise return 0
-        CV_EXPORTS int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type);
-
-        //Set the global device memory and read/write type,
-        //the newly generated oclMat will all use this type
-        //return -1 if the target type is unsupported, otherwise return 0
-        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT);
-
         // these classes contain OpenCL runtime information
 
         struct PlatformInfo;
@@ -113,6 +104,7 @@ namespace cv
             std::vector<size_t> maxWorkItemSizes;
             int maxComputeUnits;
             size_t localMemorySize;
+            size_t maxMemAllocSize;
 
             int deviceVersionMajor;
             int deviceVersionMinor;
@@ -199,23 +191,19 @@ namespace cv
 
         void CV_EXPORTS finish();
 
+        enum BINARY_CACHE_MODE
+        {
+            CACHE_NONE    = 0,        // do not cache OpenCL binary
+            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode
+            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // cache opencl binary
+        };
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
         // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
         // binary file, which will be reused when the OpenCV executable is started again.
         //
-        // Caching mode is controlled by the following enums
-        // Notes
-        //   1. the feature is by default enabled when OpenCV is built in release mode.
-        //   2. the CACHE_DEBUG / CACHE_RELEASE flags only effectively work with MSVC compiler;
-        //      for GNU compilers, the function always treats the build as release mode (enabled by default).
-        enum
-        {
-            CACHE_NONE    = 0,        // do not cache OpenCL binary
-            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
-            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
-        };
+        // This feature is enabled by default.
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
         //! set where binary cache to be saved to
