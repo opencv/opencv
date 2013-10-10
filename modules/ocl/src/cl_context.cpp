@@ -50,20 +50,7 @@
 #include <fstream>
 #include "cl_programcache.hpp"
 
-// workaround for OpenCL C++ bindings
-#if defined(HAVE_OPENCL12)
-#include "opencv2/ocl/cl_runtime/cl_runtime_opencl12_wrappers.hpp"
-#elif defined(HAVE_OPENCL11)
-#include "opencv2/ocl/cl_runtime/cl_runtime_opencl11_wrappers.hpp"
-#else
-#error Invalid OpenCL configuration
-#endif
-
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4100 4101 4127 4244 4267 4510 4512 4610)
-#endif
-#undef __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#include "opencv2/ocl/private/opencl_utils.hpp"
 
 namespace cv {
 namespace ocl {
@@ -329,17 +316,19 @@ static cv::Mutex __initializedMutex;
 static bool __initialized = false;
 static int initializeOpenCLDevices()
 {
+    using namespace cl_utils;
+
     assert(!__initialized);
     __initialized = true;
 
     assert(global_devices.size() == 0);
 
-    std::vector<cl::Platform> platforms;
+    std::vector<cl_platform_id> platforms;
     try
     {
-        openCLSafeCall(cl::Platform::get(&platforms));
+        openCLSafeCall(getPlatforms(platforms));
     }
-    catch (cv::Exception& e)
+    catch (cv::Exception&)
     {
         return 0; // OpenCL not found
     }
@@ -351,20 +340,20 @@ static int initializeOpenCLDevices()
         PlatformInfoImpl& platformInfo = global_platforms[i];
         platformInfo.info._id = i;
 
-        cl::Platform& platform = platforms[i];
+        cl_platform_id platform = platforms[i];
 
-        platformInfo.platform_id = platform();
-        openCLSafeCall(platform.getInfo(CL_PLATFORM_PROFILE, &platformInfo.info.platformProfile));
-        openCLSafeCall(platform.getInfo(CL_PLATFORM_VERSION, &platformInfo.info.platformVersion));
-        openCLSafeCall(platform.getInfo(CL_PLATFORM_NAME, &platformInfo.info.platformName));
-        openCLSafeCall(platform.getInfo(CL_PLATFORM_VENDOR, &platformInfo.info.platformVendor));
-        openCLSafeCall(platform.getInfo(CL_PLATFORM_EXTENSIONS, &platformInfo.info.platformExtensons));
+        platformInfo.platform_id = platform;
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_PROFILE, platformInfo.info.platformProfile));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VERSION, platformInfo.info.platformVersion));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_NAME, platformInfo.info.platformName));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VENDOR, platformInfo.info.platformVendor));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_EXTENSIONS, platformInfo.info.platformExtensons));
 
         parseOpenCLVersion(platformInfo.info.platformVersion,
                 platformInfo.info.platformVersionMajor, platformInfo.info.platformVersionMinor);
 
-        std::vector<cl::Device> devices;
-        cl_int status = platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        std::vector<cl_device_id> devices;
+        cl_int status = getDevices(platform, CL_DEVICE_TYPE_ALL, devices);
         if(status != CL_DEVICE_NOT_FOUND)
             openCLVerifyCall(status);
 
@@ -377,60 +366,60 @@ static int initializeOpenCLDevices()
 
             for(size_t j = 0; j < devices.size(); ++j)
             {
-                cl::Device& device = devices[j];
+                cl_device_id device = devices[j];
 
                 DeviceInfoImpl& deviceInfo = global_devices[baseIndx + j];
                 deviceInfo.info._id = baseIndx + j;
-                deviceInfo.platform_id = platform();
-                deviceInfo.device_id = device();
+                deviceInfo.platform_id = platform;
+                deviceInfo.device_id = device;
 
                 deviceInfo.info.platform = &platformInfo.info;
                 platformInfo.deviceIDs[j] = deviceInfo.info._id;
 
                 cl_device_type type = cl_device_type(-1);
-                openCLSafeCall(device.getInfo(CL_DEVICE_TYPE, &type));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_TYPE, type));
                 deviceInfo.info.deviceType = DeviceType(type);
 
-                openCLSafeCall(device.getInfo(CL_DEVICE_PROFILE, &deviceInfo.info.deviceProfile));
-                openCLSafeCall(device.getInfo(CL_DEVICE_VERSION, &deviceInfo.info.deviceVersion));
-                openCLSafeCall(device.getInfo(CL_DEVICE_NAME, &deviceInfo.info.deviceName));
-                openCLSafeCall(device.getInfo(CL_DEVICE_VENDOR, &deviceInfo.info.deviceVendor));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_PROFILE, deviceInfo.info.deviceProfile));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VERSION, deviceInfo.info.deviceVersion));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_NAME, deviceInfo.info.deviceName));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR, deviceInfo.info.deviceVendor));
                 cl_uint vendorID = 0;
-                openCLSafeCall(device.getInfo(CL_DEVICE_VENDOR_ID, &vendorID));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR_ID, vendorID));
                 deviceInfo.info.deviceVendorId = vendorID;
-                openCLSafeCall(device.getInfo(CL_DRIVER_VERSION, &deviceInfo.info.deviceDriverVersion));
-                openCLSafeCall(device.getInfo(CL_DEVICE_EXTENSIONS, &deviceInfo.info.deviceExtensions));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DRIVER_VERSION, deviceInfo.info.deviceDriverVersion));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, deviceInfo.info.deviceExtensions));
 
                 parseOpenCLVersion(deviceInfo.info.deviceVersion,
                         deviceInfo.info.deviceVersionMajor, deviceInfo.info.deviceVersionMinor);
 
                 size_t maxWorkGroupSize = 0;
-                openCLSafeCall(device.getInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE, &maxWorkGroupSize));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_GROUP_SIZE, maxWorkGroupSize));
                 deviceInfo.info.maxWorkGroupSize = maxWorkGroupSize;
 
                 cl_uint maxDimensions = 0;
-                openCLSafeCall(device.getInfo(CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, &maxDimensions));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, maxDimensions));
                 std::vector<size_t> maxWorkItemSizes(maxDimensions);
-                openCLSafeCall(clGetDeviceInfo(device(), CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * maxDimensions,
+                openCLSafeCall(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * maxDimensions,
                         (void *)&maxWorkItemSizes[0], 0));
                 deviceInfo.info.maxWorkItemSizes = maxWorkItemSizes;
 
                 cl_uint maxComputeUnits = 0;
-                openCLSafeCall(device.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &maxComputeUnits));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_COMPUTE_UNITS, maxComputeUnits));
                 deviceInfo.info.maxComputeUnits = maxComputeUnits;
 
                 cl_ulong localMemorySize = 0;
-                openCLSafeCall(device.getInfo(CL_DEVICE_LOCAL_MEM_SIZE, &localMemorySize));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMemorySize));
                 deviceInfo.info.localMemorySize = (size_t)localMemorySize;
 
 
                 cl_bool unifiedMemory = false;
-                openCLSafeCall(device.getInfo(CL_DEVICE_HOST_UNIFIED_MEMORY, &unifiedMemory));
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_HOST_UNIFIED_MEMORY, unifiedMemory));
                 deviceInfo.info.isUnifiedMemory = unifiedMemory != 0;
 
                 //initialize extra options for compilation. Currently only fp64 is included.
                 //Assume 4KB is enough to store all possible extensions.
-                openCLSafeCall(device.getInfo(CL_DEVICE_EXTENSIONS, &deviceInfo.info.deviceExtensions));
+                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, deviceInfo.info.deviceExtensions));
 
                 size_t fp64_khr = deviceInfo.info.deviceExtensions.find("cl_khr_fp64");
                 if(fp64_khr != std::string::npos)
@@ -501,6 +490,10 @@ public:
     bool supportsFeature(FEATURE_TYPE featureType) const;
 
     static void cleanupContext(void);
+
+private:
+    ContextImpl(const ContextImpl&); // disabled
+    ContextImpl& operator=(const ContextImpl&); // disabled
 };
 
 static cv::Mutex currentContextMutex;
