@@ -23,7 +23,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(WIN32)
-  install(TARGETS ${the_target} RUNTIME DESTINATION "samples/gpu" COMPONENT main)
+  install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/gpu" COMPONENT main)
 endif()
 
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
