@@ -1,1 +1,1 @@
-/home/arjun/src/opencv/modules/python/src2/hdr_parser.py
+../../python/src2/hdr_parser.py
