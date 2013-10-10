@@ -62,7 +62,7 @@ PARAM_TEST_CASE(Gemm, int, cv::Size, int)
     }
 };
 
-TEST_P(Gemm, Accuracy)
+OCL_TEST_P(Gemm, Accuracy)
 {
     cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
     cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);

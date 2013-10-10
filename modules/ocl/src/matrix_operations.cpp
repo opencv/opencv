@@ -119,6 +119,12 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
 
 void cv::ocl::oclMat::upload(const Mat &m)
 {
+    if (!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE) && m.depth() == CV_64F)
+    {
+        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
+        return;
+    }
+
     CV_DbgAssert(!m.empty());
     Size wholeSize;
     Point ofs;
@@ -308,7 +314,7 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) &&
             (depth() == CV_64F || dst.depth() == CV_64F))
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 

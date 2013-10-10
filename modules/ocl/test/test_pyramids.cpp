@@ -74,7 +74,7 @@ PARAM_TEST_CASE(PyrBase, MatType, int)
 
 typedef PyrBase PyrDown;
 
-TEST_P(PyrDown, Mat)
+OCL_TEST_P(PyrDown, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -97,7 +97,7 @@ INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
 
 typedef PyrBase PyrUp;
 
-TEST_P(PyrUp, Accuracy)
+OCL_TEST_P(PyrUp, Accuracy)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {

@@ -106,7 +106,7 @@ namespace
         }
     };
 
-    TEST_P(BruteForceMatcher, Match_Single)
+    OCL_TEST_P(BruteForceMatcher, Match_Single)
     {
         cv::ocl::BruteForceMatcher_OCL_base matcher(distType);
 
@@ -126,7 +126,7 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
-    TEST_P(BruteForceMatcher, KnnMatch_2_Single)
+    OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     {
         const int knn = 2;
 
@@ -158,7 +158,7 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
-    TEST_P(BruteForceMatcher, RadiusMatch_Single)
+    OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)
     {
         float radius = 1.f / countFactor;
 

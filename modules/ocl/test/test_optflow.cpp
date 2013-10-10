@@ -70,7 +70,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
     }
 };
 
-TEST_P(GoodFeaturesToTrack, Accuracy)
+OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
 {
     cv::Mat frame = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame.empty());
@@ -111,7 +111,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-TEST_P(GoodFeaturesToTrack, EmptyCorners)
+OCL_TEST_P(GoodFeaturesToTrack, EmptyCorners)
 {
     int maxCorners = 1000;
     double qualityLevel = 0.01;
@@ -141,7 +141,7 @@ PARAM_TEST_CASE(TVL1, bool)
 
 };
 
-TEST_P(TVL1, Accuracy)
+OCL_TEST_P(TVL1, Accuracy)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -182,7 +182,7 @@ PARAM_TEST_CASE(Sparse, bool, bool)
     }
 };
 
-TEST_P(Sparse, Mat)
+OCL_TEST_P(Sparse, Mat)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
@@ -295,7 +295,7 @@ PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
     }
 };
 
-TEST_P(Farneback, Accuracy)
+OCL_TEST_P(Farneback, Accuracy)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());

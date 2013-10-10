@@ -64,7 +64,7 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
     }
 };
 
-TEST_P(Canny, Accuracy)
+OCL_TEST_P(Canny, Accuracy)
 {
     cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());

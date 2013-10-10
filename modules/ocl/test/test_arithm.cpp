@@ -126,7 +126,7 @@ PARAM_TEST_CASE(Lut, int, int, bool, bool)
     }
 };
 
-TEST_P(Lut, Mat)
+OCL_TEST_P(Lut, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -232,7 +232,7 @@ PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
 
 typedef ArithmTestBase Exp;
 
-TEST_P(Exp, Mat)
+OCL_TEST_P(Exp, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -249,7 +249,7 @@ TEST_P(Exp, Mat)
 
 typedef ArithmTestBase Log;
 
-TEST_P(Log, Mat)
+OCL_TEST_P(Log, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -265,7 +265,7 @@ TEST_P(Log, Mat)
 
 typedef ArithmTestBase Add;
 
-TEST_P(Add, Mat)
+OCL_TEST_P(Add, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -277,7 +277,7 @@ TEST_P(Add, Mat)
     }
 }
 
-TEST_P(Add, Mat_Mask)
+OCL_TEST_P(Add, Mat_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -289,7 +289,7 @@ TEST_P(Add, Mat_Mask)
     }
 }
 
-TEST_P(Add, Scalar)
+OCL_TEST_P(Add, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -301,7 +301,7 @@ TEST_P(Add, Scalar)
     }
 }
 
-TEST_P(Add, Scalar_Mask)
+OCL_TEST_P(Add, Scalar_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -317,7 +317,7 @@ TEST_P(Add, Scalar_Mask)
 
 typedef ArithmTestBase Sub;
 
-TEST_P(Sub, Mat)
+OCL_TEST_P(Sub, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -330,7 +330,7 @@ TEST_P(Sub, Mat)
     }
 }
 
-TEST_P(Sub, Mat_Mask)
+OCL_TEST_P(Sub, Mat_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -342,7 +342,7 @@ TEST_P(Sub, Mat_Mask)
     }
 }
 
-TEST_P(Sub, Scalar)
+OCL_TEST_P(Sub, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -355,7 +355,7 @@ TEST_P(Sub, Scalar)
     }
 }
 
-TEST_P(Sub, Scalar_Mask)
+OCL_TEST_P(Sub, Scalar_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -371,7 +371,7 @@ TEST_P(Sub, Scalar_Mask)
 
 typedef ArithmTestBase Mul;
 
-TEST_P(Mul, Mat)
+OCL_TEST_P(Mul, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -383,7 +383,7 @@ TEST_P(Mul, Mat)
     }
 }
 
-TEST_P(Mul, Scalar)
+OCL_TEST_P(Mul, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -396,7 +396,7 @@ TEST_P(Mul, Scalar)
     }
 }
 
-TEST_P(Mul, Mat_Scalar)
+OCL_TEST_P(Mul, Mat_Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -413,7 +413,7 @@ TEST_P(Mul, Mat_Scalar)
 
 typedef ArithmTestBase Div;
 
-TEST_P(Div, Mat)
+OCL_TEST_P(Div, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -425,7 +425,7 @@ TEST_P(Div, Mat)
     }
 }
 
-TEST_P(Div, Scalar)
+OCL_TEST_P(Div, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -438,7 +438,7 @@ TEST_P(Div, Scalar)
     }
 }
 
-TEST_P(Div, Mat_Scalar)
+OCL_TEST_P(Div, Mat_Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -447,7 +447,7 @@ TEST_P(Div, Mat_Scalar)
         cv::divide(src1_roi, src2_roi, dst1_roi, val[0]);
         cv::ocl::divide(gsrc1_roi, gsrc2_roi, gdst1_roi, val[0]);
 
-        Near(gdst1_roi.depth() >= CV_32F ? 1e-3 : 1);
+        Near(gdst1_roi.depth() >= CV_32F ? 4e-3 : 1);
     }
 }
 
@@ -455,7 +455,7 @@ TEST_P(Div, Mat_Scalar)
 
 typedef ArithmTestBase Min;
 
-TEST_P(Min, Mat)
+OCL_TEST_P(Min, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -469,7 +469,7 @@ TEST_P(Min, Mat)
 
 typedef ArithmTestBase Max;
 
-TEST_P(Max, Mat)
+OCL_TEST_P(Max, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -485,7 +485,7 @@ TEST_P(Max, Mat)
 
 typedef ArithmTestBase Abs;
 
-TEST_P(Abs, Abs)
+OCL_TEST_P(Abs, Abs)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -501,7 +501,7 @@ TEST_P(Abs, Abs)
 
 typedef ArithmTestBase Absdiff;
 
-TEST_P(Absdiff, Mat)
+OCL_TEST_P(Absdiff, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -513,7 +513,7 @@ TEST_P(Absdiff, Mat)
     }
 }
 
-TEST_P(Absdiff, Scalar)
+OCL_TEST_P(Absdiff, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -529,7 +529,7 @@ TEST_P(Absdiff, Scalar)
 
 typedef ArithmTestBase CartToPolar;
 
-TEST_P(CartToPolar, angleInDegree)
+OCL_TEST_P(CartToPolar, angleInDegree)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -542,7 +542,7 @@ TEST_P(CartToPolar, angleInDegree)
     }
 }
 
-TEST_P(CartToPolar, angleInRadians)
+OCL_TEST_P(CartToPolar, angleInRadians)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -559,7 +559,7 @@ TEST_P(CartToPolar, angleInRadians)
 
 typedef ArithmTestBase PolarToCart;
 
-TEST_P(PolarToCart, angleInDegree)
+OCL_TEST_P(PolarToCart, angleInDegree)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -573,7 +573,7 @@ TEST_P(PolarToCart, angleInDegree)
     }
 }
 
-TEST_P(PolarToCart, angleInRadians)
+OCL_TEST_P(PolarToCart, angleInRadians)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -591,7 +591,7 @@ TEST_P(PolarToCart, angleInRadians)
 
 typedef ArithmTestBase Magnitude;
 
-TEST_P(Magnitude, Mat)
+OCL_TEST_P(Magnitude, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -607,7 +607,7 @@ TEST_P(Magnitude, Mat)
 
 typedef ArithmTestBase Transpose;
 
-TEST_P(Transpose, Mat)
+OCL_TEST_P(Transpose, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -620,7 +620,7 @@ TEST_P(Transpose, Mat)
     }
 }
 
-TEST_P(Transpose, SquareInplace)
+OCL_TEST_P(Transpose, SquareInplace)
 {
     const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -646,7 +646,7 @@ TEST_P(Transpose, SquareInplace)
 
 typedef ArithmTestBase Flip;
 
-TEST_P(Flip, X)
+OCL_TEST_P(Flip, X)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -658,7 +658,7 @@ TEST_P(Flip, X)
     }
 }
 
-TEST_P(Flip, Y)
+OCL_TEST_P(Flip, Y)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -670,7 +670,7 @@ TEST_P(Flip, Y)
     }
 }
 
-TEST_P(Flip, BOTH)
+OCL_TEST_P(Flip, BOTH)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -686,7 +686,7 @@ TEST_P(Flip, BOTH)
 
 typedef ArithmTestBase MinMax;
 
-TEST_P(MinMax, MAT)
+OCL_TEST_P(MinMax, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -717,7 +717,7 @@ TEST_P(MinMax, MAT)
     }
 }
 
-TEST_P(MinMax, MASK)
+OCL_TEST_P(MinMax, MASK)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -754,7 +754,7 @@ TEST_P(MinMax, MASK)
 
 typedef ArithmTestBase MinMaxLoc;
 
-TEST_P(MinMaxLoc, MAT)
+OCL_TEST_P(MinMaxLoc, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -868,7 +868,7 @@ TEST_P(MinMaxLoc, MAT)
     }
 }
 
-TEST_P(MinMaxLoc, MASK)
+OCL_TEST_P(MinMaxLoc, MASK)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -986,7 +986,7 @@ TEST_P(MinMaxLoc, MASK)
 
 typedef ArithmTestBase Sum;
 
-TEST_P(Sum, MAT)
+OCL_TEST_P(Sum, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1032,7 +1032,7 @@ static Scalar sqrSum(const Mat & src)
 
 typedef Scalar (*sumFunc)(const Mat &);
 
-TEST_P(SqrSum, MAT)
+OCL_TEST_P(SqrSum, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1088,7 +1088,7 @@ static Scalar absSum(const Mat & src)
     return sum;
 }
 
-TEST_P(AbsSum, MAT)
+OCL_TEST_P(AbsSum, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1121,7 +1121,7 @@ TEST_P(AbsSum, MAT)
 
 typedef ArithmTestBase CountNonZero;
 
-TEST_P(CountNonZero, MAT)
+OCL_TEST_P(CountNonZero, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1137,7 +1137,7 @@ TEST_P(CountNonZero, MAT)
 
 typedef ArithmTestBase Phase;
 
-TEST_P(Phase, angleInDegrees)
+OCL_TEST_P(Phase, angleInDegrees)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1149,7 +1149,7 @@ TEST_P(Phase, angleInDegrees)
     }
 }
 
-TEST_P(Phase, angleInRadians)
+OCL_TEST_P(Phase, angleInRadians)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1165,7 +1165,7 @@ TEST_P(Phase, angleInRadians)
 
 typedef ArithmTestBase Bitwise_and;
 
-TEST_P(Bitwise_and, Mat)
+OCL_TEST_P(Bitwise_and, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1177,7 +1177,7 @@ TEST_P(Bitwise_and, Mat)
     }
 }
 
-TEST_P(Bitwise_and, Mat_Mask)
+OCL_TEST_P(Bitwise_and, Mat_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1189,7 +1189,7 @@ TEST_P(Bitwise_and, Mat_Mask)
     }
 }
 
-TEST_P(Bitwise_and, Scalar)
+OCL_TEST_P(Bitwise_and, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1201,7 +1201,7 @@ TEST_P(Bitwise_and, Scalar)
     }
 }
 
-TEST_P(Bitwise_and, Scalar_Mask)
+OCL_TEST_P(Bitwise_and, Scalar_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1217,7 +1217,7 @@ TEST_P(Bitwise_and, Scalar_Mask)
 
 typedef ArithmTestBase Bitwise_or;
 
-TEST_P(Bitwise_or, Mat)
+OCL_TEST_P(Bitwise_or, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1229,7 +1229,7 @@ TEST_P(Bitwise_or, Mat)
     }
 }
 
-TEST_P(Bitwise_or, Mat_Mask)
+OCL_TEST_P(Bitwise_or, Mat_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1241,7 +1241,7 @@ TEST_P(Bitwise_or, Mat_Mask)
     }
 }
 
-TEST_P(Bitwise_or, Scalar)
+OCL_TEST_P(Bitwise_or, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1253,7 +1253,7 @@ TEST_P(Bitwise_or, Scalar)
     }
 }
 
-TEST_P(Bitwise_or, Scalar_Mask)
+OCL_TEST_P(Bitwise_or, Scalar_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1269,7 +1269,7 @@ TEST_P(Bitwise_or, Scalar_Mask)
 
 typedef ArithmTestBase Bitwise_xor;
 
-TEST_P(Bitwise_xor, Mat)
+OCL_TEST_P(Bitwise_xor, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1281,7 +1281,7 @@ TEST_P(Bitwise_xor, Mat)
     }
 }
 
-TEST_P(Bitwise_xor, Mat_Mask)
+OCL_TEST_P(Bitwise_xor, Mat_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1293,7 +1293,7 @@ TEST_P(Bitwise_xor, Mat_Mask)
     }
 }
 
-TEST_P(Bitwise_xor, Scalar)
+OCL_TEST_P(Bitwise_xor, Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1305,7 +1305,7 @@ TEST_P(Bitwise_xor, Scalar)
     }
 }
 
-TEST_P(Bitwise_xor, Scalar_Mask)
+OCL_TEST_P(Bitwise_xor, Scalar_Mask)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1321,7 +1321,7 @@ TEST_P(Bitwise_xor, Scalar_Mask)
 
 typedef ArithmTestBase Bitwise_not;
 
-TEST_P(Bitwise_not, Mat)
+OCL_TEST_P(Bitwise_not, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1337,7 +1337,7 @@ TEST_P(Bitwise_not, Mat)
 
 typedef ArithmTestBase Compare;
 
-TEST_P(Compare, Mat)
+OCL_TEST_P(Compare, Mat)
 {
     int cmp_codes[] = { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE };
     int cmp_num = sizeof(cmp_codes) / sizeof(int);
@@ -1358,7 +1358,7 @@ TEST_P(Compare, Mat)
 
 typedef ArithmTestBase Pow;
 
-TEST_P(Pow, Mat)
+OCL_TEST_P(Pow, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1374,7 +1374,7 @@ TEST_P(Pow, Mat)
 
 typedef ArithmTestBase AddWeighted;
 
-TEST_P(AddWeighted, Mat)
+OCL_TEST_P(AddWeighted, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1385,7 +1385,7 @@ TEST_P(AddWeighted, Mat)
         cv::addWeighted(src1_roi, alpha, src2_roi, beta, gama, dst1_roi);
         cv::ocl::addWeighted(gsrc1_roi, alpha, gsrc2_roi, beta, gama, gdst1_roi);
 
-        Near(1e-5);
+        Near(3e-4);
     }
 }
 
@@ -1393,7 +1393,7 @@ TEST_P(AddWeighted, Mat)
 
 typedef ArithmTestBase SetIdentity;
 
-TEST_P(SetIdentity, Mat)
+OCL_TEST_P(SetIdentity, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1410,7 +1410,7 @@ TEST_P(SetIdentity, Mat)
 
 typedef ArithmTestBase MeanStdDev;
 
-TEST_P(MeanStdDev, Mat)
+OCL_TEST_P(MeanStdDev, Mat)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1434,7 +1434,7 @@ TEST_P(MeanStdDev, Mat)
 
 typedef ArithmTestBase Norm;
 
-TEST_P(Norm, NORM_INF)
+OCL_TEST_P(Norm, NORM_INF)
 {
     for (int relative = 0; relative < 2; ++relative)
         for (int j = 0; j < LOOP_TIMES; j++)
@@ -1452,7 +1452,7 @@ TEST_P(Norm, NORM_INF)
         }
 }
 
-TEST_P(Norm, NORM_L1)
+OCL_TEST_P(Norm, NORM_L1)
 {
     for (int relative = 0; relative < 2; ++relative)
         for (int j = 0; j < LOOP_TIMES; j++)
@@ -1466,11 +1466,11 @@ TEST_P(Norm, NORM_L1)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.2);
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
         }
 }
 
-TEST_P(Norm, NORM_L2)
+OCL_TEST_P(Norm, NORM_L2)
 {
     for (int relative = 0; relative < 2; ++relative)
         for (int j = 0; j < LOOP_TIMES; j++)
