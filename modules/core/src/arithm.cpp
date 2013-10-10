@@ -74,8 +74,6 @@ FUNCTOR_TEMPLATE(VLoadStore128);
 FUNCTOR_TEMPLATE(VLoadStore64);
 FUNCTOR_TEMPLATE(VLoadStore128Aligned);
 
-#undef FUNCTOR_TEMPLATE
-
 #endif
 
 template<typename T, class Op, class VOp>
@@ -199,8 +197,8 @@ void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
 
 
 template<typename T, class Op, class Op64>
-void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step2,
-               double* dst, size_t step, Size sz)
+void vBinOp64(const T* src1, size_t step1, const T* src2, size_t step2,
+               T* dst, size_t step, Size sz)
 {
 #if CV_SSE2
     Op64 op64;
@@ -233,8 +231,8 @@ void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step
 
         for( ; x <= sz.width - 4; x += 4 )
         {
-            double v0 = op(src1[x], src2[x]);
-            double v1 = op(src1[x+1], src2[x+1]);
+            T v0 = op(src1[x], src2[x]);
+            T v1 = op(src1[x+1], src2[x+1]);
             dst[x] = v0; dst[x+1] = v1;
             v0 = op(src1[x+2], src2[x+2]);
             v1 = op(src1[x+3], src2[x+3]);
@@ -247,9 +245,6 @@ void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step
 }
 
 #if CV_SSE2
-
-#define FUNCTOR_TEMPLATE(name)          \
-    template<typename T> struct name {}
 
 #define FUNCTOR_LOADSTORE_CAST(name, template_arg, register_type, load_body, store_body)\
     template <>                                                                                  \
@@ -397,13 +392,6 @@ FUNCTOR_TEMPLATE(VXor);
 FUNCTOR_CLOSURE_2arg(VXor, uchar, return _mm_xor_si128(a, b));
 FUNCTOR_TEMPLATE(VNot);
 FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm_xor_si128(_mm_set1_epi32(-1), a));
-
-#undef FUNCTOR_TEMPLATE
-#undef FUNCTOR_LOADSTORE_CAST
-#undef FUNCTOR_LOADSTORE
-#undef FUNCTOR_CLOSURE_2arg
-#undef FUNCTOR_CLOSURE_1arg
-
 #endif
 
 #if CV_SSE2
@@ -531,7 +519,7 @@ static void add64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<double, OpAdd<double>, IF_SIMD(VAdd<double>)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpAdd<double>, IF_SIMD(VAdd<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void sub8u( const uchar* src1, size_t step1,
@@ -588,7 +576,7 @@ static void sub64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<double, OpSub<double>, IF_SIMD(VSub<double>)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpSub<double>, IF_SIMD(VSub<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
@@ -699,7 +687,7 @@ static void max64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min8u( const uchar* src1, size_t step1,
@@ -807,7 +795,7 @@ static void min64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void absdiff8u( const uchar* src1, size_t step1,
@@ -862,7 +850,7 @@ static void absdiff64f( const double* src1, size_t step1,
                         const double* src2, size_t step2,
                         double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<double, OpAbsDiff<double>, IF_SIMD(VAbsDiff<double>)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpAbsDiff<double>, IF_SIMD(VAbsDiff<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 
