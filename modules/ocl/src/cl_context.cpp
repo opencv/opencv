@@ -412,6 +412,9 @@ static int initializeOpenCLDevices()
                 openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMemorySize));
                 deviceInfo.info.localMemorySize = (size_t)localMemorySize;
 
+                cl_ulong maxMemAllocSize = 0;
+                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, maxMemAllocSize));
+                deviceInfo.info.maxMemAllocSize = (size_t)maxMemAllocSize;
 
                 cl_bool unifiedMemory = false;
                 openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_HOST_UNIFIED_MEMORY, unifiedMemory));
@@ -452,7 +455,7 @@ static int initializeOpenCLDevices()
 DeviceInfo::DeviceInfo()
     : _id(-1), deviceType(DeviceType(0)),
       deviceVendorId(-1),
-      maxWorkGroupSize(0), maxComputeUnits(0), localMemorySize(0),
+      maxWorkGroupSize(0), maxComputeUnits(0), localMemorySize(0), maxMemAllocSize(0),
       deviceVersionMajor(0), deviceVersionMinor(0),
       haveDoubleSupport(false), isUnifiedMemory(false),
       platform(NULL)
