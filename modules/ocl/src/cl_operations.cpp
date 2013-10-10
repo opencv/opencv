@@ -212,13 +212,35 @@ void openCLVerifyKernel(const Context *ctx, cl_kernel kernel, size_t *localThrea
 static double total_execute_time = 0;
 static double total_kernel_time = 0;
 #endif
+
+static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
+{
+    if (buildOptions == NULL)
+        return "";
+
+    size_t length = strlen(buildOptions), didx = 0, sidx = 0;
+    while (sidx < length && buildOptions[sidx] == 0)
+        ++sidx;
+
+    std::string opt;
+    opt.resize(length);
+
+    for ( ; sidx < length; ++sidx)
+        if (buildOptions[sidx] != ' ')
+            opt[didx++] = buildOptions[sidx];
+        else if ( !(didx > 0 && opt[didx - 1] == ' ') )
+            opt[didx++] = buildOptions[sidx];
+
+    return opt;
+}
+
 void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
                           size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
-    //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
+    //for example split_C2_D3, represent the split kernel with channels = 2 and dataType Depth = 3(Data type is short)
     stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
@@ -227,7 +249,8 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
     kernelName += idxStr.str();
 
     cl_kernel kernel;
-    kernel = openCLGetKernelFromSource(ctx, source, kernelName, build_options);
+    std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
+    kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
 
     if ( localThreads != NULL)
     {

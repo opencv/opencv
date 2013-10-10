@@ -1497,7 +1497,7 @@ namespace cv
                     openCLSafeCall(clReleaseKernel(kernel));
 
                     static char opt[20] = {0};
-                    sprintf(opt, " -D WAVE_SIZE=%d", (int)wave_size);
+                    sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
                     openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, opt);
                 }
             }
