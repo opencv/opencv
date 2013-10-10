@@ -229,7 +229,7 @@ PARAM_TEST_CASE(SortByKey, InputSize, MatType, MatType, SortMethod, IsGreaterTha
     }
 };
 
-TEST_P(SortByKey, Accuracy)
+OCL_TEST_P(SortByKey, Accuracy)
 {
     using namespace cv;
     ocl::oclMat oclmat_key(mat_key);

@@ -517,14 +517,14 @@ Context* Context::getContext()
             {
                 if (initializeOpenCLDevices() == 0)
                 {
-                    CV_Error(CV_GpuNotSupported, "OpenCL not available");
+                    CV_Error(CV_OpenCLInitError, "OpenCL not available");
                 }
             }
             if (!__deviceSelected)
             {
                 if (!selectOpenCLDevice())
                 {
-                    CV_Error(CV_GpuNotSupported, "Can't select OpenCL device");
+                    CV_Error(CV_OpenCLInitError, "Can't select OpenCL device");
                 }
             }
         }

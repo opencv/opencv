@@ -42,7 +42,7 @@
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
 
-#define LOOP_TIMES 10
+#define LOOP_TIMES 1
 
 #define MWIDTH 256
 #define MHEIGHT 256
@@ -253,5 +253,51 @@ CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, 
 CV_FLAGS(GemmFlags, GEMM_1_T, GEMM_2_T, GEMM_3_T);
 CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
 CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
+
+# define OCL_TEST_P(test_case_name, test_name) \
+    class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : \
+        public test_case_name { \
+    public: \
+        GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() { } \
+        virtual void TestBody(); \
+        void OCLTestBody(); \
+    private: \
+        static int AddToRegistry() \
+        { \
+            ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
+              GetTestCasePatternHolder<test_case_name>(\
+                  #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
+                      #test_case_name, \
+                      #test_name, \
+                      new ::testing::internal::TestMetaFactory< \
+                          GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+            return 0; \
+        } \
+    \
+        static int gtest_registering_dummy_; \
+        GTEST_DISALLOW_COPY_AND_ASSIGN_(\
+            GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
+    }; \
+    \
+    int GTEST_TEST_CLASS_NAME_(test_case_name, \
+                             test_name)::gtest_registering_dummy_ = \
+      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
+    \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() \
+    { \
+        try \
+        { \
+            OCLTestBody(); \
+        } \
+        catch (const cv::Exception & ex) \
+        { \
+            if (ex.code != CV_OpenCLDoubleNotSupported) \
+               throw; \
+            else \
+                std::cout << "Test skipped (selected device does not support double)" << std::endl; \
+        } \
+    } \
+    \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::OCLTestBody()
 
 #endif // __OPENCV_TEST_UTILITY_HPP__
