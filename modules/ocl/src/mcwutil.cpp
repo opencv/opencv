@@ -216,40 +216,10 @@ namespace cv
         {
             return Ptr<TextureCL>(new TextureCL(bindTexture(mat), mat.rows, mat.cols, mat.type()));
         }
+
         void releaseTexture(cl_mem& texture)
         {
             openCLFree(texture);
-        }
-
-        bool support_image2d(Context *clCxt)
-        {
-            const cv::ocl::ProgramEntry _kernel = {"test_func", "__kernel void test_func(image2d_t img) {}", NULL};
-            static bool _isTested = false;
-            static bool _support = false;
-            if(_isTested)
-            {
-                return _support;
-            }
-            try
-            {
-                cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel, "test_func");
-                cv::ocl::finish();
-                _support = true;
-            }
-            catch (const cv::Exception& e)
-            {
-                if(e.code == -217)
-                {
-                    _support = false;
-                }
-                else
-                {
-                    // throw e once again
-                    throw e;
-                }
-            }
-            _isTested = true;
-            return _support;
         }
     }//namespace ocl
 

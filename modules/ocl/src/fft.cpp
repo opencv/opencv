@@ -90,8 +90,7 @@ namespace cv
         protected:
             PlanCache();
             ~PlanCache();
-            friend class auto_ptr<PlanCache>;
-            static auto_ptr<PlanCache> planCache;
+            static PlanCache* planCache;
 
             bool started;
             vector<FftPlan *> planStore;
@@ -102,9 +101,9 @@ namespace cv
 
             static PlanCache* getPlanCache()
             {
-                if( NULL == planCache.get())
-                    planCache.reset(new PlanCache());
-                return planCache.get();
+                if (NULL == planCache)
+                    planCache = new PlanCache();
+                return planCache;
             }
             // return a baked plan->
             // if there is one matched plan, return it
@@ -118,7 +117,7 @@ namespace cv
         };
     }
 }
-auto_ptr<PlanCache> PlanCache::planCache;
+PlanCache* PlanCache::planCache = NULL;
 
 void cv::ocl::fft_setup()
 {
@@ -138,13 +137,13 @@ void cv::ocl::fft_teardown()
     {
         return;
     }
-    delete pCache.setupData;
     for(size_t i = 0; i < pCache.planStore.size(); i ++)
     {
         delete pCache.planStore[i];
     }
     pCache.planStore.clear();
     openCLSafeCall( clAmdFftTeardown( ) );
+    delete pCache.setupData; pCache.setupData = NULL;
     pCache.started = false;
 }
 

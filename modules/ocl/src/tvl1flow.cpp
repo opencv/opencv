@@ -411,9 +411,6 @@ void ocl_tvl1flow::estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
 void ocl_tvl1flow::warpBackward(const oclMat &I0, const oclMat &I1, oclMat &I1x, oclMat &I1y, oclMat &u1, oclMat &u2, oclMat &I1w, oclMat &I1wx, oclMat &I1wy, oclMat &grad, oclMat &rho)
 {
     Context* clCxt = I0.clCxt;
-    const bool isImgSupported = support_image2d(clCxt);
-
-    CV_Assert(isImgSupported);
 
     int u1ElementSize = u1.elemSize();
     int u1Step = u1.step/u1ElementSize;

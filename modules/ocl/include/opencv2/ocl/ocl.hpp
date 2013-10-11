@@ -187,9 +187,9 @@ namespace cv
             return Context::getContext()->getOpenCLCommandQueuePtr();
         }
 
-        bool CV_EXPORTS supportsFeature(FEATURE_TYPE featureType);
+        CV_EXPORTS bool supportsFeature(FEATURE_TYPE featureType);
 
-        void CV_EXPORTS finish();
+        CV_EXPORTS void finish();
 
         enum BINARY_CACHE_MODE
         {
@@ -1739,7 +1739,7 @@ namespace cv
         //  output -
         //    keys   = {1,    2,   3}   (CV_8UC1)
         //    values = {6,2, 10,5, 4,3} (CV_8UC2)
-        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
+        CV_EXPORTS void sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
         /*!Base class for MOG and MOG2!*/
         class CV_EXPORTS BackgroundSubtractor
         {
@@ -1938,6 +1938,7 @@ namespace cv
         private:
             oclMat samples_ocl;
         };
+
         /*!***************  SVM  *************!*/
         class CV_EXPORTS CvSVM_OCL : public CvSVM
         {
@@ -1957,6 +1958,7 @@ namespace cv
             void create_kernel();
             void create_solver();
         };
+
         /*!***************  END  *************!*/
     }
 }

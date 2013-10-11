@@ -55,6 +55,21 @@
 namespace cv {
 namespace ocl {
 
+struct __Module
+{
+    __Module();
+    ~__Module();
+    cv::Mutex initializationMutex;
+    cv::Mutex currentContextMutex;
+};
+static __Module __module;
+
+cv::Mutex& getInitializationMutex()
+{
+    return __module.initializationMutex;
+}
+
+
 struct PlatformInfoImpl
 {
     cl_platform_id platform_id;
@@ -312,7 +327,6 @@ not_found:
     return false;
 }
 
-static cv::Mutex __initializedMutex;
 static bool __initialized = false;
 static int initializeOpenCLDevices()
 {
@@ -499,7 +513,6 @@ private:
     ContextImpl& operator=(const ContextImpl&); // disabled
 };
 
-static cv::Mutex currentContextMutex;
 static ContextImpl* currentContext = NULL;
 
 Context* Context::getContext()
@@ -508,7 +521,7 @@ Context* Context::getContext()
     {
         if (!__initialized || !__deviceSelected)
         {
-            cv::AutoLock lock(__initializedMutex);
+            cv::AutoLock lock(getInitializationMutex());
             if (!__initialized)
             {
                 if (initializeOpenCLDevices() == 0)
@@ -604,7 +617,7 @@ void ContextImpl::cleanupContext(void)
     fft_teardown();
     clBlasTeardown();
 
-    cv::AutoLock lock(currentContextMutex);
+    cv::AutoLock lock(__module.currentContextMutex);
     if (currentContext)
         delete currentContext;
     currentContext = NULL;
@@ -615,7 +628,7 @@ void ContextImpl::setContext(const DeviceInfo* deviceInfo)
     CV_Assert(deviceInfo->_id >= 0 && deviceInfo->_id < (int)global_devices.size());
 
     {
-        cv::AutoLock lock(currentContextMutex);
+        cv::AutoLock lock(__module.currentContextMutex);
         if (currentContext)
         {
             if (currentContext->deviceInfo._id == deviceInfo->_id)
@@ -640,7 +653,7 @@ void ContextImpl::setContext(const DeviceInfo* deviceInfo)
 
     ContextImpl* old = NULL;
     {
-        cv::AutoLock lock(currentContextMutex);
+        cv::AutoLock lock(__module.currentContextMutex);
         old = currentContext;
         currentContext = ctx;
     }
@@ -724,20 +737,19 @@ bool supportsFeature(FEATURE_TYPE featureType)
     return Context::getContext()->supportsFeature(featureType);
 }
 
-struct __Module
+__Module::__Module()
 {
-    __Module() { /* moved to Context::getContext(): initializeOpenCLDevices(); */ }
-    ~__Module()
-    {
-#if defined(WIN32) && defined(CVAPI_EXPORTS)
-        // nothing, see DllMain
-#else
-        ContextImpl::cleanupContext();
-#endif
-    }
-};
-static __Module __module;
+    /* moved to Context::getContext(): initializeOpenCLDevices(); */
+}
 
+__Module::~__Module()
+{
+#if defined(WIN32) && defined(CVAPI_EXPORTS)
+    // nothing, see DllMain
+#else
+    ContextImpl::cleanupContext();
+#endif
+}
 
 } // namespace ocl
 } // namespace cv
