@@ -133,16 +133,21 @@ void cv::ocl::fft_setup()
 void cv::ocl::fft_teardown()
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
+
     if(!pCache.started)
-    {
         return;
-    }
+
     for(size_t i = 0; i < pCache.planStore.size(); i ++)
-    {
         delete pCache.planStore[i];
-    }
     pCache.planStore.clear();
-    openCLSafeCall( clAmdFftTeardown( ) );
+
+    try
+    {
+        openCLSafeCall( clAmdFftTeardown( ) );
+    }
+    catch (const std::bad_alloc &)
+    { }
+
     delete pCache.setupData; pCache.setupData = NULL;
     pCache.started = false;
 }
