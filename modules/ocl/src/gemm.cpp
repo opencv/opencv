@@ -58,12 +58,12 @@ void clBlasTeardown();
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasSetup()
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasTeardown()

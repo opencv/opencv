@@ -50,7 +50,7 @@ using namespace cv::ocl;
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL DFT is not implemented");
 }
 namespace cv { namespace ocl {
     void fft_teardown();
