@@ -45,6 +45,11 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
+// TODO Remove this after HAVE_CLAMDBLAS eliminating
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 using namespace cv;
 using namespace ocl;
 
