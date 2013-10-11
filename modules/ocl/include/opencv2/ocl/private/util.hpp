@@ -165,13 +165,9 @@ private:
 //   for faster clamping, there is no buffer padding for the constructed texture
 Ptr<TextureCL> CV_EXPORTS bindTexturePtr(const oclMat &mat);
 
-// returns whether the current context supports image2d_t format or not
-bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
-
 bool CV_EXPORTS isCpuDevice();
 
 size_t CV_EXPORTS queryWaveFrontSize(cl_kernel kernel);
-
 
 
 inline size_t divUp(size_t total, size_t grain)
