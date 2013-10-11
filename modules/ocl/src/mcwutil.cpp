@@ -223,7 +223,7 @@ namespace cv
 
         bool support_image2d(Context *clCxt)
         {
-            const cv::ocl::ProgramEntry _kernel = {NULL, "__kernel void test_func(image2d_t img) {}", NULL};
+            const cv::ocl::ProgramEntry _kernel = {"test_func", "__kernel void test_func(image2d_t img) {}", NULL};
             static bool _isTested = false;
             static bool _support = false;
             if(_isTested)
