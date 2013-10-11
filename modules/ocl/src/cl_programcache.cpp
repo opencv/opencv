@@ -448,26 +448,30 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
 {
     stringstream src_sign;
 
-    src_sign << source->name;
-    src_sign << getClContext(ctx);
-    if (NULL != build_options)
+    if (source->name)
     {
-        src_sign << "_" << build_options;
-    }
-
-    {
-        cv::AutoLock lockCache(mutexCache);
-        cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
-        if (!!program)
+        src_sign << source->name;
+        src_sign << getClContext(ctx);
+        if (NULL != build_options)
         {
-            clRetainProgram(program);
-            return program;
+            src_sign << "_" << build_options;
+        }
+
+        {
+            cv::AutoLock lockCache(mutexCache);
+            cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
+            if (!!program)
+            {
+                clRetainProgram(program);
+                return program;
+            }
         }
     }
 
     cv::AutoLock lockCache(mutexFiles);
 
     // second check
+    if (source->name)
     {
         cv::AutoLock lockCache(mutexCache);
         cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
@@ -493,6 +497,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
     cl_program program = programFileCache.getOrBuildProgram(ctx, source, all_build_options);
 
     //Cache the binary for future use if build_options is null
+    if (source->name)
     {
         cv::AutoLock lockCache(mutexCache);
         this->addProgram(src_sign.str(), program);

@@ -76,13 +76,12 @@ void cv::ocl::clBlasTeardown()
 using namespace cv;
 
 static bool clBlasInitialized = false;
-static Mutex cs;
 
 void cv::ocl::clBlasSetup()
 {
     if(!clBlasInitialized)
     {
-        AutoLock al(cs);
+        AutoLock lock(getInitializationMutex());
         if(!clBlasInitialized)
         {
             openCLSafeCall(clAmdBlasSetup());
@@ -93,7 +92,7 @@ void cv::ocl::clBlasSetup()
 
 void cv::ocl::clBlasTeardown()
 {
-    AutoLock al(cs);
+    AutoLock lock(getInitializationMutex());
     if(clBlasInitialized)
     {
         clAmdBlasTeardown();
