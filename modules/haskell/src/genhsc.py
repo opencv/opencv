@@ -108,9 +108,9 @@ class FuncInfo(object):
         if self.classname:
             classname = self.classname + "_"
             if "[" in name:
-                name = "getelem"
+                name = re.sub(r"operator\[\]", "getelem", name)
             elif "(" in name:
-                name = "call"
+                name = re.sub(r"operator \(\)", "call", name)
         else:
             classname = ""
 
@@ -248,17 +248,16 @@ class HSCWrapperGen(object):
 
         name += str(nargs)
 
-        i = 0
         #ugly, but keeps with the old behavior and adds to it.
         if name in self.funcs.keys():
+            i = 0
             while True:
                 #overloaded function with the same number of args :/
                 if not name + "_" + str(i) in self.funcs.keys():
+                    name += "_" + str(i)
                     break
                 else:
                     i += 1
-        if i != 0:
-            name += "_" + str(i)
         return name
 
     def add_const(self, name, decl):
