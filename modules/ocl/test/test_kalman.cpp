@@ -46,8 +46,6 @@
 
 #ifdef HAVE_OPENCL
 
-#ifdef HAVE_CLAMDBLAS
-
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
@@ -146,7 +144,5 @@ OCL_TEST_P(Kalman, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_Video, Kalman, Combine(Values(3, 7), Values(30)));
-
-#endif // HAVE_CLAMDBLAS
 
 #endif // HAVE_OPENCL

@@ -266,7 +266,8 @@ enum {
  CV_OpenGlNotSupported=        -218,
  CV_OpenGlApiCallError=        -219,
  CV_OpenCLDoubleNotSupported=  -220,
- CV_OpenCLInitError=           -221
+ CV_OpenCLInitError=           -221,
+ CV_OpenCLNoAMDBlasFft=        -222
 };
 
 /****************************************************************************************\
