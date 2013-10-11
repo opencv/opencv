@@ -128,8 +128,6 @@ INSTANTIATE_TEST_CASE_P(OCL_ML, KNN, Combine(Values(6, 5), Values(Size(200, 400)
 
 ////////////////////////////////SVM/////////////////////////////////////////////////
 
-#ifdef HAVE_CLAMDBLAS
-
 PARAM_TEST_CASE(SVM_OCL, int, int, int)
 {
     cv::Size size;
@@ -307,6 +305,5 @@ INSTANTIATE_TEST_CASE_P(OCL_ML, SVM_OCL, testing::Combine(
                             Values((int)CvSVM::C_SVC, (int)CvSVM::NU_SVC, (int)CvSVM::ONE_CLASS, (int)CvSVM::NU_SVR),
                             Values(2, 3, 4)
                         ));
-#endif // HAVE_CLAMDBLAS
 
 #endif // HAVE_OPENCL
