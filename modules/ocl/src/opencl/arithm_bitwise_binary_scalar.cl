@@ -50,19 +50,33 @@
 
 __kernel void arithm_bitwise_binary_scalar(
         __global uchar *src1, int src1_step, int src1_offset,
-        __global uchar *src2, int elemSize,
+        __global uchar *src2,
         __global uchar *dst, int dst_step, int dst_offset,
-        int cols1, int rows)
+        int cols, int rows)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if (x < cols1 && y < rows)
+    if (x < cols && y < rows)
     {
+#if elemSize > 1
+        x *= elemSize;
+#endif
         int src1_index = mad24(y, src1_step, src1_offset + x);
-        int src2_index = x % elemSize;
         int dst_index  = mad24(y, dst_step, dst_offset + x);
 
-        dst[dst_index] = src1[src1_index] Operation src2[src2_index];
+#if elemSize > 1
+        #pragma unroll
+        for (int i = 0; i < elemSize; i += vlen)
+        {
+            ucharv t0 = vloadn(0, src1 + src1_index + i);
+            ucharv t1 = vloadn(0, src2 + i);
+            ucharv t2 = t0 Operation t1;
+
+            vstoren(t2, 0, dst + dst_index + i);
+        }
+#else
+        dst[dst_index] = src1[src1_index] Operation src2[0];
+#endif
     }
 }

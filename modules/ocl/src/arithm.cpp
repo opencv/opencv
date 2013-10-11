@@ -56,6 +56,23 @@
 using namespace cv;
 using namespace cv::ocl;
 
+static std::vector<uchar> scalarToVector(const cv::Scalar & sc, int depth, int ocn, int cn)
+{
+    CV_Assert(ocn == cn || (ocn == 4 && cn == 3));
+
+    static const int sizeMap[] = { sizeof(uchar), sizeof(char), sizeof(ushort),
+                               sizeof(short), sizeof(int), sizeof(float), sizeof(double) };
+
+    int elemSize1 = sizeMap[depth];
+    int bufSize = elemSize1 * ocn;
+    std::vector<uchar> _buf(bufSize);
+    uchar * buf = &_buf[0];
+    scalarToRawData(sc, buf, CV_MAKE_TYPE(depth, cn));
+    memset(buf + elemSize1 * cn, 0, (ocn - cn) * elemSize1);
+
+    return _buf;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////// add subtract multiply divide min max /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -84,7 +101,7 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
     int src2step1 = src2.step / src2.elemSize(), src2offset1 = src2.offset / src2.elemSize();
     int maskstep1 = mask.step, maskoffset1 = mask.offset / mask.elemSize();
     int dststep1 = dst.step / dst.elemSize(), dstoffset1 = dst.offset / dst.elemSize();
-    oclMat m;
+    std::vector<uchar> m;
 
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
@@ -132,10 +149,9 @@ static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const
     if (haveScalar)
     {
         const int WDepthMap[] = { CV_16S, CV_16S, CV_32S, CV_32S, CV_32S, CV_32F, CV_64F };
-        m.create(1, 1, CV_MAKE_TYPE(WDepthMap[WDepth], oclChannels));
-        m.setTo(scalar);
+        m = scalarToVector(scalar, WDepthMap[WDepth], oclChannels, src1.channels());
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&m.data ));
+        args.push_back( make_pair( m.size(), (void *)&m[0]));
 
         kernelName += "_scalar";
     }
@@ -1329,6 +1345,13 @@ static void bitwise_unary_run(const oclMat &src1, oclMat &dst, string kernelName
 
 enum { AND = 0, OR, XOR };
 
+static std::string to_string(int value)
+{
+    std::ostringstream stream;
+    stream << value;
+    return stream.str();
+}
+
 static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Scalar& src3, const oclMat &mask,
                                oclMat &dst, int operationType)
 {
@@ -1337,17 +1360,20 @@ static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Sca
     CV_Assert(mask.empty() || (!mask.empty() && mask.type() == CV_8UC1 && mask.size() == src1.size()));
 
     dst.create(src1.size(), src1.type());
-
-    int elemSize = dst.elemSize();
-    int cols1 = dst.cols * elemSize;
     oclMat m;
 
     const char operationMap[] = { '&', '|', '^' };
     std::string kernelName("arithm_bitwise_binary");
-    std::string buildOptions = format("-D Operation=%c", operationMap[operationType]);
+
+    int vlen = std::min<int>(8, src1.elemSize1() * src1.oclchannels());
+    std::string vlenstr = vlen > 1 ? to_string(vlen) : "";
+    std::string buildOptions = format("-D Operation=%c -D vloadn=vload%s -D vstoren=vstore%s -D elemSize=%d -D vlen=%d"
+                                      " -D ucharv=uchar%s",
+                                      operationMap[operationType], vlenstr.c_str(), vlenstr.c_str(),
+                                      (int)src1.elemSize(), vlen, vlenstr.c_str());
 
     size_t localThreads[3]  = { 16, 16, 1 };
-    size_t globalThreads[3] = { cols1, dst.rows, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -1360,7 +1386,6 @@ static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Sca
         m.setTo(src3);
 
         args.push_back( make_pair( sizeof(cl_mem), (void *)&m.data ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&elemSize ) );
 
         kernelName += "_scalar";
     }
@@ -1377,9 +1402,6 @@ static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Sca
         args.push_back( make_pair( sizeof(cl_int), (void *)&mask.step ));
         args.push_back( make_pair( sizeof(cl_int), (void *)&mask.offset ));
 
-        if (!src2.empty())
-            args.push_back( make_pair( sizeof(cl_int), (void *)&elemSize ));
-
         kernelName += "_mask";
     }
 
@@ -1387,7 +1409,7 @@ static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Sca
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
 
     openCLExecuteKernel(src1.clCxt, mask.empty() ? (!src2.empty() ? &arithm_bitwise_binary : &arithm_bitwise_binary_scalar) :
@@ -1400,12 +1422,12 @@ void cv::ocl::bitwise_not(const oclMat &src, oclMat &dst)
 {
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_OpenCLDoubleNotSupported, "selected device doesn't support double");
+        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 
     dst.create(src.size(), src.type());
-    bitwise_unary_run(src, dst,  "arithm_bitwise_not", &arithm_bitwise_not);
+    bitwise_unary_run(src, dst, "arithm_bitwise_not", &arithm_bitwise_not);
 }
 
 void cv::ocl::bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
