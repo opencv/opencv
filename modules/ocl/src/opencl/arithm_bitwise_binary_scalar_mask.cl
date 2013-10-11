@@ -56,7 +56,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 __kernel void arithm_bitwise_binary_scalar_mask(__global uchar *src1, int src1_step, int src1_offset,
-        __global uchar *src2, int elemSize,
+        __global uchar *src2,
         __global uchar *mask, int mask_step, int mask_offset,
         __global uchar *dst,  int dst_step,  int dst_offset,
         int cols, int rows)
@@ -66,14 +66,29 @@ __kernel void arithm_bitwise_binary_scalar_mask(__global uchar *src1, int src1_s
 
     if (x < cols && y < rows)
     {
-        int mask_index = mad24(y, mask_step, (x / elemSize) + mask_offset);
+        int mask_index = mad24(y, mask_step, x + mask_offset);
+
         if (mask[mask_index])
         {
+#if elemSize > 1
+            x *= elemSize;
+#endif
             int src1_index = mad24(y, src1_step, x + src1_offset);
-            int src2_index = x % elemSize;
             int dst_index = mad24(y, dst_step, x + dst_offset);
 
-            dst[dst_index] = src1[src1_index] Operation src2[src2_index];
+#if elemSize > 1
+            #pragma unroll
+            for (int i = 0; i < elemSize; i += vlen)
+            {
+                ucharv t0 = vloadn(0, src1 + src1_index + i);
+                ucharv t1 = vloadn(0, src2 + i);
+                ucharv t2 = t0 Operation t1;
+
+                vstoren(t2, 0, dst + dst_index + i);
+            }
+#else
+            dst[dst_index] = src1[src1_index] Operation src2[0];
+#endif
         }
     }
 }
