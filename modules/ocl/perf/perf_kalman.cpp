@@ -57,12 +57,14 @@ using std::tr1::get;
 
 ///////////// Kalman Filter ////////////////////////
 
-typedef TestBaseWithParam<int> KalmanFilterFixture;
+typedef tuple<int> KalmanFilterType;
+typedef TestBaseWithParam<KalmanFilterType> KalmanFilterFixture;
 
 PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
-            ::testing::Values(1000, 1500))
+    ::testing::Values(1000, 1500))
 {
-    const int dim = GetParam();
+    KalmanFilterType params = GetParam();
+    const int dim = get<0>(params);
 
     cv::Mat sample(dim, 1, CV_32FC1), dresult;
     randu(sample, -1, 1);
