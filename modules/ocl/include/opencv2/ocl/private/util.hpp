@@ -77,6 +77,8 @@ inline cl_command_queue getClCommandQueue(const Context *ctx)
     return *(cl_command_queue*)(ctx->getOpenCLCommandQueuePtr());
 }
 
+CV_EXPORTS cv::Mutex& getInitializationMutex();
+
 enum openCLMemcpyKind
 {
     clMemcpyHostToDevice = 0,
