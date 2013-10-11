@@ -631,9 +631,8 @@ def getLibVersion(version_hpp_path):
     epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     status = re.search("^W*#\W*define\W+CV_VERSION_STATUS\W+\"(.*?)\"\W*$", version_file, re.MULTILINE).group(1)
-    return (epoch, major, minor, revision, status)
+    return (epoch, major, minor, status)
 
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
@@ -800,9 +799,9 @@ public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
         if class_name == 'Core':
-            (epoch, major, minor, revision, status) = getLibVersion(
+            (epoch, major, minor, status) = getLibVersion(
                 (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
-            version_str    = '.'.join( (epoch, major, minor, revision) ) + status
+            version_str    = '.'.join( (epoch, major, minor) ) + status
             version_suffix =  ''.join( (epoch, major, minor) )
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
@@ -812,7 +811,7 @@ public class %(jc)s {
     private static int getVersionEpoch() { return %(ep)s; }
     private static int getVersionMajor() { return %(ma)s; }
     private static int getVersionMinor() { return %(mi)s; }
-    private static int getVersionRevision() { return %(re)s; }
+    private static int getVersionRevision() { return 0; }
     private static String getVersionStatus() { return "%(st)s"; }
 
     public static final String VERSION = getVersion();
@@ -820,9 +819,14 @@ public class %(jc)s {
     public static final int VERSION_EPOCH = getVersionEpoch();
     public static final int VERSION_MAJOR = getVersionMajor();
     public static final int VERSION_MINOR = getVersionMinor();
-    public static final int VERSION_REVISION = getVersionRevision();
     public static final String VERSION_STATUS = getVersionStatus();
-""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision, 'st': status } )
+
+    // Strictly speaking, this can be inlined now that it's frozen at 0;
+    // but just in case, let's keep it as a function call.
+    @Deprecated
+    public static final int VERSION_REVISION = getVersionRevision();
+
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 'st': status } )
 
 
     def add_class(self, decl):
