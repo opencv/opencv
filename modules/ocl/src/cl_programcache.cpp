@@ -110,17 +110,12 @@ void ProgramCache::releaseProgram()
     cacheSize = 0;
 }
 
-static int enable_disk_cache = true ||
-#ifdef _DEBUG
-        false;
-#else
-        true;
-#endif
+static bool enable_disk_cache = true;
 static String binpath = "";
 
 void setBinaryDiskCache(int mode, String path)
 {
-    enable_disk_cache = 0;
+    enable_disk_cache = false;
     binpath = "";
 
     if(mode == CACHE_NONE)
@@ -128,7 +123,7 @@ void setBinaryDiskCache(int mode, String path)
         return;
     }
     enable_disk_cache =
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(DEBUG)
         (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
         (mode & CACHE_RELEASE) == CACHE_RELEASE;
