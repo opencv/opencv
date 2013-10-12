@@ -335,7 +335,7 @@ namespace cv { namespace cuda { namespace device
             0,
             kernel_caller< 1>, kernel_caller< 2>, kernel_caller< 3>, kernel_caller< 4>, kernel_caller< 5>,
             kernel_caller< 6>, kernel_caller< 7>, kernel_caller< 8>, kernel_caller< 9>, kernel_caller<10>,
-            kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<15>, kernel_caller<15>,
+            kernel_caller<11>, kernel_caller<12>, kernel_caller<13>, kernel_caller<14>, kernel_caller<15>,
             kernel_caller<16>, kernel_caller<17>, kernel_caller<18>, kernel_caller<19>, kernel_caller<20>,
             kernel_caller<21>, kernel_caller<22>, kernel_caller<23>, kernel_caller<24>, kernel_caller<25>
 
