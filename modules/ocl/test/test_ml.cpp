@@ -126,7 +126,7 @@ OCL_TEST_P(KNN, Accuracy)
 INSTANTIATE_TEST_CASE_P(OCL_ML, KNN, Combine(Values(6, 5), Values(Size(200, 400), Size(300, 600)),
     Values(4, 3), Values(false, true)));
 
-#ifndef HAVE_CLAMDBLAS // TODO does not work non-blas version of SVM
+#ifdef HAVE_CLAMDBLAS // TODO does not work non-blas version of SVM
 
 ////////////////////////////////SVM/////////////////////////////////////////////////
 
