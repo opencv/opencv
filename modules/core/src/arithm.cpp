@@ -65,11 +65,22 @@ IPPArithmInitializer ippArithmInitializer;
 
 struct NOP {};
 
-template<typename T, class Op, class Op8>
-void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
+#if CV_SSE2
+
+#define FUNCTOR_TEMPLATE(name)          \
+    template<typename T> struct name {}
+
+FUNCTOR_TEMPLATE(VLoadStore128);
+FUNCTOR_TEMPLATE(VLoadStore64);
+FUNCTOR_TEMPLATE(VLoadStore128Aligned);
+
+#endif
+
+template<typename T, class Op, class VOp>
+void vBinOp(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, size_t step, Size sz)
 {
 #if CV_SSE2
-    Op8 op8;
+    VOp vop;
 #endif
     Op op;
 
@@ -79,26 +90,31 @@ void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, s
     {
         int x = 0;
 
-    #if CV_SSE2
+#if CV_SSE2
         if( USE_SSE2 )
         {
-            for( ; x <= sz.width - 32; x += 32 )
+            for( ; x <= sz.width - 32/(int)sizeof(T); x += 32/sizeof(T) )
             {
-                __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 16));
-                r0 = op8(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
-                r1 = op8(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 16)));
-                _mm_storeu_si128((__m128i*)(dst + x), r0);
-                _mm_storeu_si128((__m128i*)(dst + x + 16), r1);
-            }
-            for( ; x <= sz.width - 8; x += 8 )
-            {
-                __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
-                r0 = op8(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
-                _mm_storel_epi64((__m128i*)(dst + x), r0);
+                typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x               );
+                typename VLoadStore128<T>::reg_type r1 = VLoadStore128<T>::load(src1 + x + 16/sizeof(T));
+                r0 = vop(r0, VLoadStore128<T>::load(src2 + x               ));
+                r1 = vop(r1, VLoadStore128<T>::load(src2 + x + 16/sizeof(T)));
+                VLoadStore128<T>::store(dst + x               , r0);
+                VLoadStore128<T>::store(dst + x + 16/sizeof(T), r1);
             }
         }
-    #endif
+#endif
+#if CV_SSE2
+        if( USE_SSE2 )
+        {
+            for( ; x <= sz.width - 8/(int)sizeof(T); x += 8/sizeof(T) )
+            {
+                typename VLoadStore64<T>::reg_type r = VLoadStore64<T>::load(src1 + x);
+                r = vop(r, VLoadStore64<T>::load(src2 + x));
+                VLoadStore64<T>::store(dst + x, r);
+            }
+        }
+#endif
 #if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
@@ -110,17 +126,18 @@ void vBinOp8(const T* src1, size_t step1, const T* src2, size_t step2, T* dst, s
             dst[x+2] = v0; dst[x+3] = v1;
         }
 #endif
+
         for( ; x < sz.width; x++ )
             dst[x] = op(src1[x], src2[x]);
     }
 }
 
-template<typename T, class Op, class Op16>
-void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
+template<typename T, class Op, class Op32>
+void vBinOp32(const T* src1, size_t step1, const T* src2, size_t step2,
               T* dst, size_t step, Size sz)
 {
 #if CV_SSE2
-    Op16 op16;
+    Op32 op32;
 #endif
     Op op;
 
@@ -130,28 +147,38 @@ void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
     {
         int x = 0;
 
-    #if CV_SSE2
+#if CV_SSE2
         if( USE_SSE2 )
         {
-            for( ; x <= sz.width - 16; x += 16 )
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
             {
-                __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 8));
-                r0 = op16(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
-                r1 = op16(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 8)));
-                _mm_storeu_si128((__m128i*)(dst + x), r0);
-                _mm_storeu_si128((__m128i*)(dst + x + 8), r1);
-            }
-            for( ; x <= sz.width - 4; x += 4 )
-            {
-                __m128i r0 = _mm_loadl_epi64((const __m128i*)(src1 + x));
-                r0 = op16(r0,_mm_loadl_epi64((const __m128i*)(src2 + x)));
-                _mm_storel_epi64((__m128i*)(dst + x), r0);
+                for( ; x <= sz.width - 8; x += 8 )
+                {
+                    typename VLoadStore128Aligned<T>::reg_type r0 = VLoadStore128Aligned<T>::load(src1 + x    );
+                    typename VLoadStore128Aligned<T>::reg_type r1 = VLoadStore128Aligned<T>::load(src1 + x + 4);
+                    r0 = op32(r0, VLoadStore128Aligned<T>::load(src2 + x    ));
+                    r1 = op32(r1, VLoadStore128Aligned<T>::load(src2 + x + 4));
+                    VLoadStore128Aligned<T>::store(dst + x    , r0);
+                    VLoadStore128Aligned<T>::store(dst + x + 4, r1);
+                }
             }
         }
-        else
-    #endif
-
+#endif
+#if CV_SSE2
+        if( USE_SSE2 )
+        {
+            for( ; x <= sz.width - 8; x += 8 )
+            {
+                typename VLoadStore128<T>::reg_type r0 = VLoadStore128<T>::load(src1 + x    );
+                typename VLoadStore128<T>::reg_type r1 = VLoadStore128<T>::load(src1 + x + 4);
+                r0 = op32(r0, VLoadStore128<T>::load(src2 + x    ));
+                r1 = op32(r1, VLoadStore128<T>::load(src2 + x + 4));
+                VLoadStore128<T>::store(dst + x    , r0);
+                VLoadStore128<T>::store(dst + x + 4, r1);
+            }
+        }
+#endif
+#if CV_ENABLE_UNROLLED
         for( ; x <= sz.width - 4; x += 4 )
         {
             T v0 = op(src1[x], src2[x]);
@@ -161,6 +188,7 @@ void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
             v1 = op(src1[x+3], src2[x+3]);
             dst[x+2] = v0; dst[x+3] = v1;
         }
+#endif
 
         for( ; x < sz.width; x++ )
             dst[x] = op(src1[x], src2[x]);
@@ -168,122 +196,9 @@ void vBinOp16(const T* src1, size_t step1, const T* src2, size_t step2,
 }
 
 
-template<class Op, class Op32>
-void vBinOp32s(const int* src1, size_t step1, const int* src2, size_t step2,
-               int* dst, size_t step, Size sz)
-{
-#if CV_SSE2
-    Op32 op32;
-#endif
-    Op op;
-
-    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
-        src2 += step2/sizeof(src2[0]),
-        dst += step/sizeof(dst[0]) )
-    {
-        int x = 0;
-
-#if CV_SSE2
-        if( USE_SSE2 )
-        {
-            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
-                for( ; x <= sz.width - 8; x += 8 )
-                {
-                    __m128i r0 = _mm_load_si128((const __m128i*)(src1 + x));
-                    __m128i r1 = _mm_load_si128((const __m128i*)(src1 + x + 4));
-                    r0 = op32(r0,_mm_load_si128((const __m128i*)(src2 + x)));
-                    r1 = op32(r1,_mm_load_si128((const __m128i*)(src2 + x + 4)));
-                    _mm_store_si128((__m128i*)(dst + x), r0);
-                    _mm_store_si128((__m128i*)(dst + x + 4), r1);
-                }
-            else
-                for( ; x <= sz.width - 8; x += 8 )
-                {
-                    __m128i r0 = _mm_loadu_si128((const __m128i*)(src1 + x));
-                    __m128i r1 = _mm_loadu_si128((const __m128i*)(src1 + x + 4));
-                    r0 = op32(r0,_mm_loadu_si128((const __m128i*)(src2 + x)));
-                    r1 = op32(r1,_mm_loadu_si128((const __m128i*)(src2 + x + 4)));
-                    _mm_storeu_si128((__m128i*)(dst + x), r0);
-                    _mm_storeu_si128((__m128i*)(dst + x + 4), r1);
-                }
-        }
-#endif
-#if CV_ENABLE_UNROLLED
-        for( ; x <= sz.width - 4; x += 4 )
-        {
-            int v0 = op(src1[x], src2[x]);
-            int v1 = op(src1[x+1], src2[x+1]);
-            dst[x] = v0; dst[x+1] = v1;
-            v0 = op(src1[x+2], src2[x+2]);
-            v1 = op(src1[x+3], src2[x+3]);
-            dst[x+2] = v0; dst[x+3] = v1;
-        }
-#endif
-        for( ; x < sz.width; x++ )
-            dst[x] = op(src1[x], src2[x]);
-    }
-}
-
-
-template<class Op, class Op32>
-void vBinOp32f(const float* src1, size_t step1, const float* src2, size_t step2,
-               float* dst, size_t step, Size sz)
-{
-#if CV_SSE2
-    Op32 op32;
-#endif
-    Op op;
-
-    for( ; sz.height--; src1 += step1/sizeof(src1[0]),
-        src2 += step2/sizeof(src2[0]),
-        dst += step/sizeof(dst[0]) )
-    {
-        int x = 0;
-
-    #if CV_SSE2
-        if( USE_SSE2 )
-        {
-            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
-                for( ; x <= sz.width - 8; x += 8 )
-                {
-                    __m128 r0 = _mm_load_ps(src1 + x);
-                    __m128 r1 = _mm_load_ps(src1 + x + 4);
-                    r0 = op32(r0,_mm_load_ps(src2 + x));
-                    r1 = op32(r1,_mm_load_ps(src2 + x + 4));
-                    _mm_store_ps(dst + x, r0);
-                    _mm_store_ps(dst + x + 4, r1);
-                }
-            else
-                for( ; x <= sz.width - 8; x += 8 )
-                {
-                    __m128 r0 = _mm_loadu_ps(src1 + x);
-                    __m128 r1 = _mm_loadu_ps(src1 + x + 4);
-                    r0 = op32(r0,_mm_loadu_ps(src2 + x));
-                    r1 = op32(r1,_mm_loadu_ps(src2 + x + 4));
-                    _mm_storeu_ps(dst + x, r0);
-                    _mm_storeu_ps(dst + x + 4, r1);
-                }
-        }
-    #endif
-#if CV_ENABLE_UNROLLED
-        for( ; x <= sz.width - 4; x += 4 )
-        {
-            float v0 = op(src1[x], src2[x]);
-            float v1 = op(src1[x+1], src2[x+1]);
-            dst[x] = v0; dst[x+1] = v1;
-            v0 = op(src1[x+2], src2[x+2]);
-            v1 = op(src1[x+3], src2[x+3]);
-            dst[x+2] = v0; dst[x+3] = v1;
-        }
-#endif
-        for( ; x < sz.width; x++ )
-            dst[x] = op(src1[x], src2[x]);
-    }
-}
-
-template<class Op, class Op64>
-void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step2,
-               double* dst, size_t step, Size sz)
+template<typename T, class Op, class Op64>
+void vBinOp64(const T* src1, size_t step1, const T* src2, size_t step2,
+               T* dst, size_t step, Size sz)
 {
 #if CV_SSE2
     Op64 op64;
@@ -296,23 +211,28 @@ void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step
     {
         int x = 0;
 
-    #if CV_SSE2
-        if( USE_SSE2 && (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
-            for( ; x <= sz.width - 4; x += 4 )
+#if CV_SSE2
+        if( USE_SSE2 )
+        {
+            if( (((size_t)src1|(size_t)src2|(size_t)dst)&15) == 0 )
             {
-                __m128d r0 = _mm_load_pd(src1 + x);
-                __m128d r1 = _mm_load_pd(src1 + x + 2);
-                r0 = op64(r0,_mm_load_pd(src2 + x));
-                r1 = op64(r1,_mm_load_pd(src2 + x + 2));
-                _mm_store_pd(dst + x, r0);
-                _mm_store_pd(dst + x + 2, r1);
+                for( ; x <= sz.width - 4; x += 4 )
+                {
+                    typename VLoadStore128Aligned<T>::reg_type r0 = VLoadStore128Aligned<T>::load(src1 + x    );
+                    typename VLoadStore128Aligned<T>::reg_type r1 = VLoadStore128Aligned<T>::load(src1 + x + 2);
+                    r0 = op64(r0, VLoadStore128Aligned<T>::load(src2 + x    ));
+                    r1 = op64(r1, VLoadStore128Aligned<T>::load(src2 + x + 2));
+                    VLoadStore128Aligned<T>::store(dst + x    , r0);
+                    VLoadStore128Aligned<T>::store(dst + x + 2, r1);
+                }
             }
-        else
-    #endif
+        }
+#endif
+
         for( ; x <= sz.width - 4; x += 4 )
         {
-            double v0 = op(src1[x], src2[x]);
-            double v1 = op(src1[x+1], src2[x+1]);
+            T v0 = op(src1[x], src2[x]);
+            T v1 = op(src1[x+1], src2[x+1]);
             dst[x] = v0; dst[x+1] = v1;
             v0 = op(src1[x+2], src2[x+2]);
             v1 = op(src1[x+3], src2[x+3]);
@@ -326,135 +246,152 @@ void vBinOp64f(const double* src1, size_t step1, const double* src2, size_t step
 
 #if CV_SSE2
 
-struct _VAdd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epu8(a,b); }};
-struct _VSub8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epu8(a,b); }};
-struct _VMin8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_min_epu8(a,b); }};
-struct _VMax8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_max_epu8(a,b); }};
-struct _VAbsDiff8u
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_add_epi8(_mm_subs_epu8(a,b),_mm_subs_epu8(b,a)); }
-};
+#define FUNCTOR_LOADSTORE_CAST(name, template_arg, register_type, load_body, store_body)\
+    template <>                                                                                  \
+    struct name<template_arg>{                                                                   \
+        typedef register_type reg_type;                                                          \
+        static reg_type load(const template_arg * p) { return load_body ((const reg_type *)p);}; \
+        static void store(template_arg * p, reg_type v) { store_body ((reg_type *)p, v);};       \
+    }
 
-struct _VAdd8s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epi8(a,b); }};
-struct _VSub8s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epi8(a,b); }};
-struct _VMin8s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
+#define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body)\
+    template <>                                                                \
+    struct name<template_arg>{                                                 \
+        typedef register_type reg_type;                                        \
+        static reg_type load(const template_arg * p) { return load_body (p);}; \
+        static void store(template_arg * p, reg_type v) { store_body (p, v);}; \
+    }
+
+#define FUNCTOR_CLOSURE_2arg(name, template_arg, body)\
+    template<>                                                                 \
+    struct name<template_arg>                                                  \
+    {                                                                          \
+        VLoadStore128<template_arg>::reg_type operator()(                      \
+                        const VLoadStore128<template_arg>::reg_type & a,       \
+                        const VLoadStore128<template_arg>::reg_type & b) const \
+        {                                                                      \
+            body;                                                              \
+        }                                                                      \
+    }
+
+#define FUNCTOR_CLOSURE_1arg(name, template_arg, body)\
+    template<>                                                                 \
+    struct name<template_arg>                                                  \
+    {                                                                          \
+        VLoadStore128<template_arg>::reg_type operator()(                      \
+                        const VLoadStore128<template_arg>::reg_type & a,       \
+                        const VLoadStore128<template_arg>::reg_type &  ) const \
+        {                                                                      \
+            body;                                                              \
+        }                                                                      \
+    }
+
+FUNCTOR_LOADSTORE_CAST(VLoadStore128,  uchar, __m128i, _mm_loadu_si128, _mm_storeu_si128);
+FUNCTOR_LOADSTORE_CAST(VLoadStore128,  schar, __m128i, _mm_loadu_si128, _mm_storeu_si128);
+FUNCTOR_LOADSTORE_CAST(VLoadStore128, ushort, __m128i, _mm_loadu_si128, _mm_storeu_si128);
+FUNCTOR_LOADSTORE_CAST(VLoadStore128,  short, __m128i, _mm_loadu_si128, _mm_storeu_si128);
+FUNCTOR_LOADSTORE_CAST(VLoadStore128,    int, __m128i, _mm_loadu_si128, _mm_storeu_si128);
+FUNCTOR_LOADSTORE(     VLoadStore128,  float, __m128 , _mm_loadu_ps   , _mm_storeu_ps   );
+FUNCTOR_LOADSTORE(     VLoadStore128, double, __m128d, _mm_loadu_pd   , _mm_storeu_pd   );
+
+FUNCTOR_LOADSTORE_CAST(VLoadStore64,  uchar, __m128i, _mm_loadl_epi64, _mm_storel_epi64);
+FUNCTOR_LOADSTORE_CAST(VLoadStore64,  schar, __m128i, _mm_loadl_epi64, _mm_storel_epi64);
+FUNCTOR_LOADSTORE_CAST(VLoadStore64, ushort, __m128i, _mm_loadl_epi64, _mm_storel_epi64);
+FUNCTOR_LOADSTORE_CAST(VLoadStore64,  short, __m128i, _mm_loadl_epi64, _mm_storel_epi64);
+
+FUNCTOR_LOADSTORE_CAST(VLoadStore128Aligned,    int, __m128i, _mm_load_si128, _mm_store_si128);
+FUNCTOR_LOADSTORE(     VLoadStore128Aligned,  float, __m128 , _mm_load_ps   , _mm_store_ps   );
+FUNCTOR_LOADSTORE(     VLoadStore128Aligned, double, __m128d, _mm_load_pd   , _mm_store_pd   );
+
+FUNCTOR_TEMPLATE(VAdd);
+FUNCTOR_CLOSURE_2arg(VAdd,  uchar, return _mm_adds_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  schar, return _mm_adds_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, ushort, return _mm_adds_epu16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  short, return _mm_adds_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,    int, return _mm_add_epi32 (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd,  float, return _mm_add_ps    (a, b));
+FUNCTOR_CLOSURE_2arg(VAdd, double, return _mm_add_pd    (a, b));
+
+FUNCTOR_TEMPLATE(VSub);
+FUNCTOR_CLOSURE_2arg(VSub,  uchar, return _mm_subs_epu8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  schar, return _mm_subs_epi8 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, ushort, return _mm_subs_epu16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  short, return _mm_subs_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VSub,    int, return _mm_sub_epi32 (a, b));
+FUNCTOR_CLOSURE_2arg(VSub,  float, return _mm_sub_ps    (a, b));
+FUNCTOR_CLOSURE_2arg(VSub, double, return _mm_sub_pd    (a, b));
+
+FUNCTOR_TEMPLATE(VMin);
+FUNCTOR_CLOSURE_2arg(VMin, uchar, return _mm_min_epu8(a, b));
+FUNCTOR_CLOSURE_2arg(VMin, schar,
         __m128i m = _mm_cmpgt_epi8(a, b);
         return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
-    }
-};
-struct _VMax8s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
+    );
+FUNCTOR_CLOSURE_2arg(VMin, ushort, return _mm_subs_epu16(a, _mm_subs_epu16(a, b)));
+FUNCTOR_CLOSURE_2arg(VMin,  short, return _mm_min_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMin,    int,
+        __m128i m = _mm_cmpgt_epi32(a, b);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    );
+FUNCTOR_CLOSURE_2arg(VMin,  float, return _mm_min_ps(a, b));
+FUNCTOR_CLOSURE_2arg(VMin, double, return _mm_min_pd(a, b));
+
+FUNCTOR_TEMPLATE(VMax);
+FUNCTOR_CLOSURE_2arg(VMax, uchar, return _mm_max_epu8(a, b));
+FUNCTOR_CLOSURE_2arg(VMax, schar,
         __m128i m = _mm_cmpgt_epi8(b, a);
         return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
-    }
-};
-struct _VAbsDiff8s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
+    );
+FUNCTOR_CLOSURE_2arg(VMax, ushort, return _mm_adds_epu16(_mm_subs_epu16(a, b), b));
+FUNCTOR_CLOSURE_2arg(VMax,  short, return _mm_max_epi16(a, b));
+FUNCTOR_CLOSURE_2arg(VMax,    int,
+        __m128i m = _mm_cmpgt_epi32(b, a);
+        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
+    );
+FUNCTOR_CLOSURE_2arg(VMax,  float, return _mm_max_ps(a, b));
+FUNCTOR_CLOSURE_2arg(VMax, double, return _mm_max_pd(a, b));
+
+
+static int CV_DECL_ALIGNED(16) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
+static int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
+
+FUNCTOR_TEMPLATE(VAbsDiff);
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  uchar,
+        return _mm_add_epi8(_mm_subs_epu8(a, b), _mm_subs_epu8(b, a));
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  schar,
         __m128i d = _mm_subs_epi8(a, b);
         __m128i m = _mm_cmpgt_epi8(b, a);
         return _mm_subs_epi8(_mm_xor_si128(d, m), m);
-    }
-};
-
-struct _VAdd16u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epu16(a,b); }};
-struct _VSub16u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epu16(a,b); }};
-struct _VMin16u
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_subs_epu16(a,_mm_subs_epu16(a,b)); }
-};
-struct _VMax16u
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_adds_epu16(_mm_subs_epu16(a,b),b); }
-};
-struct _VAbsDiff16u
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    { return _mm_add_epi16(_mm_subs_epu16(a,b),_mm_subs_epu16(b,a)); }
-};
-
-struct _VAdd16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_adds_epi16(a,b); }};
-struct _VSub16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_subs_epi16(a,b); }};
-struct _VMin16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_min_epi16(a,b); }};
-struct _VMax16s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_max_epi16(a,b); }};
-struct _VAbsDiff16s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
-        __m128i M = _mm_max_epi16(a,b), m = _mm_min_epi16(a,b);
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff, ushort,
+        return _mm_add_epi16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a));
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  short,
+        __m128i M = _mm_max_epi16(a, b);
+        __m128i m = _mm_min_epi16(a, b);
         return _mm_subs_epi16(M, m);
-    }
-};
-
-struct _VAdd32s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_add_epi32(a,b); }};
-struct _VSub32s { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_sub_epi32(a,b); }};
-struct _VMin32s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
-        __m128i m = _mm_cmpgt_epi32(a, b);
-        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
-    }
-};
-struct _VMax32s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
-        __m128i m = _mm_cmpgt_epi32(b, a);
-        return _mm_xor_si128(a, _mm_and_si128(_mm_xor_si128(a, b), m));
-    }
-};
-struct _VAbsDiff32s
-{
-    __m128i operator()(const __m128i& a, const __m128i& b) const
-    {
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,    int,
         __m128i d = _mm_sub_epi32(a, b);
         __m128i m = _mm_cmpgt_epi32(b, a);
         return _mm_sub_epi32(_mm_xor_si128(d, m), m);
-    }
-};
-
-struct _VAdd32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_add_ps(a,b); }};
-struct _VSub32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_sub_ps(a,b); }};
-struct _VMin32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_min_ps(a,b); }};
-struct _VMax32f { __m128 operator()(const __m128& a, const __m128& b) const { return _mm_max_ps(a,b); }};
-static int CV_DECL_ALIGNED(16) v32f_absmask[] = { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff };
-struct _VAbsDiff32f
-{
-    __m128 operator()(const __m128& a, const __m128& b) const
-    {
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff,  float,
         return _mm_and_ps(_mm_sub_ps(a,b), *(const __m128*)v32f_absmask);
-    }
-};
-
-struct _VAdd64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_add_pd(a,b); }};
-struct _VSub64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_sub_pd(a,b); }};
-struct _VMin64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_min_pd(a,b); }};
-struct _VMax64f { __m128d operator()(const __m128d& a, const __m128d& b) const { return _mm_max_pd(a,b); }};
-
-static int CV_DECL_ALIGNED(16) v64f_absmask[] = { 0xffffffff, 0x7fffffff, 0xffffffff, 0x7fffffff };
-struct _VAbsDiff64f
-{
-    __m128d operator()(const __m128d& a, const __m128d& b) const
-    {
+    );
+FUNCTOR_CLOSURE_2arg(VAbsDiff, double,
         return _mm_and_pd(_mm_sub_pd(a,b), *(const __m128d*)v64f_absmask);
-    }
-};
+    );
 
-struct _VAnd8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_and_si128(a,b); }};
-struct _VOr8u  { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_or_si128(a,b); }};
-struct _VXor8u { __m128i operator()(const __m128i& a, const __m128i& b) const { return _mm_xor_si128(a,b); }};
-struct _VNot8u { __m128i operator()(const __m128i& a, const __m128i&) const { return _mm_xor_si128(_mm_set1_epi32(-1),a); }};
-
+FUNCTOR_TEMPLATE(VAnd);
+FUNCTOR_CLOSURE_2arg(VAnd, uchar, return _mm_and_si128(a, b));
+FUNCTOR_TEMPLATE(VOr);
+FUNCTOR_CLOSURE_2arg(VOr , uchar, return _mm_or_si128 (a, b));
+FUNCTOR_TEMPLATE(VXor);
+FUNCTOR_CLOSURE_2arg(VXor, uchar, return _mm_xor_si128(a, b));
+FUNCTOR_TEMPLATE(VNot);
+FUNCTOR_CLOSURE_1arg(VNot, uchar, return _mm_xor_si128(_mm_set1_epi32(-1), a));
 #endif
 
 #if CV_SSE2
@@ -534,14 +471,14 @@ static void add8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAdd_8u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp8<uchar, OpAdd<uchar>, IF_SIMD(_VAdd8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpAdd<uchar>, IF_SIMD(VAdd<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void add8s( const schar* src1, size_t step1,
                    const schar* src2, size_t step2,
                    schar* dst, size_t step, Size sz, void* )
 {
-    vBinOp8<schar, OpAdd<schar>, IF_SIMD(_VAdd8s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<schar, OpAdd<schar>, IF_SIMD(VAdd<schar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void add16u( const ushort* src1, size_t step1,
@@ -550,7 +487,7 @@ static void add16u( const ushort* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAdd_16u_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-            (vBinOp16<ushort, OpAdd<ushort>, IF_SIMD(_VAdd16u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<ushort, OpAdd<ushort>, IF_SIMD(VAdd<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void add16s( const short* src1, size_t step1,
@@ -559,14 +496,14 @@ static void add16s( const short* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAdd_16s_C1RSfs(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp16<short, OpAdd<short>, IF_SIMD(_VAdd16s)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<short, OpAdd<short>, IF_SIMD(VAdd<short>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void add32s( const int* src1, size_t step1,
                     const int* src2, size_t step2,
                     int* dst, size_t step, Size sz, void* )
 {
-    vBinOp32s<OpAdd<int>, IF_SIMD(_VAdd32s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp32<int, OpAdd<int>, IF_SIMD(VAdd<int>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void add32f( const float* src1, size_t step1,
@@ -575,14 +512,14 @@ static void add32f( const float* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAdd_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32f<OpAdd<float>, IF_SIMD(_VAdd32f)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp32<float, OpAdd<float>, IF_SIMD(VAdd<float>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void add64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<OpAdd<double>, IF_SIMD(_VAdd64f)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpAdd<double>, IF_SIMD(VAdd<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void sub8u( const uchar* src1, size_t step1,
@@ -591,14 +528,14 @@ static void sub8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiSub_8u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp8<uchar, OpSub<uchar>, IF_SIMD(_VSub8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpSub<uchar>, IF_SIMD(VSub<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void sub8s( const schar* src1, size_t step1,
                    const schar* src2, size_t step2,
                    schar* dst, size_t step, Size sz, void* )
 {
-    vBinOp8<schar, OpSub<schar>, IF_SIMD(_VSub8s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<schar, OpSub<schar>, IF_SIMD(VSub<schar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void sub16u( const ushort* src1, size_t step1,
@@ -607,7 +544,7 @@ static void sub16u( const ushort* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiSub_16u_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp16<ushort, OpSub<ushort>, IF_SIMD(_VSub16u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<ushort, OpSub<ushort>, IF_SIMD(VSub<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void sub16s( const short* src1, size_t step1,
@@ -616,14 +553,14 @@ static void sub16s( const short* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiSub_16s_C1RSfs(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz, 0),
-           (vBinOp16<short, OpSub<short>, IF_SIMD(_VSub16s)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<short, OpSub<short>, IF_SIMD(VSub<short>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void sub32s( const int* src1, size_t step1,
                     const int* src2, size_t step2,
                     int* dst, size_t step, Size sz, void* )
 {
-    vBinOp32s<OpSub<int>, IF_SIMD(_VSub32s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp32<int, OpSub<int>, IF_SIMD(VSub<int>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void sub32f( const float* src1, size_t step1,
@@ -632,14 +569,14 @@ static void sub32f( const float* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiSub_32f_C1R(src2, (int)step2, src1, (int)step1, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32f<OpSub<float>, IF_SIMD(_VSub32f)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp32<float, OpSub<float>, IF_SIMD(VSub<float>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void sub64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<OpSub<double>, IF_SIMD(_VSub64f)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpSub<double>, IF_SIMD(VSub<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
@@ -664,7 +601,7 @@ static void max8u( const uchar* src1, size_t step1,
     }
   }
 #else
-  vBinOp8<uchar, OpMax<uchar>, IF_SIMD(_VMax8u)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp<uchar, OpMax<uchar>, IF_SIMD(VMax<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
@@ -676,7 +613,7 @@ static void max8s( const schar* src1, size_t step1,
                    const schar* src2, size_t step2,
                    schar* dst, size_t step, Size sz, void* )
 {
-    vBinOp8<schar, OpMax<schar>, IF_SIMD(_VMax8s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<schar, OpMax<schar>, IF_SIMD(VMax<schar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max16u( const ushort* src1, size_t step1,
@@ -698,7 +635,7 @@ static void max16u( const ushort* src1, size_t step1,
     }
   }
 #else
-  vBinOp16<ushort, OpMax<ushort>, IF_SIMD(_VMax16u)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp<ushort, OpMax<ushort>, IF_SIMD(VMax<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
@@ -710,14 +647,14 @@ static void max16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-    vBinOp16<short, OpMax<short>, IF_SIMD(_VMax16s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<short, OpMax<short>, IF_SIMD(VMax<short>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max32s( const int* src1, size_t step1,
                     const int* src2, size_t step2,
                     int* dst, size_t step, Size sz, void* )
 {
-    vBinOp32s<OpMax<int>, IF_SIMD(_VMax32s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp32<int, OpMax<int>, IF_SIMD(VMax<int>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void max32f( const float* src1, size_t step1,
@@ -739,7 +676,7 @@ static void max32f( const float* src1, size_t step1,
     }
   }
 #else
-  vBinOp32f<OpMax<float>, IF_SIMD(_VMax32f)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp32<float, OpMax<float>, IF_SIMD(VMax<float>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
 //           ippiMaxEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
@@ -750,7 +687,7 @@ static void max64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<OpMax<double>, IF_SIMD(_VMax64f)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpMax<double>, IF_SIMD(VMax<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min8u( const uchar* src1, size_t step1,
@@ -772,7 +709,7 @@ static void min8u( const uchar* src1, size_t step1,
     }
   }
 #else
-  vBinOp8<uchar, OpMin<uchar>, IF_SIMD(_VMin8u)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp<uchar, OpMin<uchar>, IF_SIMD(VMin<uchar>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
@@ -784,7 +721,7 @@ static void min8s( const schar* src1, size_t step1,
                    const schar* src2, size_t step2,
                    schar* dst, size_t step, Size sz, void* )
 {
-    vBinOp8<schar, OpMin<schar>, IF_SIMD(_VMin8s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<schar, OpMin<schar>, IF_SIMD(VMin<schar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min16u( const ushort* src1, size_t step1,
@@ -806,7 +743,7 @@ static void min16u( const ushort* src1, size_t step1,
     }
   }
 #else
-  vBinOp16<ushort, OpMin<ushort>, IF_SIMD(_VMin16u)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp<ushort, OpMin<ushort>, IF_SIMD(VMin<ushort>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
@@ -818,14 +755,14 @@ static void min16s( const short* src1, size_t step1,
                     const short* src2, size_t step2,
                     short* dst, size_t step, Size sz, void* )
 {
-    vBinOp16<short, OpMin<short>, IF_SIMD(_VMin16s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<short, OpMin<short>, IF_SIMD(VMin<short>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min32s( const int* src1, size_t step1,
                     const int* src2, size_t step2,
                     int* dst, size_t step, Size sz, void* )
 {
-    vBinOp32s<OpMin<int>, IF_SIMD(_VMin32s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp32<int, OpMin<int>, IF_SIMD(VMin<int>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void min32f( const float* src1, size_t step1,
@@ -847,7 +784,7 @@ static void min32f( const float* src1, size_t step1,
     }
   }
 #else
-  vBinOp32f<OpMin<float>, IF_SIMD(_VMin32f)>(src1, step1, src2, step2, dst, step, sz);
+  vBinOp32<float, OpMin<float>, IF_SIMD(VMin<float>)>(src1, step1, src2, step2, dst, step, sz);
 #endif
 //    IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
 //           ippiMinEvery_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (IppiSize&)sz),
@@ -858,7 +795,7 @@ static void min64f( const double* src1, size_t step1,
                     const double* src2, size_t step2,
                     double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<OpMin<double>, IF_SIMD(_VMin64f)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpMin<double>, IF_SIMD(VMin<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void absdiff8u( const uchar* src1, size_t step1,
@@ -867,14 +804,14 @@ static void absdiff8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAbsDiff_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp8<uchar, OpAbsDiff<uchar>, IF_SIMD(_VAbsDiff8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpAbsDiff<uchar>, IF_SIMD(VAbsDiff<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void absdiff8s( const schar* src1, size_t step1,
                        const schar* src2, size_t step2,
                        schar* dst, size_t step, Size sz, void* )
 {
-    vBinOp8<schar, OpAbsDiff<schar>, IF_SIMD(_VAbsDiff8s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<schar, OpAbsDiff<schar>, IF_SIMD(VAbsDiff<schar>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void absdiff16u( const ushort* src1, size_t step1,
@@ -883,21 +820,21 @@ static void absdiff16u( const ushort* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAbsDiff_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp16<ushort, OpAbsDiff<ushort>, IF_SIMD(_VAbsDiff16u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<ushort, OpAbsDiff<ushort>, IF_SIMD(VAbsDiff<ushort>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void absdiff16s( const short* src1, size_t step1,
                         const short* src2, size_t step2,
                         short* dst, size_t step, Size sz, void* )
 {
-    vBinOp16<short, OpAbsDiff<short>, IF_SIMD(_VAbsDiff16s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp<short, OpAbsDiff<short>, IF_SIMD(VAbsDiff<short>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void absdiff32s( const int* src1, size_t step1,
                         const int* src2, size_t step2,
                         int* dst, size_t step, Size sz, void* )
 {
-    vBinOp32s<OpAbsDiff<int>, IF_SIMD(_VAbsDiff32s)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp32<int, OpAbsDiff<int>, IF_SIMD(VAbsDiff<int>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 static void absdiff32f( const float* src1, size_t step1,
@@ -906,14 +843,14 @@ static void absdiff32f( const float* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAbsDiff_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp32f<OpAbsDiff<float>, IF_SIMD(_VAbsDiff32f)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp32<float, OpAbsDiff<float>, IF_SIMD(VAbsDiff<float>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void absdiff64f( const double* src1, size_t step1,
                         const double* src2, size_t step2,
                         double* dst, size_t step, Size sz, void* )
 {
-    vBinOp64f<OpAbsDiff<double>, IF_SIMD(_VAbsDiff64f)>(src1, step1, src2, step2, dst, step, sz);
+    vBinOp64<double, OpAbsDiff<double>, IF_SIMD(VAbsDiff<double>)>(src1, step1, src2, step2, dst, step, sz);
 }
 
 
@@ -923,7 +860,7 @@ static void and8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiAnd_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp8<uchar, OpAnd<uchar>, IF_SIMD(_VAnd8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpAnd<uchar>, IF_SIMD(VAnd<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void or8u( const uchar* src1, size_t step1,
@@ -932,7 +869,7 @@ static void or8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiOr_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp8<uchar, OpOr<uchar>, IF_SIMD(_VOr8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpOr<uchar>, IF_SIMD(VOr<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void xor8u( const uchar* src1, size_t step1,
@@ -941,7 +878,7 @@ static void xor8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiXor_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)sz),
-           (vBinOp8<uchar, OpXor<uchar>, IF_SIMD(_VXor8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpXor<uchar>, IF_SIMD(VXor<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 static void not8u( const uchar* src1, size_t step1,
@@ -950,7 +887,7 @@ static void not8u( const uchar* src1, size_t step1,
 {
     IF_IPP(fixSteps(sz, sizeof(dst[0]), step1, step2, step);
            ippiNot_8u_C1R(src1, (int)step1, dst, (int)step, (IppiSize&)sz),
-           (vBinOp8<uchar, OpNot<uchar>, IF_SIMD(_VNot8u)>(src1, step1, src2, step2, dst, step, sz)));
+           (vBinOp<uchar, OpNot<uchar>, IF_SIMD(VNot<uchar>)>(src1, step1, src2, step2, dst, step, sz)));
 }
 
 /****************************************************************************************\
