@@ -55,9 +55,9 @@
 
 #ifdef HAVE_OPENCL
 
-using namespace cvtest;
-using namespace testing;
+using namespace cv;
 using namespace std;
+using namespace testing;
 
 MatType nulltype = -1;
 
@@ -77,7 +77,7 @@ typedef struct
     short y;
 } COOR;
 
-COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size size, int sp, int sr, int maxIter, float eps, int *tab)
+COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, Size size, int sp, int sr, int maxIter, float eps, int *tab)
 {
 
     int isr2 = sr * sr;
@@ -219,7 +219,7 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
     return coor;
 }
 
-void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::TermCriteria crit)
+void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, TermCriteria crit)
 {
     if( src_roi.empty() )
         CV_Error( CV_StsBadArg, "The input image is empty" );
@@ -230,11 +230,11 @@ void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::T
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) );
     CV_Assert( !(dst_roi.step & 0x3) );
 
-    if( !(crit.type & cv::TermCriteria::MAX_ITER) )
+    if( !(crit.type & TermCriteria::MAX_ITER) )
         crit.maxCount = 5;
     int maxIter = std::min(std::max(crit.maxCount, 1), 100);
     float eps;
-    if( !(crit.type & cv::TermCriteria::EPS) )
+    if( !(crit.type & TermCriteria::EPS) )
         eps = 1.f;
     eps = (float)std::max(crit.epsilon, 0.0);
 
@@ -245,7 +245,7 @@ void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::T
     uchar *dptr = dst_roi.data;
     int sstep = (int)src_roi.step;
     int dstep = (int)dst_roi.step;
-    cv::Size size = src_roi.size();
+    Size size = src_roi.size();
 
     for(int i = 0; i < size.height; i++, sptr += sstep - (size.width << 2),
             dptr += dstep - (size.width << 2))
@@ -257,7 +257,7 @@ void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::T
     }
 }
 
-void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, int sr, cv::TermCriteria crit)
+void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, int sr, TermCriteria crit)
 {
 
     if( src_roi.empty() )
@@ -268,11 +268,11 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
                (src_roi.cols == dstCoor_roi.cols) && (src_roi.rows == dstCoor_roi.rows));
     CV_Assert( !(dstCoor_roi.step & 0x3) );
 
-    if( !(crit.type & cv::TermCriteria::MAX_ITER) )
+    if( !(crit.type & TermCriteria::MAX_ITER) )
         crit.maxCount = 5;
     int maxIter = std::min(std::max(crit.maxCount, 1), 100);
     float eps;
-    if( !(crit.type & cv::TermCriteria::EPS) )
+    if( !(crit.type & TermCriteria::EPS) )
         eps = 1.f;
     eps = (float)std::max(crit.epsilon, 0.0);
 
@@ -285,7 +285,7 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
     int sstep = (int)src_roi.step;
     int dstep = (int)dst_roi.step;
     int dCoorstep = (int)dstCoor_roi.step >> 1;
-    cv::Size size = src_roi.size();
+    Size size = src_roi.size();
 
     for(int i = 0; i < size.height; i++, sptr += sstep - (size.width << 2),
             dptr += dstep - (size.width << 2), dCoorptr += dCoorstep - (size.width << 1))
@@ -301,7 +301,7 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bool)
 {
     int type1, type2, type3, type4, type5;
-    cv::Scalar val;
+    Scalar val;
     // set up roi
     int roicols;
     int roirows;
@@ -317,32 +317,32 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     int masky;
 
     //mat
-    cv::Mat mat1;
-    cv::Mat mat2;
-    cv::Mat mask;
-    cv::Mat dst;
-    cv::Mat dst1; //bak, for two outputs
+    Mat mat1;
+    Mat mat2;
+    Mat mask;
+    Mat dst;
+    Mat dst1; //bak, for two outputs
 
     //mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat mat2_roi;
-    cv::Mat mask_roi;
-    cv::Mat dst_roi;
-    cv::Mat dst1_roi; //bak
+    Mat mat1_roi;
+    Mat mat2_roi;
+    Mat mask_roi;
+    Mat dst_roi;
+    Mat dst1_roi; //bak
 
     //ocl mat
-    cv::ocl::oclMat clmat1;
-    cv::ocl::oclMat clmat2;
-    cv::ocl::oclMat clmask;
-    cv::ocl::oclMat cldst;
-    cv::ocl::oclMat cldst1; //bak
+    ocl::oclMat clmat1;
+    ocl::oclMat clmat2;
+    ocl::oclMat clmask;
+    ocl::oclMat cldst;
+    ocl::oclMat cldst1; //bak
 
     //ocl mat with roi
-    cv::ocl::oclMat clmat1_roi;
-    cv::ocl::oclMat clmat2_roi;
-    cv::ocl::oclMat clmask_roi;
-    cv::ocl::oclMat cldst_roi;
-    cv::ocl::oclMat cldst1_roi;
+    ocl::oclMat clmat1_roi;
+    ocl::oclMat clmat2_roi;
+    ocl::oclMat clmask_roi;
+    ocl::oclMat cldst_roi;
+    ocl::oclMat cldst1_roi;
 
     virtual void SetUp()
     {
@@ -351,7 +351,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         type3 = GET_PARAM(2);
         type4 = GET_PARAM(3);
         type5 = GET_PARAM(4);
-        cv::Size size(MWIDTH, MHEIGHT);
+        Size size(MWIDTH, MHEIGHT);
         double min = 1, max = 20;
 
         if(type1 != nulltype)
@@ -377,10 +377,10 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         if(type5 != nulltype)
         {
             mask = randomMat(size, CV_8UC1, 0, 2,  false);
-            cv::threshold(mask, mask, 0.5, 255., type5);
+            threshold(mask, mask, 0.5, 255., type5);
             clmask = mask;
         }
-        val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
+        val = Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
     }
 
     void random_roi()
@@ -444,16 +444,16 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
 
     void Near(double threshold)
     {
-        cv::Mat cpu_cldst;
+        Mat cpu_cldst;
         cldst.download(cpu_cldst);
         EXPECT_MAT_NEAR(dst, cpu_cldst, threshold);
     }
 };
 ////////////////////////////////equalizeHist//////////////////////////////////////////
 
-struct equalizeHist : ImgprocTestBase {};
+typedef ImgprocTestBase EqualizeHist;
 
-OCL_TEST_P(equalizeHist, Mat)
+OCL_TEST_P(EqualizeHist, Mat)
 {
     if (mat1.type() != CV_8UC1 || mat1.type() != dst.type())
     {
@@ -465,8 +465,8 @@ OCL_TEST_P(equalizeHist, Mat)
         for(int j = 0; j < LOOP_TIMES; j++)
         {
             random_roi();
-            cv::equalizeHist(mat1_roi, dst_roi);
-            cv::ocl::equalizeHist(clmat1_roi, cldst_roi);
+            equalizeHist(mat1_roi, dst_roi);
+            ocl::equalizeHist(clmat1_roi, cldst_roi);
             Near(1.1);
         }
     }
@@ -475,11 +475,11 @@ OCL_TEST_P(equalizeHist, Mat)
 
 ////////////////////////////////copyMakeBorder////////////////////////////////////////////
 
-struct CopyMakeBorder : ImgprocTestBase {};
+typedef ImgprocTestBase CopyMakeBorder;
 
 OCL_TEST_P(CopyMakeBorder, Mat)
 {
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
+    int bordertype[] = {BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101};
     int top = rng.uniform(0, 10);
     int bottom = rng.uniform(0, 10);
     int left = rng.uniform(0, 10);
@@ -496,7 +496,7 @@ OCL_TEST_P(CopyMakeBorder, Mat)
             {
                 random_roi();
 #ifdef RANDOMROI
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= left) || (mat1_roi.cols <= right) || (mat1_roi.rows <= top) || (mat1_roi.rows <= bottom))
+                if(((bordertype[i] != BORDER_CONSTANT) && (bordertype[i] != BORDER_REPLICATE)) && (mat1_roi.cols <= left) || (mat1_roi.cols <= right) || (mat1_roi.rows <= top) || (mat1_roi.rows <= bottom))
                 {
                     continue;
                 }
@@ -510,10 +510,10 @@ OCL_TEST_P(CopyMakeBorder, Mat)
                     continue;
                 }
 #endif
-                cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
-                cv::ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i] | cv::BORDER_ISOLATED, cv::Scalar(1.0));
+                cv::copyMakeBorder(mat1_roi, dst_roi, top, bottom, left, right, bordertype[i] | BORDER_ISOLATED, Scalar(1.0));
+                ocl::copyMakeBorder(clmat1_roi, cldst_roi, top, bottom, left, right,  bordertype[i] | BORDER_ISOLATED, Scalar(1.0));
 
-                cv::Mat cpu_cldst;
+                Mat cpu_cldst;
 #ifndef RANDOMROI
                 cldst_roi.download(cpu_cldst);
                 EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0);
@@ -530,20 +530,20 @@ OCL_TEST_P(CopyMakeBorder, Mat)
 
 ////////////////////////////////cornerMinEigenVal//////////////////////////////////////////
 
-struct cornerMinEigenVal : ImgprocTestBase {};
+struct CornerMinEigenVal : ImgprocTestBase {};
 
-OCL_TEST_P(cornerMinEigenVal, Mat)
+OCL_TEST_P(CornerMinEigenVal, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
 
         random_roi();
         int blockSize = 3, apertureSize = 3;//1 + 2 * (rand() % 4);
-        //int borderType = cv::BORDER_CONSTANT;
-        //int borderType = cv::BORDER_REPLICATE;
-        int borderType = cv::BORDER_REFLECT;
-        cv::cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType);
-        cv::ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
+        //int borderType = BORDER_CONSTANT;
+        //int borderType = BORDER_REPLICATE;
+        int borderType = BORDER_REFLECT;
+        cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType);
+        ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
         Near(1.);
     }
 }
@@ -552,9 +552,9 @@ OCL_TEST_P(cornerMinEigenVal, Mat)
 
 ////////////////////////////////cornerHarris//////////////////////////////////////////
 
-struct cornerHarris : ImgprocTestBase {};
+typedef ImgprocTestBase CornerHarris;
 
-OCL_TEST_P(cornerHarris, Mat)
+OCL_TEST_P(CornerHarris, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -562,11 +562,11 @@ OCL_TEST_P(cornerHarris, Mat)
         random_roi();
         int blockSize = 3, apertureSize = 3; //1 + 2 * (rand() % 4);
         double k = 2;
-        //int borderType = cv::BORDER_CONSTANT;
-        //int borderType = cv::BORDER_REPLICATE;
-        int borderType = cv::BORDER_REFLECT;
-        cv::cornerHarris(mat1_roi, dst_roi, blockSize, apertureSize, k, borderType);
-        cv::ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, k, borderType);
+        //int borderType = BORDER_CONSTANT;
+        //int borderType = BORDER_REPLICATE;
+        int borderType = BORDER_REFLECT;
+        cornerHarris(mat1_roi, dst_roi, blockSize, apertureSize, k, borderType);
+        ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, k, borderType);
         Near(1.);
     }
 }
@@ -574,31 +574,31 @@ OCL_TEST_P(cornerHarris, Mat)
 
 ////////////////////////////////integral/////////////////////////////////////////////////
 
-struct integral : ImgprocTestBase {};
+typedef ImgprocTestBase Integral;
 
-OCL_TEST_P(integral, Mat1)
+OCL_TEST_P(Integral, Mat1)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::ocl::integral(clmat1_roi, cldst_roi);
-        cv::integral(mat1_roi, dst_roi);
+        ocl::integral(clmat1_roi, cldst_roi);
+        integral(mat1_roi, dst_roi);
         Near(0);
     }
 }
 
-OCL_TEST_P(integral, Mat2)
+OCL_TEST_P(Integral, Mat2)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
-        cv::integral(mat1_roi, dst_roi, dst1_roi);
+        ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
+        integral(mat1_roi, dst_roi, dst1_roi);
         Near(0);
 
-        cv::Mat cpu_cldst1;
+        Mat cpu_cldst1;
         cldst1.download(cpu_cldst1);
         EXPECT_MAT_NEAR(dst1, cpu_cldst1, 0.0);
     }
@@ -611,12 +611,12 @@ OCL_TEST_P(integral, Mat2)
 PARAM_TEST_CASE(WarpTestBase, MatType, int)
 {
     int type;
-    cv::Size size;
+    Size size;
     int interpolation;
 
     //src mat
-    cv::Mat mat1;
-    cv::Mat dst;
+    Mat mat1;
+    Mat dst;
 
     // set up roi
     int src_roicols;
@@ -630,21 +630,21 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
 
 
     //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat dst_roi;
+    Mat mat1_roi;
+    Mat dst_roi;
 
     //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
+    ocl::oclMat gdst_whole;
 
     //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gdst;
+    ocl::oclMat gmat1;
+    ocl::oclMat gdst;
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         interpolation = GET_PARAM(1);
-        size = cv::Size(MWIDTH, MHEIGHT);
+        size = Size(MWIDTH, MHEIGHT);
 
         mat1 = randomMat(size, type, 5, 16, false);
         dst  = randomMat(size, type, 5, 16, false);
@@ -688,7 +688,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
 
 /////warpAffine
 
-struct WarpAffine : WarpTestBase {};
+typedef WarpTestBase WarpAffine;
 
 OCL_TEST_P(WarpAffine, Mat)
 {
@@ -703,10 +703,10 @@ OCL_TEST_P(WarpAffine, Mat)
     {
         random_roi();
 
-        cv::warpAffine(mat1_roi, dst_roi, M, size, interpolation);
-        cv::ocl::warpAffine(gmat1, gdst, M, size, interpolation);
+        warpAffine(mat1_roi, dst_roi, M, size, interpolation);
+        ocl::warpAffine(gmat1, gdst, M, size, interpolation);
 
-        cv::Mat cpu_dst;
+        Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
@@ -716,7 +716,7 @@ OCL_TEST_P(WarpAffine, Mat)
 
 // warpPerspective
 
-struct WarpPerspective : WarpTestBase {};
+typedef WarpTestBase WarpPerspective;
 
 OCL_TEST_P(WarpPerspective, Mat)
 {
@@ -732,10 +732,10 @@ OCL_TEST_P(WarpPerspective, Mat)
     {
         random_roi();
 
-        cv::warpPerspective(mat1_roi, dst_roi, M, size, interpolation);
-        cv::ocl::warpPerspective(gmat1, gdst, M, size, interpolation);
+        warpPerspective(mat1_roi, dst_roi, M, size, interpolation);
+        ocl::warpPerspective(gmat1, gdst, M, size, interpolation);
 
-        cv::Mat cpu_dst;
+        Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
@@ -751,17 +751,17 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     int srcType;
     int map1Type;
     int map2Type;
-    cv::Scalar val;
+    Scalar val;
 
     int interpolation;
     int bordertype;
 
-    cv::Mat src;
-    cv::Mat dst;
-    cv::Mat map1;
-    cv::Mat map2;
+    Mat src;
+    Mat dst;
+    Mat map1;
+    Mat map2;
 
-    //std::vector<cv::ocl::Info> oclinfo;
+    //std::vector<ocl::Info> oclinfo;
 
     int src_roicols;
     int src_roirows;
@@ -780,19 +780,19 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     int map2x;
     int map2y;
 
-    cv::Mat src_roi;
-    cv::Mat dst_roi;
-    cv::Mat map1_roi;
-    cv::Mat map2_roi;
+    Mat src_roi;
+    Mat dst_roi;
+    Mat map1_roi;
+    Mat map2_roi;
 
     //ocl mat for testing
-    cv::ocl::oclMat gdst;
+    ocl::oclMat gdst;
 
     //ocl mat with roi
-    cv::ocl::oclMat gsrc_roi;
-    cv::ocl::oclMat gdst_roi;
-    cv::ocl::oclMat gmap1_roi;
-    cv::ocl::oclMat gmap2_roi;
+    ocl::oclMat gsrc_roi;
+    ocl::oclMat gdst_roi;
+    ocl::oclMat gmap1_roi;
+    ocl::oclMat gmap2_roi;
 
     virtual void SetUp()
     {
@@ -802,8 +802,8 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         interpolation = GET_PARAM(3);
         bordertype = GET_PARAM(4);
 
-        cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
-        cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
+        Size srcSize = Size(MWIDTH, MHEIGHT);
+        Size map1Size = Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 
         if(srcType != nulltype)
@@ -830,16 +830,16 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         switch (src.channels())
         {
         case 1:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
+            val = Scalar(rng.uniform(0.0, 10.0), 0, 0, 0);
             break;
         case 2:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
+            val = Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0, 0);
             break;
         case 3:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
+            val = Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), 0);
             break;
         case 4:
-            val = cv::Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
+            val = Scalar(rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0), rng.uniform(0.0, 10.0));
             break;
         }
 
@@ -894,14 +894,14 @@ OCL_TEST_P(Remap, Mat)
         cout << "Don't support the dataType" << endl;
         return;
     }
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
+    int bordertype[] = {BORDER_CONSTANT, BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
 
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        cv::remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
-        cv::ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
-        cv::Mat cpu_dst;
+        remap(src_roi, dst_roi, map1_roi, map2_roi, interpolation, bordertype[0], val);
+        ocl::remap(gsrc_roi, gdst_roi, gmap1_roi, gmap2_roi, interpolation, bordertype[0], val);
+        Mat cpu_dst;
         gdst.download(cpu_dst);
 
         if(interpolation == 0)
@@ -915,16 +915,16 @@ OCL_TEST_P(Remap, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // resize
 
-PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
+PARAM_TEST_CASE(Resize, MatType, Size, double, double, int)
 {
     int type;
-    cv::Size dsize;
+    Size dsize;
     double fx, fy;
     int interpolation;
 
     //src mat
-    cv::Mat mat1;
-    cv::Mat dst;
+    Mat mat1;
+    Mat dst;
 
     // set up roi
     int src_roicols;
@@ -937,15 +937,15 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     int dsty;
 
     //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat dst_roi;
+    Mat mat1_roi;
+    Mat dst_roi;
 
     //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
+    ocl::oclMat gdst_whole;
 
     //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gdst;
+    ocl::oclMat gmat1;
+    ocl::oclMat gdst;
 
     virtual void SetUp()
     {
@@ -955,15 +955,15 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
         fy = GET_PARAM(3);
         interpolation = GET_PARAM(4);
 
-        cv::Size size(MWIDTH, MHEIGHT);
+        Size size(MWIDTH, MHEIGHT);
 
-        if(dsize == cv::Size() && !(fx > 0 && fy > 0))
+        if(dsize == Size() && !(fx > 0 && fy > 0))
         {
             cout << "invalid dsize and fx fy" << endl;
             return;
         }
 
-        if(dsize == cv::Size())
+        if(dsize == Size())
         {
             dsize.width = (int)(size.width * fx);
             dsize.height = (int)(size.height * fy);
@@ -1018,13 +1018,13 @@ OCL_TEST_P(Resize, Mat)
     {
         random_roi();
 
-        // cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
-        // cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
+        // resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
+        // ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
         if(dst_roicols < 1 || dst_roirows < 1) continue;
-        cv::resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
-        cv::ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
+        resize(mat1_roi, dst_roi, dsize, fx, fy, interpolation);
+        ocl::resize(gmat1, gdst, dsize, fx, fy, interpolation);
 
-        cv::Mat cpu_dst;
+        Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
@@ -1041,8 +1041,8 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
     int threshOp;
 
     //src mat
-    cv::Mat mat1;
-    cv::Mat dst;
+    Mat mat1;
+    Mat dst;
 
     // set up roi
     int roicols;
@@ -1053,22 +1053,22 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
     int dsty;
 
     //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat dst_roi;
+    Mat mat1_roi;
+    Mat dst_roi;
 
     //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
+    ocl::oclMat gdst_whole;
 
     //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gdst;
+    ocl::oclMat gmat1;
+    ocl::oclMat gdst;
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         threshOp = GET_PARAM(1);
 
-        cv::Size size(MWIDTH, MHEIGHT);
+        Size size(MWIDTH, MHEIGHT);
 
         mat1 = randomMat(size, type, 5, 16, false);
         dst  = randomMat(size, type, 5, 16, false);
@@ -1113,25 +1113,25 @@ OCL_TEST_P(Threshold, Mat)
         double maxVal = randomDouble(20.0, 127.0);
         double thresh = randomDouble(0.0, maxVal);
 
-        cv::threshold(mat1_roi, dst_roi, thresh, maxVal, threshOp);
-        cv::ocl::threshold(gmat1, gdst, thresh, maxVal, threshOp);
+        threshold(mat1_roi, dst_roi, thresh, maxVal, threshOp);
+        ocl::threshold(gmat1, gdst, thresh, maxVal, threshOp);
 
-        cv::Mat cpu_dst;
+        Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         EXPECT_MAT_NEAR(dst, cpu_dst, 1);
     }
 
 }
 
-PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
+PARAM_TEST_CASE(MeanShiftTestBase, MatType, MatType, int, int, TermCriteria)
 {
     int type, typeCoor;
     int sp, sr;
-    cv::TermCriteria crit;
+    TermCriteria crit;
     //src mat
-    cv::Mat src;
-    cv::Mat dst;
-    cv::Mat dstCoor;
+    Mat src;
+    Mat dst;
+    Mat dstCoor;
 
     //set up roi
     int roicols;
@@ -1142,18 +1142,18 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
     int dsty;
 
     //src mat with roi
-    cv::Mat src_roi;
-    cv::Mat dst_roi;
-    cv::Mat dstCoor_roi;
+    Mat src_roi;
+    Mat dst_roi;
+    Mat dstCoor_roi;
 
     //ocl dst mat
-    cv::ocl::oclMat gdst;
-    cv::ocl::oclMat gdstCoor;
+    ocl::oclMat gdst;
+    ocl::oclMat gdstCoor;
 
     //ocl mat with roi
-    cv::ocl::oclMat gsrc_roi;
-    cv::ocl::oclMat gdst_roi;
-    cv::ocl::oclMat gdstCoor_roi;
+    ocl::oclMat gsrc_roi;
+    ocl::oclMat gdst_roi;
+    ocl::oclMat gdstCoor_roi;
 
     virtual void SetUp()
     {
@@ -1164,7 +1164,7 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
         crit     = GET_PARAM(4);
 
         // MWIDTH=256, MHEIGHT=256. defined in utility.hpp
-        cv::Size size = cv::Size(MWIDTH, MHEIGHT);
+        Size size = Size(MWIDTH, MHEIGHT);
 
         src = randomMat(size, type, 5, 16, false);
         dst = randomMat(size, type, 5, 16, false);
@@ -1204,20 +1204,21 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
 };
 
 /////////////////////////meanShiftFiltering/////////////////////////////
-struct meanShiftFiltering : meanShiftTestBase {};
 
-OCL_TEST_P(meanShiftFiltering, Mat)
+typedef MeanShiftTestBase MeanShiftFiltering;
+
+OCL_TEST_P(MeanShiftFiltering, Mat)
 {
 
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::Mat cpu_gdst;
+        Mat cpu_gdst;
         gdst.download(cpu_gdst);
 
-        meanShiftFiltering_(src_roi, dst_roi, sp, sr, crit);
-        cv::ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
+        ::meanShiftFiltering_(src_roi, dst_roi, sp, sr, crit);
+        ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
 
         gdst.download(cpu_gdst);
         EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0);
@@ -1225,20 +1226,21 @@ OCL_TEST_P(meanShiftFiltering, Mat)
 }
 
 ///////////////////////////meanShiftProc//////////////////////////////////
-struct meanShiftProc : meanShiftTestBase {};
 
-OCL_TEST_P(meanShiftProc, Mat)
+typedef MeanShiftTestBase MeanShiftProc;
+
+OCL_TEST_P(MeanShiftProc, Mat)
 {
 
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::Mat cpu_gdst;
-        cv::Mat cpu_gdstCoor;
+        Mat cpu_gdst;
+        Mat cpu_gdstCoor;
 
         meanShiftProc_(src_roi, dst_roi, dstCoor_roi, sp, sr, crit);
-        cv::ocl::meanShiftProc(gsrc_roi, gdst_roi, gdstCoor_roi, sp, sr, crit);
+        ocl::meanShiftProc(gsrc_roi, gdst_roi, gdstCoor_roi, sp, sr, crit);
 
         gdst.download(cpu_gdst);
         gdstCoor.download(cpu_gdstCoor);
@@ -1249,10 +1251,11 @@ OCL_TEST_P(meanShiftProc, Mat)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 //hist
-void calcHistGold(const cv::Mat &src, cv::Mat &hist)
+
+void calcHistGold(const Mat &src, Mat &hist)
 {
     hist.create(1, 256, CV_32SC1);
-    hist.setTo(cv::Scalar::all(0));
+    hist.setTo(Scalar::all(0));
 
     int *hist_row = hist.ptr<int>();
     for (int y = 0; y < src.rows; ++y)
@@ -1264,30 +1267,30 @@ void calcHistGold(const cv::Mat &src, cv::Mat &hist)
     }
 }
 
-PARAM_TEST_CASE(histTestBase, MatType, MatType)
+PARAM_TEST_CASE(HistTestBase, MatType, MatType)
 {
     int type_src;
 
     //src mat
-    cv::Mat src;
-    cv::Mat dst_hist;
+    Mat src;
+    Mat dst_hist;
     //set up roi
     int roicols;
     int roirows;
     int srcx;
     int srcy;
     //src mat with roi
-    cv::Mat src_roi;
+    Mat src_roi;
     //ocl dst mat, dst_hist and gdst_hist don't have roi
-    cv::ocl::oclMat gdst_hist;
+    ocl::oclMat gdst_hist;
     //ocl mat with roi
-    cv::ocl::oclMat gsrc_roi;
+    ocl::oclMat gsrc_roi;
 
     virtual void SetUp()
     {
         type_src   = GET_PARAM(0);
 
-        cv::Size size = cv::Size(MWIDTH, MHEIGHT);
+        Size size = Size(MWIDTH, MHEIGHT);
 
         src = randomMat(size, type_src, 0, 256, false);
 
@@ -1312,69 +1315,73 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
         gsrc_roi = src_roi;
     }
 };
-///////////////////////////calcHist///////////////////////////////////////
-struct calcHist : histTestBase {};
 
-OCL_TEST_P(calcHist, Mat)
+///////////////////////////calcHist///////////////////////////////////////
+
+typedef HistTestBase CalcHist;
+
+OCL_TEST_P(CalcHist, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::Mat cpu_hist;
+        Mat cpu_hist;
 
         calcHistGold(src_roi, dst_hist);
-        cv::ocl::calcHist(gsrc_roi, gdst_hist);
+        ocl::calcHist(gsrc_roi, gdst_hist);
 
         gdst_hist.download(cpu_hist);
         EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0);
     }
 }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLAHE
 
-PARAM_TEST_CASE(CLAHE, cv::Size, double)
+PARAM_TEST_CASE(CLAHE_Test, Size, double)
 {
-    cv::Size gridSize;
+    Size gridSize;
     double clipLimit;
 
-    cv::Mat src;
-    cv::Mat dst_gold;
+    Mat src;
+    Mat dst_gold;
 
-    cv::ocl::oclMat g_src;
-    cv::ocl::oclMat g_dst;
+    ocl::oclMat g_src;
+    ocl::oclMat g_dst;
 
     virtual void SetUp()
     {
         gridSize = GET_PARAM(0);
         clipLimit = GET_PARAM(1);
 
-        src = randomMat(cv::Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
+        src = randomMat(Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
         g_src.upload(src);
     }
 };
 
-OCL_TEST_P(CLAHE, Accuracy)
+OCL_TEST_P(CLAHE_Test, Accuracy)
 {
-    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit, gridSize);
+    Ptr<CLAHE> clahe = ocl::createCLAHE(clipLimit, gridSize);
     clahe->apply(g_src, g_dst);
-    cv::Mat dst(g_dst);
+    Mat dst(g_dst);
 
-    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit, gridSize);
+    Ptr<CLAHE> clahe_gold = createCLAHE(clipLimit, gridSize);
     clahe_gold->apply(src, dst_gold);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
 ///////////////////////////Convolve//////////////////////////////////
+
 PARAM_TEST_CASE(ConvolveTestBase, MatType, bool)
 {
     int type;
     //src mat
-    cv::Mat mat1;
-    cv::Mat mat2;
-    cv::Mat dst;
-    cv::Mat dst1; //bak, for two outputs
+    Mat mat1;
+    Mat mat2;
+    Mat dst;
+    Mat dst1; //bak, for two outputs
     // set up roi
     int roicols;
     int roirows;
@@ -1385,23 +1392,23 @@ PARAM_TEST_CASE(ConvolveTestBase, MatType, bool)
     int dstx;
     int dsty;
     //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat mat2_roi;
-    cv::Mat dst_roi;
-    cv::Mat dst1_roi; //bak
+    Mat mat1_roi;
+    Mat mat2_roi;
+    Mat dst_roi;
+    Mat dst1_roi; //bak
     //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
-    cv::ocl::oclMat gdst1_whole; //bak
+    ocl::oclMat gdst_whole;
+    ocl::oclMat gdst1_whole; //bak
     //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gmat2;
-    cv::ocl::oclMat gdst;
-    cv::ocl::oclMat gdst1;   //bak
+    ocl::oclMat gmat1;
+    ocl::oclMat gmat2;
+    ocl::oclMat gdst;
+    ocl::oclMat gdst1;   //bak
     virtual void SetUp()
     {
         type = GET_PARAM(0);
 
-        cv::Size size(MWIDTH, MHEIGHT);
+        Size size(MWIDTH, MHEIGHT);
 
         mat1 = randomMat(size, type, 5, 16, false);
         mat2 = randomMat(size, type, 5, 16, false);
@@ -1445,9 +1452,10 @@ PARAM_TEST_CASE(ConvolveTestBase, MatType, bool)
     }
 
 };
-struct Convolve : ConvolveTestBase {};
 
-void conv2( cv::Mat x, cv::Mat y, cv::Mat z)
+typedef ConvolveTestBase Convolve;
+
+void conv2( Mat x, Mat y, Mat z)
 {
     int N1 = x.rows;
     int M1 = x.cols;
@@ -1477,6 +1485,7 @@ void conv2( cv::Mat x, cv::Mat y, cv::Mat z)
             dstdata[i * (z.step >> 2) + j] = temp;
         }
 }
+
 OCL_TEST_P(Convolve, Mat)
 {
     if(mat1.type() != CV_32FC1)
@@ -1486,14 +1495,14 @@ OCL_TEST_P(Convolve, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        cv::ocl::oclMat temp1;
-        cv::Mat kernel_cpu = mat2(Rect(0, 0, 7, 7));
+        ocl::oclMat temp1;
+        Mat kernel_cpu = mat2(Rect(0, 0, 7, 7));
         temp1 = kernel_cpu;
 
         conv2(kernel_cpu, mat1_roi, dst_roi);
-        cv::ocl::convolve(gmat1, temp1, gdst);
+        ocl::convolve(gmat1, temp1, gdst);
 
-        cv::Mat cpu_dst;
+        Mat cpu_dst;
         gdst_whole.download(cpu_dst);
         EXPECT_MAT_NEAR(dst, cpu_dst, .1);
 
@@ -1501,10 +1510,11 @@ OCL_TEST_P(Convolve, Mat)
 }
 
 //////////////////////////////// ColumnSum //////////////////////////////////////
-PARAM_TEST_CASE(ColumnSum, cv::Size)
+
+PARAM_TEST_CASE(ColumnSum, Size)
 {
-    cv::Size size;
-    cv::Mat src;
+    Size size;
+    Mat src;
 
     virtual void SetUp()
     {
@@ -1514,13 +1524,13 @@ PARAM_TEST_CASE(ColumnSum, cv::Size)
 
 OCL_TEST_P(ColumnSum, Accuracy)
 {
-    cv::Mat src = randomMat(size, CV_32FC1, 0, 255);
-    cv::ocl::oclMat d_dst;
-    cv::ocl::oclMat d_src(src);
+    Mat src = randomMat(size, CV_32FC1, 0, 255);
+    ocl::oclMat d_dst;
+    ocl::oclMat d_src(src);
 
-    cv::ocl::columnSum(d_src, d_dst);
+    ocl::columnSum(d_src, d_dst);
 
-    cv::Mat dst(d_dst);
+    Mat dst(d_dst);
 
     for (int j = 0; j < src.cols; ++j)
     {
@@ -1539,9 +1549,10 @@ OCL_TEST_P(ColumnSum, Accuracy)
         }
     }
 }
+
 /////////////////////////////////////////////////////////////////////////////////////
 
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, EqualizeHist, Combine(
                             ONE_TYPE(CV_8UC1),
                             NULL_TYPE,
                             ONE_TYPE(CV_8UC1),
@@ -1558,7 +1569,7 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
                             NULL_TYPE,
                             Values(false))); // Values(false) is the reserved parameter
 
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CornerMinEigenVal, Combine(
                             Values(CV_8UC1, CV_32FC1),
                             NULL_TYPE,
                             ONE_TYPE(CV_32FC1),
@@ -1566,7 +1577,7 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerMinEigenVal, Combine(
                             NULL_TYPE,
                             Values(false))); // Values(false) is the reserved parameter
 
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerHarris, Combine(
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CornerHarris, Combine(
                             Values(CV_8UC1, CV_32FC1),
                             NULL_TYPE,
                             ONE_TYPE(CV_32FC1),
@@ -1575,7 +1586,7 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, cornerHarris, Combine(
                             Values(false))); // Values(false) is the reserved parameter
 
 
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, integral, Combine(
+INSTANTIATE_TEST_CASE_P(ImgprocTestBase, Integral, Combine(
                             ONE_TYPE(CV_8UC1),
                             NULL_TYPE,
                             ONE_TYPE(CV_32SC1),
@@ -1585,60 +1596,60 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, integral, Combine(
 
 INSTANTIATE_TEST_CASE_P(Imgproc, WarpAffine, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR,
-                                   (MatType)cv::INTER_CUBIC, (MatType)(cv::INTER_NEAREST | cv::WARP_INVERSE_MAP),
-                                   (MatType)(cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), (MatType)(cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
+                            Values((MatType)INTER_NEAREST, (MatType)INTER_LINEAR,
+                                   (MatType)INTER_CUBIC, (MatType)(INTER_NEAREST | WARP_INVERSE_MAP),
+                                   (MatType)(INTER_LINEAR | WARP_INVERSE_MAP), (MatType)(INTER_CUBIC | WARP_INVERSE_MAP))));
 
 
 INSTANTIATE_TEST_CASE_P(Imgproc, WarpPerspective, Combine
                         (Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                         Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR,
-                                (MatType)cv::INTER_CUBIC, (MatType)(cv::INTER_NEAREST | cv::WARP_INVERSE_MAP),
-                                (MatType)(cv::INTER_LINEAR | cv::WARP_INVERSE_MAP), (MatType)(cv::INTER_CUBIC | cv::WARP_INVERSE_MAP))));
+                         Values((MatType)INTER_NEAREST, (MatType)INTER_LINEAR,
+                                (MatType)INTER_CUBIC, (MatType)(INTER_NEAREST | WARP_INVERSE_MAP),
+                                (MatType)(INTER_LINEAR | WARP_INVERSE_MAP), (MatType)(INTER_CUBIC | WARP_INVERSE_MAP))));
 
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Resize, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),  Values(cv::Size()),
-                            Values(0.5, 1.5, 2), Values(0.5, 1.5, 2), Values((MatType)cv::INTER_NEAREST, (MatType)cv::INTER_LINEAR)));
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),  Values(Size()),
+                            Values(0.5, 1.5, 2), Values(0.5, 1.5, 2), Values((MatType)INTER_NEAREST, (MatType)INTER_LINEAR)));
 
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
-                            Values(CV_8UC1, CV_32FC1), Values(ThreshOp(cv::THRESH_BINARY),
-                                    ThreshOp(cv::THRESH_BINARY_INV), ThreshOp(cv::THRESH_TRUNC),
-                                    ThreshOp(cv::THRESH_TOZERO), ThreshOp(cv::THRESH_TOZERO_INV))));
+                            Values(CV_8UC1, CV_32FC1), Values(ThreshOp(THRESH_BINARY),
+                                    ThreshOp(THRESH_BINARY_INV), ThreshOp(THRESH_TRUNC),
+                                    ThreshOp(THRESH_TOZERO), ThreshOp(THRESH_TOZERO_INV))));
 
 
-INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftFiltering, Combine(
+INSTANTIATE_TEST_CASE_P(Imgproc, MeanShiftFiltering, Combine(
                             ONE_TYPE(CV_8UC4),
                             ONE_TYPE(CV_16SC2),
                             Values(5),
                             Values(6),
-                            Values(cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1))
+                            Values(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 5, 1))
                         ));
 
 
-INSTANTIATE_TEST_CASE_P(Imgproc, meanShiftProc, Combine(
+INSTANTIATE_TEST_CASE_P(Imgproc, MeanShiftProc, Combine(
                             ONE_TYPE(CV_8UC4),
                             ONE_TYPE(CV_16SC2),
                             Values(5),
                             Values(6),
-                            Values(cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1))
+                            Values(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 5, 1))
                         ));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Remap, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(CV_32FC1, CV_16SC2, CV_32FC2), Values(-1, CV_32FC1),
-                            Values((int)cv::INTER_NEAREST, (int)cv::INTER_LINEAR),
-                            Values((int)cv::BORDER_CONSTANT)));
+                            Values((int)INTER_NEAREST, (int)INTER_LINEAR),
+                            Values((int)BORDER_CONSTANT)));
 
 
-INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
+INSTANTIATE_TEST_CASE_P(histTestBase, CalcHist, Combine(
                             ONE_TYPE(CV_8UC1),
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE, Combine(
-                        Values(cv::Size(4, 4), cv::Size(32, 8), cv::Size(8, 64)),
+INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE_Test, Combine(
+                        Values(Size(4, 4), Size(32, 8), Size(8, 64)),
                         Values(0.0, 10.0, 62.0, 300.0)));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, ColumnSum, DIFFERENT_SIZES);
