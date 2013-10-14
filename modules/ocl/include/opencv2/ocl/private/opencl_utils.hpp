@@ -97,13 +97,14 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     if (err != CL_SUCCESS)
         return err;
 
-    param.resize(required);
+    param.clear();
     if (required > 0)
     {
-        err = f(obj, name, required, &param.at(0), NULL);
+        std::vector<char> buf(required + 1, char(0));
+        err = f(obj, name, required, &buf[0], NULL);
         if (err != CL_SUCCESS)
             return err;
-        param.resize(required - 1); // last symbol is '\0'
+        param = &buf[0];
     }
 
     return CL_SUCCESS;
