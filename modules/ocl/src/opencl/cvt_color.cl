@@ -45,6 +45,7 @@
 //M*/
 
 /**************************************PUBLICFUNC*************************************/
+
 #if defined (DOUBLE_SUPPORT)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
@@ -52,7 +53,6 @@
 #define DATA_TYPE UNDEFINED
 
 #if defined (DEPTH_0)
-#undef  DATA_TYPE
 #define DATA_TYPE uchar
 #define MAX_NUM  255
 #define HALF_MAX 128
@@ -60,7 +60,6 @@
 #endif
 
 #if defined (DEPTH_2)
-#undef  DATA_TYPE
 #define DATA_TYPE ushort
 #define MAX_NUM  65535
 #define HALF_MAX 32768
@@ -68,15 +67,14 @@
 #endif
 
 #if defined (DEPTH_5)
-#undef  DATA_TYPE
 #define DATA_TYPE float
 #define MAX_NUM  1.0f
 #define HALF_MAX 0.5f
 #define SAT_CAST(num) (num)
 #endif
 
-
 #define CV_DESCALE(x,n) (((x) + (1 << ((n)-1))) >> (n))
+
 enum
 {
     yuv_shift  = 14,
@@ -86,20 +84,20 @@ enum
     B2Y        = 1868,
     BLOCK_SIZE = 256
 };
+
 ///////////////////////////////////// RGB <-> GRAY //////////////////////////////////////
 
-__kernel void RGB2Gray(int cols,int rows,int src_step,int dst_step,int channels,
-                       int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst)
+__kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step, int channels,
+                       int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                       int src_offset, int dst_offset)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
-    src_step /= sizeof(DATA_TYPE);
-    dst_step /= sizeof(DATA_TYPE);
     if (y < rows && x < cols)
     {
-        int src_idx = y * src_step + x * channels;
-        int dst_idx = y * dst_step + x;
+        int src_idx = mad24(y, src_step, src_offset + x * channels);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
 #if defined (DEPTH_5)
         dst[dst_idx] = src[src_idx + bidx] * 0.114f + src[src_idx + 1] * 0.587f + src[src_idx + (bidx^2)] * 0.299f;
 #else
@@ -109,17 +107,16 @@ __kernel void RGB2Gray(int cols,int rows,int src_step,int dst_step,int channels,
 }
 
 __kernel void Gray2RGB(int cols,int rows,int src_step,int dst_step,
-                       __global const DATA_TYPE* src, __global DATA_TYPE* dst)
+                       __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                       int src_offset, int dst_offset)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
-    src_step /= sizeof(DATA_TYPE);
-    dst_step /= sizeof(DATA_TYPE);
     if (y < rows && x < cols)
     {
-        int src_idx = y * src_step + x;
-        int dst_idx = y * dst_step + x * 4;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * 4);
         DATA_TYPE val = src[src_idx];
         dst[dst_idx++] = val;
         dst[dst_idx++] = val;
@@ -129,24 +126,25 @@ __kernel void Gray2RGB(int cols,int rows,int src_step,int dst_step,
 }
 
 ///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
+
 __constant float c_RGB2YUVCoeffs_f[5]  = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
 __constant int   c_RGB2YUVCoeffs_i[5]  = { B2Y, G2Y, R2Y, 8061, 14369 };
 
 __kernel void RGB2YUV(int cols,int rows,int src_step,int dst_step,int channels,
-                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst)
+                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                      int src_offset, int dst_offset)
 {
-    const int x = get_global_id(0);
-    const int y = get_global_id(1);
-
-    src_step /= sizeof(DATA_TYPE);
-    dst_step /= sizeof(DATA_TYPE);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     if (y < rows && x < cols)
     {
-        int src_idx = y * src_step + x * channels;
-        int dst_idx = y * dst_step + x * channels;
+        x *= channels;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
         dst += dst_idx;
         const DATA_TYPE rgb[] = {src[src_idx], src[src_idx + 1], src[src_idx + 2]};
+
 #if defined (DEPTH_5)
         __constant float * coeffs = c_RGB2YUVCoeffs_f;
         const DATA_TYPE Y  = rgb[0] * coeffs[bidx] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx^2];
@@ -159,6 +157,7 @@ __kernel void RGB2YUV(int cols,int rows,int src_step,int dst_step,int channels,
         const int Cr = CV_DESCALE((rgb[bidx] - Y) * coeffs[3] + delta, yuv_shift);
         const int Cb = CV_DESCALE((rgb[bidx^2] - Y) * coeffs[4] + delta, yuv_shift);
 #endif
+
         dst[0] = SAT_CAST( Y );
         dst[1] = SAT_CAST( Cr );
         dst[2] = SAT_CAST( Cb );
@@ -169,18 +168,17 @@ __constant float c_YUV2RGBCoeffs_f[5] = { 2.032f, -0.395f, -0.581f, 1.140f };
 __constant int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 };
 
 __kernel void YUV2RGB(int cols,int rows,int src_step,int dst_step,int channels,
-                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst)
+                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                      int src_offset, int dst_offset)
 {
-    const int x = get_global_id(0);
-    const int y = get_global_id(1);
-
-    src_step /= sizeof(DATA_TYPE);
-    dst_step /= sizeof(DATA_TYPE);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     if (y < rows && x < cols)
     {
-        int src_idx = y * src_step + x * channels;
-        int dst_idx = y * dst_step + x * channels;
+        x *= channels;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
         dst += dst_idx;
         const DATA_TYPE yuv[] = {src[src_idx], src[src_idx + 1], src[src_idx + 2]};
 
@@ -195,6 +193,7 @@ __kernel void YUV2RGB(int cols,int rows,int src_step,int dst_step,int channels,
         const int g = yuv[0] + CV_DESCALE((yuv[2] - HALF_MAX) * coeffs[2] + (yuv[1] - HALF_MAX) * coeffs[1], yuv_shift);
         const int r = yuv[0] + CV_DESCALE((yuv[1] - HALF_MAX) * coeffs[0], yuv_shift);
 #endif
+
         dst[bidx^2] = SAT_CAST( b );
         dst[1]      = SAT_CAST( g );
         dst[bidx]   = SAT_CAST( r );
@@ -209,17 +208,19 @@ __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
 __kernel void YUV2RGBA_NV12(int cols,int rows,int src_step,int dst_step,
-                            int bidx, int width, int height, __global const uchar* src, __global uchar* dst)
+                            int bidx, int width, int height, __global const uchar* src, __global uchar* dst,
+                            int src_offset, int dst_offset)
 {
     const int x = get_global_id(0); // max_x = width / 2
     const int y = get_global_id(1); // max_y = height/ 2
 
     if (y < height / 2 && x < width / 2 )
     {
-        __global const uchar* ysrc = src + (y << 1)       * src_step + (x << 1);
-        __global const uchar* usrc = src + (height + y)   * src_step + (x << 1);
-        __global uchar*       dst1 = dst + (y << 1)       * dst_step + (x << 3);
-        __global uchar*       dst2 = dst + ((y << 1) + 1) * dst_step + (x << 3);
+        __global const uchar* ysrc = src + mad24(y << 1, src_step, (x << 1) + src_offset);
+        __global const uchar* usrc = src + mad24(height + y, src_step, (x << 1) + src_offset);
+        __global uchar*       dst1 = dst + mad24(y << 1, dst_step, (x << 3) + dst_offset);
+        __global uchar*       dst2 = dst + mad24((y << 1) + 1, dst_step, (x << 3) + dst_offset);
+
         int Y1 = ysrc[0];
         int Y2 = ysrc[1];
         int Y3 = ysrc[src_step];
@@ -259,24 +260,26 @@ __kernel void YUV2RGBA_NV12(int cols,int rows,int src_step,int dst_step,
 }
 
 ///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
+
 __constant float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
 __constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
 
 __kernel void RGB2YCrCb(int cols,int rows,int src_step,int dst_step,int channels,
-                        int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst)
+                        int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                        int src_offset, int dst_offset)
 {
-    const int x = get_global_id(0);
-    const int y = get_global_id(1);
-
-    src_step /= sizeof(DATA_TYPE);
-    dst_step /= sizeof(DATA_TYPE);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     if (y < rows && x < cols)
     {
-        int src_idx = y * src_step + x * channels;
-        int dst_idx = y * dst_step + x * channels;
+        x *= channels;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
         dst += dst_idx;
-        const DATA_TYPE rgb[] = {src[src_idx], src[src_idx + 1], src[src_idx + 2]};
+        const DATA_TYPE rgb[] = { src[src_idx], src[src_idx + 1], src[src_idx + 2] };
+
 #if defined (DEPTH_5)
         __constant float * coeffs = c_RGB2YCrCbCoeffs_f;
         const DATA_TYPE Y  = rgb[0] * coeffs[bidx^2] + rgb[1] * coeffs[1] + rgb[2] * coeffs[bidx];
@@ -289,6 +292,7 @@ __kernel void RGB2YCrCb(int cols,int rows,int src_step,int dst_step,int channels
         const int Cr = CV_DESCALE((rgb[bidx^2] - Y) * coeffs[3] + delta, yuv_shift);
         const int Cb = CV_DESCALE((rgb[bidx] - Y) * coeffs[4] + delta, yuv_shift);
 #endif
+
         dst[0] = SAT_CAST( Y );
         dst[1] = SAT_CAST( Cr );
         dst[2] = SAT_CAST( Cb );
