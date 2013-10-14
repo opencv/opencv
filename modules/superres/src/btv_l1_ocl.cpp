@@ -416,7 +416,7 @@ namespace
         btvKernelSize_ = 7;
         blurKernelSize_ = 5;
         blurSigma_ = 0.0;
-        opticalFlow_ = createOptFlow_DualTVL1_OCL();
+        opticalFlow_ = createOptFlow_Farneback_OCL();
 
         curBlurKernelSize_ = -1;
         curBlurSigma_ = -1.0;
