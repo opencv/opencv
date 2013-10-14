@@ -408,20 +408,11 @@ namespace cv
         void medianFilter(const oclMat &src, oclMat &dst, int m)
         {
             CV_Assert( m % 2 == 1 && m > 1 );
-            CV_Assert( m <= 5 || src.depth() == CV_8U );
-            CV_Assert( src.cols <= dst.cols && src.rows <= dst.rows );
+            CV_Assert( (src.depth() == CV_8U || src.depth() == CV_32F) && (src.channels() == 1 || src.channels() == 4));
+            dst.create(src.size(), src.type());
 
-            if (src.data == dst.data)
-            {
-                oclMat src1;
-                src.copyTo(src1);
-                return medianFilter(src1, dst, m);
-            }
-
-            int srcStep = src.step1() / src.oclchannels();
-            int dstStep = dst.step1() / dst.oclchannels();
-            int srcOffset = src.offset / src.oclchannels() / src.elemSize1();
-            int dstOffset = dst.offset / dst.oclchannels() / dst.elemSize1();
+            int srcStep = src.step / src.elemSize(), dstStep = dst.step / dst.elemSize();
+            int srcOffset = src.offset /  src.elemSize(), dstOffset = dst.offset / dst.elemSize();
 
             Context *clCxt = src.clCxt;
 
@@ -1518,6 +1509,7 @@ namespace cv
             float *color_weight = &_color_weight[0];
             float *space_weight = &_space_weight[0];
             int *space_ofs = &_space_ofs[0];
+
             int dst_step_in_pixel = dst.step / dst.elemSize();
             int dst_offset_in_pixel = dst.offset / dst.elemSize();
             int temp_step_in_pixel = temp.step / temp.elemSize();
@@ -1548,7 +1540,7 @@ namespace cv
             if ((dst.type() == CV_8UC1) && ((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))
             {
                 kernelName = "bilateral2";
-                globalThreads[0] = dst.cols / 4;
+                globalThreads[0] = dst.cols >> 2;
             }
 
             vector<pair<size_t , const void *> > args;
@@ -1566,15 +1558,17 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_mem), (void *)&oclcolor_weight.data ));
             args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_weight.data ));
             args.push_back( make_pair( sizeof(cl_mem), (void *)&oclspace_ofs.data ));
+
             openCLExecuteKernel(src.clCxt, &imgproc_bilateral, kernelName, globalThreads, localThreads, args, dst.oclchannels(), dst.depth());
         }
+
         void bilateralFilter(const oclMat &src, oclMat &dst, int radius, double sigmaclr, double sigmaspc, int borderType)
         {
             dst.create( src.size(), src.type() );
             if ( src.depth() == CV_8U )
                 oclbilateralFilter_8u( src, dst, radius, sigmaclr, sigmaspc, borderType );
             else
-                CV_Error( CV_StsUnsupportedFormat, "Bilateral filtering is only implemented for 8uimages" );
+                CV_Error( CV_StsUnsupportedFormat, "Bilateral filtering is only implemented for CV_8U images" );
         }
 
     }
