@@ -409,8 +409,63 @@ OCL_TEST_P(AdaptiveBilateral, Mat)
         cv::ocl::adaptiveBilateralFilter(gmat1, gdst, ksize, 5, anchor, bordertype);
         Near(1);
     }
-
 }
+
+
+//////////////////////////////// MedianFilter ///////////////////////////////////////
+
+PARAM_TEST_CASE(MedianFilter, MatType, int, bool)
+{
+    int type, apertureSize;
+    bool useRoi;
+
+    cv::Mat src, dst_whole;
+    cv::Mat src_roi, dst_roi;
+
+    cv::ocl::oclMat gsrc_roi, gdst_roi;
+    cv::ocl::oclMat gsrc_whole, gdst_whole;
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        apertureSize = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+    }
+
+    void random_roi()
+    {
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 256);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, 5, 16);
+
+        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
+        generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
+    }
+
+    void Near(double threshold = 0.0)
+    {
+        EXPECT_MAT_NEAR(dst_roi, cv::Mat(dst_roi), threshold);
+        EXPECT_MAT_NEAR(dst_whole, cv::Mat(gdst_whole), threshold);
+    }
+};
+
+OCL_TEST_P(MedianFilter, Mat)
+{
+    for (int i = 0; i < LOOP_TIMES; ++i)
+    {
+        random_roi();
+
+        cv::medianBlur(src_roi, dst_roi, apertureSize);
+        cv::ocl::medianFilter(gsrc_roi, gdst_roi, apertureSize);
+
+        Near();
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
@@ -472,4 +527,8 @@ INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
                         Values(Size(0, 0)), //not use
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE,
                                (MatType)cv::BORDER_REFLECT,  (MatType)cv::BORDER_REFLECT_101)));
+
+INSTANTIATE_TEST_CASE_P(ImgProc, MedianFilter,
+                        Combine(Values((MatType)CV_8UC1, (MatType)CV_8UC4, (MatType)CV_32FC1, (MatType)CV_32FC4), Values(3, 5), Bool()));
+
 #endif // HAVE_OPENCL

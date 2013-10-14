@@ -408,20 +408,11 @@ namespace cv
         void medianFilter(const oclMat &src, oclMat &dst, int m)
         {
             CV_Assert( m % 2 == 1 && m > 1 );
-            CV_Assert( m <= 5 || src.depth() == CV_8U );
-            CV_Assert( src.cols <= dst.cols && src.rows <= dst.rows );
+            CV_Assert( (src.depth() == CV_8U || src.depth() == CV_32F) && (src.channels() == 1 || src.channels() == 4));
+            dst.create(src.size(), src.type());
 
-            if (src.data == dst.data)
-            {
-                oclMat src1;
-                src.copyTo(src1);
-                return medianFilter(src1, dst, m);
-            }
-
-            int srcStep = src.step1() / src.oclchannels();
-            int dstStep = dst.step1() / dst.oclchannels();
-            int srcOffset = src.offset / src.oclchannels() / src.elemSize1();
-            int dstOffset = dst.offset / dst.oclchannels() / dst.elemSize1();
+            int srcStep = src.step / src.elemSize(), dstStep = dst.step / dst.elemSize();
+            int srcOffset = src.offset /  src.elemSize(), dstOffset = dst.offset / dst.elemSize();
 
             Context *clCxt = src.clCxt;
 
