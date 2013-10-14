@@ -51,6 +51,35 @@
 #define DUMP_INFO_XML(...)
 #endif
 
+#include <sstream>
+
+static std::string bytesToStringRepr(size_t value)
+{
+    size_t b = value % 1024;
+    value /= 1024;
+
+    size_t kb = value % 1024;
+    value /= 1024;
+
+    size_t mb = value % 1024;
+    value /= 1024;
+
+    size_t gb = value;
+
+    std::ostringstream stream;
+
+    if (gb > 0)
+        stream << gb << " GB ";
+    if (mb > 0)
+        stream << mb << " MB ";
+    if (kb > 0)
+        stream << kb << " kB ";
+    if (b > 0)
+        stream << b << " B";
+
+    return stream.str();
+}
+
 static void dumpOpenCLDevice()
 {
     using namespace cv::ocl;
@@ -79,10 +108,12 @@ static void dumpOpenCLDevice()
         DUMP_INFO_STDOUT("Max work group size", deviceInfo.maxWorkGroupSize);
         DUMP_INFO_XML("cv_ocl_maxWorkGroupSize", deviceInfo.maxWorkGroupSize);
 
-        DUMP_INFO_STDOUT("Local memory size", deviceInfo.localMemorySize);
+        std::string localMemorySizeStr = bytesToStringRepr(deviceInfo.localMemorySize);
+        DUMP_INFO_STDOUT("Local memory size", localMemorySizeStr.c_str());
         DUMP_INFO_XML("cv_ocl_localMemorySize", deviceInfo.localMemorySize);
 
-        DUMP_INFO_STDOUT("Max memory allocation size", deviceInfo.maxMemAllocSize);
+        std::string maxMemAllocSizeStr = bytesToStringRepr(deviceInfo.maxMemAllocSize);
+        DUMP_INFO_STDOUT("Max memory allocation size", maxMemAllocSizeStr.c_str());
         DUMP_INFO_XML("cv_ocl_maxMemAllocSize", deviceInfo.maxMemAllocSize);
 
         const char* doubleSupportStr = deviceInfo.haveDoubleSupport ? "Yes" : "No";
