@@ -50,7 +50,7 @@ using namespace cv::ocl;
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
-    CV_Error(Error::StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL DFT is not implemented");
 }
 namespace cv { namespace ocl {
     void fft_teardown();
@@ -90,8 +90,7 @@ namespace cv
         protected:
             PlanCache();
             ~PlanCache();
-            friend class std::auto_ptr<PlanCache>;
-            static std::auto_ptr<PlanCache> planCache;
+            static PlanCache* planCache;
 
             bool started;
             std::vector<FftPlan *> planStore;
@@ -102,9 +101,9 @@ namespace cv
 
             static PlanCache* getPlanCache()
             {
-                if( NULL == planCache.get())
-                    planCache.reset(new PlanCache());
-                return planCache.get();
+                if (NULL == planCache)
+                    planCache = new PlanCache();
+                return planCache;
             }
             // return a baked plan->
             // if there is one matched plan, return it
@@ -118,7 +117,7 @@ namespace cv
         };
     }
 }
-std::auto_ptr<PlanCache> PlanCache::planCache;
+PlanCache* PlanCache::planCache = NULL;
 
 void cv::ocl::fft_setup()
 {
@@ -134,17 +133,22 @@ void cv::ocl::fft_setup()
 void cv::ocl::fft_teardown()
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
+
     if(!pCache.started)
-    {
         return;
-    }
-    delete pCache.setupData;
+
     for(size_t i = 0; i < pCache.planStore.size(); i ++)
-    {
         delete pCache.planStore[i];
-    }
     pCache.planStore.clear();
-    openCLSafeCall( clAmdFftTeardown( ) );
+
+    try
+    {
+        openCLSafeCall( clAmdFftTeardown( ) );
+    }
+    catch (const std::bad_alloc &)
+    { }
+
+    delete pCache.setupData; pCache.setupData = NULL;
     pCache.started = false;
 }
 

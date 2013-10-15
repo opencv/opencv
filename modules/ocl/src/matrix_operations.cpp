@@ -119,41 +119,33 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
 
 void cv::ocl::oclMat::upload(const Mat &m)
 {
+    if (!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE) && m.depth() == CV_64F)
+    {
+        CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
+        return;
+    }
+
     CV_DbgAssert(!m.empty());
     Size wholeSize;
     Point ofs;
     m.locateROI(wholeSize, ofs);
-    if(m.channels() == 3)
+    create(wholeSize, m.type());
+
+    if (m.channels() == 3)
     {
-        create(wholeSize, m.type());
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp;
-        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP){
-            temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
-                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
-            openCLVerifyCall(err);
-            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step,
-                           wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
-        }
-        else{
-            temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
-                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, m.datastart, &err);
-            openCLVerifyCall(err);
-        }
+        cl_mem temp = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE,
+                                     (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+        openCLVerifyCall(err);
 
+        openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
         convert_C3C4(temp, *this);
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
-    {
-        // try to use host ptr
-        createEx(wholeSize, m.type(), gDeviceMemRW, gDeviceMemType, m.datastart);
-        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP)
-            openCLMemcpy2D(clCxt, data, step, m.datastart, m.step,
-                           wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
-    }
+        openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
 
     rows = m.rows;
     cols = m.cols;
@@ -322,7 +314,7 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) &&
             (depth() == CV_64F || dst.depth() == CV_64F))
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 
@@ -360,6 +352,66 @@ oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
     return *this;
 }
 
+#ifdef CL_VERSION_1_2
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt1(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf[0] = saturate_cast<PT>(s[0]);
+    return _buf;
+}
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt2(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    return _buf;
+}
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt4(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    buf->s[2] = saturate_cast<PT>(s[2]);
+    buf->s[3] = saturate_cast<PT>(s[3]);
+    return _buf;
+}
+
+typedef std::vector<uchar> (*ConvertFunc)(const cv::Scalar & s);
+
+static std::vector<uchar> scalarToCLVector(const cv::Scalar & s, int type)
+{
+    const int depth = CV_MAT_DEPTH(type);
+    const int channels = CV_MAT_CN(type);
+
+    static const ConvertFunc funcs[4][7] =
+    {
+        { cvt1<cl_uchar, uchar>, cvt1<cl_char, char>, cvt1<cl_ushort, ushort>, cvt1<cl_short, short>,
+          cvt1<cl_int, int>, cvt1<cl_float, float>, cvt1<cl_double, double> },
+
+        { cvt2<cl_uchar2, uchar>, cvt2<cl_char2, char>, cvt2<cl_ushort2, ushort>, cvt2<cl_short2, short>,
+          cvt2<cl_int2, int>, cvt2<cl_float2, float>, cvt2<cl_double2, double> },
+
+        { 0, 0, 0, 0, 0, 0, 0 },
+
+        { cvt4<cl_uchar4, uchar>, cvt4<cl_char4, char>, cvt4<cl_ushort4, ushort>, cvt4<cl_short4, short>,
+          cvt4<cl_int4, int>, cvt4<cl_float4, float>, cvt4<cl_double4, double> }
+    };
+
+    ConvertFunc func = funcs[channels - 1][depth];
+    return func(s);
+}
+
+#endif
+
 static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, String kernelName)
 {
     std::vector<std::pair<size_t , const void *> > args;
@@ -380,23 +432,14 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, Stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-//    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
-//        dst.offset == 0 && dst.cols == dst.wholecols)
-//    {
-//        const int sizeofMap[][7] =
-//            {
-//                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
-//                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
-//                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
-//                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
-//            };
-//        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
-
-//        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
-//                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
-//                            0, dst.step * dst.rows, 0, NULL, NULL);
-//    }
-//    else
+    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) && dst.isContinuous())
+    {
+        std::vector<uchar> p = ::scalarToCLVector(scalar, CV_MAKE_TYPE(dst.depth(), dst.oclchannels()));
+        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
+                (cl_mem)dst.data, (void*)&p[0], p.size(),
+                0, dst.step * dst.rows, 0, NULL, NULL);
+    }
+    else
 #endif
     {
         oclMat m(mat);
@@ -501,9 +544,9 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 }
 
 void cv::ocl::oclMat::createEx(Size size, int type,
-                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
+                               DevMemRW rw_type, DevMemType mem_type)
 {
-    createEx(size.height, size.width, type, rw_type, mem_type, hptr);
+    createEx(size.height, size.width, type, rw_type, mem_type);
 }
 
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
@@ -512,7 +555,7 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
 }
 
 void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
-                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
+                               DevMemRW rw_type, DevMemType mem_type)
 {
     clCxt = Context::getContext();
     /* core logic */

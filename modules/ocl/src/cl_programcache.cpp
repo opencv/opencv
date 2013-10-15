@@ -50,24 +50,8 @@
 #include <fstream>
 #include "cl_programcache.hpp"
 
-// workaround for OpenCL C++ bindings
-#if defined(HAVE_OPENCL12)
-#include "opencv2/ocl/cl_runtime/cl_runtime_opencl12_wrappers.hpp"
-#elif defined(HAVE_OPENCL11)
-#include "opencv2/ocl/cl_runtime/cl_runtime_opencl11_wrappers.hpp"
-#else
-#error Invalid OpenCL configuration
-#endif
-
-#if defined _MSC_VER && _MSC_VER >= 1200
-#  pragma warning( disable: 4100 4244 4267 4510 4512 4610)
-#endif
-#undef __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
-
 namespace cv { namespace ocl {
 
-#define MAX_PROG_CACHE_SIZE 1024
 /*
  * The binary caching system to eliminate redundant program source compilation.
  * Strictly, this is not a cache because we do not implement evictions right now.
@@ -126,17 +110,12 @@ void ProgramCache::releaseProgram()
     cacheSize = 0;
 }
 
-static int enable_disk_cache = true ||
-#ifdef _DEBUG
-        false;
-#else
-        true;
-#endif
+static bool enable_disk_cache = true;
 static String binpath = "";
 
 void setBinaryDiskCache(int mode, String path)
 {
-    enable_disk_cache = 0;
+    enable_disk_cache = false;
     binpath = "";
 
     if(mode == CACHE_NONE)
@@ -144,7 +123,7 @@ void setBinaryDiskCache(int mode, String path)
         return;
     }
     enable_disk_cache =
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(DEBUG)
         (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
         (mode & CACHE_RELEASE) == CACHE_RELEASE;
@@ -291,7 +270,7 @@ struct ProgramFileCache
     bool writeConfigurationToFile(const String& options, std::vector<char>& buf)
     {
         if (hash_ == NULL)
-            return true; // don't save dynamic kernels
+            return true; // don't save programs without hash
 
         if (!f.is_open())
         {
@@ -469,26 +448,30 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
 {
     std::stringstream src_sign;
 
-    src_sign << (int64)(source->programStr);
-    src_sign << getClContext(ctx);
-    if (NULL != build_options)
+    if (source->name)
     {
-        src_sign << "_" << build_options;
-    }
-
-    {
-        cv::AutoLock lockCache(mutexCache);
-        cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
-        if (!!program)
+        src_sign << source->name;
+        src_sign << getClContext(ctx);
+        if (NULL != build_options)
         {
-            clRetainProgram(program);
-            return program;
+            src_sign << "_" << build_options;
+        }
+
+        {
+            cv::AutoLock lockCache(mutexCache);
+            cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
+            if (!!program)
+            {
+                clRetainProgram(program);
+                return program;
+            }
         }
     }
 
     cv::AutoLock lockCache(mutexFiles);
 
     // second check
+    if (source->name)
     {
         cv::AutoLock lockCache(mutexCache);
         cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
@@ -514,14 +497,10 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
     cl_program program = programFileCache.getOrBuildProgram(ctx, source, all_build_options);
 
     //Cache the binary for future use if build_options is null
-    if( (this->cacheSize += 1) < MAX_PROG_CACHE_SIZE)
+    if (source->name)
     {
         cv::AutoLock lockCache(mutexCache);
         this->addProgram(src_sign.str(), program);
-    }
-    else
-    {
-        std::cout << "Warning: code cache has been full.\n";
     }
     return program;
 }

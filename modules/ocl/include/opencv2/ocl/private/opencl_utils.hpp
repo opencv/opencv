@@ -10,13 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Fangfang Bai, fangfang@multicorewareinc.com
-//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -34,7 +29,7 @@
 // This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -44,60 +39,77 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#ifndef __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
+#define __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
 
-#ifdef HAVE_CLAMDBLAS
+#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
+#include <vector>
+#include <string>
 
-using namespace perf;
-using namespace std;
-using namespace cv::ocl;
-using namespace cv;
-using std::tr1::tuple;
-using std::tr1::get;
+namespace cl_utils {
 
-///////////// Kalman Filter ////////////////////////
-
-typedef tuple<int> KalmanFilterType;
-typedef TestBaseWithParam<KalmanFilterType> KalmanFilterFixture;
-
-PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
-    ::testing::Values(1000, 1500))
+inline cl_int getPlatforms(std::vector<cl_platform_id>& platforms)
 {
-    KalmanFilterType params = GetParam();
-    const int dim = get<0>(params);
+    cl_uint n = 0;
 
-    cv::Mat sample(dim, 1, CV_32FC1), dresult;
-    randu(sample, -1, 1);
+    cl_int err = ::clGetPlatformIDs(0, NULL, &n);
+    if (err != CL_SUCCESS)
+        return err;
 
-    cv::Mat statePre_;
+    platforms.clear(); platforms.resize(n);
+    err = ::clGetPlatformIDs(n, &platforms[0], NULL);
+    if (err != CL_SUCCESS)
+        return err;
 
-    if (RUN_PLAIN_IMPL)
-    {
-        cv::KalmanFilter kalman;
-        TEST_CYCLE()
-        {
-            kalman.init(dim, dim);
-            kalman.correct(sample);
-            kalman.predict();
-        }
-        statePre_ = kalman.statePre;
-    }
-    else if(RUN_OCL_IMPL)
-    {
-        cv::ocl::oclMat dsample(sample);
-        cv::ocl::KalmanFilter kalman_ocl;
-        OCL_TEST_CYCLE()
-        {
-            kalman_ocl.init(dim, dim);
-            kalman_ocl.correct(dsample);
-            kalman_ocl.predict();
-        }
-        kalman_ocl.statePre.download(statePre_);
-    }
-    else
-        OCL_PERF_ELSE
-
-    SANITY_CHECK(statePre_);
+    return CL_SUCCESS;
 }
 
-#endif // HAVE_CLAMDBLAS
+inline cl_int getDevices(cl_platform_id platform, cl_device_type type, std::vector<cl_device_id>& devices)
+{
+    cl_uint n = 0;
+
+    cl_int err = ::clGetDeviceIDs(platform, type, 0, NULL, &n);
+    if (err != CL_SUCCESS)
+        return err;
+
+    devices.clear(); devices.resize(n);
+    err = ::clGetDeviceIDs(platform, type, n, &devices[0], NULL);
+    if (err != CL_SUCCESS)
+        return err;
+
+    return CL_SUCCESS;
+}
+
+
+
+
+template <typename Functor, typename ObjectType, typename T>
+inline cl_int getScalarInfo(Functor f, ObjectType obj, cl_uint name, T& param)
+{
+    return f(obj, name, sizeof(T), &param, NULL);
+}
+
+template <typename Functor, typename ObjectType>
+inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string& param)
+{
+    ::size_t required;
+    cl_int err = f(obj, name, 0, NULL, &required);
+    if (err != CL_SUCCESS)
+        return err;
+
+    param.clear();
+    if (required > 0)
+    {
+        std::vector<char> buf(required + 1, char(0));
+        err = f(obj, name, required, &buf[0], NULL);
+        if (err != CL_SUCCESS)
+            return err;
+        param = &buf[0];
+    }
+
+    return CL_SUCCESS;
+};
+
+} // namespace cl_utils
+
+#endif // __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__

@@ -90,10 +90,8 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType, int, bool)
 
         use_roi = GET_PARAM(3);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-
-        mat = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), src_type, 5, 136, false);
-        dst = randomMat(rng, use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : mat.size(), dst_type, 5, 136, false);
+        mat = randomMat(randomSize(MIN_VALUE, MAX_VALUE), src_type, 5, 136, false);
+        dst = randomMat(use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : mat.size(), dst_type, 5, 136, false);
     }
 
     void random_roi()
@@ -101,7 +99,6 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType, int, bool)
         if (use_roi)
         {
             // randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, MIN_VALUE);
             roirows = rng.uniform(1, MIN_VALUE);
             srcx = rng.uniform(0, mat.cols - roicols);
@@ -129,7 +126,7 @@ PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType, int, bool)
 
 typedef ConvertToTestBase ConvertTo;
 
-TEST_P(ConvertTo, Accuracy)
+OCL_TEST_P(ConvertTo, Accuracy)
 {
     if((src_depth == CV_64F || dst_depth == CV_64F) &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -178,11 +175,9 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, int, bool)
         int type = CV_MAKETYPE(GET_PARAM(0), GET_PARAM(1));
         use_roi = GET_PARAM(2);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-
-        src = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
-        dst = randomMat(rng, use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), type, 5, 16, false);
-        mask = randomMat(rng, use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), CV_8UC1, 0, 2,  false);
+        src = randomMat(randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
+        dst = randomMat(use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), type, 5, 16, false);
+        mask = randomMat(use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), CV_8UC1, 0, 2,  false);
 
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
     }
@@ -192,7 +187,6 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, int, bool)
         if (use_roi)
         {
             // randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, MIN_VALUE);
             roirows = rng.uniform(1, MIN_VALUE);
             srcx = rng.uniform(0, src.cols - roicols);
@@ -225,7 +219,7 @@ PARAM_TEST_CASE(CopyToTestBase, MatType, int, bool)
 
 typedef CopyToTestBase CopyTo;
 
-TEST_P(CopyTo, Without_mask)
+OCL_TEST_P(CopyTo, Without_mask)
 {
     if((src.depth() == CV_64F) &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -243,7 +237,7 @@ TEST_P(CopyTo, Without_mask)
     }
 }
 
-TEST_P(CopyTo, With_mask)
+OCL_TEST_P(CopyTo, With_mask)
 {
     if(src.depth() == CV_64F &&
         !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -295,11 +289,10 @@ PARAM_TEST_CASE(SetToTestBase, MatType, int, bool)
         channels = GET_PARAM(1);
         use_roi = GET_PARAM(2);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         int type = CV_MAKE_TYPE(depth, channels);
 
-        src = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
-        mask = randomMat(rng, use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), CV_8UC1, 0, 2,  false);
+        src = randomMat(randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
+        mask = randomMat(use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), CV_8UC1, 0, 2,  false);
 
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
         val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0),
@@ -311,7 +304,6 @@ PARAM_TEST_CASE(SetToTestBase, MatType, int, bool)
         if (use_roi)
         {
             // randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, MIN_VALUE);
             roirows = rng.uniform(1, MIN_VALUE);
             srcx = rng.uniform(0, src.cols - roicols);
@@ -339,7 +331,7 @@ PARAM_TEST_CASE(SetToTestBase, MatType, int, bool)
 
 typedef SetToTestBase SetTo;
 
-TEST_P(SetTo, Without_mask)
+OCL_TEST_P(SetTo, Without_mask)
 {
     if(depth == CV_64F &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -357,7 +349,7 @@ TEST_P(SetTo, Without_mask)
     }
 }
 
-TEST_P(SetTo, With_mask)
+OCL_TEST_P(SetTo, With_mask)
 {
     if(depth == CV_64F &&
             !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
@@ -401,8 +393,7 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
         use_roi = GET_PARAM(1);
         int type = CV_MAKE_TYPE(depth, 3);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-        src = randomMat(rng, randomSize(1, MAX_VALUE), type, 0, 40, false);
+        src = randomMat(randomSize(1, MAX_VALUE), type, 0, 40, false);
     }
 
     void random_roi()
@@ -410,7 +401,6 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
         if (use_roi)
         {
             //randomize ROI
-            cv::RNG &rng = TS::ptr()->get_rng();
             roicols = rng.uniform(1, src.cols);
             roirows = rng.uniform(1, src.rows);
             srcx = rng.uniform(0, src.cols - roicols);
@@ -427,7 +417,7 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
     }
 };
 
-TEST_P(convertC3C4, Accuracy)
+OCL_TEST_P(convertC3C4, Accuracy)
 {
     if(depth == CV_64F &&
         !cv::ocl::Context::getContext()->supportsFeature(cv::ocl::FEATURE_CL_DOUBLE))
