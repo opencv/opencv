@@ -109,8 +109,7 @@ TEST(Viz_viz3d, accuracy)
 
     for (int i = 0, j = 0; i <= 360; ++i, j+=5)
     {
-        cam_path.push_back(viz::makeCameraPose(Point3f(0.5*cos(double(i)*CV_PI/180.0), 0.5*sin(double(j)*CV_PI/180.0), 0.5*sin(double(i)*CV_PI/180.0)),
-                                               Point3f(0.0,0.0,0.0), Point3f(0.0,1.0,0.0)));
+        cam_path.push_back(viz::makeCameraPose(Vec3d(0.5*cos(double(i)*CV_PI/180.0), 0.5*sin(double(j)*CV_PI/180.0), 0.5*sin(double(i)*CV_PI/180.0)), Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 1.f, 0.f)));
     }
 
     int path_counter = 0;
@@ -133,7 +132,7 @@ TEST(Viz_viz3d, accuracy)
         colors[col] = Mat::zeros(img.rows/downSample, 1, CV_8UC3);
         for (int row = 0; row < row_max; ++row)
         {
-            clouds[col].at<Vec3f>(row) = Vec3f(downSample * float(col) / img.cols, 1.0-(downSample * float(row) / img.rows), 0.0);
+            clouds[col].at<Vec3f>(row) = Vec3f(downSample * float(col) / img.cols, 1.f-(downSample * float(row) / img.rows), 0.f);
             colors[col].at<Vec3b>(row) = img.at<Vec3b>(row*downSample,col*downSample);
         }
     }
@@ -174,7 +173,7 @@ TEST(Viz_viz3d, accuracy)
         {
             std::stringstream strstrm;
             strstrm << "cloud_" << i;
-            viz.setWidgetPose(strstrm.str(), Affine3f().translate(Vec3f(-0.5,0.0, -0.7 + 0.2*sin((angle+i*10)*CV_PI / 180.0))));
+            viz.setWidgetPose(strstrm.str(), Affine3f().translate(Vec3f(-0.5f, 0.f, (float)(-0.7 + 0.2*sin((angle+i*10)*CV_PI / 180.0)))));
         }
         angle += 10;
         viz.spinOnce(42, true);
