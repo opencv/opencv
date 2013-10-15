@@ -70,6 +70,7 @@ namespace cv
     {
         float* btvWeights_ = NULL;
         size_t btvWeights_size = 0;
+        oclMat c_btvRegWeights;
     }
 }
 
@@ -81,10 +82,6 @@ namespace btv_l1_device_ocl
         oclMat& backwardMapX, oclMat& backwardMapY);
 
     void upscale(const oclMat& src, oclMat& dst, int scale);
-
-    float diffSign(float a, float b);
-
-    Point3f diffSign(Point3f a, Point3f b);
 
     void diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst);
 
@@ -165,20 +162,6 @@ void btv_l1_device_ocl::upscale(const oclMat& src, oclMat& dst, int scale)
 
 }
 
-float btv_l1_device_ocl::diffSign(float a, float b)
-{
-    return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
-}
-
-Point3f btv_l1_device_ocl::diffSign(Point3f a, Point3f b)
-{
-    return Point3f(
-        a.x > b.x ? 1.0f : a.x < b.x ? -1.0f : 0.0f,
-        a.y > b.y ? 1.0f : a.y < b.y ? -1.0f : 0.0f,
-        a.z > b.z ? 1.0f : a.z < b.z ? -1.0f : 0.0f
-        );
-}
-
 void btv_l1_device_ocl::diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst)
 {
     Context* clCxt = Context::getContext();
@@ -228,12 +211,6 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
 
     int cn = src.oclchannels();
 
-    cl_mem c_btvRegWeights;
-    size_t count = btvWeights_size * sizeof(float);
-    c_btvRegWeights = openCLCreateBuffer(clCxt, CL_MEM_READ_ONLY, count);
-    int cl_safe_check = clEnqueueWriteBuffer(getClCommandQueue(clCxt), c_btvRegWeights, 1, 0, count, btvWeights_, 0, NULL, NULL);
-    CV_Assert(cl_safe_check == CL_SUCCESS);
-
     args.push_back(make_pair(sizeof(cl_mem), (void*)&src_.data));
     args.push_back(make_pair(sizeof(cl_mem), (void*)&dst_.data));
     args.push_back(make_pair(sizeof(cl_int), (void*)&src_step));
@@ -242,11 +219,9 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.cols));
     args.push_back(make_pair(sizeof(cl_int), (void*)&ksize));
     args.push_back(make_pair(sizeof(cl_int), (void*)&cn));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&c_btvRegWeights));
+    args.push_back(make_pair(sizeof(cl_mem), (void*)&c_btvRegWeights.data));
 
     openCLExecuteKernel(clCxt, &superres_btvl1, kernel_name, global_thread, local_thread, args, -1, -1);
-    cl_safe_check = clReleaseMemObject(c_btvRegWeights);
-    CV_Assert(cl_safe_check == CL_SUCCESS);
 }
 
 namespace
@@ -351,6 +326,8 @@ namespace
 
         btvWeights_ = &btvWeights[0];
         btvWeights_size = size;
+        Mat btvWeights_mheader(1, static_cast<int>(size), CV_32FC1, btvWeights_);
+        c_btvRegWeights = btvWeights_mheader;
     }
 
     void calcBtvRegularization(const oclMat& src, oclMat& dst, int btvKernelSize)
@@ -421,7 +398,7 @@ namespace
         btvKernelSize_ = 7;
         blurKernelSize_ = 5;
         blurSigma_ = 0.0;
-        opticalFlow_ = createOptFlow_DualTVL1_OCL();
+        opticalFlow_ = createOptFlow_Farneback_OCL();
 
         curBlurKernelSize_ = -1;
         curBlurSigma_ = -1.0;
@@ -553,6 +530,7 @@ namespace
         b_.clear();
         c_.clear();
         regTerm_.release();
+        c_btvRegWeights.release();
     }
 
     ////////////////////////////////////////////////////////////
