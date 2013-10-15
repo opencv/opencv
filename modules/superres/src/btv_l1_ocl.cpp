@@ -83,10 +83,6 @@ namespace btv_l1_device_ocl
 
     void upscale(const oclMat& src, oclMat& dst, int scale);
 
-    float diffSign(float a, float b);
-
-    Point3f diffSign(Point3f a, Point3f b);
-
     void diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst);
 
     void calcBtvRegularization(const oclMat& src, oclMat& dst, int ksize);
@@ -164,20 +160,6 @@ void btv_l1_device_ocl::upscale(const oclMat& src, oclMat& dst, int scale)
 
     openCLExecuteKernel(clCxt, &superres_btvl1, kernel_name, global_thread, local_thread, args, -1, -1);
 
-}
-
-float btv_l1_device_ocl::diffSign(float a, float b)
-{
-    return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
-}
-
-Point3f btv_l1_device_ocl::diffSign(Point3f a, Point3f b)
-{
-    return Point3f(
-        a.x > b.x ? 1.0f : a.x < b.x ? -1.0f : 0.0f,
-        a.y > b.y ? 1.0f : a.y < b.y ? -1.0f : 0.0f,
-        a.z > b.z ? 1.0f : a.z < b.z ? -1.0f : 0.0f
-        );
 }
 
 void btv_l1_device_ocl::diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst)
