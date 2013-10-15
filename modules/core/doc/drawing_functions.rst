@@ -99,7 +99,7 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
 
     :param center: Center of the ellipse.
 
-    :param axes: Length of the ellipse axes.
+    :param axes: Half of the size of the ellipse main axes.
 
     :param angle: Ellipse rotation angle in degrees.
 
@@ -137,7 +137,7 @@ Approximates an elliptic arc with a polyline.
 
     :param center: Center of the arc.
 
-    :param axes: Half-sizes of the arc. See the  :ocv:func:`ellipse`  for details.
+    :param axes: Half of the size of the ellipse main axes. See the  :ocv:func:`ellipse`  for details.
 
     :param angle: Rotation angle of the ellipse in degrees. See the  :ocv:func:`ellipse`  for details.
 
@@ -151,7 +151,6 @@ Approximates an elliptic arc with a polyline.
 
 The function ``ellipse2Poly`` computes the vertices of a polyline that approximates the specified elliptic arc. It is used by
 :ocv:func:`ellipse` .
-
 
 
 fillConvexPoly

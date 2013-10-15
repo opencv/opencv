@@ -877,3 +877,108 @@ PERF_TEST_P(AddWeightedFixture, AddWeighted,
     else
         OCL_PERF_ELSE
 }
+
+///////////// Min ////////////////////////
+
+typedef Size_MatType MinFixture;
+
+PERF_TEST_P(MinFixture, Min,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::min(oclSrc1, oclSrc2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() dst = cv::min(src1, src2);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// Max ////////////////////////
+
+typedef Size_MatType MaxFixture;
+
+PERF_TEST_P(MaxFixture, Max,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::max(oclSrc1, oclSrc2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() dst = cv::max(src1, src2);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// Max ////////////////////////
+
+typedef Size_MatType AbsFixture;
+
+PERF_TEST_P(AbsFixture, Abs,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::abs(oclSrc, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() dst = cv::abs(src);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}

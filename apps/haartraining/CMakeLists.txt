@@ -69,9 +69,17 @@ set_target_properties(opencv_performance PROPERTIES
 #  Install part
 # -----------------------------------------------------------
 
-install(TARGETS opencv_haartraining RUNTIME DESTINATION bin COMPONENT main)
-install(TARGETS opencv_createsamples RUNTIME DESTINATION bin COMPONENT main)
-install(TARGETS opencv_performance RUNTIME DESTINATION bin COMPONENT main)
+if(INSTALL_CREATE_DISTRIB)
+  if(BUILD_SHARED_LIBS)
+    install(TARGETS opencv_haartraining RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} CONFIGURATIONS Release COMPONENT main)
+    install(TARGETS opencv_createsamples RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} CONFIGURATIONS Release COMPONENT main)
+    install(TARGETS opencv_performance RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} CONFIGURATIONS Release COMPONENT main)
+  endif()
+else()
+  install(TARGETS opencv_haartraining RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main)
+  install(TARGETS opencv_createsamples RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main)
+  install(TARGETS opencv_performance RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main)
+endif()
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(opencv_performance PROPERTIES FOLDER "applications")

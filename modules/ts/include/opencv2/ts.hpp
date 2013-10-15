@@ -538,12 +538,23 @@ CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 } //namespace cvtest
 
-#define CV_TEST_MAIN(resourcesubdir) \
+#ifndef __CV_TEST_EXEC_ARGS
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
+#define __CV_TEST_EXEC_ARGS(...)    \
+    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/
+#else
+#define __CV_TEST_EXEC_ARGS(...)    \
+    __VA_ARGS__;
+#endif
+#endif
+
+#define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
 { \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
-    cvtest::printVersionInfo();\
+    cvtest::printVersionInfo(); \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     return RUN_ALL_TESTS(); \
 }
 

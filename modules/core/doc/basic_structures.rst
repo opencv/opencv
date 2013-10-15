@@ -1429,7 +1429,7 @@ Various Mat constructors
 
     :param sizes: Array of integers specifying an n-dimensional array shape.
 
-    :param type: Array type. Use  ``CV_8UC1, ..., CV_64FC4``  to create 1-4 channel matrices, or  ``CV_8UC(n), ..., CV_64FC(n)``  to create multi-channel (up to  ``CV_MAX_CN``  channels) matrices.
+    :param type: Array type. Use  ``CV_8UC1, ..., CV_64FC4``  to create 1-4 channel matrices, or  ``CV_8UC(n), ..., CV_64FC(n)``  to create multi-channel (up to  ``CV_CN_MAX``  channels) matrices.
 
     :param s: An optional value to initialize each matrix element with. To set all the matrix elements to the particular value after the construction, use the assignment operator  ``Mat::operator=(const Scalar& value)`` .
 

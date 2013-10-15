@@ -18,6 +18,9 @@ int64 TestBase::_timeadjustment = 0;
 static std::vector<std::string> available_impls;
 
 static std::string  param_impl;
+
+static enum PERF_STRATEGY param_strategy = PERF_STRATEGY_BASE;
+
 static double       param_max_outliers;
 static double       param_max_deviation;
 static unsigned int param_min_samples;
@@ -152,7 +155,7 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
 {
     if (!storageInPath.empty())
     {
-        LOGE("Subsequent initialisation of Regression utility is not allowed.");
+        LOGE("Subsequent initialization of Regression utility is not allowed.");
         return;
     }
 
@@ -599,6 +602,11 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 \*****************************************************************************************/
 performance_metrics::performance_metrics()
 {
+    clear();
+}
+
+void performance_metrics::clear()
+{
     bytesIn = 0;
     bytesOut = 0;
     samples = 0;
@@ -643,6 +651,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
                                                   "|the implementation variant of functions under test}"
         "{   perf_list_impls             |false    |list available implementation variants and exit}"
         "{   perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
+        "{   perf_strategy               |default  |specifies performance measuring strategy: default, base or simple (weak restrictions)}"
 #ifdef ANDROID
         "{   perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
         "{   perf_affinity_mask          |0        |set affinity mask for the main thread}"
@@ -668,6 +677,24 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
     param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
+    std::string perf_strategy = args.get<std::string>("perf_strategy");
+    if (perf_strategy == "default")
+    {
+        // nothing
+    }
+    else if (perf_strategy == "base")
+    {
+        param_strategy = PERF_STRATEGY_BASE;
+    }
+    else if (perf_strategy == "simple")
+    {
+        param_strategy = PERF_STRATEGY_SIMPLE;
+    }
+    else
+    {
+        printf("No such strategy: %s\n", perf_strategy.c_str());
+        exit(1);
+    }
     param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
@@ -761,6 +788,18 @@ std::string TestBase::getSelectedImpl()
     return param_impl;
 }
 
+enum PERF_STRATEGY TestBase::getPerformanceStrategy()
+{
+    return param_strategy;
+}
+
+enum PERF_STRATEGY TestBase::setPerformanceStrategy(enum PERF_STRATEGY strategy)
+{
+    enum PERF_STRATEGY ret = param_strategy;
+    param_strategy = strategy;
+    return ret;
+}
+
 
 int64 TestBase::_calibrate()
 {
@@ -791,6 +830,11 @@ int64 TestBase::_calibrate()
     _helper h;
     h.PerfTestBody();
     double compensation = h.getMetrics().min;
+    if (param_strategy == PERF_STRATEGY_SIMPLE)
+    {
+        CV_Assert(compensation < 0.01 * cv::getTickFrequency());
+        compensation = 0.0f; // simple strategy doesn't require any compensation
+    }
     LOGD("Time compensation is %.0f", compensation);
     return (int64)compensation;
 }
@@ -854,8 +898,64 @@ cv::Size TestBase::getSize(cv::InputArray a)
 
 bool TestBase::next()
 {
-    bool has_next = ++currentIter < nIters && totalTime < timeLimit;
+    static int64 lastActivityPrintTime = 0;
+
+    if (currentIter != (unsigned int)-1)
+    {
+        if (currentIter + 1 != times.size())
+            ADD_FAILURE() << "  next() is called before stopTimer()";
+    }
+    else
+    {
+        lastActivityPrintTime = 0;
+        metrics.clear();
+    }
+
     cv::theRNG().state = param_seed; //this rng should generate same numbers for each run
+    ++currentIter;
+
+    bool has_next = false;
+
+    do {
+        assert(currentIter == times.size());
+        if (currentIter == 0)
+        {
+            has_next = true;
+            break;
+        }
+
+        if (param_strategy == PERF_STRATEGY_BASE)
+        {
+            has_next = currentIter < nIters && totalTime < timeLimit;
+        }
+        else
+        {
+            assert(param_strategy == PERF_STRATEGY_SIMPLE);
+            if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
+            {
+                std::cout << '.' << std::endl;
+                lastActivityPrintTime = totalTime;
+            }
+            if (currentIter >= nIters)
+            {
+                has_next = false;
+                break;
+            }
+            if (currentIter < param_min_samples)
+            {
+                has_next = true;
+                break;
+            }
+
+            calcMetrics();
+
+            double criteria = 0.03;  // 3%
+            if (fabs(metrics.mean) > 1e-6)
+                has_next = metrics.stddev > criteria * fabs(metrics.mean);
+            else
+                has_next = true;
+        }
+    } while (false);
 
 #ifdef ANDROID
     if (log_power_checkpoints)
@@ -868,6 +968,9 @@ bool TestBase::next()
         if (!has_next) RecordProperty("test_complete", cv::format("%llu",t1).c_str());
     }
 #endif
+
+    if (has_next)
+        startTimer(); // really we should measure activity from this moment, so reset start time
     return has_next;
 }
 
@@ -914,7 +1017,7 @@ void TestBase::stopTimer()
 {
     int64 time = cv::getTickCount();
     if (lastTime == 0)
-        ADD_FAILURE() << "  stopTimer() is called before startTimer()";
+        ADD_FAILURE() << "  stopTimer() is called before startTimer()/next()";
     lastTime = time - lastTime;
     totalTime += lastTime;
     lastTime -= _timeadjustment;
@@ -925,6 +1028,7 @@ void TestBase::stopTimer()
 
 performance_metrics& TestBase::calcMetrics()
 {
+    CV_Assert(metrics.samples <= (unsigned int)currentIter);
     if ((metrics.samples == (unsigned int)currentIter) || times.size() == 0)
         return metrics;
 
@@ -946,47 +1050,61 @@ performance_metrics& TestBase::calcMetrics()
 
     std::sort(times.begin(), times.end());
 
-    //estimate mean and stddev for log(time)
-    double gmean = 0;
-    double gstddev = 0;
-    int n = 0;
-    for(TimeVector::const_iterator i = times.begin(); i != times.end(); ++i)
-    {
-        double x = static_cast<double>(*i)/runsPerIteration;
-        if (x < DBL_EPSILON) continue;
-        double lx = log(x);
-
-        ++n;
-        double delta = lx - gmean;
-        gmean += delta / n;
-        gstddev += delta * (lx - gmean);
-    }
-
-    gstddev = n > 1 ? sqrt(gstddev / (n - 1)) : 0;
-
     TimeVector::const_iterator start = times.begin();
     TimeVector::const_iterator end = times.end();
 
-    //filter outliers assuming log-normal distribution
-    //http://stackoverflow.com/questions/1867426/modeling-distribution-of-performance-measurements
-    int offset = 0;
-    if (gstddev > DBL_EPSILON)
+    if (param_strategy == PERF_STRATEGY_BASE)
     {
-        double minout = exp(gmean - 3 * gstddev) * runsPerIteration;
-        double maxout = exp(gmean + 3 * gstddev) * runsPerIteration;
-        while(*start < minout) ++start, ++metrics.outliers, ++offset;
-        do --end, ++metrics.outliers; while(*end > maxout);
-        ++end, --metrics.outliers;
+        //estimate mean and stddev for log(time)
+        double gmean = 0;
+        double gstddev = 0;
+        int n = 0;
+        for(TimeVector::const_iterator i = times.begin(); i != times.end(); ++i)
+        {
+            double x = static_cast<double>(*i)/runsPerIteration;
+            if (x < DBL_EPSILON) continue;
+            double lx = log(x);
+
+            ++n;
+            double delta = lx - gmean;
+            gmean += delta / n;
+            gstddev += delta * (lx - gmean);
+        }
+
+        gstddev = n > 1 ? sqrt(gstddev / (n - 1)) : 0;
+
+        //filter outliers assuming log-normal distribution
+        //http://stackoverflow.com/questions/1867426/modeling-distribution-of-performance-measurements
+        if (gstddev > DBL_EPSILON)
+        {
+            double minout = exp(gmean - 3 * gstddev) * runsPerIteration;
+            double maxout = exp(gmean + 3 * gstddev) * runsPerIteration;
+            while(*start < minout) ++start, ++metrics.outliers;
+            do --end, ++metrics.outliers; while(*end > maxout);
+            ++end, --metrics.outliers;
+        }
     }
+    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    {
+        metrics.outliers = static_cast<int>(times.size() * param_max_outliers / 100);
+        for (unsigned int i = 0; i < metrics.outliers; i++)
+            --end;
+    }
+    else
+    {
+        assert(false);
+    }
+
+    int offset = static_cast<int>(start - times.begin());
 
     metrics.min = static_cast<double>(*start)/runsPerIteration;
     //calc final metrics
-    n = 0;
-    gmean = 0;
-    gstddev = 0;
+    unsigned int n = 0;
+    double gmean = 0;
+    double gstddev = 0;
     double mean = 0;
     double stddev = 0;
-    int m = 0;
+    unsigned int m = 0;
     for(; start != end; ++start)
     {
         double x = static_cast<double>(*start)/runsPerIteration;
@@ -1008,11 +1126,10 @@ performance_metrics& TestBase::calcMetrics()
     metrics.gmean = exp(gmean);
     metrics.gstddev = m > 1 ? sqrt(gstddev / (m - 1)) : 0;
     metrics.stddev = n > 1 ? sqrt(stddev / (n - 1)) : 0;
-    metrics.median = n % 2
+    metrics.median = (n % 2
             ? (double)times[offset + n / 2]
-            : 0.5 * (times[offset + n / 2] + times[offset + n / 2 - 1]);
-
-    metrics.median /= runsPerIteration;
+            : 0.5 * (times[offset + n / 2] + times[offset + n / 2 - 1])
+            ) / runsPerIteration;
 
     return metrics;
 }
@@ -1026,17 +1143,31 @@ void TestBase::validateMetrics()
     ASSERT_GE(m.samples, 1u)
       << "  No time measurements was performed.\nstartTimer() and stopTimer() commands are required for performance tests.";
 
-    EXPECT_GE(m.samples, param_min_samples)
-      << "  Only a few samples are collected.\nPlease increase number of iterations or/and time limit to get reliable performance measurements.";
-
-    if (m.gstddev > DBL_EPSILON)
+    if (param_strategy == PERF_STRATEGY_BASE)
     {
-        EXPECT_GT(/*m.gmean * */1., /*m.gmean * */ 2 * sinh(m.gstddev * param_max_deviation))
-          << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is greater than measured time interval).";
-    }
+        EXPECT_GE(m.samples, param_min_samples)
+          << "  Only a few samples are collected.\nPlease increase number of iterations or/and time limit to get reliable performance measurements.";
 
-    EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
-      << "  Test results are not reliable (too many outliers).";
+        if (m.gstddev > DBL_EPSILON)
+        {
+            EXPECT_GT(/*m.gmean * */1., /*m.gmean * */ 2 * sinh(m.gstddev * param_max_deviation))
+              << "  Test results are not reliable ((mean-sigma,mean+sigma) deviation interval is greater than measured time interval).";
+        }
+
+        EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
+          << "  Test results are not reliable (too many outliers).";
+    }
+    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    {
+        double mean = metrics.mean * 1000.0f / metrics.frequency;
+        double stddev = metrics.stddev * 1000.0f / metrics.frequency;
+        double percents = stddev / mean * 100.f;
+        printf("    samples = %d, mean = %.2f, stddev = %.2f (%.1f%%)\n", (int)metrics.samples, mean, stddev, percents);
+    }
+    else
+    {
+        assert(false);
+    }
 }
 
 void TestBase::reportMetrics(bool toJUnitXML)
@@ -1199,12 +1330,12 @@ void TestBase::RunPerfTestBody()
     {
         this->PerfTestBody();
     }
-    catch(PerfEarlyExitException)
+    catch(PerfEarlyExitException&)
     {
         metrics.terminationReason = performance_metrics::TERM_INTERRUPT;
         return;//no additional failure logging
     }
-    catch(cv::Exception e)
+    catch(cv::Exception& e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         #ifdef HAVE_CUDA
@@ -1213,7 +1344,7 @@ void TestBase::RunPerfTestBody()
         #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }
-    catch(std::exception e)
+    catch(std::exception& e)
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws std::exception:\n  " << e.what();
@@ -1234,6 +1365,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::iterations(unsigned int n)
     test->times.reserve(n);
     test->nIters = std::min(n, TestBase::iterationsLimitDefault);
     test->currentIter = (unsigned int)-1;
+    test->metrics.clear();
     return *this;
 }
 
@@ -1242,6 +1374,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::time(double timeLimitSecs)
     test->times.clear();
     test->currentIter = (unsigned int)-1;
     test->timeLimit = (int64)(timeLimitSecs * cv::getTickFrequency());
+    test->metrics.clear();
     return *this;
 }
 

@@ -115,7 +115,7 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
 #ifdef USE_IPP_CANNY
     if( aperture_size == 3 && !L2gradient &&
-        ippCanny(src, dst, low_thresh, high_thresh) >= 0 )
+        ippCanny(src, dst, (float)low_thresh, (float)high_thresh) )
         return;
 #endif
 

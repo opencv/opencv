@@ -309,7 +309,7 @@ if(WIN32 AND WITH_FFMPEG)
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
 
-  install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
+  install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
 endif()
 
 ocv_add_accuracy_tests()

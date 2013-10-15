@@ -6,6 +6,7 @@ get_filename_component(OUTPUT_HPP_NAME "${OUTPUT_HPP}" NAME)
 
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
+#include \"precomp.hpp\"
 #include \"${OUTPUT_HPP_NAME}\"
 
 namespace cv
@@ -15,6 +16,8 @@ namespace ocl
 ")
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
+
+#include \"opencv2/ocl/private/util.hpp\"
 
 namespace cv
 {

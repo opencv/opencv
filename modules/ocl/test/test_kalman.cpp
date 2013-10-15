@@ -43,7 +43,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+
 #ifdef HAVE_OPENCL
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
@@ -51,6 +53,7 @@ using namespace testing;
 using namespace std;
 
 //////////////////////////////////////////////////////////////////////////
+
 PARAM_TEST_CASE(Kalman, int, int)
 {
     int size_;
@@ -62,14 +65,12 @@ PARAM_TEST_CASE(Kalman, int, int)
     }
 };
 
-TEST_P(Kalman, Accuracy)
+OCL_TEST_P(Kalman, Accuracy)
 {
     const int Dim = size_;
     const int Steps = iteration;
     const double max_init = 1;
     const double max_noise = 0.1;
-
-    cv::RNG &rng = TS::ptr()->get_rng();
 
     Mat sample_mat(Dim, 1, CV_32F), temp_mat;
     oclMat Sample(Dim, 1, CV_32F);
@@ -78,7 +79,7 @@ TEST_P(Kalman, Accuracy)
 
     Size size(Sample.cols, Sample.rows);
 
-    sample_mat =  randomMat(rng, size, Sample.type(), -max_init, max_init, false);
+    sample_mat =  randomMat(size, Sample.type(), -max_init, max_init, false);
     Sample.upload(sample_mat);
 
     //ocl start
@@ -120,7 +121,7 @@ TEST_P(Kalman, Accuracy)
         cv::gemm(kalman_filter_cpu.transitionMatrix, sample_mat, 1, cv::Mat(), 0, Temp_cpu);
 
         Size size1(Temp.cols, Temp.rows);
-        Mat temp = randomMat(rng, size1, Temp.type(), 0, 0xffff, false);
+        Mat temp = randomMat(size1, Temp.type(), 0, 0xffff, false);
 
 
         cv::multiply(2, temp, temp);
@@ -141,6 +142,7 @@ TEST_P(Kalman, Accuracy)
     //test end
     EXPECT_MAT_NEAR(kalman_filter_cpu.statePost, kalman_filter_ocl.statePost, 0);
 }
+
 INSTANTIATE_TEST_CASE_P(OCL_Video, Kalman, Combine(Values(3, 7), Values(30)));
 
 #endif // HAVE_OPENCL
