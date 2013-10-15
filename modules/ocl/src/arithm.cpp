@@ -1345,13 +1345,6 @@ static void bitwise_unary_run(const oclMat &src1, oclMat &dst, string kernelName
 
 enum { AND = 0, OR, XOR };
 
-static std::string to_string(int value)
-{
-    std::ostringstream stream;
-    stream << value;
-    return stream.str();
-}
-
 static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Scalar& src3, const oclMat &mask,
                                oclMat &dst, int operationType)
 {
@@ -1366,7 +1359,7 @@ static void bitwise_binary_run(const oclMat &src1, const oclMat &src2, const Sca
     std::string kernelName("arithm_bitwise_binary");
 
     int vlen = std::min<int>(8, src1.elemSize1() * src1.oclchannels());
-    std::string vlenstr = vlen > 1 ? to_string(vlen) : "";
+    std::string vlenstr = vlen > 1 ? format("%d", vlen) : "";
     std::string buildOptions = format("-D Operation=%c -D vloadn=vload%s -D vstoren=vstore%s -D elemSize=%d -D vlen=%d"
                                       " -D ucharv=uchar%s",
                                       operationMap[operationType], vlenstr.c_str(), vlenstr.c_str(),
