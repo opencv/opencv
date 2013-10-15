@@ -7,7 +7,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
-
 PARAM_TEST_CASE(MomentsTest, MatType, bool)
 {
     int type;
@@ -18,9 +17,8 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
     {
         type = GET_PARAM(0);
         test_contours = GET_PARAM(1);
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(10*MWIDTH, 10*MHEIGHT);
-        mat1 = randomMat(rng, size, type, 5, 16, false);
+        mat1 = randomMat(size, type, 5, 16, false);
     }
 
     void Compare(Moments& cpu_moments, Moments& gpu_moments)
@@ -34,10 +32,9 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
 };
 
 
-TEST_P(MomentsTest, Mat)
+OCL_TEST_P(MomentsTest, Mat)
 {
     bool binaryImage = 0;
-    SetUp();
 
     for(int j = 0; j < LOOP_TIMES; j++)
     {

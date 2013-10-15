@@ -480,7 +480,7 @@ cv::Scalar cv::sum( InputArray _src )
         if( ippFunc )
         {
             Ipp64f res[4];
-            if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
+            if( ippFunc(src.data, (int)src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
             {
                 Scalar sc;
                 for( int i = 0; i < cn; i++ )
@@ -585,7 +585,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFuncC1 )
             {
                 Ipp64f res;
-                if( ippFuncC1(src.data, src.step[0], mask.data, mask.step[0], sz, &res) >= 0 )
+                if( ippFuncC1(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, &res) >= 0 )
                 {
                     return Scalar(res);
                 }
@@ -599,9 +599,9 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFuncC3 )
             {
                 Ipp64f res1, res2, res3;
-                if( ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 1, &res1) >= 0 &&
-                    ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 2, &res2) >= 0 &&
-                    ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 3, &res3) >= 0 )
+                if( ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 1, &res1) >= 0 &&
+                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 2, &res2) >= 0 &&
+                    ippFuncC3(src.data, (int)src.step[0], mask.data, (int)mask.step[0], sz, 3, &res3) >= 0 )
                 {
                     return Scalar(res1, res2, res3);
                 }
@@ -627,7 +627,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
             if( ippFunc )
             {
                 Ipp64f res[4];
-                if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
+                if( ippFunc(src.data, (int)src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
                 {
                     Scalar sc;
                     for( int i = 0; i < cn; i++ )

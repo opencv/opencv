@@ -252,11 +252,11 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 {
                     _sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
                     sqsum = _sqsum.getMat();
-                    ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32f*)sum.data, sum.step, (Ipp64f*)sqsum.data, sqsum.step, srcRoiSize, 0, 0 );
+                    ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
                 }
                 else
                 {
-                    ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32f*)sum.data, sum.step, srcRoiSize, 0 );
+                    ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, srcRoiSize, 0 );
                 }
                 return;
             }
@@ -272,11 +272,11 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 {
                     _sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
                     sqsum = _sqsum.getMat();
-                    ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32s*)sum.data, sum.step, (Ipp64f*)sqsum.data, sqsum.step, srcRoiSize, 0, 0 );
+                    ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
                 }
                 else
                 {
-                    ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, src.step, (Ipp32s*)sum.data, sum.step, srcRoiSize, 0 );
+                    ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, srcRoiSize, 0 );
                 }
                 return;
             }

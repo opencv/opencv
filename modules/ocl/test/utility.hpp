@@ -52,16 +52,12 @@
 #define MIN_VALUE 171
 #define MAX_VALUE 357
 
-//#define RANDOMROI
-int randomInt(int minVal, int maxVal);
-double randomDouble(double minVal, double maxVal);
-//std::string generateVarList(int first,...);
-std::string generateVarList(int &p1, int &p2);
-cv::Size randomSize(int minVal, int maxVal);
-cv::Scalar randomScalar(double minVal, double maxVal);
-cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 255.0);
+namespace cvtest {
 
-void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
+//void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
+
+cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi);
+cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi);
 
 // This function test if gpu_rst matches cpu_rst.
 // If the two vectors are not equal, it will return the difference in vector size
@@ -77,10 +73,6 @@ cv::Mat readImageType(const std::string &fname, int type);
 double checkNorm(const cv::Mat &m);
 double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
 double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
-
-//oclMat create
-cv::ocl::oclMat createMat_ocl(cv::Size size, int type, bool useRoi = false);
-cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
 
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
@@ -101,13 +93,6 @@ cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
     EXPECT_LE(checkSimilarity(cv::Mat(mat1), cv::Mat(mat2)), eps); \
 }
 
-namespace cv
-{
-    namespace ocl
-    {
-        // void PrintTo(const DeviceInfo& info, std::ostream* os);
-    }
-}
 
 using perf::MatDepth;
 using perf::MatType;
@@ -134,79 +119,105 @@ private:
 
 void PrintTo(const Inverse &useRoi, std::ostream *os);
 
-enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
-CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
+#define OCL_RNG_SEED 123456
 
-CV_ENUM(CmpCode, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
-CV_ENUM(NormCode, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
-CV_ENUM(ReduceOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN)
-CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
-CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
-CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
-CV_ENUM(Border, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
-CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
+template <typename T>
+struct TSTestWithParam : public ::testing::TestWithParam<T>
+{
+    cv::RNG rng;
 
-CV_FLAGS(GemmFlags, GEMM_1_T, GEMM_2_T, GEMM_3_T);
-CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
-CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
+    TSTestWithParam()
+    {
+        rng = cv::RNG(OCL_RNG_SEED);
+    }
 
-void  run_perf_test();
+    int randomInt(int minVal, int maxVal)
+    {
+        return rng.uniform(minVal, maxVal);
+    }
 
-#define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
+    double randomDouble(double minVal, double maxVal)
+    {
+        return rng.uniform(minVal, maxVal);
+    }
+
+    double randomDoubleLog(double minVal, double maxVal)
+    {
+        double logMin = log((double)minVal + 1);
+        double logMax = log((double)maxVal + 1);
+        double pow = rng.uniform(logMin, logMax);
+        double v = exp(pow) - 1;
+        CV_Assert(v >= minVal && (v < maxVal || (v == minVal && v == maxVal)));
+        return v;
+    }
+
+    Size randomSize(int minVal, int maxVal)
+    {
+#if 1
+        return cv::Size((int)randomDoubleLog(minVal, maxVal), (int)randomDoubleLog(minVal, maxVal));
+#else
+        return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
+#endif
+    }
+
+    Size randomSize(int minValX, int maxValX, int minValY, int maxValY)
+    {
+#if 1
+        return cv::Size(randomDoubleLog(minValX, maxValX), randomDoubleLog(minValY, maxValY));
+#else
+        return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
+#endif
+    }
+
+    Scalar randomScalar(double minVal, double maxVal)
+    {
+        return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
+    }
+
+    Mat randomMat(Size size, int type, double minVal, double maxVal, bool useRoi = false)
+    {
+        RNG dataRng(rng.next());
+        return cvtest::randomMat(dataRng, size, type, minVal, maxVal, useRoi);
+    }
+
+    struct Border
+    {
+        int top, bot, lef, rig;
+    };
+
+    Border randomBorder(int minValue = 0, int maxValue = MAX_VALUE)
+    {
+        Border border = {
+                (int)randomDoubleLog(minValue, maxValue),
+                (int)randomDoubleLog(minValue, maxValue),
+                (int)randomDoubleLog(minValue, maxValue),
+                (int)randomDoubleLog(minValue, maxValue)
+        };
+        return border;
+    }
+
+    void randomSubMat(Mat& whole, Mat& subMat, const Size& roiSize, const Border& border, int type, double minVal, double maxVal)
+    {
+        Size wholeSize = Size(roiSize.width + border.lef + border.rig, roiSize.height + border.top + border.bot);
+        whole = randomMat(wholeSize, type, minVal, maxVal, false);
+        subMat = whole(Rect(border.lef, border.top, roiSize.width, roiSize.height));
+    }
+
+    void generateOclMat(cv::ocl::oclMat& whole, cv::ocl::oclMat& subMat, const Mat& wholeMat, const Size& roiSize, const Border& border)
+    {
+        whole = wholeMat;
+        subMat = whole(Rect(border.lef, border.top, roiSize.width, roiSize.height));
+    }
+};
+
+#define PARAM_TEST_CASE(name, ...) struct name : public TSTestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
-
-#define ALL_DEVICES testing::ValuesIn(devices())
-#define DEVICES(feature) testing::ValuesIn(devices(feature))
 
 #define ALL_TYPES testing::ValuesIn(all_types())
 #define TYPES(depth_start, depth_end, cn_start, cn_end) testing::ValuesIn(types(depth_start, depth_end, cn_start, cn_end))
 
 #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300))
-
-#define DIRECT_INVERSE testing::Values(Inverse(false), Inverse(true))
-
-#ifndef ALL_DEPTH
-#define ALL_DEPTH testing::Values(MatDepth(CV_8U), MatDepth(CV_8S), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32S), MatDepth(CV_32F), MatDepth(CV_64F))
-#endif
-#define REPEAT   1000
-#define COUNT_U  0 // count the uploading execution time for ocl mat structures
-#define COUNT_D  0
-// the following macro section tests the target function (kernel) performance
-// upload is the code snippet for converting cv::mat to cv::ocl::oclMat
-// downloading is the code snippet for converting cv::ocl::oclMat back to cv::mat
-// change COUNT_U and COUNT_D to take downloading and uploading time into account
-#define P_TEST_FULL( upload, kernel_call, download ) \
-{ \
-    std::cout<< "\n" #kernel_call "\n----------------------"; \
-    {upload;} \
-    R_TEST( kernel_call, 2 ); \
-    double t = (double)cvGetTickCount(); \
-    R_T( { \
-            if( COUNT_U ) {upload;} \
-            kernel_call; \
-            if( COUNT_D ) {download;} \
-            } ); \
-    t = (double)cvGetTickCount() - t; \
-    std::cout << "runtime is  " << t/((double)cvGetTickFrequency()* 1000.) << "ms" << std::endl; \
-}
-
-#define R_T2( test ) \
-{ \
-    std::cout<< "\n" #test "\n----------------------"; \
-    R_TEST( test, 15 ) \
-    clock_t st = clock(); \
-    R_T( test ) \
-    std::cout<< clock() - st << "ms\n"; \
-}
-#define R_T( test ) \
-    R_TEST( test, REPEAT )
-#define R_TEST( test, repeat ) \
-    try{ \
-        for( int i = 0; i < repeat; i ++ ) { test; } \
-    } catch( ... ) { std::cout << "||||| Exception catched! |||||\n"; return; }
-
-//////// Utility
 
 #define IMAGE_CHANNELS testing::Values(Channels(1), Channels(3), Channels(4))
 #ifndef IMPLEMENT_PARAM_CLASS
@@ -226,5 +237,71 @@ void  run_perf_test();
 
 IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS
+
+} // namespace cvtest
+
+enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
+CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
+
+CV_ENUM(CmpCode, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
+CV_ENUM(NormCode, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
+CV_ENUM(ReduceOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN)
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
+CV_ENUM(Border, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
+CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
+
+CV_FLAGS(GemmFlags, GEMM_1_T, GEMM_2_T, GEMM_3_T);
+CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
+CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
+
+# define OCL_TEST_P(test_case_name, test_name) \
+    class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : \
+        public test_case_name { \
+    public: \
+        GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() { } \
+        virtual void TestBody(); \
+        void OCLTestBody(); \
+    private: \
+        static int AddToRegistry() \
+        { \
+            ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
+              GetTestCasePatternHolder<test_case_name>(\
+                  #test_case_name, __FILE__, __LINE__)->AddTestPattern(\
+                      #test_case_name, \
+                      #test_name, \
+                      new ::testing::internal::TestMetaFactory< \
+                          GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>()); \
+            return 0; \
+        } \
+    \
+        static int gtest_registering_dummy_; \
+        GTEST_DISALLOW_COPY_AND_ASSIGN_(\
+            GTEST_TEST_CLASS_NAME_(test_case_name, test_name)); \
+    }; \
+    \
+    int GTEST_TEST_CLASS_NAME_(test_case_name, \
+                             test_name)::gtest_registering_dummy_ = \
+      GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
+    \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() \
+    { \
+        try \
+        { \
+            OCLTestBody(); \
+        } \
+        catch (const cv::Exception & ex) \
+        { \
+            if (ex.code == cv::Error::OpenCLDoubleNotSupported)\
+                std::cout << "Test skipped (selected device does not support double)" << std::endl; \
+            else if (ex.code == cv::Error::OpenCLNoAMDBlasFft) \
+                std::cout << "Test skipped (AMD Blas / Fft libraries are not available)" << std::endl; \
+            else \
+                throw; \
+        } \
+    } \
+    \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::OCLTestBody()
 
 #endif // __OPENCV_TEST_UTILITY_HPP__

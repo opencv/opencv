@@ -39,7 +39,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "samples/c" COMPONENT main)
+              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/c" COMPONENT main)
     endif()
   ENDMACRO()
 

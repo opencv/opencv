@@ -11,6 +11,17 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
+macro(ocv_check_environment_variables)
+  foreach(_var ${ARGN})
+    if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
+      set(__value "$ENV{${_var}}")
+      file(TO_CMAKE_PATH "${__value}" __value) # Assume that we receive paths
+      set(${_var} "${__value}")
+      message(STATUS "Update variable ${_var} from environment: ${${_var}}")
+    endif()
+  endforeach()
+endmacro()
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   set(__add_before "")
@@ -423,6 +434,48 @@ macro(ocv_convert_to_full_paths VAR)
     unset(__tmp)
   endif()
 endmacro()
+
+
+# add install command
+function(ocv_install_target)
+  install(TARGETS ${ARGN})
+
+  if(INSTALL_CREATE_DISTRIB)
+    if(MSVC AND NOT BUILD_SHARED_LIBS)
+      set(__target "${ARGV0}")
+
+      set(isArchive 0)
+      set(isDst 0)
+      foreach(e ${ARGN})
+        if(isDst EQUAL 1)
+          set(DST "${e}")
+          break()
+        endif()
+        if(isArchive EQUAL 1 AND e STREQUAL "DESTINATION")
+          set(isDst 1)
+        endif()
+        if(e STREQUAL "ARCHIVE")
+          set(isArchive 1)
+        else()
+          set(isArchive 0)
+        endif()
+      endforeach()
+
+#      message(STATUS "Process ${__target} dst=${DST}...")
+      if(NOT DEFINED DST)
+        set(DST "OPENCV_LIB_INSTALL_PATH")
+      endif()
+
+      get_target_property(fname ${__target} LOCATION_DEBUG)
+      string(REPLACE ".lib" ".pdb" fname "${fname}")
+      install(FILES ${fname} DESTINATION ${DST} CONFIGURATIONS Debug)
+
+      get_target_property(fname ${__target} LOCATION_RELEASE)
+      string(REPLACE ".lib" ".pdb" fname "${fname}")
+      install(FILES ${fname} DESTINATION ${DST} CONFIGURATIONS Release)
+    endif()
+  endif()
+endfunction()
 
 
 # read set of version defines from the header file

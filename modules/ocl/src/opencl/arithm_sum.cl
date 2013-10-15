@@ -51,14 +51,14 @@
 #endif
 #endif
 
-#if defined (FUNC_SUM)
+#if FUNC_SUM
 #define FUNC(a, b) b += a;
-#endif
-#if defined (FUNC_ABS_SUM)
-#define FUNC(a, b) b += a >= 0 ? a : -a;
-#endif
-#if defined (FUNC_SQR_SUM)
+#elif FUNC_ABS_SUM
+#define FUNC(a, b) b += a >= (dstT)(0) ? a : -a;
+#elif FUNC_SQR_SUM
 #define FUNC(a, b) b += a * a;
+#else
+#error No sum function
 #endif
 
 /**************************************Array buffer SUM**************************************/

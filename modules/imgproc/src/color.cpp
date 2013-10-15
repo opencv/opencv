@@ -218,7 +218,7 @@ public:
     {
         const void *yS = src.ptr<uchar>(range.start);
         void *yD = dst.ptr<uchar>(range.start);
-        if( cvt(yS, (int)src.step[0], yD, (int)dst.step[0], src.cols, range.end - range.start) < 0 )
+        if( !cvt(yS, (int)src.step[0], yD, (int)dst.step[0], src.cols, range.end - range.start) )
             *ok = false;
     }
 
@@ -730,7 +730,7 @@ template<> struct RGB2Gray<uchar>
 {
     typedef uchar channel_type;
 
-    RGB2Gray<uchar>(int _srccn, int blueIdx, const int* coeffs) : srccn(_srccn)
+    RGB2Gray(int _srccn, int blueIdx, const int* coeffs) : srccn(_srccn)
     {
         const int coeffs0[] = { R2Y, G2Y, B2Y };
         if(!coeffs) coeffs = coeffs0;
@@ -761,7 +761,7 @@ template<> struct RGB2Gray<ushort>
 {
     typedef ushort channel_type;
 
-    RGB2Gray<ushort>(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)
+    RGB2Gray(int _srccn, int blueIdx, const int* _coeffs) : srccn(_srccn)
     {
         static const int coeffs0[] = { R2Y, G2Y, B2Y };
         memcpy(coeffs, _coeffs ? _coeffs : coeffs0, 3*sizeof(coeffs[0]));

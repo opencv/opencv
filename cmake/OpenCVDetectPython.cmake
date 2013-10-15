@@ -20,6 +20,7 @@ if(PYTHONINTERP_FOUND)
   set(PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 
   if(NOT ANDROID AND NOT IOS)
+    ocv_check_environment_variables(PYTHON_LIBRARY PYTHON_INCLUDE_DIR)
     find_host_package(PythonLibs "${PYTHON_VERSION_STRING}" EXACT)
   endif()
 

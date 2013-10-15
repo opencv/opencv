@@ -45,7 +45,7 @@ using namespace std;
 using namespace cv;
 using namespace cvtest;
 
-
+namespace cvtest {
 //std::string generateVarList(int first,...)
 //{
 //	vector<std::string> varname;
@@ -72,41 +72,14 @@ using namespace cvtest;
 //	return ss.str();
 //};
 
-int randomInt(int minVal, int maxVal)
-{
-    RNG &rng = TS::ptr()->get_rng();
-    return rng.uniform(minVal, maxVal);
-}
-
-double randomDouble(double minVal, double maxVal)
-{
-    RNG &rng = TS::ptr()->get_rng();
-    return rng.uniform(minVal, maxVal);
-}
-
-Size randomSize(int minVal, int maxVal)
-{
-    return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
-}
-
-Scalar randomScalar(double minVal, double maxVal)
-{
-    return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
-}
-
-Mat randomMat(Size size, int type, double minVal, double maxVal)
-{
-    return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
-}
-
-cv::ocl::oclMat createMat_ocl(Size size, int type, bool useRoi)
+cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi)
 {
     Size size0 = size;
 
     if (useRoi)
     {
-        size0.width += randomInt(5, 15);
-        size0.height += randomInt(5, 15);
+        size0.width += rng.uniform(5, 15);
+        size0.height += rng.uniform(5, 15);
     }
 
     cv::ocl::oclMat d_m(size0, type);
@@ -117,11 +90,11 @@ cv::ocl::oclMat createMat_ocl(Size size, int type, bool useRoi)
     return d_m;
 }
 
-cv::ocl::oclMat loadMat_ocl(const Mat& m, bool useRoi)
+cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi)
 {
     CV_Assert(m.type() == CV_8UC1 || m.type() == CV_8UC3);
     cv::ocl::oclMat d_m;
-    d_m = createMat_ocl(m.size(), m.type(), useRoi);
+    d_m = createMat_ocl(rng, m.size(), m.type(), useRoi);
 
     Size ls;
     Point pt;
@@ -137,38 +110,6 @@ cv::ocl::oclMat loadMat_ocl(const Mat& m, bool useRoi)
     m_ocl.copyTo(d_m);
     return d_m;
 }
-/*
-void showDiff(InputArray gold_, InputArray actual_, double eps)
-{
-    Mat gold;
-    if (gold_.kind() == _InputArray::MAT)
-        gold = gold_.getMat();
-    else
-        gold_.getGpuMat().download(gold);
-
-    Mat actual;
-    if (actual_.kind() == _InputArray::MAT)
-        actual = actual_.getMat();
-    else
-        actual_.getGpuMat().download(actual);
-
-    Mat diff;
-    absdiff(gold, actual, diff);
-    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
-
-    namedWindow("gold", WINDOW_NORMAL);
-    namedWindow("actual", WINDOW_NORMAL);
-    namedWindow("diff", WINDOW_NORMAL);
-
-    imshow("gold", gold);
-    imshow("actual", actual);
-    imshow("diff", diff);
-
-    waitKey();
-}
-*/
-
-
 
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
@@ -288,3 +229,5 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     }
     return final_test_result;
 }
+
+} // namespace cvtest

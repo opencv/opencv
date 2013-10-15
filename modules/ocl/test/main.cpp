@@ -10,7 +10,8 @@
 //                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,105 +42,17 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_OPENCL
+#define DUMP_INFO_STDOUT(propertyDisplayName, propertyValue) \
+    do { \
+        std::cout << (propertyDisplayName) << ": " << (propertyValue) << std::endl; \
+    } while (false)
 
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using std::cout;
-using std::endl;
+#define DUMP_INFO_XML(propertyXMLName, propertyValue) \
+    do { \
+        std::stringstream ss; ss << propertyValue; \
+        ::testing::Test::RecordProperty((propertyXMLName), ss.str()); \
+    } while (false)
 
-void print_info()
-{
-    printf("\n");
-#if defined _WIN32
-#   if defined _WIN64
-    puts("OS: Windows 64");
-#   else
-    puts("OS: Windows 32");
-#   endif
-#elif defined linux
-#   if defined _LP64
-    puts("OS: Linux 64");
-#   else
-    puts("OS: Linux 32");
-#   endif
-#elif defined __APPLE__
-#   if defined _LP64
-    puts("OS: Apple 64");
-#   else
-    puts("OS: Apple 32");
-#   endif
-#endif
+#include "opencv2/ocl/private/opencl_dumpinfo.hpp"
 
-}
-int main(int argc, char **argv)
-{
-    TS::ptr()->init(".");
-    InitGoogleTest(&argc, argv);
-    const char *keys =
-        "{ h | false              | print help message }"
-        "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
-        "{ p | -1                 | set platform id i.e. -p=0}"
-        "{ d | 0                  | set device id i.e. -d=0}";
-
-    if (getenv("OPENCV_OPENCL_DEVICE") == NULL) // TODO Remove this after buildbot updates
-    {
-        CommandLineParser cmd(argc, argv, keys);
-        if (cmd.has("help"))
-        {
-            cout << "Available options besides google test option:" << endl;
-            cmd.printMessage();
-            return 0;
-        }
-        string type = cmd.get<string>("type");
-        int pid = cmd.get<int>("platform");
-        int device = cmd.get<int>("device");
-
-        print_info();
-        int flag = CVCL_DEVICE_TYPE_GPU;
-        if(type == "cpu")
-        {
-            flag = CVCL_DEVICE_TYPE_CPU;
-        }
-
-        cv::ocl::PlatformsInfo platformsInfo;
-        cv::ocl::getOpenCLPlatforms(platformsInfo);
-        if (pid >= (int)platformsInfo.size())
-        {
-            std::cout << "platform is invalid\n";
-            return 1;
-        }
-
-        cv::ocl::DevicesInfo devicesInfo;
-        int devnums = cv::ocl::getOpenCLDevices(devicesInfo, flag, (pid < 0) ? NULL : platformsInfo[pid]);
-        if (device < 0 || device >= devnums)
-        {
-            std::cout << "device/platform invalid\n";
-            return 1;
-        }
-
-        cv::ocl::setDevice(devicesInfo[device]);
-    }
-
-    const DeviceInfo& deviceInfo = cv::ocl::Context::getContext()->getDeviceInfo();
-
-    cout << "Device type: " << (deviceInfo.deviceType == CVCL_DEVICE_TYPE_CPU ?
-                "CPU" :
-                (deviceInfo.deviceType == CVCL_DEVICE_TYPE_GPU ? "GPU" : "unknown")) << endl
-         << "Platform name: " << deviceInfo.platform->platformName << endl
-         << "Device name: " << deviceInfo.deviceName << endl;
-    return RUN_ALL_TESTS();
-}
-
-#else // DON'T HAVE_OPENCL
-
-int main()
-{
-    printf("OpenCV was built without OpenCL support\n");
-    return 0;
-}
-
-
-#endif // HAVE_OPENCL
+CV_TEST_MAIN(".", dumpOpenCLDevice())

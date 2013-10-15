@@ -55,20 +55,11 @@ namespace cv
 {
     namespace ocl
     {
-        static const char noImage2dOption[] = "-D DISABLE_IMAGE2D";
-
-        static bool use_image2d = false;
-
         static void openCLExecuteKernelSURF(Context *clCxt, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
             size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             char optBuf [100] = {0};
             char * optBufPtr = optBuf;
-            if( !use_image2d )
-            {
-                strcat(optBufPtr, noImage2dOption);
-                optBufPtr += strlen(noImage2dOption);
-            }
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optBufPtr);
             size_t wave_size = queryWaveFrontSize(kernel);
@@ -149,13 +140,10 @@ public:
         counters.setTo(Scalar::all(0));
 
         integral(img, surf_.sum);
-        use_image2d = support_image2d();
-        if(use_image2d)
-        {
-            bindImgTex(img, imgTex);
-            bindImgTex(surf_.sum, sumTex);
-            finish();
-        }
+
+        bindImgTex(img, imgTex);
+        bindImgTex(surf_.sum, sumTex);
+        finish();
 
         maskSumTex = 0;
 

@@ -3,6 +3,18 @@ Operations on Matrics
 
 .. highlight:: cpp
 
+ocl::abs
+------------------
+Returns void
+
+.. ocv:function:: void ocl::abs(const oclMat& src, oclMat& dst)
+
+    :param src: input array.
+
+    :param dst: destination array, it will have the same size and same type as ``src``.
+
+Computes per-element absolute values of the input array. Supports all data types.
+
 ocl::absdiff
 ------------------
 Returns void
