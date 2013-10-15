@@ -232,6 +232,56 @@ static CvSize cvImageWidget_calc_size( int im_width, int im_height, int max_widt
     return cvSize( cvRound(max_height*aspect), max_height );
 }
 
+#if defined (HAVE_GTK3)
+static void
+cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint *natural_width)
+{
+  g_return_if_fail (widget != NULL);
+  g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
+  CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
+
+  if(image_widget->original_image != NULL) {
+    *minimal_width = image_widget->flags & CV_WINDOW_AUTOSIZE ?
+      gdk_window_get_width(gtk_widget_get_window(widget)) : image_widget->original_image->cols;
+  }
+  else {
+    *minimal_width = 320;
+  }
+
+  if(image_widget->scaled_image != NULL) {
+    *natural_width = *minimal_width < image_widget->scaled_image->cols ?
+      image_widget->scaled_image->cols : *minimal_width;
+  }
+  else {
+    *natural_width = *minimal_width;
+  }
+}
+
+static void
+cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gint *natural_height)
+{
+  g_return_if_fail (widget != NULL);
+  g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
+  CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
+
+  if(image_widget->original_image != NULL) {
+    *minimal_height = image_widget->flags & CV_WINDOW_AUTOSIZE ?
+      gdk_window_get_height(gtk_widget_get_window(widget)) : image_widget->original_image->rows;
+  }
+  else {
+    *minimal_height = 240;
+  }
+
+  if(image_widget->scaled_image != NULL) {
+    *natural_height = *minimal_height < image_widget->scaled_image->rows ?
+      image_widget->scaled_image->cols : *minimal_height;
+  }
+  else {
+    *natural_height = *minimal_height;
+  }
+}
+
+#else
 static void
 cvImageWidget_size_request (GtkWidget      *widget,
                        GtkRequisition *requisition)
@@ -261,25 +311,6 @@ cvImageWidget_size_request (GtkWidget      *widget,
         requisition->height = 240;
     }
     //printf("%d %d\n",requisition->width, requisition->height);
-}
-
-#if defined (HAVE_GTK3)
-static void
-cvImageWidget_get_preferred_width (GtkWidget *widget, gint *minimal_width, gint *natural_width)
-{
-  GtkRequisition requisition;
-
-  cvImageWidget_size_request (widget, &requisition);
-  *minimal_width = *natural_width = requisition.width;
-}
-
-static void
-cvImageWidget_get_preferred_height (GtkWidget *widget, gint *minimal_height, gint *natural_height)
-{
-  GtkRequisition requisition;
-
-  cvImageWidget_size_request (widget, &requisition);
-  *minimal_height = *natural_height = requisition.height;
 }
 #endif //HAVE_GTK3
 
@@ -860,7 +891,6 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
   g_return_val_if_fail (widget != NULL, FALSE);
   g_return_val_if_fail (CV_IS_IMAGE_WIDGET (widget), FALSE);
 
-  cr = gdk_cairo_create(gtk_widget_get_window(widget));
   image_widget = CV_IMAGE_WIDGET (widget);
 
   if( image_widget->scaled_image ){
@@ -884,7 +914,7 @@ static gboolean cvImageWidget_draw(GtkWidget* widget, cairo_t *cr, gpointer data
   }
 
   cairo_paint(cr);
-  cairo_destroy(cr);
+  g_object_unref(pixbuf);
   return TRUE;
 }
 
@@ -938,6 +968,7 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
   }
 
   cairo_paint(cr);
+  g_object_unref(pixbuf);
   cairo_destroy(cr);
   return TRUE;
 }
