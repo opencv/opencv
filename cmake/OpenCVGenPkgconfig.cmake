@@ -57,11 +57,9 @@ endforeach()
 # add extra dependencies required for OpenCV
 set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
 if(OpenCV_EXTRA_COMPONENTS)
-  set(OpenCV_DASH_L_EXTRA_COMPONENTS "")
-  foreach(ExtraComponent ${OpenCV_EXTRA_COMPONENTS})
-    set(OpenCV_DASH_L_EXTRA_COMPONENTS "${OpenCV_DASH_L_EXTRA_COMPONENTS} -l${ExtraComponent}")
+  foreach(extra_component ${OpenCV_EXTRA_COMPONENTS})
+    set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} -l${extra_component}")
   endforeach()
-  set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} ${OpenCV_DASH_L_EXTRA_COMPONENTS}")
 endif()
 
 #generate the .pc file
