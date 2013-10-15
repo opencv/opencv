@@ -126,8 +126,6 @@ private:
                        int d_C1, int d_C2, int d_C3 );
     // merge an ER with its nested parent
     void er_merge( ERStat *parent, ERStat *child );
-    // recursively walk the tree and clean memory
-    void er_tree_clean( ERStat *er );
     // copy extracted regions into the output vector
     ERStat* er_save( ERStat *er, ERStat *parent, ERStat *prev );
     // recursively walk the tree and filter (remove) regions using the callback classifier
@@ -486,7 +484,17 @@ void ERFilterNM::er_tree_extract( InputArray image )
             er_save(er_stack.back(), NULL, NULL);
 
             // clean memory
-            er_tree_clean(er_stack.back());
+            for (size_t r=0; r<er_stack.size(); r++)
+            {
+                ERStat *stat = er_stack.at(r);
+                if (stat->crossings)
+                {
+                    stat->crossings->clear();
+                    delete(stat->crossings);
+                    stat->crossings = NULL;
+                }
+                delete stat;
+            }
             er_stack.clear();
 
             return;
@@ -676,22 +684,6 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
         delete(child);
     }
 
-}
-
-// recursively walk the tree and clean memory
-void ERFilterNM::er_tree_clean( ERStat *stat )
-{
-        for (ERStat * child = stat->child; child; child = child->next)
-        {
-            er_tree_clean(child);
-        }
-        if (stat->crossings)
-        {
-            stat->crossings->clear();
-            delete(stat->crossings);
-            stat->crossings = NULL;
-        }
-        delete stat;
 }
 
 // copy extracted regions into the output vector
