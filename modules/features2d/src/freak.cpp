@@ -493,7 +493,6 @@ int FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     const float yf = FreakPoint.y+kp_y;
     const int x = int(xf);
     const int y = int(yf);
-    const int& imagecols = image.cols;
 
     // get the sigma:
     const float radius = FreakPoint.sigma;
