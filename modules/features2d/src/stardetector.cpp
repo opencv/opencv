@@ -285,8 +285,13 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes,
             for(int i = 0; i <= maxIdx; i++ )
             {
                 const iiMatType** p = (const iiMatType**)&f[i].p[0];
+<<<<<<< HEAD
                 vals[i] = (int)(p[0][ofs] - p[1][ofs] - p[2][ofs] + p[3][ofs] +
                     p[4][ofs] - p[5][ofs] - p[6][ofs] + p[7][ofs]);
+=======
+                vals[i] = p[0][ofs] - p[1][ofs] - p[2][ofs] + p[3][ofs] +
+                    p[4][ofs] - p[5][ofs] - p[6][ofs] + p[7][ofs];
+>>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
             }
             for(int i = 0; i < npatterns; i++ )
             {
@@ -444,7 +449,11 @@ StarDetector::StarDetector(int _maxSize, int _responseThreshold,
 void StarDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
+<<<<<<< HEAD
     if( image.channels() > 1 ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
+=======
+    if( image.channels() > 1 ) cvtColor( image, grayImage, CV_BGR2GRAY );
+>>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
 
     (*this)(grayImage, keypoints);
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
@@ -456,7 +465,11 @@ void StarDetector::operator()(const Mat& img, std::vector<KeyPoint>& keypoints) 
     int border;
 
     // Use 32-bit integers if we won't overflow in the integral image
+<<<<<<< HEAD
     if ((img.type() == CV_8UC1 || img.type() == CV_8SC1) &&
+=======
+    if ((img.type() == CV_8U || img.type() == CV_8S) &&
+>>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
         (img.rows * img.cols) < 8388608 ) // 8388608 = 2 ^ (32 - 8(bit depth) - 1(sign bit))
         border = StarDetectorComputeResponses<int>( img, responses, sizes, maxSize, CV_32S );
     else
