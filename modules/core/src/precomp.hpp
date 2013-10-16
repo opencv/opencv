@@ -218,8 +218,10 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 
 struct TLSData
 {
+    TLSData();
     RNG rng;
-    ocl::Context oclContext;
+    int device;
+    ocl::Queue oclQueue;
 
     static TLSData* get();
 };

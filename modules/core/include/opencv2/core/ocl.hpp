@@ -51,57 +51,173 @@ CV_EXPORTS bool useOpenCL();
 CV_EXPORTS void setUseOpenCL(bool flag);
 CV_EXPORTS void finish();
 
-class CV_EXPORTS Platform
+class CV_EXPORTS Context;
+class CV_EXPORTS Device;
+class CV_EXPORTS Kernel;
+class CV_EXPORTS Program;
+class CV_EXPORTS ProgramSource;
+class CV_EXPORTS Queue;
+    
+class CV_EXPORTS Device
 {
 public:
-    //enum {};    
-    Platform();
-    ~Platform();
-    Platform(const Platform& p);
-    Platform& operator = (const Platform& p);
+    Device();
+    explicit Device(void* d);
+    Device(const Device& d);
+    Device& operator = (const Device& d);
+    ~Device();
 
+    void set(void* d);
+
+    enum
+    {
+        TYPE_DEFAULT     = (1 << 0),
+        TYPE_CPU         = (1 << 1),
+        TYPE_GPU         = (1 << 2),
+        TYPE_ACCELERATOR = (1 << 3),
+        TYPE_DGPU        = TYPE_GPU + (1 << 16),
+        TYPE_IGPU        = TYPE_GPU + (1 << 17),
+        TYPE_ALL         = 0xFFFFFFFF
+    };
+
+    String name() const;
+    String extensions() const;
+    String vendor() const;
+    String OpenCL_C_Version() const;
+    String OpenCLVersion() const;
+    String driverVersion() const;
     void* ptr() const;
-    static Platform& getDefault();
+
+    int type() const;
+
+    int addressBits() const;
+    bool available() const;
+    bool compilerAvailable() const;
+    bool linkerAvailable() const;
+
+    enum
+    {
+        FP_DENORM=(1 << 0),
+        FP_INF_NAN=(1 << 1),
+        FP_ROUND_TO_NEAREST=(1 << 2),
+        FP_ROUND_TO_ZERO=(1 << 3),
+        FP_ROUND_TO_INF=(1 << 4),
+        FP_FMA=(1 << 5),
+        FP_SOFT_FLOAT=(1 << 6),
+        FP_CORRECTLY_ROUNDED_DIVIDE_SQRT=(1 << 7)
+    };
+    int doubleFPConfig() const;
+    int singleFPConfig() const;
+    int halfFPConfig() const;
+
+    bool endianLittle() const;
+    bool errorCorrectionSupport() const;
+
+    enum
+    {
+        EXEC_KERNEL=(1 << 0),
+        EXEC_NATIVE_KERNEL=(1 << 1)
+    };
+    int executionCapabilities() const;
+
+    size_t globalMemCacheSize() const;
+
+    enum
+    {
+        NO_CACHE=0,
+        READ_ONLY_CACHE=1,
+        READ_WRITE_CACHE=2
+    };
+    int globalMemCacheType() const;
+    int globalMemCacheLineSize() const;
+    size_t globalMemSize() const;
+
+    size_t localMemSize() const;
+    enum
+    {
+        NO_LOCAL_MEM=0,
+        LOCAL_IS_LOCAL=1,
+        LOCAL_IS_GLOBAL=2
+    };
+    int localMemType() const;
+    bool hostUnifiedMemory() const;
+
+    bool imageSupport() const;
+
+    size_t image2DMaxWidth() const;
+    size_t image2DMaxHeight() const;
+
+    size_t image3DMaxWidth() const;
+    size_t image3DMaxHeight() const;
+    size_t image3DMaxDepth() const;
+
+    size_t imageMaxBufferSize() const;
+    size_t imageMaxArraySize() const;
+
+    int maxClockFrequency() const;
+    int maxComputeUnits() const;
+    int maxConstantArgs() const;
+    size_t maxConstantBufferSize() const;
+
+    size_t maxMemAllocSize() const;
+    size_t maxParameterSize() const;
+
+    int maxReadImageArgs() const;
+    int maxWriteImageArgs() const;
+    int maxSamplers() const;
+
+    size_t maxWorkGroupSize() const;
+    int maxWorkItemDims() const;
+    void maxWorkItemSizes(size_t*) const;
+
+    int memBaseAddrAlign() const;
+
+    int nativeVectorWidthChar() const;
+    int nativeVectorWidthShort() const;
+    int nativeVectorWidthInt() const;
+    int nativeVectorWidthLong() const;
+    int nativeVectorWidthFloat() const;
+    int nativeVectorWidthDouble() const;
+    int nativeVectorWidthHalf() const;
+
+    int preferredVectorWidthChar() const;
+    int preferredVectorWidthShort() const;
+    int preferredVectorWidthInt() const;
+    int preferredVectorWidthLong() const;
+    int preferredVectorWidthFloat() const;
+    int preferredVectorWidthDouble() const;
+    int preferredVectorWidthHalf() const;
+
+    size_t printfBufferSize() const;
+    size_t profilingTimerResolution() const;
+
+    static const Device& getDefault();
+
 protected:
     struct Impl;
     Impl* p;
 };
 
 
-class CV_EXPORTS Queue;
-
 class CV_EXPORTS Context
 {
 public:
-    enum
-    {
-        DEVICE_TYPE_DEFAULT     = (1 << 0),
-        DEVICE_TYPE_CPU         = (1 << 1),
-        DEVICE_TYPE_GPU         = (1 << 2),
-        DEVICE_TYPE_ACCELERATOR = (1 << 3),
-        DEVICE_TYPE_ALL         = 0xFFFFFFFF
-    };
-
     Context();
-    Context(const Platform& p, int dtype);
+    explicit Context(int dtype);
     ~Context();
     Context(const Context& c);
     Context& operator = (const Context& c);
 
-    bool create(const Platform& p, int dtype);
+    bool create(int dtype);
     size_t ndevices() const;
-    void* device(size_t idx) const;
+    const Device& device(size_t idx) const;
+    int dtype() const;
+    Program getProg(const ProgramSource& prog,
+                    const String& buildopt, String& errmsg);
     
     static Context& getDefault();
-    static Queue& getDefaultQueue();
-    
-    template<typename _Tp> _Tp deviceProp(void* d, int prop) const
-    { _Tp val; deviceProp(d, prop, &val, sizeof(val)); return val; }
-    
     void* ptr() const;
 protected:
-    void deviceProp(void* d, int prop, void* val, size_t sz);
-
     struct Impl;
     Impl* p;
 };
@@ -111,14 +227,15 @@ class CV_EXPORTS Queue
 {
 public:
     Queue();
-    Queue(const Context& ctx);
+    explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
     
-    bool create(const Context& ctx);
+    bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
     void* ptr() const;
+    static Queue& getDefault();
     
 protected:
     struct Impl;
@@ -143,28 +260,45 @@ public:
         MAP_WRITE_INVALIDATE_REGION=(1 << 2)
     };
 
-    static void* create(Context& ctx, int flags, size_t size, void* hostptr);
-    static void release(void* handle);
-    static void retain(void* handle);
+    Buffer();
+    Buffer(int flags, size_t size, void* hostptr);
+    Buffer(const Buffer& buf);
+    ~Buffer();
 
-    static void read(Queue& q, void* handle, size_t offset, size_t size, void* dst, bool async);
-    static void read(Queue& q, void* handle, size_t offset[3], size_t size[3], size_t step[2],
-                     void* dst, size_t dststep[2], bool async);
+    Buffer& operator = (const Buffer& buf);
 
-    static void write(Queue& q, void* handle, size_t offset, size_t size, const void* src, bool async);
-    static void write(Queue& q, void* handle, size_t offset[3], size_t size[3], size_t step[2],
-                     const void* src, size_t srcstep[2], bool async);
+    bool create(int flags, size_t size, void* hostptr);
+    void release();
+    void addref();
 
-    static void fill(Queue& q, void* handle, const void* pattern,
-                     size_t pattern_size, size_t offset, size_t size, bool async);
+    bool read(size_t offset, size_t size, void* dst,
+              bool async, const Queue& q=Queue()) const;
+    bool read(size_t offset[3], size_t size[3], size_t step[2],
+              void* dst, size_t dststep[2],
+              bool async, const Queue& q=Queue()) const;
 
-    static void copy(Queue& q, void* srchandle, size_t srcoffset, void* dsthandle, size_t dstoffset, size_t size, bool async);
-    static void copy(Queue& q, void* srchandle, size_t srcoffset[3], size_t srcstep[2],
-                     void* dsthandle, size_t dstoffset[3], size_t dststep[2],
-                     size_t size[3], bool async);
+    bool write(size_t offset, size_t size, const void* src,
+               bool async, const Queue& q=Queue()) const;
+    bool write(size_t offset[3], size_t size[3], size_t step[2],
+               const void* src, size_t srcstep[2],
+               bool async, const Queue& q=Queue()) const;
 
-    static void* map(Queue& q, void* handle, int mapflags, size_t offset, size_t size, bool async);
-    static void unmap(Queue& q, void* ptr, bool async);
+    bool fill(const void* pattern, size_t pattern_size, size_t offset,
+              size_t size, bool async, const Queue& q=Queue()) const;
+
+    bool copyTo(size_t srcoffset, const Buffer& dst, size_t dstoffset,
+                size_t size, bool async, const Queue& q=Queue()) const;
+    bool copyTo(size_t srcoffset[3], size_t srcstep[2], const Buffer& dst,
+                size_t dstoffset[3], size_t dststep[2], size_t size[3],
+                bool async, const Queue& q=Queue()) const;
+
+    void* map(int mapflags, size_t offset, size_t size,
+              bool async, const Queue& q=Queue()) const;
+    void unmap(void* ptr, const Queue& q=Queue()) const;
+    void* ptr() const;
+
+protected:
+    void* handle;
 };
 
 
@@ -187,8 +321,6 @@ public:
     size_t sz;
 };
 
-class CV_EXPORTS Program;
-
 class CV_EXPORTS Kernel
 {
 public:
@@ -200,59 +332,184 @@ public:
     };
 
     Kernel();
-    Kernel(const Context& ctx, Program& prog, const char* kname, const char* buildopts);
+    Kernel(const char* kname, const Program& prog);
+    Kernel(const char* kname, const ProgramSource& prog,
+           const String& buildopts, String& errmsg);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
 
-    void create(const Context& ctx, Program& prog, const char* kname, const char* buildopts);
+    bool create(const char* kname, const Program& prog);
+    bool create(const char* kname, const ProgramSource& prog,
+                const String& buildopts, String& errmsg);
 
     int set(int i, const void* value, size_t sz);
     int set(int i, const UMat& m);
     int set(int i, const KernelArg& arg);
-    template<typename _Tp> int set(int i, const _Tp& value) { return set(i, &value, sizeof(value)); }
+    template<typename _Tp> int set(int i, const _Tp& value)
+    { return set(i, &value, sizeof(value)); }
 
-    void run(Queue& q, int dims, size_t offset[], size_t globalsize[], size_t localsize[],
-             bool async, const Ptr<Callback>& cleanupCallback=Ptr<Callback>());
-    void runTask(Queue& q, bool async, const Ptr<Callback>& cleanupCallback=Ptr<Callback>());
+    template<typename _Tp1>
+    Kernel& args(_Tp1 a1)
+    {
+        set(0, a1); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2>
+    Kernel& args(_Tp1 a1, _Tp2 a2)
+    {
+        int i = set(0, a1); set(i, a2); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3)
+    {
+        int i = set(0, a1); i = set(i, a2); set(i, a3); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); set(i, a4);
+        return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4, typename _Tp5>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); set(i, a5);
+        return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); set(i, a6); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
+             typename _Tp5, typename _Tp6, typename _Tp7>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); set(i, a7); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
+             typename _Tp5, typename _Tp6, typename _Tp7, typename _Tp8>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7, _Tp8 a8)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); set(i, a8);
+        return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4, typename _Tp5,
+             typename _Tp6, typename _Tp7, typename _Tp8, typename _Tp9>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7, _Tp8 a8, _Tp9 a9)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); i = set(i, a8);
+        set(i, a9); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4, typename _Tp5,
+             typename _Tp6, typename _Tp7, typename _Tp8, typename _Tp9, typename _Tp10>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7,
+                 _Tp8 a8, _Tp9 a9, _Tp10 a10)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); i = set(i, a8);
+        i = set(i, a9); set(i, a10); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4, typename _Tp5,
+             typename _Tp6, typename _Tp7, typename _Tp8, typename _Tp9,
+             typename _Tp10, typename _Tp11>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7,
+                 _Tp8 a8, _Tp9 a9, _Tp10 a10, _Tp11 a11)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); i = set(i, a8);
+        i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
+    }
+
+    template<typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4, typename _Tp5,
+             typename _Tp6, typename _Tp7, typename _Tp8, typename _Tp9,
+             typename _Tp10, typename _Tp11, typename _Tp12>
+    Kernel& args(_Tp1 a1, _Tp2 a2, _Tp3 a3, _Tp4 a4, _Tp5 a5, _Tp6 a6, _Tp7 a7,
+                 _Tp8 a8, _Tp9 a9, _Tp10 a10, _Tp11 a11, _Tp12 a12)
+    {
+        int i = set(0, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); i = set(i, a8);
+        i = set(i, a9); i = set(i, a10); i = set(i, a11); set(i, a12);
+        return *this;
+    }
+
+    void run(int dims, size_t offset[],
+             size_t globalsize[], size_t localsize[], bool async,
+             const Ptr<Callback>& cleanupCallback=Ptr<Callback>(),
+             const Queue& q=Queue());
+    void runTask(bool async,
+                 const Ptr<Callback>& cleanupCallback=Ptr<Callback>(),
+                 const Queue& q=Queue());
+
+    size_t workGroupSize() const;
+    bool compileWorkGroupSize(size_t wsz[]) const;
+    size_t localMemSize() const;
 
     void* ptr() const;
-
     struct Impl;
 
 protected:
     Impl* p;
 };
 
-
-class CV_EXPORTS KernelArgSetter
-{
-public:    
-    KernelArgSetter(Kernel* k, int i) : kernel(k), idx(i) {}
-    template<typename _Tp> KernelArgSetter operator , (const _Tp& value)
-    { return KernelArgSetter(kernel, kernel->set(idx, value)); }
-    
-protected:
-    Kernel* kernel;
-    int idx;
-};
-
-template<typename _Tp> inline KernelArgSetter operator << (Kernel& k, const _Tp& value)
-{
-    return KernelArgSetter(&k, k.set(0, value));
-}
-
 class CV_EXPORTS Program
 {
 public:
-    Program(const char* prog);
-    ~Program();
+    Program();
+    Program(const ProgramSource& src,
+            const String& buildflags, String& errmsg);
+    explicit Program(const String& buf);
     Program(const Program& prog);
+
     Program& operator = (const Program& prog);
-    
-    void* build(const Context& ctx, const char* buildopts);
-    
-    String getErrMsg() const;
+    ~Program();
+
+    bool create(const ProgramSource& src,
+                const String& buildflags, String& errmsg);
+    bool read(const String& buf, const String& buildflags);
+    bool write(String& buf) const;
+
+    const ProgramSource& source() const;
+    void* ptr() const;
+
+    String getPrefix() const;
+    static String getPrefix(const String& buildflags);
+
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+
+class CV_EXPORTS ProgramSource
+{
+public:
+    typedef uint64 hash_t;
+
+    ProgramSource();
+    explicit ProgramSource(const String& prog);
+    explicit ProgramSource(const char* prog);
+    ~ProgramSource();
+    ProgramSource(const ProgramSource& prog);
+    ProgramSource& operator = (const ProgramSource& prog);
+
+    const String& source() const;
+    hash_t hash() const;
     
 protected:
     struct Impl;

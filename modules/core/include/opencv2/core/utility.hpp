@@ -256,8 +256,6 @@ CV_EXPORTS_W bool useOptimized();
 
 static inline size_t getElemSize(int type) { return CV_ELEM_SIZE(type); }
 
-CV_EXPORTS uint64 crc64(const uchar* data, size_t len);
-
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
 // a base body class

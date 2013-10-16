@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <map>
 
 /*
   Part of the file is an extract from the standard OpenCL headers from Khronos site.
@@ -318,6 +319,7 @@ typedef struct _cl_buffer_region {
 #define CL_DEVICE_EXTENSIONS                        0x1030
 #define CL_DEVICE_PLATFORM                          0x1031
 #define CL_DEVICE_DOUBLE_FP_CONFIG                  0x1032
+#define CL_DEVICE_HALF_FP_CONFIG                    0x1033
 #define CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF       0x1034
 #define CL_DEVICE_HOST_UNIFIED_MEMORY               0x1035
 #define CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR          0x1036
@@ -712,7 +714,16 @@ OCL_FUNC(cl_int, clGetPlatformInfo,
     size_t param_value_size, void * param_value,
     size_t * param_value_size_ret),
     (platform, param_name, param_value_size, param_value, param_value_size_ret))
-    
+
+OCL_FUNC(cl_int, clGetDeviceInfo,
+         (cl_device_id device,
+          cl_device_info param_name,
+          size_t param_value_size,
+          void * param_value,
+          size_t * param_value_size_ret),
+         (device, param_name, param_value_size, param_value, param_value_size_ret))
+
+
 OCL_FUNC(cl_int, clGetDeviceIDs,
     (cl_platform_id platform,
     cl_device_type device_type, 
@@ -720,14 +731,6 @@ OCL_FUNC(cl_int, clGetDeviceIDs,
     cl_device_id * devices, 
     cl_uint * num_devices),
     (platform, device_type, num_entries, devices, num_devices))
-
-OCL_FUNC(cl_int, clGetDeviceInfo,
-    (cl_device_id device,
-    cl_device_info param_name, 
-    size_t param_value_size, 
-    void * param_value,
-    size_t * param_value_size_ret),
-    (device, param_name, param_value_size, param_value, param_value_size_ret))
 
 OCL_FUNC_P(cl_context, clCreateContext,
     (const cl_context_properties * properties,
@@ -738,6 +741,11 @@ OCL_FUNC_P(cl_context, clCreateContext,
     cl_int * errcode_ret),
     (properties, num_devices, devices, pfn_notify, user_data, errcode_ret))
 
+OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
+
+/*
+OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
+
 OCL_FUNC_P(cl_context, clCreateContextFromType,
     (const cl_context_properties * properties,
     cl_device_type device_type,
@@ -745,10 +753,6 @@ OCL_FUNC_P(cl_context, clCreateContextFromType,
     void * user_data,
     cl_int * errcode_ret),
     (properties, device_type, pfn_notify, user_data, errcode_ret))
-
-OCL_FUNC(cl_int, clRetainContext, (cl_context context), (context))
-
-OCL_FUNC(cl_int, clReleaseContext, (cl_context context), (context))
 
 OCL_FUNC(cl_int, clGetContextInfo,
     (cl_context context, 
@@ -758,7 +762,7 @@ OCL_FUNC(cl_int, clGetContextInfo,
     size_t * param_value_size_ret),
     (context, param_name, param_value_size, 
     param_value, param_value_size_ret))
-    
+*/
 OCL_FUNC_P(cl_command_queue, clCreateCommandQueue,
     (cl_context context, 
     cl_device_id device, 
@@ -766,18 +770,8 @@ OCL_FUNC_P(cl_command_queue, clCreateCommandQueue,
     cl_int * errcode_ret),
     (context, device, properties, errcode_ret))
 
-OCL_FUNC(cl_int, clRetainCommandQueue, (cl_command_queue command_queue), (command_queue))
-
 OCL_FUNC(cl_int, clReleaseCommandQueue, (cl_command_queue command_queue), (command_queue))
 
-OCL_FUNC(cl_int, clGetCommandQueueInfo,
-    (cl_command_queue command_queue,
-    cl_command_queue_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
-    
 OCL_FUNC_P(cl_mem, clCreateBuffer,
     (cl_context context,
     cl_mem_flags flags,
@@ -785,6 +779,17 @@ OCL_FUNC_P(cl_mem, clCreateBuffer,
     void * host_ptr,
     cl_int * errcode_ret),
     (context, flags, size, host_ptr, errcode_ret))
+
+/*
+OCL_FUNC(cl_int, clRetainCommandQueue, (cl_command_queue command_queue), (command_queue))
+
+OCL_FUNC(cl_int, clGetCommandQueueInfo,
+ (cl_command_queue command_queue,
+ cl_command_queue_info param_name,
+ size_t param_value_size,
+ void * param_value,
+ size_t * param_value_size_ret),
+ (command_queue, param_name, param_value_size, param_value, param_value_size_ret))
 
 OCL_FUNC_P(cl_mem, clCreateSubBuffer,
     (cl_mem buffer,
@@ -803,34 +808,168 @@ OCL_FUNC_P(cl_mem, clCreateImage,
     cl_int * errcode_ret),
     (context, flags, image_format, image_desc, host_ptr, errcode_ret))
 
+OCL_FUNC(cl_int, clGetSupportedImageFormats,
+ (cl_context context,
+ cl_mem_flags flags,
+ cl_mem_object_type image_type,
+ cl_uint num_entries,
+ cl_image_format * image_formats,
+ cl_uint * num_image_formats),
+ (context, flags, image_type, num_entries, image_formats, num_image_formats))
+
+OCL_FUNC(cl_int, clGetMemObjectInfo,
+ (cl_mem memobj,
+ cl_mem_info param_name,
+ size_t param_value_size,
+ void * param_value,
+ size_t * param_value_size_ret),
+ (memobj, param_name, param_value_size, param_value, param_value_size_ret))
+
+OCL_FUNC(cl_int, clGetImageInfo,
+ (cl_mem image,
+ cl_image_info param_name,
+ size_t param_value_size,
+ void * param_value,
+ size_t * param_value_size_ret),
+ (image, param_name, param_value_size, param_value, param_value_size_ret))
+
+OCL_FUNC(cl_int, clCreateKernelsInProgram,
+ (cl_program program,
+ cl_uint num_kernels,
+ cl_kernel * kernels,
+ cl_uint * num_kernels_ret),
+ (program, num_kernels, kernels, num_kernels_ret))
+
+OCL_FUNC(cl_int, clRetainKernel, (cl_kernel kernel), (kernel))
+
+OCL_FUNC(cl_int, clGetKernelArgInfo,
+ (cl_kernel kernel,
+ cl_uint arg_indx,
+ cl_kernel_arg_info param_name,
+ size_t param_value_size,
+ void * param_value,
+ size_t * param_value_size_ret),
+ (kernel, arg_indx, param_name, param_value_size, param_value, param_value_size_ret))
+ 
+OCL_FUNC(cl_int, clEnqueueReadImage,
+ (cl_command_queue command_queue,
+ cl_mem image,
+ cl_bool blocking_read,
+ const size_t * origin[3],
+ const size_t * region[3],
+ size_t row_pitch,
+ size_t slice_pitch,
+ void * ptr,
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, image, blocking_read, origin, region,
+ row_pitch, slice_pitch,
+ ptr,
+ num_events_in_wait_list,
+ event_wait_list,
+ event))
+
+OCL_FUNC(cl_int, clEnqueueWriteImage,
+ (cl_command_queue command_queue,
+ cl_mem image,
+ cl_bool blocking_write,
+ const size_t * origin[3],
+ const size_t * region[3],
+ size_t input_row_pitch,
+ size_t input_slice_pitch,
+ const void * ptr,
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, image, blocking_write, origin, region, input_row_pitch,
+ input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event))
+
+OCL_FUNC(cl_int, clEnqueueFillImage,
+ (cl_command_queue command_queue,
+ cl_mem image,
+ const void * fill_color,
+ const size_t * origin[3],
+ const size_t * region[3],
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, image, fill_color, origin, region,
+ num_events_in_wait_list, event_wait_list, event))
+
+OCL_FUNC(cl_int, clEnqueueCopyImage,
+ (cl_command_queue command_queue,
+ cl_mem src_image,
+ cl_mem dst_image,
+ const size_t * src_origin[3],
+ const size_t * dst_origin[3],
+ const size_t * region[3],
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, src_image, dst_image, src_origin, dst_origin,
+ region, num_events_in_wait_list, event_wait_list, event))
+
+OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
+ (cl_command_queue command_queue,
+ cl_mem src_image,
+ cl_mem dst_buffer,
+ const size_t * src_origin[3],
+ const size_t * region[3],
+ size_t dst_offset,
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
+ num_events_in_wait_list, event_wait_list, event))
+
+OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
+ (cl_command_queue command_queue,
+ cl_mem src_buffer,
+ cl_mem dst_image,
+ size_t src_offset,
+ const size_t * dst_origin[3],
+ const size_t * region[3],
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event),
+ (command_queue, src_buffer, dst_image, src_offset, dst_origin,
+ region, num_events_in_wait_list, event_wait_list, event))
+
+
+OCL_FUNC_P(void*, clEnqueueMapImage,
+ (cl_command_queue command_queue,
+ cl_mem image,
+ cl_bool blocking_map,
+ cl_map_flags map_flags,
+ const size_t * origin[3],
+ const size_t * region[3],
+ size_t * image_row_pitch,
+ size_t * image_slice_pitch,
+ cl_uint num_events_in_wait_list,
+ const cl_event * event_wait_list,
+ cl_event * event,
+ cl_int * errcode_ret),
+ (command_queue, image, blocking_map, map_flags, origin, region,
+ image_row_pitch, image_slice_pitch, num_events_in_wait_list,
+ event_wait_list, event, errcode_ret))
+
+OCL_FUNC(cl_int, clRetainProgram, (cl_program program), (program))
+ 
+OCL_FUNC(cl_int, clGetKernelInfo,
+ (cl_kernel kernel,
+ cl_kernel_info param_name,
+ size_t param_value_size,
+ void * param_value,
+ size_t * param_value_size_ret),
+ (kernel, param_name, param_value_size, param_value, param_value_size_ret))
+
+*/
+
 OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
-OCL_FUNC(cl_int, clGetSupportedImageFormats,
-    (cl_context context,
-    cl_mem_flags flags,
-    cl_mem_object_type image_type,
-    cl_uint num_entries,
-    cl_image_format * image_formats,
-    cl_uint * num_image_formats),
-    (context, flags, image_type, num_entries, image_formats, num_image_formats))
-
-OCL_FUNC(cl_int, clGetMemObjectInfo,
-    (cl_mem memobj,
-    cl_mem_info param_name, 
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (memobj, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clGetImageInfo,
-    (cl_mem image,
-    cl_image_info param_name, 
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (image, param_name, param_value_size, param_value, param_value_size_ret))
 
 OCL_FUNC_P(cl_program, clCreateProgramWithSource,
     (cl_context context,
@@ -850,8 +989,6 @@ OCL_FUNC_P(cl_program, clCreateProgramWithBinary,
     cl_int * errcode_ret),
     (context, num_devices, device_list, lengths, binaries, binary_status, errcode_ret))
 
-OCL_FUNC(cl_int, clRetainProgram, (cl_program program), (program))
-
 OCL_FUNC(cl_int, clReleaseProgram, (cl_program program), (program))
 
 OCL_FUNC(cl_int, clBuildProgram,
@@ -862,7 +999,6 @@ OCL_FUNC(cl_int, clBuildProgram,
     void (CL_CALLBACK * pfn_notify)(cl_program, void *),
     void * user_data),
     (program, num_devices, device_list, options, pfn_notify, user_data))
-    
 
 OCL_FUNC(cl_int, clGetProgramInfo,
     (cl_program program,
@@ -887,15 +1023,6 @@ OCL_FUNC_P(cl_kernel, clCreateKernel,
     cl_int * errcode_ret),
     (program, kernel_name, errcode_ret))
 
-OCL_FUNC(cl_int, clCreateKernelsInProgram,
-    (cl_program program,
-    cl_uint num_kernels,
-    cl_kernel * kernels,
-    cl_uint * num_kernels_ret),
-    (program, num_kernels, kernels, num_kernels_ret))
-
-OCL_FUNC(cl_int, clRetainKernel, (cl_kernel kernel), (kernel))
-
 OCL_FUNC(cl_int, clReleaseKernel, (cl_kernel kernel), (kernel))
 
 OCL_FUNC(cl_int, clSetKernelArg,
@@ -904,23 +1031,6 @@ OCL_FUNC(cl_int, clSetKernelArg,
     size_t arg_size,
     const void * arg_value),
     (kernel, arg_index, arg_size, arg_value))
-
-OCL_FUNC(cl_int, clGetKernelInfo,
-    (cl_kernel kernel,
-    cl_kernel_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (kernel, param_name, param_value_size, param_value, param_value_size_ret))
-
-OCL_FUNC(cl_int, clGetKernelArgInfo,
-    (cl_kernel kernel,
-    cl_uint arg_indx,
-    cl_kernel_arg_info param_name,
-    size_t param_value_size,
-    void * param_value,
-    size_t * param_value_size_ret),
-    (kernel, arg_indx, param_name, param_value_size, param_value, param_value_size_ret))
 
 OCL_FUNC(cl_int, clGetKernelWorkGroupInfo,
     (cl_kernel kernel,
@@ -1041,91 +1151,6 @@ OCL_FUNC(cl_int, clEnqueueCopyBufferRect,
     region, src_row_pitch, src_slice_pitch, dst_row_pitch, dst_slice_pitch,
     num_events_in_wait_list, event_wait_list, event))
 
-OCL_FUNC(cl_int, clEnqueueReadImage,
-    (cl_command_queue command_queue,
-    cl_mem image,
-    cl_bool blocking_read, 
-    const size_t * origin[3],
-    const size_t * region[3],
-    size_t row_pitch,
-    size_t slice_pitch, 
-    void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, image, blocking_read, origin, region,
-    row_pitch, slice_pitch, 
-    ptr,
-    num_events_in_wait_list,
-    event_wait_list,
-    event))
-
-OCL_FUNC(cl_int, clEnqueueWriteImage,
-    (cl_command_queue command_queue,
-    cl_mem image,
-    cl_bool blocking_write, 
-    const size_t * origin[3],
-    const size_t * region[3],
-    size_t input_row_pitch,
-    size_t input_slice_pitch, 
-    const void * ptr,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, image, blocking_write, origin, region, input_row_pitch,
-    input_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueFillImage,
-    (cl_command_queue command_queue,
-    cl_mem image, 
-    const void * fill_color, 
-    const size_t * origin[3], 
-    const size_t * region[3], 
-    cl_uint num_events_in_wait_list, 
-    const cl_event * event_wait_list, 
-    cl_event * event),
-    (command_queue, image, fill_color, origin, region,
-    num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyImage,
-    (cl_command_queue command_queue,
-    cl_mem src_image,
-    cl_mem dst_image, 
-    const size_t * src_origin[3],
-    const size_t * dst_origin[3],
-    const size_t * region[3], 
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, src_image, dst_image, src_origin, dst_origin,
-    region, num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
-    (cl_command_queue command_queue,
-    cl_mem src_image,
-    cl_mem dst_buffer, 
-    const size_t * src_origin[3],
-    const size_t * region[3], 
-    size_t dst_offset,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
-    num_events_in_wait_list, event_wait_list, event))
-
-OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
-    (cl_command_queue command_queue,
-    cl_mem src_buffer,
-    cl_mem dst_image, 
-    size_t src_offset,
-    const size_t * dst_origin[3],
-    const size_t * region[3], 
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event),
-    (command_queue, src_buffer, dst_image, src_offset, dst_origin,
-    region, num_events_in_wait_list, event_wait_list, event))
-
 OCL_FUNC_P(void*, clEnqueueMapBuffer,
     (cl_command_queue command_queue,
     cl_mem buffer,
@@ -1139,23 +1164,6 @@ OCL_FUNC_P(void*, clEnqueueMapBuffer,
     cl_int * errcode_ret),
     (command_queue, buffer, blocking_map, map_flags, offset, size,
     num_events_in_wait_list, event_wait_list, event, errcode_ret))
-
-OCL_FUNC_P(void*, clEnqueueMapImage,
-    (cl_command_queue command_queue,
-    cl_mem image, 
-    cl_bool blocking_map, 
-    cl_map_flags map_flags, 
-    const size_t * origin[3],
-    const size_t * region[3],
-    size_t * image_row_pitch,
-    size_t * image_slice_pitch,
-    cl_uint num_events_in_wait_list,
-    const cl_event * event_wait_list,
-    cl_event * event,
-    cl_int * errcode_ret),
-    (command_queue, image, blocking_map, map_flags, origin, region,
-    image_row_pitch, image_slice_pitch, num_events_in_wait_list,
-    event_wait_list, event, errcode_ret))
 
 OCL_FUNC(cl_int, clEnqueueUnmapMemObject,
     (cl_command_queue command_queue,
@@ -1202,17 +1210,74 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 
 namespace cv { namespace ocl {
 
+// Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
+static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
+{
+    static uint64 table[256];
+    static bool initialized = false;
+
+    if( !initialized )
+    {
+        for( int i = 0; i < 256; i++ )
+        {
+            uint64 c = i;
+            for( int j = 0; j < 8; j++ )
+                c = ((c & 1) ? CV_BIG_UINT(0xc96c5795d7870f42) : 0) ^ (c >> 1);
+            table[i] = c;
+        }
+        initialized = true;
+    }
+
+    uint64 crc = ~crc0;
+    for( size_t idx = 0; idx < size; idx++ )
+        crc = table[(uchar)crc ^ data[idx]] ^ (crc >> 8);
+
+    return ~crc;
+}
+
+struct HashKey
+{
+    typedef uint64 part;
+    HashKey(part _a, part _b) : a(_a), b(_b) {}
+    part a, b;
+};
+
+inline bool operator == (const HashKey& h1, const HashKey& h2)
+{
+    return h1.a == h2.a && h1.b == h2.b;
+}
+
+inline bool operator < (const HashKey& h1, const HashKey& h2)
+{
+    return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
+}
+
 bool haveOpenCL() { return g_haveOpenCL; }
 
 void finish()
 {
-    Context::getDefaultQueue().finish();
+    Queue::getDefault().finish();
 }
 
 #define IMPLEMENT_REFCOUNTABLE() \
     void addref() { CV_XADD(&refcount, 1); } \
     void release() { if( CV_XADD(&refcount, -1) == 1 ) delete this; } \
     int refcount
+
+class Platform
+{
+public:
+    Platform();
+    ~Platform();
+    Platform(const Platform& p);
+    Platform& operator = (const Platform& p);
+
+    void* ptr() const;
+    static Platform& getDefault();
+protected:
+    struct Impl;
+    Impl* p;
+};
 
 struct Platform::Impl
 {
@@ -1225,14 +1290,22 @@ struct Platform::Impl
 
     ~Impl() {}
 
-    void create()
+    void init()
     {
-        if(!initialized)
+        if( !initialized )
         {
             //cl_uint num_entries
-            //clGetPlatformIDs(
-            //(cl_uint num_entries, cl_platform_id* platforms, cl_uint* num_platforms),
-            //(num_entries, platforms, num_platforms))
+            cl_uint n = 0;
+            if( clGetPlatformIDs(1, &handle, &n) < 0 || n == 0 )
+                handle = 0;
+            if( handle != 0 )
+            {
+                char buf[1000];
+                size_t len = 0;
+                clGetPlatformInfo(handle, CL_PLATFORM_VENDOR, sizeof(buf), buf, &len);
+                buf[len] = '\0';
+                vendor = String(buf);
+            }
 
             initialized = true;
         }
@@ -1241,6 +1314,7 @@ struct Platform::Impl
     IMPLEMENT_REFCOUNTABLE();
 
     cl_platform_id handle;
+    String vendor;
     bool initialized;
 };
 
@@ -1278,40 +1352,394 @@ void* Platform::ptr() const
     return p ? p->handle : 0;
 }
 
-static Platform g_platform;
-
 Platform& Platform::getDefault()
 {
-    if( !g_platform.p )
+    static Platform p;
+    if( !p.p )
     {
-        g_platform.p = new Impl;
-        g_platform.p->init();
+        p.p = new Impl;
+        p.p->init();
     }
-    return g_platform;
+    return p;
 }
+
+///////////////////////////////////////////////////////////////////////////////////
+
+struct Device::Impl
+{
+    Impl(void* d)
+    {
+        handle = (cl_device_id)d;
+    }
+
+    template<typename _TpCL, typename _TpOut>
+    _TpOut getProp(cl_device_info prop) const
+    {
+        _TpCL temp=_TpCL();
+        size_t sz = 0;
+
+        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) >= 0 &&
+            sz == sizeof(temp) ? _TpOut(temp) : _TpOut();
+    }
+
+    String getStrProp(cl_device_info prop) const
+    {
+        char buf[1024];
+        size_t sz=0;
+        return clGetDeviceInfo(handle, prop, sizeof(buf)-16, buf, &sz) >= 0 &&
+            sz < sizeof(buf) ? String(buf) : String();
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+    cl_device_id handle;
+};
+
+
+Device::Device()
+{
+    p = 0;
+}
+
+Device::Device(void* d)
+{
+    p = 0;
+    set(d);
+}
+
+Device::Device(const Device& d)
+{
+    p = d.p;
+    if(p)
+        p->addref();
+}
+
+Device& Device::operator = (const Device& d)
+{
+    Impl* newp = (Impl*)d.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+Device::~Device()
+{
+    if(p)
+        p->release();
+}
+
+void Device::set(void* d)
+{
+    if(p)
+        p->release();
+    p = new Impl(d);
+}
+
+void* Device::ptr() const
+{
+    return p ? p->handle : 0;
+}
+
+String Device::name() const
+{ return p ? p->getStrProp(CL_DEVICE_NAME) : String(); }
+
+String Device::extensions() const
+{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+
+String Device::vendor() const
+{ return p ? p->getStrProp(CL_DEVICE_VENDOR) : String(); }
+
+String Device::OpenCL_C_Version() const
+{ return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
+
+String Device::OpenCLVersion() const
+{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+
+String Device::driverVersion() const
+{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+
+int Device::type() const
+{ return p ? p->getProp<cl_device_type, int>(CL_DEVICE_TYPE) : 0; }
+
+int Device::addressBits() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS) : 0; }
+
+bool Device::available() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_AVAILABLE) : 0; }
+
+bool Device::compilerAvailable() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_COMPILER_AVAILABLE) : 0; }
+
+bool Device::linkerAvailable() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_LINKER_AVAILABLE) : 0; }
+
+int Device::doubleFPConfig() const
+{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG) : 0; }
+
+int Device::singleFPConfig() const
+{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
+
+int Device::halfFPConfig() const
+{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
+
+bool Device::endianLittle() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_ENDIAN_LITTLE) : 0; }
+
+bool Device::errorCorrectionSupport() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_ERROR_CORRECTION_SUPPORT) : 0; }
+
+int Device::executionCapabilities() const
+{ return p ? p->getProp<cl_device_exec_capabilities, int>(CL_DEVICE_EXECUTION_CAPABILITIES) : 0; }
+
+size_t Device::globalMemCacheSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_GLOBAL_MEM_CACHE_SIZE) : 0; }
+
+int Device::globalMemCacheType() const
+{ return p ? p->getProp<cl_device_mem_cache_type, int>(CL_DEVICE_GLOBAL_MEM_CACHE_TYPE) : 0; }
+
+int Device::globalMemCacheLineSize() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE) : 0; }
+
+size_t Device::globalMemSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_GLOBAL_MEM_SIZE) : 0; }
+
+size_t Device::localMemSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_LOCAL_MEM_SIZE) : 0; }
+
+int Device::localMemType() const
+{ return p ? p->getProp<cl_device_local_mem_type, int>(CL_DEVICE_LOCAL_MEM_TYPE) : 0; }
+
+bool Device::hostUnifiedMemory() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_HOST_UNIFIED_MEMORY) : 0; }
+
+bool Device::imageSupport() const
+{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_IMAGE_SUPPORT) : 0; }
+
+size_t Device::image2DMaxWidth() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE2D_MAX_WIDTH) : 0; }
+
+size_t Device::image2DMaxHeight() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE2D_MAX_HEIGHT) : 0; }
+
+size_t Device::image3DMaxWidth() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE3D_MAX_WIDTH) : 0; }
+
+size_t Device::image3DMaxHeight() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE3D_MAX_HEIGHT) : 0; }
+
+size_t Device::image3DMaxDepth() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE3D_MAX_DEPTH) : 0; }
+
+size_t Device::imageMaxBufferSize() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE_MAX_BUFFER_SIZE) : 0; }
+
+size_t Device::imageMaxArraySize() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE_MAX_ARRAY_SIZE) : 0; }
+
+int Device::maxClockFrequency() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CLOCK_FREQUENCY) : 0; }
+
+int Device::maxComputeUnits() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS) : 0; }
+
+int Device::maxConstantArgs() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CONSTANT_ARGS) : 0; }
+
+size_t Device::maxConstantBufferSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE) : 0; }
+
+size_t Device::maxMemAllocSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_MAX_MEM_ALLOC_SIZE) : 0; }
+
+size_t Device::maxParameterSize() const
+{ return p ? p->getProp<cl_ulong, size_t>(CL_DEVICE_MAX_PARAMETER_SIZE) : 0; }
+
+int Device::maxReadImageArgs() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_READ_IMAGE_ARGS) : 0; }
+
+int Device::maxWriteImageArgs() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_WRITE_IMAGE_ARGS) : 0; }
+
+int Device::maxSamplers() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_SAMPLERS) : 0; }
+
+size_t Device::maxWorkGroupSize() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE) : 0; }
+
+int Device::maxWorkItemDims() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS) : 0; }
+
+void Device::maxWorkItemSizes(size_t* sizes) const
+{
+    if(p)
+    {
+        const int MAX_DIMS = 32;
+        size_t retsz = 0;
+        clGetDeviceInfo(p->handle, CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                MAX_DIMS*sizeof(sizes[0]), &sizes[0], &retsz);
+    }
+}
+
+int Device::memBaseAddrAlign() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_MEM_BASE_ADDR_ALIGN) : 0; }
+
+int Device::nativeVectorWidthChar() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR) : 0; }
+
+int Device::nativeVectorWidthShort() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT) : 0; }
+
+int Device::nativeVectorWidthInt() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_INT) : 0; }
+
+int Device::nativeVectorWidthLong() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG) : 0; }
+
+int Device::nativeVectorWidthFloat() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT) : 0; }
+
+int Device::nativeVectorWidthDouble() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE) : 0; }
+
+int Device::nativeVectorWidthHalf() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF) : 0; }
+
+int Device::preferredVectorWidthChar() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR) : 0; }
+
+int Device::preferredVectorWidthShort() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT) : 0; }
+
+int Device::preferredVectorWidthInt() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT) : 0; }
+
+int Device::preferredVectorWidthLong() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG) : 0; }
+
+int Device::preferredVectorWidthFloat() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT) : 0; }
+
+int Device::preferredVectorWidthDouble() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE) : 0; }
+
+int Device::preferredVectorWidthHalf() const
+{ return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF) : 0; }
+
+size_t Device::printfBufferSize() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_PRINTF_BUFFER_SIZE) : 0; }
+
+size_t Device::profilingTimerResolution() const
+{ return p ? p->getProp<size_t, size_t>(CL_DEVICE_PROFILING_TIMER_RESOLUTION) : 0; }
+
+const Device& Device::getDefault()
+{
+    const Context& ctx = Context::getDefault();
+    int idx = TLSData::get()->device;
+    return ctx.device(idx);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 struct Context::Impl
 {
-    Impl()
+    Impl(int dtype0)
     {
         refcount = 1;
         handle = 0;
-        initialized = false;
+
+        cl_int retval = 0;
+        cl_platform_id pl = (cl_platform_id)Platform::getDefault().ptr();
+        cl_context_properties prop[] =
+        {
+            CL_CONTEXT_PLATFORM, (cl_context_properties)pl,
+            0
+        };
+
+        cl_uint i, nd0 = 0, nd = 0;
+        int dtype = dtype0 & 15;
+        clGetDeviceIDs( pl, dtype, 0, 0, &nd0 );
+        if(retval < 0)
+            return;
+        AutoBuffer<void*> dlistbuf(nd0*2+1);
+        cl_device_id* dlist = (cl_device_id*)(void**)dlistbuf;
+        cl_device_id* dlist_new = dlist + nd0;
+        clGetDeviceIDs(	pl, dtype, nd0, dlist, &nd0 );
+        String name0;
+
+        for(i = 0; i < nd0; i++)
+        {
+            Device d(dlist[i]);
+            if( !d.available() || !d.compilerAvailable() )
+                continue;
+            if( dtype0 == Device::TYPE_DGPU && d.hostUnifiedMemory() )
+                continue;
+            if( dtype0 == Device::TYPE_IGPU && !d.hostUnifiedMemory() )
+                continue;
+            String name = d.name();
+            if( nd != 0 && name != name0 )
+                continue;
+            name0 = name;
+            dlist_new[nd++] = dlist[i];
+        }
+
+        if(nd == 0)
+            return;
+
+        // !!! in the current implementation force the number of devices to 1 !!!
+        nd = 1;
+
+        handle = clCreateContext(prop, nd, dlist_new, 0, 0, &retval);
+        bool ok = handle != 0 && retval >= 0;
+        if( ok )
+        {
+            devices.resize(nd);
+            for( i = 0; i < nd; i++ )
+                devices[i].set(dlist_new[i]);
+        }
     }
 
     ~Impl()
     {
-        q.finish();
         if(handle)
-            clReleaseContext((cl_context)handle);
+            clReleaseContext(handle);
+        devices.clear();
+    }
+
+    Program getProg(const ProgramSource& src,
+                    const String& buildflags, String& errmsg)
+    {
+        String prefix = Program::getPrefix(buildflags);
+        HashKey k(src.hash(), crc64((const uchar*)prefix.c_str(), prefix.size()));
+        phash_t::iterator it = phash.find(k);
+        if( it != phash.end() )
+            return it->second;
+        //String filename = format("%08x%08x_%08x%08x.clb2",
+        Program prog(src, buildflags, errmsg);
+        phash.insert(std::pair<HashKey,Program>(k, prog));
+        return prog;
     }
 
     IMPLEMENT_REFCOUNTABLE();
 
     cl_context handle;
-    Queue q;
-    std::vector<cl_device_id> devices;
+    std::vector<Device> devices;
+    int dtype;
     bool initialized;
+
+    typedef ProgramSource::hash_t hash_t;
+
+    struct HashKey
+    {
+        HashKey(hash_t _a, hash_t _b) : a(_a), b(_b) {}
+        bool operator < (const HashKey& k) const { return a < k.a || (a == k.a && b < k.b); }
+        bool operator == (const HashKey& k) const { return a == k.a && b == k.b; }
+        bool operator != (const HashKey& k) const { return a != k.a || b != k.b; }
+        hash_t a, b;
+    };
+    typedef std::map<HashKey, Program> phash_t;
+    phash_t phash;
 };
 
 
@@ -1320,49 +1748,30 @@ Context::Context()
     p = 0;
 }
 
-Context::Context(const Platform& pl, int dtype)
+Context::Context(int dtype)
 {
     p = 0;
-    create(pl, dtype);
+    create(dtype);
 }
 
-bool Context::create(const Platform& pl, int dtype)
+int Context::dtype() const
+{
+    return p ? p->dtype : 0;
+}
+
+bool Context::create(int dtype0)
 {
     if( !haveOpenCL() )
         return false;
     if(p)
         p->release();
-    p = new Impl;
-    cl_int retval = 0;
-    cl_context_properties prop[] =
+    p = new Impl(dtype0);
+    if(!p->handle)
     {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)pl.ptr(),
-        0
-    };
-    p->handle = clCreateContextFromType(prop,
-                                        (dtype == DEVICE_TYPE_CPU ? CL_DEVICE_TYPE_CPU :
-                                         dtype == DEVICE_TYPE_GPU ? CL_DEVICE_TYPE_GPU :
-                                         CL_DEVICE_TYPE_DEFAULT),
-                                        0,
-                                        0,
-                                        &retval);
-    bool ok = p->handle != 0 && retval >= 0;
-    if( ok )
-        p->q.create(*this);
-    ok = ok && p->q.ptr() != 0;
-    if( ok )
-    {
-        size_t sz = 0;
-        cl_uint nd = 0;
-        if( clGetContextInfo(p->handle, CL_CONTEXT_NUM_DEVICES,
-                             sizeof(nd), &nd, &sz) < 0 || nd < 1 )
-            return false;
-        p->devices.resize(nd);
-        if( clGetContextInfo(p->handle, CL_CONTEXT_DEVICES,
-                             sizeof(cl_device_id), &p->devices[0], &sz) < 0 )
-            return false;
+        delete p;
+        p = 0;
     }
-    return ok;
+    return p != 0;
 }
 
 Context::~Context()
@@ -1398,41 +1807,66 @@ size_t Context::ndevices() const
     return p ? p->devices.size() : 0;
 }
 
-void* Context::device(size_t idx) const
+const Device& Context::device(size_t idx) const
 {
-    return !p || idx >= p->devices.size() ? 0 : p->devices[idx];
-}
-
-void Context::deviceProp(void* d, int prop, void* val, size_t propsize)
-{
-    if(p || p->devices.empty())
-        return;
-    size_t sz = 0;
-    if( clGetDeviceInfo((cl_device_id)d, (cl_device_info)prop,
-                        propsize, val, &sz) < 0 || sz != propsize )
-        memset(val, 0, propsize);
+    static Device dummy;
+    return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
 Context& Context::getDefault()
 {
-    Context& c = TLSData::get()->oclContext;
-    if( !c.p->handle && haveOpenCL() )
-        c.create(Platform::getDefault(), DEVICE_TYPE_DEFAULT);
-    return c;
+    static Context ctx;
+    if( !ctx.p->handle && haveOpenCL() )
+    {
+        // do not create new Context right away.
+        // First, try to retrieve existing context of the same type.
+        // In its turn, Platform::getContext() may call Context::create()
+        // if there is no such context.
+        ctx.create(Device::TYPE_ACCELERATOR);
+        if(!ctx.p->handle)
+            ctx.create(Device::TYPE_DGPU);
+        if(!ctx.p->handle)
+            ctx.create(Device::TYPE_IGPU);
+        if(!ctx.p->handle)
+            ctx.create(Device::TYPE_CPU);
+    }
+
+    return ctx;
 }
 
-Queue& Context::getDefaultQueue()
+Program Context::getProg(const ProgramSource& prog,
+                         const String& buildopts, String& errmsg)
 {
-    Context& c = TLSData::get()->oclContext;
-    if( !c.p->handle && haveOpenCL() )
-        c.create(Platform::getDefault(), DEVICE_TYPE_DEFAULT);
-    return c.p->q;
+    return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
-
 
 struct Queue::Impl
 {
-    Impl() { handle = 0; refcount = 1; }
+    Impl(const Context& c, const Device& d)
+    {
+        refcount = 1;
+        const Context* pc = &c;
+        cl_context ch = (cl_context)pc->ptr();
+        if( !ch )
+        {
+            pc = &Context::getDefault();
+            ch = (cl_context)pc->ptr();
+        }
+        cl_device_id dh = (cl_device_id)d.ptr();
+        if( !dh )
+            dh = (cl_device_id)pc->device(0).ptr();
+        cl_int retval = 0;
+        handle = clCreateCommandQueue(ch, dh, 0, &retval);
+    }
+
+    ~Impl()
+    {
+        if(handle)
+        {
+            clFinish(handle);
+            clReleaseCommandQueue(handle);
+        }
+    }
 
     IMPLEMENT_REFCOUNTABLE();
 
@@ -1445,10 +1879,10 @@ Queue::Queue()
     p = 0;
 }
 
-Queue::Queue(const Context& ctx)
+Queue::Queue(const Context& c, const Device& d)
 {
     p = 0;
-    create(ctx);
+    create(c, d);
 }
 
 Queue::Queue(const Queue& q)
@@ -1475,17 +1909,12 @@ Queue::~Queue()
         p->release();
 }
 
-bool Queue::create(const Context& c)
+bool Queue::create(const Context& c, const Device& d)
 {
     if(p)
         p->release();
-    cl_context ctx = (cl_context)c.ptr();
-    if( !ctx )
-        return false;
-    cl_int retval = 0;
-    p = new Impl;
-    p->handle = clCreateCommandQueue(ctx, (cl_device_id)c.device(0), 0, &retval);
-    return p->handle != 0 && retval >= 0;
+    p = new Impl(c, d);
+    return p->handle != 0;
 }
 
 void Queue::finish()
@@ -1497,6 +1926,22 @@ void Queue::finish()
 void* Queue::ptr() const
 {
     return p ? p->handle : 0;
+}
+
+Queue& Queue::getDefault()
+{
+    Queue& q = TLSData::get()->oclQueue;
+    if( !q.p->handle )
+        q.create(Context::getDefault());
+    return q;
+}
+
+static cl_command_queue getQueue(const Queue& q)
+{
+    cl_command_queue qq = (cl_command_queue)q.ptr();
+    if(!qq)
+        qq = (cl_command_queue)Queue::getDefault().ptr();
+    return qq;
 }
 
 KernelArg::KernelArg(int _flags, UMat* _m, void* _obj, size_t _sz)
@@ -1513,12 +1958,25 @@ KernelArg KernelArg::Constant(const Mat& m)
 
 struct Kernel::Impl
 {
-    Impl() { handle = 0; e = 0; refcount = 1; }
+    Impl(const char* kname, const Program& prog)
+    {
+        e = 0; refcount = 1;
+        cl_program ph = (cl_program)prog.ptr();
+        cl_int retval = 0;
+        handle = ph != 0 ?
+            clCreateKernel(ph, kname, &retval) : 0;
+    }
     void finit()
     {
         if(!f.empty()) f->operator()();
         if(e) { clReleaseEvent(e); e = 0; }
         release();
+    }
+
+    ~Impl()
+    {
+        if(handle)
+            clReleaseKernel(handle);
     }
 
     IMPLEMENT_REFCOUNTABLE();
@@ -1546,10 +2004,17 @@ Kernel::Kernel()
     p = 0;
 }
 
-Kernel::Kernel(const Context& ctx, Program& prog, const char* kname, const char* buildopts)
+Kernel::Kernel(const char* kname, const Program& prog)
 {
     p = 0;
-    create(ctx, prog, kname, buildopts);
+    create(kname, prog);
+}
+
+Kernel::Kernel(const char* kname, const ProgramSource& src,
+               const String& buildopts, String& errmsg)
+{
+    p = 0;
+    create(kname, src, buildopts, errmsg);
 }
 
 Kernel::Kernel(const Kernel& k)
@@ -1576,17 +2041,29 @@ Kernel::~Kernel()
         p->release();
 }
 
-bool Kernel::create(const Context& ctx, Program& _prog, const char* kname, const char* buildopts)
+bool Kernel::create(const char* kname, const Program& prog)
 {
     if(p)
         p->release();
-    cl_program prog = (cl_program)_prog.build(ctx, buildopts);
-    if( !prog )
-        return false;
-    cl_int retval = 0;
-    p = new Impl;
-    p->handle = clCreateKernel(prog, kname, &retval);
-    return p->handle != 0 && retval >= 0;
+    p = new Impl(kname, prog);
+    if(p->handle == 0)
+    {
+        p->release();
+        p = 0;
+    }
+    return p != 0;
+}
+
+bool Kernel::create(const char* kname, const ProgramSource& src,
+                    const String& buildopts, String& errmsg)
+{
+    if(p)
+    {
+        p->release();
+        p = 0;
+    }
+    const Program& prog = Context::getDefault().getProg(src, buildopts, errmsg);
+    return create(kname, prog);
 }
 
 void* Kernel::ptr() const
@@ -1633,17 +2110,16 @@ int Kernel::set(int i, const KernelArg& arg)
     else
     {
         clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
+        return i+1;
     }
 }
 
 
-void Kernel::run(Queue& q, int dims, size_t offset[], size_t globalsize[], size_t localsize[],
-                 bool async, const Ptr<Callback>& cleanupCallback)
+void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
+                 bool async, const Ptr<Callback>& cleanupCallback, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
-    cl_command_queue qq = (cl_command_queue)q.ptr();
-    if( !qq )
-        qq = (cl_command_queue)Context::getDefaultQueue().ptr();
+    cl_command_queue qq = getQueue(q);
     clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                            offset, globalsize, localsize, 0, 0,
                            !async ? 0 : &p->e);
@@ -1661,12 +2137,10 @@ void Kernel::run(Queue& q, int dims, size_t offset[], size_t globalsize[], size_
     }
 }
 
-void Kernel::runTask(Queue& q, bool async, const Ptr<Callback>& cleanupCallback)
+void Kernel::runTask(bool async, const Ptr<Callback>& cleanupCallback, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
-    cl_command_queue qq = (cl_command_queue)q.ptr();
-    if( !qq )
-        qq = (cl_command_queue)Context::getDefaultQueue().ptr();
+    cl_command_queue qq = getQueue(q);
     clEnqueueTask(qq, p->handle, 0, 0, !async ? 0 : &p->e);
     if( !async )
     {
@@ -1683,77 +2157,456 @@ void Kernel::runTask(Queue& q, bool async, const Ptr<Callback>& cleanupCallback)
 }
 
 
+size_t Kernel::workGroupSize() const
+{
+    if(!p)
+        return 0;
+    size_t val = 0, retsz = 0;
+    cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
+    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_WORK_GROUP_SIZE,
+                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+}
 
-    class CV_EXPORTS Buffer
+bool Kernel::compileWorkGroupSize(size_t wsz[]) const
+{
+    if(!p || !wsz)
+        return 0;
+    size_t retsz = 0;
+    cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
+    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
+                                    sizeof(wsz[0]*3), wsz, &retsz) >= 0;
+}
+
+size_t Kernel::localMemSize() const
+{
+    if(!p)
+        return 0;
+    size_t val = 0, retsz = 0;
+    cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
+    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_LOCAL_MEM_SIZE,
+                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+}
+
+//=============================================================================
+
+Buffer::Buffer() { handle = 0; }
+
+Buffer::Buffer(int flags, size_t size, void* hostptr)
+{
+    handle = 0;
+    create(flags, size, hostptr);
+}
+
+Buffer::Buffer(const Buffer& buf)
+{
+    handle = buf.handle;
+    addref();
+}
+
+Buffer::~Buffer()
+{
+    release();
+}
+
+Buffer& Buffer::operator = (const Buffer& buf)
+{
+    if(handle != buf.handle)
     {
-    public:
-        enum
-        {
-            MEM_READ_WRITE=(1 << 0),
-            MEM_WRITE_ONLY=(1 << 1),
-            MEM_READ_ONLY=(1 << 2),
-            MEM_USE_HOST_PTR=(1 << 3),
-            MEM_ALLOC_HOST_PTR=(1 << 4),
-            MEM_COPY_HOST_PTR=(1 << 5),
+        release();
+        handle = buf.handle;
+        addref();
+    }
+    return *this;
+}
 
-            MAP_READ=(1 << 0),
-            MAP_WRITE=(1 << 1),
-            MAP_WRITE_INVALIDATE_REGION=(1 << 2)
-        };
+bool Buffer::create(int flags, size_t size, void* hostptr)
+{
+    release();
+    cl_int retval = 0;
+    handle = clCreateBuffer((cl_context)Context::getDefault().ptr(),
+                            (cl_mem_flags)flags, size, hostptr, &retval);
+    return handle != 0 && retval >= 0;
+}
 
-        static void* create(Context& ctx, int flags, size_t size, void* hostptr);
-        static void release(void* handle);
-        static void retain(void* handle);
+void Buffer::release()
+{
+    if(handle)
+        clReleaseMemObject((cl_mem)handle);
+    handle = 0;
+}
 
-        static void read(Queue& q, void* handle, size_t offset, size_t size, void* dst, bool async);
-        static void read(Queue& q, void* handle, size_t offset[3], size_t size[3], size_t step[2],
-                         void* dst, size_t dststep[2], bool async);
+void Buffer::addref()
+{
+    if(handle)
+        clRetainMemObject((cl_mem)handle);
+}
 
-        static void write(Queue& q, void* handle, size_t offset, size_t size, const void* src, bool async);
-        static void write(Queue& q, void* handle, size_t offset[3], size_t size[3], size_t step[2],
-                          const void* src, size_t srcstep[2], bool async);
+bool Buffer::read(size_t offset, size_t size, void* dst, bool async, const Queue& q) const
+{
+    if( !handle )
+        return false;
+    return clEnqueueReadBuffer(getQueue(q), (cl_mem)handle, (cl_bool)!async,
+                               offset, size, dst, 0, 0, 0) >= 0;
+}
 
-        static void fill(Queue& q, void* handle, const void* pattern,
-                         size_t pattern_size, size_t offset, size_t size, bool async);
+bool Buffer::read(size_t offset[3], size_t size[3], size_t step[2],
+                  void* dst, size_t dststep[2], bool async, const Queue& q) const
+{
+    if( !handle )
+        return false;
+    size_t host_offset[] = {0, 0, 0};
+    return clEnqueueReadBufferRect(getQueue(q), (cl_mem)handle, (cl_bool)!async,
+                                   offset, host_offset, size, step[1],
+                                   step[0], dststep[1], dststep[0], dst, 0, 0, 0) >= 0;
+}
 
-        static void copy(Queue& q, void* srchandle, size_t srcoffset, void* dsthandle, size_t dstoffset, size_t size, bool async);
-        static void copy(Queue& q, void* srchandle, size_t srcoffset[3], size_t srcstep[2],
-                         void* dsthandle, size_t dstoffset[3], size_t dststep[2],
-                         size_t size[3], bool async);
-        
-        static void* map(Queue& q, void* handle, int mapflags, size_t offset, size_t size, bool async);
-        static void unmap(Queue& q, void* ptr, bool async);
-    };
+bool Buffer::write(size_t offset, size_t size, const void* src,
+                   bool async, const Queue& q) const
+{
+    if( !handle )
+        return false;
+    return clEnqueueWriteBuffer(getQueue(q), (cl_mem)handle, (cl_bool)!async,
+                                offset, size, src, 0, 0, 0) >= 0;
+}
 
+bool Buffer::write(size_t offset[3], size_t size[3], size_t step[2],
+                   const void* src, size_t srcstep[2],
+                   bool async, const Queue& q) const
+{
+    if( !handle )
+        return false;
+    size_t host_offset[] = {0, 0, 0};
+    return clEnqueueWriteBufferRect(getQueue(q), (cl_mem)handle, (cl_bool)!async,
+                                   offset, host_offset, size, step[1],
+                                   step[0], srcstep[1], srcstep[0], src, 0, 0, 0) >= 0;
+}
 
+bool Buffer::fill(const void* pattern, size_t pattern_size,
+                  size_t offset, size_t size,
+                  bool async, const Queue& q) const
+{
+    if( !handle )
+        return false;
+    cl_command_queue qq = getQueue(q);
+    bool ok = clEnqueueFillBuffer(qq, (cl_mem)handle, pattern,
+                                  pattern_size, offset, size, 0, 0, 0) >= 0;
+    if(!async && ok)
+        clFinish(qq);
+    return ok;
+}
 
+bool Buffer::copyTo(size_t srcoffset, const Buffer& dst,
+                    size_t dstoffset, size_t size,
+                    bool async, const Queue& q) const
+{
+    if(!handle || !dst.handle)
+        return false;
+    cl_command_queue qq = getQueue(q);
+    bool ok = clEnqueueCopyBuffer(qq, (cl_mem)handle, (cl_mem)dst.handle,
+                                  srcoffset, dstoffset, size, 0, 0, 0) >= 0;
+    if(!async && ok)
+        clFinish(qq);
+    return ok;
+}
+
+bool Buffer::copyTo(size_t srcoffset[3], size_t srcstep[2],
+                    const Buffer& dst, size_t dstoffset[3], size_t dststep[2],
+                    size_t size[3], bool async, const Queue& q) const
+{
+    if(!handle || !dst.handle)
+        return false;
+    cl_command_queue qq = getQueue(q);
+    bool ok = clEnqueueCopyBufferRect(qq, (cl_mem)handle, (cl_mem)dst.handle,
+                            srcoffset, dstoffset, size, srcstep[1], srcstep[0],
+                            dststep[1], dststep[0], 0, 0, 0) >= 0;
+    if(!async && ok)
+        clFinish(qq);
+    return ok;
+}
+
+void* Buffer::map(int mapflags, size_t offset, size_t size,
+                  bool async, const Queue& q) const
+{
+    if( !handle )
+        return 0;
+    cl_int retval = 0;
+    return clEnqueueMapBuffer(getQueue(q), (cl_mem)handle, (cl_bool)async, mapflags,
+                              offset, size, 0, 0, 0, &retval);
+}
+
+void Buffer::unmap(void* ptr, const Queue& q) const
+{
+    clEnqueueUnmapMemObject(getQueue(q), (cl_mem)handle, ptr, 0, 0, 0);
+}
+
+void* Buffer::ptr() const { return handle; }
+
+////////////////////////////////////////////////////////////////////////////////////////
 
 struct Program::Impl
 {
-    Impl() { refcount = 1; }
+    Impl(const ProgramSource& _src,
+         const String& _buildflags, String& errmsg)
+    {
+        refcount = 1;
+        const Context& ctx = Context::getDefault();
+        src = _src;
+        buildflags = _buildflags;
+        const String& srcstr = src.source();
+        const char* srcptr = srcstr.c_str();
+        size_t srclen = srcstr.size();
+        cl_int retval = 0;
 
-    std::map<
+        handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
+        if( handle && retval >= 0 )
+        {
+            int i, n = ctx.ndevices();
+            AutoBuffer<void*> deviceListBuf(n+1);
+            void** deviceList = deviceListBuf;
+            for( i = 0; i < n; i++ )
+                deviceList[i] = ctx.device(i).ptr();
+            retval = clBuildProgram(handle, n,
+                                    (const cl_device_id*)deviceList,
+                                    buildflags.c_str(), 0, 0);
+            if( retval == CL_BUILD_PROGRAM_FAILURE )
+            {
+                char buf[1024];
+                size_t retsz = 0;
+                clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
+                                      sizeof(buf)-16, buf, &retsz);
+                errmsg = String(buf);
+            }
+        }
+    }
 
+    Impl(const String& _buf, const String& _buildflags)
+    {
+        refcount = 1;
+        handle = 0;
+        buildflags = _buildflags;
+        if(_buf.empty())
+            return;
+        String prefix0 = Program::getPrefix(buildflags);
+        const Context& ctx = Context::getDefault();
+        const Device& dev = Device::getDefault();
+        const char* pos0 = _buf.c_str();
+        char* pos1 = strchr(pos0, '\n');
+        if(!pos1)
+            return;
+        char* pos2 = strchr(pos1+1, '\n');
+        if(!pos2)
+            return;
+        char* pos3 = strchr(pos2+1, '\n');
+        if(!pos3)
+            return;
+        size_t prefixlen = (pos3 - pos0)+1;
+        String prefix(pos0, prefixlen);
+        if( prefix != prefix0 )
+            return;
+        const uchar* bin = (uchar*)(pos3+1);
+        void* devid = dev.ptr();
+        size_t codelen = _buf.length() - prefixlen;
+        cl_int binstatus = 0, retval = 0;
+        handle = clCreateProgramWithBinary((cl_context)ctx.ptr(), 1, (cl_device_id*)&devid,
+                                           &codelen, &bin, &binstatus, &retval);
+    }
+
+    String store()
+    {
+        if(!handle)
+            return String();
+        size_t progsz = 0, retsz = 0;
+        String prefix = Program::getPrefix(buildflags);
+        size_t prefixlen = prefix.length();
+        if(clGetProgramInfo(handle, CL_PROGRAM_BINARY_SIZES, sizeof(progsz), &progsz, &retsz) < 0)
+            return String();
+        AutoBuffer<uchar> bufbuf(prefixlen + progsz + 16);
+        uchar* buf = bufbuf;
+        memcpy(buf, prefix.c_str(), prefixlen);
+        buf += prefixlen;
+        if(clGetProgramInfo(handle, CL_PROGRAM_BINARIES, sizeof(buf), &buf, &retsz) < 0)
+            return String();
+        buf[progsz] = (uchar)'\0';
+        return String((const char*)(uchar*)bufbuf, prefixlen + progsz);
+    }
+
+    ~Impl()
+    {
+        if( handle )
+            clReleaseProgram(handle);
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+
+    ProgramSource src;
+    String buildflags;
+    cl_program handle;
 };
 
+
+Program::Program() { p = 0; }
+
+Program::Program(const ProgramSource& src,
+        const String& buildflags, String& errmsg)
 {
-public:
-    Program(const char* prog);
-    ~Program();
-    Program(const Program& prog);
-    Program& operator = (const Program& prog);
-    
-    bool build(const Context& ctx, const char* buildopts);
-    
-    String getErrMsg() const;
-    
-    // non-constant method
-    Kernel get(const char* name, const char* buildopts, const Context& ctx);
-    
-protected:
-    struct Impl;
-    Impl* p;
+    p = 0;
+    create(src, buildflags, errmsg);
+}
+
+Program::Program(const Program& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+Program& Program::operator = (const Program& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+Program::~Program()
+{
+    if(p)
+        p->release();
+}
+
+bool Program::create(const ProgramSource& src,
+            const String& buildflags, String& errmsg)
+{
+    if(p)
+        p->release();
+    p = new Impl(src, buildflags, errmsg);
+    if(!p->handle)
+    {
+        p->release();
+        p = 0;
+    }
+    return p != 0;
+}
+
+const ProgramSource& Program::source() const
+{
+    static ProgramSource dummy;
+    return p ? p->src : dummy;
+}
+
+void* Program::ptr() const
+{
+    return p ? p->handle : 0;
+}
+
+bool Program::read(const String& bin, const String& buildflags)
+{
+    if(p)
+        p->release();
+    p = new Impl(bin, buildflags);
+    return p->handle != 0;
+}
+
+bool Program::write(String& bin) const
+{
+    if(!p)
+        return false;
+    bin = p->store();
+    return !bin.empty();
+}
+
+String Program::getPrefix() const
+{
+    if(!p)
+        return String();
+    return getPrefix(p->buildflags);
+}
+
+String Program::getPrefix(const String& buildflags)
+{
+    const Context& ctx = Context::getDefault();
+    const Device& dev = ctx.device(0);
+    return format("name=%s\ndriver=%s\nbuildflags=%s\n",
+                  dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+struct ProgramSource::Impl
+{
+    Impl(const char* _src)
+    {
+        init(String(_src));
+    }
+    Impl(const String& _src)
+    {
+        init(_src);
+    }
+    void init(const String& _src)
+    {
+        refcount = 1;
+        src = _src;
+        h = crc64((uchar*)src.c_str(), src.size());
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+    String src;
+    ProgramSource::hash_t h;
 };
+
+
+ProgramSource::ProgramSource()
+{
+    p = 0;
+}
+
+ProgramSource::ProgramSource(const char* prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::ProgramSource(const String& prog)
+{
+    p = new Impl(prog);
+}
+
+ProgramSource::~ProgramSource()
+{
+    if(p)
+        p->release();
+}
+
+ProgramSource::ProgramSource(const ProgramSource& prog)
+{
+    p = prog.p;
+    if(p)
+        p->addref();
+}
+
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+{
+    Impl* newp = (Impl*)prog.p;
+    if(newp)
+        newp->addref();
+    if(p)
+        p->release();
+    p = newp;
+    return *this;
+}
+
+const String& ProgramSource::source() const
+{
+    static String dummy;
+    return p ? p->src : dummy;
+}
+
+ProgramSource::hash_t ProgramSource::hash() const
+{
+    return p ? p->h : 0;
+}
 
 }}
 
