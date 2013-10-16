@@ -263,6 +263,8 @@ public:
                                      OutputArray descriptors,
                                      bool useProvidedKeypoints=false ) const = 0;
 
+    CV_WRAP void compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
+
     // Create feature detector and descriptor extractor by name.
     CV_WRAP static Ptr<Feature2D> create( const string& name );
 };
@@ -452,8 +454,13 @@ public:
 protected:
     virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     void buildPattern();
-    uchar meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
+
+    template <typename imgType, typename iiType>
+    int meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
                          const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
+
+    template <typename srcMatType, typename iiMatType>
+    void computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     bool orientationNormalized; //true if the orientation is normalized, false otherwise
     bool scaleNormalized; //true if the scale is normalized, false otherwise
@@ -1015,7 +1022,7 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
-template<int cellsize> struct CV_EXPORTS HammingMultilevel
+template<int cellsize> struct HammingMultilevel
 {
     enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
