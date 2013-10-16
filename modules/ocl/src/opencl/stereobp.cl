@@ -290,7 +290,7 @@ void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
 
     minimum += cmax_disc_term;
 
-    float4 sum = 0;
+    float4 sum = (float4)(0);
     prev = convert_float4(t_dst[CNDISP - 1]);
     for (int disp = CNDISP - 2; disp >= 0; disp--)
     {
@@ -308,7 +308,7 @@ void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
     t_dst[CNDISP - 1] = saturate_cast4(dst_reg);
     sum += dst_reg;
 
-    sum /= CNDISP;
+    sum /= (float4)(CNDISP);
 #pragma unroll
     for(int i = 0, idx = 0; i < CNDISP; ++i, idx+=msg_disp_step)
     {

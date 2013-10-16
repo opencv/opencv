@@ -212,13 +212,35 @@ void openCLVerifyKernel(const Context *ctx, cl_kernel kernel, size_t *localThrea
 static double total_execute_time = 0;
 static double total_kernel_time = 0;
 #endif
+
+static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
+{
+    if (buildOptions == NULL)
+        return "";
+
+    size_t length = strlen(buildOptions), didx = 0, sidx = 0;
+    while (sidx < length && buildOptions[sidx] == 0)
+        ++sidx;
+
+    std::string opt;
+    opt.resize(length);
+
+    for ( ; sidx < length; ++sidx)
+        if (buildOptions[sidx] != ' ')
+            opt[didx++] = buildOptions[sidx];
+        else if ( !(didx > 0 && opt[didx - 1] == ' ') )
+            opt[didx++] = buildOptions[sidx];
+
+    return opt;
+}
+
 void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
                           size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
-    //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
+    //for example split_C2_D3, represent the split kernel with channels = 2 and dataType Depth = 3(Data type is short)
     std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
@@ -227,7 +249,8 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, Str
     kernelName = kernelName + idxStr.str();
 
     cl_kernel kernel;
-    kernel = openCLGetKernelFromSource(ctx, source, kernelName, build_options);
+    std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
+    kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
 
     if ( localThreads != NULL)
     {
@@ -302,28 +325,27 @@ void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, Stri
     total_kernel_time = 0;
     cout << "-------------------------------------" << endl;
 
-    cout << setiosflags(ios::left) << setw(15) << "excute time";
-    cout << setiosflags(ios::left) << setw(15) << "lauch time";
+    cout << setiosflags(ios::left) << setw(15) << "execute time";
+    cout << setiosflags(ios::left) << setw(15) << "launch time";
     cout << setiosflags(ios::left) << setw(15) << "kernel time" << endl;
     int i = 0;
     for(i = 0; i < RUN_TIMES; i++)
         openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                              build_options);
 
-    cout << "average kernel excute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
+    cout << "average kernel execute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
     cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << endl; // "ms" << endl;
 #endif
 }
 
-double openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
+void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
-                         bool finish, bool measureKernelTime, bool cleanUp)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
-    //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
+    //for example split_C2_D2, represent the split kernel with channels = 2 and dataType Depth = 2 (Data type is char)
     std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
@@ -331,63 +353,27 @@ double openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramEntry* sou
         idxStr << "_D" << depth;
     kernelName = kernelName + idxStr.str();
 
-    cl_kernel kernel;
-    kernel = openCLGetKernelFromSource(ctx, source, kernelName, build_options);
+    std::string name = std::string("custom_") + source.name;
+    ProgramEntry program = { name.c_str(), source.programStr, source.programHash };
+    cl_kernel kernel = openCLGetKernelFromSource(ctx, &program, kernelName, build_options);
 
-    double kernelTime = 0.0;
-
-    if( globalThreads != NULL)
+    CV_Assert(globalThreads != NULL);
+    if ( localThreads != NULL)
     {
-        if ( localThreads != NULL)
-        {
-            globalThreads[0] = divUp(globalThreads[0], localThreads[0]) * localThreads[0];
-            globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
-            globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
+        globalThreads[0] = roundUp(globalThreads[0], localThreads[0]);
+        globalThreads[1] = roundUp(globalThreads[1], localThreads[1]);
+        globalThreads[2] = roundUp(globalThreads[2], localThreads[2]);
 
-            //size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
-            cv::ocl::openCLVerifyKernel(ctx, kernel, localThreads);
-        }
-        for(size_t i = 0; i < args.size(); i ++)
-            openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
-
-        if(measureKernelTime == false)
-        {
-            openCLSafeCall(clEnqueueNDRangeKernel(getClCommandQueue(ctx), kernel, 3, NULL, globalThreads,
-                            localThreads, 0, NULL, NULL));
-        }
-        else
-        {
-            cl_event event = NULL;
-            openCLSafeCall(clEnqueueNDRangeKernel(getClCommandQueue(ctx), kernel, 3, NULL, globalThreads,
-                            localThreads, 0, NULL, &event));
-
-            cl_ulong end_time, queue_time;
-
-            openCLSafeCall(clWaitForEvents(1, &event));
-
-            openCLSafeCall(clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,
-                            sizeof(cl_ulong), &end_time, 0));
-
-            openCLSafeCall(clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED,
-                            sizeof(cl_ulong), &queue_time, 0));
-
-            kernelTime = (double)(end_time - queue_time) / (1000 * 1000);
-
-            clReleaseEvent(event);
-        }
+        cv::ocl::openCLVerifyKernel(ctx, kernel, localThreads);
     }
+    for(size_t i = 0; i < args.size(); i ++)
+        openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 
-    if(finish)
-    {
-        clFinish(getClCommandQueue(ctx));
-    }
+    openCLSafeCall(clEnqueueNDRangeKernel(getClCommandQueue(ctx), kernel, 3, NULL, globalThreads,
+                    localThreads, 0, NULL, NULL));
 
-    if(cleanUp)
-    {
-        openCLSafeCall(clReleaseKernel(kernel));
-    }
-
-    return kernelTime;
+    clFinish(getClCommandQueue(ctx));
+    openCLSafeCall(clReleaseKernel(kernel));
 }
 
 cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,

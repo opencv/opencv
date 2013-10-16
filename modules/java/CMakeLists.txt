@@ -334,9 +334,15 @@ if(ANDROID)
           LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 else()
-  install(TARGETS ${the_module}
-          RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
-          LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  if(NOT INSTALL_CREATE_DISTRIB)
+    install(TARGETS ${the_module}
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  else()
+    install(TARGETS ${the_module}
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main)
+  endif()
 endif()
 
 ######################################################################################################################################
