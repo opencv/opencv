@@ -44,10 +44,12 @@
 //M*/
 
 #include "test_precomp.hpp"
+
 using namespace std;
-#ifdef HAVE_CLAMDFFT
+
 ////////////////////////////////////////////////////////////////////////////
 // Dft
+
 PARAM_TEST_CASE(Dft, cv::Size, int)
 {
     cv::Size dft_size;
@@ -59,7 +61,7 @@ PARAM_TEST_CASE(Dft, cv::Size, int)
     }
 };
 
-TEST_P(Dft, C2C)
+OCL_TEST_P(Dft, C2C)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC2, 0.0, 100.0);
     cv::Mat b_gold;
@@ -71,7 +73,7 @@ TEST_P(Dft, C2C)
     EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), a.size().area() * 1e-4);
 }
 
-TEST_P(Dft, R2C)
+OCL_TEST_P(Dft, R2C)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 100.0);
     cv::Mat b_gold, b_gold_roi;
@@ -88,7 +90,7 @@ TEST_P(Dft, R2C)
     EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4);
 }
 
-TEST_P(Dft, R2CthenC2R)
+OCL_TEST_P(Dft, R2CthenC2R)
 {
     cv::Mat a = randomMat(dft_size, CV_32FC1, 0.0, 10.0);
 
@@ -98,9 +100,6 @@ TEST_P(Dft, R2CthenC2R)
     EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4);
 }
 
-
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Dft, testing::Combine(
                             testing::Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(25, 20), cv::Size(512, 1), cv::Size(1024, 768)),
                             testing::Values(0, (int)cv::DFT_ROWS, (int)cv::DFT_SCALE) ));
-
-#endif // HAVE_CLAMDFFT

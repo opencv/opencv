@@ -57,8 +57,7 @@ namespace cv
 {
     namespace ocl
     {
-        using std::auto_ptr;
-        enum
+        enum DeviceType
         {
             CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
             CVCL_DEVICE_TYPE_CPU         = (1 << 1),
@@ -84,126 +83,158 @@ namespace cv
             DEVICE_MEM_PM           //persistent memory
         };
 
-        //Get the global device memory and read/write type
-        //return 1 if unified memory system supported, otherwise return 0
-        CV_EXPORTS int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type);
+        // these classes contain OpenCL runtime information
 
-        //Set the global device memory and read/write type,
-        //the newly generated oclMat will all use this type
-        //return -1 if the target type is unsupported, otherwise return 0
-        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT);
+        struct PlatformInfo;
 
-        //this class contains ocl runtime information
-        class CV_EXPORTS Info
+        struct DeviceInfo
         {
-        public:
-            struct Impl;
-            Impl *impl;
+            int _id; // reserved, don't use it
 
-            Info();
-            Info(const Info &m);
-            ~Info();
-            void release();
-            Info &operator = (const Info &m);
-            std::vector<string> DeviceName;
+            DeviceType deviceType;
+            std::string deviceProfile;
+            std::string deviceVersion;
+            std::string deviceName;
+            std::string deviceVendor;
+            int deviceVendorId;
+            std::string deviceDriverVersion;
+            std::string deviceExtensions;
+
+            size_t maxWorkGroupSize;
+            std::vector<size_t> maxWorkItemSizes;
+            int maxComputeUnits;
+            size_t localMemorySize;
+            size_t maxMemAllocSize;
+
+            int deviceVersionMajor;
+            int deviceVersionMinor;
+
+            bool haveDoubleSupport;
+            bool isUnifiedMemory; // 1 means integrated GPU, otherwise this value is 0
+
+            std::string compilationExtraOptions;
+
+            const PlatformInfo* platform;
+
+            DeviceInfo();
         };
+
+        struct PlatformInfo
+        {
+            int _id; // reserved, don't use it
+
+            std::string platformProfile;
+            std::string platformVersion;
+            std::string platformName;
+            std::string platformVendor;
+            std::string platformExtensons;
+
+            int platformVersionMajor;
+            int platformVersionMinor;
+
+            std::vector<const DeviceInfo*> devices;
+
+            PlatformInfo();
+        };
+
         //////////////////////////////// Initialization & Info ////////////////////////
-        //this function may be obsoleted
-        //CV_EXPORTS cl_device_id getDevice();
-        //the function must be called before any other cv::ocl::functions, it initialize ocl runtime
-        //each Info relates to an OpenCL platform
-        //there is one or more devices in each platform, each one has a separate name
-        CV_EXPORTS int getDevice(std::vector<Info> &oclinfo, int devicetype = CVCL_DEVICE_TYPE_GPU);
+        typedef std::vector<const PlatformInfo*> PlatformsInfo;
 
-        //set device you want to use, optional function after getDevice be called
-        //the devnum is the index of the selected device in DeviceName vector of INfo
-        CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
+        CV_EXPORTS int getOpenCLPlatforms(PlatformsInfo& platforms);
 
-        //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
-        //returns cl_context *
-        CV_EXPORTS void* getoclContext();
-        //returns cl_command_queue *
-        CV_EXPORTS void* getoclCommandQueue();
+        typedef std::vector<const DeviceInfo*> DevicesInfo;
 
-        //explicit call clFinish. The global command queue will be used.
-        CV_EXPORTS void finish();
+        CV_EXPORTS int getOpenCLDevices(DevicesInfo& devices, int deviceType = CVCL_DEVICE_TYPE_GPU,
+                const PlatformInfo* platform = NULL);
 
-        //this function enable ocl module to use customized cl_context and cl_command_queue
-        //getDevice also need to be called before this function
-        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
-
-        //returns true when global OpenCL context is initialized
-        CV_EXPORTS bool initialized();
+        // set device you want to use
+        CV_EXPORTS void setDevice(const DeviceInfo* info);
 
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
-        //////////////////////////////// OpenCL context ////////////////////////
-        //This is a global singleton class used to represent a OpenCL context.
+        enum FEATURE_TYPE
+        {
+            FEATURE_CL_DOUBLE = 1,
+            FEATURE_CL_UNIFIED_MEM,
+            FEATURE_CL_VER_1_2
+        };
+
+        // Represents OpenCL context, interface
         class CV_EXPORTS Context
         {
         protected:
-            Context();
-            friend class auto_ptr<Context>;
-            friend bool initialized();
-        private:
-            static auto_ptr<Context> clCxt;
-            static int val;
+            Context() { }
+            ~Context() { }
         public:
-            ~Context();
-            void release();
-            Info::Impl* impl;
-
             static Context* getContext();
-            static void setContext(Info &oclinfo);
 
-            enum {CL_DOUBLE, CL_UNIFIED_MEM, CL_VER_1_2};
-            bool supportsFeature(int ftype) const;
-            size_t computeUnits() const;
-            void* oclContext();
-            void* oclCommandQueue();
+            bool supportsFeature(FEATURE_TYPE featureType) const;
+            const DeviceInfo& getDeviceInfo() const;
+
+            const void* getOpenCLContextPtr() const;
+            const void* getOpenCLCommandQueuePtr() const;
+            const void* getOpenCLDeviceIDPtr() const;
         };
 
-        //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
+        inline const void *getClContextPtr()
+        {
+            return Context::getContext()->getOpenCLContextPtr();
+        }
 
-        //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
+        inline const void *getClCommandQueuePtr()
+        {
+            return Context::getContext()->getOpenCLCommandQueuePtr();
+        }
 
+        CV_EXPORTS bool supportsFeature(FEATURE_TYPE featureType);
+
+        CV_EXPORTS void finish();
+
+        enum BINARY_CACHE_MODE
+        {
+            CACHE_NONE    = 0,        // do not cache OpenCL binary
+            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode
+            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // cache opencl binary
+        };
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
         // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
         // binary file, which will be reused when the OpenCV executable is started again.
         //
-        // Caching mode is controlled by the following enums
-        // Notes
-        //   1. the feature is by default enabled when OpenCV is built in release mode.
-        //   2. the CACHE_DEBUG / CACHE_RELEASE flags only effectively work with MSVC compiler;
-        //      for GNU compilers, the function always treats the build as release mode (enabled by default).
-        enum
-        {
-            CACHE_NONE    = 0,        // do not cache OpenCL binary
-            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
-            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
-            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
-        };
+        // This feature is enabled by default.
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
         //! set where binary cache to be saved to
-        CV_EXPORTS void setBinpath(const char *path);
+        CV_EXPORTS void setBinaryPath(const char *path);
+
+        struct ProgramSource
+        {
+            const char* name;
+            const char* programStr;
+            const char* programHash;
+
+            // Cache in memory by name (should be unique). Caching on disk disabled.
+            inline ProgramSource(const char* _name, const char* _programStr)
+                : name(_name), programStr(_programStr), programHash(NULL)
+            {
+            }
+
+            // Cache in memory by name (should be unique). Caching on disk uses programHash mark.
+            inline ProgramSource(const char* _name, const char* _programStr, const char* _programHash)
+                : name(_name), programStr(_programStr), programHash(_programHash)
+            {
+            }
+        };
+
+        //! Calls OpenCL kernel. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+        //! Deprecated, will be replaced
+        CV_EXPORTS void openCLExecuteKernelInterop(Context *clCxt,
+                const cv::ocl::ProgramSource& source, string kernelName,
+                size_t globalThreads[3], size_t localThreads[3],
+                std::vector< std::pair<size_t, const void *> > &args,
+                int channels, int depth, const char *build_options);
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
@@ -384,7 +415,7 @@ namespace cv
             uchar *dataend;
 
             //! OpenCL context associated with the oclMat object.
-            Context *clCxt;
+            Context *clCxt; // TODO clCtx
             //add offset for handle ROI, calculated in byte
             int offset;
             //add wholerows and wholecols for the whole matrix, datastart and dataend are no longer used
@@ -410,6 +441,7 @@ namespace cv
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
         //! adds one matrix to another with scale (dst = src1 * alpha + src2 * beta + gama)
+        // supports all data types
         CV_EXPORTS void addWeighted(const oclMat &src1, double  alpha, const oclMat &src2, double beta, double gama, oclMat &dst);
 
         //! adds one matrix to another (dst = src1 + src2)
@@ -440,6 +472,14 @@ namespace cv
         // supports all data types
         CV_EXPORTS void divide(double scale, const oclMat &src1, oclMat &dst);
 
+        //! computes element-wise minimum of the two arrays (dst = min(src1, src2))
+        // supports all data types
+        CV_EXPORTS void min(const oclMat &src1, const oclMat &src2, oclMat &dst);
+
+        //! computes element-wise maximum of the two arrays (dst = max(src1, src2))
+        // supports all data types
+        CV_EXPORTS void max(const oclMat &src1, const oclMat &src2, oclMat &dst);
+
         //! compares elements of two arrays (dst = src1 <cmpop> src2)
         // supports all data types
         CV_EXPORTS void compare(const oclMat &src1, const oclMat &src2, oclMat &dst, int cmpop);
@@ -447,6 +487,10 @@ namespace cv
         //! transposes the matrix
         // supports all data types
         CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
+
+        //! computes element-wise absolute values of an array (dst = abs(src))
+        // supports all data types
+        CV_EXPORTS void abs(const oclMat &src, oclMat &dst);
 
         //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
         // supports all data types
@@ -456,17 +500,17 @@ namespace cv
         CV_EXPORTS void absdiff(const oclMat &src1, const Scalar &s, oclMat &dst);
 
         //! computes mean value and standard deviation of all or selected array elements
-        // supports except CV_32F,CV_64F
+        // supports all data types
         CV_EXPORTS void meanStdDev(const oclMat &mtx, Scalar &mean, Scalar &stddev);
 
         //! computes norm of array
         // supports NORM_INF, NORM_L1, NORM_L2
-        // supports only CV_8UC1 type
+        // supports all data types
         CV_EXPORTS double norm(const oclMat &src1, int normType = NORM_L2);
 
         //! computes norm of the difference between two arrays
         // supports NORM_INF, NORM_L1, NORM_L2
-        // supports only CV_8UC1 type
+        // supports all data types
         CV_EXPORTS double norm(const oclMat &src1, const oclMat &src2, int normType = NORM_L2);
 
         //! reverses the order of the rows, columns or both in a matrix
@@ -474,7 +518,6 @@ namespace cv
         CV_EXPORTS void flip(const oclMat &src, oclMat &dst, int flipCode);
 
         //! computes sum of array elements
-        // disabled until fix crash
         // support all types
         CV_EXPORTS Scalar sum(const oclMat &m);
         CV_EXPORTS Scalar absSum(const oclMat &m);
@@ -483,7 +526,6 @@ namespace cv
         //! finds global minimum and maximum array elements and returns their values
         // support all C1 types
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
-        CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         // support all C1 types
@@ -582,9 +624,10 @@ namespace cv
         // support only CV_32FC1 type
         CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
 
-        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
+        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code, int dcn = 0);
 
-        CV_EXPORTS void setIdentity(oclMat& src, double val);
+        //! initializes a scaled identity matrix
+        CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 
@@ -1696,7 +1739,7 @@ namespace cv
         //  output -
         //    keys   = {1,    2,   3}   (CV_8UC1)
         //    values = {6,2, 10,5, 4,3} (CV_8UC2)
-        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
+        CV_EXPORTS void sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
         /*!Base class for MOG and MOG2!*/
         class CV_EXPORTS BackgroundSubtractor
         {
@@ -1878,11 +1921,6 @@ namespace cv
             oclMat temp5;
         };
 
-        static inline size_t divUp(size_t total, size_t grain)
-        {
-            return (total + grain - 1) / grain;
-        }
-
         /*!***************K Nearest Neighbour*************!*/
         class CV_EXPORTS KNearestNeighbour: public CvKNearest
         {
@@ -1900,6 +1938,28 @@ namespace cv
         private:
             oclMat samples_ocl;
         };
+
+        /*!***************  SVM  *************!*/
+        class CV_EXPORTS CvSVM_OCL : public CvSVM
+        {
+        public:
+            CvSVM_OCL();
+
+            CvSVM_OCL(const cv::Mat& trainData, const cv::Mat& responses,
+                      const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
+                      CvSVMParams params=CvSVMParams());
+            CV_WRAP float predict( const int row_index, Mat& src, bool returnDFVal=false ) const;
+            CV_WRAP void predict( cv::InputArray samples, cv::OutputArray results ) const;
+            CV_WRAP float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
+            float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
+
+        protected:
+            float predict( const int row_index, int row_len, Mat& src, bool returnDFVal=false ) const;
+            void create_kernel();
+            void create_solver();
+        };
+
+        /*!***************  END  *************!*/
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200

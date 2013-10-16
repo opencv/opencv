@@ -785,8 +785,20 @@ public class %(jc)s {
             version_suffix =  ''.join( (epoch, major, minor) )
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
-    public static final String VERSION = "%(v)s", NATIVE_LIBRARY_NAME = "opencv_java%(vs)s";
-    public static final int VERSION_EPOCH = %(ep)s, VERSION_MAJOR = %(ma)s, VERSION_MINOR = %(mi)s, VERSION_REVISION = %(re)s;
+    // these constants are wrapped inside functions to prevent inlining
+    private static String getVersion() { return "%(v)s"; }
+    private static String getNativeLibraryName() { return "opencv_java%(vs)s"; }
+    private static int getVersionEpoch() { return %(ep)s; }
+    private static int getVersionMajor() { return %(ma)s; }
+    private static int getVersionMinor() { return %(mi)s; }
+    private static int getVersionRevision() { return %(re)s; }
+
+    public static final String VERSION = getVersion();
+    public static final String NATIVE_LIBRARY_NAME = getNativeLibraryName();
+    public static final int VERSION_EPOCH = getVersionEpoch();
+    public static final int VERSION_MAJOR = getVersionMajor();
+    public static final int VERSION_MINOR = getVersionMinor();
+    public static final int VERSION_REVISION = getVersionRevision();
 """ % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision } )
 
 

@@ -1,0 +1,25 @@
+#ifndef __OPENCV_OCL_CLAMDFFT_RUNTIME_HPP__
+#define __OPENCV_OCL_CLAMDFFT_RUNTIME_HPP__
+
+#ifdef HAVE_CLAMDFFT
+
+@CLAMDFFT_REMAP_ORIGIN@
+
+#include <clAmdFft.h>
+
+@CLAMDFFT_REMAP_DYNAMIC@
+
+#ifndef CL_RUNTIME_EXPORT
+#if (defined(BUILD_SHARED_LIBS) || defined(OPENCV_OCL_SHARED)) && (defined WIN32 || defined _WIN32 || defined WINCE)
+#define CL_RUNTIME_EXPORT __declspec(dllimport)
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+#endif
+
+
+@CLAMDFFT_FN_DECLARATIONS@
+
+#endif
+
+#endif // __OPENCV_OCL_CLAMDFFT_RUNTIME_HPP__

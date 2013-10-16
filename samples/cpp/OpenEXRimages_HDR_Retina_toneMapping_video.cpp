@@ -16,6 +16,10 @@
 
 #include "opencv2/opencv.hpp"
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
+
 static void help(std::string errorMessage)
 {
     std::cout<<"Program init error : "<<errorMessage<<std::endl;

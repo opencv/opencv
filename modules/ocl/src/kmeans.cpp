@@ -43,20 +43,11 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
-using namespace ocl;
-
-namespace cv
-{
-namespace ocl
-{
-////////////////////////////////////OpenCL kernel strings//////////////////////////
-extern const char *kmeans_kernel;
-}
-}
+using namespace cv::ocl;
 
 static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
 {
@@ -173,7 +164,7 @@ void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src
 {
     //if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     //{
-    //    CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+    //    CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
     //    return;
     //}
 

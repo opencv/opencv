@@ -43,20 +43,25 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
+
+#ifdef HAVE_CLAMDBLAS
+
 using namespace perf;
 using namespace std;
 using namespace cv::ocl;
 using namespace cv;
 using std::tr1::tuple;
 using std::tr1::get;
+
 ///////////// Kalman Filter ////////////////////////
 
 typedef tuple<int> KalmanFilterType;
 typedef TestBaseWithParam<KalmanFilterType> KalmanFilterFixture;
 
 PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
-            ::testing::Values(1000, 1500))
+    ::testing::Values(1000, 1500))
 {
     KalmanFilterType params = GetParam();
     const int dim = get<0>(params);
@@ -66,7 +71,7 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
 
     cv::Mat statePre_;
 
-    if(RUN_PLAIN_IMPL)
+    if (RUN_PLAIN_IMPL)
     {
         cv::KalmanFilter kalman;
         TEST_CYCLE()
@@ -76,7 +81,8 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
             kalman.predict();
         }
         statePre_ = kalman.statePre;
-    }else if(RUN_OCL_IMPL)
+    }
+    else if(RUN_OCL_IMPL)
     {
         cv::ocl::oclMat dsample(sample);
         cv::ocl::KalmanFilter kalman_ocl;
@@ -87,7 +93,11 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
             kalman_ocl.predict();
         }
         kalman_ocl.statePre.download(statePre_);
-    }else
+    }
+    else
         OCL_PERF_ELSE
+
     SANITY_CHECK(statePre_);
 }
+
+#endif // HAVE_CLAMDBLAS
