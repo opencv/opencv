@@ -58,7 +58,7 @@ namespace cv
             {
                 if(!mat_dst.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && mat_dst.type() == CV_64F)
                 {
-                    CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
+                    CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
                     return;
                 }
 
@@ -153,7 +153,7 @@ namespace cv
 
                 if(!mat_src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && mat_src.type() == CV_64F)
                 {
-                    CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
+                    CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
                     return;
                 }
 

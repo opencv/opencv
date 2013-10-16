@@ -624,37 +624,21 @@ static void gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade)
     cascade->p3 = equRect.width ;
     for( i = 0; i < _cascade->count; i++ )
     {
-        int j, k, l;
+        int j, l;
         for( j = 0; j < stage_classifier[i].count; j++ )
         {
             for( l = 0; l < stage_classifier[i].classifier[j].count; l++ )
             {
-                CvHaarFeature *feature =
+                const CvHaarFeature *feature =
                     &_cascade->stage_classifier[i].classifier[j].haar_feature[l];
                 GpuHidHaarTreeNode *hidnode = &stage_classifier[i].classifier[j].node[l];
-                CvRect r[3];
 
-
-                int nr;
-
-                /* align blocks */
-                for( k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
+                for( int k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
                 {
-                    if(!hidnode->p[k][0])
+                    const CvRect tr = feature->rect[k].r;
+                    if (tr.width == 0)
                         break;
-                    r[k] = feature->rect[k].r;
-               }
-
-                nr = k;
-                for( k = 0; k < nr; k++ )
-                {
-                    CvRect tr;
-                    double correction_ratio;
-                    tr.x = r[k].x;
-                    tr.width = r[k].width;
-                    tr.y = r[k].y ;
-                    tr.height = r[k].height;
-                    correction_ratio = weight_scale * (!feature->tilted ? 1 : 0.5);
+                    double correction_ratio = weight_scale * (!feature->tilted ? 1 : 0.5);
                     hidnode->p[k][0] = tr.x;
                     hidnode->p[k][1] = tr.y;
                     hidnode->p[k][2] = tr.width;
@@ -925,7 +909,6 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
             n_factors = 1;
             sizev.push_back(minSize);
             scalev.push_back( std::min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
-
         }
         detect_piramid_info *scaleinfo = (detect_piramid_info *)malloc(sizeof(detect_piramid_info) * loopcount);
         cl_int4 *p = (cl_int4 *)malloc(sizeof(cl_int4) * loopcount);

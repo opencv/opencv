@@ -72,4 +72,6 @@
 
 #include "opencv2/core/private.hpp"
 
+using namespace cvtest;
+
 #endif

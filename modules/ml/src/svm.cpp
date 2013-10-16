@@ -1392,6 +1392,8 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
         for( i = 0; i < sample_count; i++ )
             sv_count += fabs(alpha[i]) > 0;
 
+        CV_Assert(sv_count != 0);
+
         sv_total = df->sv_count = sv_count;
         CV_CALL( df->alpha = (double*)cvMemStorageAlloc( storage, sv_count*sizeof(df->alpha[0])) );
         CV_CALL( sv = (float**)cvMemStorageAlloc( storage, sv_count*sizeof(sv[0])));

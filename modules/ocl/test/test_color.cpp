@@ -93,7 +93,7 @@ PARAM_TEST_CASE(CvtColor, cv::Size, MatDepth)
 };
 
 #define CVTCODE(name) cv::COLOR_ ## name
-#define TEST_P_CVTCOLOR(name) TEST_P(CvtColor, name)\
+#define OCL_TEST_P_CVTCOLOR(name) OCL_TEST_P(CvtColor, name)\
 {\
     cv::Mat src = img;\
     cv::ocl::oclMat ocl_img, dst;\
@@ -107,17 +107,17 @@ PARAM_TEST_CASE(CvtColor, cv::Size, MatDepth)
 }
 
 //add new ones here using macro
-TEST_P_CVTCOLOR(RGB2GRAY)
-TEST_P_CVTCOLOR(BGR2GRAY)
-TEST_P_CVTCOLOR(RGBA2GRAY)
-TEST_P_CVTCOLOR(BGRA2GRAY)
+OCL_TEST_P_CVTCOLOR(RGB2GRAY)
+OCL_TEST_P_CVTCOLOR(BGR2GRAY)
+OCL_TEST_P_CVTCOLOR(RGBA2GRAY)
+OCL_TEST_P_CVTCOLOR(BGRA2GRAY)
 
-TEST_P_CVTCOLOR(RGB2YUV)
-TEST_P_CVTCOLOR(BGR2YUV)
-TEST_P_CVTCOLOR(YUV2RGB)
-TEST_P_CVTCOLOR(YUV2BGR)
-TEST_P_CVTCOLOR(RGB2YCrCb)
-TEST_P_CVTCOLOR(BGR2YCrCb)
+OCL_TEST_P_CVTCOLOR(RGB2YUV)
+OCL_TEST_P_CVTCOLOR(BGR2YUV)
+OCL_TEST_P_CVTCOLOR(YUV2RGB)
+OCL_TEST_P_CVTCOLOR(YUV2BGR)
+OCL_TEST_P_CVTCOLOR(RGB2YCrCb)
+OCL_TEST_P_CVTCOLOR(BGR2YCrCb)
 
 PARAM_TEST_CASE(CvtColor_Gray2RGB, cv::Size, MatDepth, int)
 {
@@ -134,7 +134,7 @@ PARAM_TEST_CASE(CvtColor_Gray2RGB, cv::Size, MatDepth, int)
         img   = randomMat(size, CV_MAKETYPE(depth, 1), 0.0, depth == CV_32F ? 1.0 : 255.0);
     }
 };
-TEST_P(CvtColor_Gray2RGB, Accuracy)
+OCL_TEST_P(CvtColor_Gray2RGB, Accuracy)
 {
     cv::Mat src = img;
     cv::ocl::oclMat ocl_img, dst;
@@ -163,7 +163,7 @@ PARAM_TEST_CASE(CvtColor_YUV420, cv::Size, int)
     }
 };
 
-TEST_P(CvtColor_YUV420, Accuracy)
+OCL_TEST_P(CvtColor_YUV420, Accuracy)
 {
     cv::Mat src = img;
     cv::ocl::oclMat ocl_img, dst;

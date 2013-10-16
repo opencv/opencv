@@ -293,8 +293,6 @@ Calculates the up-right bounding rectangle of a point set.
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
 
 
-
-
 contourArea
 ---------------
 Calculates a contour area.
@@ -417,6 +415,7 @@ Fits an ellipse around a set of 2D points.
         * Nx2 numpy array (Python interface)
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
+Developer should keep in mind that it is possible that the returned ellipse/rotatedRect data contains negative indices, due to the data points being close to the border of the containing Mat element.
 
 .. note::
 
@@ -539,7 +538,7 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
         * Nx2 numpy array (Python interface)
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a specified point set. See the OpenCV sample ``minarea.cpp`` .
-
+Developer should keep in mind that the returned rotatedRect can contain negative indices when data is close the the containing Mat element boundary.
 
 
 boxPoints

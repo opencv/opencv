@@ -164,7 +164,7 @@ void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src
 {
     //if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     //{
-    //    CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+    //    CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
     //    return;
     //}
 

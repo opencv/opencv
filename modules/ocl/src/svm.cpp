@@ -45,6 +45,11 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
+// TODO Remove this after HAVE_CLAMDBLAS eliminating
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
 using namespace cv;
 using namespace ocl;
 
@@ -75,6 +80,7 @@ public:
     void calc_non_rbf_base( int vec_count, const int row_idx, Qfloat* results, Mat& src);
     void calc_rbf( int vec_count, const int row_idx, Qfloat* results, Mat& src);
 };
+
 class CvSVMSolver_ocl: public CvSVMSolver
 {
 public:
@@ -90,13 +96,16 @@ typedef struct CvSparseVecElem32f
     int idx;
     float val;
 } CvSparseVecElem32f;
+
 static int icvCmpSparseVecElems( const void* a, const void* b )
 {
     return ((CvSparseVecElem32f*)a)->idx - ((CvSparseVecElem32f*)b)->idx;
 }
+
 void cvPreparePredictData( const CvArr* sample, int dims_all, const CvMat* comp_idx,
                            int class_count, const CvMat* prob, float** row_sample,
                            int as_sparse CV_DEFAULT(0) );
+
 void  cvPreparePredictData( const CvArr* _sample, int dims_all,
                             const CvMat* comp_idx, int class_count,
                             const CvMat* prob, float** _row_sample,
@@ -135,9 +144,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
     }
 
     if( d == 1 )
-    {
         sizes[1] = 1;
-    }
 
     if( sizes[0] + sizes[1] - 1 != dims_all )
         CV_ERROR( CV_StsUnmatchedSizes,
@@ -184,25 +191,19 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
         sample_step = CV_IS_MAT_CONT(sample->type) ? 1 : sample->step / sizeof(row_sample[0]);
 
         if( !comp_idx && CV_IS_MAT_CONT(sample->type) && !as_sparse )
-        {
             *_row_sample = sample_data;
-        }
         else
         {
             CV_CALL( row_sample = (float*)cvAlloc( vec_size ));
 
             if( !comp_idx )
                 for( i = 0; i < dims_selected; i++ )
-                {
                     row_sample[i] = sample_data[sample_step * i];
-                }
             else
             {
                 int* comp = comp_idx->data.i;
                 for( i = 0; i < dims_selected; i++ )
-                {
                     row_sample[i] = sample_data[sample_step * comp[i]];
-                }
             }
 
             *_row_sample = row_sample;
@@ -236,9 +237,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
             CV_CALL( inverse_comp_idx = (int*)cvAlloc( dims_all * sizeof(int) ));
             memset( inverse_comp_idx, -1, dims_all * sizeof(int) );
             for( i = 0; i < dims_selected; i++ )
-            {
                 inverse_comp_idx[comp_idx->data.i[i]] = i;
-            }
         }
 
         if( !as_sparse )
@@ -252,9 +251,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
                 {
                     idx = inverse_comp_idx[idx];
                     if( idx < 0 )
-                    {
                         continue;
-                    }
                 }
                 row_sample[idx] = *(float*)CV_NODE_VAL( sparse, node );
             }
@@ -270,9 +267,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
                 {
                     idx = inverse_comp_idx[idx];
                     if( idx < 0 )
-                    {
                         continue;
-                    }
                 }
                 ptr->idx = idx;
                 ptr->val = *(float*)CV_NODE_VAL( sparse, node );
@@ -290,9 +285,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
     __CV_END__;
 
     if( inverse_comp_idx )
-    {
         cvFree( &inverse_comp_idx );
-    }
 
     if( cvGetErrStatus() < 0 && _row_sample )
     {
@@ -300,6 +293,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
         *_row_sample = 0;
     }
 }
+
 float CvSVM_OCL::predict( const int row_index, int row_len, Mat& src, bool returnDFVal ) const
 {
     assert( kernel );
@@ -323,9 +317,7 @@ float CvSVM_OCL::predict( const int row_index, int row_len, Mat& src, bool retur
 
         ((CvSVMKernel_ocl*)kernel)->calc( sv_count, row_index, buffer, src);
         for( i = 0; i < sv_count; i++ )
-        {
             sum += buffer[i] * df->alpha[i];
-        }
 
         result = params.svm_type == ONE_CLASS ? (float)(sum > 0) : (float)sum;
     }
@@ -341,27 +333,20 @@ float CvSVM_OCL::predict( const int row_index, int row_len, Mat& src, bool retur
         double sum = 0.;
 
         for( i = 0; i < class_count; i++ )
-        {
             for( j = i + 1; j < class_count; j++, df++ )
             {
                 sum = -df->rho;
                 int sv_count = df->sv_count;
                 for( k = 0; k < sv_count; k++ )
-                {
                     sum += df->alpha[k] * buffer[df->sv_index[k]];
-                }
 
                 vote[sum > 0 ? i : j]++;
             }
-        }
 
         for( i = 1, k = 0; i < class_count; i++ )
-        {
             if( vote[i] > vote[k] )
-            {
                 k = i;
-            }
-        }
+
         result = returnDFVal && class_count == 2 ? (float)sum : (float)(class_labels->data.i[k]);
     }
     else
@@ -370,11 +355,13 @@ float CvSVM_OCL::predict( const int row_index, int row_len, Mat& src, bool retur
 
     return result;
 }
+
 float CvSVM_OCL::predict( const Mat& _sample, bool returnDFVal ) const
 {
     CvMat sample = _sample;
     return CvSVM::predict(&sample, returnDFVal);
 }
+
 float CvSVM_OCL::predict( const int row_index, Mat& src, bool returnDFVal) const
 {
     float result = 0;
@@ -383,6 +370,7 @@ float CvSVM_OCL::predict( const int row_index, Mat& src, bool returnDFVal) const
 
     return result;
 }
+
 #undef get_C
 #define get_C(i) (C[y[i]>0])
 #undef is_upper_bound
@@ -397,12 +385,14 @@ CvSVMSolver_ocl::CvSVMSolver_ocl(const CvSVMParams* _params)
 {
     params = _params;
 }
+
 float* CvSVMSolver_ocl::get_row( int i, float* dst, Mat& src )
 {
     bool existed = false;
     float* row = get_row_base( i, &existed, src);
     return (this->*get_row_func)( i, row, dst, existed );
 }
+
 float* CvSVMSolver_ocl::get_row_base( int i, bool* _existed, Mat& src )
 {
     int i1 = i < sample_count ? i : i - sample_count;
@@ -434,19 +424,16 @@ float* CvSVMSolver_ocl::get_row_base( int i, bool* _existed, Mat& src )
     row->prev->next = row->next->prev = row;
 
     if( !existed )
-    {
         ((CvSVMKernel_ocl*)kernel)->calc( sample_count, i1, row->data, src);
-    }
 
     if( _existed )
-    {
         *_existed = existed;
-    }
 
     return row->data;
 }
 
 #ifndef HAVE_CLAMDBLAS
+
 static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
@@ -486,6 +473,7 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
+
 static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1, double degree1, bool flag)
 {
     Context *clCxt = Context::getContext();
@@ -534,6 +522,7 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
+
 static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
@@ -573,6 +562,7 @@ static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
+
 #endif // #ifndef HAVE_CLAMDBLAS
 
 static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, int src2_cols, int var_count, double gamma1, bool flag)
@@ -594,9 +584,8 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
     char build_options[50];
 
     if(flag)
-    {
         sprintf(build_options, "-D ADDEXP");
-    }
+
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src.data));
     args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_step));
@@ -614,9 +603,7 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
         args.push_back(std::make_pair(sizeof(cl_float), (void* )&gamma));
     }
     else
-    {
         args.push_back(std::make_pair(sizeof(cl_double), (void* )&gamma1));
-    }
 
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -649,14 +636,12 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
         CV_CALL( cvPreparePredictData(&sample, var_all, var_idx,
                                       class_count, 0, &row_sample ));
         for(int j = 0; j < var_count; ++j)
-        {
             src_temp.at<float>(i, j) = row_sample[j];
-        }
         __CV_END__;
     }
 
     Mat dst1;
-    double alpha1 = 0.0, beta1 = 0.0, gamma1 = 0.0, degree1 = 0.0;
+    double alpha1 = 0.0, beta1 = 0.0, gamma1 = 0.0;
     if(params.kernel_type == CvSVM::LINEAR)
     {
         alpha1 = 1;
@@ -666,7 +651,6 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     {
         alpha1 = params.gamma;
         beta1 = params.coef0;
-        degree1 = params.degree;
     }
     if(params.kernel_type == CvSVM::SIGMOID)
     {
@@ -674,27 +658,22 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
         beta1 = - 2 * params.coef0;
     }
     if(params.kernel_type == CvSVM::RBF)
-    {
         gamma1 = - params.gamma;
-    }
 
     Mat sv_temp = Mat(sv_total, var_count, CV_32FC1, Scalar::all(0));
 
 
     for(int i = 0; i < sv_total; ++i)
-    {
         for(int j = 0; j < var_count; ++j)
-        {
             sv_temp.at<float>(i, j) = sv[i][j];
-        }
-    }
+
     oclMat src(sample_count, var_count, CV_32FC1, Scalar::all(0));
     oclMat sv_;
 
     src.upload(src_temp);
     oclMat dst;
 
-#if defined HAVE_CLAMDBLAS
+#ifdef HAVE_CLAMDBLAS
 
     dst = oclMat(sample_count, sv_total, CV_32FC1);
     oclMat src3(sample_count, sv_total, CV_32FC1, Scalar::all(1));
@@ -707,15 +686,18 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     }
 
 #else
+    // TODO fix it
+    CV_Error(Error::StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
+
+    double degree1 = 0.0;
+    if (params.kernel_type == CvSVM::POLY)
+        degree1 = params.degree;
 
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-    {
         dst = oclMat(sample_count, sv_total, CV_32FC1);
-    }
     else
-    {
         dst = oclMat(sample_count, sv_total, CV_64FC1);
-    }
+
     if(params.kernel_type == CvSVM::LINEAR)
     {
         sv_.upload(sv_temp);
@@ -731,13 +713,9 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     {
         sv_.upload(sv_temp);
         if(sample_count > 0)
-        {
             matmul_poly(src, sv_, dst, sample_count, sv_total, var_count, alpha1, beta1, degree1, true);
-        }
         else
-        {
             matmul_poly(src, sv_, dst, sample_count, sv_total, var_count, alpha1, beta1, degree1, false);
-        }
     }
 #endif
 
@@ -745,21 +723,14 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     {
         sv_.upload(sv_temp);
         if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-        {
             dst = oclMat(sample_count, sv_total, CV_32FC1);
-        }
         else
-        {
             dst = oclMat(sample_count, sv_total, CV_64FC1);
-        }
+
         if(sample_count > 0)
-        {
             matmul_rbf(src, sv_, dst, sample_count, sv_total, var_count, gamma1, true);
-        }
         else
-        {
             matmul_rbf(src, sv_, dst, sample_count, sv_total, var_count, gamma1, false);
-        }
     }
     dst.download(dst1);
 
@@ -768,22 +739,20 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     {
         int r = (int)this->predict(i, dst1);
         if (results)
-        {
             results->data.fl[i] = (float)r;
-        }
         if (i == 0)
-        {
             result = (float)r;
-        }
     }
     return result;
 }
+
 void CvSVM_OCL::predict( cv::InputArray _samples, cv::OutputArray _results ) const
 {
     _results.create(_samples.size().height, 1, CV_32F);
     CvMat samples = _samples.getMat(), results = _results.getMat();
     predict(&samples, &results);
 }
+
 bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
 {
     int iter = 0;
@@ -800,7 +769,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
         }
     }
     Mat dst1;
-    double alpha1 = 0.0, beta1 = 0.0, gamma1 = 0.0, degree1 = 0.0;
+    double alpha1 = 0.0, beta1 = 0.0, gamma1 = 0.0;
     if(params->kernel_type == CvSVM::LINEAR)
     {
         alpha1 = 1;
@@ -810,7 +779,6 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     {
         alpha1 = params->gamma;
         beta1 = params->coef0;
-        degree1 = params->degree;
     }
     if(params->kernel_type == CvSVM::SIGMOID)
     {
@@ -834,7 +802,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     src.upload(src1);
     oclMat dst;
 
-#if defined HAVE_CLAMDBLAS
+#ifdef HAVE_CLAMDBLAS
 
     dst = oclMat(sample_count, sample_count, CV_32FC1);
     oclMat src3(sample_count, sample_count, CV_32FC1, Scalar::all(1));
@@ -845,14 +813,18 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
+    // TODO fix it
+    CV_Error(Error::StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
+
+    double degree1 = 0.0;
+    if(params->kernel_type == CvSVM::POLY)
+        degree1 = params->degree;
+
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-    {
         dst = oclMat(sample_count, sample_count, CV_32FC1);
-    }
     else
-    {
         dst = oclMat(sample_count, sample_count, CV_64FC1);
-    }
+
     if(params->kernel_type == CvSVM::LINEAR )
     {
         src_e = src;
@@ -868,13 +840,9 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     {
         src_e = src;
         if(sample_count > 0)
-        {
             matmul_poly(src, src_e, dst, sample_count, sample_count, var_count, alpha1, beta1, degree1, true);
-        }
         else
-        {
             matmul_poly(src, src_e, dst, sample_count, sample_count, var_count, alpha1, beta1, degree1, false);
-        }
     }
 
 #endif
@@ -883,21 +851,14 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     {
         src_e = src;
         if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-        {
             dst = oclMat(sample_count, sample_count, CV_32FC1);
-        }
         else
-        {
             dst = oclMat(sample_count, sample_count, CV_64FC1);
-        }
+
         if(sample_count > 0)
-        {
             matmul_rbf(src, src_e, dst, sample_count, sample_count, var_count, gamma1, true);
-        }
         else
-        {
             matmul_rbf(src, src_e, dst, sample_count, sample_count, var_count, gamma1, false);
-        }
     }
     dst.download(dst1);
     for( i = 0; i < alpha_count; i++ )
@@ -908,9 +869,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
             double alpha_i = alpha[i];
 
             for( j = 0; j < alpha_count; j++ )
-            {
                 G[j] += alpha_i * Q_i[j];
-            }
         }
     }
 
@@ -926,14 +885,10 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
         for( i = 0; i < alpha_count; i++ )
         {
             if( fabs(G[i]) > 1e+300 )
-            {
                 return false;
-            }
 
             if( fabs(alpha[i]) > 1e16 )
-            {
                 return false;
-            }
         }
 #endif
 
@@ -1021,9 +976,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
         delta_alpha_j = alpha_j - old_alpha_j;
 
         for( k = 0; k < alpha_count; k++ )
-        {
             G[k] += Q_i[k] * delta_alpha_i + Q_j[k] * delta_alpha_j;
-        }
     }
 
     // calculate rho
@@ -1031,9 +984,7 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
 
     // calculate objective value
     for( i = 0, si.obj = 0; i < alpha_count; i++ )
-    {
         si.obj += alpha[i] * (G[i] + b[i]);
-    }
 
     si.obj *= 0.5;
 
@@ -1053,14 +1004,11 @@ void CvSVMKernel_ocl::calc( int vcount, const int row_idx, Qfloat* results, Mat&
     const Qfloat max_val = (Qfloat)(FLT_MAX * 1e-3);
     int j;
     for( j = 0; j < vcount; j++ )
-    {
         if( results[j] > max_val )
-        {
             results[j] = max_val;
-        }
-    }
 // FIXIT #endif
 }
+
 bool CvSVMKernel_ocl::create( const CvSVMParams* _params, Calc_ocl _calc_func, Calc _calc_func1 )
 {
     clear();
@@ -1084,9 +1032,10 @@ CvSVMKernel_ocl::CvSVMKernel_ocl(const CvSVMParams* params, CvSVMKernel_ocl::Cal
     CvSVMKernel::clear();
     CvSVMKernel_ocl::create( params, _calc_func, _calc_func1 );
 }
+
 void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* results, Mat& src)
 {
-#if defined HAVE_CLAMDBLAS
+#ifdef HAVE_CLAMDBLAS
 
     for(int i = 0; i < vcount; i++)
     {
@@ -1109,23 +1058,17 @@ void CvSVMKernel_ocl::calc_non_rbf_base( int vcount, const int row_idx, Qfloat* 
     }
 #endif
 }
+
 void CvSVMKernel_ocl::calc_rbf( int vcount, const int row_idx, Qfloat* results, Mat& src)
 {
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-    {
         for(int m = 0; m < vcount; m++)
-        {
             results[m] = (Qfloat) * src.ptr<float>(row_idx, m);
-        }
-    }
     else
-    {
         for(int m = 0; m < vcount; m++)
-        {
             results[m] = (Qfloat) * src.ptr<double>(row_idx, m);
-        }
-    }
 }
+
 void CvSVMKernel_ocl::calc_linear( int vcount, const int row_idx, Qfloat* results, Mat& src )
 {
     calc_non_rbf_base( vcount, row_idx, results, src);
@@ -1133,16 +1076,13 @@ void CvSVMKernel_ocl::calc_linear( int vcount, const int row_idx, Qfloat* result
 
 void CvSVMKernel_ocl::calc_poly( int vcount, const int row_idx, Qfloat* results, Mat& src)
 {
-
     calc_non_rbf_base( vcount, row_idx, results, src);
 
 //FIXIT #if defined HAVE_CLAMDBLAS
 
     CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
     if( vcount > 0 )
-    {
         cvPow( &R, &R, params->degree );
-    }
 //FIXIT #endif
 }
 
@@ -1157,16 +1097,13 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
         Qfloat t = results[j];
         double e = ::exp(-fabs(t));
         if( t > 0 )
-        {
             results[j] = (Qfloat)((1. - e) / (1. + e));
-        }
         else
-        {
             results[j] = (Qfloat)((e - 1.) / (e + 1.));
-        }
     }
 //FIXIT #endif
 }
+
 CvSVM_OCL::CvSVM_OCL()
 {
     CvSVM();
@@ -1191,6 +1128,7 @@ void CvSVM_OCL::create_kernel()
 {
     kernel = new CvSVMKernel_ocl(&params, 0, 0);
 }
+
 void CvSVM_OCL::create_solver( )
 {
     solver = new CvSVMSolver_ocl(&params);
