@@ -79,34 +79,24 @@ void cv::detailEnhance(InputArray _src, OutputArray _dst, float sigma_s, float s
 
     int h = I.size().height;
     int w = I.size().width;
-    int channel = I.channels();
     float factor = 3.0;
 
     Mat img = Mat(I.size(),CV_32FC3);
     I.convertTo(img,CV_32FC3,1.0/255.0);
 
-    Mat res = Mat(h,w,CV_32FC3);
+    Mat res = Mat(h,w,CV_32FC1);
     dst.convertTo(res,CV_32FC3,1.0/255.0);
 
     Mat result = Mat(img.size(),CV_32FC3);
     Mat lab = Mat(img.size(),CV_32FC3);
-    Mat l_channel = Mat(img.size(),CV_32FC1);
-    Mat a_channel = Mat(img.size(),CV_32FC1);
-    Mat b_channel = Mat(img.size(),CV_32FC1);
+    vector <Mat> lab_channel;
 
     cvtColor(img,lab,COLOR_BGR2Lab);
-
-    for(int i = 0; i < h; i++)
-        for(int j = 0; j < w; j++)
-        {
-            l_channel.at<float>(i,j) = lab.at<float>(i,j*channel+0);
-            a_channel.at<float>(i,j) = lab.at<float>(i,j*channel+1);
-            b_channel.at<float>(i,j) = lab.at<float>(i,j*channel+2);
-        }
+    split(lab,lab_channel);
 
     Mat L = Mat(img.size(),CV_32FC1);
 
-    l_channel.convertTo(L,CV_32FC1,1.0/255.0);
+    lab_channel[0].convertTo(L,CV_32FC1,1.0/255.0);
 
     Domain_Filter obj;
 
@@ -114,23 +104,13 @@ void cv::detailEnhance(InputArray _src, OutputArray _dst, float sigma_s, float s
 
     Mat detail = Mat(h,w,CV_32FC1);
 
-    for(int i = 0; i < h; i++)
-        for(int j = 0; j < w; j++)
-            detail.at<float>(i,j) = L.at<float>(i,j) - res.at<float>(i,j);
+    detail = L - res;
+    multiply(detail,factor,detail);
+    L = res + detail;
 
-    for(int i = 0; i < h; i++)
-        for(int j = 0; j < w; j++)
-            L.at<float>(i,j) = res.at<float>(i,j) + factor*detail.at<float>(i,j);
+    L.convertTo(lab_channel[0],CV_32FC1,255);
 
-    L.convertTo(l_channel,CV_32FC1,255);
-
-    for(int i = 0; i < h; i++)
-        for(int j = 0; j < w; j++)
-        {
-            lab.at<float>(i,j*channel+0) = l_channel.at<float>(i,j);
-            lab.at<float>(i,j*channel+1) = a_channel.at<float>(i,j);
-            lab.at<float>(i,j*channel+2) = b_channel.at<float>(i,j);
-        }
+    merge(lab_channel,lab);
 
     cvtColor(lab,result,COLOR_Lab2BGR);
     result.convertTo(dst,CV_8UC3,255);
@@ -174,64 +154,21 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     int channel = img.channels();
 
     Mat res = Mat(h,w,CV_32FC3);
+    Mat magnitude = Mat(h,w,CV_32FC1);
 
     Domain_Filter obj;
     obj.filter(img, res, sigma_s, sigma_r, NORMCONV_FILTER);
 
-    vector <Mat> planes;
-    split(res, planes);
-
-    Mat magXR = Mat(h, w, CV_32FC1);
-    Mat magYR = Mat(h, w, CV_32FC1);
-
-    Mat magXG = Mat(h, w, CV_32FC1);
-    Mat magYG = Mat(h, w, CV_32FC1);
-
-    Mat magXB = Mat(h, w, CV_32FC1);
-    Mat magYB = Mat(h, w, CV_32FC1);
-
-    Sobel(planes[0], magXR, CV_32FC1, 1, 0, 3);
-    Sobel(planes[0], magYR, CV_32FC1, 0, 1, 3);
-
-    Sobel(planes[1], magXG, CV_32FC1, 1, 0, 3);
-    Sobel(planes[1], magYG, CV_32FC1, 0, 1, 3);
-
-    Sobel(planes[2], magXB, CV_32FC1, 1, 0, 3);
-    Sobel(planes[2], magYB, CV_32FC1, 0, 1, 3);
-
-    Mat magx = Mat(h,w,CV_32FC1);
-    Mat magy = Mat(h,w,CV_32FC1);
-
-    Mat mag1 = Mat(h,w,CV_32FC1);
-    Mat mag2 = Mat(h,w,CV_32FC1);
-    Mat mag3 = Mat(h,w,CV_32FC1);
-
-    magnitude(magXR,magYR,mag1);
-    magnitude(magXG,magYG,mag2);
-    magnitude(magXB,magYB,mag3);
-
-    Mat magnitude = Mat(h,w,CV_32FC1);
-
-    for(int i =0;i < h;i++)
-        for(int j=0;j<w;j++)
-        {
-            magnitude.at<float>(i,j) = mag1.at<float>(i,j) + mag2.at<float>(i,j) + mag3.at<float>(i,j);
-        }
-
-    for(int i =0;i < h;i++)
-        for(int j=0;j<w;j++)
-        {
-            magnitude.at<float>(i,j) = 1.0f -  magnitude.at<float>(i,j);
-        }
+    obj.find_magnitude(res,magnitude,2);
 
     Mat stylized = Mat(h,w,CV_32FC3);
 
-    for(int i =0;i < h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;c++)
-            {
-                stylized.at<float>(i,j*channel + c) = res.at<float>(i,j*channel + c) * magnitude.at<float>(i,j);
-            }
+    vector <Mat> temp;
+    split(res,temp);
+    multiply(temp[0],magnitude,temp[0]);
+    multiply(temp[1],magnitude,temp[1]);
+    multiply(temp[2],magnitude,temp[2]);
+    merge(temp,stylized);
 
     stylized.convertTo(dst,CV_8UC3,255);
 }
@@ -259,7 +196,7 @@ void cv::edgeEnhance(InputArray _src, OutputArray _dst, float sigma_s, float sig
 
     obj.filter(img, res, sigma_s, sigma_r, NORMCONV_FILTER);
 
-    obj.find_magnitude(res,magnitude);
+    obj.find_magnitude(res,magnitude,1);
 
     magnitude.convertTo(dst,CV_8UC1,255);
 }
