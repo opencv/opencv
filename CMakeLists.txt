@@ -62,6 +62,8 @@ endif()
 
 include(cmake/OpenCVUtils.cmake)
 
+ocv_clear_vars(OpenCVModules_TARGETS)
+
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
