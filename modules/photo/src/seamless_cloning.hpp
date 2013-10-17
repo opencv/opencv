@@ -555,8 +555,6 @@ void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, flo
 
 void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alpha, float beta)
 {
-    int channel = I.channels();
-
     initialization(I,mask,wmask);
 
     array_product(srx32,sgx,smask);
@@ -565,18 +563,20 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
     Mat mag = Mat(I.size(),CV_32FC3);
     magnitude(srx32,sry32,mag);
 
-    for(int i=0;i < I.size().height; i++)
-        for(int j=0; j < I.size().width; j++)
-            for(int c=0;c < channel;++c)
-            {
-                if(srx32.at<float>(i,j*channel+c) != 0)
-                {
-                    srx32.at<float>(i,j*channel+c) =
-                        pow(alpha,beta)*srx32.at<float>(i,j*channel+c)*pow(mag.at<float>(i,j*channel+c),-1*beta);
-                    sry32.at<float>(i,j*channel+c) =
-                        pow(alpha,beta)*sry32.at<float>(i,j*channel+c)*pow(mag.at<float>(i,j*channel+c),-1*beta);
-                }
-            }
+    Mat multX, multY, multx_temp, multy_temp;
+
+    multiply(srx32,pow(alpha,beta),multX);
+    pow(mag,-1*beta, multx_temp);
+    multiply(multX,multx_temp,srx32);
+
+    multiply(sry32,pow(alpha,beta),multY);
+    pow(mag,-1*beta, multy_temp);
+    multiply(multY,multy_temp,sry32);
+
+    Mat zeroMask = (srx32 != 0);
+
+    srx32.copyTo(srx32, zeroMask);
+    sry32.copyTo(sry32, zeroMask);
 
     evaluate(I,wmask,cloned);
 }
@@ -584,23 +584,16 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &cloned, float alp
 void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold,
         double high_threshold, int kernel_size, Mat &cloned)
 {
-    int channel = mask.channels();
-
     initialization(I,mask,wmask);
 
     Mat out = Mat(mask.size(),CV_8UC1);
     Canny(mask,out,low_threshold,high_threshold,kernel_size);
 
-    for(int i=0;i<mask.size().height;i++)
-        for(int j=0;j<mask.size().width;j++)
-            for(int c=0;c<channel;c++)
-            {
-                if(out.at<uchar>(i,j) != 255)
-               {
-                    sgx.at<float>(i,j*channel+c) = 0.0;
-                    sgy.at<float>(i,j*channel+c) = 0.0;
-               }
-            }
+    Mat zeros(sgx.size(), CV_32FC3);
+    zeros.setTo(0);
+    Mat zerosMask = (out != 255);
+    zeros.copyTo(sgx, zerosMask);
+    zeros.copyTo(sgy, zerosMask);
 
     array_product(srx32,sgx,smask);
     array_product(sry32,sgy,smask);

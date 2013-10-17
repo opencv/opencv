@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/highgui.hpp"
 #include <iostream>
 #include <stdlib.h>
 
@@ -100,30 +99,17 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
         exit(0);
     }
 
-    for(int i=minx, k=minxd;i<(minx+lenx);i++,k++)
-        for(int j=miny,l=minyd ;j<(miny+leny);j++,l++)
-        {
-            dst_mask.at<uchar>(k,l) = gray.at<uchar>(i,j);
-        }
+    Rect roi_d(minyd,minxd,leny,lenx);
+    Rect roi_s(miny,minx,leny,lenx);
 
-    int channel = 3;
+    Mat destinationROI = dst_mask(roi_d);
+    Mat sourceROI = cs_mask(roi_s);
 
-    for(int i=minx;i<(minx+lenx);i++)
-        for(int j=miny;j<(miny+leny);j++)
-        {
-            for(int c=0;c<3;c++)
-            {
-                if(gray.at<uchar>(i,j) == 255)
-                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
-            }
-        }
+    gray(roi_s).copyTo(destinationROI);
+    src(roi_s).copyTo(sourceROI,gray(roi_s));
 
-    for(int i=minx, k=minxd;i<(minx+lenx);i++,k++)
-        for(int j=miny,l=minyd ;j<(miny+leny);j++,l++)
-        {
-            for(int c=0;c<channel;c++)
-                cd_mask.at<uchar>(k,l*channel+c) = cs_mask.at<uchar>(i,j*channel+c);
-        }
+    destinationROI = cd_mask(roi_d);
+    cs_mask(roi_s).copyTo(destinationROI);
 
     Cloning obj;
     obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);

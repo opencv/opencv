@@ -61,7 +61,7 @@ class Domain_Filter
         void getGradienty( const Mat &img, Mat &gy);
         void diffx(const Mat &img, Mat &temp);
         void diffy(const Mat &img, Mat &temp);
-        void find_magnitude(Mat &img, Mat &mag);
+        void find_magnitude(Mat &img, Mat &mag, int flags);
         void compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float radius);
         void compute_Rfilter(Mat &O, Mat &horiz, float sigma_h);
         void compute_NCfilter(Mat &O, Mat &horiz, Mat &psketch, float radius);
@@ -131,9 +131,8 @@ void Domain_Filter::getGradienty( const Mat &img, Mat &gy)
             }
 }
 
-void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
+void Domain_Filter::find_magnitude(Mat &img, Mat &mag, int flags)
 {
-
     int h = img.rows;
     int w = img.cols;
 
@@ -149,17 +148,28 @@ void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
     Mat magXB = Mat(h, w, CV_32FC1);
     Mat magYB = Mat(h, w, CV_32FC1);
 
-    getGradientx(planes[0], magXR);
-    getGradienty(planes[0], magYR);
+    if(flags == 1)
+    {
+        getGradientx(planes[0], magXR);
+        getGradienty(planes[0], magYR);
 
-    getGradientx(planes[1], magXG);
-    getGradienty(planes[1], magYG);
+        getGradientx(planes[1], magXG);
+        getGradienty(planes[1], magYG);
 
-    getGradientx(planes[2], magXR);
-    getGradienty(planes[2], magYR);
+        getGradientx(planes[2], magXR);
+        getGradienty(planes[2], magYR);
+    }
+    else if(flags == 2)
+    {
+        Sobel(planes[0], magXR, CV_32FC1, 1, 0, 3);
+        Sobel(planes[0], magYR, CV_32FC1, 0, 1, 3);
 
-    Mat magx = Mat(h,w,CV_32FC1);
-    Mat magy = Mat(h,w,CV_32FC1);
+        Sobel(planes[1], magXG, CV_32FC1, 1, 0, 3);
+        Sobel(planes[1], magYG, CV_32FC1, 0, 1, 3);
+
+        Sobel(planes[2], magXB, CV_32FC1, 1, 0, 3);
+        Sobel(planes[2], magYB, CV_32FC1, 0, 1, 3);
+    }
 
     Mat mag1 = Mat(h,w,CV_32FC1);
     Mat mag2 = Mat(h,w,CV_32FC1);
@@ -169,39 +179,21 @@ void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
     magnitude(magXG,magYG,mag2);
     magnitude(magXB,magYB,mag3);
 
-    for(int i =0;i < h;i++)
-        for(int j=0;j<w;j++)
-        {
-            mag.at<float>(i,j) = mag1.at<float>(i,j) + mag2.at<float>(i,j) + mag3.at<float>(i,j);
-        }
-
-
-    for(int i =0;i < h;i++)
-        for(int j=0;j<w;j++)
-        {
-            mag.at<float>(i,j) = 1.0f -  mag.at<float>(i,j);
-        }
-
+    mag = mag1 + mag2 + mag3;
+    mag = 1.0f - mag;
 }
 
 void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
 {
-
-    float a;
-
     int h = output.rows;
     int w = output.cols;
     int channel = output.channels();
 
-    a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
+    float a = (float) exp((-1.0 * sqrt(2.0)) / sigma_h);
 
     Mat temp = Mat(h,w,CV_32FC3);
 
-    for(int i =0; i < h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;c++)
-                temp.at<float>(i,j*channel+c) = output.at<float>(i,j*channel+c);
-
+    output.copyTo(temp);
     Mat V = Mat(h,w,CV_32FC1);
 
     for(int i=0;i<h;i++)
@@ -232,14 +224,7 @@ void Domain_Filter::compute_Rfilter(Mat &output, Mat &hz, float sigma_h)
         }
     }
 
-
-    for(int i =0; i < h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;c++)
-                output.at<float>(i,j*channel+c) = temp.at<float>(i,j*channel+c);
-
-    temp.release();
-    V.release();
+    temp.copyTo(output);
 }
 
 void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float radius)
@@ -249,12 +234,8 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
     Mat lower_pos = Mat(h,w,CV_32FC1);
     Mat upper_pos = Mat(h,w,CV_32FC1);
 
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-        {
-            lower_pos.at<float>(i,j) = hz.at<float>(i,j) - radius;
-            upper_pos.at<float>(i,j) = hz.at<float>(i,j) + radius;
-        }
+    lower_pos = hz - radius;
+    upper_pos = hz + radius;
 
     lower_idx = Mat::zeros(h,w,CV_32FC1);
     upper_idx = Mat::zeros(h,w,CV_32FC1);
@@ -334,19 +315,11 @@ void Domain_Filter::compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float 
             upper_idx.at<float>(i,j) = temp_upper_idx.at<float>(0,j) + 1;
         }
 
-        lower_pos_row.release();
-        upper_pos_row.release();
-        temp_lower_idx.release();
-        temp_upper_idx.release();
     }
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            psketch.at<float>(i,j) = upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j);
-
+    psketch = upper_idx - lower_idx;
 }
 void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float radius)
 {
-
     int h = output.rows;
     int w = output.cols;
     int channel = output.channels();
@@ -377,24 +350,25 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
     Mat a = Mat::zeros(h,w,CV_32FC1);
     Mat b = Mat::zeros(h,w,CV_32FC1);
 
+    // Compute the box filter using a summed area table.
     for(int c=0;c<channel;c++)
     {
         Mat flag = Mat::ones(h,w,CV_32FC1);
-        for(int i=0;i<h;i++)
-            for(int j=0;j<w;j++)
-                flag.at<float>(i,j) = (c+1)*flag.at<float>(i,j);
+        multiply(flag,c+1,flag);
 
-        for(int i=0;i<h;i++)
-            for(int j=0;j<w;j++)
-            {
-                a.at<float>(i,j) = (flag.at<float>(i,j) - 1) * h * (w+1) + (lower_idx.at<float>(i,j) - 1) * h + indices.at<float>(i,j);
-                b.at<float>(i,j) = (flag.at<float>(i,j) - 1) * h * (w+1) + (upper_idx.at<float>(i,j) - 1) * h + indices.at<float>(i,j);
+        Mat temp1, temp2;
+        multiply(flag - 1,h*(w+1),temp1);
+        multiply(lower_idx - 1,h,temp2);
+        a = temp1 + temp2 + indices;
 
-            }
+        multiply(flag - 1,h*(w+1),temp1);
+        multiply(upper_idx - 1,h,temp2);
+        b = temp1 + temp2 + indices;
 
         int p,q,r,rem;
         int p1,q1,r1,rem1;
 
+        // Calculating indices
         for(int i=0;i<h;i++)
         {
             for(int j=0;j<w;j++)
@@ -416,7 +390,6 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
                     q=q-1;
                 }
 
-
                 r1 = (int) a.at<float>(i,j)/(h*(w+1));
                 rem1 = (int) a.at<float>(i,j) - r1*h*(w+1);
                 q1 = rem1/h;
@@ -427,18 +400,13 @@ void Domain_Filter::compute_NCfilter(Mat &output, Mat &hz, Mat &psketch, float r
                     q1=q1-1;
                 }
 
-
                 final.at<float>(i,j*channel+2-c) = (box_filter.at<float>(p-1,q*channel+(2-r)) - box_filter.at<float>(p1-1,q1*channel+(2-r1)))
                     /(upper_idx.at<float>(i,j) - lower_idx.at<float>(i,j));
             }
         }
     }
 
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;c++)
-                output.at<float>(i,j*channel+c) = final.at<float>(i,j*channel+c);
-
+    final.copyTo(output);
 }
 void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r)
 {
@@ -482,20 +450,15 @@ void Domain_Filter::init(const Mat &img, int flags, float sigma_s, float sigma_r
 
     Mat final = Mat(h,w,CV_32FC3);
 
-    for(int i = 0; i < h; i++)
-        for(int j = 0; j < w; j++)
-        {
-            horiz.at<float>(i,j) = (float) 1.0 + (sigma_s/sigma_r) * distx.at<float>(i,j);
-            vert.at<float>(i,j) = (float) 1.0 + (sigma_s/sigma_r) * disty.at<float>(i,j);
-        }
+    Mat tempx,tempy;
+    multiply(distx,sigma_s/sigma_r,tempx);
+    multiply(disty,sigma_s/sigma_r,tempy);
 
+    horiz = 1.0f + tempx;
+    vert = 1.0f + tempy;
 
     O = Mat(h,w,CV_32FC3);
-
-    for(int  i =0;i<h;i++)
-        for(int  j =0;j<w;j++)
-            for(int c=0;c<channel;c++)
-                O.at<float>(i,j*channel+c) =  img.at<float>(i,j*channel+c);
+    img.copyTo(O);
 
     O_t = Mat(w,h,CV_32FC3);
 
@@ -588,17 +551,14 @@ void Domain_Filter::pencil_sketch(const Mat &img, Mat &sketch, Mat &color_res, f
     init(img,2,sigma_s,sigma_r);
     int h = img.size().height;
     int w = img.size().width;
-    int channel = img.channels();
 
     /////////////////////// convert to YCBCR model for color pencil drawing //////////////////////////////////////////////////////
 
     Mat color_sketch = Mat(h,w,CV_32FC3);
-    Mat Y_channel = Mat(h,w,CV_32FC1);
-    Mat U_channel = Mat(h,w,CV_32FC1);
-    Mat V_channel = Mat(h,w,CV_32FC1);
 
     cvtColor(img,color_sketch,COLOR_BGR2YCrCb);
 
+    vector <Mat> YUV_channel;
     Mat vert_t = ct_V.t();
 
     float sigma_h = sigma_s;
@@ -635,33 +595,11 @@ void Domain_Filter::pencil_sketch(const Mat &img, Mat &sketch, Mat &color_res, f
         if(i==0)
         {
             sketch = pen_res.clone();
-
-            for(int k = 0; k < h; k++)
-                for(int j = 0; j < w; j++)
-                {
-                    Y_channel.at<float>(k,j) = color_sketch.at<float>(k,j*channel+0);
-                    U_channel.at<float>(k,j) = color_sketch.at<float>(k,j*channel+1);
-                    V_channel.at<float>(k,j) = color_sketch.at<float>(k,j*channel+2);
-                }
-
-
-            for(int k=0;k<h;k++)
-                for(int j=0;j<w;j++)
-                    Y_channel.at<float>(k,j) = pen_res.at<float>(k,j);
-
-            //	cvMerge(Y_channel,U_channel,V_channel,0,color_sketch);
-            for(int k = 0; k < h; k++)
-                for(int j = 0; j < w; j++)
-                {
-                    color_sketch.at<float>(k,j*channel+0) = Y_channel.at<float>(k,j);
-                    color_sketch.at<float>(k,j*channel+1) = U_channel.at<float>(k,j);
-                    color_sketch.at<float>(k,j*channel+2) = V_channel.at<float>(k,j);
-                }
-
+            split(color_sketch,YUV_channel);
+            pen_res.copyTo(YUV_channel[0]);
+            merge(YUV_channel,color_sketch);
             cvtColor(color_sketch,color_res,COLOR_YCrCb2BGR);
-
         }
 
     }
-
 }
