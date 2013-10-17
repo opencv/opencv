@@ -91,39 +91,6 @@ double av_expr_eval(AVExpr *e, const double *const_values, void *opaque);
  */
 void av_expr_free(AVExpr *e);
 
-#if FF_API_OLD_EVAL_NAMES
-/**
- * @deprecated Deprecated in favor of av_expr_parse_and_eval().
- */
-attribute_deprecated
-int av_parse_and_eval_expr(double *res, const char *s,
-                           const char * const *const_names, const double *const_values,
-                           const char * const *func1_names, double (* const *funcs1)(void *, double),
-                           const char * const *func2_names, double (* const *funcs2)(void *, double, double),
-                           void *opaque, int log_offset, void *log_ctx);
-
-/**
- * @deprecated Deprecated in favor of av_expr_parse().
- */
-attribute_deprecated
-int av_parse_expr(AVExpr **expr, const char *s,
-                  const char * const *const_names,
-                  const char * const *func1_names, double (* const *funcs1)(void *, double),
-                  const char * const *func2_names, double (* const *funcs2)(void *, double, double),
-                  int log_offset, void *log_ctx);
-/**
- * @deprecated Deprecated in favor of av_expr_eval().
- */
-attribute_deprecated
-double av_eval_expr(AVExpr *e, const double *const_values, void *opaque);
-
-/**
- * @deprecated Deprecated in favor of av_expr_free().
- */
-attribute_deprecated
-void av_free_expr(AVExpr *e);
-#endif /* FF_API_OLD_EVAL_NAMES */
-
 /**
  * Parse the string in numstr and return its value as a double. If
  * the string is empty, contains only whitespaces, or does not contain
