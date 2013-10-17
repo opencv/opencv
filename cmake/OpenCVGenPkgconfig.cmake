@@ -58,13 +58,15 @@ endforeach()
 set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
 if(OpenCV_EXTRA_COMPONENTS)
   foreach(extra_component ${OpenCV_EXTRA_COMPONENTS})
-    if(extra_component MATCHES "-[lL](.*)" )
-      set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} ${extra_component}")
-    elseif(extra_component MATCHES "/")
-      set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} ${extra_component}")
+
+    if(extra_component MATCHES "-[lL](.*)" OR extra_component MATCHES "/")
+      set(maybe_l_prefix "")
     else()
-      set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} -l${extra_component}")
+      set(maybe_l_prefix "-l")
     endif()
+
+    set(OpenCV_LIB_COMPONENTS "${OpenCV_LIB_COMPONENTS} ${maybe_l_prefix}${extra_component}")
+
   endforeach()
 endif()
 
