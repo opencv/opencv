@@ -458,7 +458,6 @@ function(ocv_install_target)
 
   if(DEFINED __package)
     list(APPEND ${__package}_TARGETS ${__target})
-    list(REMOVE_DUPLICATES ${__package}_TARGETS)
     set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
   endif()
 
