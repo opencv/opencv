@@ -46,7 +46,7 @@
 #include "opencl_kernels.hpp"
 
 // TODO Remove this after HAVE_CLAMDBLAS eliminating
-#ifdef __GNUC__
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 #  pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #endif
 
