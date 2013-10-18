@@ -1736,7 +1736,8 @@ void CvWindow::displayStatusBar(QString text, int delayms)
 
 void CvWindow::enablePropertiesButton()
 {
-    vect_QActions[9]->setDisabled(false);
+    if (!vect_QActions.empty())
+        vect_QActions[9]->setDisabled(false);
 }
 
 
