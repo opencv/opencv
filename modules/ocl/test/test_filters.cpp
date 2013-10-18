@@ -146,6 +146,7 @@ struct ErodeDilate :
     virtual void SetUp()
     {
         type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
         iterations = GET_PARAM(3);
         useRoi = GET_PARAM(4);
     }
