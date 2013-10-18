@@ -48,9 +48,12 @@
 #elif defined (__NVIDIA__)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+
 /************************************** convolve **************************************/
-__kernel void convolve_D5 (__global float *src, __global float *temp1, __global float *dst,
-                                  int rows, int cols, int src_step, int dst_step,int k_step, int kWidth, int kHeight)
+
+__kernel void convolve_D5(__global float *src, __global float *temp1, __global float *dst,
+                          int rows, int cols, int src_step, int dst_step,int k_step, int kWidth, int kHeight,
+                          int src_offset, int dst_offset, int koffset)
 {
     __local float smem[16 + 2 * 8][16 + 2 * 8];
 
@@ -65,7 +68,7 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
             // 0 | 0 0 | 0
             // -----------
             // 0 | 0 0 | 0
-    smem[y][x] = src[min(max(gy - 8, 0), rows - 1)*(src_step >> 2) + min(max(gx - 8, 0), cols - 1)];
+    smem[y][x] = src[min(max(gy - 8, 0), rows - 1) * src_step + min(max(gx - 8, 0), cols - 1) + src_offset];
 
             // 0 | 0 x | x
             // -----------
@@ -73,7 +76,7 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
             // 0 | 0 0 | 0
             // -----------
             // 0 | 0 0 | 0
-    smem[y][x + 16] = src[min(max(gy - 8, 0), rows - 1)*(src_step >> 2) + min(gx + 8, cols - 1)];
+    smem[y][x + 16] = src[min(max(gy - 8, 0), rows - 1) * src_step + min(gx + 8, cols - 1) + src_offset];
 
             // 0 | 0 0 | 0
             // -----------
@@ -81,7 +84,7 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
             // x | x 0 | 0
             // -----------
             // x | x 0 | 0
-    smem[y + 16][x] = src[min(gy + 8, rows - 1)*(src_step >> 2) + min(max(gx - 8, 0), cols - 1)];
+    smem[y + 16][x] = src[min(gy + 8, rows - 1) * src_step + min(max(gx - 8, 0), cols - 1) + src_offset];
 
             // 0 | 0 0 | 0
             // -----------
@@ -89,21 +92,18 @@ __kernel void convolve_D5 (__global float *src, __global float *temp1, __global 
             // 0 | 0 x | x
             // -----------
             // 0 | 0 x | x
-    smem[y + 16][x + 16] = src[min(gy + 8, rows - 1)*(src_step >> 2) + min(gx + 8, cols - 1)];
+    smem[y + 16][x + 16] = src[min(gy + 8, rows - 1) * src_step + min(gx + 8, cols - 1) + src_offset];
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (gx < cols && gy < rows)
     {
-       float res = 0;
+        float res = 0;
 
         for (int i = 0; i < kHeight; ++i)
-        {
             for (int j = 0; j < kWidth; ++j)
-            {
-                res += smem[y + 8 - kHeight / 2 + i][x + 8 - kWidth / 2 + j] * temp1[i * (k_step>>2) + j];
-            }
-        }
-        dst[gy*(dst_step >> 2)+gx] = res;
-   }
+                res += smem[y + 8 - kHeight / 2 + i][x + 8 - kWidth / 2 + j] * temp1[i * k_step + j + koffset];
+
+        dst[gy * dst_step + gx + dst_offset] = res;
+    }
 }
