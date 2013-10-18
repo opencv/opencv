@@ -197,10 +197,10 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
               (src.rows == dst.rows));
     CV_Assert((src.oclchannels() == dst.oclchannels()));
 
-    int srcStep = src.step1() / src.oclchannels();
-    int dstStep = dst.step1() / dst.oclchannels();
-    int srcOffset = src.offset /  src.elemSize();
-    int dstOffset = dst.offset /  dst.elemSize();
+    int srcStep = src.step / src.elemSize();
+    int dstStep = dst.step / dst.elemSize();
+    int srcOffset = src.offset / src.elemSize();
+    int dstOffset = dst.offset / dst.elemSize();
 
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
@@ -247,6 +247,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
         s, rectKernel?"-D RECTKERNEL":"");
+
     vector< pair<size_t, const void *> > args;
     args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
@@ -260,6 +261,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
     args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
     args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
+
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
@@ -351,7 +353,7 @@ Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat
     };
 
     CV_Assert(op == MORPH_ERODE || op == MORPH_DILATE);
-    CV_Assert(type == CV_8UC1 || type == CV_8UC3 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC1 || type == CV_32FC4);
+    CV_Assert(type == CV_8UC1 || type == CV_8UC3 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC3 || type == CV_32FC4);
 
     oclMat gpu_krnl;
     normalizeKernel(kernel, gpu_krnl);
@@ -361,9 +363,11 @@ Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat
     for(int i = 0; i < kernel.rows * kernel.cols; ++i)
         if(kernel.data[i] != 1)
             noZero = false;
-    MorphFilter_GPU* mfgpu=new MorphFilter_GPU(ksize, anchor, gpu_krnl, GPUMorfFilter_callers[op][CV_MAT_CN(type)]);
+
+    MorphFilter_GPU* mfgpu = new MorphFilter_GPU(ksize, anchor, gpu_krnl, GPUMorfFilter_callers[op][CV_MAT_CN(type)]);
     if(noZero)
         mfgpu->rectKernel = true;
+
     return Ptr<BaseFilter_GPU>(mfgpu);
 }
 
@@ -445,9 +449,7 @@ void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point a
         iterations = 1;
     }
     else
-    {
         kernel = _kernel;
-    }
 
     Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
 
@@ -462,14 +464,10 @@ void cv::ocl::erode(const oclMat &src, oclMat &dst, const Mat &kernel, Point anc
 
     for (int i = 0; i < kernel.rows * kernel.cols; ++i)
         if (kernel.data[i] != 0)
-        {
             allZero = false;
-        }
 
     if (allZero)
-    {
         kernel.data[0] = 1;
-    }
 
     morphOp(MORPH_ERODE, src, dst, kernel, anchor, iterations, borderType, borderValue);
 }
@@ -558,7 +556,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const oclMat &mat_kernel
     Context *clCxt = src.clCxt;
 
     int filterWidth = ksize.width;
-    bool ksize_3x3 = filterWidth == 3 && src.type() != CV_32FC4; // CV_32FC4 is not tuned up with filter2d_3x3 kernel
+    bool ksize_3x3 = filterWidth == 3 && src.type() != CV_32FC4 && src.type() != CV_32FC3; // CV_32FC4 is not tuned up with filter2d_3x3 kernel
 
     string kernelName = ksize_3x3 ? "filter2D_3x3" : "filter2D";
 
@@ -649,9 +647,7 @@ Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int srcType, int dstType, const
 Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Point &anchor,
         int borderType)
 {
-
     Size ksize = kernel.size();
-
     Ptr<BaseFilter_GPU> linearFilter = getLinearFilter_GPU(srcType, dstType, kernel, ksize, anchor, borderType);
 
     return createFilter2D_GPU(linearFilter);
@@ -659,11 +655,8 @@ Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int srcType, int dstType, 
 
 void cv::ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel, Point anchor, int borderType)
 {
-
     if (ddepth < 0)
-    {
         ddepth = src.depth();
-    }
 
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
@@ -1444,9 +1437,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
     int depth = CV_MAT_DEPTH(type);
 
     if (sigma2 <= 0)
-    {
         sigma2 = sigma1;
-    }
 
     // automatic detection of kernel size from sigma
     if (ksize.width <= 0 && sigma1 > 0)
