@@ -169,6 +169,7 @@ __kernel void filter2D(
     int globalRow = groupStartRow + localRow;
     const int src_offset = mad24(src_offset_y, src_step, src_offset_x);
     const int dst_offset = mad24(dst_offset_y, dst_step, dst_offset_x);
+
 #ifdef BORDER_CONSTANT
     for(int i = localRow; i < LOCAL_HEIGHT; i += get_local_size(1))
     {
@@ -208,6 +209,7 @@ __kernel void filter2D(
         }
     }
 #endif
+
     barrier(CLK_LOCAL_MEM_FENCE);
     if(globalRow < rows && globalCol < cols)
     {
@@ -231,6 +233,7 @@ __kernel void filter2D(
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////Macro for define elements number per thread/////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #define ANX                     1
 #define ANY                     1
 
@@ -249,6 +252,7 @@ __kernel void filter2D(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////8uC1////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void filter2D_3x3(
     __global T_IMG *src,
     __global T_IMG *dst,
@@ -359,6 +363,7 @@ __kernel void filter2D_3x3(
                 }
             }
         }
+
         if(dst_rows_index < dst_rows_end)
         {
             T_IMGx4 tmp_dst = CONVERT_TYPEx4(sum);
