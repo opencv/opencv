@@ -425,6 +425,12 @@ namespace cv
 
         void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int bordertype, const Scalar &scalar)
         {
+            if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
+            {
+                CV_Error(CV_OpenCLDoubleNotSupported, "Selected device does not support double");
+                return;
+            }
+
             oclMat _src = src;
 
             CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
@@ -469,7 +475,7 @@ namespace cv
                     break;
 
             if (bordertype_index == sizeof(__bordertype) / sizeof(int))
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(CV_StsBadArg, "Unsupported border type");
 
             string kernelName = "copymakeborder";
             size_t localThreads[3] = {16, 16, 1};
