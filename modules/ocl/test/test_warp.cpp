@@ -101,16 +101,9 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int, bool, bool)
 
     void Near(double threshold = 0.0)
     {
-        Mat whole, roi, diff;
+        Mat whole, roi;
         gdst_whole.download(whole);
         gdst_roi.download(roi);
-
-        imshow("OpenCV", dst_whole);
-        imshow("OpenCL", whole);
-
-        cv::absdiff(whole, dst_whole, diff);
-        imshow("Diff", diff);
-        cv::waitKey();
 
         EXPECT_MAT_NEAR(dst_whole, whole, threshold);
         EXPECT_MAT_NEAR(dst_roi, roi, threshold);

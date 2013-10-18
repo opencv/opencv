@@ -448,31 +448,40 @@ namespace cv
 
         void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int bordertype, const Scalar &scalar)
         {
-            CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
-            if ((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
-            {
-                if (((bordertype & cv::BORDER_ISOLATED) == 0) &&
-                        (bordertype != cv::BORDER_CONSTANT) &&
-                        (bordertype != cv::BORDER_REPLICATE))
-                {
-                    CV_Error(CV_StsBadArg, "Unsupported border type");
-                }
-            }
+            oclMat _src = src;
 
+            CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
+
+            if( _src.offset != 0 && (bordertype & BORDER_ISOLATED) == 0 )
+            {
+                Size wholeSize;
+                Point ofs;
+                _src.locateROI(wholeSize, ofs);
+                int dtop = std::min(ofs.y, top);
+                int dbottom = std::min(wholeSize.height - _src.rows - ofs.y, bottom);
+                int dleft = std::min(ofs.x, left);
+                int dright = std::min(wholeSize.width - _src.cols - ofs.x, right);
+                _src.adjustROI(dtop, dbottom, dleft, dright);
+                top -= dtop;
+                left -= dleft;
+                bottom -= dbottom;
+                right -= dright;
+            }
             bordertype &= ~cv::BORDER_ISOLATED;
+
             if (bordertype == cv::BORDER_REFLECT || bordertype == cv::BORDER_WRAP)
             {
-                CV_Assert((src.cols >= left) && (src.cols >= right) && (src.rows >= top) && (src.rows >= bottom));
+                CV_Assert((_src.cols >= left) && (_src.cols >= right) && (_src.rows >= top) && (_src.rows >= bottom));
             }
             else if (bordertype == cv::BORDER_REFLECT_101)
             {
-                CV_Assert((src.cols > left) && (src.cols > right) && (src.rows > top) && (src.rows > bottom));
+                CV_Assert((_src.cols > left) && (_src.cols > right) && (_src.rows > top) && (_src.rows > bottom));
             }
 
-            dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
-            int srcStep = src.step1() / src.oclchannels(),  dstStep = dst.step1() / dst.oclchannels();
-            int srcOffset = src.offset / src.elemSize(), dstOffset = dst.offset / dst.elemSize();
-            int depth = src.depth(), ochannels = src.oclchannels();
+            dst.create(_src.rows + top + bottom, _src.cols + left + right, _src.type());
+            int srcStep = _src.step1() / _src.oclchannels(),  dstStep = dst.step1() / dst.oclchannels();
+            int srcOffset = _src.offset / _src.elemSize(), dstOffset = dst.offset / dst.elemSize();
+            int depth = _src.depth(), ochannels = _src.oclchannels();
 
             int __bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101};
             const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
@@ -490,12 +499,12 @@ namespace cv
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( make_pair( sizeof(cl_mem), (void *)&_src.data));
             args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
             args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
             args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&_src.cols));
+            args.push_back( make_pair( sizeof(cl_int), (void *)&_src.rows));
             args.push_back( make_pair( sizeof(cl_int), (void *)&srcStep));
             args.push_back( make_pair( sizeof(cl_int), (void *)&srcOffset));
             args.push_back( make_pair( sizeof(cl_int), (void *)&dstStep));
