@@ -50,16 +50,9 @@
 
 #ifdef HAVE_OPENCV_OCL
 
-#define NOT_IMPLEMENTED CV_Error(cv::Error::StsNotImplemented, "Not implemented")
+#include "opencl_kernels.hpp"
 
-namespace cv
-{
-namespace ocl
-{
-//OpenCL kernel file string pointer
-extern const char * retina_kernel;
-}
-}
+#define NOT_IMPLEMENTED CV_Error(cv::Error::StsNotImplemented, "Not implemented")
 
 namespace cv
 {

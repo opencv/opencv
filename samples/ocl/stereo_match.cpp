@@ -79,28 +79,18 @@ int main(int argc, char** argv)
         "{ r | right    |                           | specify right image }"
         "{ m | method   | BM                        | specify match method(BM/BP/CSBP) }"
         "{ n | ndisp    | 64                        |  specify number of disparity levels }"
-        "{ s | cpu_ocl  | false                     | use cpu or gpu as ocl device to process the image }"
         "{ o | output   | stereo_match_output.jpg   | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        cout << "Avaible options:" << endl;
+        cout << "Available options:" << endl;
         cmd.printMessage();
         return 0;
     }
     try
     {
         App app(cmd);
-        int flag = CVCL_DEVICE_TYPE_GPU;
-        if(cmd.get<bool>("s") == true)
-            flag = CVCL_DEVICE_TYPE_CPU;
-
-        vector<Info> info;
-        if(getDevice(info, flag) == 0)
-        {
-            throw runtime_error("Error: Did not find a valid OpenCL device!");
-        }
-        cout << "Device name:" << info[0].DeviceName[0] << endl;
+        cout << "Device name:" << cv::ocl::Context::getContext()->getDeviceInfo().deviceName << endl;
 
         app.run();
     }

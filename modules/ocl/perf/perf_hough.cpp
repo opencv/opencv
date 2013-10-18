@@ -59,9 +59,10 @@ PERF_TEST_P(Size_Dp_MinDist, OCL_HoughCircles,
                 testing::Values(1.0f, 2.0f, 4.0f),
                 testing::Values(1.0f, 10.0f)))
 {
-    const cv::Size size = std::tr1::get<0>(GetParam());
-    const float dp      = std::tr1::get<1>(GetParam());
-    const float minDist = std::tr1::get<2>(GetParam());
+    const Size_Dp_MinDist_t params = GetParam();
+    const cv::Size size = std::tr1::get<0>(params);
+    const float dp      = std::tr1::get<1>(params);
+    const float minDist = std::tr1::get<2>(params);
 
     const int minRadius = 10;
     const int maxRadius = 30;
@@ -70,7 +71,7 @@ PERF_TEST_P(Size_Dp_MinDist, OCL_HoughCircles,
 
     cv::RNG rng(123456789);
 
-    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0));
+    cv::Mat src(size, CV_8UC1, cv::Scalar::all(0)), circles;
 
     const int numCircles = rng.uniform(50, 100);
     for (int i = 0; i < numCircles; ++i)
@@ -81,18 +82,25 @@ PERF_TEST_P(Size_Dp_MinDist, OCL_HoughCircles,
         cv::circle(src, center, radius, cv::Scalar::all(255), -1);
     }
 
-    cv::ocl::oclMat ocl_src(src);
-    cv::ocl::oclMat ocl_circles;
-
     declare.time(10.0).iterations(25);
 
-    TEST_CYCLE()
+    if (RUN_OCL_IMPL)
     {
-        cv::ocl::HoughCircles(ocl_src, ocl_circles, HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
-    }
+        cv::ocl::oclMat ocl_src(src), ocl_circles;
 
-    cv::Mat circles(ocl_circles);
-    SANITY_CHECK(circles);
+        OCL_TEST_CYCLE() cv::ocl::HoughCircles(ocl_src, ocl_circles, HOUGH_GRADIENT, dp, minDist,
+                                               cannyThreshold, votesThreshold, minRadius, maxRadius);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::HoughCircles(src, circles, HOUGH_GRADIENT, dp, minDist, cannyThreshold,
+                                      votesThreshold, minRadius, maxRadius);
+    }
+    else
+        OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
 }
 
 #endif // HAVE_OPENCL

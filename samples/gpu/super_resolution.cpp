@@ -133,17 +133,9 @@ int main(int argc, const char* argv[])
     }
 #endif
 #if defined(HAVE_OPENCV_OCL)
-    std::vector<cv::ocl::Info>info;
     if(useCuda)
     {
         CV_Assert(!useOcl);
-        info.clear();
-    }
-
-    if(useOcl)
-    {
-        CV_Assert(!useCuda);
-        cv::ocl::getDevice(info);
     }
 #endif
     Ptr<SuperResolution> superRes;

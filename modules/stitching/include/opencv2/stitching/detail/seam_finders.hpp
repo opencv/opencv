@@ -205,7 +205,7 @@ private:
 class CV_EXPORTS GraphCutSeamFinderBase
 {
 public:
-    enum { COST_COLOR, COST_COLOR_GRAD };
+    enum CostType { COST_COLOR, COST_COLOR_GRAD };
 };
 
 

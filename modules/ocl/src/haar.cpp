@@ -48,21 +48,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <stdio.h>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *haarobjectdetect;
-extern const char *haarobjectdetectbackup;
-extern const char *haarobjectdetect_scaled2;
-}
-}
 
 /* these settings affect the quality of detection: change with care */
 #define CV_ADJUST_FEATURES  1
@@ -635,37 +624,21 @@ static void gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade)
     cascade->p3 = equRect.width ;
     for( i = 0; i < _cascade->count; i++ )
     {
-        int j, k, l;
+        int j, l;
         for( j = 0; j < stage_classifier[i].count; j++ )
         {
             for( l = 0; l < stage_classifier[i].classifier[j].count; l++ )
             {
-                CvHaarFeature *feature =
+                const CvHaarFeature *feature =
                     &_cascade->stage_classifier[i].classifier[j].haar_feature[l];
                 GpuHidHaarTreeNode *hidnode = &stage_classifier[i].classifier[j].node[l];
-                CvRect r[3];
 
-
-                int nr;
-
-                /* align blocks */
-                for( k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
+                for( int k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
                 {
-                    if(!hidnode->p[k][0])
+                    const CvRect tr = feature->rect[k].r;
+                    if (tr.width == 0)
                         break;
-                    r[k] = feature->rect[k].r;
-               }
-
-                nr = k;
-                for( k = 0; k < nr; k++ )
-                {
-                    CvRect tr;
-                    double correction_ratio;
-                    tr.x = r[k].x;
-                    tr.width = r[k].width;
-                    tr.y = r[k].y ;
-                    tr.height = r[k].height;
-                    correction_ratio = weight_scale * (!feature->tilted ? 1 : 0.5);
+                    double correction_ratio = weight_scale * (!feature->tilted ? 1 : 0.5);
                     hidnode->p[k][0] = tr.x;
                     hidnode->p[k][1] = tr.y;
                     hidnode->p[k][2] = tr.width;
@@ -742,7 +715,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
     if( gimg.cols < minSize.width || gimg.rows < minSize.height )
         CV_Error(CV_StsError, "Image too small");
 
-    cl_command_queue qu = reinterpret_cast<cl_command_queue>(Context::getContext()->oclCommandQueue());
+    cl_command_queue qu = getClCommandQueue(Context::getContext());
     if( (flags & CV_HAAR_SCALE_IMAGE) )
     {
         CvSize winSize0 = cascade->orig_window_size;
@@ -785,7 +758,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
 
         size_t blocksize = 8;
         size_t localThreads[3] = { blocksize, blocksize , 1 };
-        size_t globalThreads[3] = { grp_per_CU *(gsum.clCxt->computeUnits()) *localThreads[0],
+        size_t globalThreads[3] = { grp_per_CU *(gsum.clCxt->getDeviceInfo().maxComputeUnits) *localThreads[0],
                                     localThreads[1], 1
                                   };
         int outputsz = 256 * globalThreads[0] / localThreads[0];
@@ -936,7 +909,6 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
             n_factors = 1;
             sizev.push_back(minSize);
             scalev.push_back( std::min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
-
         }
         detect_piramid_info *scaleinfo = (detect_piramid_info *)malloc(sizeof(detect_piramid_info) * loopcount);
         cl_int4 *p = (cl_int4 *)malloc(sizeof(cl_int4) * loopcount);
@@ -944,7 +916,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         int grp_per_CU = 12;
         size_t blocksize = 8;
         size_t localThreads[3] = { blocksize, blocksize , 1 };
-        size_t globalThreads[3] = { grp_per_CU *gsum.clCxt->computeUnits() *localThreads[0],
+        size_t globalThreads[3] = { grp_per_CU *gsum.clCxt->getDeviceInfo().maxComputeUnits *localThreads[0],
                                     localThreads[1], 1 };
         int outputsz = 256 * globalThreads[0] / localThreads[0];
         int nodenum = (datasize - sizeof(GpuHidHaarClassifierCascade) -

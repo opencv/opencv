@@ -112,7 +112,7 @@ static Mat _localAffineEstimate(const std::vector<Point2f>& shape1, const std::v
                                 bool fullAfine)
 {
     Mat out(2,3,CV_32F);
-    int siz=2*shape1.size();
+    int siz=2*(int)shape1.size();
 
     if (fullAfine)
     {

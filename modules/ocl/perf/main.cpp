@@ -13,7 +13,7 @@
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -42,7 +42,20 @@
 
 #include "perf_precomp.hpp"
 
-const char * impls[] =
+#define DUMP_INFO_STDOUT(propertyDisplayName, propertyValue) \
+    do { \
+        std::cout << (propertyDisplayName) << ": " << (propertyValue) << std::endl; \
+    } while (false)
+
+#define DUMP_INFO_XML(propertyXMLName, propertyValue) \
+    do { \
+        std::stringstream ss; ss << propertyValue; \
+        ::testing::Test::RecordProperty((propertyXMLName), ss.str()); \
+    } while (false)
+
+#include "opencv2/ocl/private/opencl_dumpinfo.hpp"
+
+static const char * impls[] =
 {
     IMPL_OCL,
     IMPL_PLAIN,
@@ -51,45 +64,10 @@ const char * impls[] =
 #endif
 };
 
+
 int main(int argc, char ** argv)
 {
-    const char * keys =
-        "{ h help     | false              | print help message }"
-        "{ t type     | gpu                | set device type:cpu or gpu}"
-        "{ p platform | 0                  | set platform id }"
-        "{ d device   | 0                  | set device id }";
+    ::perf::TestBase::setPerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
 
-    CommandLineParser cmd(argc, argv, keys);
-    if (cmd.has("help"))
-    {
-        cout << "Available options besides google test option:" << endl;
-        cmd.printMessage();
-        return 0;
-    }
-
-    string type = cmd.get<string>("type");
-    unsigned int pid = cmd.get<unsigned int>("platform");
-    int device = cmd.get<int>("device");
-
-    int flag = type == "cpu" ? cv::ocl::CVCL_DEVICE_TYPE_CPU :
-                               cv::ocl::CVCL_DEVICE_TYPE_GPU;
-
-    std::vector<cv::ocl::Info> oclinfo;
-    int devnums = cv::ocl::getDevice(oclinfo, flag);
-    if (devnums <= device || device < 0)
-    {
-        std::cout << "device invalid\n";
-        return -1;
-    }
-
-    if (pid >= oclinfo.size())
-    {
-        std::cout << "platform invalid\n";
-        return -1;
-    }
-
-    cv::ocl::setDevice(oclinfo[pid], device);
-    cv::ocl::setBinaryDiskCache(cv::ocl::CACHE_UPDATE);
-
-    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, dumpOpenCLDevice())
 }

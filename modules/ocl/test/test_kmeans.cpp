@@ -66,12 +66,11 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
 
     Mat labels, centers;
     ocl::oclMat d_labels, d_centers;
-    cv::RNG rng ;
-    virtual void SetUp(){
+    virtual void SetUp()
+    {
         K = GET_PARAM(0);
         type = GET_PARAM(1);
         flags = GET_PARAM(2);
-        rng = TS::ptr()->get_rng();
 
         // MWIDTH=256, MHEIGHT=256. defined in utility.hpp
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
@@ -92,14 +91,14 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
             {
                 Mat cur_row_header = src.row(row_idx + 1 + j);
                 center_row_header.copyTo(cur_row_header);
-                Mat tmpmat = randomMat(rng, cur_row_header.size(), cur_row_header.type(), -200, 200, false);
+                Mat tmpmat = randomMat(cur_row_header.size(), cur_row_header.type(), -200, 200, false);
                 cur_row_header += tmpmat;
             }
             row_idx += 1 + max_neighbour;
         }
     }
 };
-TEST_P(Kmeans, Mat){
+OCL_TEST_P(Kmeans, Mat){
 
     if(flags & KMEANS_USE_INITIAL_LABELS)
     {

@@ -43,7 +43,6 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
 
 namespace cv { namespace ocl {
@@ -59,12 +58,12 @@ void clBlasTeardown();
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(Error::StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasSetup()
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasTeardown()
@@ -73,17 +72,16 @@ void cv::ocl::clBlasTeardown()
 }
 
 #else
-#include "clAmdBlas.h"
+#include "opencv2/ocl/cl_runtime/clamdblas_runtime.hpp"
 using namespace cv;
 
 static bool clBlasInitialized = false;
-static Mutex cs;
 
 void cv::ocl::clBlasSetup()
 {
     if(!clBlasInitialized)
     {
-        AutoLock al(cs);
+        AutoLock lock(getInitializationMutex());
         if(!clBlasInitialized)
         {
             openCLSafeCall(clAmdBlasSetup());
@@ -94,7 +92,7 @@ void cv::ocl::clBlasSetup()
 
 void cv::ocl::clBlasTeardown()
 {
-    AutoLock al(cs);
+    AutoLock lock(getInitializationMutex());
     if(clBlasInitialized)
     {
         clAmdBlasTeardown();
@@ -134,7 +132,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     int offb    = src2.offset;
     int offc    = dst.offset;
 
-    cl_command_queue clq = (cl_command_queue)src1.clCxt->oclCommandQueue();
+    cl_command_queue clq = *(cl_command_queue*)src1.clCxt->getOpenCLCommandQueuePtr();
     switch(src1.type())
     {
     case CV_32FC1:

@@ -44,7 +44,7 @@ int  main(int argc, const char * argv[])
         channels.push_back(255-channels[c]);
 
     // Create ERFilter objects with the 1st and 2nd stage default classifiers
-    Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("trained_classifierNM1.xml"),16,0.00015,0.13,0.2,true,0.1);
+    Ptr<ERFilter> er_filter1 = createERFilterNM1(loadClassifierNM1("trained_classifierNM1.xml"),16,0.00015f,0.13f,0.2f,true,0.1f);
     Ptr<ERFilter> er_filter2 = createERFilterNM2(loadClassifierNM2("trained_classifierNM2.xml"),0.5);
 
     vector<vector<ERStat> > regions(channels.size());
@@ -94,7 +94,7 @@ void show_help_and_exit(const char *cmd)
 
 void groups_draw(Mat &src, vector<Rect> &groups)
 {
-    for (int i=groups.size()-1; i>=0; i--)
+    for (int i=(int)groups.size()-1; i>=0; i--)
     {
         if (src.type() == CV_8UC3)
             rectangle(src,groups.at(i).tl(),groups.at(i).br(),Scalar( 0, 255, 255 ), 3, 8 );

@@ -70,10 +70,10 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     }
 };
 
-TEST_P(MatchTemplate8U, Accuracy)
+OCL_TEST_P(MatchTemplate8U, Accuracy)
 {
-    cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
-    cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
+    cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn), 0, 255);
+    cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn), 0, 255);
 
     cv::ocl::oclMat dst, ocl_image(image), ocl_templ(templ);
     cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);
@@ -103,10 +103,10 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
     }
 };
 
-TEST_P(MatchTemplate32F, Accuracy)
+OCL_TEST_P(MatchTemplate32F, Accuracy)
 {
-    cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn));
-    cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn));
+    cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn), 0, 255);
+    cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn), 0, 255);
 
     cv::ocl::oclMat dst, ocl_image(image), ocl_templ(templ);
     cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);

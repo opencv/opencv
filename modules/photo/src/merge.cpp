@@ -106,7 +106,7 @@ public:
             LUT(images[i], response, response_img);
             split(response_img, splitted);
             for(int c = 0; c < channels; c++) {
-                result_split[c] += w.mul(splitted[c] - exp_values.at<float>(i));
+                result_split[c] += w.mul(splitted[c] - exp_values.at<float>((int)i));
             }
             weight_sum += w;
         }
@@ -327,8 +327,8 @@ public:
             LUT(images[i], weight, w);
             LUT(images[i], response, im);
 
-            result += times.at<float>(i) * w.mul(im);
-            wsum += times.at<float>(i) * times.at<float>(i) * w;
+            result += times.at<float>((int)i) * w.mul(im);
+            wsum += times.at<float>((int)i) * times.at<float>((int)i) * w;
         }
         result = result.mul(1 / wsum);
     }

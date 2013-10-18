@@ -97,7 +97,7 @@ public:
 
         std::vector<Mat> result_split(channels);
         for(int channel = 0; channel < channels; channel++) {
-            Mat A = Mat::zeros(sample_points.size() * images.size() + LDR_SIZE + 1, LDR_SIZE + sample_points.size(), CV_32F);
+            Mat A = Mat::zeros((int)sample_points.size() * (int)images.size() + LDR_SIZE + 1, LDR_SIZE + (int)sample_points.size(), CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
             int eq = 0;
@@ -106,8 +106,8 @@ public:
 
                     int val = images[j].ptr()[3*(sample_points[i].y * images[j].cols + sample_points[j].x) + channel];
                     A.at<float>(eq, val) = w.at<float>(val);
-                    A.at<float>(eq, LDR_SIZE + i) = -w.at<float>(val);
-                    B.at<float>(eq, 0) = w.at<float>(val) * log(times.at<float>(j));
+                    A.at<float>(eq, LDR_SIZE + (int)i) = -w.at<float>(val);
+                    B.at<float>(eq, 0) = w.at<float>(val) * log(times.at<float>((int)j));
                     eq++;
                 }
             }
@@ -219,7 +219,7 @@ public:
                 float* rad_ptr = radiance.ptr<float>();
                 for(size_t pos = 0; pos < images[i].total(); pos++) {
                     for(int c = 0; c < channels; c++, ptr++, rad_ptr++) {
-                        new_response.at<Vec3f>(*ptr)[c] += times.at<float>(i) * *rad_ptr;
+                        new_response.at<Vec3f>(*ptr)[c] += times.at<float>((int)i) * *rad_ptr;
                     }
                 }
             }

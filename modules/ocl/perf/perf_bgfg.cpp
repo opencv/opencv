@@ -167,7 +167,7 @@ PERF_TEST_P(VideoMOGFixture, MOG,
 typedef tuple<string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> VideoMOG2Fixture;
 
-PERF_TEST_P(VideoMOG2Fixture, MOG2,
+PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on buildslave
             ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
             ::testing::Values(1, 3)))
 {
@@ -191,7 +191,7 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
         TEST_CYCLE()
         {
             cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
-            mog2->set("detectShadows", false);
+            mog2->setDetectShadows(false);
             foreground.release();
 
             for (int i = 0; i < nFrame; i++)
@@ -253,7 +253,7 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
         TEST_CYCLE()
         {
             cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
-            mog2->set("detectShadows", false);
+            mog2->setDetectShadows(false);
             foreground.release();
             background.release();
             for (int i = 0; i < nFrame; i++)

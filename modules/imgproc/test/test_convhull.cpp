@@ -1445,14 +1445,14 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
         t = (float)((cvtest::randReal(rng)-0.5)*low_high_range*2);
 
         for( k = 0; k < n; k++ )
+        {
             p[k] = (float)((cvtest::randReal(rng)-0.5)*max_noise*2 + t*line0[k] + line0[k+n]);
 
-        if( point_type == CV_32S )
-            for( k = 0; k < n; k++ )
+            if( point_type == CV_32S )
                 pi[k] = cvRound(p[k]);
-        else
-            for( k = 0; k < n; k++ )
+            else
                 pf[k] = p[k];
+        }
     }
 }
 

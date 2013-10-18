@@ -36,7 +36,7 @@ static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
 
     // In case actual number of points is less than n
     int dummy=0;
-    for (int add=contoursQuery.size()-1; add<n; add++)
+    for (int add=(int)contoursQuery.size()-1; add<n; add++)
     {
         contoursQuery.push_back(contoursQuery[dummy++]); //adding dummy values
     }

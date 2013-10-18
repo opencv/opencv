@@ -309,15 +309,15 @@ private:
     class TBBApproximateSynchronizer: public ApproximateSynchronizerBase
     {
     public:
-        TBBApproximateSynchronizer( ApproximateSyncGrabber& approxSyncGrabber ) :
-            ApproximateSynchronizerBase(approxSyncGrabber)
+        TBBApproximateSynchronizer( ApproximateSyncGrabber& _approxSyncGrabber ) :
+            ApproximateSynchronizerBase(_approxSyncGrabber)
         {
             setMaxBufferSize();
         }
 
         void setMaxBufferSize()
         {
-            int maxBufferSize = ApproximateSynchronizerBase::approxSyncGrabber.getMaxBufferSize();
+            int maxBufferSize = approxSyncGrabber.getMaxBufferSize();
             if( maxBufferSize >= 0 )
             {
                 depthQueue.set_capacity( maxBufferSize );

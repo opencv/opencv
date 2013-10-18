@@ -18,6 +18,10 @@
 #include "opencv2/imgproc.hpp" // cvCvtcolor function
 #include "opencv2/highgui.hpp" // display
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
+
 static void help(std::string errorMessage)
 {
     std::cout<<"Program init error : "<<errorMessage<<std::endl;

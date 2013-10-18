@@ -44,14 +44,15 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 using namespace cv;
 using namespace cv::ocl;
+
 namespace cv
 {
     namespace ocl
     {
-        extern const char* bgfg_mog;
-
         typedef struct _contant_struct
         {
             cl_float c_Tb;
@@ -392,7 +393,7 @@ void cv::ocl::device::mog::loadConstants(float Tb, float TB, float Tg, float var
     constants->c_tau = tau;
     constants->c_shadowVal = shadowVal;
 
-    cl_constants = load_constant(*((cl_context*)getoclContext()), *((cl_command_queue*)getoclCommandQueue()),
+    cl_constants = load_constant(*((cl_context*)getClContextPtr()), *((cl_command_queue*)getClCommandQueuePtr()),
         (void *)constants, sizeof(_contant_struct));
 }
 

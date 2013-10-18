@@ -48,24 +48,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-//helper routines
-namespace cv
-{
-namespace ocl
-{
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *filtering_boxFilter;
-extern const char *filter_sep_row;
-extern const char *filter_sep_col;
-extern const char *filtering_laplacian;
-extern const char *filtering_morph;
-extern const char *filtering_adaptive_bilateral;
-}
-}
 
 namespace
 {
@@ -633,7 +619,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const oclMat &mat_kernel
         sprintf(btype, "BORDER_REFLECT");
         break;
     case 3:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        CV_Error(Error::StsUnsupportedFormat, "BORDER_WRAP is not supported!");
         return;
     case 4:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -1430,9 +1416,9 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
 
 void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, double scale)
 {
-    if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
+    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(Error::GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 
@@ -1571,7 +1557,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
         sprintf(btype, "BORDER_REFLECT_101");
         break;
     default:
-        CV_Error(CV_StsBadArg, "This border type is not supported");
+        CV_Error(Error::StsBadArg, "This border type is not supported");
         break;
     }
 

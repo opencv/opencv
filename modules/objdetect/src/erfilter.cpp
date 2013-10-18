@@ -795,7 +795,7 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
         int p_prev = p-1;
         int p_next = p+1;
         if (p_prev == -1)
-            p_prev = contour_poly.size()-1;
+            p_prev = (int)contour_poly.size()-1;
         if (p_next == (int)contour_poly.size())
             p_next = 0;
 
@@ -2455,9 +2455,9 @@ void MaxMeaningfulClustering::build_merge_info(double *Z, int N, vector<HCluster
 
         cluster.dist   = dist;
         if (cluster.dist >= 1)
-            cluster.dist = 0.999999;
+            cluster.dist = 0.999999f;
         if (cluster.dist == 0)
-            cluster.dist = 1.e-25;
+            cluster.dist = 1.e-25f;
 
         cluster.dist_ext   = 1;
 
@@ -2811,7 +2811,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
 
         for (int f=0; f<num_features; f++)
         {
-            unsigned int N = regions.at(c).size();
+            unsigned int N = (unsigned int)regions.at(c).size();
             if (N<3) break;
             int dim = dims[f];
             double *data = (double*)malloc(dim*N * sizeof(double));
@@ -2892,7 +2892,7 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
         }
 
         // Find the Max. Meaningful Clusters in the co-occurrence matrix
-        mm_clustering(D, regions.at(c).size(), METHOD_METR_AVERAGE, &meaningful_clusters);
+        mm_clustering(D, (unsigned int)regions.at(c).size(), METHOD_METR_AVERAGE, &meaningful_clusters);
         free(D);
 
 

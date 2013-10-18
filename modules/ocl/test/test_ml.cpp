@@ -44,16 +44,19 @@
 //M*/
 
 #include "test_precomp.hpp"
+
 #ifdef HAVE_OPENCL
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
+
 ///////K-NEAREST NEIGHBOR//////////////////////////
-static void genTrainData(Mat& trainData, int trainDataRow, int trainDataCol,
+
+static void genTrainData(cv::RNG& rng, Mat& trainData, int trainDataRow, int trainDataCol,
                          Mat& trainLabel = Mat().setTo(Scalar::all(0)), int nClasses = 0)
 {
-    cv::RNG &rng = TS::ptr()->get_rng();
     cv::Size size(trainDataCol, trainDataRow);
     trainData = randomMat(rng, size, CV_32FC1, 1.0, 1000.0, false);
     if(nClasses != 0)
@@ -81,14 +84,14 @@ PARAM_TEST_CASE(KNN, int, Size, int, bool)
     }
 };
 
-TEST_P(KNN, Accuracy)
+OCL_TEST_P(KNN, Accuracy)
 {
     Mat trainData, trainLabels;
     const int trainDataRow = 500;
-    genTrainData(trainData, trainDataRow, trainDataCol, trainLabels, nClass);
+    genTrainData(rng, trainData, trainDataRow, trainDataCol, trainLabels, nClass);
 
     Mat testData, testLabels;
-    genTrainData(testData, testDataRow, trainDataCol);
+    genTrainData(rng, testData, testDataRow, trainDataCol);
 
     KNearestNeighbour knn_ocl;
     CvKNearest knn_cpu;
@@ -119,10 +122,14 @@ TEST_P(KNN, Accuracy)
         EXPECT_MAT_NEAR(Mat(best_label_ocl), best_label_cpu, 0.0);
     }
 }
+
 INSTANTIATE_TEST_CASE_P(OCL_ML, KNN, Combine(Values(6, 5), Values(Size(200, 400), Size(300, 600)),
     Values(4, 3), Values(false, true)));
 
+#ifdef HAVE_CLAMDBLAS // TODO does not work non-blas version of SVM
+
 ////////////////////////////////SVM/////////////////////////////////////////////////
+
 PARAM_TEST_CASE(SVM_OCL, int, int, int)
 {
     cv::Size size;
@@ -130,7 +137,6 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
     int svm_type;
     Mat src, labels, samples, labels_predict;
     int K;
-    cv::RNG rng ;
 
     virtual void SetUp()
     {
@@ -138,7 +144,6 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
         kernel_type = GET_PARAM(0);
         svm_type = GET_PARAM(1);
         K = GET_PARAM(2);
-        rng = TS::ptr()->get_rng();
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
         src.create(size, CV_32FC1);
         labels.create(1, size.height, CV_32SC1);
@@ -160,7 +165,7 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
             {
                 Mat cur_row_header = src.row(row_idx + 1 + j);
                 center_row_header.copyTo(cur_row_header);
-                Mat tmpmat = randomMat(rng, cur_row_header.size(), cur_row_header.type(), 1, 100, false);
+                Mat tmpmat = randomMat(cur_row_header.size(), cur_row_header.type(), 1, 100, false);
                 cur_row_header += tmpmat;
                 labels.at<int>(0, row_idx + 1 + j) = i;
             }
@@ -187,7 +192,7 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
             {
                 Mat cur_row_header = samples.row(row_idx + 1 + j);
                 center_row_header.copyTo(cur_row_header);
-                Mat tmpmat = randomMat(rng, cur_row_header.size(), cur_row_header.type(), 1, 100, false);
+                Mat tmpmat = randomMat(cur_row_header.size(), cur_row_header.type(), 1, 100, false);
                 cur_row_header += tmpmat;
                 labels_predict.at<int>(0, row_idx + 1 + j) = i;
             }
@@ -196,7 +201,8 @@ PARAM_TEST_CASE(SVM_OCL, int, int, int)
         labels_predict.convertTo(labels_predict, CV_32FC1);
     }
 };
-TEST_P(SVM_OCL, Accuracy)
+
+OCL_TEST_P(SVM_OCL, Accuracy)
 {
     CvSVMParams params;
     params.degree = 0.4;
@@ -292,9 +298,16 @@ TEST_P(SVM_OCL, Accuracy)
         }
     }
 }
+
+// TODO FIXIT: CvSVM::EPS_SVR case is crashed inside CPU implementation
+// Anonymous enums are not supported well so cast them to 'int'
+
 INSTANTIATE_TEST_CASE_P(OCL_ML, SVM_OCL, testing::Combine(
-                            Values(CvSVM::LINEAR, CvSVM::POLY, CvSVM::RBF, CvSVM::SIGMOID),
-                            Values(CvSVM::C_SVC, CvSVM::NU_SVC, CvSVM::ONE_CLASS, CvSVM::EPS_SVR, CvSVM::NU_SVR),
+                            Values((int)CvSVM::LINEAR, (int)CvSVM::POLY, (int)CvSVM::RBF, (int)CvSVM::SIGMOID),
+                            Values((int)CvSVM::C_SVC, (int)CvSVM::NU_SVC, (int)CvSVM::ONE_CLASS, (int)CvSVM::NU_SVR),
                             Values(2, 3, 4)
                         ));
+
+#endif // HAVE_CLAMDBLAS
+
 #endif // HAVE_OPENCL
