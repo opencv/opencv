@@ -1314,6 +1314,8 @@ namespace cv
                 args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesX ));
                 args.push_back( std::make_pair( sizeof(cl_int), (void *)&clipLimit ));
                 args.push_back( std::make_pair( sizeof(cl_float), (void *)&lutScale ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
 
                 String kernelName = "calcLut";
                 size_t localThreads[3]  = { 32, 8, 1 };
@@ -1333,7 +1335,7 @@ namespace cv
             }
 
             static void transform(const oclMat &src, oclMat &dst, const oclMat &lut,
-                const int tilesX, const int tilesY, const cv::Size tileSize)
+                const int tilesX, const int tilesY, const Size & tileSize)
             {
                 cl_int2 tile_size;
                 tile_size.s[0] = tileSize.width;
@@ -1351,6 +1353,9 @@ namespace cv
                 args.push_back( std::make_pair( sizeof(cl_int2), (void *)&tile_size ));
                 args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesX ));
                 args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesY ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&lut.offset ));
 
                 size_t localThreads[3]  = { 32, 8, 1 };
                 size_t globalThreads[3] = { src.cols, src.rows, 1 };
@@ -1419,9 +1424,10 @@ namespace cv
                 }
                 else
                 {
-                    cv::ocl::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar());
+                    ocl::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0,
+                                            tilesX_ - (src.cols % tilesX_), BORDER_REFLECT_101, Scalar::all(0));
 
-                    tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
+                    tileSize = Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
                     srcForLut = srcExt_;
                 }
 
