@@ -195,7 +195,8 @@ namespace cv
             CV_Assert((map1.type() == CV_16SC2 && !map2.data) || (map1.type() == CV_32FC2 && !map2.data) ||
                       (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
             CV_Assert(!map2.data || map2.size() == map1.size());
-            CV_Assert(borderType == BORDER_CONSTANT);
+            CV_Assert(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE || borderType == BORDER_WRAP
+                      || borderType == BORDER_REFLECT_101 || borderType == BORDER_REFLECT);
 
             dst.create(map1.size(), src.type());
 
@@ -452,6 +453,7 @@ namespace cv
             }
             bordertype &= ~cv::BORDER_ISOLATED;
 
+            // TODO need to remove this conditions and fix the code
             if (bordertype == cv::BORDER_REFLECT || bordertype == cv::BORDER_WRAP)
             {
                 CV_Assert((_src.cols >= left) && (_src.cols >= right) && (_src.rows >= top) && (_src.rows >= bottom));

@@ -51,6 +51,70 @@
 #endif
 #endif
 
+#ifdef INTER_NEAREST
+#define convertToWT
+#endif
+
+#ifdef BORDER_CONSTANT
+#define EXTRAPOLATE(v2, v) v = scalar;
+#elif defined BORDER_REPLICATE
+#define EXTRAPOLATE(v2, v) \
+    { \
+        v2 = max(min(v2, (int2)(src_cols - 1, src_rows - 1)), zero); \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
+    }
+#elif defined BORDER_WRAP
+#define EXTRAPOLATE(v2, v) \
+    { \
+        if (v2.x < 0) \
+            v2.x -= ((v2.x - src_cols + 1) / src_cols) * src_cols; \
+        if (v2.x >= src_cols) \
+            v2.x %= src_cols; \
+        \
+        if (v2.y < 0) \
+            v2.y -= ((v2.y - src_rows + 1) / src_rows) * src_rows; \
+        if( v2.y >= src_rows ) \
+            v2.y %= src_rows; \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
+    }
+#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
+#ifdef BORDER_REFLECT
+#define DELTA int delta = 0
+#else
+#define DELTA int delta = 1
+#endif
+#define EXTRAPOLATE(v2, v) \
+    { \
+        DELTA; \
+        if (src_cols == 1) \
+            v2.x = 0; \
+        else \
+            do \
+            { \
+                if( v2.x < 0 ) \
+                    v2.x = -v2.x - 1 + delta; \
+                else \
+                    v2.x = src_cols - 1 - (v2.x - src_cols) - delta; \
+            } \
+            while (v2.x >= src_cols || v2.x < 0); \
+        \
+        if (src_rows == 1) \
+            v2.y = 0; \
+        else \
+            do \
+            { \
+                if( v2.y < 0 ) \
+                    v2.y = -v2.y - 1 + delta; \
+                else \
+                    v2.y = src_rows - 1 - (v2.y - src_rows) - delta; \
+            } \
+            while (v2.y >= src_rows || v2.y < 0); \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
+    }
+#else
+#error No extrapolation method
+#endif
+
 #define NEED_EXTRAPOLATION(gx, gy) (gx >= src_cols || gy >= src_rows || gx < 0 || gy < 0)
 
 #ifdef INTER_NEAREST
@@ -75,11 +139,8 @@ __kernel void remap_2_32FC1(__global const T * restrict src, __global T * dst,
 
         if (NEED_EXTRAPOLATION(gx, gy))
         {
-#ifdef BORDER_CONSTANT
-            dst[dstIdx] = scalar;
-#else
-#error No extrapolation method
-#endif
+            int2 gxy = (int2)(gx, gy), zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
         }
         else
         {
@@ -107,11 +168,8 @@ __kernel void remap_32FC2(__global const T * restrict src, __global T * dst, __g
 
         if (NEED_EXTRAPOLATION(gx, gy))
         {
-#ifdef BORDER_CONSTANT
-            dst[dstIdx] = scalar;
-#else
-#error No extrapolation method
-#endif
+            int2 zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
         }
         else
         {
@@ -139,11 +197,8 @@ __kernel void remap_16SC2(__global const T * restrict src, __global T * dst, __g
 
         if (NEED_EXTRAPOLATION(gx, gy))
         {
-#ifdef BORDER_CONSTANT
-            dst[dstIdx] = scalar;
-#else
-#error No extrapolation method
-#endif
+            int2 zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
         }
         else
         {
@@ -176,56 +231,37 @@ __kernel void remap_2_32FC1(__global T const * restrict  src, __global T * dst,
         int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
         int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
         int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
+        int2 zero = (int2)(0);
 
         float2 _u = map_data - convert_float2(map_dataA);
         WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
-        WT nval = convertToWT(nVal);
-        WT a = nval, b = nval, c = nval, d = nval;
+        WT scalar = convertToWT(nVal);
+        WT a = scalar, b = scalar, c = scalar, d = scalar;
 
         if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
             a = convertToWT(src[mad24(map_dataA.y, src_step, map_dataA.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataA, a);
 
         if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
             b = convertToWT(src[mad24(map_dataB.y, src_step, map_dataB.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataB, b);
 
         if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
             c = convertToWT(src[mad24(map_dataC.y, src_step, map_dataC.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataC, c);
 
         if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
             d = convertToWT(src[mad24(map_dataD.y, src_step, map_dataD.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataD, d);
 
-        WT dst_data = a * (WT)(1.0 - u.x) * (WT)(1.0 - u.y) +
-                      b * (WT)(u.x)       * (WT)(1.0 - u.y) +
-                      c * (WT)(1.0 - u.x) * (WT)(u.y) +
-                      d * (WT)(u.x)       * (WT)(u.y);
+        WT dst_data = a * (WT)(1 - u.x) * (WT)(1 - u.y) +
+                      b * (WT)(u.x)     * (WT)(1 - u.y) +
+                      c * (WT)(1 - u.x) * (WT)(u.y) +
+                      d * (WT)(u.x)     * (WT)(u.y);
         dst[dstIdx] = convertToT(dst_data);
     }
 }
@@ -248,57 +284,38 @@ __kernel void remap_32FC2(__global T const * restrict  src, __global T * dst,
         int2 map_dataA = convert_int2_sat_rtn(map_data);
         int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
         int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
-        int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
+        int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
+        int2 zero = (int2)(0);
 
         float2 _u = map_data - convert_float2(map_dataA);
         WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
-        WT nval = convertToWT(nVal);
-        WT a = nval, b = nval, c = nval, d = nval;
+        WT scalar = convertToWT(nVal);
+        WT a = scalar, b = scalar, c = scalar, d = scalar;
 
         if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
             a = convertToWT(src[mad24(map_dataA.y, src_step, map_dataA.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataA, a);
 
         if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
             b = convertToWT(src[mad24(map_dataB.y, src_step, map_dataB.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataB, b);
 
         if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
             c = convertToWT(src[mad24(map_dataC.y, src_step, map_dataC.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataC, c);
 
         if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
             d = convertToWT(src[mad24(map_dataD.y, src_step, map_dataD.x + src_offset)]);
         else
-        {
-#ifdef BORDER_CONSTANT
-#else
-#error No extrapolation method
-#endif
-        }
+            EXTRAPOLATE(map_dataD, d);
 
-        WT dst_data = a * (WT)(1.0 - u.x) * (WT)(1.0 - u.y) +
-                      b * (WT)(u.x)       * (WT)(1.0 - u.y) +
-                      c * (WT)(1.0 - u.x) * (WT)(u.y) +
-                      d * (WT)(u.x)       * (WT)(u.y);
+        WT dst_data = a * (WT)(1 - u.x) * (WT)(1 - u.y) +
+                      b * (WT)(u.x)     * (WT)(1 - u.y) +
+                      c * (WT)(1 - u.x) * (WT)(u.y) +
+                      d * (WT)(u.x)     * (WT)(u.y);
         dst[dstIdx] = convertToT(dst_data);
     }
 }

@@ -64,7 +64,7 @@ static MatType noType = -1;
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // warpAffine  & warpPerspective
 
-PARAM_TEST_CASE(WarpTestBase, MatType, int, bool, bool)
+PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 {
     int type, interpolation;
     Size dsize;
@@ -164,7 +164,7 @@ OCL_TEST_P(WarpPerspective, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 
-PARAM_TEST_CASE(Remap, int, int, pair<MatType, MatType>, int, bool)
+PARAM_TEST_CASE(Remap, MatDepth, Channels, pair<MatType, MatType>, Border, bool)
 {
     int srcType, map1Type, map2Type;
     int borderType;
@@ -202,14 +202,15 @@ PARAM_TEST_CASE(Remap, int, int, pair<MatType, MatType>, int, bool)
         randomSubMat(src, src_roi, srcROISize, srcBorder, srcType, 5, 256);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dstROISize, dstBorder, srcType, -MAX_VALUE, MAX_VALUE << 1);
+        randomSubMat(dst, dst_roi, dstROISize, dstBorder, srcType, -MAX_VALUE, MAX_VALUE);
 
+        int mapMaxValue = MAX_VALUE << 2;
         Border map1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(map1, map1_roi, dstROISize, map1Border, map1Type, -MAX_VALUE, MAX_VALUE << 1);
+        randomSubMat(map1, map1_roi, dstROISize, map1Border, map1Type, -mapMaxValue, mapMaxValue);
 
         Border map2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         if (map2Type != noType)
-            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, -MAX_VALUE, MAX_VALUE << 1);
+            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, -mapMaxValue, mapMaxValue);
 
         generateOclMat(gsrc, gsrc_roi, src, srcROISize, srcBorder);
         generateOclMat(gdst, gdst_roi, dst, dstROISize, dstBorder);
@@ -262,7 +263,7 @@ OCL_TEST_P(Remap_INTER_LINEAR, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // resize
 
-PARAM_TEST_CASE(Resize, MatType, double, double, int, bool)
+PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 {
     int type, interpolation;
     double fx, fy;
@@ -325,38 +326,46 @@ OCL_TEST_P(Resize, Mat)
 
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values((int)INTER_NEAREST, (int)INTER_LINEAR, (int)INTER_CUBIC),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
                             Bool(),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
-                            testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                            testing::Range(1, 5),
-                            Values(make_pair<MatType, MatType>(CV_32FC1, CV_32FC1),
-                                   make_pair<MatType, MatType>(CV_32FC2, noType)),
-                            Values((int)BORDER_CONSTANT),
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+                            Values(1, 2, 3, 4),
+                            Values(pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
+                                   pair<MatType, MatType>((MatType)CV_32FC2, noType)),
+                            Values((Border)BORDER_CONSTANT,
+                                   (Border)BORDER_REPLICATE,
+                                   (Border)BORDER_WRAP,
+                                   (Border)BORDER_REFLECT,
+                                   (Border)BORDER_REFLECT_101),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
-                            testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                            testing::Range(1, 5),
-                            Values(make_pair<MatType, MatType>(CV_32FC1, CV_32FC1),
-                                   make_pair<MatType, MatType>(CV_32FC2, noType),
-                                   make_pair<MatType, MatType>(CV_16SC2, noType)),
-                            Values((int)BORDER_CONSTANT),
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+                            Values(1, 2, 3, 4),
+                            Values(pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
+                                   pair<MatType, MatType>((MatType)CV_32FC2, noType),
+                                   pair<MatType, MatType>((MatType)CV_16SC2, noType)),
+                            Values((Border)BORDER_CONSTANT,
+                                   (Border)BORDER_REPLICATE,
+                                   (Border)BORDER_WRAP,
+                                   (Border)BORDER_REFLECT,
+                                   (Border)BORDER_REFLECT_101),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(0.5, 1.5, 2.0),
                             Values(0.5, 1.5, 2.0),
-                            Values((int)INTER_NEAREST, (int)INTER_LINEAR),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
                             Bool()));
 
 #endif // HAVE_OPENCL
