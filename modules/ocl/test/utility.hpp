@@ -42,7 +42,7 @@
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
 
-#define LOOP_TIMES 1
+extern int LOOP_TIMES;
 
 #define MWIDTH 256
 #define MHEIGHT 256
