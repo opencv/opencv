@@ -99,7 +99,7 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
 {
     // getting params
     const Size srcSize = GetParam();
-    const double eps = 3e-1;
+    const double eps = 1e-6;
 
     // creating src data
     Mat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
@@ -114,17 +114,15 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::exp(oclSrc, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::exp(src, dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// LOG ////////////////////////
@@ -135,7 +133,7 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
 {
     // getting params
     const Size srcSize = GetParam();
-    const double eps = 1e-5;
+    const double eps = 1e-6;
 
     // creating src data
     Mat src(srcSize, CV_32F), dst(srcSize, src.type());
@@ -153,17 +151,15 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::log(oclSrc, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::log(src, dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// Add ////////////////////////
@@ -818,8 +814,9 @@ typedef TestBaseWithParam<Size> PowFixture;
 PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
+    const double eps = 1e-6;
 
-   Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
+    Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
@@ -829,17 +826,15 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::pow(oclSrc, -2.0, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, 5e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::pow(src, -2.0, dst);
-
-        SANITY_CHECK(dst, 5e-2);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// AddWeighted////////////////////////
