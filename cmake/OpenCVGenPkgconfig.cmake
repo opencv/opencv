@@ -59,7 +59,7 @@ set(OpenCV_LIB_COMPONENTS ${OpenCV_LIB_COMPONENTS_})
 if(OpenCV_EXTRA_COMPONENTS)
   foreach(extra_component ${OpenCV_EXTRA_COMPONENTS})
 
-    if(extra_component MATCHES "-[lL](.*)" OR extra_component MATCHES "[\\/]")
+    if(extra_component MATCHES "^-[lL](.*)" OR extra_component MATCHES "[\\/]")
       set(maybe_l_prefix "")
     else()
       set(maybe_l_prefix "-l")
