@@ -128,8 +128,11 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     {
         random_roi();
 
-        Laplacian(src_roi, dst_roi, -1, ksize, 1);
-        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, 1); // TODO scale
+        // border type is used as a scale factor for the Laplacian kernel
+        double scale = static_cast<double>(borderType);
+
+        Laplacian(src_roi, dst_roi, -1, ksize, scale);
+        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, scale);
 
         Near(1e-5);
     }
@@ -371,7 +374,7 @@ INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(1, 3),
                             Values(Size(0, 0)), // not used
-                            Values(0), // not used
+                            Values(1, 2), // value is used as scale factor for kernel
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
