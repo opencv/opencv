@@ -139,9 +139,14 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
     int step = (int)img.step;
 
 #if 1
-    #define GET_VALUE(idx) \
-        center[cvRound(pattern[idx].x*b + pattern[idx].y*a)*step + \
-               cvRound(pattern[idx].x*a - pattern[idx].y*b)]
+    float x, y;
+    int ix, iy;
+#define GET_VALUE(idx) \
+       (x = pattern[idx].x*a - pattern[idx].y*b, \
+        y = pattern[idx].x*b + pattern[idx].y*a, \
+        ix = cvRound(x), \
+        iy = cvRound(y), \
+        *(center + iy*step + ix) )
 #else
     float x, y;
     int ix, iy;
@@ -935,7 +940,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
     }
 }
 
-void ORB::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void ORB::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
 }

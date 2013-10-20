@@ -176,7 +176,7 @@ CV_INIT_ALGORITHM(DenseFeatureDetector, "Feature2D.Dense",
                   obj.info()->addParam(obj, "varyImgBoundWithScale", obj.varyImgBoundWithScale));
 
 CV_INIT_ALGORITHM(GridAdaptedFeatureDetector, "Feature2D.Grid",
-                  obj.info()->addParam(obj, "detector", obj.detector);
+                  obj.info()->addParam<FeatureDetector>(obj, "detector", obj.detector, false, 0, 0, "Detector algorithm.");
                   obj.info()->addParam(obj, "maxTotalKeypoints", obj.maxTotalKeypoints);
                   obj.info()->addParam(obj, "gridRows", obj.gridRows);
                   obj.info()->addParam(obj, "gridCols", obj.gridCols));
