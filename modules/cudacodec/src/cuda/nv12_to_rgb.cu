@@ -47,13 +47,26 @@
  * source and converts to output in ARGB format
  */
 
-#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/opencv_modules.hpp"
 
-namespace cv { namespace cuda { namespace device
+#ifndef HAVE_OPENCV_CUDEV
+
+#error "opencv_cudev is required"
+
+#else
+
+#include "opencv2/cudev/common.hpp"
+
+using namespace cv;
+using namespace cv::cudev;
+
+void videoDecPostProcessFrame(const GpuMat& decodedFrame, OutputArray _outFrame, int width, int height);
+
+namespace
 {
     __constant__ float constHueColorSpaceMat[9] = {1.1644f, 0.0f, 1.596f, 1.1644f, -0.3918f, -0.813f, 1.1644f, 2.0172f, 0.0f};
 
-    __device__ void YUV2RGB(const uint* yuvi, float* red, float* green, float* blue)
+    __device__ static void YUV2RGB(const uint* yuvi, float* red, float* green, float* blue)
     {
         float luma, chromaCb, chromaCr;
 
@@ -76,7 +89,7 @@ namespace cv { namespace cuda { namespace device
                 (chromaCr * constHueColorSpaceMat[8]);
     }
 
-    __device__ uint RGBA_pack_10bit(float red, float green, float blue, uint alpha)
+    __device__ static uint RGBA_pack_10bit(float red, float green, float blue, uint alpha)
     {
         uint ARGBpixel = 0;
 
@@ -99,9 +112,9 @@ namespace cv { namespace cuda { namespace device
     #define COLOR_COMPONENT_BIT_SIZE 10
     #define COLOR_COMPONENT_MASK     0x3FF
 
-    __global__ void NV12_to_RGB(uchar* srcImage, size_t nSourcePitch,
-                                uint* dstImage, size_t nDestPitch,
-                                uint width, uint height)
+    __global__ void NV12_to_RGB(const uchar* srcImage, size_t nSourcePitch,
+                                  uint* dstImage, size_t nDestPitch,
+                                  uint width, uint height)
     {
         // Pad borders with duplicate pixels, and we multiply by 2 because we process 2 pixels per thread
         const int x = blockIdx.x * (blockDim.x << 1) + (threadIdx.x << 1);
@@ -171,18 +184,24 @@ namespace cv { namespace cuda { namespace device
         dstImage[y * dstImagePitch + x     ] = RGBA_pack_10bit(red[0], green[0], blue[0], ((uint)0xff << 24));
         dstImage[y * dstImagePitch + x + 1 ] = RGBA_pack_10bit(red[1], green[1], blue[1], ((uint)0xff << 24));
     }
+}
 
-    void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream)
-    {
-        dim3 block(32, 8);
-        dim3 grid(divUp(interopFrame.cols, 2 * block.x), divUp(interopFrame.rows, block.y));
+void videoDecPostProcessFrame(const GpuMat& decodedFrame, OutputArray _outFrame, int width, int height)
+{
+    // Final Stage: NV12toARGB color space conversion
 
-        NV12_to_RGB<<<grid, block, 0, stream>>>(decodedFrame.data, decodedFrame.step, interopFrame.data, interopFrame.step,
-            interopFrame.cols, interopFrame.rows);
+    _outFrame.create(height, width, CV_8UC4);
+    GpuMat outFrame = _outFrame.getGpuMat();
 
-        cudaSafeCall( cudaGetLastError() );
+    dim3 block(32, 8);
+    dim3 grid(divUp(width, 2 * block.x), divUp(height, block.y));
 
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-}}}
+    NV12_to_RGB<<<grid, block>>>(decodedFrame.ptr<uchar>(), decodedFrame.step,
+                                 outFrame.ptr<uint>(), outFrame.step,
+                                 width, height);
+
+    CV_CUDEV_SAFE_CALL( cudaGetLastError() );
+    CV_CUDEV_SAFE_CALL( cudaDeviceSynchronize() );
+}
+
+#endif
