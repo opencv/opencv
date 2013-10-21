@@ -40,64 +40,23 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void cmpMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
+
+namespace
 {
-    struct VCmpEq4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vcmpeq4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VCmpEq4() {}
-        __host__ __device__ __forceinline__ VCmpEq4(const VCmpEq4&) {}
-    };
-    struct VCmpNe4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vcmpne4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VCmpNe4() {}
-        __host__ __device__ __forceinline__ VCmpNe4(const VCmpNe4&) {}
-    };
-    struct VCmpLt4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vcmplt4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VCmpLt4() {}
-        __host__ __device__ __forceinline__ VCmpLt4(const VCmpLt4&) {}
-    };
-    struct VCmpLe4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vcmple4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VCmpLe4() {}
-        __host__ __device__ __forceinline__ VCmpLe4(const VCmpLe4&) {}
-    };
-
-    template <class Op, typename T>
-    struct Cmp : binary_function<T, T, uchar>
+    template <class Op, typename T> struct CmpOp : binary_function<T, T, uchar>
     {
         __device__ __forceinline__ uchar operator()(T a, T b) const
         {
@@ -105,102 +64,156 @@ namespace arithm
             return -op(a, b);
         }
     };
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <> struct TransformFunctorTraits< arithm::VCmpEq4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-    template <> struct TransformFunctorTraits< arithm::VCmpNe4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
+        enum {
+            shift = 1
+        };
     };
-    template <> struct TransformFunctorTraits< arithm::VCmpLt4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
-    };
-    template <> struct TransformFunctorTraits< arithm::VCmpLe4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
-    };
-
-    template <class Op, typename T> struct TransformFunctorTraits< arithm::Cmp<Op, T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    void cmpMatEq_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
-    }
-    void cmpMatNe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
-    }
-    void cmpMatLt_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
-    }
-    void cmpMatLe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
-    }
 
     template <template <typename> class Op, typename T>
-    void cmpMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void cmpMat_v1(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
     {
-        Cmp<Op<T>, T> op;
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
+        CmpOp<Op<T>, T> op;
+        gridTransformBinary_< TransformPolicy<T> >(globPtr<T>(src1), globPtr<T>(src2), globPtr<uchar>(dst), op, stream);
     }
 
-    template <typename T> void cmpMatEq(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    struct VCmpEq4 : binary_function<uint, uint, uint>
     {
-        cmpMat<equal_to, T>(src1, src2, dst, stream);
-    }
-    template <typename T> void cmpMatNe(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmpeq4(a, b);
+        }
+    };
+    struct VCmpNe4 : binary_function<uint, uint, uint>
     {
-        cmpMat<not_equal_to, T>(src1, src2, dst, stream);
-    }
-    template <typename T> void cmpMatLt(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmpne4(a, b);
+        }
+    };
+    struct VCmpLt4 : binary_function<uint, uint, uint>
     {
-        cmpMat<less, T>(src1, src2, dst, stream);
-    }
-    template <typename T> void cmpMatLe(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmplt4(a, b);
+        }
+    };
+    struct VCmpLe4 : binary_function<uint, uint, uint>
     {
-        cmpMat<less_equal, T>(src1, src2, dst, stream);
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vcmple4(a, b);
+        }
+    };
+
+    void cmpMatEq_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, VCmpEq4(), stream);
     }
+    void cmpMatNe_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
 
-    template void cmpMatEq<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatEq<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
 
-    template void cmpMatNe<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatNe<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+        gridTransformBinary(src1_, src2_, dst_, VCmpNe4(), stream);
+    }
+    void cmpMatLt_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
 
-    template void cmpMatLt<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLt<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
 
-    template void cmpMatLe<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<schar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<short >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<int   >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<float >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void cmpMatLe<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+        gridTransformBinary(src1_, src2_, dst_, VCmpLt4(), stream);
+    }
+    void cmpMatLe_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, VCmpLe4(), stream);
+    }
 }
 
-#endif // CUDA_DISABLER
+void cmpMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop)
+{
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+    static const func_t funcs[7][4] =
+    {
+        {cmpMat_v1<equal_to, uchar> , cmpMat_v1<not_equal_to, uchar> , cmpMat_v1<less, uchar> , cmpMat_v1<less_equal, uchar> },
+        {cmpMat_v1<equal_to, schar> , cmpMat_v1<not_equal_to, schar> , cmpMat_v1<less, schar> , cmpMat_v1<less_equal, schar> },
+        {cmpMat_v1<equal_to, ushort>, cmpMat_v1<not_equal_to, ushort>, cmpMat_v1<less, ushort>, cmpMat_v1<less_equal, ushort>},
+        {cmpMat_v1<equal_to, short> , cmpMat_v1<not_equal_to, short> , cmpMat_v1<less, short> , cmpMat_v1<less_equal, short> },
+        {cmpMat_v1<equal_to, int>   , cmpMat_v1<not_equal_to, int>   , cmpMat_v1<less, int>   , cmpMat_v1<less_equal, int>   },
+        {cmpMat_v1<equal_to, float> , cmpMat_v1<not_equal_to, float> , cmpMat_v1<less, float> , cmpMat_v1<less_equal, float> },
+        {cmpMat_v1<equal_to, double>, cmpMat_v1<not_equal_to, double>, cmpMat_v1<less, double>, cmpMat_v1<less_equal, double>}
+    };
+
+    typedef void (*func_v4_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+    static const func_v4_t funcs_v4[] =
+    {
+        cmpMatEq_v4, cmpMatNe_v4, cmpMatLt_v4, cmpMatLe_v4
+    };
+
+    const int depth = src1.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    static const int codes[] =
+    {
+        0, 2, 3, 2, 3, 1
+    };
+    const GpuMat* psrc1[] =
+    {
+        &src1, &src2, &src2, &src1, &src1, &src1
+    };
+    const GpuMat* psrc2[] =
+    {
+        &src2, &src1, &src1, &src2, &src2, &src2
+    };
+
+    const int code = codes[cmpop];
+
+    GpuMat src1_ = psrc1[cmpop]->reshape(1);
+    GpuMat src2_ = psrc2[cmpop]->reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    if (depth == CV_8U && (src1_.cols & 3) == 0)
+    {
+        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
+        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
+        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
+
+        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
+
+        if (isAllAligned)
+        {
+            funcs_v4[code](src1_, src2_, dst_, stream);
+            return;
+        }
+    }
+
+    const func_t func = funcs[depth][code];
+
+    func(src1_, src2_, dst_, stream);
+}
+
+#endif
