@@ -110,6 +110,7 @@ if(CUDA_FOUND)
       message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
     else()
       set(__cuda_arch_bin "${_nvcc_out}")
+      string(REPLACE "2.1" "2.1(2.0)" __cuda_arch_bin "${__cuda_arch_bin}")
     endif()
   endif()
 
