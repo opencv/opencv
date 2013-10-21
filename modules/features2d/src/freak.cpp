@@ -224,29 +224,31 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
 
     ((FREAK*)this)->buildPattern();
 
+    // Convert to gray if not already
     Mat grayImage = image;
-    if( image.channels() > 1 ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
+    if( image.channels() > 1 )
+        cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     // Use 32-bit integers if we won't overflow in the integral image
-    if ((image.type() == CV_8UC1 || image.type() == CV_8SC1) &&
+    if ((image.depth() == CV_8U || image.depth() == CV_8S) &&
         (image.rows * image.cols) < 8388608 ) // 8388608 = 2 ^ (32 - 8(bit depth) - 1(sign bit))
     {
         // Create the integral image appropriate for our type & usage
-        if (image.type() == CV_8UC1)
+        if (image.depth() == CV_8U)
             computeDescriptors<uchar, int>(grayImage, keypoints, descriptors);
-        else if (image.type() == CV_8SC1)
+        else if (image.depth() == CV_8S)
             computeDescriptors<char, int>(grayImage, keypoints, descriptors);
         else
             CV_Error( Error::StsUnsupportedFormat, "" );
     } else {
         // Create the integral image appropriate for our type & usage
-        if ( image.type() == CV_8UC1 )
+        if ( image.depth() == CV_8U )
             computeDescriptors<uchar, double>(grayImage, keypoints, descriptors);
-        else if ( image.type() == CV_8SC1 )
+        else if ( image.depth() == CV_8S )
             computeDescriptors<char, double>(grayImage, keypoints, descriptors);
-        else if ( image.type() == CV_16UC1 )
+        else if ( image.depth() == CV_16U )
             computeDescriptors<ushort, double>(grayImage, keypoints, descriptors);
-        else if ( image.type() == CV_16SC1 )
+        else if ( image.depth() == CV_16S )
             computeDescriptors<short, double>(grayImage, keypoints, descriptors);
         else
             CV_Error( Error::StsUnsupportedFormat, "" );
