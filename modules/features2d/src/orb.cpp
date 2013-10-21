@@ -938,7 +938,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
     }
 }
 
-void ORB::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void ORB::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     (*this)(image, mask, keypoints, noArray(), false);
 }
