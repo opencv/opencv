@@ -62,8 +62,7 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
                 int, // border type, or iteration
                 bool) // roi or not
 {
-    int type, borderType;
-    int ksize;
+    int type, borderType, ksize;
     bool useRoi;
 
     Mat src, dst_whole, src_roi, dst_roi;
@@ -92,8 +91,12 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst_whole, Mat(gdst_whole), threshold);
-        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), threshold);
+        Mat roi, whole;
+        gdst_whole.download(whole);
+        gdst_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst_whole, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 };
 
