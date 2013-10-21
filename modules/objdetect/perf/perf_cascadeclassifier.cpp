@@ -1,5 +1,5 @@
 #include "perf_precomp.hpp"
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 
 using namespace std;
 using namespace cv;

@@ -152,7 +152,7 @@ int main(int ac, char ** av)
 
     Mat train_desc, query_desc;
     const int DESIRED_FTRS = 500;
-    GridAdaptedFeatureDetector detector(new FastFeatureDetector(10, true), DESIRED_FTRS, 4, 4);
+    GridAdaptedFeatureDetector detector(makePtr<FastFeatureDetector>(10, true), DESIRED_FTRS, 4, 4);
 
     Mat H_prev = Mat::eye(3, 3, CV_32FC1);
     for (;;)
@@ -161,7 +161,7 @@ int main(int ac, char ** av)
         if (frame.empty())
             break;
 
-        cvtColor(frame, gray, CV_RGB2GRAY);
+        cvtColor(frame, gray, COLOR_RGB2GRAY);
 
         detector.detect(gray, query_kpts); //Find interest points
 

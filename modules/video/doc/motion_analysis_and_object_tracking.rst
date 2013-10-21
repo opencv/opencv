@@ -10,10 +10,9 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
 .. ocv:function:: void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg, InputArray prevPts, InputOutputArray nextPts, OutputArray status, OutputArray err, Size winSize=Size(21,21), int maxLevel=3, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01), int flags=0, double minEigThreshold=1e-4 )
 
-.. ocv:pyfunction:: cv2.calcOpticalFlowPyrLK(prevImg, nextImg, prevPts[, nextPts[, status[, err[, winSize[, maxLevel[, criteria[, flags[, minEigThreshold]]]]]]]]) -> nextPts, status, err
+.. ocv:pyfunction:: cv2.calcOpticalFlowPyrLK(prevImg, nextImg, prevPts, nextPts[, status[, err[, winSize[, maxLevel[, criteria[, flags[, minEigThreshold]]]]]]]) -> nextPts, status, err
 
 .. ocv:cfunction:: void cvCalcOpticalFlowPyrLK( const CvArr* prev, const CvArr* curr, CvArr* prev_pyr, CvArr* curr_pyr, const CvPoint2D32f* prev_features, CvPoint2D32f* curr_features, int count, CvSize win_size, int level, char* status, float* track_error, CvTermCriteria criteria, int flags )
-.. ocv:pyoldfunction:: cv.CalcOpticalFlowPyrLK(prev, curr, prevPyr, currPyr, prevFeatures, winSize, level, criteria, flags, guesses=None) -> (currFeatures, status, track_error)
 
     :param prevImg: first 8-bit input image or pyramid constructed by :ocv:func:`buildOpticalFlowPyramid`.
 
@@ -84,7 +83,7 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
 .. ocv:cfunction:: void cvCalcOpticalFlowFarneback( const CvArr* prev, const CvArr* next, CvArr* flow, double pyr_scale, int levels, int winsize, int iterations, int poly_n, double poly_sigma, int flags )
 
-.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags[, flow]) -> flow
+.. ocv:pyfunction:: cv2.calcOpticalFlowFarneback(prev, next, flow, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags) -> flow
 
     :param prev: first 8-bit single-channel input image.
 
@@ -165,6 +164,54 @@ In case of point sets, the problem is formulated as follows: you need to find a 
     :ocv:func:`getPerspectiveTransform`,
     :ocv:func:`findHomography`
 
+findTransformECC
+------------------------
+Finds the geometric transform (warp) between two images in terms of the ECC criterion [EP08]_.
+
+.. ocv:function:: double findTransformECC( InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix, int motionType=MOTION_AFFINE, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001))
+
+.. ocv:pyfunction:: cv2.findTransformECC(templateImage, inputImage, warpMatrix[, motionType[, criteria]]) -> retval, warpMatrix
+
+    :param templateImage: single-channel template image; ``CV_8U`` or ``CV_32F`` array.
+
+    :param inputImage: single-channel input image which should be warped with the final ``warpMatrix`` in order to provide an image similar to ``templateImage``, same type as ``temlateImage``.
+
+    :param warpMatrix: floating-point :math:`2\times 3` or :math:`3\times 3` mapping matrix (warp).
+
+    :param motionType: parameter, specifying the type of motion:
+
+        * **MOTION_TRANSLATION** sets a translational motion model; ``warpMatrix`` is :math:`2\times 3` with the first :math:`2\times 2` part being the unity matrix and the rest two parameters being estimated.
+
+        * **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
+
+        * **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated; ``warpMatrix`` is :math:`2\times 3`.
+
+        * **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are estimated;``warpMatrix`` is :math:`3\times 3`.
+
+    :param criteria: parameter, specifying the termination criteria of the ECC algorithm; ``criteria.epsilon`` defines the threshold of the increment in the correlation coefficient between two iterations (a negative ``criteria.epsilon`` makes ``criteria.maxcount`` the only termination criterion). Default values are shown in the declaration above.
+
+
+The function estimates the optimum transformation (``warpMatrix``) with respect to ECC criterion ([EP08]_), that is
+
+.. math::
+
+    \texttt{warpMatrix} = \texttt{warpMatrix} = \arg\max_{W} \texttt{ECC}(\texttt{templateImage}(x,y),\texttt{inputImage}(x',y'))
+
+where
+
+.. math::
+
+    \begin{bmatrix} x' \\ y' \end{bmatrix} = W \cdot \begin{bmatrix} x \\ y \\ 1 \end{bmatrix}
+
+(the equation holds with homogeneous coordinates for homography). It returns the final enhanced correlation coefficient, that is the correlation coefficient between the template image and the final warped input image. When a :math:`3\times 3` matrix is given with ``motionType`` =0, 1 or 2, the third row is ignored.
+
+
+Unlike :ocv:func:`findHomography` and :ocv:func:`estimateRigidTransform`, the function :ocv:func:`findTransformECC` implements an area-based alignment that builds on intensity similarities. In essence, the function updates the initial transformation that roughly aligns the images. If this information is missing, the identity warp (unity matrix) should be given as input. Note that if images undergo strong displacements/rotations, an initial transformation that roughly aligns the images is necessary (e.g., a simple euclidean/similarity transform that allows for the images showing the same image content approximately). Use inverse warping in the second image to take an image close to the first one, i.e. use the flag ``WARP_INVERSE_MAP`` with :ocv:func:`warpAffine` or :ocv:func:`warpPerspective`. See also the OpenCV sample ``image_alignment.cpp`` that demonstrates the use of the function. Note that the function throws an exception if algorithm does not converges.
+
+.. seealso::
+
+    :ocv:func:`estimateRigidTransform`,
+    :ocv:func:`findHomography`
 
 
 updateMotionHistory
@@ -173,10 +220,9 @@ Updates the motion history image by a moving silhouette.
 
 .. ocv:function:: void updateMotionHistory( InputArray silhouette, InputOutputArray mhi, double timestamp, double duration )
 
-.. ocv:pyfunction:: cv2.updateMotionHistory(silhouette, mhi, timestamp, duration) -> None
+.. ocv:pyfunction:: cv2.updateMotionHistory(silhouette, mhi, timestamp, duration) -> mhi
 
 .. ocv:cfunction:: void cvUpdateMotionHistory( const CvArr* silhouette, CvArr* mhi, double timestamp, double duration )
-.. ocv:pyoldfunction:: cv.UpdateMotionHistory(silhouette, mhi, timestamp, duration)-> None
 
     :param silhouette: Silhouette mask that has non-zero pixels where the motion occurs.
 
@@ -210,7 +256,6 @@ Calculates a gradient orientation of a motion history image.
 .. ocv:pyfunction:: cv2.calcMotionGradient(mhi, delta1, delta2[, mask[, orientation[, apertureSize]]]) -> mask, orientation
 
 .. ocv:cfunction:: void cvCalcMotionGradient( const CvArr* mhi, CvArr* mask, CvArr* orientation, double delta1, double delta2, int aperture_size=3 )
-.. ocv:pyoldfunction:: cv.CalcMotionGradient(mhi, mask, orientation, delta1, delta2, apertureSize=3)-> None
 
     :param mhi: Motion history single-channel floating-point image.
 
@@ -252,7 +297,6 @@ Calculates a global motion orientation in a selected region.
 .. ocv:pyfunction:: cv2.calcGlobalOrientation(orientation, mask, mhi, timestamp, duration) -> retval
 
 .. ocv:cfunction:: double cvCalcGlobalOrientation( const CvArr* orientation, const CvArr* mask, const CvArr* mhi, double timestamp, double duration )
-.. ocv:pyoldfunction:: cv.CalcGlobalOrientation(orientation, mask, mhi, timestamp, duration)-> float
 
     :param orientation: Motion gradient orientation image calculated by the function  :ocv:func:`calcMotionGradient` .
 
@@ -282,7 +326,6 @@ Splits a motion history image into a few parts corresponding to separate indepen
 .. ocv:pyfunction:: cv2.segmentMotion(mhi, timestamp, segThresh[, segmask]) -> segmask, boundingRects
 
 .. ocv:cfunction:: CvSeq* cvSegmentMotion( const CvArr* mhi, CvArr* seg_mask, CvMemStorage* storage, double timestamp, double seg_thresh )
-.. ocv:pyoldfunction:: cv.SegmentMotion(mhi, seg_mask, storage, timestamp, seg_thresh) -> boundingRects
 
     :param mhi: Motion history image.
 
@@ -309,8 +352,6 @@ Finds an object center, size, and orientation.
 .. ocv:pyfunction:: cv2.CamShift(probImage, window, criteria) -> retval, window
 
 .. ocv:cfunction:: int cvCamShift( const CvArr* prob_image, CvRect window, CvTermCriteria criteria, CvConnectedComp* comp, CvBox2D* box=NULL )
-
-.. ocv:pyoldfunction:: cv.CamShift(prob_image, window, criteria) -> (int, comp, box)
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` .
 
@@ -340,7 +381,6 @@ Finds an object on a back projection image.
 .. ocv:pyfunction:: cv2.meanShift(probImage, window, criteria) -> retval, window
 
 .. ocv:cfunction:: int cvMeanShift( const CvArr* prob_image, CvRect window, CvTermCriteria criteria, CvConnectedComp* comp )
-.. ocv:pyoldfunction:: cv.MeanShift(prob_image, window, criteria) -> comp
 
     :param probImage: Back projection of the object histogram. See  :ocv:func:`calcBackProject` for details.
 
@@ -387,7 +427,6 @@ The constructors.
 .. ocv:pyfunction:: cv2.KalmanFilter([dynamParams, measureParams[, controlParams[, type]]]) -> <KalmanFilter object>
 
 .. ocv:cfunction:: CvKalman* cvCreateKalman( int dynam_params, int measure_params, int control_params=0 )
-.. ocv:pyoldfunction:: cv.CreateKalman(dynam_params, measure_params, control_params=0) -> CvKalman
 
     The full constructor.
 
@@ -425,7 +464,6 @@ Computes a predicted state.
 .. ocv:pyfunction:: cv2.KalmanFilter.predict([control]) -> retval
 
 .. ocv:cfunction:: const CvMat* cvKalmanPredict( CvKalman* kalman, const CvMat* control=NULL)
-.. ocv:pyoldfunction:: cv.KalmanPredict(kalman, control=None) -> mat
 
     :param control: The optional input control
 
@@ -439,8 +477,6 @@ Updates the predicted state from the measurement.
 .. ocv:pyfunction:: cv2.KalmanFilter.correct(measurement) -> retval
 
 .. ocv:cfunction:: const CvMat* cvKalmanCorrect( CvKalman* kalman, const CvMat* measurement )
-
-.. ocv:pyoldfunction:: cv.KalmanCorrect(kalman, measurement) -> mat
 
     :param measurement: The measured system parameters
 
@@ -456,7 +492,7 @@ Base class for background/foreground segmentation. ::
     {
     public:
         virtual ~BackgroundSubtractor();
-        virtual void operator()(InputArray image, OutputArray fgmask, double learningRate=0);
+        virtual void apply(InputArray image, OutputArray fgmask, double learningRate=0);
         virtual void getBackgroundImage(OutputArray backgroundImage) const;
     };
 
@@ -464,11 +500,11 @@ Base class for background/foreground segmentation. ::
 The class is only used to define the common interface for the whole family of background/foreground segmentation algorithms.
 
 
-BackgroundSubtractor::operator()
+BackgroundSubtractor::apply
 --------------------------------
 Computes a foreground mask.
 
-.. ocv:function:: void BackgroundSubtractor::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
+.. ocv:function:: void BackgroundSubtractor::apply(InputArray image, OutputArray fgmask, double learningRate=-1)
 
 .. ocv:pyfunction:: cv2.BackgroundSubtractor.apply(image[, fgmask[, learningRate]]) -> fgmask
 
@@ -476,6 +512,7 @@ Computes a foreground mask.
 
     :param fgmask: The output foreground mask as an 8-bit binary image.
 
+    :param learningRate: The value between 0 and 1 that indicates how fast the background model is learnt. Negative parameter value makes the algorithm to use some automatically chosen learning rate. 0 means that the background model is not updated at all, 1 means that the background model is completely reinitialized from the last frame.
 
 BackgroundSubtractor::getBackgroundImage
 ----------------------------------------
@@ -494,20 +531,16 @@ BackgroundSubtractorMOG
 
 Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
-The class implements the algorithm described in P. KadewTraKuPong and R. Bowden, *An improved adaptive background mixture model for real-time tracking with shadow detection*, Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+The class implements the algorithm described in [KB2001]_.
 
 
-
-
-BackgroundSubtractorMOG::BackgroundSubtractorMOG
+createBackgroundSubtractorMOG
 ------------------------------------------------
-The constructors.
+Creates mixture-of-gaussian background subtractor
 
-.. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG()
+.. ocv:function:: Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history=200, int nmixtures=5, double backgroundRatio=0.7, double noiseSigma=0)
 
-.. ocv:function:: BackgroundSubtractorMOG::BackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma=0)
-
-.. ocv:pyfunction:: cv2.BackgroundSubtractorMOG([history, nmixtures, backgroundRatio[, noiseSigma]]) -> <BackgroundSubtractorMOG object>
+.. ocv:pyfunction:: cv2.createBackgroundSubtractorMOG([history[, nmixtures[, backgroundRatio[, noiseSigma]]]]) -> retval
 
     :param history: Length of the history.
 
@@ -515,20 +548,7 @@ The constructors.
 
     :param backgroundRatio: Background ratio.
 
-    :param noiseSigma: Noise strength.
-
-Default constructor sets all parameters to default values.
-
-
-
-
-BackgroundSubtractorMOG::operator()
------------------------------------
-Updates the background model and returns the foreground mask
-
-.. ocv:function:: void BackgroundSubtractorMOG::operator()(InputArray image, OutputArray fgmask, double learningRate=0)
-
-Parameters are the same as in :ocv:funcx:`BackgroundSubtractor::operator()`
+    :param noiseSigma: Noise strength (standard deviation of the brightness or each color channel). 0 means some automatic value.
 
 
 BackgroundSubtractorMOG2
@@ -537,101 +557,322 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
 .. ocv:class:: BackgroundSubtractorMOG2 : public BackgroundSubtractor
 
-    Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
-
-    .. ocv:member:: int nmixtures
-
-        Maximum allowed number of mixture components. Actual number is determined dynamically per pixel.
-
-    .. ocv:member:: float backgroundRatio
-
-        Threshold defining whether the component is significant enough to be included into the background model ( corresponds to ``TB=1-cf`` from the paper??which paper??). ``cf=0.1 => TB=0.9`` is default. For ``alpha=0.001``, it means that the mode should exist for approximately 105 frames before it is considered foreground.
-
-    .. ocv:member:: float varThresholdGen
-
-        Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg``). If it is not close to any component, a new component is generated. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
-
-    .. ocv:member:: float fVarInit
-
-        Initial variance for the newly generated components. It affects the speed of adaptation. The parameter value is based on your estimate of the typical standard deviation from the images. OpenCV uses 15 as a reasonable value.
-
-    .. ocv:member:: float fVarMin
-
-        Parameter used to further control the variance.
-
-    .. ocv:member:: float fVarMax
-
-        Parameter used to further control the variance.
-
-    .. ocv:member:: float fCT
-
-        Complexity reduction parameter. This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
-
-    .. ocv:member:: uchar nShadowDetection
-
-        The value for marking shadow pixels in the output foreground mask. Default value is 127.
-
-    .. ocv:member:: float fTau
-
-        Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati,Mikic,Trivedi,Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
+The class implements the Gaussian mixture model background subtraction described in [Zivkovic2004]_ and [Zivkovic2006]_ .
 
 
-The class implements the Gaussian mixture model background subtraction described in:
-
-  * Z.Zivkovic, *Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
-
-  * Z.Zivkovic, F. van der Heijden, *Efficient Adaptive Density Estimapion per Image Pixel for the Task of Background Subtraction*, Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006. The algorithm similar to the standard Stauffer&Grimson algorithm with additional selection of the number of the Gaussian components based on: Z.Zivkovic, F.van der Heijden, Recursive unsupervised learning of finite mixture models, IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004.
-
-
-BackgroundSubtractorMOG2::BackgroundSubtractorMOG2
+createBackgroundSubtractorMOG2
 --------------------------------------------------
-The constructors.
+Creates MOG2 Background Subtractor
 
-.. ocv:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2()
+.. ocv:function:: Ptr<BackgroundSubtractorMOG2> createBackgroundSubtractorMOG2( int history=500, double varThreshold=16, bool detectShadows=true )
 
-.. ocv:function:: BackgroundSubtractorMOG2::BackgroundSubtractorMOG2( int history, float varThreshold, bool bShadowDetection=true )
+  :param history: Length of the history.
 
-    :param history: Length of the history.
+  :param varThreshold: Threshold on the squared Mahalanobis distance between the pixel and the model to decide whether a pixel is well described by the background model. This parameter does not affect the background update.
 
-    :param varThreshold: Threshold on the squared Mahalanobis distance to decide whether it is well described by the background model (see Cthr??). This parameter does not affect the background update. A typical value could be 4 sigma, that is, ``varThreshold=4*4=16;`` (see Tb??).
-
-    :param bShadowDetection: Parameter defining whether shadow detection should be enabled (``true`` or ``false``).
+  :param detectShadows: If true, the algorithm will detect shadows and mark them. It decreases the speed a bit, so if you do not need this feature, set the parameter to false.
 
 
+BackgroundSubtractorMOG2::getHistory
+--------------------------------------
+Returns the number of last frames that affect the background model
 
-BackgroundSubtractorMOG2::operator()
-------------------------------------
-Updates the background model and computes the foreground mask
-
-.. ocv:function:: void BackgroundSubtractorMOG2::operator()(InputArray image, OutputArray fgmask, double learningRate=-1)
-
-    See :ocv:funcx:`BackgroundSubtractor::operator()`.
+.. ocv:function:: int BackgroundSubtractorMOG2::getHistory() const
 
 
-BackgroundSubtractorMOG2::getBackgroundImage
---------------------------------------------
-Returns background image
+BackgroundSubtractorMOG2::setHistory
+--------------------------------------
+Sets the number of last frames that affect the background model
 
-.. ocv:function:: void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage)
+.. ocv:function:: void BackgroundSubtractorMOG2::setHistory(int history)
 
-See :ocv:func:`BackgroundSubtractor::getBackgroundImage`.
+
+BackgroundSubtractorMOG2::getNMixtures
+--------------------------------------
+Returns the number of gaussian components in the background model
+
+.. ocv:function:: int BackgroundSubtractorMOG2::getNMixtures() const
+
+
+BackgroundSubtractorMOG2::setNMixtures
+--------------------------------------
+Sets the number of gaussian components in the background model
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setNMixtures(int nmixtures)
+
+
+BackgroundSubtractorMOG2::getBackgroundRatio
+---------------------------------------------
+Returns the "background ratio" parameter of the algorithm
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getBackgroundRatio() const
+
+If a foreground pixel keeps semi-constant value for about ``backgroundRatio*history`` frames, it's considered background and added to the model as a center of a new component. It corresponds to ``TB`` parameter in the paper.
+
+BackgroundSubtractorMOG2::setBackgroundRatio
+---------------------------------------------
+Sets the "background ratio" parameter of the algorithm
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setBackgroundRatio(double ratio)
+
+BackgroundSubtractorMOG2::getVarThresholdGen
+---------------------------------------------
+Returns the variance scale factor for the pixel-model match
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getVarThresholdGen() const
+
+Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg`` in the paper). If a pixel is not close to any component, it is considered foreground or added as a new component. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
+
+BackgroundSubtractorMOG2::setVarThresholdGen
+---------------------------------------------
+Sets the variance scale factor for the pixel-model match
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setVarThresholdGen(double varThresholdGen)
+
+BackgroundSubtractorMOG2::getVarInit
+---------------------------------------------
+Returns the initial variance of each gaussian component
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getVarInit() const
+
+BackgroundSubtractorMOG2::setVarInit
+---------------------------------------------
+Sets the initial variance of each gaussian component
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setVarInit(double varInit)
+
+
+BackgroundSubtractorMOG2::getComplexityReductionThreshold
+----------------------------------------------------------
+Returns the complexity reduction threshold
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getComplexityReductionThreshold() const
+
+This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
+
+BackgroundSubtractorMOG2::setComplexityReductionThreshold
+----------------------------------------------------------
+Sets the complexity reduction threshold
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setComplexityReductionThreshold(double ct)
+
+
+BackgroundSubtractorMOG2::getDetectShadows
+---------------------------------------------
+Returns the shadow detection flag
+
+.. ocv:function:: bool BackgroundSubtractorMOG2::getDetectShadows() const
+
+If true, the algorithm detects shadows and marks them. See createBackgroundSubtractorMOG2 for details.
+
+BackgroundSubtractorMOG2::setDetectShadows
+---------------------------------------------
+Enables or disables shadow detection
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setDetectShadows(bool detectShadows)
+
+BackgroundSubtractorMOG2::getShadowValue
+---------------------------------------------
+Returns the shadow value
+
+.. ocv:function:: int BackgroundSubtractorMOG2::getShadowValue() const
+
+Shadow value is the value used to mark shadows in the foreground mask. Default value is 127. Value 0 in the mask always means background, 255 means foreground.
+
+BackgroundSubtractorMOG2::setShadowValue
+---------------------------------------------
+Sets the shadow value
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setShadowValue(int value)
+
+BackgroundSubtractorMOG2::getShadowThreshold
+---------------------------------------------
+Returns the shadow threshold
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getShadowThreshold() const
+
+A shadow is detected if pixel is a darker version of the background. The shadow threshold (``Tau`` in the paper) is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
+
+BackgroundSubtractorMOG2::setShadowThreshold
+---------------------------------------------
+Sets the shadow threshold
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(double threshold)
+
+
+BackgroundSubtractorGMG
+------------------------
+Background Subtractor module based on the algorithm given in [Gold2012]_.
+
+.. ocv:class:: BackgroundSubtractorGMG : public BackgroundSubtractor
+
+
+createBackgroundSubtractorGMG
+-----------------------------------
+Creates a GMG Background Subtractor
+
+.. ocv:function:: Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120, double decisionThreshold=0.8)
+
+.. ocv:pyfunction:: cv2.createBackgroundSubtractorGMG([, initializationFrames[, decisionThreshold]]) -> retval
+
+    :param initializationFrames: number of frames used to initialize the background models.
+
+    :param decisionThreshold: Threshold value, above which it is marked foreground, else background.
+
+
+BackgroundSubtractorGMG::getNumFrames
+---------------------------------------
+Returns the number of frames used to initialize background model.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getNumFrames() const
+
+
+BackgroundSubtractorGMG::setNumFrames
+---------------------------------------
+Sets the number of frames used to initialize background model.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setNumFrames(int nframes)
+
+
+BackgroundSubtractorGMG::getDefaultLearningRate
+--------------------------------------------------
+Returns the learning rate of the algorithm. It lies between 0.0 and 1.0. It determines how quickly features are "forgotten" from histograms.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getDefaultLearningRate() const
+
+
+BackgroundSubtractorGMG::setDefaultLearningRate
+--------------------------------------------------
+Sets the learning rate of the algorithm.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setDefaultLearningRate(double lr)
+
+
+BackgroundSubtractorGMG::getDecisionThreshold
+--------------------------------------------------
+Returns the value of decision threshold. Decision value is the value above which pixel is determined to be FG.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getDecisionThreshold() const
+
+
+BackgroundSubtractorGMG::setDecisionThreshold
+--------------------------------------------------
+Sets the value of decision threshold.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setDecisionThreshold(double thresh)
+
+
+BackgroundSubtractorGMG::getMaxFeatures
+--------------------------------------------------
+Returns total number of distinct colors to maintain in histogram.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getMaxFeatures() const
+
+
+BackgroundSubtractorGMG::setMaxFeatures
+--------------------------------------------------
+Sets total number of distinct colors to maintain in histogram.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMaxFeatures(int maxFeatures)
+
+
+BackgroundSubtractorGMG::getQuantizationLevels
+--------------------------------------------------
+Returns the parameter used for quantization of color-space. It is the number of discrete levels in each channel to be used in histograms.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getQuantizationLevels() const
+
+
+BackgroundSubtractorGMG::setQuantizationLevels
+--------------------------------------------------
+Sets the parameter used for quantization of color-space
+
+.. ocv:function:: void BackgroundSubtractorGMG::setQuantizationLevels(int nlevels)
+
+
+BackgroundSubtractorGMG::getSmoothingRadius
+--------------------------------------------------
+Returns the kernel radius used for morphological operations
+
+.. ocv:function:: int BackgroundSubtractorGMG::getSmoothingRadius() const
+
+
+BackgroundSubtractorGMG::setSmoothingRadius
+--------------------------------------------------
+Sets the kernel radius used for morphological operations
+
+.. ocv:function:: void BackgroundSubtractorGMG::setSmoothingRadius(int radius)
+
+
+BackgroundSubtractorGMG::getUpdateBackgroundModel
+--------------------------------------------------
+Returns the status of background model update
+
+.. ocv:function:: bool BackgroundSubtractorGMG::getUpdateBackgroundModel() const
+
+
+BackgroundSubtractorGMG::setUpdateBackgroundModel
+--------------------------------------------------
+Sets the status of background model update
+
+.. ocv:function:: void BackgroundSubtractorGMG::setUpdateBackgroundModel(bool update)
+
+
+BackgroundSubtractorGMG::getMinVal
+--------------------------------------------------
+Returns the minimum value taken on by pixels in image sequence. Usually 0.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getMinVal() const
+
+
+BackgroundSubtractorGMG::setMinVal
+--------------------------------------------------
+Sets the minimum value taken on by pixels in image sequence.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMinVal(double val)
+
+
+BackgroundSubtractorGMG::getMaxVal
+--------------------------------------------------
+Returns the maximum value taken on by pixels in image sequence. e.g. 1.0 or 255.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getMaxVal() const
+
+
+BackgroundSubtractorGMG::setMaxVal
+--------------------------------------------------
+Sets the maximum value taken on by pixels in image sequence.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMaxVal(double val)
+
+
+BackgroundSubtractorGMG::getBackgroundPrior
+--------------------------------------------------
+Returns the prior probability that each individual pixel is a background pixel.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getBackgroundPrior() const
+
+
+BackgroundSubtractorGMG::setBackgroundPrior
+--------------------------------------------------
+Sets the prior probability that each individual pixel is a background pixel.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setBackgroundPrior(double bgprior)
 
 
 calcOpticalFlowSF
 -----------------
 Calculate an optical flow using "SimpleFlow" algorithm.
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow )
+.. ocv:function:: void calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow )
 
-.. ocv:function:: void calcOpticalFlowSF( Mat& from, Mat& to, Mat& flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
+.. ocv:function:: calcOpticalFlowSF( InputArray from, InputArray to, OutputArray flow, int layers, int averaging_block_size, int max_flow, double sigma_dist, double sigma_color, int postprocess_window, double sigma_dist_fix, double sigma_color_fix, double occ_thr, int upscale_averaging_radius, double upscale_sigma_dist, double upscale_sigma_color, double speed_up_thr )
 
     :param prev: First 8-bit 3-channel image.
 
-    :param next: Second 8-bit 3-channel image
+    :param next: Second 8-bit 3-channel image of the same size as ``prev``
 
-    :param flowX: X-coordinate of estimated flow
-
-    :param flowY: Y-coordinate of estimated flow
+    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2``
 
     :param layers: Number of layers
 
@@ -651,7 +892,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param occ_thr: threshold for detecting occlusions
 
-    :param upscale_averaging_radiud: window size for bilateral upscale operation
+    :param upscale_averaging_radius: window size for bilateral upscale operation
 
     :param upscale_sigma_dist: spatial sigma for bilateral upscale operation
 
@@ -737,9 +978,15 @@ Releases all inner buffers.
 
 .. [Davis97] Davis, J.W. and Bobick, A.F. “The Representation and Recognition of Action Using Temporal Templates”, CVPR97, 1997
 
+.. [EP08] Evangelidis, G.D. and Psarakis E.Z. "Parametric Image Alignment using Enhanced Correlation Coefficient Maximization", IEEE Transactions on PAMI, vol. 32, no. 10, 2008
+
 .. [Farneback2003] Gunnar Farneback, Two-frame motion estimation based on polynomial expansion, Lecture Notes in Computer Science, 2003, (2749), , 363-370.
 
 .. [Horn81] Berthold K.P. Horn and Brian G. Schunck. Determining Optical Flow. Artificial Intelligence, 17, pp. 185-203, 1981.
+
+.. [KB2001] P. KadewTraKuPong and R. Bowden. "An improved adaptive background mixture model for real-time tracking with shadow detection", Proc. 2nd European Workshop on Advanced Video-Based Surveillance Systems, 2001: http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+
+.. [Javier2012] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
 
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
@@ -749,4 +996,8 @@ Releases all inner buffers.
 
 .. [Zach2007] C. Zach, T. Pock and H. Bischof. "A Duality Based Approach for Realtime TV-L1 Optical Flow", In Proceedings of Pattern Recognition (DAGM), Heidelberg, Germany, pp. 214-223, 2007
 
-.. [Javier2012] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
+.. [Zivkovic2004] Z. Zivkovic. "Improved adaptive Gausian mixture model for background subtraction", International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
+
+.. [Zivkovic2006] Z.Zivkovic, F. van der Heijden. "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction", Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
+
+.. [Gold2012] Andrew B. Godbehere, Akihiro Matsukawa, Ken Goldberg, "Visual Tracking of Human Visitors under Variable-Lighting Conditions for a Responsive Audio Art Installation", American Control Conference, Montreal, June 2012.

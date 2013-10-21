@@ -45,15 +45,14 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
 namespace
 {
-    void calcRelativeMotions(const vector<Mat>& forwardMotions, const vector<Mat>& backwardMotions,
-                             vector<Mat>& relForwardMotions, vector<Mat>& relBackwardMotions,
+    void calcRelativeMotions(const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions,
+                             std::vector<Mat>& relForwardMotions, std::vector<Mat>& relBackwardMotions,
                              int baseIdx, Size size)
     {
         const int count = static_cast<int>(forwardMotions.size());
@@ -81,7 +80,7 @@ namespace
         }
     }
 
-    void upscaleMotions(const vector<Mat>& lowResMotions, vector<Mat>& highResMotions, int scale)
+    void upscaleMotions(const std::vector<Mat>& lowResMotions, std::vector<Mat>& highResMotions, int scale)
     {
         highResMotions.resize(lowResMotions.size());
 
@@ -175,7 +174,7 @@ namespace
         }
     }
 
-    void calcBtvWeights(int btvKernelSize, double alpha, vector<float>& btvWeights)
+    void calcBtvWeights(int btvKernelSize, double alpha, std::vector<float>& btvWeights)
     {
         const size_t size = btvKernelSize * btvKernelSize;
 
@@ -229,7 +228,7 @@ namespace
     }
 
     template <typename T>
-    void calcBtvRegularizationImpl(const Mat& src, Mat& dst, int btvKernelSize, const vector<float>& btvWeights)
+    void calcBtvRegularizationImpl(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights)
     {
         dst.create(src.size(), src.type());
         dst.setTo(Scalar::all(0));
@@ -246,9 +245,9 @@ namespace
         parallel_for_(Range(ksize, src.rows - ksize), body);
     }
 
-    void calcBtvRegularization(const Mat& src, Mat& dst, int btvKernelSize, const vector<float>& btvWeights)
+    void calcBtvRegularization(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights)
     {
-        typedef void (*func_t)(const Mat& src, Mat& dst, int btvKernelSize, const vector<float>& btvWeights);
+        typedef void (*func_t)(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights);
         static const func_t funcs[] =
         {
             0, calcBtvRegularizationImpl<float>, 0, calcBtvRegularizationImpl<Point3f>
@@ -264,8 +263,8 @@ namespace
     public:
         BTVL1_Base();
 
-        void process(const vector<Mat>& src, Mat& dst,
-                     const vector<Mat>& forwardMotions, const vector<Mat>& backwardMotions,
+        void process(const std::vector<Mat>& src, Mat& dst,
+                     const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions,
                      int baseIdx);
 
         void collectGarbage();
@@ -287,18 +286,18 @@ namespace
         double curBlurSigma_;
         int curSrcType_;
 
-        vector<float> btvWeights_;
+        std::vector<float> btvWeights_;
         int curBtvKernelSize_;
         double curAlpha_;
 
-        vector<Mat> lowResForwardMotions_;
-        vector<Mat> lowResBackwardMotions_;
+        std::vector<Mat> lowResForwardMotions_;
+        std::vector<Mat> lowResBackwardMotions_;
 
-        vector<Mat> highResForwardMotions_;
-        vector<Mat> highResBackwardMotions_;
+        std::vector<Mat> highResForwardMotions_;
+        std::vector<Mat> highResBackwardMotions_;
 
-        vector<Mat> forwardMaps_;
-        vector<Mat> backwardMaps_;
+        std::vector<Mat> forwardMaps_;
+        std::vector<Mat> backwardMaps_;
 
         Mat highRes_;
 
@@ -326,7 +325,7 @@ namespace
         curAlpha_ = -1.0;
     }
 
-    void BTVL1_Base::process(const vector<Mat>& src, Mat& dst, const vector<Mat>& forwardMotions, const vector<Mat>& backwardMotions, int baseIdx)
+    void BTVL1_Base::process(const std::vector<Mat>& src, Mat& dst, const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions, int baseIdx)
     {
         CV_Assert( scale_ > 1 );
         CV_Assert( iterations_ > 0 );
@@ -338,7 +337,7 @@ namespace
 
         // update blur filter and btv weights
 
-        if (filter_.empty() || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
+        if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
         {
             filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
@@ -463,18 +462,18 @@ namespace
         Mat curFrame_;
         Mat prevFrame_;
 
-        vector<Mat> frames_;
-        vector<Mat> forwardMotions_;
-        vector<Mat> backwardMotions_;
-        vector<Mat> outputs_;
+        std::vector<Mat> frames_;
+        std::vector<Mat> forwardMotions_;
+        std::vector<Mat> backwardMotions_;
+        std::vector<Mat> outputs_;
 
         int storePos_;
         int procPos_;
         int outPos_;
 
-        vector<Mat> srcFrames_;
-        vector<Mat> srcForwardMotions_;
-        vector<Mat> srcBackwardMotions_;
+        std::vector<Mat> srcFrames_;
+        std::vector<Mat> srcForwardMotions_;
+        std::vector<Mat> srcBackwardMotions_;
         Mat finalOutput_;
     };
 
@@ -584,9 +583,9 @@ namespace
 
     void BTVL1::processFrame(int idx)
     {
-        const int startIdx = max(idx - temporalAreaRadius_, 0);
+        const int startIdx = std::max(idx - temporalAreaRadius_, 0);
         const int procIdx = idx;
-        const int endIdx = min(startIdx + 2 * temporalAreaRadius_, storePos_);
+        const int endIdx = std::min(startIdx + 2 * temporalAreaRadius_, storePos_);
 
         const int count = endIdx - startIdx + 1;
 
@@ -615,5 +614,5 @@ namespace
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1()
 {
-    return new BTVL1;
+    return makePtr<BTVL1>();
 }

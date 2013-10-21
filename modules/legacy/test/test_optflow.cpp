@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking.hpp"
+#include "opencv2/video/tracking_c.h"
 
 #include <string>
 #include <iostream>

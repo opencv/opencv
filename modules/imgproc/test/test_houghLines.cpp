@@ -134,6 +134,9 @@ void CV_HoughLinesTest::run_test(int type)
     read( fs["exp_lines"], exp_lines, Mat() );
     fs.release();
 
+    if( exp_lines.size != lines.size )
+        transpose(lines, lines);
+
     if ( exp_lines.size != lines.size || norm(exp_lines, lines, NORM_INF) > 1e-4 )
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);

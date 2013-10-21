@@ -459,28 +459,28 @@ namespace cv
         inline uchar *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
+            CV_Error(Error::GpuNotSupported, "This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         inline const uchar *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
+            CV_Error(Error::GpuNotSupported, "This function hasn't been supported yet.\n");
             return data + step * y;
         }
 
         template<typename _Tp> inline _Tp *oclMat::ptr(int y)
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
+            CV_Error(Error::GpuNotSupported, "This function hasn't been supported yet.\n");
             return (_Tp *)(data + step * y);
         }
 
         template<typename _Tp> inline const _Tp *oclMat::ptr(int y) const
         {
             CV_DbgAssert( (unsigned)y < (unsigned)rows );
-            CV_Error(CV_GpuNotSupported, "This function hasn't been supported yet.\n");
+            CV_Error(Error::GpuNotSupported, "This function hasn't been supported yet.\n");
             return (const _Tp *)(data + step * y);
         }
 

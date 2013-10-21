@@ -9,7 +9,7 @@ else()
   project(${PNG_LIBRARY})
 endif()
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIRS})
 
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
@@ -34,7 +34,7 @@ if (HAVE_WINRT)
 endif()
 
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
-target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARY})
+target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)

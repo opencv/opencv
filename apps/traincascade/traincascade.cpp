@@ -1,5 +1,4 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core.hpp"
 
 #include "cv.h"
 #include "cascadeclassifier.h"
@@ -9,7 +8,7 @@ using namespace std;
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
-    String cascadeDirName, vecName, bgName;
+    string cascadeDirName, vecName, bgName;
     int numPos    = 2000;
     int numNeg    = 1000;
     int numStages = 20;
@@ -19,9 +18,9 @@ int main( int argc, char* argv[] )
 
     CvCascadeParams cascadeParams;
     CvCascadeBoostParams stageParams;
-    Ptr<CvFeatureParams> featureParams[] = { Ptr<CvFeatureParams>(new CvHaarFeatureParams),
-                                             Ptr<CvFeatureParams>(new CvLBPFeatureParams),
-                                             Ptr<CvFeatureParams>(new CvHOGFeatureParams)
+    Ptr<CvFeatureParams> featureParams[] = { makePtr<CvHaarFeatureParams>(),
+                                             makePtr<CvLBPFeatureParams>(),
+                                             makePtr<CvHOGFeatureParams>()
                                            };
     int fc = sizeof(featureParams)/sizeof(featureParams[0]);
     if( argc == 1 )

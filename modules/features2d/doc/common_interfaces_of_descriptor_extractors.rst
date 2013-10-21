@@ -36,7 +36,7 @@ Abstract base class for computing descriptors for image keypoints. ::
         virtual int descriptorSize() const = 0;
         virtual int descriptorType() const = 0;
 
-        static Ptr<DescriptorExtractor> create( const string& descriptorExtractorType );
+        static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
     protected:
         ...
@@ -60,6 +60,8 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
 .. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
 
+.. ocv:pyfunction:: cv2.DescriptorExtractor_create.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+
     :param image: Image.
 
     :param images: Image set.
@@ -73,7 +75,9 @@ DescriptorExtractor::create
 -------------------------------
 Creates a descriptor extractor by name.
 
-.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const string& descriptorExtractorType )
+.. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const String& descriptorExtractorType )
+
+.. ocv:pyfunction:: cv2.DescriptorExtractor_create(descriptorExtractorType) -> retval
 
     :param descriptorExtractorType: Descriptor extractor type.
 

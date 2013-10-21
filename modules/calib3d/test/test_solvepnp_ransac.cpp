@@ -41,7 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/internal.hpp"
+
+#ifdef HAVE_TBB
+#include "tbb/task_scheduler_init.h"
+#endif
 
 using namespace cv;
 using namespace std;
@@ -51,9 +54,9 @@ class CV_solvePnPRansac_Test : public cvtest::BaseTest
 public:
     CV_solvePnPRansac_Test()
     {
-        eps[CV_ITERATIVE] = 1.0e-2;
-        eps[CV_EPNP] = 1.0e-2;
-        eps[CV_P3P] = 1.0e-2;
+        eps[ITERATIVE] = 1.0e-2;
+        eps[EPNP] = 1.0e-2;
+        eps[P3P] = 1.0e-2;
         totalTestsCount = 10;
     }
     ~CV_solvePnPRansac_Test() {}
@@ -190,9 +193,9 @@ class CV_solvePnP_Test : public CV_solvePnPRansac_Test
 public:
     CV_solvePnP_Test()
     {
-        eps[CV_ITERATIVE] = 1.0e-6;
-        eps[CV_EPNP] = 1.0e-6;
-        eps[CV_P3P] = 1.0e-4;
+        eps[ITERATIVE] = 1.0e-6;
+        eps[EPNP] = 1.0e-6;
+        eps[P3P] = 1.0e-4;
         totalTestsCount = 1000;
     }
 
@@ -273,7 +276,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     {
         // limit concurrency to get determenistic result
         cv::theRNG().state = 20121010;
-        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
     }
 
@@ -292,7 +295,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     {
         // single thread again
         cv::theRNG().state = 20121010;
-        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
     }
 

@@ -44,13 +44,11 @@ struct base_any_policy
     virtual void clone(void* const* src, void** dest) = 0;
     virtual void move(void* const* src, void** dest) = 0;
     virtual void* get_value(void** src) = 0;
+    virtual const void* get_value(void* const * src) = 0;
     virtual ::size_t get_size() = 0;
     virtual const std::type_info& type() = 0;
     virtual void print(std::ostream& out, void* const* src) = 0;
-
-#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
     virtual ~base_any_policy() {}
-#endif
 };
 
 template<typename T>
@@ -72,6 +70,7 @@ struct small_any_policy : typed_base_any_policy<T>
     virtual void clone(void* const* src, void** dest) { *dest = *src; }
     virtual void move(void* const* src, void** dest) { *dest = *src; }
     virtual void* get_value(void** src) { return reinterpret_cast<void*>(src); }
+    virtual const void* get_value(void* const * src) { return reinterpret_cast<const void*>(src); }
     virtual void print(std::ostream& out, void* const* src) { out << *reinterpret_cast<T const*>(src); }
 };
 
@@ -96,6 +95,7 @@ struct big_any_policy : typed_base_any_policy<T>
         **reinterpret_cast<T**>(dest) = **reinterpret_cast<T* const*>(src);
     }
     virtual void* get_value(void** src) { return *src; }
+    virtual const void* get_value(void* const * src) { return *src; }
     virtual void print(std::ostream& out, void* const* src) { out << *reinterpret_cast<T const*>(*src); }
 };
 
@@ -107,6 +107,11 @@ template<> inline void big_any_policy<flann_centers_init_t>::print(std::ostream&
 template<> inline void big_any_policy<flann_algorithm_t>::print(std::ostream& out, void* const* src)
 {
     out << int(*reinterpret_cast<flann_algorithm_t const*>(*src));
+}
+
+template<> inline void big_any_policy<cv::String>::print(std::ostream& out, void* const* src)
+{
+    out << (*reinterpret_cast<cv::String const*>(*src)).c_str();
 }
 
 template<typename T>
@@ -255,7 +260,7 @@ public:
     const T& cast() const
     {
         if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
-        T* r = reinterpret_cast<T*>(policy->get_value(const_cast<void **>(&object)));
+        const T* r = reinterpret_cast<const T*>(policy->get_value(&object));
         return *r;
     }
 

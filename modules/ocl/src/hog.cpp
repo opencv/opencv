@@ -180,7 +180,7 @@ bool cv::ocl::HOGDescriptor::checkDetectorSize() const
         detector_size == descriptor_size + 1;
 }
 
-void cv::ocl::HOGDescriptor::setSVMDetector(const vector<float> &_detector)
+void cv::ocl::HOGDescriptor::setSVMDetector(const std::vector<float> &_detector)
 {
     std::vector<float> detector_reordered(_detector.size());
 
@@ -298,12 +298,12 @@ void cv::ocl::HOGDescriptor::getDescriptors(const oclMat &img, Size win_stride,
             effect_size.height, effect_size.width, block_hists, descriptors);
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown descriptor format");
+        CV_Error(Error::StsBadArg, "Unknown descriptor format");
     }
 }
 
 
-void cv::ocl::HOGDescriptor::detect(const oclMat &img, vector<Point> &hits,
+void cv::ocl::HOGDescriptor::detect(const oclMat &img, std::vector<Point> &hits,
                                     double hit_threshold, Size win_stride, Size padding)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
@@ -341,14 +341,14 @@ void cv::ocl::HOGDescriptor::detect(const oclMat &img, vector<Point> &hits,
 
 
 
-void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &img, vector<Rect> &found_locations,
+void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &img, std::vector<Rect> &found_locations,
                                               double hit_threshold, Size win_stride, Size padding,
                                               double scale0, int group_threshold)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
     CV_Assert(scale0 > 1);
 
-    vector<double> level_scale;
+    std::vector<double> level_scale;
     double scale = 1.;
     int levels = 0;
 
@@ -364,7 +364,7 @@ void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &img, vector<Rect> &f
     level_scale.resize(levels);
 
     std::vector<Rect> all_candidates;
-    vector<Point> locations;
+    std::vector<Point> locations;
 
     if (win_stride == Size())
         win_stride = block_stride;
@@ -390,8 +390,7 @@ void cv::ocl::HOGDescriptor::detectMultiScale(const oclMat &img, vector<Rect> &f
         Size scaled_win_size(cvRound(win_size.width * scale),
             cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale,
-              scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());
@@ -751,7 +750,7 @@ std::vector<float> cv::ocl::HOGDescriptor::getPeopleDetector48x96()
         -0.035372f, -0.233209f, -0.049869f, -0.039151f, -0.022279f, -0.065380f,
         -9.063785f
     };
-    return vector<float>(detector, detector + sizeof(detector) / sizeof(detector[0]));
+    return std::vector<float>(detector, detector + sizeof(detector) / sizeof(detector[0]));
 }
 
 
@@ -1567,7 +1566,7 @@ std::vector<float> cv::ocl::HOGDescriptor::getPeopleDetector64x128()
         -0.03250246f, 3.38630192e-003f, 2.64779478e-003f, 0.03359732f,
         -0.02411991f, -0.04229729f, 0.10666174f, -6.66579151f
     };
-    return vector<float>(detector, detector + sizeof(detector) / sizeof(detector[0]));
+    return std::vector<float>(detector, detector + sizeof(detector) / sizeof(detector[0]));
 }
 
 /* Returns the nearest upper power of two, works only for
@@ -1618,8 +1617,8 @@ void cv::ocl::device::hog::compute_hists(int nbins,
                                          cv::ocl::oclMat &block_hists)
 {
     Context *clCxt = Context::getContext();
-    vector< pair<size_t, const void *> > args;
-    string kernelName = "compute_hists_lut_kernel";
+    std::vector< std::pair<size_t, const void *> > args;
+    String kernelName = "compute_hists_lut_kernel";
 
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)
         / block_stride_x;
@@ -1637,26 +1636,27 @@ void cv::ocl::device::hog::compute_hists(int nbins,
 
     int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
     int final_hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y) * sizeof(float);
+
     int smem = (hists_size + final_hists_size) * blocks_in_group;
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_stride_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_stride_y));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&blocks_in_group));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&blocks_total));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&grad_quadstep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&qangle_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&grad.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&qangle.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&gauss_w_lut.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
-    args.push_back( make_pair( smem, (void *)NULL));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_stride_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_stride_y));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnbins));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&blocks_in_group));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&blocks_total));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&grad_quadstep));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&qangle_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&grad.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&qangle.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&gauss_w_lut.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&block_hists.data));
+    args.push_back( std::make_pair( smem, (void *)NULL));
 
     if(hog_device_cpu)
     {
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
             localThreads, args, -1, -1, "-D CPU");
     }
     else
@@ -1665,7 +1665,7 @@ void cv::ocl::device::hog::compute_hists(int nbins,
         size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
         sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
             localThreads, args, -1, -1, opt);
     }
 }
@@ -1677,8 +1677,8 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
                                            float threshold)
 {
     Context *clCxt = Context::getContext();
-    vector< pair<size_t, const void *> > args;
-    string kernelName;
+    std::vector< std::pair<size_t, const void *> > args;
+    String kernelName;
 
     int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)
@@ -1708,20 +1708,20 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
         localThreads[0] = nthreads;
 
         if ((nthreads < 32) || (nthreads > 512) )
-            cv::ocl::error("normalize_hists: histogram's size is too small or too big",
-                __FILE__, __LINE__, "normalize_hists");
+            cv::error(Error::StsBadArg, "normalize_hists: histogram's size is too small or too big",
+                "normalize_hists", __FILE__, __LINE__);
 
-        args.push_back( make_pair( sizeof(cl_int), (void *)&nthreads));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&block_hist_size));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&nthreads));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&block_hist_size));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
     }
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&threshold));
-    args.push_back( make_pair( nthreads * sizeof(float), (void *)NULL));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&block_hists.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&threshold));
+    args.push_back( std::make_pair( nthreads * sizeof(float), (void *)NULL));
 
     if(hog_device_cpu)
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, "-D CPU");
     else
     {
@@ -1729,7 +1729,7 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
         size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
         sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, opt);
     }
 }
@@ -1744,29 +1744,29 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width,
                                           cv::ocl::oclMat &labels)
 {
     Context *clCxt = Context::getContext();
-    vector< pair<size_t, const void *> > args;
+    std::vector< std::pair<size_t, const void *> > args;
 
     int nthreads;
-    string kernelName;
+    String kernelName;
     switch (cdescr_width)
     {
     case 180:
         nthreads = 180;
         kernelName = "classify_hists_180_kernel";
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_width));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_height));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_width));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_height));
         break;
     case 252:
         nthreads = 256;
         kernelName = "classify_hists_252_kernel";
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_width));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_height));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_width));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_height));
         break;
     default:
         nthreads = 256;
         kernelName = "classify_hists_kernel";
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_size));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_width));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_size));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_width));
     }
 
     int win_block_stride_x = win_stride_x / block_stride_x;
@@ -1778,19 +1778,19 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width,
 
     size_t globalThreads[3] = { img_win_width * nthreads, img_win_height, 1 };
     size_t localThreads[3] = { nthreads, 1, 1 };
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_win_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coefs.data));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&free_coef));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&threshold));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&labels.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_win_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&block_hists.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&coefs.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&free_coef));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&threshold));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&labels.data));
 
     if(hog_device_cpu)
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, "-D CPU");
     else
     {
@@ -1798,7 +1798,7 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width,
         size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
         sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
-        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+        openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, opt);
     }
 }
@@ -1811,8 +1811,8 @@ void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width,
                                                   cv::ocl::oclMat &descriptors)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "extract_descrs_by_rows_kernel";
-    vector< pair<size_t, const void *> > args;
+    String kernelName = "extract_descrs_by_rows_kernel";
+    std::vector< std::pair<size_t, const void *> > args;
 
     int win_block_stride_x = win_stride_x / block_stride_x;
     int win_block_stride_y = win_stride_y / block_stride_y;
@@ -1825,17 +1825,17 @@ void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width,
     size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors_quadstep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors_quadstep));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&block_hists.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
 
-    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
         localThreads, args, -1, -1);
 }
 
@@ -1847,8 +1847,8 @@ void cv::ocl::device::hog::extract_descrs_by_cols(int win_height, int win_width,
                                                   cv::ocl::oclMat &descriptors)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "extract_descrs_by_cols_kernel";
-    vector< pair<size_t, const void *> > args;
+    String kernelName = "extract_descrs_by_cols_kernel";
+    std::vector< std::pair<size_t, const void *> > args;
 
     int win_block_stride_x = win_stride_x / block_stride_x;
     int win_block_stride_y = win_stride_y / block_stride_y;
@@ -1861,18 +1861,18 @@ void cv::ocl::device::hog::extract_descrs_by_cols(int win_height, int win_width,
     size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
     size_t localThreads[3] = { NTHREADS, 1, 1 };
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&descriptors_quadstep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cdescr_size));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cnblocks_win_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cnblocks_win_y));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_block_width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&descriptors.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors_quadstep));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cdescr_size));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnblocks_win_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnblocks_win_y));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&win_block_stride_y));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&block_hists.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
 
-    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
         localThreads, args, -1, -1);
 }
 
@@ -1884,8 +1884,8 @@ void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width,
                                                   bool correct_gamma)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "compute_gradients_8UC1_kernel";
-    vector< pair<size_t, const void *> > args;
+    String kernelName = "compute_gradients_8UC1_kernel";
+    std::vector< std::pair<size_t, const void *> > args;
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
     size_t globalThreads[3] = { width, height, 1 };
@@ -1894,19 +1894,19 @@ void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width,
     int grad_quadstep = grad.step >> 3;
     int qangle_step = qangle.step >> 1;
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&height));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&grad_quadstep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&qangle_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&img.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&grad.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&qangle.data));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&angle_scale));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&correctGamma));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&grad_quadstep));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&qangle_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&grad.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&qangle.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&angle_scale));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&correctGamma));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnbins));
 
-    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
         localThreads, args, -1, -1);
 }
 
@@ -1918,8 +1918,8 @@ void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width,
                                                   bool correct_gamma)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "compute_gradients_8UC4_kernel";
-    vector< pair<size_t, const void *> > args;
+    String kernelName = "compute_gradients_8UC4_kernel";
+    std::vector< std::pair<size_t, const void *> > args;
 
     size_t localThreads[3] = { NTHREADS, 1, 1 };
     size_t globalThreads[3] = { width, height, 1 };
@@ -1929,18 +1929,18 @@ void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width,
     int grad_quadstep = grad.step >> 3;
     int qangle_step = qangle.step >> 1;
 
-    args.push_back( make_pair( sizeof(cl_int), (void *)&height));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&width));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&img_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&grad_quadstep));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&qangle_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&img.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&grad.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&qangle.data));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&angle_scale));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&correctGamma));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cnbins));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&grad_quadstep));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&qangle_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&img.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&grad.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&qangle.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&angle_scale));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&correctGamma));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnbins));
 
-    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
+    openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
         localThreads, args, -1, -1);
 }

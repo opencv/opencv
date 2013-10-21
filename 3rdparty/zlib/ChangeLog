@@ -1,6 +1,69 @@
 
                 ChangeLog file for zlib
 
+Changes in 1.2.8 (28 Apr 2013)
+- Update contrib/minizip/iowin32.c for Windows RT [Vollant]
+- Do not force Z_CONST for C++
+- Clean up contrib/vstudio [Ro§]
+- Correct spelling error in zlib.h
+- Fix mixed line endings in contrib/vstudio
+
+Changes in 1.2.7.3 (13 Apr 2013)
+- Fix version numbers and DLL names in contrib/vstudio/*/zlib.rc
+
+Changes in 1.2.7.2 (13 Apr 2013)
+- Change check for a four-byte type back to hexadecimal
+- Fix typo in win32/Makefile.msc
+- Add casts in gzwrite.c for pointer differences
+
+Changes in 1.2.7.1 (24 Mar 2013)
+- Replace use of unsafe string functions with snprintf if available
+- Avoid including stddef.h on Windows for Z_SOLO compile [Niessink]
+- Fix gzgetc undefine when Z_PREFIX set [Turk]
+- Eliminate use of mktemp in Makefile (not always available)
+- Fix bug in 'F' mode for gzopen()
+- Add inflateGetDictionary() function
+- Correct comment in deflate.h
+- Use _snprintf for snprintf in Microsoft C
+- On Darwin, only use /usr/bin/libtool if libtool is not Apple
+- Delete "--version" file if created by "ar --version" [Richard G.]
+- Fix configure check for veracity of compiler error return codes
+- Fix CMake compilation of static lib for MSVC2010 x64
+- Remove unused variable in infback9.c
+- Fix argument checks in gzlog_compress() and gzlog_write()
+- Clean up the usage of z_const and respect const usage within zlib
+- Clean up examples/gzlog.[ch] comparisons of different types
+- Avoid shift equal to bits in type (caused endless loop)
+- Fix unintialized value bug in gzputc() introduced by const patches
+- Fix memory allocation error in examples/zran.c [Nor]
+- Fix bug where gzopen(), gzclose() would write an empty file
+- Fix bug in gzclose() when gzwrite() runs out of memory
+- Check for input buffer malloc failure in examples/gzappend.c
+- Add note to contrib/blast to use binary mode in stdio
+- Fix comparisons of differently signed integers in contrib/blast
+- Check for invalid code length codes in contrib/puff
+- Fix serious but very rare decompression bug in inftrees.c
+- Update inflateBack() comments, since inflate() can be faster
+- Use underscored I/O function names for WINAPI_FAMILY
+- Add _tr_flush_bits to the external symbols prefixed by --zprefix
+- Add contrib/vstudio/vc10 pre-build step for static only
+- Quote --version-script argument in CMakeLists.txt
+- Don't specify --version-script on Apple platforms in CMakeLists.txt
+- Fix casting error in contrib/testzlib/testzlib.c
+- Fix types in contrib/minizip to match result of get_crc_table()
+- Simplify contrib/vstudio/vc10 with 'd' suffix
+- Add TOP support to win32/Makefile.msc
+- Suport i686 and amd64 assembler builds in CMakeLists.txt
+- Fix typos in the use of _LARGEFILE64_SOURCE in zconf.h
+- Add vc11 and vc12 build files to contrib/vstudio
+- Add gzvprintf() as an undocumented function in zlib
+- Fix configure for Sun shell
+- Remove runtime check in configure for four-byte integer type
+- Add casts and consts to ease user conversion to C++
+- Add man pages for minizip and miniunzip
+- In Makefile uninstall, don't rm if preceding cd fails
+- Do not return Z_BUF_ERROR if deflateParam() has nothing to write
+
 Changes in 1.2.7 (2 May 2012)
 - Replace use of memmove() with a simple copy for portability
 - Test for existence of strerror

@@ -8,7 +8,7 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<String, bool> VideoWriter_Writing_t;
+typedef std::tr1::tuple<std::string, bool> VideoWriter_Writing_t;
 typedef perf::TestBaseWithParam<VideoWriter_Writing_t> VideoWriter_Writing;
 
 PERF_TEST_P(VideoWriter_Writing, WriteFrame,
@@ -24,10 +24,10 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
   bool isColor = get<1>(GetParam());
   Mat image = imread(filename, 1);
 #if defined(HAVE_MSMF) && !defined(HAVE_VFW) && !defined(HAVE_FFMPEG) // VFW has greater priority
-  VideoWriter writer(cv::tempfile(".wmv"), CV_FOURCC('W', 'M', 'V', '3'),
+  VideoWriter writer(cv::tempfile(".wmv"), VideoWriter::fourcc('W', 'M', 'V', '3'),
                             25, cv::Size(image.cols, image.rows), isColor);
 #else
-  VideoWriter writer(cv::tempfile(".avi"), CV_FOURCC('X', 'V', 'I', 'D'),
+  VideoWriter writer(cv::tempfile(".avi"), VideoWriter::fourcc('X', 'V', 'I', 'D'),
                             25, cv::Size(image.cols, image.rows), isColor);
 #endif
 

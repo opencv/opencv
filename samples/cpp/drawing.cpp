@@ -21,7 +21,7 @@ int main()
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;
-    int lineType = CV_AA; // change it to 8 to see non-antialiased graphics
+    int lineType = LINE_AA; // change it to LINE_8 to see non-antialiased graphics
     int i, width = 1000, height = 700;
     int x1 = -width/2, x2 = width*3/2, y1 = -height/2, y2 = height*3/2;
     RNG rng(0xFFFFFFFF);
@@ -157,14 +157,14 @@ int main()
             return 0;
     }
 
-    Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+    Size textsize = getTextSize("OpenCV forever!", FONT_HERSHEY_COMPLEX, 3, 5, 0);
     Point org((width - textsize.width)/2, (height - textsize.height)/2);
 
     Mat image2;
     for( i = 0; i < 255; i += 2 )
     {
         image2 = image - Scalar::all(i);
-        putText(image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
+        putText(image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
                 Scalar(i, i, 255), 5, lineType);
 
         imshow(wndname, image2);

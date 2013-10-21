@@ -87,8 +87,6 @@ Thanks to:
 */
 /////////////////////////////////////////////////////////
 
-#include "precomp.hpp"
-
 #if defined _MSC_VER && _MSC_VER >= 100
 //'sprintf': name was marked as #pragma deprecated
 #pragma warning(disable: 4995)

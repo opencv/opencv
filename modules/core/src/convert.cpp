@@ -277,11 +277,6 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
     split(m, dst);
 }
 
-void cv::split(const Mat& src, vector<Mat>& mv)
-{
-    split(_InputArray(src), _OutputArray(mv));
-}
-
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 {
     CV_Assert( mv && n > 0 );
@@ -359,14 +354,9 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
 
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
-    vector<Mat> mv;
+    std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
-}
-
-void cv::merge(const vector<Mat>& _mv, OutputArray _dst)
-{
-    merge(_InputArray(_mv), _dst);
 }
 
 /****************************************************************************************\
@@ -530,15 +520,31 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
 }
 
 
-void cv::mixChannels(const vector<Mat>& src, vector<Mat>& dst,
+void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    mixChannels(!src.empty() ? &src[0] : 0, src.size(),
-                !dst.empty() ? &dst[0] : 0, dst.size(), fromTo, npairs);
+    if(npairs == 0)
+        return;
+    bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
+                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+    bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
+                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+    int i;
+    int nsrc = src_is_mat ? 1 : (int)src.total();
+    int ndst = dst_is_mat ? 1 : (int)dst.total();
+
+    CV_Assert(nsrc > 0 && ndst > 0);
+    cv::AutoBuffer<Mat> _buf(nsrc + ndst);
+    Mat* buf = _buf;
+    for( i = 0; i < nsrc; i++ )
+        buf[i] = src.getMat(src_is_mat ? -1 : i);
+    for( i = 0; i < ndst; i++ )
+        buf[nsrc + i] = dst.getMat(dst_is_mat ? -1 : i);
+    mixChannels(&buf[0], nsrc, &buf[nsrc], ndst, fromTo, npairs);
 }
 
-void cv::mixChannels(InputArrayOfArrays src, InputArrayOfArrays dst,
-                     const vector<int>& fromTo)
+void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
+                     const std::vector<int>& fromTo)
 {
     if(fromTo.empty())
         return;
@@ -1015,7 +1021,7 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
     return cvtTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
+static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 {
     static BinaryFunc cvtScaleTab[][8] =
     {
@@ -1203,10 +1209,9 @@ static LUTFunc lutTab[] =
 
 }
 
-void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst, int interpolation )
+void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
     Mat src = _src.getMat(), lut = _lut.getMat();
-    CV_Assert( interpolation == 0 );
     int cn = src.channels();
     int lutcn = lut.channels();
 
@@ -1277,8 +1282,8 @@ cvSplit( const void* srcarr, void* dstarr0, void* dstarr1, void* dstarr2, void* 
     for( i = 0; i < 4; i++ )
         nz += dptrs[i] != 0;
     CV_Assert( nz > 0 );
-    cv::vector<cv::Mat> dvec(nz);
-    cv::vector<int> pairs(nz*2);
+    std::vector<cv::Mat> dvec(nz);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
@@ -1313,8 +1318,8 @@ cvMerge( const void* srcarr0, const void* srcarr1, const void* srcarr2,
     for( i = 0; i < 4; i++ )
         nz += sptrs[i] != 0;
     CV_Assert( nz > 0 );
-    cv::vector<cv::Mat> svec(nz);
-    cv::vector<int> pairs(nz*2);
+    std::vector<cv::Mat> svec(nz);
+    std::vector<int> pairs(nz*2);
 
     for( i = j = 0; i < 4; i++ )
     {
@@ -1344,7 +1349,7 @@ cvMixChannels( const CvArr** src, int src_count,
                CvArr** dst, int dst_count,
                const int* from_to, int pair_count )
 {
-    cv::AutoBuffer<cv::Mat, 32> buf(src_count + dst_count);
+    cv::AutoBuffer<cv::Mat> buf(src_count + dst_count);
 
     int i;
     for( i = 0; i < src_count; i++ )

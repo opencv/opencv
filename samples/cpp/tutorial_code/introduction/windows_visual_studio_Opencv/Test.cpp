@@ -59,10 +59,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    Size refS = Size((int) captRefrnc.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
-         uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
+    Size refS = Size((int) captRefrnc.get(CAP_PROP_FRAME_WIDTH),
+                     (int) captRefrnc.get(CAP_PROP_FRAME_HEIGHT)),
+         uTSi = Size((int) captUndTst.get(CAP_PROP_FRAME_WIDTH),
+                     (int) captUndTst.get(CAP_PROP_FRAME_HEIGHT));
 
     if (refS != uTSi)
     {
@@ -74,13 +74,13 @@ int main(int argc, char *argv[])
     const char* WIN_RF = "Reference";
 
     // Windows
-            namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE );
-            namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE );
-            cvMoveWindow(WIN_RF, 400       ,            0);		 //750,  2 (bernat =0)
-            cvMoveWindow(WIN_UT, refS.width,            0);		 //1500, 2
+            namedWindow(WIN_RF, WINDOW_AUTOSIZE );
+            namedWindow(WIN_UT, WINDOW_AUTOSIZE );
+            moveWindow(WIN_RF, 400       ,            0); //750,  2 (bernat =0)
+            moveWindow(WIN_UT, refS.width,            0); //1500, 2
 
     cout << "Frame resolution: Width=" << refS.width << "  Height=" << refS.height
-         << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+         << " of nr#: " << captRefrnc.get(CAP_PROP_FRAME_COUNT) << endl;
 
     cout << "PSNR trigger value " <<
           setiosflags(ios::fixed) << setprecision(3) << psnrTriggerValue << endl;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
         imshow( WIN_RF, frameReference);
         imshow( WIN_UT, frameUnderTest);
 
-        c = (char)cvWaitKey(delay);
+        c = (char)waitKey(delay);
         if (c == 27) break;
     }
 

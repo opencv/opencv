@@ -69,11 +69,11 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
     Mat img = cvarrToMat(_img), mask;
     if(_mask)
         mask = cvarrToMat(_mask);
-    vector<KeyPoint> kpt;
+    std::vector<KeyPoint> kpt;
     Mat descr;
 
     Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
-    if( surf.empty() )
+    if( !surf )
         CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
 
     surf->set("hessianThreshold", params.hessianThreshold);
@@ -107,11 +107,11 @@ CV_IMPL CvSeq*
 cvGetStarKeypoints( const CvArr* _img, CvMemStorage* storage,
                     CvStarDetectorParams params )
 {
-    Ptr<StarDetector> star = new StarDetector(params.maxSize, params.responseThreshold,
-                                              params.lineThresholdProjected,
-                                              params.lineThresholdBinarized,
-                                              params.suppressNonmaxSize);
-    vector<KeyPoint> kpts;
+    Ptr<StarDetector> star(new StarDetector(params.maxSize, params.responseThreshold,
+                                            params.lineThresholdProjected,
+                                            params.lineThresholdBinarized,
+                                            params.suppressNonmaxSize));
+    std::vector<KeyPoint> kpts;
     star->detect(cvarrToMat(_img), kpts, Mat());
 
     CvSeq* seq = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvStarKeypoint), storage);

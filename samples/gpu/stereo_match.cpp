@@ -3,8 +3,10 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/cudastereo.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace cv;
 using namespace std;
@@ -62,11 +64,11 @@ private:
 
     Mat left_src, right_src;
     Mat left, right;
-    gpu::GpuMat d_left, d_right;
+    cuda::GpuMat d_left, d_right;
 
-    gpu::StereoBM_GPU bm;
-    gpu::StereoBeliefPropagation bp;
-    gpu::StereoConstantSpaceBP csbp;
+    Ptr<cuda::StereoBM> bm;
+    Ptr<cuda::StereoBeliefPropagation> bp;
+    Ptr<cuda::StereoConstantSpaceBP> csbp;
 
     int64 work_begin;
     double work_fps;
@@ -139,7 +141,7 @@ Params Params::read(int argc, char** argv)
 App::App(const Params& params)
     : p(params), running(false)
 {
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     cout << "stereo_match_gpu sample\n";
     cout << "\nControls:\n"
@@ -162,8 +164,8 @@ void App::run()
     right_src = imread(p.right);
     if (left_src.empty()) throw runtime_error("can't open file \"" + p.left + "\"");
     if (right_src.empty()) throw runtime_error("can't open file \"" + p.right + "\"");
-    cvtColor(left_src, left, CV_BGR2GRAY);
-    cvtColor(right_src, right, CV_BGR2GRAY);
+    cvtColor(left_src, left, COLOR_BGR2GRAY);
+    cvtColor(right_src, right, COLOR_BGR2GRAY);
     d_left.upload(left);
     d_right.upload(right);
 
@@ -171,13 +173,13 @@ void App::run()
     imshow("right", right);
 
     // Set common parameters
-    bm.ndisp = p.ndisp;
-    bp.ndisp = p.ndisp;
-    csbp.ndisp = p.ndisp;
+    bm = cuda::createStereoBM(p.ndisp);
+    bp = cuda::createStereoBeliefPropagation(p.ndisp);
+    csbp = cv::cuda::createStereoConstantSpaceBP(p.ndisp);
 
     // Prepare disparity map of specified type
     Mat disp(left.size(), CV_8U);
-    gpu::GpuMat d_disp(left.size(), CV_8U);
+    cuda::GpuMat d_disp(left.size(), CV_8U);
 
     cout << endl;
     printParams();
@@ -192,18 +194,18 @@ void App::run()
             if (d_left.channels() > 1 || d_right.channels() > 1)
             {
                 cout << "BM doesn't support color images\n";
-                cvtColor(left_src, left, CV_BGR2GRAY);
-                cvtColor(right_src, right, CV_BGR2GRAY);
+                cvtColor(left_src, left, COLOR_BGR2GRAY);
+                cvtColor(right_src, right, COLOR_BGR2GRAY);
                 cout << "image_channels: " << left.channels() << endl;
                 d_left.upload(left);
                 d_right.upload(right);
                 imshow("left", left);
                 imshow("right", right);
             }
-            bm(d_left, d_right, d_disp);
+            bm->compute(d_left, d_right, d_disp);
             break;
-        case Params::BP: bp(d_left, d_right, d_disp); break;
-        case Params::CSBP: csbp(d_left, d_right, d_disp); break;
+        case Params::BP: bp->compute(d_left, d_right, d_disp); break;
+        case Params::CSBP: csbp->compute(d_left, d_right, d_disp); break;
         }
         workEnd();
 
@@ -227,16 +229,16 @@ void App::printParams() const
     switch (p.method)
     {
     case Params::BM:
-        cout << "win_size: " << bm.winSize << endl;
-        cout << "prefilter_sobel: " << bm.preset << endl;
+        cout << "win_size: " << bm->getBlockSize() << endl;
+        cout << "prefilter_sobel: " << bm->getPreFilterType() << endl;
         break;
     case Params::BP:
-        cout << "iter_count: " << bp.iters << endl;
-        cout << "level_count: " << bp.levels << endl;
+        cout << "iter_count: " << bp->getNumIters() << endl;
+        cout << "level_count: " << bp->getNumLevels() << endl;
         break;
     case Params::CSBP:
-        cout << "iter_count: " << csbp.iters << endl;
-        cout << "level_count: " << csbp.levels << endl;
+        cout << "iter_count: " << csbp->getNumIters() << endl;
+        cout << "level_count: " << csbp->getNumLevels() << endl;
         break;
     }
     cout << endl;
@@ -261,8 +263,8 @@ void App::handleKey(char key)
         }
         else
         {
-            cvtColor(left_src, left, CV_BGR2GRAY);
-            cvtColor(right_src, right, CV_BGR2GRAY);
+            cvtColor(left_src, left, COLOR_BGR2GRAY);
+            cvtColor(right_src, right, COLOR_BGR2GRAY);
         }
         d_left.upload(left);
         d_right.upload(right);
@@ -288,92 +290,92 @@ void App::handleKey(char key)
     case 's': case 'S':
         if (p.method == Params::BM)
         {
-            switch (bm.preset)
+            switch (bm->getPreFilterType())
             {
-            case gpu::StereoBM_GPU::BASIC_PRESET:
-                bm.preset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
+            case 0:
+                bm->setPreFilterType(cv::StereoBM::PREFILTER_XSOBEL);
                 break;
-            case gpu::StereoBM_GPU::PREFILTER_XSOBEL:
-                bm.preset = gpu::StereoBM_GPU::BASIC_PRESET;
+            case cv::StereoBM::PREFILTER_XSOBEL:
+                bm->setPreFilterType(0);
                 break;
             }
-            cout << "prefilter_sobel: " << bm.preset << endl;
+            cout << "prefilter_sobel: " << bm->getPreFilterType() << endl;
         }
         break;
     case '1':
         p.ndisp = p.ndisp == 1 ? 8 : p.ndisp + 8;
         cout << "ndisp: " << p.ndisp << endl;
-        bm.ndisp = p.ndisp;
-        bp.ndisp = p.ndisp;
-        csbp.ndisp = p.ndisp;
+        bm->setNumDisparities(p.ndisp);
+        bp->setNumDisparities(p.ndisp);
+        csbp->setNumDisparities(p.ndisp);
         break;
     case 'q': case 'Q':
         p.ndisp = max(p.ndisp - 8, 1);
         cout << "ndisp: " << p.ndisp << endl;
-        bm.ndisp = p.ndisp;
-        bp.ndisp = p.ndisp;
-        csbp.ndisp = p.ndisp;
+        bm->setNumDisparities(p.ndisp);
+        bp->setNumDisparities(p.ndisp);
+        csbp->setNumDisparities(p.ndisp);
         break;
     case '2':
         if (p.method == Params::BM)
         {
-            bm.winSize = min(bm.winSize + 1, 51);
-            cout << "win_size: " << bm.winSize << endl;
+            bm->setBlockSize(min(bm->getBlockSize() + 1, 51));
+            cout << "win_size: " << bm->getBlockSize() << endl;
         }
         break;
     case 'w': case 'W':
         if (p.method == Params::BM)
         {
-            bm.winSize = max(bm.winSize - 1, 2);
-            cout << "win_size: " << bm.winSize << endl;
+            bm->setBlockSize(max(bm->getBlockSize() - 1, 2));
+            cout << "win_size: " << bm->getBlockSize() << endl;
         }
         break;
     case '3':
         if (p.method == Params::BP)
         {
-            bp.iters += 1;
-            cout << "iter_count: " << bp.iters << endl;
+            bp->setNumIters(bp->getNumIters() + 1);
+            cout << "iter_count: " << bp->getNumIters() << endl;
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.iters += 1;
-            cout << "iter_count: " << csbp.iters << endl;
+            csbp->setNumIters(csbp->getNumIters() + 1);
+            cout << "iter_count: " << csbp->getNumIters() << endl;
         }
         break;
     case 'e': case 'E':
         if (p.method == Params::BP)
         {
-            bp.iters = max(bp.iters - 1, 1);
-            cout << "iter_count: " << bp.iters << endl;
+            bp->setNumIters(max(bp->getNumIters() - 1, 1));
+            cout << "iter_count: " << bp->getNumIters() << endl;
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.iters = max(csbp.iters - 1, 1);
-            cout << "iter_count: " << csbp.iters << endl;
+            csbp->setNumIters(max(csbp->getNumIters() - 1, 1));
+            cout << "iter_count: " << csbp->getNumIters() << endl;
         }
         break;
     case '4':
         if (p.method == Params::BP)
         {
-            bp.levels += 1;
-            cout << "level_count: " << bp.levels << endl;
+            bp->setNumLevels(bp->getNumLevels() + 1);
+            cout << "level_count: " << bp->getNumLevels() << endl;
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.levels += 1;
-            cout << "level_count: " << csbp.levels << endl;
+            csbp->setNumLevels(csbp->getNumLevels() + 1);
+            cout << "level_count: " << csbp->getNumLevels() << endl;
         }
         break;
     case 'r': case 'R':
         if (p.method == Params::BP)
         {
-            bp.levels = max(bp.levels - 1, 1);
-            cout << "level_count: " << bp.levels << endl;
+            bp->setNumLevels(max(bp->getNumLevels() - 1, 1));
+            cout << "level_count: " << bp->getNumLevels() << endl;
         }
         else if (p.method == Params::CSBP)
         {
-            csbp.levels = max(csbp.levels - 1, 1);
-            cout << "level_count: " << csbp.levels << endl;
+            csbp->setNumLevels(max(csbp->getNumLevels() - 1, 1));
+            cout << "level_count: " << csbp->getNumLevels() << endl;
         }
         break;
     }

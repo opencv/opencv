@@ -2,13 +2,6 @@
 
 #if defined(HAVE_OPENCL) && (!defined(__APPLE__) || defined(IOS))
 
-#if defined(BUILD_SHARED_LIBS) && (defined WIN32 || defined _WIN32 || defined WINCE)
-#define CL_RUNTIME_EXPORT __declspec(dllexport)
-#else
-#define CL_RUNTIME_EXPORT
-#endif
-
-
 #include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 
 #if defined(__APPLE__)

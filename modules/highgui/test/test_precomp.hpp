@@ -9,12 +9,13 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-# include "cvconfig.h"
-
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 #include <iostream>
+#include "opencv2/ts.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+
+#include "opencv2/core/private.hpp"
 
 #if defined(HAVE_DSHOW)        || \
     defined(HAVE_TYZX)         || \

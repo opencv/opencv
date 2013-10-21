@@ -41,9 +41,8 @@
 //M*/
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
@@ -75,7 +74,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 {
-    return new EmptyFrameSource;
+    return makePtr<EmptyFrameSource>();
 }
 
 //////////////////////////////////////////////////////
@@ -83,17 +82,17 @@ Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 
 #ifndef HAVE_OPENCV_HIGHGUI
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
     (void) fileName;
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
 
 Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 {
     (void) deviceId;
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
 
@@ -141,15 +140,15 @@ namespace
     class VideoFrameSource : public CaptureFrameSource
     {
     public:
-        VideoFrameSource(const string& fileName);
+        VideoFrameSource(const String& fileName);
 
         void reset();
 
     private:
-        string fileName_;
+        String fileName_;
     };
 
-    VideoFrameSource::VideoFrameSource(const string& fileName) : fileName_(fileName)
+    VideoFrameSource::VideoFrameSource(const String& fileName) : fileName_(fileName)
     {
         reset();
     }
@@ -185,64 +184,64 @@ namespace
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
 Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 {
-    return new CameraFrameSource(deviceId);
+    return makePtr<CameraFrameSource>(deviceId);
 }
 
 #endif // HAVE_OPENCV_HIGHGUI
 
 //////////////////////////////////////////////////////
-// VideoFrameSource_GPU
+// VideoFrameSource_CUDA
 
-#ifndef HAVE_OPENCV_GPU
+#ifndef HAVE_OPENCV_CUDACODEC
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
     (void) fileName;
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_GPU
+#else // HAVE_OPENCV_CUDACODEC
 
 namespace
 {
-    class VideoFrameSource_GPU : public FrameSource
+    class VideoFrameSource_CUDA : public FrameSource
     {
     public:
-        VideoFrameSource_GPU(const string& fileName);
+        VideoFrameSource_CUDA(const String& fileName);
 
         void nextFrame(OutputArray frame);
         void reset();
 
     private:
-        string fileName_;
-        VideoReader_GPU reader_;
+        String fileName_;
+        Ptr<cudacodec::VideoReader> reader_;
         GpuMat frame_;
     };
 
-    VideoFrameSource_GPU::VideoFrameSource_GPU(const string& fileName) : fileName_(fileName)
+    VideoFrameSource_CUDA::VideoFrameSource_CUDA(const String& fileName) : fileName_(fileName)
     {
         reset();
     }
 
-    void VideoFrameSource_GPU::nextFrame(OutputArray _frame)
+    void VideoFrameSource_CUDA::nextFrame(OutputArray _frame)
     {
         if (_frame.kind() == _InputArray::GPU_MAT)
         {
-            bool res = reader_.read(_frame.getGpuMatRef());
+            bool res = reader_->nextFrame(_frame.getGpuMatRef());
             if (!res)
                 _frame.release();
         }
         else
         {
-            bool res = reader_.read(frame_);
+            bool res = reader_->nextFrame(frame_);
             if (!res)
                 _frame.release();
             else
@@ -250,17 +249,15 @@ namespace
         }
     }
 
-    void VideoFrameSource_GPU::reset()
+    void VideoFrameSource_CUDA::reset()
     {
-        reader_.close();
-        reader_.open(fileName_);
-        CV_Assert( reader_.isOpened() );
+        reader_ = cudacodec::createVideoReader(fileName_);
     }
 }
 
-Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const string& fileName)
+Ptr<FrameSource> cv::superres::createFrameSource_Video_CUDA(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
-#endif // HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_CUDACODEC

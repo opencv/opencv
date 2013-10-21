@@ -324,7 +324,18 @@ enum
     CV_RGBA2YUV_YV12 = 133,
     CV_BGRA2YUV_YV12 = 134,
 
-    CV_COLORCVT_MAX  = 135
+    // Edge-Aware Demosaicing
+    CV_BayerBG2BGR_EA = 135,
+    CV_BayerGB2BGR_EA = 136,
+    CV_BayerRG2BGR_EA = 137,
+    CV_BayerGR2BGR_EA = 138,
+
+    CV_BayerBG2RGB_EA = CV_BayerRG2BGR_EA,
+    CV_BayerGB2RGB_EA = CV_BayerGR2BGR_EA,
+    CV_BayerRG2RGB_EA = CV_BayerBG2BGR_EA,
+    CV_BayerGR2RGB_EA = CV_BayerGB2BGR_EA,
+
+    CV_COLORCVT_MAX  = 139
 };
 
 
@@ -372,6 +383,24 @@ typedef struct CvMoments
     double  m00, m10, m01, m20, m11, m02, m30, m21, m12, m03; /* spatial moments */
     double  mu20, mu11, mu02, mu30, mu21, mu12, mu03; /* central moments */
     double  inv_sqrt_m00; /* m00 != 0 ? 1/sqrt(m00) : 0 */
+
+#ifdef __cplusplus
+    CvMoments(){}
+    CvMoments(const cv::Moments& m)
+    {
+        m00 = m.m00; m10 = m.m10; m01 = m.m01;
+        m20 = m.m20; m11 = m.m11; m02 = m.m02;
+        m30 = m.m30; m21 = m.m21; m12 = m.m12; m03 = m.m03;
+        mu20 = m.mu20; mu11 = m.mu11; mu02 = m.mu02;
+        mu30 = m.mu30; mu21 = m.mu21; mu12 = m.mu12; mu03 = m.mu03;
+        double am00 = std::abs(m.m00);
+        inv_sqrt_m00 = am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0;
+    }
+    operator cv::Moments() const
+    {
+        return cv::Moments(m00, m10, m01, m20, m11, m02, m30, m21, m12, m03);
+    }
+#endif
 }
 CvMoments;
 
@@ -440,79 +469,6 @@ CvChainPtReader;
      (deltas)[6] =  (step), (deltas)[7] =  (step) + (nch))
 
 
-/****************************************************************************************\
-*                              Planar subdivisions                                       *
-\****************************************************************************************/
-
-typedef size_t CvSubdiv2DEdge;
-
-#define CV_QUADEDGE2D_FIELDS()     \
-    int flags;                     \
-    struct CvSubdiv2DPoint* pt[4]; \
-    CvSubdiv2DEdge  next[4];
-
-#define CV_SUBDIV2D_POINT_FIELDS()\
-    int            flags;      \
-    CvSubdiv2DEdge first;      \
-    CvPoint2D32f   pt;         \
-    int id;
-
-#define CV_SUBDIV2D_VIRTUAL_POINT_FLAG (1 << 30)
-
-typedef struct CvQuadEdge2D
-{
-    CV_QUADEDGE2D_FIELDS()
-}
-CvQuadEdge2D;
-
-typedef struct CvSubdiv2DPoint
-{
-    CV_SUBDIV2D_POINT_FIELDS()
-}
-CvSubdiv2DPoint;
-
-#define CV_SUBDIV2D_FIELDS()    \
-    CV_GRAPH_FIELDS()           \
-    int  quad_edges;            \
-    int  is_geometry_valid;     \
-    CvSubdiv2DEdge recent_edge; \
-    CvPoint2D32f  topleft;      \
-    CvPoint2D32f  bottomright;
-
-typedef struct CvSubdiv2D
-{
-    CV_SUBDIV2D_FIELDS()
-}
-CvSubdiv2D;
-
-
-typedef enum CvSubdiv2DPointLocation
-{
-    CV_PTLOC_ERROR = -2,
-    CV_PTLOC_OUTSIDE_RECT = -1,
-    CV_PTLOC_INSIDE = 0,
-    CV_PTLOC_VERTEX = 1,
-    CV_PTLOC_ON_EDGE = 2
-}
-CvSubdiv2DPointLocation;
-
-typedef enum CvNextEdgeType
-{
-    CV_NEXT_AROUND_ORG   = 0x00,
-    CV_NEXT_AROUND_DST   = 0x22,
-    CV_PREV_AROUND_ORG   = 0x11,
-    CV_PREV_AROUND_DST   = 0x33,
-    CV_NEXT_AROUND_LEFT  = 0x13,
-    CV_NEXT_AROUND_RIGHT = 0x31,
-    CV_PREV_AROUND_LEFT  = 0x20,
-    CV_PREV_AROUND_RIGHT = 0x02
-}
-CvNextEdgeType;
-
-/* get the next edge with the same origin point (counterwise) */
-#define  CV_SUBDIV2D_NEXT_EDGE( edge )  (((CvQuadEdge2D*)((edge) & ~3))->next[(edge)&3])
-
-
 /* Contour approximation algorithms */
 enum
 {
@@ -552,7 +508,8 @@ enum
     CV_COMP_CHISQR        =1,
     CV_COMP_INTERSECT     =2,
     CV_COMP_BHATTACHARYYA =3,
-    CV_COMP_HELLINGER     =CV_COMP_BHATTACHARYYA
+    CV_COMP_HELLINGER     =CV_COMP_BHATTACHARYYA,
+    CV_COMP_CHISQR_ALT    =4
 };
 
 /* Mask size for distance transform */

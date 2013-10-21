@@ -2,6 +2,7 @@
 #include <vector>
 #include <iomanip>
 
+#include "opencv2/core/utility.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/video/video.hpp"
@@ -95,7 +96,7 @@ int main(int argc, const char* argv[])
     {
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -120,9 +121,8 @@ int main(int argc, const char* argv[])
     {
         useCamera = true;
         defaultPicturesFail = true;
-        CvCapture* capture = 0;
-        capture = cvCaptureFromCAM( inputName );
-        if (!capture)
+        VideoCapture capture( inputName );
+        if (!capture.isOpened())
         {
             cout << "Can't load input images" << endl;
             return -1;
@@ -132,18 +132,18 @@ int main(int argc, const char* argv[])
 
     if (useCamera)
     {
-        CvCapture* capture = 0;
+        VideoCapture capture;
         Mat frame, frameCopy;
         Mat frame0Gray, frame1Gray;
         Mat ptr0, ptr1;
 
         if(vdofile == "")
-            capture = cvCaptureFromCAM( inputName );
+            capture.open( inputName );
         else
-            capture = cvCreateFileCapture(vdofile.c_str());
+            capture.open(vdofile.c_str());
 
         int c = inputName ;
-        if(!capture)
+        if(!capture.isOpened())
         {
             if(vdofile == "")
                 cout << "Capture from CAM " << c << " didn't work" << endl;
@@ -159,8 +159,7 @@ int main(int argc, const char* argv[])
         cout << "In capture ..." << endl;
         for(int i = 0;; i++)
         {
-            frame = cvQueryFrame( capture );
-            if( frame.empty() )
+            if( !capture.read(frame) )
                 break;
 
             if (i == 0)
@@ -212,7 +211,7 @@ int main(int argc, const char* argv[])
         waitKey(0);
 
 _cleanup_:
-        cvReleaseCapture( &capture );
+        capture.release();
     }
     else
     {

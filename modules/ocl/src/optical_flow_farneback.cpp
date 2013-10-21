@@ -72,7 +72,7 @@ inline void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
 
 static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("gaussianBlur");
+    String kernelName("gaussianBlur");
     size_t localThreads[3] = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, src.rows, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
@@ -95,7 +95,7 @@ static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 
 static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 {
-    string kernelName("polynomialExpansion");
+    String kernelName("polynomialExpansion");
     size_t localThreads[3] = { 256, 1, 1 };
     size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*polyN) * localThreads[0], src.rows, 1 };
     int smem_size = 3 * localThreads[0] * sizeof(float);
@@ -122,7 +122,7 @@ static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 
 static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
 {
-    string kernelName("updateMatrices");
+    String kernelName("updateMatrices");
     size_t localThreads[3] = { 32, 8, 1 };
     size_t globalThreads[3] = { flowx.cols, flowx.rows, 1 };
 
@@ -146,7 +146,7 @@ static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oc
 
 static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("boxFilter5");
+    String kernelName("boxFilter5");
     int height = src.rows / 5;
     size_t localThreads[3] = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, height, 1 };
@@ -168,7 +168,7 @@ static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 
 static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 {
-    string kernelName("updateFlow");
+    String kernelName("updateFlow");
     int cols = divUp(flowx.cols, 4);
     size_t localThreads[3] = { 32, 8, 1 };
     size_t globalThreads[3] = { cols, flowx.rows, 1 };
@@ -189,7 +189,7 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 
 static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("gaussianBlur5");
+    String kernelName("gaussianBlur5");
     int height = src.rows / 5;
     size_t localThreads[3] = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, height, 1 };
@@ -303,7 +303,7 @@ void cv::ocl::FarnebackOpticalFlow::prepareGaussian(
 
 void cv::ocl::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
 {
-    vector<float> buf(n*6 + 3);
+    std::vector<float> buf(n*6 + 3);
     float* g = &buf[0] + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;

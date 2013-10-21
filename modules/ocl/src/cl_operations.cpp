@@ -177,12 +177,12 @@ void openCLFree(void *devPtr)
     openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName)
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName)
 {
     return openCLGetKernelFromSource(ctx, source, kernelName, NULL);
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                                     const char *build_options)
 {
     cl_kernel kernel;
@@ -234,19 +234,19 @@ static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
     return opt;
 }
 
-void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
     //for example split_C2_D3, represent the split kernel with channels = 2 and dataType Depth = 3(Data type is short)
-    stringstream idxStr;
+    std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
     if(depth != -1)
         idxStr << "_D" << depth;
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str();
 
     cl_kernel kernel;
     std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
@@ -297,16 +297,16 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
     openCLSafeCall(clReleaseKernel(kernel));
 }
 
-void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
 {
     openCLExecuteKernel(ctx, source, kernelName, globalThreads, localThreads, args,
                         channels, depth, NULL);
 }
-void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
 {
 #ifndef PRINT_KERNEL_RUN_TIME
@@ -338,20 +338,20 @@ void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, stri
 #endif
 }
 
-void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& source, string kernelName,
+void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
     //for example split_C2_D2, represent the split kernel with channels = 2 and dataType Depth = 2 (Data type is char)
-    stringstream idxStr;
+    std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
     if(depth != -1)
         idxStr << "_D" << depth;
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str();
 
     std::string name = std::string("custom_") + source.name;
     ProgramEntry program = { name.c_str(), source.programStr, source.programHash };

@@ -152,12 +152,12 @@ struct CvFaceTracker
         if ((NULL == imgray) ||
             (NULL == imgThresh) ||
             (NULL == mstgContours))
-            return FALSE;
-        return TRUE;
+            return 0;
+        return 1;
     };
     int InitNextImage(IplImage* img)
     {
-        CvSize sz = {img->width, img->height};
+        CvSize sz(img->width, img->height);
         ReallocImage(&imgGray, sz, 1);
         ReallocImage(&imgThresh, sz, 1);
         ptRotate = face[MOUTH].ptCenter;
@@ -165,7 +165,7 @@ struct CvFaceTracker
         CvMat mat = cvMat( 2, 3, CV_32FC1, m );
 
         if (NULL == imgGray || NULL == imgThresh)
-            return FALSE;
+            return 0;
 
         /*m[0] = (float)cos(-dbRotateAngle*CV_PI/180.);
         m[1] = (float)sin(-dbRotateAngle*CV_PI/180.);
@@ -181,8 +181,8 @@ struct CvFaceTracker
         else
             cvClearMemStorage(mstgContours);
         if (NULL == mstgContours)
-            return FALSE;
-        return TRUE;
+            return 0;
+        return 1;
     }
 };
 
@@ -209,14 +209,14 @@ public:
         if (NULL != mstg)
             m_mstgRects = mstg;
         if (NULL == m_mstgRects)
-            return FALSE;
+            return 0;
         if (NULL == m_seqRects)
             m_seqRects = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvTrackingRect), m_mstgRects);
         else
             cvClearSeq(m_seqRects);
         if (NULL == m_seqRects)
-            return FALSE;
-        return TRUE;
+            return 0;
+        return 1;
     };
     void FindRects(IplImage* img, IplImage* thresh, int nLayers, int dMinSize);
 protected:
@@ -433,14 +433,14 @@ cvInitFaceTracker(CvFaceTracker* pFaceTracker, const IplImage* imgGray, CvRect* 
         (nRects < NUM_FACE_ELEMENTS))
         return NULL;
 
-    //int new_face = FALSE;
+    //int new_face = 0;
     CvFaceTracker* pFace = pFaceTracker;
     if (NULL == pFace)
     {
         pFace = new CvFaceTracker;
         if (NULL == pFace)
             return NULL;
-        //new_face = TRUE;
+        //new_face = 1;
     }
     pFace->Init(pRects, (IplImage*)imgGray);
     return pFace;
@@ -464,7 +464,7 @@ cvTrackFace(CvFaceTracker* pFaceTracker, IplImage* imgGray, CvRect* pRects, int 
     assert(NULL != pRects && nRects >= NUM_FACE_ELEMENTS);
     if ((NULL == pFaceTracker) ||
         (NULL == imgGray))
-        return FALSE;
+        return 0;
     pFaceTracker->InitNextImage(imgGray);
     *ptRotate = pFaceTracker->ptRotate;
     *dbAngleRotate = pFaceTracker->dbRotateAngle;
@@ -505,7 +505,7 @@ START:
         if (r.y + r.height > pFaceTracker->imgGray->height - 2)
             r.height = pFaceTracker->imgGray->height - 2 - r.y;
         if (!big_face[elem].Init(r, pFaceTracker->face[elem], pFaceTracker->mstgContours))
-            return FALSE;
+            return 0;
     }
     // find contours
     for (elem = 0; elem < NUM_FACE_ELEMENTS; elem++)
@@ -514,13 +514,13 @@ START:
     CvTrackingRect new_face[NUM_FACE_ELEMENTS];
     int new_energy = 0;
     int found = ChoiceTrackingFace3(pFaceTracker, nElements, big_face, new_face, new_energy);
-    int restart = FALSE;
-    int find2 = FALSE;
+    int restart = 0;
+    int find2 = 0;
     int noel = -1;
     if (found)
     {
         if (new_energy > 100000 && -1 != pFaceTracker->iTrackingFaceType)
-            find2 = TRUE;
+            find2 = 1;
         else if (new_energy > 150000)
         {
             int elements = 0;
@@ -532,17 +532,17 @@ START:
                     noel = el;
             }
             if (2 == elements)
-                find2 = TRUE;
+                find2 = 1;
             else
-                restart = TRUE;
+                restart = 1;
         }
     }
     else
     {
         if (-1 != pFaceTracker->iTrackingFaceType)
-            find2 = TRUE;
+            find2 = 1;
         else
-            restart = TRUE;
+            restart = 1;
     }
 RESTART:
     if (restart)
@@ -561,11 +561,11 @@ RESTART:
         if (found2 && new_energy < 100000)
         {
             pFaceTracker->iTrackingFaceType = noel;
-            found = TRUE;
+            found = 1;
         }
         else
         {
-            restart = TRUE;
+            restart = 1;
             goto RESTART;
         }
     }
@@ -599,7 +599,7 @@ RESTART:
     {
         pFaceTracker->dbRotateDelta = 0;
         pFaceTracker->dbRotateAngle = 0;
-        found = FALSE;
+        found = 0;
     }
     if (found)
     {
@@ -663,7 +663,7 @@ int ChoiceTrackingFace3(CvFaceTracker* pTF, const int nElements, const CvFaceEle
     CvTrackingRect* new_face[NUM_FACE_ELEMENTS] = {NULL};
     new_energy = 0x7fffffff;
     int curr_energy = 0x7fffffff;
-    int found = FALSE;
+    int found = 0;
     int N = 0;
     CvSeqReader reader_m, reader_l, reader_r;
     cvStartReadSeq( big_face[MOUTH].m_seqRects, &reader_m );
@@ -689,7 +689,7 @@ int ChoiceTrackingFace3(CvFaceTracker* pTF, const int nElements, const CvFaceEle
                             for (int elem = 0; elem < NUM_FACE_ELEMENTS; elem++)
                                 new_face[elem] = curr_face[elem];
                             new_energy = curr_energy;
-                            found = TRUE;
+                            found = 1;
                         }
                         N++;
                     }
@@ -722,7 +722,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
     CvTrackingRect* new_face[NUM_FACE_ELEMENTS] = {NULL};
     new_energy = 0x7fffffff;
     int curr_energy = 0x7fffffff;
-    int found = FALSE;
+    int found = 0;
     int N = 0;
     CvSeqReader reader0, reader1;
     cvStartReadSeq( big_face[element[0]].m_seqRects, &reader0 );
@@ -739,7 +739,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
                 for (int elem = 0; elem < NUM_FACE_ELEMENTS; elem++)
                     new_face[elem] = curr_face[elem];
                 new_energy = curr_energy;
-                found = TRUE;
+                found = 1;
             }
             N++;
         }
@@ -749,11 +749,11 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         face[element[0]] = *(new_face[element[0]]);
         face[element[1]] = *(new_face[element[1]]);
         // 3 element find by template
-        CvPoint templ_v01 = {pTF->ptTempl[element[1]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[1]].y - pTF->ptTempl[element[0]].y};
-        CvPoint templ_v02 = {pTF->ptTempl[element[2]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[2]].y - pTF->ptTempl[element[0]].y};
-        CvPoint prev_v01 = {pTF->face[element[1]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[1]].ptCenter.y - pTF->face[element[0]].ptCenter.y};
-        CvPoint prev_v02 = {pTF->face[element[2]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[2]].ptCenter.y - pTF->face[element[0]].ptCenter.y};
-        CvPoint new_v01 = {new_face[element[1]]->ptCenter.x - new_face[element[0]]->ptCenter.x, new_face[element[1]]->ptCenter.y - new_face[element[0]]->ptCenter.y};
+        CvPoint templ_v01(pTF->ptTempl[element[1]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[1]].y - pTF->ptTempl[element[0]].y);
+        CvPoint templ_v02(pTF->ptTempl[element[2]].x - pTF->ptTempl[element[0]].x, pTF->ptTempl[element[2]].y - pTF->ptTempl[element[0]].y);
+        CvPoint prev_v01(pTF->face[element[1]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[1]].ptCenter.y - pTF->face[element[0]].ptCenter.y);
+        CvPoint prev_v02(pTF->face[element[2]].ptCenter.x - pTF->face[element[0]].ptCenter.x, pTF->face[element[2]].ptCenter.y - pTF->face[element[0]].ptCenter.y);
+        CvPoint new_v01(new_face[element[1]]->ptCenter.x - new_face[element[0]]->ptCenter.x, new_face[element[1]]->ptCenter.y - new_face[element[0]]->ptCenter.y);
         double templ_d01 = sqrt((double)templ_v01.x*templ_v01.x + templ_v01.y*templ_v01.y);
         double templ_d02 = sqrt((double)templ_v02.x*templ_v02.x + templ_v02.y*templ_v02.y);
         double prev_d01 = sqrt((double)prev_v01.x*prev_v01.x + prev_v01.y*prev_v01.y);
@@ -767,7 +767,7 @@ int ChoiceTrackingFace2(CvFaceTracker* pTF, const int nElements, const CvFaceEle
         double y = double(new_v01.x) * sin_a + double(new_v01.y) * cos_a;
         x = x * new_d02 / new_d01;
         y = y * new_d02 / new_d01;
-        CvPoint new_v02 = {int(x + 0.5), int(y + 0.5)};
+        CvPoint new_v02(int(x + 0.5), int(y + 0.5));
         face[element[2]].iColor = 0;
         face[element[2]].iEnergy = 0;
         face[element[2]].nRectsInThis = 0;
@@ -818,10 +818,10 @@ inline int GetEnergy(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoin
 
 inline int GetEnergy2(CvTrackingRect** ppNew, const CvTrackingRect* pPrev, CvPoint* ptTempl, CvRect* rTempl, int* element)
 {
-    CvPoint new_v = {ppNew[element[0]]->ptCenter.x - ppNew[element[1]]->ptCenter.x,
-        ppNew[element[0]]->ptCenter.y - ppNew[element[1]]->ptCenter.y};
-    CvPoint prev_v = {pPrev[element[0]].ptCenter.x - pPrev[element[1]].ptCenter.x,
-        pPrev[element[0]].ptCenter.y - pPrev[element[1]].ptCenter.y};
+    CvPoint new_v(ppNew[element[0]]->ptCenter.x - ppNew[element[1]]->ptCenter.x,
+        ppNew[element[0]]->ptCenter.y - ppNew[element[1]]->ptCenter.y);
+    CvPoint prev_v(pPrev[element[0]].ptCenter.x - pPrev[element[1]].ptCenter.x,
+        pPrev[element[0]].ptCenter.y - pPrev[element[1]].ptCenter.y);
     double new_d = sqrt((double)new_v.x*new_v.x + new_v.y*new_v.y);
     double prev_d = sqrt((double)prev_v.x*prev_v.x + prev_v.y*prev_v.y);
     double dx = ptTempl[element[0]].x - ptTempl[element[1]].x;

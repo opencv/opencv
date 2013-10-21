@@ -65,13 +65,13 @@ int main( int, char** argv )
 
 
   /// Show what you got
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, src );
 
-  namedWindow( warp_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( warp_window, WINDOW_AUTOSIZE );
   imshow( warp_window, warp_dst );
 
-  namedWindow( warp_rotate_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( warp_rotate_window, WINDOW_AUTOSIZE );
   imshow( warp_rotate_window, warp_rotate_dst );
 
   /// Wait until user exits the program

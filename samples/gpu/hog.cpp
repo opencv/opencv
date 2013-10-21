@@ -4,8 +4,11 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/cuda.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace std;
 using namespace cv;
@@ -192,7 +195,7 @@ Args Args::read(int argc, char** argv)
 
 App::App(const Args& s)
 {
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     args = s;
     cout << "\nControls:\n"
@@ -244,13 +247,13 @@ void App::run()
     // Create HOG descriptors and detectors here
     vector<float> detector;
     if (win_size == Size(64, 128))
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector64x128();
+        detector = cv::cuda::HOGDescriptor::getPeopleDetector64x128();
     else
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector48x96();
+        detector = cv::cuda::HOGDescriptor::getPeopleDetector48x96();
 
-    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
+    cv::cuda::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
+                                   cv::cuda::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
+                                   cv::cuda::HOGDescriptor::DEFAULT_NLEVELS);
     cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
@@ -287,7 +290,7 @@ void App::run()
         }
 
         Mat img_aux, img, img_to_show;
-        gpu::GpuMat gpu_img;
+        cuda::GpuMat gpu_img;
 
         // Iterate over all frames
         while (running && !frame.empty())
@@ -295,8 +298,8 @@ void App::run()
             workBegin();
 
             // Change format of the image
-            if (make_gray) cvtColor(frame, img_aux, CV_BGR2GRAY);
-            else if (use_gpu) cvtColor(frame, img_aux, CV_BGR2BGRA);
+            if (make_gray) cvtColor(frame, img_aux, COLOR_BGR2GRAY);
+            else if (use_gpu) cvtColor(frame, img_aux, COLOR_BGR2BGRA);
             else frame.copyTo(img_aux);
 
             // Resize image
@@ -325,7 +328,7 @@ void App::run()
             for (size_t i = 0; i < found.size(); i++)
             {
                 Rect r = found[i];
-                rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
+                rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
             }
 
             if (use_gpu)
@@ -344,14 +347,14 @@ void App::run()
             {
                 if (!video_writer.isOpened())
                 {
-                    video_writer.open(args.dst_video, CV_FOURCC('x','v','i','d'), args.dst_video_fps,
+                    video_writer.open(args.dst_video, VideoWriter::fourcc('x','v','i','d'), args.dst_video_fps,
                                       img_to_show.size(), true);
                     if (!video_writer.isOpened())
                         throw std::runtime_error("can't create video writer");
                 }
 
-                if (make_gray) cvtColor(img_to_show, img, CV_GRAY2BGR);
-                else cvtColor(img_to_show, img, CV_BGRA2BGR);
+                if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
+                else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
                 video_writer << img;
             }

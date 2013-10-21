@@ -41,15 +41,14 @@
 //M*/
 
 #include "test_precomp.hpp"
-
+#include "opencv2/objdetect/objdetect_c.h"
 #include <string>
-
-#include "cvconfig.h"
 
 #ifdef HAVE_TBB
 #include "tbb/task_scheduler_init.h"
 #endif
 
+using namespace std;
 using namespace cv;
 
 const int num_detections = 3;
@@ -84,8 +83,9 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
     init.initialize(numThreads);
 #endif
 
-    IplImage* image = cvLoadImage(img_path.c_str());
-    if (!image)
+    Mat image2 = cv::imread(img_path.c_str());
+    IplImage image = image2;
+    if (image2.empty())
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
         return;
@@ -95,13 +95,12 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
     if (!detector)
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
-        cvReleaseImage(&image);
         return;
     }
 
     CvMemStorage* storage = cvCreateMemStorage(0);
     CvSeq* detections = 0;
-    detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
+    detections = cvLatentSvmDetectObjects(&image, detector, storage, 0.5f, numThreads);
     if (detections->total != num_detections)
     {
         ts->set_failed_test_info( cvtest::TS::FAIL_MISMATCH );
@@ -126,7 +125,6 @@ void CV_LatentSVMDetectorTest::run( int /* start_from */)
 #endif
     cvReleaseMemStorage( &storage );
     cvReleaseLatentSvmDetector( &detector );
-    cvReleaseImage( &image );
 }
 
 // Test for c++ version of Latent SVM
@@ -229,9 +227,9 @@ void LatentSVMDetectorTest::run( int /* start_from */)
     // detector12 - to test case of two (several) classes 'cat' and car
 
     // Load detectors
-    LatentSvmDetector detector1( vector<string>(1,model_path_cat) );
+    LatentSvmDetector detector1( vector<String>(1,model_path_cat) );
 
-    vector<string> models_pathes(2);
+    vector<String> models_pathes(2);
     models_pathes[0] = model_path_cat;
     models_pathes[1] = model_path_car;
     LatentSvmDetector detector12( models_pathes );

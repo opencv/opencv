@@ -45,52 +45,17 @@
 //M*/
 #include "perf_precomp.hpp"
 
+#include "opencv2/objdetect/objdetect_c.h"
+
 using namespace perf;
 
 ///////////// Haar ////////////////////////
-namespace cv
-{
-namespace ocl
-{
-
-struct getRect
-{
-    Rect operator()(const CvAvgComp &e) const
-    {
-        return e.rect;
-    }
-};
-
-class CascadeClassifier_GPU : public OclCascadeClassifier
-{
-public:
-    void detectMultiScale(oclMat &image,
-                          CV_OUT std::vector<cv::Rect>& faces,
-                          double scaleFactor = 1.1,
-                          int minNeighbors = 3, int flags = 0,
-                          Size minSize = Size(),
-                          Size maxSize = Size())
-    {
-        (void)maxSize;
-        MemStorage storage(cvCreateMemStorage(0));
-        //CvMat img=image;
-        CvSeq *objs = oclHaarDetectObjects(image, storage, scaleFactor, minNeighbors, flags, minSize);
-        vector<CvAvgComp> vecAvgComp;
-        Seq<CvAvgComp>(objs).copyTo(vecAvgComp);
-        faces.resize(vecAvgComp.size());
-        std::transform(vecAvgComp.begin(), vecAvgComp.end(), faces.begin(), getRect());
-    }
-
-};
-
-}
-}
 
 PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;
 
-    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), IMREAD_GRAYSCALE);
     ASSERT_TRUE(!img.empty()) << "can't open basketball1.png";
     declare.in(img);
 
@@ -107,7 +72,7 @@ PERF_TEST(HaarFixture, Haar)
     }
     else if (RUN_OCL_IMPL)
     {
-        ocl::CascadeClassifier_GPU faceCascade;
+        ocl::OclCascadeClassifier faceCascade;
         ocl::oclMat oclImg(img);
 
         ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))

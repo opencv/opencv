@@ -56,19 +56,6 @@ void makeOffsets(int pixel[25], int row_stride, int patternSize);
 template<int patternSize>
 int cornerScore(const uchar* ptr, const int pixel[], int threshold);
 
-class FastFeatureDetector2 : public FastFeatureDetector
-{
-public:
-    CV_WRAP FastFeatureDetector2( int threshold=10, bool nonmaxSuppression=true);
-    CV_WRAP FastFeatureDetector2( int threshold, bool nonmaxSuppression, int type);
-    AlgorithmInfo* info() const;
-
-protected:
-    virtual void detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-
-    short type;
-};
-
 }
 
 #endif

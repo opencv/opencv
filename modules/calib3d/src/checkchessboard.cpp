@@ -40,6 +40,8 @@
  //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d_c.h"
 
 #include <vector>
 #include <algorithm>
@@ -49,7 +51,7 @@
 #if defined(DEBUG_WINDOWS)
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui/highgui.hpp"
+#    include "opencv2/highgui.hpp"
 #  else
 #    undef DEBUG_WINDOWS
 #  endif

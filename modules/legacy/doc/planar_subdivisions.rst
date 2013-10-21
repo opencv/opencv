@@ -116,7 +116,6 @@ CalcSubdivVoronoi2D
 Calculates the coordinates of the Voronoi diagram cells.
 
 .. ocv:cfunction:: void cvCalcSubdivVoronoi2D(  CvSubdiv2D* subdiv )
-.. ocv:pyoldfunction:: cv.CalcSubdivVoronoi2D(subdiv)-> None
 
     :param subdiv: Delaunay subdivision, in which all the points are already added.
 
@@ -130,7 +129,6 @@ ClearSubdivVoronoi2D
 Removes all virtual points.
 
 .. ocv:cfunction:: void cvClearSubdivVoronoi2D( CvSubdiv2D* subdiv )
-.. ocv:pyoldfunction:: cv.ClearSubdivVoronoi2D(subdiv)-> None
 
     :param subdiv: Delaunay subdivision.
 
@@ -145,7 +143,6 @@ CreateSubdivDelaunay2D
 Creates an empty Delaunay triangulation.
 
 .. ocv:cfunction:: CvSubdiv2D* cvCreateSubdivDelaunay2D(  CvRect rect, CvMemStorage* storage )
-.. ocv:pyoldfunction:: cv.CreateSubdivDelaunay2D(rect, storage) -> CvSubdiv2D
 
     :param rect: Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
@@ -166,7 +163,6 @@ FindNearestPoint2D
 Finds the subdivision vertex closest to the given point.
 
 .. ocv:cfunction:: CvSubdiv2DPoint* cvFindNearestPoint2D(  CvSubdiv2D* subdiv, CvPoint2D32f pt )
-.. ocv:pyoldfunction:: cv.FindNearestPoint2D(subdiv, pt)-> point
 
     :param subdiv: Delaunay or another subdivision.
 
@@ -185,7 +181,6 @@ Subdiv2DEdgeDst
 Returns the edge destination.
 
 .. ocv:cfunction:: CvSubdiv2DPoint* cvSubdiv2DEdgeDst(  CvSubdiv2DEdge edge )
-.. ocv:pyoldfunction:: cv.Subdiv2DEdgeDst(edge)-> point
 
     :param edge: Subdivision edge (not a quad-edge).
 
@@ -200,7 +195,6 @@ Subdiv2DGetEdge
 Returns one of the edges related to the given edge.
 
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DGetEdge( CvSubdiv2DEdge edge, CvNextEdgeType type )
-.. ocv:pyoldfunction:: cv.Subdiv2DGetEdge(edge, type)-> CvSubdiv2DEdge
 
     :param edge: Subdivision edge (not a quad-edge).
 
@@ -231,7 +225,6 @@ Subdiv2DNextEdge
 Returns next edge around the edge origin.
 
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DNextEdge( CvSubdiv2DEdge edge )
-.. ocv:pyoldfunction:: cv.Subdiv2DNextEdge(edge)-> CvSubdiv2DEdge
 
     :param edge: Subdivision edge (not a quad-edge).
 
@@ -246,7 +239,6 @@ Subdiv2DLocate
 Returns the location of a point within a Delaunay triangulation.
 
 .. ocv:cfunction:: CvSubdiv2DPointLocation  cvSubdiv2DLocate(  CvSubdiv2D* subdiv, CvPoint2D32f pt, CvSubdiv2DEdge* edge, CvSubdiv2DPoint** vertex=NULL )
-.. ocv:pyoldfunction:: cv.Subdiv2DLocate(subdiv, pt) -> (loc, where)
 
     :param subdiv: Delaunay or another subdivision.
 
@@ -294,7 +286,6 @@ Subdiv2DRotateEdge
 Returns another edge of the same quad-edge.
 
 .. ocv:cfunction:: CvSubdiv2DEdge  cvSubdiv2DRotateEdge(  CvSubdiv2DEdge edge, int rotate )
-.. ocv:pyoldfunction:: cv.Subdiv2DRotateEdge(edge, rotate)-> CvSubdiv2DEdge
 
     :param edge: Subdivision edge (not a quad-edge).
 
@@ -315,7 +306,6 @@ SubdivDelaunay2DInsert
 Inserts a single point into a Delaunay triangulation.
 
 .. ocv:cfunction:: CvSubdiv2DPoint*  cvSubdivDelaunay2DInsert(  CvSubdiv2D* subdiv, CvPoint2D32f pt)
-.. ocv:pyoldfunction:: cv.SubdivDelaunay2DInsert(subdiv, pt)-> point
 
     :param subdiv: Delaunay subdivision created by the function  :ocv:cfunc:`CreateSubdivDelaunay2D`.
 

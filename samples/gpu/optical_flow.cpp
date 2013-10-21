@@ -1,13 +1,14 @@
 #include <iostream>
 #include <fstream>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/highgui.hpp"
+#include "opencv2/cudaoptflow.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 inline bool isFlowCorrect(Point2f u)
 {
@@ -169,7 +170,7 @@ int main(int argc, const char* argv[])
     BroxOpticalFlow brox(0.197f, 50.0f, 0.8f, 10, 77, 10);
     PyrLKOpticalFlow lk; lk.winSize = Size(7, 7);
     FarnebackOpticalFlow farn;
-    OpticalFlowDual_TVL1_GPU tvl1;
+    OpticalFlowDual_TVL1_CUDA tvl1;
     FastOpticalFlowBM fastBM;
 
     {

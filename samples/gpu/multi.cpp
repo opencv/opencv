@@ -9,7 +9,19 @@
 #include <iostream>
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/cudaarithm.hpp"
+
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
 
 #if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
 
@@ -28,11 +40,9 @@ int main()
 
 #else
 
-#include "opencv2/core/internal.hpp" // For TBB wrappers
-
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 struct Worker { void operator()(int device_id) const; };
 
@@ -46,12 +56,12 @@ int main()
     }
     for (int i = 0; i < num_devices; ++i)
     {
-        cv::gpu::printShortCudaDeviceInfo(i);
+        cv::cuda::printShortCudaDeviceInfo(i);
 
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {
-            std::cout << "GPU module isn't built for GPU #" << i << " ("
+            std::cout << "CUDA module isn't built for GPU #" << i << " ("
                  << dev_info.name() << ", CC " << dev_info.majorVersion()
                  << dev_info.minorVersion() << "\n";
             return -1;
@@ -60,7 +70,7 @@ int main()
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    tbb::parallel_do(devices, devices + 2, Worker());
 
     return 0;
 }
@@ -77,15 +87,15 @@ void Worker::operator()(int device_id) const
     rng.fill(src, RNG::UNIFORM, 0, 1);
 
     // CPU works
-    transpose(src, dst);
+    cv::transpose(src, dst);
 
     // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-    transpose(d_src, d_dst);
+    cuda::transpose(d_src, d_dst);
 
     // Check results
-    bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
+    bool passed = cv::norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
     std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
         << (passed ? "passed" : "FAILED") << endl;
 

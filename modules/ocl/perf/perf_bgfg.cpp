@@ -133,11 +133,11 @@ PERF_TEST_P(VideoMOGFixture, MOG,
     {
         TEST_CYCLE()
         {
-            cv::BackgroundSubtractorMOG mog;
+            cv::Ptr<cv::BackgroundSubtractorMOG> mog = createBackgroundSubtractorMOG();
             foreground.release();
             for (int i = 0; i < nFrame; i++)
             {
-                mog(frame_buffer[i], foreground, learningRate);
+                mog->apply(frame_buffer[i], foreground, learningRate);
             }
         }
         SANITY_CHECK(foreground);
@@ -190,13 +190,13 @@ PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on b
     {
         TEST_CYCLE()
         {
-            cv::BackgroundSubtractorMOG2 mog2;
-            mog2.set("detectShadows", false);
+            cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
+            mog2->setDetectShadows(false);
             foreground.release();
 
             for (int i = 0; i < nFrame; i++)
             {
-                mog2(frame_buffer[i], foreground);
+                mog2->apply(frame_buffer[i], foreground);
             }
         }
         SANITY_CHECK(foreground);
@@ -252,15 +252,15 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
     {
         TEST_CYCLE()
         {
-            cv::BackgroundSubtractorMOG2 mog2;
-            mog2.set("detectShadows", false);
+            cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
+            mog2->setDetectShadows(false);
             foreground.release();
             background.release();
             for (int i = 0; i < nFrame; i++)
             {
-                mog2(frame_buffer[i], foreground);
+                mog2->apply(frame_buffer[i], foreground);
             }
-            mog2.getBackgroundImage(background);
+            mog2->getBackgroundImage(background);
         }
         SANITY_CHECK(background);
     }

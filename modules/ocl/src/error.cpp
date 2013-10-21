@@ -170,21 +170,5 @@ namespace cv
             sprintf(buf, "%d", err);
             return buf;
         }
-
-        void error(const char *error_string, const char *file, const int line, const char *func)
-        {
-            int code = CV_GpuApiCallError;
-
-            if (std::uncaught_exception())
-            {
-                const char *errorStr = cvErrorStr(code);
-                const char *function = func ? func : "unknown function";
-
-                std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-                std::cerr.flush();
-            }
-            else
-                cv::error( cv::Exception(code, error_string, func, file, line) );
-        }
     }
 }

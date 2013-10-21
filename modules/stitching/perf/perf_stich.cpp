@@ -1,7 +1,6 @@
 #include "perf_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/flann/flann.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/flann.hpp"
 #include "opencv2/opencv_modules.hpp"
 
 using namespace std;
@@ -14,15 +13,15 @@ using std::tr1::get;
 #define ORB_MATCH_CONFIDENCE  0.3f
 #define WORK_MEGAPIX 0.6
 
-typedef TestBaseWithParam<String> stitch;
-typedef TestBaseWithParam<String> match;
-typedef std::tr1::tuple<String, int> matchVector_t;
+typedef TestBaseWithParam<string> stitch;
+typedef TestBaseWithParam<string> match;
+typedef std::tr1::tuple<string, int> matchVector_t;
 typedef TestBaseWithParam<matchVector_t> matchVector;
 
 #ifdef HAVE_OPENCV_NONFREE_TODO_FIND_WHY_SURF_IS_NOT_ABLE_TO_STITCH_PANOS
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
-#define TEST_DETECTORS testing::Values<String>("orb")
+#define TEST_DETECTORS testing::Values<string>("orb")
 #endif
 
 PERF_TEST_P(stitch, a123, TEST_DETECTORS)
@@ -35,12 +34,12 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
-            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
+            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
+            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
-            ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
-            : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+            ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
+            : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
 
     declare.time(30 * 20).iterations(20);
 
@@ -49,7 +48,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new SphericalWarper());
+        stitcher.setWarper(makePtr<SphericalWarper>());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -73,12 +72,12 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
-            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
+            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
+            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
-            ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
-            : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+            ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
+            : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
 
     declare.time(30 * 20).iterations(20);
 
@@ -87,7 +86,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new SphericalWarper());
+        stitcher.setWarper(makePtr<SphericalWarper>());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -115,13 +114,13 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = new detail::SurfFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = new detail::OrbFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
     {
@@ -166,17 +165,17 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
 
     Ptr<detail::FeaturesFinder> finder;
     Ptr<detail::FeaturesMatcher> matcher;
-    String detectorName = get<0>(GetParam());
+    string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
     if (detectorName == "surf")
     {
-        finder = new detail::SurfFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = new detail::OrbFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
     {

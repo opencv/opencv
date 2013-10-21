@@ -52,50 +52,6 @@
 #undef USE_IPP_SEP_FILTERS
 #endif
 
-/*
- Various border types, image boundaries are denoted with '|'
-
- * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
- * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
- * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
- * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
- * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
- */
-int cv::borderInterpolate( int p, int len, int borderType )
-{
-    if( (unsigned)p < (unsigned)len )
-        ;
-    else if( borderType == BORDER_REPLICATE )
-        p = p < 0 ? 0 : len - 1;
-    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
-    {
-        int delta = borderType == BORDER_REFLECT_101;
-        if( len == 1 )
-            return 0;
-        do
-        {
-            if( p < 0 )
-                p = -p - 1 + delta;
-            else
-                p = len - 1 - (p - len) - delta;
-        }
-        while( (unsigned)p >= (unsigned)len );
-    }
-    else if( borderType == BORDER_WRAP )
-    {
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
-    }
-    else if( borderType == BORDER_CONSTANT )
-        p = -1;
-    else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
-    return p;
-}
-
-
 namespace cv
 {
 
@@ -167,7 +123,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
 
     if( isSeparable() )
     {
-        CV_Assert( !rowFilter.empty() && !columnFilter.empty() );
+        CV_Assert( rowFilter && columnFilter );
         ksize = Size(rowFilter->ksize, columnFilter->ksize);
         anchor = Point(rowFilter->anchor, columnFilter->anchor);
     }
@@ -199,7 +155,7 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-static const int VEC_ALIGN = CV_MALLOC_ALIGN;
+#define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
 {
@@ -294,9 +250,9 @@ int FilterEngine::start(Size _wholeSize, Rect _roi, int _maxBufRows)
     rowCount = dstY = 0;
     startY = startY0 = std::max(roi.y - anchor.y, 0);
     endY = std::min(roi.y + roi.height + ksize.height - anchor.y - 1, wholeSize.height);
-    if( !columnFilter.empty() )
+    if( columnFilter )
         columnFilter->reset();
-    if( !filter2D.empty() )
+    if( filter2D )
         filter2D->reset();
 
     return startY;
@@ -1996,7 +1952,7 @@ struct FilterVec_8u
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2066,7 +2022,7 @@ struct FilterVec_8u
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2079,7 +2035,7 @@ struct FilterVec_8u16s
         Mat kernel;
         _kernel.convertTo(kernel, CV_32F, 1./(1 << _bits), 0);
         delta = (float)(_delta/(1 << _bits));
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2149,7 +2105,7 @@ struct FilterVec_8u16s
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2160,7 +2116,7 @@ struct FilterVec_32f
     FilterVec_32f(const Mat& _kernel, int, double _delta)
     {
         delta = (float)_delta;
-        vector<Point> coords;
+        std::vector<Point> coords;
         preprocess2DKernel(_kernel, coords, coeffs);
         _nz = (int)coords.size();
     }
@@ -2221,7 +2177,7 @@ struct FilterVec_32f
     }
 
     int _nz;
-    vector<uchar> coeffs;
+    std::vector<uchar> coeffs;
     float delta;
 };
 
@@ -2821,42 +2777,42 @@ cv::Ptr<cv::BaseRowFilter> cv::getLinearRowFilter( int srcType, int bufType,
     if( (symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) != 0 && ksize <= 5 )
     {
         if( sdepth == CV_8U && ddepth == CV_32S )
-            return Ptr<BaseRowFilter>(new SymmRowSmallFilter<uchar, int, SymmRowSmallVec_8u32s>
-                (kernel, anchor, symmetryType, SymmRowSmallVec_8u32s(kernel, symmetryType)));
+            return makePtr<SymmRowSmallFilter<uchar, int, SymmRowSmallVec_8u32s> >
+                (kernel, anchor, symmetryType, SymmRowSmallVec_8u32s(kernel, symmetryType));
         if( sdepth == CV_32F && ddepth == CV_32F )
-            return Ptr<BaseRowFilter>(new SymmRowSmallFilter<float, float, SymmRowSmallVec_32f>
-                (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType)));
+            return makePtr<SymmRowSmallFilter<float, float, SymmRowSmallVec_32f> >
+                (kernel, anchor, symmetryType, SymmRowSmallVec_32f(kernel, symmetryType));
     }
 
     if( sdepth == CV_8U && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, int, RowVec_8u32s>
-            (kernel, anchor, RowVec_8u32s(kernel)));
+        return makePtr<RowFilter<uchar, int, RowVec_8u32s> >
+            (kernel, anchor, RowVec_8u32s(kernel));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, float, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<uchar, float, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_8U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<uchar, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<uchar, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<ushort, float, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<ushort, float, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<ushort, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<ushort, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16S && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<short, float, RowVec_16s32f>
-                                  (kernel, anchor, RowVec_16s32f(kernel)));
+        return makePtr<RowFilter<short, float, RowVec_16s32f> >
+                                  (kernel, anchor, RowVec_16s32f(kernel));
     if( sdepth == CV_16S && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<short, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<short, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_32F && ddepth == CV_32F )
-        return Ptr<BaseRowFilter>(new RowFilter<float, float, RowVec_32f>
-            (kernel, anchor, RowVec_32f(kernel)));
+        return makePtr<RowFilter<float, float, RowVec_32f> >
+            (kernel, anchor, RowVec_32f(kernel));
     if( sdepth == CV_32F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<float, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<float, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowFilter<double, double, RowNoVec>(kernel, anchor));
+        return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
 
-    return Ptr<BaseRowFilter>(0);
+    return Ptr<BaseRowFilter>();
 }
 
 
@@ -2875,24 +2831,24 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
     if( !(symmetryType & (KERNEL_SYMMETRICAL|KERNEL_ASYMMETRICAL)) )
     {
         if( ddepth == CV_8U && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<FixedPtCastEx<int, uchar>, ColumnNoVec>
-            (kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits)));
+            return makePtr<ColumnFilter<FixedPtCastEx<int, uchar>, ColumnNoVec> >
+            (kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits));
         if( ddepth == CV_8U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, uchar>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, uchar>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_8U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, uchar>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, uchar>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, ushort>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, ushort>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, ushort>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, ushort>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16S && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, short>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, short>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_16S && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, short>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, short>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_32F && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<float, float>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<float, float>, ColumnNoVec> >(kernel, anchor, delta);
         if( ddepth == CV_64F && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new ColumnFilter<Cast<double, double>, ColumnNoVec>(kernel, anchor, delta));
+            return makePtr<ColumnFilter<Cast<double, double>, ColumnNoVec> >(kernel, anchor, delta);
     }
     else
     {
@@ -2900,60 +2856,60 @@ cv::Ptr<cv::BaseColumnFilter> cv::getLinearColumnFilter( int bufType, int dstTyp
         if( ksize == 3 )
         {
             if( ddepth == CV_8U && sdepth == CV_32S )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<
-                    FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u>
+                return makePtr<SymmColumnSmallFilter<
+                    FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u> >
                     (kernel, anchor, delta, symmetryType, FixedPtCastEx<int, uchar>(bits),
-                    SymmColumnVec_32s8u(kernel, symmetryType, bits, delta)));
+                    SymmColumnVec_32s8u(kernel, symmetryType, bits, delta));
             if( ddepth == CV_16S && sdepth == CV_32S && bits == 0 )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<Cast<int, short>,
-                    SymmColumnSmallVec_32s16s>(kernel, anchor, delta, symmetryType,
-                        Cast<int, short>(), SymmColumnSmallVec_32s16s(kernel, symmetryType, bits, delta)));
+                return makePtr<SymmColumnSmallFilter<Cast<int, short>,
+                    SymmColumnSmallVec_32s16s> >(kernel, anchor, delta, symmetryType,
+                        Cast<int, short>(), SymmColumnSmallVec_32s16s(kernel, symmetryType, bits, delta));
             if( ddepth == CV_32F && sdepth == CV_32F )
-                return Ptr<BaseColumnFilter>(new SymmColumnSmallFilter<
-                    Cast<float, float>,SymmColumnSmallVec_32f>
+                return makePtr<SymmColumnSmallFilter<
+                    Cast<float, float>,SymmColumnSmallVec_32f> >
                     (kernel, anchor, delta, symmetryType, Cast<float, float>(),
-                    SymmColumnSmallVec_32f(kernel, symmetryType, 0, delta)));
+                    SymmColumnSmallVec_32f(kernel, symmetryType, 0, delta));
         }
         if( ddepth == CV_8U && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u>
+            return makePtr<SymmColumnFilter<FixedPtCastEx<int, uchar>, SymmColumnVec_32s8u> >
                 (kernel, anchor, delta, symmetryType, FixedPtCastEx<int, uchar>(bits),
-                SymmColumnVec_32s8u(kernel, symmetryType, bits, delta)));
+                SymmColumnVec_32s8u(kernel, symmetryType, bits, delta));
         if( ddepth == CV_8U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, uchar>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<float, uchar>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_8U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, uchar>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, uchar>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16U && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, ushort>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<float, ushort>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16U && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, ushort>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, ushort>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16S && sdepth == CV_32S )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<int, short>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<int, short>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_16S && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, short>, SymmColumnVec_32f16s>
+            return makePtr<SymmColumnFilter<Cast<float, short>, SymmColumnVec_32f16s> >
                  (kernel, anchor, delta, symmetryType, Cast<float, short>(),
-                  SymmColumnVec_32f16s(kernel, symmetryType, 0, delta)));
+                  SymmColumnVec_32f16s(kernel, symmetryType, 0, delta));
         if( ddepth == CV_16S && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, short>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, short>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
         if( ddepth == CV_32F && sdepth == CV_32F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<float, float>, SymmColumnVec_32f>
+            return makePtr<SymmColumnFilter<Cast<float, float>, SymmColumnVec_32f> >
                 (kernel, anchor, delta, symmetryType, Cast<float, float>(),
-                SymmColumnVec_32f(kernel, symmetryType, 0, delta)));
+                SymmColumnVec_32f(kernel, symmetryType, 0, delta));
         if( ddepth == CV_64F && sdepth == CV_64F )
-            return Ptr<BaseColumnFilter>(new SymmColumnFilter<Cast<double, double>, ColumnNoVec>
-                (kernel, anchor, delta, symmetryType));
+            return makePtr<SymmColumnFilter<Cast<double, double>, ColumnNoVec> >
+                (kernel, anchor, delta, symmetryType);
     }
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
 
-    return Ptr<BaseColumnFilter>(0);
+    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -3019,7 +2975,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
     Ptr<BaseColumnFilter> _columnFilter = getLinearColumnFilter(
         _bufType, _dstType, columnKernel, _anchor.y, ctype, _delta, bits );
 
-    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(0), _rowFilter, _columnFilter,
+    return Ptr<FilterEngine>( new FilterEngine(Ptr<BaseFilter>(), _rowFilter, _columnFilter,
         _srcType, _dstType, _bufType, _rowBorderType, _columnBorderType, _borderValue ));
 }
 
@@ -3031,7 +2987,7 @@ cv::Ptr<cv::FilterEngine> cv::createSeparableLinearFilter(
 namespace cv
 {
 
-void preprocess2DKernel( const Mat& kernel, vector<Point>& coords, vector<uchar>& coeffs )
+void preprocess2DKernel( const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs )
 {
     int i, j, k, nz = countNonZero(kernel), ktype = kernel.type();
     if(nz == 0)
@@ -3149,9 +3105,9 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
         }
     }
 
-    vector<Point> coords;
-    vector<uchar> coeffs;
-    vector<uchar*> ptrs;
+    std::vector<Point> coords;
+    std::vector<uchar> coeffs;
+    std::vector<uchar*> ptrs;
     KT delta;
     CastOp castOp0;
     VecOp vecOp;
@@ -3171,13 +3127,13 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
     anchor = normalizeAnchor(anchor, _kernel.size());
 
     /*if( sdepth == CV_8U && ddepth == CV_8U && kdepth == CV_32S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u>
+        return makePtr<Filter2D<uchar, FixedPtCastEx<int, uchar>, FilterVec_8u> >
             (_kernel, anchor, delta, FixedPtCastEx<int, uchar>(bits),
-            FilterVec_8u(_kernel, bits, delta)));
+            FilterVec_8u(_kernel, bits, delta));
     if( sdepth == CV_8U && ddepth == CV_16S && kdepth == CV_32S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s>
+        return makePtr<Filter2D<uchar, FixedPtCastEx<int, short>, FilterVec_8u16s> >
             (_kernel, anchor, delta, FixedPtCastEx<int, short>(bits),
-            FilterVec_8u16s(_kernel, bits, delta)));*/
+            FilterVec_8u16s(_kernel, bits, delta));*/
 
     kdepth = sdepth == CV_64F || ddepth == CV_64F ? CV_64F : CV_32F;
     Mat kernel;
@@ -3187,53 +3143,53 @@ cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
         _kernel.convertTo(kernel, kdepth, _kernel.type() == CV_32S ? 1./(1 << bits) : 1.);
 
     if( sdepth == CV_8U && ddepth == CV_8U )
-        return Ptr<BaseFilter>(new Filter2D<uchar, Cast<float, uchar>, FilterVec_8u>
-            (kernel, anchor, delta, Cast<float, uchar>(), FilterVec_8u(kernel, 0, delta)));
+        return makePtr<Filter2D<uchar, Cast<float, uchar>, FilterVec_8u> >
+            (kernel, anchor, delta, Cast<float, uchar>(), FilterVec_8u(kernel, 0, delta));
     if( sdepth == CV_8U && ddepth == CV_16U )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<float, ushort>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_8U && ddepth == CV_16S )
-        return Ptr<BaseFilter>(new Filter2D<uchar, Cast<float, short>, FilterVec_8u16s>
-            (kernel, anchor, delta, Cast<float, short>(), FilterVec_8u16s(kernel, 0, delta)));
+        return makePtr<Filter2D<uchar, Cast<float, short>, FilterVec_8u16s> >
+            (kernel, anchor, delta, Cast<float, short>(), FilterVec_8u16s(kernel, 0, delta));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_8U && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<uchar,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<uchar,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_16U && ddepth == CV_16U )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<float, ushort>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<float, ushort>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16U && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16U && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<ushort,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<ushort,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_16S && ddepth == CV_16S )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<float, short>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<float, short>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16S && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<float, float>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<float, float>, FilterNoVec> >(kernel, anchor, delta);
     if( sdepth == CV_16S && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<short,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<short,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     if( sdepth == CV_32F && ddepth == CV_32F )
-        return Ptr<BaseFilter>(new Filter2D<float, Cast<float, float>, FilterVec_32f>
-            (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta)));
+        return makePtr<Filter2D<float, Cast<float, float>, FilterVec_32f> >
+            (kernel, anchor, delta, Cast<float, float>(), FilterVec_32f(kernel, 0, delta));
     if( sdepth == CV_64F && ddepth == CV_64F )
-        return Ptr<BaseFilter>(new Filter2D<double,
-            Cast<double, double>, FilterNoVec>(kernel, anchor, delta));
+        return makePtr<Filter2D<double,
+            Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
 
-    return Ptr<BaseFilter>(0);
+    return Ptr<BaseFilter>();
 }
 
 
@@ -3264,9 +3220,9 @@ cv::Ptr<cv::FilterEngine> cv::createLinearFilter( int _srcType, int _dstType,
     Ptr<BaseFilter> _filter2D = getLinearFilter(_srcType, _dstType,
         kernel, _anchor, _delta, bits);
 
-    return Ptr<FilterEngine>(new FilterEngine(_filter2D, Ptr<BaseRowFilter>(0),
-        Ptr<BaseColumnFilter>(0), _srcType, _dstType, _srcType,
-        _rowBorderType, _columnBorderType, _borderValue ));
+    return makePtr<FilterEngine>(_filter2D, Ptr<BaseRowFilter>(),
+        Ptr<BaseColumnFilter>(), _srcType, _dstType, _srcType,
+        _rowBorderType, _columnBorderType, _borderValue );
 }
 
 

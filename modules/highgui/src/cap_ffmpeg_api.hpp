@@ -7,9 +7,11 @@ extern "C"
 #endif
 
 #if defined WIN32 || defined _WIN32
-#define OPENCV_FFMPEG_API __declspec(dllexport)
+#   define OPENCV_FFMPEG_API __declspec(dllexport)
+#elif defined __GNUC__ && __GNUC__ >= 4
+#   define OPENCV_FFMPEG_API __attribute__ ((visibility ("default")))
 #else
-#define OPENCV_FFMPEG_API
+#   define OPENCV_FFMPEG_API
 #endif
 
 enum

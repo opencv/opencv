@@ -2,7 +2,8 @@
 
 import numpy as np
 import cv2
-import cv2.cv as cv
+
+# local modules
 from video import create_capture
 from common import clock, draw_str
 
@@ -11,7 +12,7 @@ USAGE: facedetect.py [--cascade <cascade_fn>] [--nested-cascade <cascade_fn>] [<
 '''
 
 def detect(img, cascade):
-    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags = cv.CV_HAAR_SCALE_IMAGE)
+    rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30), flags = cv2.CASCADE_SCALE_IMAGE)
     if len(rects) == 0:
         return []
     rects[:,2:] += rects[:,:2]
@@ -26,8 +27,10 @@ if __name__ == '__main__':
     print help_message
 
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
-    try: video_src = video_src[0]
-    except: video_src = 0
+    try:
+        video_src = video_src[0]
+    except:
+        video_src = 0
     args = dict(args)
     cascade_fn = args.get('--cascade', "../../data/haarcascades/haarcascade_frontalface_alt.xml")
     nested_fn  = args.get('--nested-cascade', "../../data/haarcascades/haarcascade_eye.xml")

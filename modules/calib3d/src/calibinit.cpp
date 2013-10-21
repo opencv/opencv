@@ -60,6 +60,8 @@
 \************************************************************************************/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d_c.h"
 #include "circlesgrid.hpp"
 #include <stdarg.h>
 
@@ -69,7 +71,7 @@
 #ifdef DEBUG_CHESSBOARD
 #  include "opencv2/opencv_modules.hpp"
 #  ifdef HAVE_OPENCV_HIGHGUI
-#    include "opencv2/highgui/highgui.hpp"
+#    include "opencv2/highgui.hpp"
 #  else
 #    undef DEBUG_CHESSBOARD
 #  endif
@@ -269,8 +271,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( !out_corners )
         CV_Error( CV_StsNullPtr, "Null pointer to corners" );
 
-    storage = cvCreateMemStorage(0);
-    thresh_img = cvCreateMat( img->rows, img->cols, CV_8UC1 );
+    storage.reset(cvCreateMemStorage(0));
+    thresh_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
 
 #ifdef DEBUG_CHESSBOARD
     dbg_img = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 3 );
@@ -282,7 +284,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     {
         // equalize the input image histogram -
         // that should make the contrast between "black" and "white" areas big enough
-        norm_img = cvCreateMat( img->rows, img->cols, CV_8UC1 );
+        norm_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
 
         if( CV_MAT_CN(img->type) != 1 )
         {
@@ -539,12 +541,12 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         cv::Ptr<CvMat> gray;
         if( CV_MAT_CN(img->type) != 1 )
         {
-            gray = cvCreateMat(img->rows, img->cols, CV_8UC1);
+            gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
             cvCvtColor(img, gray, CV_BGR2GRAY);
         }
         else
         {
-            gray = cvCloneMat(img);
+            gray.reset(cvCloneMat(img));
         }
         int wsize = 2;
         cvFindCornerSubPix( gray, out_corners, pattern_size.width*pattern_size.height,
@@ -625,7 +627,7 @@ icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
         int *all_count, CvCBQuad **all_quads, CvCBCorner **corners,
         CvSize pattern_size, CvMemStorage* storage )
 {
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateChildMemStorage( storage );
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateChildMemStorage( storage ));
     CvSeq* stack = cvCreateSeq( 0, sizeof(*stack), sizeof(void*), temp_storage );
 
     // first find an interior quad
@@ -1095,7 +1097,7 @@ icvOrderQuad(CvCBQuad *quad, CvCBCorner *corner, int common)
 static int
 icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize pattern_size )
 {
-    CvPoint2D32f center = {0,0};
+    CvPoint2D32f center;
     int i, j, k;
     // number of quads this pattern should contain
     int count = ((pattern_size.width + 1)*(pattern_size.height + 1) + 1)/2;
@@ -1107,11 +1109,11 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
 
     // create an array of quadrangle centers
     cv::AutoBuffer<CvPoint2D32f> centers( quad_count );
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateMemStorage(0);
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateMemStorage(0));
 
     for( i = 0; i < quad_count; i++ )
     {
-        CvPoint2D32f ci = {0,0};
+        CvPoint2D32f ci;
         CvCBQuad* q = quad_group[i];
 
         for( j = 0; j < 4; j++ )
@@ -1203,7 +1205,7 @@ static int
 icvFindConnectedQuads( CvCBQuad *quad, int quad_count, CvCBQuad **out_group,
                        int group_idx, CvMemStorage* storage )
 {
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateChildMemStorage( storage );
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateChildMemStorage( storage ));
     CvSeq* stack = cvCreateSeq( 0, sizeof(*stack), sizeof(void*), temp_storage );
     int i, count = 0;
 
@@ -1672,7 +1674,7 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
     min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     // create temporary storage for contours and the sequence of pointers to found quadrangles
-    temp_storage = cvCreateChildMemStorage( storage );
+    temp_storage.reset(cvCreateChildMemStorage( storage ));
     root = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvSeq*), temp_storage );
 
     // initialize contour retrieving routine
@@ -1833,7 +1835,7 @@ cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,
 
     if( !found )
     {
-        CvScalar color = {{0,0,255}};
+        CvScalar color(0,0,255,0);
         if( cn == 1 )
             color = cvScalarAll(200);
         color.val[0] *= scale;
@@ -1856,17 +1858,17 @@ cvDrawChessboardCorners( CvArr* _image, CvSize pattern_size,
     else
     {
         int x, y;
-        CvPoint prev_pt = {0, 0};
+        CvPoint prev_pt;
         const int line_max = 7;
         static const CvScalar line_colors[line_max] =
         {
-            {{0,0,255}},
-            {{0,128,255}},
-            {{0,200,200}},
-            {{0,255,0}},
-            {{200,200,0}},
-            {{255,0,0}},
-            {{255,0,255}}
+            CvScalar(0,0,255),
+            CvScalar(0,128,255),
+            CvScalar(0,200,200),
+            CvScalar(0,255,0),
+            CvScalar(200,200,0),
+            CvScalar(255,0,0),
+            CvScalar(255,0,255)
         };
 
         for( y = 0, i = 0; y < pattern_size.height; y++ )
@@ -1903,7 +1905,7 @@ bool cv::findChessboardCorners( InputArray _image, Size patternSize,
                             OutputArray corners, int flags )
 {
     int count = patternSize.area()*2;
-    vector<Point2f> tmpcorners(count+1);
+    std::vector<Point2f> tmpcorners(count+1);
     Mat image = _image.getMat(); CvMat c_image = image;
     bool ok = cvFindChessboardCorners(&c_image, patternSize,
         (CvPoint2D32f*)&tmpcorners[0], &count, flags ) > 0;
@@ -1949,11 +1951,11 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
     CV_Assert(isAsymmetricGrid ^ isSymmetricGrid);
 
     Mat image = _image.getMat();
-    vector<Point2f> centers;
+    std::vector<Point2f> centers;
 
-    vector<KeyPoint> keypoints;
+    std::vector<KeyPoint> keypoints;
     blobDetector->detect(image, keypoints);
-    vector<Point2f> points;
+    std::vector<Point2f> points;
     for (size_t i = 0; i < keypoints.size(); i++)
     {
       points.push_back (keypoints[i].pt);

@@ -85,13 +85,12 @@ void CvEM::read( CvFileStorage* fs, CvFileNode* node )
 
 void CvEM::write( CvFileStorage* _fs, const char* name ) const
 {
-    FileStorage fs = _fs;
+    FileStorage fs(_fs, false);
     if(name)
         fs << name << "{";
     emObj.write(fs);
     if(name)
         fs << "}";
-    fs.fs.obj = 0;
 }
 
 double CvEM::calcLikelihood( const Mat &input_sample ) const
@@ -123,7 +122,7 @@ void CvEM::set_mat_hdrs()
         int K = emObj.get<int>("nclusters");
         covsHdrs.resize(K);
         covsPtrs.resize(K);
-        const std::vector<Mat>& covs = emObj.get<vector<Mat> >("covs");
+        const std::vector<Mat>& covs = emObj.get<std::vector<Mat> >("covs");
         for(size_t i = 0; i < covsHdrs.size(); i++)
         {
             covsHdrs[i] = covs[i];
@@ -137,17 +136,17 @@ void CvEM::set_mat_hdrs()
 static
 void init_params(const CvEMParams& src,
                  Mat& prbs, Mat& weights,
-                 Mat& means, vector<Mat>& covsHdrs)
+                 Mat& means, std::vector<Mat>& covsHdrs)
 {
-    prbs = src.probs;
-    weights = src.weights;
-    means = src.means;
+    prbs = cv::cvarrToMat(src.probs);
+    weights = cv::cvarrToMat(src.weights);
+    means = cv::cvarrToMat(src.means);
 
     if(src.covs)
     {
         covsHdrs.resize(src.nclusters);
         for(size_t i = 0; i < covsHdrs.size(); i++)
-            covsHdrs[i] = src.covs[i];
+            covsHdrs[i] = cv::cvarrToMat(src.covs[i]);
     }
 }
 
@@ -244,9 +243,9 @@ Mat CvEM::getMeans() const
     return emObj.get<Mat>("means");
 }
 
-void CvEM::getCovs(vector<Mat>& _covs) const
+void CvEM::getCovs(std::vector<Mat>& _covs) const
 {
-    _covs = emObj.get<vector<Mat> >("covs");
+    _covs = emObj.get<std::vector<Mat> >("covs");
 }
 
 Mat CvEM::getWeights() const

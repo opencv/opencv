@@ -16,7 +16,6 @@ Calculates a histogram of a set of arrays.
 .. ocv:pyfunction:: cv2.calcHist(images, channels, mask, histSize, ranges[, hist[, accumulate]]) -> hist
 
 .. ocv:cfunction:: void cvCalcHist( IplImage** image, CvHistogram* hist, int accumulate=0, const CvArr* mask=NULL )
-.. ocv:pyoldfunction:: cv.CalcHist(image, hist, accumulate=0, mask=None)-> None
 
     :param images: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -43,8 +42,8 @@ arrays. The elements of a tuple used to increment
 a histogram bin are taken from the corresponding
 input arrays at the same location. The sample below shows how to compute a 2D Hue-Saturation histogram for a color image. ::
 
-    #include <cv.h>
-    #include <highgui.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
@@ -54,7 +53,7 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
         if( argc != 2 || !(src=imread(argv[1], 1)).data )
             return -1;
 
-        cvtColor(src, hsv, CV_BGR2HSV);
+        cvtColor(src, hsv, COLOR_BGR2HSV);
 
         // Quantize the hue to 30 levels
         // and the saturation to 32 levels
@@ -118,7 +117,6 @@ Calculates the back projection of a histogram.
 .. ocv:pyfunction:: cv2.calcBackProject(images, channels, hist, ranges, scale[, dst]) -> dst
 
 .. ocv:cfunction:: void cvCalcBackProject( IplImage** image, CvArr* backProject, const CvHistogram* hist )
-.. ocv:pyoldfunction:: cv.CalcBackProject(image, back_project, hist) -> None
 
     :param images: Source arrays. They all should have the same depth,  ``CV_8U``  or  ``CV_32F`` , and the same size. Each of them can have an arbitrary number of channels.
 
@@ -164,7 +162,6 @@ Compares two histograms.
 .. ocv:pyfunction:: cv2.compareHist(H1, H2, method) -> retval
 
 .. ocv:cfunction:: double cvCompareHist( const CvHistogram* hist1, const CvHistogram* hist2, int method )
-.. ocv:pyoldfunction:: cv.CompareHist(hist1, hist2, method)->float
 
     :param H1: First compared histogram.
 
@@ -175,6 +172,8 @@ Compares two histograms.
             * **CV_COMP_CORREL**     Correlation
 
             * **CV_COMP_CHISQR**     Chi-Square
+
+            * **CV_COMP_CHISQR_ALT**     Alternative Chi-Square
 
             * **CV_COMP_INTERSECT**     Intersection
 
@@ -205,6 +204,14 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
 
         d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}
 
+* Alternative Chi-Square (``method=CV_COMP_CHISQR_ALT``)
+
+    .. math::
+
+        d(H_1,H_2) =  2 * \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)+H_2(I)}
+
+    This alternative formula is regularly used for texture comparison. See e.g. [Puzicha1997]_.
+
 * Intersection (``method=CV_COMP_INTERSECT``)
 
     .. math::
@@ -233,8 +240,6 @@ Computes the "minimal work" distance between two weighted point configurations.
 .. ocv:function:: float EMD( InputArray signature1, InputArray signature2, int distType, InputArray cost=noArray(), float* lowerBound=0, OutputArray flow=noArray() )
 
 .. ocv:cfunction:: float cvCalcEMD2( const CvArr* signature1, const CvArr* signature2, int distance_type, CvDistanceFunction distance_func=NULL, const CvArr* cost_matrix=NULL, CvArr* flow=NULL, float* lower_bound=NULL, void* userdata=NULL )
-
-.. ocv:pyoldfunction:: cv.CalcEMD2(signature1, signature2, distance_type, distance_func=None, cost_matrix=None, flow=None, lower_bound=None, userdata=None) -> float
 
     :param signature1: First signature, a  :math:`\texttt{size1}\times \texttt{dims}+1`  floating-point matrix. Each row stores the point weight followed by the point coordinates. The matrix is allowed to have a single column (weights only) if the user-defined cost matrix is used.
 
@@ -309,8 +314,6 @@ Locates a template within an image by using a histogram comparison.
 
 .. ocv:cfunction:: void cvCalcBackProjectPatch( IplImage** images, CvArr* dst, CvSize patch_size, CvHistogram* hist, int method, double factor )
 
-.. ocv:pyoldfunction:: cv.CalcBackProjectPatch(images, dst, patch_size, hist, method, factor)-> None
-
     :param images: Source images (though, you may pass CvMat** as well).
 
     :param dst: Destination image.
@@ -334,8 +337,6 @@ Divides one histogram by another.
 
 .. ocv:cfunction:: void cvCalcProbDensity( const CvHistogram* hist1, const CvHistogram* hist2, CvHistogram* dst_hist, double scale=255 )
 
-.. ocv:pyoldfunction:: cv.CalcProbDensity(hist1, hist2, dst_hist, scale=255) -> None
-
     :param hist1: First histogram (the divisor).
 
     :param hist2: Second histogram.
@@ -356,7 +357,6 @@ ClearHist
 Clears the histogram.
 
 .. ocv:cfunction:: void cvClearHist( CvHistogram* hist )
-.. ocv:pyoldfunction:: cv.ClearHist(hist)-> None
 
     :param hist: Histogram.
 
@@ -382,8 +382,6 @@ CreateHist
 Creates a histogram.
 
 .. ocv:cfunction:: CvHistogram* cvCreateHist( int dims, int* sizes, int type, float** ranges=NULL, int uniform=1 )
-
-.. ocv:pyoldfunction:: cv.CreateHist(dims, type, ranges=None, uniform=1) -> hist
 
     :param dims: Number of histogram dimensions.
 
@@ -418,8 +416,6 @@ GetMinMaxHistValue
 Finds the minimum and maximum histogram bins.
 
 .. ocv:cfunction:: void cvGetMinMaxHistValue(  const CvHistogram* hist, float* min_value, float* max_value, int* min_idx=NULL, int* max_idx=NULL )
-
-.. ocv:pyoldfunction:: cv.GetMinMaxHistValue(hist)-> (min_value, max_value, min_idx, max_idx)
 
     :param hist: Histogram.
 
@@ -459,7 +455,6 @@ NormalizeHist
 Normalizes the histogram.
 
 .. ocv:cfunction:: void cvNormalizeHist( CvHistogram* hist, double factor )
-.. ocv:pyoldfunction:: cv.NormalizeHist(hist, factor)-> None
 
     :param hist: Pointer to the histogram.
 
@@ -499,7 +494,6 @@ ThreshHist
 Thresholds the histogram.
 
 .. ocv:cfunction:: void cvThreshHist( CvHistogram* hist, double threshold )
-.. ocv:pyoldfunction:: cv.ThreshHist(hist, threshold) -> None
 
     :param hist: Pointer to the histogram.
 
@@ -509,3 +503,4 @@ The function clears histogram bins that are below the specified threshold.
 
 
 .. [RubnerSept98] Y. Rubner. C. Tomasi, L.J. Guibas. *The Earth Mover’s Distance as a Metric for Image Retrieval*. Technical Report STAN-CS-TN-98-86, Department of Computer Science, Stanford University, September 1998.
+.. [Puzicha1997] Puzicha, J., Hofmann, T., and Buhmann, J. *Non-parametric similarity measures for unsupervised texture segmentation and image retrieval.* In Proc. IEEE Conf. Computer Vision and Pattern Recognition, San Juan, Puerto Rico, pp. 267-272, 1997.

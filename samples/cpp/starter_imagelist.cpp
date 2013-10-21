@@ -46,15 +46,15 @@ bool readStringList(const string& filename, vector<string>& l)
 
 int process(vector<string> images)
 {
-  namedWindow("image",CV_WINDOW_KEEPRATIO); //resizable window;
-  for (size_t i = 0; i < images.size(); i++)
-  {
-    Mat image = imread(images[i], CV_LOAD_IMAGE_GRAYSCALE); // do grayscale processing?
-    imshow("image",image);
-    cout << "Press a key to see the next image in the list." << endl;
-    waitKey(); // wait indefinitely for a key to be pressed
-  }
-  return 0;
+    namedWindow("image", WINDOW_KEEPRATIO); //resizable window;
+    for (size_t i = 0; i < images.size(); i++)
+    {
+        Mat image = imread(images[i], IMREAD_GRAYSCALE); // do grayscale processing?
+        imshow("image",image);
+        cout << "Press a key to see the next image in the list." << endl;
+        waitKey(); // wait indefinitely for a key to be pressed
+    }
+    return 0;
 }
 
 }

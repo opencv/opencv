@@ -1,16 +1,17 @@
 #include <iostream>
 #include <vector>
 
-#include "cvconfig.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaimgproc.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 static void download(const GpuMat& d_mat, vector<Point2f>& vec)
 {
@@ -117,23 +118,22 @@ static void getFlowField(const Mat& u, const Mat& v, Mat& flowField)
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h            | help           | false | print help message }"
-        "{ l            | left           |       | specify left image }"
-        "{ r            | right          |       | specify right image }"
-        "{ gray         | gray           | false | use grayscale sources [PyrLK Sparse] }"
-        "{ win_size     | win_size       | 21    | specify windows size [PyrLK] }"
-        "{ max_level    | max_level      | 3     | specify max level [PyrLK] }"
-        "{ iters        | iters          | 30    | specify iterations count [PyrLK] }"
-        "{ points       | points         | 4000  | specify points count [GoodFeatureToTrack] }"
-        "{ min_dist     | min_dist       | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ h             help   |       | print help message }"
+        "{ l             left   |       | specify left image }"
+        "{ r             right  |       | specify right image }"
+        "{ gray                 |       | use grayscale sources [PyrLK Sparse] }"
+        "{ win_size             | 21    | specify windows size [PyrLK] }"
+        "{ max_level            | 3     | specify max level [PyrLK] }"
+        "{ iters                | 30    | specify iterations count [PyrLK] }"
+        "{ points               | 4000  | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist             | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Usage: pyrlk_optical_flow [options]" << endl;
-        cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
 
@@ -146,7 +146,7 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    bool useGray = cmd.get<bool>("gray");
+    bool useGray = cmd.has("gray");
     int winSize = cmd.get<int>("win_size");
     int maxLevel = cmd.get<int>("max_level");
     int iters = cmd.get<int>("iters");
@@ -171,18 +171,18 @@ int main(int argc, const char* argv[])
     cout << endl;
 
     Mat frame0Gray;
-    cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
     Mat frame1Gray;
-    cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
 
     // goodFeaturesToTrack
-
-    GoodFeaturesToTrackDetector_GPU detector(points, 0.01, minDist);
 
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
 
-    detector(d_frame0Gray, d_prevPts);
+    Ptr<cuda::CornersDetector> detector = cuda::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
+
+    detector->detect(d_frame0Gray, d_prevPts);
 
     // Sparse
 

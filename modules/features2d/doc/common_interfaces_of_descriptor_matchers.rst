@@ -15,35 +15,6 @@ descriptor matchers inherit the
    * An example on descriptor matching evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
    * An example on one to many image matching can be found at opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
-DMatch
-------
-.. ocv:struct:: DMatch
-
-Class for matching keypoint descriptors: query descriptor index,
-train descriptor index, train image index, and distance between descriptors. ::
-
-    struct DMatch
-    {
-        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
-                   distance(std::numeric_limits<float>::max()) {}
-        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
-                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
-                distance(_distance) {}
-        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
-                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
-                distance(_distance) {}
-
-        int queryIdx; // query descriptor index
-        int trainIdx; // train descriptor index
-        int imgIdx;   // train image index
-
-        float distance;
-
-        // less is better
-        bool operator<( const DMatch &m ) const;
-    };
-
-
 DescriptorMatcher
 -----------------
 .. ocv:class:: DescriptorMatcher : public Algorithm
@@ -94,7 +65,7 @@ with an image set. ::
 
         virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-        static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
+        static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
     protected:
         vector<Mat> trainDescCollection;
@@ -243,7 +214,7 @@ DescriptorMatcher::create
 -----------------------------
 Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
-.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 
     :param descriptorMatcherType: Descriptor matcher type. Now the following matcher types are supported:
 

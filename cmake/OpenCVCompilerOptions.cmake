@@ -59,18 +59,12 @@ if(MINGW)
   endif()
 endif()
 
-if(OPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
-  add_definitions(-DOPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX)
   # High level of warnings.
   add_extra_compiler_option(-W)
   add_extra_compiler_option(-Wall)
   add_extra_compiler_option(-Werror=return-type)
-  if(OPENCV_CAN_BREAK_BINARY_COMPATIBILITY)
-    add_extra_compiler_option(-Werror=non-virtual-dtor)
-  endif()
+  add_extra_compiler_option(-Werror=non-virtual-dtor)
   add_extra_compiler_option(-Werror=address)
   add_extra_compiler_option(-Werror=sequence-point)
   add_extra_compiler_option(-Wformat)
@@ -165,6 +159,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         add_extra_compiler_option(-mfpmath=387)
       endif()
     endif()
+  endif()
+
+  if(ENABLE_NEON)
+    add_extra_compiler_option(-mfpu=neon)
   endif()
 
   # Profiling?
@@ -262,6 +260,12 @@ set(OPENCV_EXTRA_FLAGS_DEBUG   "${OPENCV_EXTRA_FLAGS_DEBUG}"   CACHE INTERNAL "E
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS         "${OPENCV_EXTRA_EXE_LINKER_FLAGS}"         CACHE INTERNAL "Extra linker flags")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}" CACHE INTERNAL "Extra linker flags for Release build")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG   "${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}"   CACHE INTERNAL "Extra linker flags for Debug build")
+
+# set default visibility to hidden
+if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_OPENCV_GCC_VERSION_NUM GREATER 399)
+  add_extra_compiler_option(-fvisibility=hidden)
+  add_extra_compiler_option(-fvisibility-inlines-hidden)
+endif()
 
 #combine all "extra" options
 set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_C_FLAGS}")

@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -80,12 +80,16 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        uchar* data = (uchar*)cvAlloc(dataSize);
-        size_t elements_read = fread( (void*)data, 1, dataSize, f );
+        int step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= cols);
+
+        Mat m = Mat(rows, step, type).colRange(0, cols);
+
+        size_t elements_read = fread( m.ptr(), 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));
         fclose(f);
 
-        return Mat( rows, cols, type, data );
+        return m;
     }
     return Mat();
 }
@@ -137,7 +141,7 @@ protected:
 
     void emptyDataTest()
     {
-        assert( !dextractor.empty() );
+        assert( dextractor );
 
         // One image.
         Mat image;
@@ -182,7 +186,7 @@ protected:
 
     void regressionTest()
     {
-        assert( !dextractor.empty() );
+        assert( dextractor );
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
@@ -205,7 +209,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows);
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)getTickFrequency()*1000.)/calcDescriptors.rows);
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -263,7 +267,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( !dextractor )
         {
             ts->printf(cvtest::TS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );

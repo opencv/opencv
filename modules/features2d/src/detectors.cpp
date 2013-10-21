@@ -41,8 +41,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 namespace cv
 {
 
@@ -53,7 +51,7 @@ namespace cv
 FeatureDetector::~FeatureDetector()
 {}
 
-void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void FeatureDetector::detect( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     keypoints.clear();
 
@@ -65,7 +63,7 @@ void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, con
     detectImpl( image, keypoints, mask );
 }
 
-void FeatureDetector::detect(const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, const vector<Mat>& masks ) const
+void FeatureDetector::detect(const std::vector<Mat>& imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection, const std::vector<Mat>& masks ) const
 {
     pointCollection.resize( imageCollection.size() );
     for( size_t i = 0; i < imageCollection.size(); i++ )
@@ -83,28 +81,28 @@ bool FeatureDetector::empty() const
     return false;
 }
 
-void FeatureDetector::removeInvalidPoints( const Mat& mask, vector<KeyPoint>& keypoints )
+void FeatureDetector::removeInvalidPoints( const Mat& mask, std::vector<KeyPoint>& keypoints )
 {
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 {
     if( detectorType.find("Grid") == 0 )
     {
-        return new GridAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<GridAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Grid"))));
     }
 
     if( detectorType.find("Pyramid") == 0 )
     {
-        return new PyramidAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<PyramidAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Pyramid"))));
     }
 
     if( detectorType.find("Dynamic") == 0 )
     {
-        return new DynamicAdaptedFeatureDetector(AdjusterAdapter::create(
+        return makePtr<DynamicAdaptedFeatureDetector>(AdjusterAdapter::create(
                                 detectorType.substr(strlen("Dynamic"))));
     }
 
@@ -127,17 +125,17 @@ GFTTDetector::GFTTDetector( int _nfeatures, double _qualityLevel,
 {
 }
 
-void GFTTDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask) const
+void GFTTDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
-    vector<Point2f> corners;
+    std::vector<Point2f> corners;
     goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, mask,
                          blockSize, useHarrisDetector, k );
     keypoints.resize(corners.size());
-    vector<Point2f>::const_iterator corner_it = corners.begin();
-    vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
+    std::vector<Point2f>::const_iterator corner_it = corners.begin();
+    std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
     for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
     {
         *keypoint_it = KeyPoint( *corner_it, (float)blockSize );
@@ -159,7 +157,7 @@ DenseFeatureDetector::DenseFeatureDetector( float _initFeatureScale, int _featur
 {}
 
 
-void DenseFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void DenseFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     float curScale = static_cast<float>(initFeatureScale);
     int curStep = initXyStep;
@@ -192,7 +190,7 @@ GridAdaptedFeatureDetector::GridAdaptedFeatureDetector( const Ptr<FeatureDetecto
 
 bool GridAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
 struct ResponseComparator
@@ -203,11 +201,11 @@ struct ResponseComparator
     }
 };
 
-static void keepStrongest( int N, vector<KeyPoint>& keypoints )
+static void keepStrongest( int N, std::vector<KeyPoint>& keypoints )
 {
     if( (int)keypoints.size() > N )
     {
-        vector<KeyPoint>::iterator nth = keypoints.begin() + N;
+        std::vector<KeyPoint>::iterator nth = keypoints.begin() + N;
         std::nth_element( keypoints.begin(), nth, keypoints.end(), ResponseComparator() );
         keypoints.erase( nth, keypoints.end() );
     }
@@ -219,7 +217,7 @@ class GridAdaptedFeatureDetectorInvoker : public ParallelLoopBody
 private:
     int gridRows_, gridCols_;
     int maxPerCell_;
-    vector<KeyPoint>& keypoints_;
+    std::vector<KeyPoint>& keypoints_;
     const Mat& image_;
     const Mat& mask_;
     const Ptr<FeatureDetector>& detector_;
@@ -230,7 +228,7 @@ private:
 public:
 
     GridAdaptedFeatureDetectorInvoker(const Ptr<FeatureDetector>& detector, const Mat& image, const Mat& mask,
-                                      vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols,
+                                      std::vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols,
                                       cv::Mutex* kptLock)
         : gridRows_(gridRows), gridCols_(gridCols), maxPerCell_(maxPerCell),
           keypoints_(keypoints), image_(image), mask_(mask), detector_(detector),
@@ -252,7 +250,7 @@ public:
             Mat sub_mask;
             if (!mask_.empty()) sub_mask = mask_(row_range, col_range);
 
-            vector<KeyPoint> sub_keypoints;
+            std::vector<KeyPoint> sub_keypoints;
             sub_keypoints.reserve(maxPerCell_);
 
             detector_->detect( sub_image, sub_keypoints, sub_mask );
@@ -273,7 +271,7 @@ public:
 };
 } // namepace
 
-void GridAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void GridAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     if (image.empty() || maxTotalKeypoints < gridRows * gridCols)
     {
@@ -297,10 +295,10 @@ PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureD
 
 bool PyramidAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
-void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask ) const
+void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat src = image;
     Mat src_mask = mask;
@@ -317,9 +315,9 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
     for( int l = 0, multiplier = 1; l <= maxLevel; ++l, multiplier *= 2 )
     {
         // Detect on current level of the pyramid
-        vector<KeyPoint> new_pts;
+        std::vector<KeyPoint> new_pts;
         detector->detect( src, new_pts, src_mask );
-        vector<KeyPoint>::iterator it = new_pts.begin(),
+        std::vector<KeyPoint>::iterator it = new_pts.begin(),
                                    end = new_pts.end();
         for( ; it != end; ++it)
         {
@@ -338,7 +336,7 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, vector<KeyPoin
             src = dst;
 
             if( !mask.empty() )
-                resize( dilated_mask, src_mask, src.size(), 0, 0, CV_INTER_AREA );
+                resize( dilated_mask, src_mask, src.size(), 0, 0, INTER_AREA );
         }
     }
 

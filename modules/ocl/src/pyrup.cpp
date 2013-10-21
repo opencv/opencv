@@ -78,20 +78,20 @@ namespace cv
                     depth == CV_32F ? "" : convertString,
                     oclChannels == 4 ? "convert_float4" : "(float)");
 
-            const std::string kernelName = "pyrUp";
+            const String kernelName = "pyrUp";
             int dststep = dst.step / dst.elemSize(), srcstep = src.step / src.elemSize();
 
-            std::vector< pair<size_t, const void *> > args;
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-            args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&srcstep));
-            args.push_back( make_pair( sizeof(cl_int), (void *)&dststep));
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+            args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcstep));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dststep));
 
             size_t globalThreads[3] = {dst.cols, dst.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};

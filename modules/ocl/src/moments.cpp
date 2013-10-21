@@ -44,6 +44,10 @@
 //
 //M*/
 #include "precomp.hpp"
+
+#include "opencv2/imgproc/types_c.h"
+#include "opencv2/imgproc/imgproc_c.h"
+
 #include "opencl_kernels.hpp"
 
 namespace cv
@@ -134,14 +138,14 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         int llength = std::min(lpt,128);
         size_t localThreads[3]  = { llength, 1, 1};
         size_t globalThreads[3] = { lpt, 1, 1};
-        vector<pair<size_t , const void *> > args;
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&contour->total ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&reader_oclmat.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a.data ));
+        std::vector<std::pair<size_t , const void *> > args;
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&contour->total ));
+        args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&reader_oclmat.data ));
+        args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_a.data ));
         cl_int dst_step = (cl_int)dst_a.step;
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
+        args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
-        openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernel2(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
 
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
@@ -264,7 +268,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     if( size.width <= 0 || size.height <= 0 )
         return;
 
-    cv::Mat src0(mat);
+    cv::Mat src0 = cv::cvarrToMat(mat);
     cv::ocl::oclMat src(src0);
     cv::Size tileSize;
     int blockx,blocky;
@@ -282,33 +286,33 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     int tile_height = std::min(size.height,TILE_SIZE);
     size_t localThreads[3]  = { tile_height, 1, 1};
     size_t globalThreads[3] = { size.height, blockx, 1};
-    vector<pair<size_t , const void *> > args,args_sum;
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&blocky ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&depth ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cn ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&coi ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&binary ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
-    openCLExecuteKernel(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
+    std::vector<std::pair<size_t , const void *> > args,args_sum;
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&blocky ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&depth ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&cn ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&coi ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&binary ));
+    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
+    openCLExecuteKernel2(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
 
     size_t localThreadss[3]  = { 128, 1, 1};
     size_t globalThreadss[3] = { 128, 1, 1};
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&tile_height ));
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&tile_width ));
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&sum.data ));
-    args_sum.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
-    args_sum.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
-    openCLExecuteKernel(Context::getContext(), &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&tile_height ));
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&tile_width ));
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
+    args_sum.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum.data ));
+    args_sum.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
+    args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
+    openCLExecuteKernel2(Context::getContext(), &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
 
     Mat dstsum(sum);
     mom->m00 = dstsum.at<double>(0, 0);
@@ -324,6 +328,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
 
     icvCompleteMomentState( mom );
 }
+
 
 Moments ocl_moments( InputArray _array, bool binaryImage )
 {

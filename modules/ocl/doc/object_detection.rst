@@ -12,24 +12,24 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
     class CV_EXPORTS OclCascadeClassifier : public CascadeClassifier
     {
     public:
-            OclCascadeClassifier(){};
-            ~OclCascadeClassifier(){};
-            CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
-                                  int minNeighbors, int flags, CvSize minSize = cvSize(0, 0),
-                                  CvSize maxSize = cvSize(0, 0));
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                                              double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                                              Size minSize = Size(), Size maxSize = Size());
     };
 
 .. note::
 
    (Ocl) A face detection example using cascade classifiers can be found at opencv_source_code/samples/ocl/facedetect.cpp
 
-ocl::OclCascadeClassifier::oclHaarDetectObjects
+ocl::OclCascadeClassifier::detectMultiScale
 ------------------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: CvSeq* ocl::OclCascadeClassifier::oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor, int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0))
+.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
 
-    :param gimage:  Matrix of type CV_8U containing an image where objects should be detected.
+    :param faces: Vector of rectangles where each rectangle contains the detected object.
+
+    :param image:  Matrix of type CV_8U containing an image where objects should be detected.
 
     :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 

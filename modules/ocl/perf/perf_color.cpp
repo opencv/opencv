@@ -62,14 +62,14 @@ PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(src.size(), CV_8UC4);
 
-        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, CV_RGBA2GRAY, 4);
+        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, COLOR_RGBA2GRAY, 4);
         oclDst.download(dst);
 
         SANITY_CHECK(dst);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::cvtColor(src, dst, CV_RGBA2GRAY, 4);
+        TEST_CYCLE() cv::cvtColor(src, dst, COLOR_RGBA2GRAY, 4);
 
         SANITY_CHECK(dst);
     }

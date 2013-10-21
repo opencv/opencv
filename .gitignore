@@ -7,4 +7,5 @@ tegra/
 .sw[a-z]
 .*.swp
 tags
+Thumbs.db
 *.autosave

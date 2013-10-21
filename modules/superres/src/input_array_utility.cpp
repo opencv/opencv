@@ -42,9 +42,8 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 Mat cv::superres::arrGetMat(InputArray arr, Mat& buf)
 {
@@ -56,10 +55,6 @@ Mat cv::superres::arrGetMat(InputArray arr, Mat& buf)
 
     case _InputArray::OPENGL_BUFFER:
         arr.getOGlBuffer().copyTo(buf);
-        return buf;
-
-    case _InputArray::OPENGL_TEXTURE:
-        arr.getOGlTexture2D().copyTo(buf);
         return buf;
 
     default:
@@ -78,10 +73,6 @@ GpuMat cv::superres::arrGetGpuMat(InputArray arr, GpuMat& buf)
         arr.getOGlBuffer().copyTo(buf);
         return buf;
 
-    case _InputArray::OPENGL_TEXTURE:
-        arr.getOGlTexture2D().copyTo(buf);
-        return buf;
-
     default:
         buf.upload(arr.getMat());
         return buf;
@@ -98,10 +89,6 @@ namespace
     {
         dst.getOGlBufferRef().copyFrom(src);
     }
-    void arr2tex(InputArray src, OutputArray dst)
-    {
-        dst.getOGlTexture2D().copyFrom(src);
-    }
     void mat2gpu(InputArray src, OutputArray dst)
     {
         dst.getGpuMatRef().upload(src.getMat());
@@ -109,10 +96,6 @@ namespace
     void buf2arr(InputArray src, OutputArray dst)
     {
         src.getOGlBuffer().copyTo(dst);
-    }
-    void tex2arr(InputArray src, OutputArray dst)
-    {
-        src.getOGlTexture2D().copyTo(dst);
     }
     void gpu2mat(InputArray src, OutputArray dst)
     {
@@ -142,15 +125,15 @@ namespace
 #else
     void ocl2mat(InputArray, OutputArray)
     {
-        CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");;
+        CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");;
     }
     void mat2ocl(InputArray, OutputArray)
     {
-        CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");;
+        CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");;
     }
     void ocl2ocl(InputArray, OutputArray)
     {
-        CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+        CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     }
 #endif
 }
@@ -161,16 +144,16 @@ void cv::superres::arrCopy(InputArray src, OutputArray dst)
     static const func_t funcs[11][11] =
     {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, arr2tex, mat2gpu, mat2ocl},
-        {0, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, 0      },
-        {0, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, tex2arr, 0      },
-        {0, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, arr2buf, arr2tex, gpu2gpu, 0      },
-        {0, ocl2mat, ocl2mat, ocl2mat, ocl2mat, ocl2mat, ocl2mat, 0,       0,       0,       ocl2ocl}
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, mat2mat, arr2buf, 0 /*arr2tex*/, mat2gpu, mat2ocl},
+        {0, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, buf2arr, 0 /*buf2arr*/, buf2arr, 0      },
+        {0, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0 /*tex2arr*/, 0},
+        {0, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, gpu2mat, arr2buf, 0 /*arr2tex*/, gpu2gpu, 0      },
+        {0, ocl2mat, ocl2mat, ocl2mat, ocl2mat, ocl2mat, ocl2mat, 0,       0,             0,       ocl2ocl}
     };
 
     const int src_kind = src.kind() >> _InputArray::KIND_SHIFT;
@@ -207,15 +190,15 @@ namespace
         switch (src.kind())
         {
         case _InputArray::GPU_MAT:
-            #ifdef HAVE_OPENCV_GPU
-                gpu::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
+            #ifdef HAVE_OPENCV_CUDAIMGPROC
+                cuda::cvtColor(src.getGpuMat(), dst.getGpuMatRef(), code, cn);
             #else
-                CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+                CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
             #endif
             break;
 
         default:
-            cvtColor(src, dst, code, cn);
+            cv::cvtColor(src, dst, code, cn);
             break;
         }
     }
@@ -226,11 +209,11 @@ namespace
 
         static const double maxVals[] =
         {
-            numeric_limits<uchar>::max(),
-            numeric_limits<schar>::max(),
-            numeric_limits<ushort>::max(),
-            numeric_limits<short>::max(),
-            numeric_limits<int>::max(),
+            std::numeric_limits<uchar>::max(),
+            std::numeric_limits<schar>::max(),
+            std::numeric_limits<ushort>::max(),
+            std::numeric_limits<short>::max(),
+            std::numeric_limits<int>::max(),
             1.0,
             1.0,
         };

@@ -43,11 +43,13 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "cvconfig.h"
-
-#include "opencv2/core/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/core/opengl.hpp"
+
+#include "opencv2/core/private.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include <assert.h>
 #include <ctype.h>
@@ -66,6 +68,25 @@
 
 namespace cv
 {
+
+typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
+                       const uchar* src2, size_t step2,
+                       uchar* dst, size_t step, Size sz,
+                       void*);
+
+BinaryFunc getConvertFunc(int sdepth, int ddepth);
+BinaryFunc getCopyMaskFunc(size_t esz);
+
+/* default memory block for sparse array elements */
+#define  CV_SPARSE_MAT_BLOCK     (1<<12)
+
+/* initial hash table size */
+#define  CV_SPARSE_HASH_SIZE0    (1<<10)
+
+/* maximal average node_count/hash_size ratio beyond which hash table is resized */
+#define  CV_SPARSE_HASH_RATIO    3
+
+
 
 // -128.f ... 255.f
 extern const float g_8x32fTab[];
@@ -172,11 +193,6 @@ extern volatile bool USE_SSE4_2;
 extern volatile bool USE_AVX;
 
 enum { BLOCK_SIZE = 1024 };
-
-#ifdef HAVE_IPP
-static inline IppiSize ippiSize(int width, int height) { IppiSize sz = { width, height}; return sz; }
-static inline IppiSize ippiSize(Size _sz)              { IppiSize sz = { _sz.width, _sz.height}; return sz; }
-#endif
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
 #define ARITHM_USE_IPP 1

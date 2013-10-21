@@ -58,8 +58,14 @@
 
 #include "cvconfig.h"
 
-#if defined(BUILD_SHARED_LIBS) && (defined WIN32 || defined _WIN32 || defined WINCE)
+#if defined(BUILD_SHARED_LIBS)
+#if defined WIN32 || defined _WIN32 || defined WINCE
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
+#elif defined __GNUC__ && __GNUC__ >= 4
+#define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
+#else
+#define CL_RUNTIME_EXPORT
+#endif
 #else
 #define CL_RUNTIME_EXPORT
 #endif
@@ -73,13 +79,14 @@
 #include <exception>
 #include <stdio.h>
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/core/core_c.h"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/ocl/ocl.hpp"
+#undef OPENCV_NOSTL
 
-#include "opencv2/core/internal.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
+#include "opencv2/ocl.hpp"
+
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/private.hpp"
 
 #define __ATI__
 
@@ -97,7 +104,5 @@ static inline void throw_nogpu()
 }
 
 #endif /* defined(HAVE_OPENCL) */
-
-using namespace std;
 
 #endif /* __OPENCV_PRECOMP_H__ */

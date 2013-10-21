@@ -103,7 +103,7 @@ OCL_TEST_P(mog, Update)
     cv::ocl::MOG mog;
     cv::ocl::oclMat foreground = createMat_ocl(rng, frame.size(), CV_8UC1, useRoi);
 
-    cv::BackgroundSubtractorMOG mog_gold;
+    Ptr<cv::BackgroundSubtractorMOG> mog_gold = createBackgroundSubtractorMOG();
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -120,7 +120,7 @@ OCL_TEST_P(mog, Update)
 
         mog(loadMat_ocl(rng, frame, useRoi), foreground, (float)learningRate);
 
-        mog_gold(frame, foreground_gold, learningRate);
+        mog_gold->apply(frame, foreground_gold, learningRate);
 
         EXPECT_MAT_NEAR(foreground_gold, foreground, 0.0);
     }
@@ -165,8 +165,8 @@ OCL_TEST_P(mog2, Update)
     mog2.bShadowDetection = detectShadow;
     cv::ocl::oclMat foreground = createMat_ocl(rng, frame.size(), CV_8UC1, useRoi);
 
-    cv::BackgroundSubtractorMOG2 mog2_gold;
-    mog2_gold.set("detectShadows", detectShadow);
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = createBackgroundSubtractorMOG2();
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -183,7 +183,7 @@ OCL_TEST_P(mog2, Update)
 
         mog2(loadMat_ocl(rng, frame, useRoi), foreground);
 
-        mog2_gold(frame, foreground_gold);
+        mog2_gold->apply(frame, foreground_gold);
 
         if (detectShadow)
             EXPECT_MAT_SIMILAR(foreground_gold, foreground, 15e-3)
@@ -207,8 +207,8 @@ OCL_TEST_P(mog2, getBackgroundImage)
     mog2.bShadowDetection = detectShadow;
     cv::ocl::oclMat foreground;
 
-    cv::BackgroundSubtractorMOG2 mog2_gold;
-    mog2_gold.set("detectShadows", detectShadow);
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = createBackgroundSubtractorMOG2();
+    mog2_gold->setDetectShadows(detectShadow);
     cv::Mat foreground_gold;
 
     for (int i = 0; i < 10; ++i)
@@ -218,14 +218,14 @@ OCL_TEST_P(mog2, getBackgroundImage)
 
         mog2(loadMat_ocl(rng, frame, useRoi), foreground);
 
-        mog2_gold(frame, foreground_gold);
+        mog2_gold->apply(frame, foreground_gold);
     }
 
     cv::ocl::oclMat background = createMat_ocl(rng, frame.size(), frame.type(), useRoi);
     mog2.getBackgroundImage(background);
 
     cv::Mat background_gold;
-    mog2_gold.getBackgroundImage(background_gold);
+    mog2_gold->getBackgroundImage(background_gold);
 
     EXPECT_MAT_NEAR(background_gold, background, 1.0);
 }

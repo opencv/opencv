@@ -2,14 +2,15 @@
 #include <vector>
 #include <sstream>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/cudaoptflow.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 template <typename T>
 inline T mapVal(T x, T a, T b, T c, T d)
@@ -21,9 +22,9 @@ inline T mapVal(T x, T a, T b, T c, T d)
 static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 {
     double uMin, uMax;
-    minMaxLoc(u, &uMin, &uMax, 0, 0);
+    cv::minMaxLoc(u, &uMin, &uMax, 0, 0);
     double vMin, vMax;
-    minMaxLoc(v, &vMin, &vMax, 0, 0);
+    cv::minMaxLoc(v, &vMin, &vMax, 0, 0);
     uMin = ::abs(uMin); uMax = ::abs(uMax);
     vMin = ::abs(vMin); vMax = ::abs(vMax);
     float dMax = static_cast<float>(::max(::max(uMin, uMax), ::max(vMin, vMax)));
@@ -43,18 +44,18 @@ static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 int main(int argc, char **argv)
 {
     CommandLineParser cmd(argc, argv,
-            "{ l | left | | specify left image }"
-            "{ r | right | | specify right image }"
-            "{ h | help | false | print help message }");
+            "{ l left  | | specify left image }"
+            "{ r right | | specify right image }"
+            "{ h help  | | print help message }");
 
-    if (cmd.get<bool>("help"))
+    cmd.about("Farneback's optical flow sample.");
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Farneback's optical flow sample.\n\n"
-             << "Usage: farneback_optical_flow_gpu [arguments]\n\n"
-             << "Arguments:\n";
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
+
 
     string pathL = cmd.get<string>("left");
     string pathR = cmd.get<string>("right");

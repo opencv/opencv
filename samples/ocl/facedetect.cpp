@@ -2,8 +2,12 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/ocl/ocl.hpp"
+
+#include "opencv2/highgui/highgui_c.h"
+
 #include <iostream>
 #include <stdio.h>
+
 
 using namespace std;
 using namespace cv;
@@ -32,21 +36,20 @@ static void workEnd()
 {
     work_end += (getTickCount() - work_begin);
 }
+
 static double getTime()
 {
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
-
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime);
 
 
 void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
                 double scale, bool calTime);
-
 
 void Draw(Mat& img, vector<Rect>& faces, double scale);
 
@@ -60,20 +63,20 @@ double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst
 int main( int argc, const char** argv )
 {
     const char* keys =
-        "{ h | help       | false       | print help message }"
-        "{ i | input      |             | specify input image }"
-        "{ t | template   | haarcascade_frontalface_alt.xml |"
+        "{ h  help       | false       | print help message }"
+        "{ i  input      |             | specify input image }"
+        "{ t  template   | haarcascade_frontalface_alt.xml |"
         " specify template file path }"
-        "{ c | scale      |   1.0       | scale image }"
-        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
-        "{ o | output     | facedetect_output.jpg  |"
+        "{ c  scale      |   1.0       | scale image }"
+        "{ s  use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ o  output     | facedetect_output.jpg  |"
         " specify output image save path(only works when input is images) }";
 
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
     CvCapture* capture = 0;
@@ -84,7 +87,7 @@ int main( int argc, const char** argv )
     outputName = cmd.get<string>("o");
     string cascadeName = cmd.get<string>("t");
     double scale = cmd.get<double>("c");
-    ocl::OclCascadeClassifierBuf cascade;
+    ocl::OclCascadeClassifier cascade;
     CascadeClassifier  cpu_cascade;
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
@@ -126,7 +129,7 @@ int main( int argc, const char** argv )
         for(;;)
         {
             IplImage* iplImg = cvQueryFrame( capture );
-            frame = iplImg;
+            frame = cv::cvarrToMat(iplImg);
             vector<Rect> faces;
             if( frame.empty() )
                 break;
@@ -195,23 +198,22 @@ _cleanup_:
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime)
 {
     ocl::oclMat image(img);
     ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
     if(calTime) workBegin();
-    ocl::cvtColor( image, gray, CV_BGR2GRAY );
+    ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
     ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     ocl::equalizeHist( smallImg, smallImg );
 
     cascade.detectMultiScale( smallImg, faces, 1.1,
                               3, 0
-                              |CV_HAAR_SCALE_IMAGE
+                              |CASCADE_SCALE_IMAGE
                               , Size(30,30), Size(0, 0) );
     if(calTime) workEnd();
 }
-
 
 void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
@@ -219,11 +221,11 @@ void detectCPU( Mat& img, vector<Rect>& faces,
 {
     if(calTime) workBegin();
     Mat cpu_gray, cpu_smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
-    cvtColor(img, cpu_gray, CV_BGR2GRAY);
+    cvtColor(img, cpu_gray, COLOR_BGR2GRAY);
     resize(cpu_gray, cpu_smallImg, cpu_smallImg.size(), 0, 0, INTER_LINEAR);
     equalizeHist(cpu_smallImg, cpu_smallImg);
     cascade.detectMultiScale(cpu_smallImg, faces, 1.1,
-                             3, 0 | CV_HAAR_SCALE_IMAGE,
+                             3, 0 | CASCADE_SCALE_IMAGE,
                              Size(30, 30), Size(0, 0));
     if(calTime) workEnd();
 }

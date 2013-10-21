@@ -55,5 +55,4 @@
 
 #include "opencv2/ocl/private/opencl_dumpinfo.hpp"
 
-
 CV_TEST_MAIN(".", dumpOpenCLDevice())
