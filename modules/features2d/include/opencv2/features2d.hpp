@@ -405,6 +405,9 @@ protected:
     template <typename srcMatType, typename iiMatType>
     void computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
+    template <typename srcMatType>
+    void extractDescriptor(srcMatType *pointsValue, void ** ptr) const;
+
     bool orientationNormalized; //true if the orientation is normalized, false otherwise
     bool scaleNormalized; //true if the scale is normalized, false otherwise
     double patternScale; //scaling of the pattern
