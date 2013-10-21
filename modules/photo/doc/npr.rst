@@ -72,18 +72,3 @@ Stylization aims to produce digital imagery with a wide variety of effects not f
     :param sigma_s: Range between 0 to 200.
 
     :param sigma_r: Range between 0 to 1.
-
-
-edgeEnhance
------------
-Able to suppress low-amplitude details and enhance edges.
-
-.. ocv:function:: void edgeEnhance(InputArray src, OutputArray dst, float sigma_s = 60, float sigma_r = 0.45)
-
-    :param src: Input 8-bit 3-channel image.
-
-    :param dst: Output 8-bit 1-channel image.
-
-    :param sigma_s: Range between 0 to 200.
-
-    :param sigma_r: Range between 0 to 1.

@@ -151,7 +151,6 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
 
     int h = img.size().height;
     int w = img.size().width;
-    int channel = img.channels();
 
     Mat res = Mat(h,w,CV_32FC3);
     Mat magnitude = Mat(h,w,CV_32FC1);
@@ -159,7 +158,7 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     Domain_Filter obj;
     obj.filter(img, res, sigma_s, sigma_r, NORMCONV_FILTER);
 
-    obj.find_magnitude(res,magnitude,2);
+    obj.find_magnitude(res,magnitude);
 
     Mat stylized = Mat(h,w,CV_32FC3);
 
@@ -171,32 +170,4 @@ void cv::stylization(InputArray _src, OutputArray _dst, float sigma_s, float sig
     merge(temp,stylized);
 
     stylized.convertTo(dst,CV_8UC3,255);
-}
-
-void cv::edgeEnhance(InputArray _src, OutputArray _dst, float sigma_s, float sigma_r)
-{
-    Mat I = _src.getMat();
-    _dst.create(I.size(), CV_8UC1);
-    Mat dst = _dst.getMat();
-
-    Mat img = Mat(I.size(),CV_32FC3);
-    I.convertTo(img,CV_32FC3,1.0/255.0);
-
-    Mat orig = img.clone();
-
-    int h = img.size().height;
-    int w = img.size().width;
-
-    Mat res = Mat(h,w,CV_32FC3);
-    Mat magnitude = Mat(h,w,CV_32FC1);
-
-    Mat mag8 = Mat(h,w,CV_32FC1);
-
-    Domain_Filter obj;
-
-    obj.filter(img, res, sigma_s, sigma_r, NORMCONV_FILTER);
-
-    obj.find_magnitude(res,magnitude,1);
-
-    magnitude.convertTo(dst,CV_8UC1,255);
 }

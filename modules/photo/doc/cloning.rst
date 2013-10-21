@@ -80,7 +80,7 @@ textureFlattening
 By retaining only the gradients at edge locations, before integrating with the Poisson solver, one washes out the texture of the selected
 region, giving its contents a flat aspect. Here Canny Edge Detector is used.
 
-.. ocv:function:: void textureFlattening(InputArray src, InputArray mask, OutputArray dst, double low_threshold, double high_threshold, int kernel_size)
+.. ocv:function:: void textureFlattening(InputArray src, InputArray mask, OutputArray dst, double low_threshold=30 , double high_threshold=45, int kernel_size=3)
 
     :param src: Input 8-bit 3-channel image.
 
