@@ -126,7 +126,8 @@ void cv::ocl::fft_setup()
     {
         return;
     }
-    pCache.setupData = new clAmdFftSetupData;
+    if (pCache.setupData == NULL)
+        pCache.setupData = new clAmdFftSetupData;
     openCLSafeCall(clAmdFftInitSetupData( pCache.setupData ));
     pCache.started = true;
 }
