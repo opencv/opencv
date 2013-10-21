@@ -153,7 +153,7 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes,
     else if ( img.type() == CV_16S )
         computeIntegralImages<short, iiMatType>( img, sum, tilted, flatTilted, iiType );
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( Error::StsUnsupportedFormat, "" );
 
     int step = (int)(sum.step/sum.elemSize());
 
@@ -444,7 +444,7 @@ StarDetector::StarDetector(int _maxSize, int _responseThreshold,
 void StarDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
 {
     Mat grayImage = image;
-    if( image.channels() > 1 ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    if( image.channels() > 1 ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     (*this)(grayImage, keypoints);
     KeyPointsFilter::runByPixelsMask( keypoints, mask );

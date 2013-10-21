@@ -234,7 +234,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         else if (image.type() == CV_8S)
             computeDescriptors<char, int>(image, keypoints, descriptors);
         else
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            CV_Error( Error::StsUnsupportedFormat, "" );
     } else {
         // Create the integral image appropriate for our type & usage
         if ( image.type() == CV_8U )
@@ -246,7 +246,7 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
         else if ( image.type() == CV_16S )
             computeDescriptors<short, double>(image, keypoints, descriptors);
         else
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            CV_Error( Error::StsUnsupportedFormat, "" );
     }
 }
 
