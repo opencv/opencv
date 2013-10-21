@@ -40,191 +40,203 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& stream, int);
+void divMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+void divMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+
+namespace
 {
-    struct Div_8uc4_32f : binary_function<uint, float, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, float b) const
-        {
-            uint res = 0;
-
-            if (b != 0)
-            {
-                b = 1.0f / b;
-                res |= (saturate_cast<uchar>((0xffu & (a      )) * b)      );
-                res |= (saturate_cast<uchar>((0xffu & (a >>  8)) * b) <<  8);
-                res |= (saturate_cast<uchar>((0xffu & (a >> 16)) * b) << 16);
-                res |= (saturate_cast<uchar>((0xffu & (a >> 24)) * b) << 24);
-            }
-
-            return res;
-        }
-    };
-
-    struct Div_16sc4_32f : binary_function<short4, float, short4>
-    {
-        __device__ __forceinline__ short4 operator ()(short4 a, float b) const
-        {
-            return b != 0 ? make_short4(saturate_cast<short>(a.x / b), saturate_cast<short>(a.y / b),
-                                        saturate_cast<short>(a.z / b), saturate_cast<short>(a.w / b))
-                          : make_short4(0,0,0,0);
-        }
-    };
-
-    template <typename T, typename D> struct Div : binary_function<T, T, D>
+    template <typename T, typename D> struct DivOp : binary_function<T, T, D>
     {
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
             return b != 0 ? saturate_cast<D>(a / b) : 0;
         }
-
-        __host__ __device__ __forceinline__ Div() {}
-        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
-    template <typename T> struct Div<T, float> : binary_function<T, T, float>
+    template <typename T> struct DivOp<T, float> : binary_function<T, T, float>
     {
         __device__ __forceinline__ float operator ()(T a, T b) const
         {
-            return b != 0 ? static_cast<float>(a) / b : 0;
+            return b != 0 ? static_cast<float>(a) / b : 0.0f;
         }
-
-        __host__ __device__ __forceinline__ Div() {}
-        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
-    template <typename T> struct Div<T, double> : binary_function<T, T, double>
+    template <typename T> struct DivOp<T, double> : binary_function<T, T, double>
     {
         __device__ __forceinline__ double operator ()(T a, T b) const
         {
-            return b != 0 ? static_cast<double>(a) / b : 0;
+            return b != 0 ? static_cast<double>(a) / b : 0.0;
         }
-
-        __host__ __device__ __forceinline__ Div() {}
-        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
 
-    template <typename T, typename S, typename D> struct DivScale : binary_function<T, T, D>
+    template <typename T, typename S, typename D> struct DivScaleOp : binary_function<T, T, D>
     {
         S scale;
-
-        __host__ explicit DivScale(S scale_) : scale(scale_) {}
 
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
             return b != 0 ? saturate_cast<D>(scale * a / b) : 0;
         }
     };
-}
 
-namespace cv { namespace cuda { namespace device
-{
-    template <> struct TransformFunctorTraits<arithm::Div_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::Div<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
+        enum {
+            shift = 1
+        };
     };
-
-    template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::DivScale<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    void divMat_8uc4_32f(PtrStepSz<uint> src1, PtrStepSzf src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, Div_8uc4_32f(), WithOutMask(), stream);
-    }
-
-    void divMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, Div_16sc4_32f(), WithOutMask(), stream);
-    }
 
     template <typename T, typename S, typename D>
-    void divMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream)
+    void divMatImpl(const GpuMat& src1, const GpuMat& src2, const GpuMat& dst, double scale, Stream& stream)
     {
         if (scale == 1)
         {
-            Div<T, D> op;
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            DivOp<T, D> op;
+            gridTransformBinary_< TransformPolicy<S> >(globPtr<T>(src1), globPtr<T>(src2), globPtr<D>(dst), op, stream);
         }
         else
         {
-            DivScale<T, S, D> op(static_cast<S>(scale));
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            DivScaleOp<T, S, D> op;
+            op.scale = static_cast<S>(scale);
+            gridTransformBinary_< TransformPolicy<S> >(globPtr<T>(src1), globPtr<T>(src2), globPtr<D>(dst), op, stream);
         }
     }
-
-    template void divMat<uchar, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<uchar, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    template void divMat<schar, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<schar, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    //template void divMat<ushort, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<ushort, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<ushort, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<ushort, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<ushort, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<ushort, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<ushort, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    //template void divMat<short, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<short, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<short, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<short, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<short, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<short, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<short, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    //template void divMat<int, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<int, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<int, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<int, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<int, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<int, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<int, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    //template void divMat<float, float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<float, float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<float, float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<float, float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<float, float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<float, float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<float, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-
-    //template void divMat<double, double, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<double, double, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<double, double, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<double, double, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<double, double, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    //template void divMat<double, double, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
-    template void divMat<double, double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, double scale, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& stream, int)
+{
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, const GpuMat& dst, double scale, Stream& stream);
+    static const func_t funcs[7][7] =
+    {
+        {
+            divMatImpl<uchar, float, uchar>,
+            divMatImpl<uchar, float, schar>,
+            divMatImpl<uchar, float, ushort>,
+            divMatImpl<uchar, float, short>,
+            divMatImpl<uchar, float, int>,
+            divMatImpl<uchar, float, float>,
+            divMatImpl<uchar, double, double>
+        },
+        {
+            divMatImpl<schar, float, uchar>,
+            divMatImpl<schar, float, schar>,
+            divMatImpl<schar, float, ushort>,
+            divMatImpl<schar, float, short>,
+            divMatImpl<schar, float, int>,
+            divMatImpl<schar, float, float>,
+            divMatImpl<schar, double, double>
+        },
+        {
+            0 /*divMatImpl<ushort, float, uchar>*/,
+            0 /*divMatImpl<ushort, float, schar>*/,
+            divMatImpl<ushort, float, ushort>,
+            divMatImpl<ushort, float, short>,
+            divMatImpl<ushort, float, int>,
+            divMatImpl<ushort, float, float>,
+            divMatImpl<ushort, double, double>
+        },
+        {
+            0 /*divMatImpl<short, float, uchar>*/,
+            0 /*divMatImpl<short, float, schar>*/,
+            divMatImpl<short, float, ushort>,
+            divMatImpl<short, float, short>,
+            divMatImpl<short, float, int>,
+            divMatImpl<short, float, float>,
+            divMatImpl<short, double, double>
+        },
+        {
+            0 /*divMatImpl<int, float, uchar>*/,
+            0 /*divMatImpl<int, float, schar>*/,
+            0 /*divMatImpl<int, float, ushort>*/,
+            0 /*divMatImpl<int, float, short>*/,
+            divMatImpl<int, float, int>,
+            divMatImpl<int, float, float>,
+            divMatImpl<int, double, double>
+        },
+        {
+            0 /*divMatImpl<float, float, uchar>*/,
+            0 /*divMatImpl<float, float, schar>*/,
+            0 /*divMatImpl<float, float, ushort>*/,
+            0 /*divMatImpl<float, float, short>*/,
+            0 /*divMatImpl<float, float, int>*/,
+            divMatImpl<float, float, float>,
+            divMatImpl<float, double, double>
+        },
+        {
+            0 /*divMatImpl<double, double, uchar>*/,
+            0 /*divMatImpl<double, double, schar>*/,
+            0 /*divMatImpl<double, double, ushort>*/,
+            0 /*divMatImpl<double, double, short>*/,
+            0 /*divMatImpl<double, double, int>*/,
+            0 /*divMatImpl<double, double, float>*/,
+            divMatImpl<double, double, double>
+        }
+    };
+
+    const int sdepth = src1.depth();
+    const int ddepth = dst.depth();
+
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
+
+    GpuMat src1_ = src1.reshape(1);
+    GpuMat src2_ = src2.reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    const func_t func = funcs[sdepth][ddepth];
+
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src1_, src2_, dst_, scale, stream);
+}
+
+namespace
+{
+    template <typename T>
+    struct DivOpSpecial : binary_function<T, float, T>
+    {
+        __device__ __forceinline__ T operator ()(const T& a, float b) const
+        {
+            typedef typename VecTraits<T>::elem_type elem_type;
+
+            T res = VecTraits<T>::all(0);
+
+            if (b != 0)
+            {
+                b = 1.0f / b;
+                res.x = saturate_cast<elem_type>(a.x * b);
+                res.y = saturate_cast<elem_type>(a.y * b);
+                res.z = saturate_cast<elem_type>(a.z * b);
+                res.w = saturate_cast<elem_type>(a.w * b);
+            }
+
+            return res;
+        }
+    };
+}
+
+void divMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+{
+    gridTransformBinary(globPtr<uchar4>(src1), globPtr<float>(src2), globPtr<uchar4>(dst), DivOpSpecial<uchar4>(), stream);
+}
+
+void divMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+{
+    gridTransformBinary(globPtr<short4>(src1), globPtr<float>(src2), globPtr<short4>(dst), DivOpSpecial<short4>(), stream);
+}
+
+#endif

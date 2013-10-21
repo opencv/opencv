@@ -217,7 +217,7 @@ namespace grid_transform_detail
     }
 
     template <int SHIFT, typename SrcType1, typename SrcType2, typename DstType, class BinOp, class MaskPtr>
-    __global__ void transformSmart(const GlobPtr<SrcType1> src1_, const GlobPtr<SrcType2> src2_, PtrStep<DstType> dst_, const BinOp op, const MaskPtr mask, const int rows, const int cols)
+    __global__ void transformSmart(const GlobPtr<SrcType1> src1_, const GlobPtr<SrcType2> src2_, GlobPtr<DstType> dst_, const BinOp op, const MaskPtr mask, const int rows, const int cols)
     {
         typedef typename MakeVec<SrcType1, SHIFT>::type read_type1;
         typedef typename MakeVec<SrcType2, SHIFT>::type read_type2;
@@ -345,25 +345,25 @@ namespace grid_transform_detail
     };
 
     template <class Policy, class SrcPtr, typename DstType, class UnOp, class MaskPtr>
-    __host__ void transform(const SrcPtr& src, const GlobPtr<DstType>& dst, const UnOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
+    __host__ void transform_unary(const SrcPtr& src, const GlobPtr<DstType>& dst, const UnOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         TransformDispatcher<false, Policy>::call(src, dst, op, mask, rows, cols, stream);
     }
 
     template <class Policy, class SrcPtr1, class SrcPtr2, typename DstType, class BinOp, class MaskPtr>
-    __host__ void transform(const SrcPtr1& src1, const SrcPtr2& src2, const GlobPtr<DstType>& dst, const BinOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
+    __host__ void transform_binary(const SrcPtr1& src1, const SrcPtr2& src2, const GlobPtr<DstType>& dst, const BinOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         TransformDispatcher<false, Policy>::call(src1, src2, dst, op, mask, rows, cols, stream);
     }
 
     template <class Policy, typename SrcType, typename DstType, class UnOp, class MaskPtr>
-    __host__ void transform(const GlobPtr<SrcType>& src, const GlobPtr<DstType>& dst, const UnOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
+    __host__ void transform_unary(const GlobPtr<SrcType>& src, const GlobPtr<DstType>& dst, const UnOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         TransformDispatcher<VecTraits<SrcType>::cn == 1 && VecTraits<DstType>::cn == 1 && Policy::shift != 1, Policy>::call(src, dst, op, mask, rows, cols, stream);
     }
 
     template <class Policy, typename SrcType1, typename SrcType2, typename DstType, class BinOp, class MaskPtr>
-    __host__ void transform(const GlobPtr<SrcType1>& src1, const GlobPtr<SrcType2>& src2, const GlobPtr<DstType>& dst, const BinOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
+    __host__ void transform_binary(const GlobPtr<SrcType1>& src1, const GlobPtr<SrcType2>& src2, const GlobPtr<DstType>& dst, const BinOp& op, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         TransformDispatcher<VecTraits<SrcType1>::cn == 1 && VecTraits<SrcType2>::cn == 1 && VecTraits<DstType>::cn == 1 && Policy::shift != 1, Policy>::call(src1, src2, dst, op, mask, rows, cols, stream);
     }

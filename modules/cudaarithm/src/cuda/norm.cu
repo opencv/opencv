@@ -55,57 +55,65 @@ using namespace cv::cudev;
 
 namespace
 {
-    template <typename T>
-    void minMaxImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf, double* minVal, double* maxVal)
+    double normDiffInf(const GpuMat& _src1, const GpuMat& _src2, GpuMat& _buf)
     {
-        typedef typename SelectIf<
-                TypesEquals<T, double>::value,
-                double,
-                typename SelectIf<TypesEquals<T, float>::value, float, int>::type
-                >::type work_type;
+        const GpuMat_<uchar>& src1 = (const GpuMat_<uchar>&) _src1;
+        const GpuMat_<uchar>& src2 = (const GpuMat_<uchar>&) _src2;
+        GpuMat_<int>& buf = (GpuMat_<int>&) _buf;
 
-        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
-        GpuMat_<work_type>& buf = (GpuMat_<work_type>&) _buf;
+        gridFindMinMaxVal(abs_(cvt_<int>(src1) - cvt_<int>(src2)), buf);
 
-        if (mask.empty())
-            gridFindMinMaxVal(src, buf);
-        else
-            gridFindMinMaxVal(src, buf, globPtr<uchar>(mask));
-
-        work_type data[2];
+        int data[2];
         buf.download(cv::Mat(1, 2, buf.type(), data));
 
-        if (minVal)
-            *minVal = data[0];
+        return data[1];
+    }
 
-        if (maxVal)
-            *maxVal = data[1];
+    double normDiffL1(const GpuMat& _src1, const GpuMat& _src2, GpuMat& _buf)
+    {
+        const GpuMat_<uchar>& src1 = (const GpuMat_<uchar>&) _src1;
+        const GpuMat_<uchar>& src2 = (const GpuMat_<uchar>&) _src2;
+        GpuMat_<int>& buf = (GpuMat_<int>&) _buf;
+
+        gridCalcSum(abs_(cvt_<int>(src1) - cvt_<int>(src2)), buf);
+
+        int data;
+        buf.download(cv::Mat(1, 1, buf.type(), &data));
+
+        return data;
+    }
+
+    double normDiffL2(const GpuMat& _src1, const GpuMat& _src2, GpuMat& _buf)
+    {
+        const GpuMat_<uchar>& src1 = (const GpuMat_<uchar>&) _src1;
+        const GpuMat_<uchar>& src2 = (const GpuMat_<uchar>&) _src2;
+        GpuMat_<double>& buf = (GpuMat_<double>&) _buf;
+
+        gridCalcSum(sqr_(cvt_<double>(src1) - cvt_<double>(src2)), buf);
+
+        double data;
+        buf.download(cv::Mat(1, 1, buf.type(), &data));
+
+        return std::sqrt(data);
     }
 }
 
-void cv::cuda::minMax(InputArray _src, double* minVal, double* maxVal, InputArray _mask, GpuMat& buf)
+double cv::cuda::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normType)
 {
-    typedef void (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf, double* minVal, double* maxVal);
+    typedef double (*func_t)(const GpuMat& _src1, const GpuMat& _src2, GpuMat& _buf);
     static const func_t funcs[] =
     {
-        minMaxImpl<uchar>,
-        minMaxImpl<schar>,
-        minMaxImpl<ushort>,
-        minMaxImpl<short>,
-        minMaxImpl<int>,
-        minMaxImpl<float>,
-        minMaxImpl<double>
+        0, normDiffInf, normDiffL1, 0, normDiffL2
     };
 
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
 
-    CV_Assert( src.channels() == 1 );
-    CV_DbgAssert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+    CV_Assert( src1.type() == CV_8UC1 );
+    CV_Assert( src1.size() == src2.size() && src1.type() == src2.type() );
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
 
-    const func_t func = funcs[src.depth()];
-
-    func(src, mask, buf, minVal, maxVal);
+    return funcs[normType](src1, src2, buf);
 }
 
 #endif
