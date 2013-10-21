@@ -28,34 +28,35 @@ static void workBegin()
 {
     work_begin = getTickCount();
 }
+
 static void workEnd()
 {
     work_end += (getTickCount() - work_begin);
 }
+
 static double getTime()
 {
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
 
-void detect( Mat& img, vector<Rect>& faces,
+static void detect( Mat& img, vector<Rect>& faces,
              ocl::OclCascadeClassifierBuf& cascade,
              double scale, bool calTime);
 
 
-void detectCPU( Mat& img, vector<Rect>& faces,
+static void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
                 double scale, bool calTime);
 
 
-void Draw(Mat& img, vector<Rect>& faces, double scale);
+static void Draw(Mat& img, vector<Rect>& faces, double scale);
 
 
 // This function test if gpu_rst matches cpu_rst.
 // If the two vectors are not equal, it will return the difference in vector size
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
-
 
 int main( int argc, const char** argv )
 {
@@ -72,10 +73,12 @@ int main( int argc, const char** argv )
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
+        cout << "Usage : facedetect [options]" << endl;
         cout << "Available options:" << endl;
         cmd.printParams();
-        return 0;
+        return EXIT_SUCCESS;
     }
+
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;
 
@@ -89,8 +92,8 @@ int main( int argc, const char** argv )
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
     {
-        cerr << "ERROR: Could not load classifier cascade" << endl;
-        return -1;
+        cout << "ERROR: Could not load classifier cascade" << endl;
+        return EXIT_FAILURE;
     }
 
     if( inputName.empty() )
@@ -99,25 +102,17 @@ int main( int argc, const char** argv )
         if(!capture)
             cout << "Capture from CAM 0 didn't work" << endl;
     }
-    else if( inputName.size() )
+    else
     {
-        image = imread( inputName, 1 );
+        image = imread( inputName, CV_LOAD_IMAGE_COLOR );
         if( image.empty() )
         {
             capture = cvCaptureFromAVI( inputName.c_str() );
             if(!capture)
                 cout << "Capture from AVI didn't work" << endl;
-            return -1;
+            return EXIT_FAILURE;
         }
     }
-    else
-    {
-        image = imread( "lena.jpg", 1 );
-        if(image.empty())
-            cout << "Couldn't read lena.jpg" << endl;
-        return -1;
-    }
-
 
     cvNamedWindow( "result", 1 );
     if( capture )
@@ -134,24 +129,16 @@ int main( int argc, const char** argv )
                 frame.copyTo( frameCopy );
             else
                 flip( frame, frameCopy, 0 );
+
             if(useCPU)
-            {
                 detectCPU(frameCopy, faces, cpu_cascade, scale, false);
-            }
             else
-            {
                 detect(frameCopy, faces, cascade, scale, false);
-            }
+
             Draw(frameCopy, faces, scale);
             if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+                break;
         }
-
-
-        waitKey(0);
-
-
-_cleanup_:
         cvReleaseCapture( &capture );
     }
     else
@@ -164,9 +151,7 @@ _cleanup_:
         {
             cout << "loop" << i << endl;
             if(useCPU)
-            {
                 detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
-            }
             else
             {
                 detect(image, faces, cascade, scale, i==0?false:true);
