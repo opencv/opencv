@@ -1416,7 +1416,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
 
     CV_Assert(ksize == 1 || ksize == 3);
 
-    static const int K[2][9] =
+    int K[2][9] =
     {
         {0, 1, 0, 1, -4, 1, 0, 1, 0},
         {2, 0, 2, 0, -8, 0, 2, 0, 2}
