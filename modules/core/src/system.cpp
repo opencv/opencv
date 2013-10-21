@@ -838,6 +838,7 @@ namespace cv
 TLSData::TLSData()
 {
     device = 0;
+    useOpenCL = -1;
 }
 
 #ifdef WIN32

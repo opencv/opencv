@@ -578,7 +578,7 @@ typedef struct _cl_buffer_region {
 
 #define CL_CALLBACK CV_STDCALL
 
-static bool g_haveOpenCL = false;
+static volatile bool g_haveOpenCL = false;
 static const char* oclFuncToCheck = "clEnqueueReadBufferRect";
 
 #if defined(__APPLE__)
@@ -964,9 +964,9 @@ OCL_FUNC(cl_int, clGetKernelInfo,
  size_t * param_value_size_ret),
  (kernel, param_name, param_value_size, param_value, param_value_size_ret))
 
-*/
-
 OCL_FUNC(cl_int, clRetainMemObject, (cl_mem memobj), (memobj))
+
+*/
 
 OCL_FUNC(cl_int, clReleaseMemObject, (cl_mem memobj), (memobj))
 
@@ -1252,7 +1252,19 @@ inline bool operator < (const HashKey& h1, const HashKey& h2)
     return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
 }
 
-bool haveOpenCL() { return g_haveOpenCL; }
+bool haveOpenCL()
+{
+    initOpenCLAndLoad(0);
+    return g_haveOpenCL;
+}
+
+bool useOpenCL()
+{
+    TLSData* data = TLSData::get();
+    if( data->useOpenCL < 0 )
+        data->useOpenCL = (int)haveOpenCL();
+    return data->useOpenCL > 0;
+}
 
 void finish()
 {
@@ -2087,12 +2099,13 @@ int Kernel::set(int i, const KernelArg& arg)
     CV_Assert( p && p->handle );
     if( arg.m )
     {
-        // TODO: make sure m is up-to-date. maybe, use special method to retrieve the handle
         int dims = arg.m->dims;
+        void* h = arg.m->handle(((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
+                                ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0));
+        clSetKernelArg(p->handle, (cl_uint)i, sizeof(cl_mem), &h);
+        clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t), &arg.m->offset);
         if( dims <= 2 )
         {
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(cl_mem), &arg.m->u->handle);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t), &arg.m->offset);
             clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(size_t), &arg.m->step.p[0]);
             clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(arg.m->rows), &arg.m->rows);
             clSetKernelArg(p->handle, (cl_uint)(i+4), sizeof(arg.m->cols), &arg.m->cols);
@@ -2100,7 +2113,6 @@ int Kernel::set(int i, const KernelArg& arg)
         }
         else
         {
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(cl_mem), &arg.m->u->handle);
             clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t), &arg.m->offset);
             clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t)*(dims-1), &arg.m->step.p[0]);
             clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(cl_int)*dims, &arg.m->size.p[0]);
@@ -2116,14 +2128,14 @@ int Kernel::set(int i, const KernelArg& arg)
 
 
 void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
-                 bool async, const Ptr<Callback>& cleanupCallback, const Queue& q)
+                 bool sync, const Ptr<Callback>& cleanupCallback, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
     cl_command_queue qq = getQueue(q);
     clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                            offset, globalsize, localsize, 0, 0,
-                           !async ? 0 : &p->e);
-    if( !async )
+                           sync ? 0 : &p->e);
+    if( sync )
     {
         clFinish(qq);
         if( !cleanupCallback.empty() )
@@ -2137,12 +2149,12 @@ void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsiz
     }
 }
 
-void Kernel::runTask(bool async, const Ptr<Callback>& cleanupCallback, const Queue& q)
+void Kernel::runTask(bool sync, const Ptr<Callback>& cleanupCallback, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
     cl_command_queue qq = getQueue(q);
-    clEnqueueTask(qq, p->handle, 0, 0, !async ? 0 : &p->e);
-    if( !async )
+    clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
+    if( sync )
     {
         clFinish(qq);
         if( !cleanupCallback.empty() )
@@ -2181,165 +2193,12 @@ size_t Kernel::localMemSize() const
 {
     if(!p)
         return 0;
-    size_t val = 0, retsz = 0;
+    size_t retsz = 0;
+    cl_ulong val = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_LOCAL_MEM_SIZE,
-                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+                                    sizeof(val), &val, &retsz) >= 0 ? (size_t)val : 0;
 }
-
-//=============================================================================
-
-Buffer::Buffer() { handle = 0; }
-
-Buffer::Buffer(int flags, size_t size, void* hostptr)
-{
-    handle = 0;
-    create(flags, size, hostptr);
-}
-
-Buffer::Buffer(const Buffer& buf)
-{
-    handle = buf.handle;
-    addref();
-}
-
-Buffer::~Buffer()
-{
-    release();
-}
-
-Buffer& Buffer::operator = (const Buffer& buf)
-{
-    if(handle != buf.handle)
-    {
-        release();
-        handle = buf.handle;
-        addref();
-    }
-    return *this;
-}
-
-bool Buffer::create(int flags, size_t size, void* hostptr)
-{
-    release();
-    cl_int retval = 0;
-    handle = clCreateBuffer((cl_context)Context::getDefault().ptr(),
-                            (cl_mem_flags)flags, size, hostptr, &retval);
-    return handle != 0 && retval >= 0;
-}
-
-void Buffer::release()
-{
-    if(handle)
-        clReleaseMemObject((cl_mem)handle);
-    handle = 0;
-}
-
-void Buffer::addref()
-{
-    if(handle)
-        clRetainMemObject((cl_mem)handle);
-}
-
-bool Buffer::read(size_t offset, size_t size, void* dst, bool async, const Queue& q) const
-{
-    if( !handle )
-        return false;
-    return clEnqueueReadBuffer(getQueue(q), (cl_mem)handle, (cl_bool)!async,
-                               offset, size, dst, 0, 0, 0) >= 0;
-}
-
-bool Buffer::read(size_t offset[3], size_t size[3], size_t step[2],
-                  void* dst, size_t dststep[2], bool async, const Queue& q) const
-{
-    if( !handle )
-        return false;
-    size_t host_offset[] = {0, 0, 0};
-    return clEnqueueReadBufferRect(getQueue(q), (cl_mem)handle, (cl_bool)!async,
-                                   offset, host_offset, size, step[1],
-                                   step[0], dststep[1], dststep[0], dst, 0, 0, 0) >= 0;
-}
-
-bool Buffer::write(size_t offset, size_t size, const void* src,
-                   bool async, const Queue& q) const
-{
-    if( !handle )
-        return false;
-    return clEnqueueWriteBuffer(getQueue(q), (cl_mem)handle, (cl_bool)!async,
-                                offset, size, src, 0, 0, 0) >= 0;
-}
-
-bool Buffer::write(size_t offset[3], size_t size[3], size_t step[2],
-                   const void* src, size_t srcstep[2],
-                   bool async, const Queue& q) const
-{
-    if( !handle )
-        return false;
-    size_t host_offset[] = {0, 0, 0};
-    return clEnqueueWriteBufferRect(getQueue(q), (cl_mem)handle, (cl_bool)!async,
-                                   offset, host_offset, size, step[1],
-                                   step[0], srcstep[1], srcstep[0], src, 0, 0, 0) >= 0;
-}
-
-bool Buffer::fill(const void* pattern, size_t pattern_size,
-                  size_t offset, size_t size,
-                  bool async, const Queue& q) const
-{
-    if( !handle )
-        return false;
-    cl_command_queue qq = getQueue(q);
-    bool ok = clEnqueueFillBuffer(qq, (cl_mem)handle, pattern,
-                                  pattern_size, offset, size, 0, 0, 0) >= 0;
-    if(!async && ok)
-        clFinish(qq);
-    return ok;
-}
-
-bool Buffer::copyTo(size_t srcoffset, const Buffer& dst,
-                    size_t dstoffset, size_t size,
-                    bool async, const Queue& q) const
-{
-    if(!handle || !dst.handle)
-        return false;
-    cl_command_queue qq = getQueue(q);
-    bool ok = clEnqueueCopyBuffer(qq, (cl_mem)handle, (cl_mem)dst.handle,
-                                  srcoffset, dstoffset, size, 0, 0, 0) >= 0;
-    if(!async && ok)
-        clFinish(qq);
-    return ok;
-}
-
-bool Buffer::copyTo(size_t srcoffset[3], size_t srcstep[2],
-                    const Buffer& dst, size_t dstoffset[3], size_t dststep[2],
-                    size_t size[3], bool async, const Queue& q) const
-{
-    if(!handle || !dst.handle)
-        return false;
-    cl_command_queue qq = getQueue(q);
-    bool ok = clEnqueueCopyBufferRect(qq, (cl_mem)handle, (cl_mem)dst.handle,
-                            srcoffset, dstoffset, size, srcstep[1], srcstep[0],
-                            dststep[1], dststep[0], 0, 0, 0) >= 0;
-    if(!async && ok)
-        clFinish(qq);
-    return ok;
-}
-
-void* Buffer::map(int mapflags, size_t offset, size_t size,
-                  bool async, const Queue& q) const
-{
-    if( !handle )
-        return 0;
-    cl_int retval = 0;
-    return clEnqueueMapBuffer(getQueue(q), (cl_mem)handle, (cl_bool)async, mapflags,
-                              offset, size, 0, 0, 0, &retval);
-}
-
-void Buffer::unmap(void* ptr, const Queue& q) const
-{
-    clEnqueueUnmapMemObject(getQueue(q), (cl_mem)handle, ptr, 0, 0, 0);
-}
-
-void* Buffer::ptr() const { return handle; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2606,6 +2465,436 @@ const String& ProgramSource::source() const
 ProgramSource::hash_t ProgramSource::hash() const
 {
     return p ? p->h : 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class OpenCLAllocator : public MatAllocator
+{
+public:
+    OpenCLAllocator() {}
+
+    UMatData* defaultAllocate(int dims, const int* sizes, int type, size_t* step) const
+    {
+        UMatData* u = Mat::getStdAllocator()->allocate(dims, sizes, type, step);
+        u->urefcount = 1;
+        u->refcount = 0;
+        return u;
+    }
+
+    void getBestFlags(const Context& ctx, int& createFlags, int& flags0) const
+    {
+        const Device& dev = ctx.device(0);
+        createFlags = CL_MEM_READ_WRITE;
+
+        if( dev.hostUnifiedMemory() )
+            flags0 = 0;
+        else
+            flags0 = UMatData::COPY_ON_MAP;
+    }
+
+    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
+    {
+        if(!useOpenCL())
+            return defaultAllocate(dims, sizes, type, step);
+        size_t total = CV_ELEM_SIZE(type);
+        for( int i = dims-1; i >= 0; i++ )
+        {
+            if( step )
+                step[i] = total;
+            total *= sizes[i];
+        }
+
+        Context& ctx = Context::getDefault();
+        int createFlags = 0, flags0 = 0;
+        getBestFlags(ctx, createFlags, flags0);
+
+        cl_int retval = 0;
+        void* handle = clCreateBuffer((cl_context)ctx.ptr(),
+                                      createFlags, total, 0, &retval);
+        if( !handle || retval < 0 )
+            return defaultAllocate(dims, sizes, type, step);
+        UMatData* u = new UMatData(this);
+        u->data = 0;
+        u->size = total;
+        u->handle = handle;
+        u->urefcount = 1;
+        u->flags = flags0;
+
+        return u;
+    }
+
+    bool allocate(UMatData* u, int accessFlags) const
+    {
+        if(!u)
+            return false;
+
+        UMatDataAutoLock lock(u);
+
+        if(u->handle == 0)
+        {
+            CV_Assert(u->origdata != 0);
+            Context& ctx = Context::getDefault();
+            int createFlags = 0, flags0 = 0;
+            getBestFlags(ctx, createFlags, flags0);
+
+            cl_context ctx_handle = (cl_context)ctx.ptr();
+            cl_int retval = 0;
+            int tempUMatFlags = UMatData::TEMP_UMAT;
+            u->handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+                                       u->size, u->origdata, &retval);
+            if((!u->handle || retval < 0) && !(accessFlags & ACCESS_FAST))
+            {
+                u->handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|createFlags,
+                                           u->size, u->origdata, &retval);
+                tempUMatFlags = UMatData::TEMP_COPIED_UMAT;
+            }
+            if(!u->handle || retval < 0)
+                return false;
+            u->prevAllocator = u->currAllocator;
+            u->currAllocator = this;
+            u->flags |= tempUMatFlags;
+        }
+        if(accessFlags & ACCESS_WRITE)
+            u->markHostCopyObsolete(true);
+        CV_XADD(&u->urefcount, 1);
+        return true;
+    }
+
+    void deallocate(UMatData* u) const
+    {
+        if(!u)
+            return;
+
+        // TODO: !!! when we add Shared Virtual Memory Support,
+        // this function (as well as the others should be corrected)
+        CV_Assert(u->handle != 0 && u->urefcount == 0);
+        if(u->tempUMat())
+        {
+            if( u->hostCopyObsolete() && u->refcount > 0 && u->tempCopiedUMat() )
+            {
+                clEnqueueWriteBuffer((cl_command_queue)Queue::getDefault().ptr(),
+                                     (cl_mem)u->handle, CL_TRUE, 0,
+                                     u->size, u->origdata, 0, 0, 0);
+            }
+            u->markHostCopyObsolete(false);
+            clReleaseMemObject((cl_mem)u->handle);
+            u->currAllocator = u->prevAllocator;
+            if(u->refcount == 0)
+                u->currAllocator->deallocate(u);
+        }
+        else
+        {
+            if(u->data && u->copyOnMap())
+                fastFree(u->data);
+            clReleaseMemObject((cl_mem)u->handle);
+            delete u;
+        }
+    }
+
+    void map(UMatData* u, int accessFlags) const
+    {
+        if(!u)
+            return;
+
+        CV_Assert( u->handle != 0 );
+
+        UMatDataAutoLock autolock(u);
+
+        if(accessFlags & ACCESS_WRITE)
+            u->markDeviceCopyObsolete(true);
+
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+        if( u->refcount == 0 )
+        {
+            if( !u->copyOnMap() )
+            {
+                CV_Assert(u->data == 0);
+                // because there can be other map requests for the same UMat with different access flags,
+                // we use the universal (read-write) access mode.
+                cl_int retval = 0;
+                u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                     (CL_MAP_READ | CL_MAP_WRITE),
+                                                     0, u->size, 0, 0, 0, &retval);
+                if(u->data && retval >= 0)
+                {
+                    u->markHostCopyObsolete(false);
+                    return;
+                }
+
+                // if map failed, switch to copy-on-map mode for the particular buffer
+                u->flags |= UMatData::COPY_ON_MAP;
+            }
+
+            if(!u->data)
+            {
+                u->data = (uchar*)fastMalloc(u->size);
+                u->markHostCopyObsolete(true);
+            }
+        }
+
+        if( (accessFlags & ACCESS_READ) != 0 && u->hostCopyObsolete() )
+        {
+            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                           u->size, u->data, 0, 0, 0) >= 0 );
+            u->markHostCopyObsolete(false);
+        }
+    }
+
+    void unmap(UMatData* u) const
+    {
+        if(!u)
+            return;
+
+        CV_Assert(u->handle != 0);
+
+        UMatDataAutoLock autolock(u);
+
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        if( !u->copyOnMap() && u->data )
+        {
+            CV_Assert( clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0) >= 0 );
+            u->data = 0;
+        }
+        else if( u->copyOnMap() && u->deviceCopyObsolete() )
+        {
+            CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                            u->size, u->data, 0, 0, 0) >= 0 );
+        }
+        u->markDeviceCopyObsolete(false);
+        u->markHostCopyObsolete(false);
+    }
+
+    bool checkContinuous(int dims, const size_t sz[],
+                         const size_t srcofs[], const size_t srcstep[],
+                         const size_t dstofs[], const size_t dststep[],
+                         size_t& total, size_t new_sz[],
+                         size_t& srcrawofs, size_t new_srcofs[], size_t new_srcstep[],
+                         size_t& dstrawofs, size_t new_dstofs[], size_t new_dststep[]) const
+    {
+        bool iscontinuous = true;
+        srcrawofs = srcofs ? srcofs[dims-1] : 0;
+        dstrawofs = dstofs ? dstofs[dims-1] : 0;
+        total = sz[dims-1];
+        for( int i = dims-2; i >= 0; i-- )
+        {
+            if( i > 0 && (total != srcstep[i] || total != dststep[i]) )
+                iscontinuous = false;
+            total *= sz[i];
+            if( srcofs )
+                srcrawofs += srcofs[i]*srcstep[i];
+            if( dstofs )
+                dstrawofs += dstofs[i]*dststep[i];
+        }
+
+        if( !iscontinuous )
+        {
+            // OpenCL uses {x, y, z} order while OpenCV uses {z, y, x} order.
+            if( dims == 2 )
+            {
+                new_sz[0] = sz[1]; new_sz[1] = sz[0]; new_sz[2] = 1;
+                // we assume that new_... arrays are initialized by caller
+                // with 0's, so there is no else branch
+                if( srcofs )
+                {
+                    new_srcofs[0] = srcofs[1];
+                    new_srcofs[1] = srcofs[0];
+                    new_srcofs[2] = 0;
+                }
+
+                if( dstofs )
+                {
+                    new_dstofs[0] = dstofs[1];
+                    new_dstofs[1] = dstofs[0];
+                    new_dstofs[2] = 0;
+                }
+
+                new_srcstep[0] = srcstep[0]; new_srcstep[1] = 0;
+                new_dststep[0] = dststep[0]; new_dststep[1] = 0;
+            }
+            else
+            {
+                // we could check for dims == 3 here,
+                // but from user perspective this one is more informative
+                CV_Assert(dims <= 3);
+                new_sz[0] = sz[2]; new_sz[1] = sz[1]; new_sz[2] = sz[0];
+                if( srcofs )
+                {
+                    new_srcofs[0] = srcofs[2];
+                    new_srcofs[1] = srcofs[1];
+                    new_srcofs[2] = srcofs[0];
+                }
+
+                if( dstofs )
+                {
+                    new_dstofs[0] = dstofs[2];
+                    new_dstofs[1] = dstofs[1];
+                    new_dstofs[2] = dstofs[0];
+                }
+
+                new_srcstep[0] = srcstep[1]; new_srcstep[1] = srcstep[0];
+                new_dststep[0] = dststep[1]; new_dststep[1] = dststep[0];
+            }
+        }
+        return iscontinuous;
+    }
+
+    void download(UMatData* u, void* dstptr, int dims, const size_t sz[],
+                  const size_t srcofs[], const size_t srcstep[],
+                  const size_t dststep[]) const
+    {
+        if(!u)
+            return;
+        UMatDataAutoLock autolock(u);
+
+        if( u->data && !u->hostCopyObsolete() )
+        {
+            Mat::getStdAllocator()->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+            return;
+        }
+        CV_Assert( u->handle != 0 );
+
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+        size_t total = 0, new_sz[] = {0, 0, 0};
+        size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
+        size_t dstrawofs = 0, new_dstofs[] = {0, 0, 0}, new_dststep[] = {0, 0, 0};
+
+        bool iscontinuous = checkContinuous(dims, sz, srcofs, srcstep, 0, dststep,
+                                            total, new_sz,
+                                            srcrawofs, new_srcofs, new_srcstep,
+                                            dstrawofs, new_dstofs, new_dststep);
+        if( iscontinuous )
+        {
+            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                           srcrawofs, total, dstptr, 0, 0, 0) >= 0 );
+        }
+        else
+        {
+            CV_Assert( clEnqueueReadBufferRect(q, (cl_mem)u->handle, CL_TRUE,
+                            new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
+                            new_dststep[0], new_dststep[1], dstptr, 0, 0, 0) >= 0 );
+        }
+        clFinish(q);
+    }
+
+    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+                const size_t dstofs[], const size_t dststep[],
+                const size_t srcstep[]) const
+    {
+        if(!u)
+            return;
+
+        // there should be no user-visible CPU copies of the UMat which we are going to copy to
+        CV_Assert(u->refcount == 0);
+
+        size_t total = 0, new_sz[] = {0, 0, 0};
+        size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
+        size_t dstrawofs = 0, new_dstofs[] = {0, 0, 0}, new_dststep[] = {0, 0, 0};
+
+        bool iscontinuous = checkContinuous(dims, sz, 0, srcstep, dstofs, dststep,
+                                            total, new_sz,
+                                            srcrawofs, new_srcofs, new_srcstep,
+                                            dstrawofs, new_dstofs, new_dststep);
+
+        UMatDataAutoLock autolock(u);
+
+        // if there is cached CPU copy of the GPU matrix,
+        // we could use it as a destination.
+        // we can do it in 2 cases:
+        //    1. we overwrite the whole content
+        //    2. we overwrite part of the matrix, but the GPU copy is out-of-date
+        if( u->data && (u->hostCopyObsolete() <= u->deviceCopyObsolete() || total == u->size))
+        {
+            Mat::getStdAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
+            u->markHostCopyObsolete(false);
+            u->markDeviceCopyObsolete(true);
+            return;
+        }
+
+        CV_Assert( u->handle != 0 );
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+        if( iscontinuous )
+        {
+            CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
+                CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) >= 0 );
+        }
+        else
+        {
+            CV_Assert( clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
+                new_dstofs, new_srcofs, new_sz, new_dststep[0], new_dststep[1],
+                new_srcstep[0], new_srcstep[1], srcptr, 0, 0, 0) >= 0 );
+        }
+
+        u->markHostCopyObsolete(true);
+        u->markDeviceCopyObsolete(false);
+
+        clFinish(q);
+    }
+
+    void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dstofs[], const size_t dststep[], bool sync) const
+    {
+        if(!src || !dst)
+            return;
+
+        size_t total = 0, new_sz[] = {0, 0, 0};
+        size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
+        size_t dstrawofs = 0, new_dstofs[] = {0, 0, 0}, new_dststep[] = {0, 0, 0};
+
+        bool iscontinuous = checkContinuous(dims, sz, srcofs, srcstep, dstofs, dststep,
+                                            total, new_sz,
+                                            srcrawofs, new_srcofs, new_srcstep,
+                                            dstrawofs, new_dstofs, new_dststep);
+
+        UMatDataAutoLock src_autolock(src);
+        UMatDataAutoLock dst_autolock(dst);
+
+        if( !src->handle || (src->data && src->hostCopyObsolete() <= src->deviceCopyObsolete()) )
+        {
+            upload(dst, src->data + srcrawofs, dims, sz, dstofs, dststep, srcstep);
+            return;
+        }
+        if( !dst->handle || (dst->data && dst->hostCopyObsolete() <= dst->deviceCopyObsolete()) )
+        {
+            download(src, dst->data + dstrawofs, dims, sz, srcofs, srcstep, dststep);
+            dst->markHostCopyObsolete(false);
+            dst->markDeviceCopyObsolete(true);
+            return;
+        }
+
+        // there should be no user-visible CPU copies of the UMat which we are going to copy to
+        CV_Assert(dst->refcount == 0);
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+
+        if( iscontinuous )
+        {
+            CV_Assert( clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                           srcrawofs, dstrawofs, total, 0, 0, 0) >= 0 );
+        }
+        else
+        {
+            CV_Assert( clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+                                               new_srcofs, new_dstofs, new_sz,
+                                               new_srcstep[0], new_srcstep[1], new_dststep[0], new_dststep[1],
+                                               0, 0, 0) >= 0 );
+        }
+
+        dst->markHostCopyObsolete(true);
+        dst->markDeviceCopyObsolete(false);
+
+        if( sync )
+            clFinish(q);
+    }
+};
+
+MatAllocator* getOpenCLAllocator()
+{
+    static OpenCLAllocator allocator;
+    return &allocator;
 }
 
 }}

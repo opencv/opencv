@@ -82,7 +82,7 @@ cvExtractSURF( const CvArr* _img, const CvArr* _mask,
     surf->set("upright", params.upright != 0);
     surf->set("extended", params.extended != 0);
 
-    surf->operator()(img, mask, kpt, _descriptors ? _OutputArray(descr) : noArray(),
+    surf->operator()(img, mask, kpt, _descriptors ? _OutputArray(descr) : (OutputArray)noArray(),
                      useProvidedKeyPts != 0);
 
     if( _keypoints )

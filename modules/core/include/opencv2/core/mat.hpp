@@ -55,7 +55,8 @@
 namespace cv
 {
 
-enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25, ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW };
+enum { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
+    ACCESS_RW=3<<24, ACCESS_MASK=ACCESS_RW, ACCESS_FAST=1<<26 };
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
 
@@ -88,6 +89,7 @@ public:
     };
 
     _InputArray();
+    _InputArray(int _flags, void* _obj);
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
     _InputArray(const std::vector<Mat>& vec);
@@ -154,6 +156,7 @@ public:
     };
 
     _OutputArray();
+    _OutputArray(int _flags, void* _obj);
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(gpu::GpuMat& d_mat);
@@ -203,6 +206,7 @@ class CV_EXPORTS _InputOutputArray : public _OutputArray
 {
 public:
     _InputOutputArray();
+    _InputOutputArray(int _flags, void* _obj);
     _InputOutputArray(Mat& m);
     _InputOutputArray(std::vector<Mat>& vec);
     _InputOutputArray(gpu::GpuMat& d_mat);
@@ -261,14 +265,21 @@ public:
     //virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
-
     virtual UMatData* allocate(int dims, const int* sizes,
-                               int type, size_t* step, int flags) const = 0;
+                               int type, size_t* step) const = 0;
+    virtual bool allocate(UMatData* data, int accessflags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
-    virtual bool map(UMatData* data, int mapflags) const = 0;
-    virtual bool unmap(UMatData* data, int mapflags, bool async) const = 0;
-    virtual void download(UMatData* data, void* dst, size_t srcofs[], size_t sz[], size_t dststep[], bool async) const = 0;
-    virtual void upload(UMatData* data, const void* src, size_t dstofs[], size_t sz[], size_t srcstep[], bool async) const = 0;
+    virtual void map(UMatData* data, int accessflags) const = 0;
+    virtual void unmap(UMatData* data) const = 0;
+    virtual void download(UMatData* data, void* dst, int dims, const size_t sz[],
+                          const size_t srcofs[], const size_t srcstep[],
+                          const size_t dststep[]) const = 0;
+    virtual void upload(UMatData* data, const void* src, int dims, const size_t sz[],
+                        const size_t dstofs[], const size_t dststep[],
+                        const size_t srcstep[]) const = 0;
+    virtual void copy(UMatData* srcdata, UMatData* dstdata, int dims, const size_t sz[],
+                      const size_t srcofs[], const size_t srcstep[],
+                      const size_t dstofs[], const size_t dststep[], bool sync) const = 0;
 };
 
 
@@ -303,27 +314,48 @@ protected:
 
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
-// note that umatdata might be allocated together with the matrix data, not as a separate object.
+// note that umatdata might be allocated together
+// with the matrix data, not as a separate object.
 // therefore, it does not have constructor or destructor;
 // it should be explicitly initialized using init().
 struct CV_EXPORTS UMatData
 {
-    void init();
+    enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
+        DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24 };
+    UMatData(const MatAllocator* allocator);
 
     // provide atomic access to the structure
     void lock();
     void unlock();
 
+    bool hostCopyObsolete() const;
+    bool deviceCopyObsolete() const;
+    bool copyOnMap() const;
+    bool tempUMat() const;
+    bool tempCopiedUMat() const;
+    void markHostCopyObsolete(bool flag);
+    void markDeviceCopyObsolete(bool flag);
+
+    const MatAllocator* prevAllocator;
+    const MatAllocator* currAllocator;
     int urefcount;
     int refcount;
     uchar* data;
+    uchar* origdata;
     size_t size;
-    int dims;
-    size_t wholestep[3];
 
-    int mapflags;
+    int flags;
     void* handle;
 };
+
+
+struct CV_EXPORTS UMatDataAutoLock
+{
+    UMatDataAutoLock(UMatData* u);
+    ~UMatDataAutoLock();
+    UMatData* u;
+};
+
 
 struct CV_EXPORTS MatSize
 {
@@ -1245,6 +1277,9 @@ public:
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+
+    void* handle(int accessFlags) const;
+    void ndoffset(size_t* ofs) const;
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
     enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };

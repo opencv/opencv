@@ -222,9 +222,12 @@ struct TLSData
     RNG rng;
     int device;
     ocl::Queue oclQueue;
+    int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 
     static TLSData* get();
 };
+
+namespace ocl { MatAllocator* getOpenCLAllocator(); }
 
 }
 

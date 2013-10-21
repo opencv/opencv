@@ -163,7 +163,9 @@ namespace
 
     void Farneback::impl(const Mat& input0, const Mat& input1, OutputArray dst)
     {
-        calcOpticalFlowFarneback(input0, input1, dst, pyrScale_, numLevels_, winSize_, numIters_, polyN_, polySigma_, flags_);
+        calcOpticalFlowFarneback(input0, input1, (InputOutputArray)dst, pyrScale_,
+                                 numLevels_, winSize_, numIters_,
+                                 polyN_, polySigma_, flags_);
     }
 }
 
@@ -325,7 +327,7 @@ namespace
         alg_->set("iterations", iterations_);
         alg_->set("useInitialFlow", useInitialFlow_);
 
-        alg_->calc(input0, input1, dst);
+        alg_->calc(input0, input1, (InputOutputArray)dst);
     }
 
     void DualTVL1::collectGarbage()

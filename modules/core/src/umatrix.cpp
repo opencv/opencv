@@ -50,15 +50,13 @@ namespace cv {
 enum { UMAT_NLOCKS = 31 };
 static Mutex umatLocks[UMAT_NLOCKS];
 
-void UMatData::init()
+UMatData::UMatData(const MatAllocator* allocator)
 {
+    prevAllocator = currAllocator = allocator;
     urefcount = refcount = 0;
-    data = 0;
+    data = origdata = 0;
     size = 0;
-    dims = 0;
-    for( int i = 0; i < (int)(sizeof(wholestep)/sizeof(wholestep[0])); i++ )
-        wholestep[i] = 0;
-    mapflags = 0;
+    flags = 0;
     handle = 0;
 }
 
@@ -72,99 +70,10 @@ void UMatData::unlock()
     umatLocks[(size_t)(void*)this % UMAT_NLOCKS].unlock();
 }
 
-class StdUMatAllocator : public MatAllocator
-{
-public:
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step, int) const
-    {
-        size_t total = CV_ELEM_SIZE(type);
-        size_t wholestep[CV_MAX_DIM];
-        int i;
-        for( i = dims-1; i >= 0; i++ )
-        {
-            wholestep[i] = total;
-            if( step )
-                step[i] = total;
-            total *= sizes[i];
-        }
-        total = alignSize(total, (int)sizeof(void*));
-        uchar* data = (uchar*)fastMalloc(total + sizeof(UMatData));
-        UMatData* u = (UMatData*)(data + total);
-        u->init();
-        u->dims = dims;
-        u->data = data;
-        u->size = total;
-        for( i = 0; i < 3; i++ )
-            u->wholestep[i] = wholestep[i];
-        u->refcount = 1;
-
-        return u;
-    }
-
-    void deallocate(UMatData* u) const
-    {
-        if(u)
-            fastFree(u->data);
-    }
-
-    bool map(UMatData*, int) const
-    {
-        return true;
-    }
-
-    bool unmap(UMatData* u, int, bool) const
-    {
-        deallocate(u);
-        return true;
-    }
-
-    void download(UMatData* u, void* dstptr, size_t srcofs[],
-                  size_t sz[], size_t dststep[], bool) const
-    {
-        if(!u)
-            return;
-        int i, isz[CV_MAX_DIM];
-        uchar* srcptr = u->data;
-        for( i = 0; i < u->dims; i++ )
-        {
-            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
-                      srcofs[i] + sz[i] <= u->wholestep[i] );
-            if( sz[i] == 0 )
-                return;
-            srcptr += srcofs[i]*u->wholestep[i];
-            isz[i] = (int)u->wholestep[i];
-        }
-        Mat src(u->dims, isz, CV_8U, u->data, u->wholestep);
-        Mat dst(u->dims, isz, CV_8U, dstptr, dststep);
-        src.copyTo(dst);
-    }
-
-    void upload(UMatData* u, const void* srcptr, size_t dstofs[],
-                size_t sz[], size_t srcstep[], bool) const
-    {
-        if(!u)
-            return;
-        int i, isz[CV_MAX_DIM];
-        uchar* dstptr = u->data;
-        for( i = 0; i < u->dims; i++ )
-        {
-            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
-                      dstofs[i] + sz[i] <= u->wholestep[i] );
-            if( sz[i] == 0 )
-                return;
-            dstptr += dstofs[i]*u->wholestep[i];
-            isz[i] = (int)u->wholestep[i];
-        }
-        Mat src(u->dims, isz, CV_8U, (void*)srcptr, srcstep);
-        Mat dst(u->dims, isz, CV_8U, dstptr, u->wholestep);
-        src.copyTo(dst);
-    }
-};
 
 MatAllocator* UMat::getStdAllocator()
 {
-    static StdUMatAllocator allocator;
-    return &allocator;
+    return ocl::getOpenCLAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -271,6 +180,7 @@ static void updateContinuityFlag(UMat& m)
         m.flags &= ~UMat::CONTINUOUS_FLAG;
 }
 
+
 static void finalizeHdr(UMat& m)
 {
     updateContinuityFlag(m);
@@ -279,6 +189,19 @@ static void finalizeHdr(UMat& m)
         m.rows = m.cols = -1;
 }
 
+
+UMat Mat::getUMat(int accessFlags) const
+{
+    UMat hdr;
+    if(!u)
+        return hdr;
+    UMat::getStdAllocator()->allocate(u, accessFlags);
+    setSize(hdr, dims, size.p, step.p);
+    finalizeHdr(hdr);
+    hdr.u = u;
+    hdr.offset = data - datastart;
+    return hdr;
+}
 
 void UMat::create(int d, const int* _sizes, int _type)
 {
@@ -311,13 +234,13 @@ void UMat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, step.p, 0);
+            u = a->allocate(dims, size, _type, step.p);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, step.p, 0);
+                u = a0->allocate(dims, size, _type, step.p);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -338,7 +261,7 @@ void UMat::copySize(const UMat& m)
 
 void UMat::deallocate()
 {
-    (allocator ? allocator : getStdAllocator())->deallocate(u);
+    u->currAllocator->deallocate(u);
 }
 
 
@@ -613,6 +536,106 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
     CV_Error(CV_StsNotImplemented, "");
     // TBD
     return UMat();
+}
+
+
+Mat UMat::getMat(int accessFlags) const
+{
+    if(!u)
+        return Mat();
+    u->currAllocator->map(u, accessFlags);
+    CV_Assert(u->data != 0);
+    Mat hdr(dims, size.p, type(), u->data + offset, step.p);
+    hdr.refcount = &u->refcount;
+    hdr.u = u;
+    hdr.datastart = u->data;
+    hdr.datalimit = hdr.dataend = u->data + u->size;
+    CV_XADD(hdr.refcount, 1);
+    return hdr;
+}
+
+void* UMat::handle(int accessFlags) const
+{
+    if( !u )
+        return 0;
+
+    // check flags: if CPU copy is newer, copy it back to GPU.
+    if( u->deviceCopyObsolete() )
+    {
+        CV_Assert(u->refcount == 0);
+        u->currAllocator->unmap(u);
+    }
+    else if( u->refcount > 0 && (accessFlags & ACCESS_WRITE) )
+    {
+        CV_Error(Error::StsError,
+                 "it's not allowed to access UMat handle for writing "
+                 "while it's mapped; call Mat::release() first for all its mappings");
+    }
+    return u->handle;
+}
+
+void UMat::ndoffset(size_t* ofs) const
+{
+    // offset = step[0]*ofs[0] + step[1]*ofs[1] + step[2]*ofs[2] + ...;
+    size_t t = offset;
+    for( int i = 0; i < dims; i++ )
+    {
+        size_t s = step.p[i];
+        ofs[i] = t / s;
+        t -= ofs[i]*s;
+    }
+}
+
+void UMat::copyTo(OutputArray _dst) const
+{
+    int dtype = _dst.type();
+    if( _dst.fixedType() && dtype != type() )
+    {
+        CV_Assert( channels() == CV_MAT_CN(dtype) );
+        convertTo( _dst, dtype );
+        return;
+    }
+
+    if( empty() )
+    {
+        _dst.release();
+        return;
+    }
+
+    size_t i, sz[CV_MAX_DIM], srcofs[CV_MAX_DIM], dstofs[CV_MAX_DIM];
+    for( i = 0; i < (size_t)dims; i++ )
+        sz[i] = size.p[i];
+    sz[dims-1] *= elemSize();
+    ndoffset(srcofs);
+
+    _dst.create( dims, size, type() );
+    if( _dst.kind() == _InputArray::UMAT )
+    {
+        UMat dst = _dst.getUMat();
+        void* srchandle = handle(ACCESS_READ);
+        void* dsthandle = dst.handle(ACCESS_WRITE);
+        if( srchandle == dsthandle && dst.offset == offset )
+            return;
+        ndoffset(dstofs);
+        CV_Assert(u->currAllocator == dst.u->currAllocator);
+        u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+    }
+    else
+    {
+        Mat dst = _dst.getMat();
+        u->currAllocator->download(u, dst.data, dims, sz, srcofs, step.p, dst.step.p);
+    }
+}
+
+void UMat::convertTo(OutputArray, int, double, double) const
+{
+    CV_Error(Error::StsNotImplemented, "");
+}
+
+UMat& UMat::operator = (const Scalar&)
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return *this;
 }
 
 }

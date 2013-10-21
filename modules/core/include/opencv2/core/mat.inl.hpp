@@ -61,6 +61,7 @@ inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
 inline void* _InputArray::getObj() const { return obj; }
 
 inline _InputArray::_InputArray() { init(0, 0); }
+inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
 inline _InputArray::_InputArray(const UMat& m) { init(UMAT+ACCESS_READ, &m); }
@@ -110,6 +111,7 @@ inline _InputArray::~_InputArray() {}
 ////////////////////////////////////////////////////////////////////////////////////////
 
 inline _OutputArray::_OutputArray() { init(ACCESS_WRITE, 0); }
+inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags|ACCESS_WRITE, _obj); }
 inline _OutputArray::_OutputArray(Mat& m) { init(MAT+ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_WRITE, &vec); }
 inline _OutputArray::_OutputArray(UMat& m) { init(UMAT+ACCESS_WRITE, &m); }
@@ -175,21 +177,22 @@ inline _OutputArray::_OutputArray(gpu::CudaMem& cuda_mem)
 inline _OutputArray::_OutputArray(const Mat& m)
 { init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_WRITE, &m); }
 
-_OutputArray::_OutputArray(const std::vector<Mat>& vec)
+inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 
-_OutputArray::_OutputArray(const gpu::GpuMat& d_mat)
+inline _OutputArray::_OutputArray(const gpu::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_WRITE, &d_mat); }
 
-_OutputArray::_OutputArray(const ogl::Buffer& buf)
+inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
 { init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_WRITE, &buf); }
 
-_OutputArray::_OutputArray(const gpu::CudaMem& cuda_mem)
+inline _OutputArray::_OutputArray(const gpu::CudaMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_MEM + ACCESS_WRITE, &cuda_mem); }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 inline _InputOutputArray::_InputOutputArray() { init(ACCESS_RW, 0); }
+inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags|ACCESS_RW, _obj); }
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT+ACCESS_RW, &m); }
@@ -255,16 +258,16 @@ inline _InputOutputArray::_InputOutputArray(gpu::CudaMem& cuda_mem)
 inline _InputOutputArray::_InputOutputArray(const Mat& m)
 { init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_RW, &m); }
 
-_InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
+inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
 
-_InputOutputArray::_InputOutputArray(const gpu::GpuMat& d_mat)
+inline _InputOutputArray::_InputOutputArray(const gpu::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_RW, &d_mat); }
 
-_InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
+inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 { init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_RW, &buf); }
 
-_InputOutputArray::_InputOutputArray(const gpu::CudaMem& cuda_mem)
+inline _InputOutputArray::_InputOutputArray(const gpu::CudaMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_MEM + ACCESS_RW, &cuda_mem); }
 
 //////////////////////////////////////////// Mat //////////////////////////////////////////
@@ -3322,6 +3325,30 @@ size_t UMat::total() const
         p *= size[i];
     return p;
 }
+
+inline bool UMatData::hostCopyObsolete() const { return (flags & HOST_COPY_OBSOLETE) != 0; }
+inline bool UMatData::deviceCopyObsolete() const { return (flags & DEVICE_COPY_OBSOLETE) != 0; }
+inline bool UMatData::copyOnMap() const { return (flags & COPY_ON_MAP) != 0; }
+inline bool UMatData::tempUMat() const { return (flags & TEMP_UMAT) != 0; }
+inline bool UMatData::tempCopiedUMat() const { return (flags & TEMP_COPIED_UMAT) == TEMP_COPIED_UMAT; }
+
+inline void UMatData::markHostCopyObsolete(bool flag)
+{
+    if(flag)
+        flags |= HOST_COPY_OBSOLETE;
+    else
+        flags &= ~HOST_COPY_OBSOLETE;
+}
+inline void UMatData::markDeviceCopyObsolete(bool flag)
+{
+    if(flag)
+        flags |= DEVICE_COPY_OBSOLETE;
+    else
+        flags &= ~DEVICE_COPY_OBSOLETE;
+}
+
+inline UMatDataAutoLock::UMatDataAutoLock(UMatData* _u) : u(_u) { u->lock(); }
+inline UMatDataAutoLock::~UMatDataAutoLock() { u->unlock(); }
 
 } //cv
 

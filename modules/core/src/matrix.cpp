@@ -51,89 +51,141 @@ namespace cv {
 class StdMatAllocator : public MatAllocator
 {
 public:
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step, int) const
+    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
     {
         size_t total = CV_ELEM_SIZE(type);
-        size_t wholestep[CV_MAX_DIM];
-        int i;
-        for( i = dims-1; i >= 0; i++ )
+        for( int i = dims-1; i >= 0; i++ )
         {
-            wholestep[i] = total;
             if( step )
                 step[i] = total;
             total *= sizes[i];
         }
-        total = alignSize(total, (int)sizeof(void*));
-        uchar* data = (uchar*)fastMalloc(total + sizeof(UMatData));
-        UMatData* u = (UMatData*)(data + total);
-        u->init();
-        u->dims = dims;
-        u->data = data;
+        uchar* data = (uchar*)fastMalloc(total);
+        UMatData* u = new UMatData(this);
+        u->data = u->origdata = data;
         u->size = total;
-        for( i = 0; i < 3; i++ )
-            u->wholestep[i] = wholestep[i];
         u->refcount = 1;
 
         return u;
     }
 
+    bool allocate(UMatData* u, int accessFlags) const
+    {
+        if(!u) return false;
+        if(u->handle != 0)
+            return true;
+        return UMat::getStdAllocator()->allocate(u, accessFlags);
+    }
+
     void deallocate(UMatData* u) const
     {
         if(u)
-            fastFree(u->data);
+            fastFree(u->origdata);
+        delete u;
     }
 
-    bool map(UMatData*, int) const
+    void map(UMatData*, int) const
     {
-        return true;
     }
 
-    bool unmap(UMatData* u, int, bool) const
+    void unmap(UMatData* u) const
     {
-        deallocate(u);
-        return true;
+        if(u->urefcount == 0)
+            deallocate(u);
     }
 
-    void download(UMatData* u, void* dstptr, size_t srcofs[],
-                  size_t sz[], size_t dststep[], bool) const
+    void download(UMatData* u, void* dstptr,
+                  int dims, const size_t sz[],
+                  const size_t srcofs[], const size_t srcstep[],
+                  const size_t dststep[]) const
     {
         if(!u)
             return;
-        int i, isz[CV_MAX_DIM];
+        int isz[CV_MAX_DIM];
         uchar* srcptr = u->data;
-        for( i = 0; i < u->dims; i++ )
+        for( int i = 0; i < dims; i++ )
         {
-            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
-                       srcofs[i] + sz[i] <= u->wholestep[i] );
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
             if( sz[i] == 0 )
                 return;
-            srcptr += srcofs[i]*u->wholestep[i];
-            isz[i] = (int)u->wholestep[i];
+            if( srcofs )
+                srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            isz[i] = (int)sz[i];
         }
-        Mat src(u->dims, isz, CV_8U, u->data, u->wholestep);
-        Mat dst(u->dims, isz, CV_8U, dstptr, dststep);
-        src.copyTo(dst);
+
+        Mat src(dims, isz, CV_8U, srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
     }
 
-    void upload(UMatData* u, const void* srcptr, size_t dstofs[],
-                size_t sz[], size_t srcstep[], bool) const
+    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+                const size_t dstofs[], const size_t dststep[],
+                const size_t srcstep[]) const
     {
         if(!u)
             return;
-        int i, isz[CV_MAX_DIM];
+        int isz[CV_MAX_DIM];
         uchar* dstptr = u->data;
-        for( i = 0; i < u->dims; i++ )
+        for( int i = 0; i < dims; i++ )
         {
-            CV_Assert( sz[i] >= 0 && sz[i] <= (size_t)INT_MAX &&
-                       dstofs[i] + sz[i] <= u->wholestep[i] );
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
             if( sz[i] == 0 )
                 return;
-            dstptr += dstofs[i]*u->wholestep[i];
-            isz[i] = (int)u->wholestep[i];
+            if( dstofs )
+                dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            isz[i] = (int)sz[i];
         }
-        Mat src(u->dims, isz, CV_8U, (void*)srcptr, srcstep);
-        Mat dst(u->dims, isz, CV_8U, dstptr, u->wholestep);
-        src.copyTo(dst);
+
+        Mat src(dims, isz, CV_8U, (void*)srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
+    }
+
+    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dstofs[], const size_t dststep[], bool) const
+    {
+        if(!usrc || !udst)
+            return;
+        int isz[CV_MAX_DIM];
+        uchar* srcptr = usrc->data;
+        uchar* dstptr = udst->data;
+        for( int i = 0; i < dims; i++ )
+        {
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
+            if( sz[i] == 0 )
+                return;
+            if( srcofs )
+                srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            if( dstofs )
+                dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            isz[i] = (int)sz[i];
+        }
+
+        Mat src(dims, isz, CV_8U, srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
     }
 };
 
@@ -258,6 +310,8 @@ static void finalizeHdr(Mat& m)
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
+    if(m.u)
+        m.data = m.datastart = m.u->data;
     if( m.data )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
@@ -309,13 +363,13 @@ void Mat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, step.p, 0);
+            u = a->allocate(dims, size, _type, step.p);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, step.p, 0);
+                u = a0->allocate(dims, size, _type, step.p);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -336,7 +390,7 @@ void Mat::copySize(const Mat& m)
 
 void Mat::deallocate()
 {
-    (allocator ? allocator : getStdAllocator())->unmap(u, 0, false);
+    (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)

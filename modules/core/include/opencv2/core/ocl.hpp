@@ -243,65 +243,6 @@ protected:
 };
 
 
-class CV_EXPORTS Buffer
-{
-public:
-    enum
-    {
-        MEM_READ_WRITE=(1 << 0),
-        MEM_WRITE_ONLY=(1 << 1),
-        MEM_READ_ONLY=(1 << 2),
-        MEM_USE_HOST_PTR=(1 << 3),
-        MEM_ALLOC_HOST_PTR=(1 << 4),
-        MEM_COPY_HOST_PTR=(1 << 5),
-
-        MAP_READ=(1 << 0),
-        MAP_WRITE=(1 << 1),
-        MAP_WRITE_INVALIDATE_REGION=(1 << 2)
-    };
-
-    Buffer();
-    Buffer(int flags, size_t size, void* hostptr);
-    Buffer(const Buffer& buf);
-    ~Buffer();
-
-    Buffer& operator = (const Buffer& buf);
-
-    bool create(int flags, size_t size, void* hostptr);
-    void release();
-    void addref();
-
-    bool read(size_t offset, size_t size, void* dst,
-              bool async, const Queue& q=Queue()) const;
-    bool read(size_t offset[3], size_t size[3], size_t step[2],
-              void* dst, size_t dststep[2],
-              bool async, const Queue& q=Queue()) const;
-
-    bool write(size_t offset, size_t size, const void* src,
-               bool async, const Queue& q=Queue()) const;
-    bool write(size_t offset[3], size_t size[3], size_t step[2],
-               const void* src, size_t srcstep[2],
-               bool async, const Queue& q=Queue()) const;
-
-    bool fill(const void* pattern, size_t pattern_size, size_t offset,
-              size_t size, bool async, const Queue& q=Queue()) const;
-
-    bool copyTo(size_t srcoffset, const Buffer& dst, size_t dstoffset,
-                size_t size, bool async, const Queue& q=Queue()) const;
-    bool copyTo(size_t srcoffset[3], size_t srcstep[2], const Buffer& dst,
-                size_t dstoffset[3], size_t dststep[2], size_t size[3],
-                bool async, const Queue& q=Queue()) const;
-
-    void* map(int mapflags, size_t offset, size_t size,
-              bool async, const Queue& q=Queue()) const;
-    void unmap(void* ptr, const Queue& q=Queue()) const;
-    void* ptr() const;
-
-protected:
-    void* handle;
-};
-
-
 class CV_EXPORTS KernelArg
 {
 public:
@@ -449,10 +390,10 @@ public:
     }
 
     void run(int dims, size_t offset[],
-             size_t globalsize[], size_t localsize[], bool async,
+             size_t globalsize[], size_t localsize[], bool sync,
              const Ptr<Callback>& cleanupCallback=Ptr<Callback>(),
              const Queue& q=Queue());
-    void runTask(bool async,
+    void runTask(bool sync,
                  const Ptr<Callback>& cleanupCallback=Ptr<Callback>(),
                  const Queue& q=Queue());
 

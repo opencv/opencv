@@ -218,30 +218,24 @@ void cv::ocl::oclMat::upload(const Mat &m)
 
 cv::ocl::oclMat::operator cv::_InputArray()
 {
-    _InputArray newInputArray;
-    newInputArray.flags = cv::_InputArray::OCL_MAT;
-    newInputArray.obj   = reinterpret_cast<void *>(this);
-    return newInputArray;
+    return _InputArray(cv::_InputArray::OCL_MAT, this);
 }
 
 cv::ocl::oclMat::operator cv::_OutputArray()
 {
-    _OutputArray newOutputArray;
-    newOutputArray.flags = cv::_InputArray::OCL_MAT;
-    newOutputArray.obj   = reinterpret_cast<void *>(this);
-    return newOutputArray;
+    return _OutputArray(cv::_InputArray::OCL_MAT, this);
 }
 
 cv::ocl::oclMat& cv::ocl::getOclMatRef(InputArray src)
 {
-    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
-    return *reinterpret_cast<oclMat*>(src.obj);
+    CV_Assert(src.kind() == cv::_InputArray::OCL_MAT);
+    return *(oclMat*)src.getObj();
 }
 
 cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
 {
-    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
-    return *reinterpret_cast<oclMat*>(src.obj);
+    CV_Assert(src.kind() == cv::_InputArray::OCL_MAT);
+    return *(oclMat*)src.getObj();
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
