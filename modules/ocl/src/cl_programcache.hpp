@@ -52,7 +52,6 @@ class ProgramCache
 protected:
     ProgramCache();
     ~ProgramCache();
-    friend class std::auto_ptr<ProgramCache>;
 public:
     static ProgramCache *getProgramCache();
 
