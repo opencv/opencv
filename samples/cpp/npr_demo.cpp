@@ -11,7 +11,6 @@
 * 2) Detail Enhancement
 * 3) Pencil sketch/Color Pencil Drawing
 * 4) Stylization
-* 5) Edge Enhancement
 *
 */
 
@@ -57,10 +56,9 @@ int main(int argc, char* argv[])
     cout << "2) Detail Enhancement" << endl;
     cout << "3) Pencil sketch/Color Pencil Drawing" << endl;
     cout << "4) Stylization" << endl;
-    cout << "5) Edge Enhancement" << endl;
     cout << endl;
 
-    cout << "Press number 1-5 to choose from above techniques: ";
+    cout << "Press number 1-4 to choose from above techniques: ";
 
     cin >> num;
 
@@ -94,11 +92,5 @@ int main(int argc, char* argv[])
         stylization(I,img);
         imshow("Stylization",img);
     }
-    else if(num == 5)
-    {
-        edgeEnhance(I,img);
-        imshow("Edge Enhance",img);
-    }
-
     waitKey(0);
 }

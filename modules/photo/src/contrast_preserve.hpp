@@ -74,6 +74,13 @@ class Decolor
         void grayImContruct(vector <double> &wei, Mat img, Mat &Gray);
 };
 
+int round_num(double a);
+
+int round_num(double a)
+{
+    return int(a + 0.5);
+}
+
 double Decolor::energyCalcu(vector <double> &Cg, vector < vector <double> > &polyGrad, vector <double> &wei)
 {
     vector <double> energy;
@@ -228,7 +235,7 @@ void Decolor::weak_order(Mat img, vector <double> &alf)
     if((h + w) > 800)
     {
         sizefactor = (double)800/(h+w);
-        resize(img,img,Size(round(h*sizefactor),round(w*sizefactor)));
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
     }
 
     Mat curIm = Mat(img.size(),CV_32FC1);
@@ -304,7 +311,7 @@ void Decolor::grad_system(Mat img, vector < vector < double > > &polyGrad,
     if((h + w) > 800)
     {
         sizefactor = (double)800/(h+w);
-        resize(img,img,Size(round(h*sizefactor),round(w*sizefactor)));
+        resize(img,img,Size(round_num(h*sizefactor),round_num(w*sizefactor)));
     }
 
     h = img.size().height;

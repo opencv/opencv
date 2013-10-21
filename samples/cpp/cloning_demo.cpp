@@ -43,7 +43,7 @@ int main()
     cout << "6) Texture Flattening " << endl;
     cout << endl;
     cout << "Press number 1-6 to choose from above techniques: ";
-    int num;
+    int num = 1;
     cin >> num;
     cout << endl;
 

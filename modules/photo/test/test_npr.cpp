@@ -128,19 +128,3 @@ TEST(Photo_NPR_Stylization, regression)
     imwrite(folder + "stylized.png", result);
 
 }
-
-TEST(Photo_NPR_EdgeEnhance, regression)
-{
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
-    string original_path = folder + "test1.png";
-
-    Mat source = imread(original_path, IMREAD_COLOR);
-
-    ASSERT_FALSE(source.empty()) << "Could not load input image " << original_path;
-
-    Mat result;
-    edgeEnhance(source,result);
-
-    imwrite(folder + "edge_enhanced.png", result);
-
-}

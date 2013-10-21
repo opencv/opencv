@@ -61,7 +61,7 @@ class Domain_Filter
         void getGradienty( const Mat &img, Mat &gy);
         void diffx(const Mat &img, Mat &temp);
         void diffy(const Mat &img, Mat &temp);
-        void find_magnitude(Mat &img, Mat &mag, int flags);
+        void find_magnitude(Mat &img, Mat &mag);
         void compute_boxfilter(Mat &output, Mat &hz, Mat &psketch, float radius);
         void compute_Rfilter(Mat &O, Mat &horiz, float sigma_h);
         void compute_NCfilter(Mat &O, Mat &horiz, Mat &psketch, float radius);
@@ -131,7 +131,7 @@ void Domain_Filter::getGradienty( const Mat &img, Mat &gy)
             }
 }
 
-void Domain_Filter::find_magnitude(Mat &img, Mat &mag, int flags)
+void Domain_Filter::find_magnitude(Mat &img, Mat &mag)
 {
     int h = img.rows;
     int w = img.cols;
@@ -148,28 +148,14 @@ void Domain_Filter::find_magnitude(Mat &img, Mat &mag, int flags)
     Mat magXB = Mat(h, w, CV_32FC1);
     Mat magYB = Mat(h, w, CV_32FC1);
 
-    if(flags == 1)
-    {
-        getGradientx(planes[0], magXR);
-        getGradienty(planes[0], magYR);
+    Sobel(planes[0], magXR, CV_32FC1, 1, 0, 3);
+    Sobel(planes[0], magYR, CV_32FC1, 0, 1, 3);
 
-        getGradientx(planes[1], magXG);
-        getGradienty(planes[1], magYG);
+    Sobel(planes[1], magXG, CV_32FC1, 1, 0, 3);
+    Sobel(planes[1], magYG, CV_32FC1, 0, 1, 3);
 
-        getGradientx(planes[2], magXR);
-        getGradienty(planes[2], magYR);
-    }
-    else if(flags == 2)
-    {
-        Sobel(planes[0], magXR, CV_32FC1, 1, 0, 3);
-        Sobel(planes[0], magYR, CV_32FC1, 0, 1, 3);
-
-        Sobel(planes[1], magXG, CV_32FC1, 1, 0, 3);
-        Sobel(planes[1], magYG, CV_32FC1, 0, 1, 3);
-
-        Sobel(planes[2], magXB, CV_32FC1, 1, 0, 3);
-        Sobel(planes[2], magYB, CV_32FC1, 0, 1, 3);
-    }
+    Sobel(planes[2], magXB, CV_32FC1, 1, 0, 3);
+    Sobel(planes[2], magYB, CV_32FC1, 0, 1, 3);
 
     Mat mag1 = Mat(h,w,CV_32FC1);
     Mat mag2 = Mat(h,w,CV_32FC1);
