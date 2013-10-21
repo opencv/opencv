@@ -138,9 +138,9 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
     const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
     int step = (int)img.step;
 
-#if 1
     float x, y;
     int ix, iy;
+#if 1
 #define GET_VALUE(idx) \
        (x = pattern[idx].x*a - pattern[idx].y*b, \
         y = pattern[idx].x*b + pattern[idx].y*a, \
@@ -148,8 +148,6 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
         iy = cvRound(y), \
         *(center + iy*step + ix) )
 #else
-    float x, y;
-    int ix, iy;
     #define GET_VALUE(idx) \
         (x = pattern[idx].x*a - pattern[idx].y*b, \
         y = pattern[idx].x*b + pattern[idx].y*a, \
