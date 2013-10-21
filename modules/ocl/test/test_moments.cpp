@@ -21,7 +21,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
         type = GET_PARAM(0);
         test_contours = GET_PARAM(1);
         cv::Size size(10*MWIDTH, 10*MHEIGHT);
-        mat1 = randomMat(size, type, 5, 16, false);
+        mat1 = randomMat(size, type, 0, 256, false);
     }
 
     void Compare(Moments& cpu, Moments& gpu)
@@ -38,6 +38,21 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
 OCL_TEST_P(MomentsTest, Mat)
 {
     bool binaryImage = 0;
+    //Only double and float are supported for the source oclMat
+    //We convert the type to CV_32FC1 if the type of source Mat is neither CV_32FC1 nor CV_64FC1
+    //If double is not supported, we also change the type to CV_32FC1
+    if(mat1.type() == CV_64FC1)
+    {
+        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+        {
+            mat1.convertTo(mat1, CV_32FC1);
+        }
+    }else
+    {
+        mat1.convertTo(mat1, CV_32FC1);
+    }
+
+    oclMat src_d(mat1);
 
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -53,18 +68,18 @@ OCL_TEST_P(MomentsTest, Mat)
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 Moments m = moments( contours[i], false );
-                Moments dm = ocl::ocl_moments( contours[i], false );
+                Moments dm = ocl::ocl_moments( contours[i], false, src_d);
                 Compare(m, dm);
             }
         }
         cv::_InputArray _array(mat1);
         cv::Moments CvMom = cv::moments(_array, binaryImage);
-        cv::Moments oclMom = cv::ocl::ocl_moments(_array, binaryImage);
+        cv::Moments oclMom = cv::ocl::ocl_moments(_array, binaryImage, src_d);
 
         Compare(CvMom, oclMom);
 
     }
 }
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MomentsTest, Combine(
-                            Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_64FC1), Values(true,false)));
+    Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1, CV_64FC1), Values(false, true)));
 #endif // HAVE_OPENCL
