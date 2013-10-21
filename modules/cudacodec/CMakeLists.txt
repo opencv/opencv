@@ -4,9 +4,9 @@ endif()
 
 set(the_description "CUDA-accelerated Video Encoding/Decoding")
 
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127 /wd4324 /wd4512 -Wundef -Wmissing-declarations)
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127 /wd4324 /wd4512 -Wundef)
 
-ocv_add_module(cudacodec opencv_highgui)
+ocv_add_module(cudacodec opencv_highgui OPTIONAL opencv_cudev)
 
 ocv_module_include_directories()
 ocv_glob_module_sources()
