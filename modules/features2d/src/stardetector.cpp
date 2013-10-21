@@ -456,7 +456,7 @@ void StarDetector::operator()(const Mat& img, std::vector<KeyPoint>& keypoints) 
     int border;
 
     // Use 32-bit integers if we won't overflow in the integral image
-    if ((img.type() == CV_8U || img.type() == CV_8S) &&
+    if ((img.type() == CV_8UC1 || img.type() == CV_8SC1) &&
         (img.rows * img.cols) < 8388608 ) // 8388608 = 2 ^ (32 - 8(bit depth) - 1(sign bit))
         border = StarDetectorComputeResponses<int>( img, responses, sizes, maxSize, CV_32S );
     else
