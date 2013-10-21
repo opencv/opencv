@@ -399,8 +399,8 @@ protected:
     void buildPattern();
 
     template <typename imgType, typename iiType>
-    int meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
-                      const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
+    imgType meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
+                           const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
 
     template <typename srcMatType, typename iiMatType>
     void computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;

@@ -254,11 +254,7 @@ template <typename srcMatType, typename iiMatType>
 void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const {
 
     Mat imgIntegral;
-    if (sizeof(iiMatType) == sizeof(double))
-        integral(image, imgIntegral, CV_64F);
-    else
-        integral(image, imgIntegral, CV_32S);
-
+    integral(image, imgIntegral, DataType<iiMatType>::type);
     std::vector<int> kpScaleIdx(keypoints.size()); // used to save pattern scale index corresponding to each keypoints
     const std::vector<int>::iterator ScaleIdxBegin = kpScaleIdx.begin(); // used in std::vector erase function
     const std::vector<cv::KeyPoint>::iterator kpBegin = keypoints.begin(); // used in std::vector erase function
@@ -481,12 +477,12 @@ void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoin
 
 // simply take average on a square patch, not even gaussian approx
 template <typename imgType, typename iiType>
-int FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
-                            const float kp_x,
-                            const float kp_y,
-                            const unsigned int scale,
-                            const unsigned int rot,
-                            const unsigned int point) const {
+imgType FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
+                              const float kp_x,
+                              const float kp_y,
+                              const unsigned int scale,
+                              const unsigned int rot,
+                              const unsigned int point) const {
     // get point position in image
     const PatternPoint& FreakPoint = patternLookup[scale*FREAK_NB_ORIENTATION*FREAK_NB_POINTS + rot*FREAK_NB_POINTS + point];
     const float xf = FreakPoint.x+kp_x;

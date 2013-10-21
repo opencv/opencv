@@ -285,8 +285,8 @@ StarDetectorComputeResponses( const Mat& img, Mat& responses, Mat& sizes,
             for(int i = 0; i <= maxIdx; i++ )
             {
                 const iiMatType** p = (const iiMatType**)&f[i].p[0];
-                vals[i] = p[0][ofs] - p[1][ofs] - p[2][ofs] + p[3][ofs] +
-                    p[4][ofs] - p[5][ofs] - p[6][ofs] + p[7][ofs];
+                vals[i] = (int)(p[0][ofs] - p[1][ofs] - p[2][ofs] + p[3][ofs] +
+                    p[4][ofs] - p[5][ofs] - p[6][ofs] + p[7][ofs]);
             }
             for(int i = 0; i < npatterns; i++ )
             {
