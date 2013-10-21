@@ -4,7 +4,7 @@ endif()
 
 set(the_description "CUDA device layer")
 
-ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4189 /wd4505 -Wundef -Wmissing-declarations -Wunused-function -Wunused-variable)
+ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4189 /wd4505 -Wundef -Wmissing-declarations -Wunused-function -Wunused-variable -Wenum-compare)
 
 ocv_add_module(cudev)
 

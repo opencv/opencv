@@ -40,43 +40,22 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
+
+namespace
 {
-    struct VAbsDiff4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vabsdiff4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VAbsDiff4() {}
-        __host__ __device__ __forceinline__ VAbsDiff4(const VAbsDiff4&) {}
-    };
-
-    struct VAbsDiff2 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vabsdiff2(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VAbsDiff2() {}
-        __host__ __device__ __forceinline__ VAbsDiff2(const VAbsDiff2&) {}
-    };
-
     __device__ __forceinline__ int _abs(int a)
     {
         return ::abs(a);
@@ -90,58 +69,120 @@ namespace arithm
         return ::fabs(a);
     }
 
-    template <typename T> struct AbsDiffMat : binary_function<T, T, T>
+    template <typename T> struct AbsDiffOp1 : binary_function<T, T, T>
     {
         __device__ __forceinline__ T operator ()(T a, T b) const
         {
             return saturate_cast<T>(_abs(a - b));
         }
-
-        __host__ __device__ __forceinline__ AbsDiffMat() {}
-        __host__ __device__ __forceinline__ AbsDiffMat(const AbsDiffMat&) {}
-    };
-}
-
-namespace cv { namespace cuda { namespace device
-{
-    template <> struct TransformFunctorTraits< arithm::VAbsDiff4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
     };
 
-    template <> struct TransformFunctorTraits< arithm::VAbsDiff2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
     };
-
-    template <typename T> struct TransformFunctorTraits< arithm::AbsDiffMat<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
     {
+        enum {
+            shift = 1
+        };
     };
-}}}
-
-namespace arithm
-{
-    void absDiffMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VAbsDiff4(), WithOutMask(), stream);
-    }
-
-    void absDiffMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VAbsDiff2(), WithOutMask(), stream);
-    }
 
     template <typename T>
-    void absDiffMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
+    void absDiffMat_v1(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
     {
-        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, AbsDiffMat<T>(), WithOutMask(), stream);
+        gridTransformBinary_< TransformPolicy<T> >(globPtr<T>(src1), globPtr<T>(src2), globPtr<T>(dst), AbsDiffOp1<T>(), stream);
     }
 
-    template void absDiffMat<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
-    template void absDiffMat<double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
+    struct AbsDiffOp2 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vabsdiff2(a, b);
+        }
+    };
+
+    void absDiffMat_v2(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 1;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, AbsDiffOp2(), stream);
+    }
+
+    struct AbsDiffOp4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vabsdiff4(a, b);
+        }
+    };
+
+    void absDiffMat_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
+
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, AbsDiffOp4(), stream);
+    }
 }
 
-#endif // CUDA_DISABLER
+void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
+{
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+    static const func_t funcs[] =
+    {
+        absDiffMat_v1<uchar>,
+        absDiffMat_v1<schar>,
+        absDiffMat_v1<ushort>,
+        absDiffMat_v1<short>,
+        absDiffMat_v1<int>,
+        absDiffMat_v1<float>,
+        absDiffMat_v1<double>
+    };
+
+    const int depth = src1.depth();
+
+    CV_DbgAssert( depth <= CV_64F );
+
+    GpuMat src1_ = src1.reshape(1);
+    GpuMat src2_ = src2.reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    if (depth == CV_8U || depth == CV_16U)
+    {
+        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
+        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
+        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
+
+        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
+
+        if (isAllAligned)
+        {
+            if (depth == CV_8U && (src1_.cols & 3) == 0)
+            {
+                absDiffMat_v4(src1_, src2_, dst_, stream);
+                return;
+            }
+            else if (depth == CV_16U && (src1_.cols & 1) == 0)
+            {
+                absDiffMat_v2(src1_, src2_, dst_, stream);
+                return;
+            }
+        }
+    }
+
+    const func_t func = funcs[depth];
+
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src1_, src2_, dst_, stream);
+}
+
+#endif

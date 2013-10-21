@@ -40,325 +40,553 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    template <typename T> struct UseDouble_
+    template <typename T1, typename T2, typename D, typename S> struct AddWeightedOp : binary_function<T1, T2, D>
     {
-        enum {value = 0};
-    };
-    template <> struct UseDouble_<double>
-    {
-        enum {value = 1};
-    };
-    template <typename T1, typename T2, typename D> struct UseDouble
-    {
-        enum {value = (UseDouble_<T1>::value || UseDouble_<T2>::value || UseDouble_<D>::value)};
-    };
-
-    template <typename T1, typename T2, typename D, bool useDouble> struct AddWeighted_;
-    template <typename T1, typename T2, typename D> struct AddWeighted_<T1, T2, D, false> : binary_function<T1, T2, D>
-    {
-        float alpha;
-        float beta;
-        float gamma;
-
-        __host__ AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(static_cast<float>(alpha_)), beta(static_cast<float>(beta_)), gamma(static_cast<float>(gamma_)) {}
+        S alpha;
+        S beta;
+        S gamma;
 
         __device__ __forceinline__ D operator ()(T1 a, T2 b) const
         {
             return saturate_cast<D>(a * alpha + b * beta + gamma);
         }
     };
-    template <typename T1, typename T2, typename D> struct AddWeighted_<T1, T2, D, true> : binary_function<T1, T2, D>
-    {
-        double alpha;
-        double beta;
-        double gamma;
 
-        __host__ AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
-
-        __device__ __forceinline__ D operator ()(T1 a, T2 b) const
-        {
-            return saturate_cast<D>(a * alpha + b * beta + gamma);
-        }
-    };
-    template <typename T1, typename T2, typename D> struct AddWeighted : AddWeighted_<T1, T2, D, UseDouble<T1, T2, D>::value>
+    template <typename ScalarDepth> struct TransformPolicy : DefaultTransformPolicy
     {
-        AddWeighted(double alpha_, double beta_, double gamma_) : AddWeighted_<T1, T2, D, UseDouble<T1, T2, D>::value>(alpha_, beta_, gamma_) {}
     };
+    template <> struct TransformPolicy<double> : DefaultTransformPolicy
+    {
+        enum {
+            shift = 1
+        };
+    };
+
+    template <typename T1, typename T2, typename D>
+    void addWeightedImpl(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, Stream& stream)
+    {
+        typedef typename LargerType<T1, T2>::type larger_type1;
+        typedef typename LargerType<larger_type1, D>::type larger_type2;
+        typedef typename LargerType<larger_type2, float>::type scalar_type;
+
+        AddWeightedOp<T1, T2, D, scalar_type> op;
+        op.alpha = static_cast<scalar_type>(alpha);
+        op.beta = static_cast<scalar_type>(beta);
+        op.gamma = static_cast<scalar_type>(gamma);
+
+        gridTransformBinary_< TransformPolicy<scalar_type> >(globPtr<T1>(src1), globPtr<T2>(src2), globPtr<D>(dst), op, stream);
+    }
 }
 
-namespace cv { namespace cuda { namespace device
+void cv::cuda::addWeighted(InputArray _src1, double alpha, InputArray _src2, double beta, double gamma, OutputArray _dst, int ddepth, Stream& stream)
 {
-    template <typename T1, typename T2, typename D, size_t src1_size, size_t src2_size, size_t dst_size> struct AddWeightedTraits : DefaultTransformFunctorTraits< arithm::AddWeighted<T1, T2, D> >
+    typedef void (*func_t)(const GpuMat& src1, double alpha, const GpuMat& src2, double beta, double gamma, GpuMat& dst, Stream& stream);
+    static const func_t funcs[7][7][7] =
     {
-    };
-    template <typename T1, typename T2, typename D, size_t src_size, size_t dst_size> struct AddWeightedTraits<T1, T2, D, src_size, src_size, dst_size> : arithm::ArithmFuncTraits<src_size, dst_size>
-    {
+        {
+            {
+                addWeightedImpl<uchar, uchar, uchar >,
+                addWeightedImpl<uchar, uchar, schar >,
+                addWeightedImpl<uchar, uchar, ushort>,
+                addWeightedImpl<uchar, uchar, short >,
+                addWeightedImpl<uchar, uchar, int   >,
+                addWeightedImpl<uchar, uchar, float >,
+                addWeightedImpl<uchar, uchar, double>
+            },
+            {
+                addWeightedImpl<uchar, schar, uchar >,
+                addWeightedImpl<uchar, schar, schar >,
+                addWeightedImpl<uchar, schar, ushort>,
+                addWeightedImpl<uchar, schar, short >,
+                addWeightedImpl<uchar, schar, int   >,
+                addWeightedImpl<uchar, schar, float >,
+                addWeightedImpl<uchar, schar, double>
+            },
+            {
+                addWeightedImpl<uchar, ushort, uchar >,
+                addWeightedImpl<uchar, ushort, schar >,
+                addWeightedImpl<uchar, ushort, ushort>,
+                addWeightedImpl<uchar, ushort, short >,
+                addWeightedImpl<uchar, ushort, int   >,
+                addWeightedImpl<uchar, ushort, float >,
+                addWeightedImpl<uchar, ushort, double>
+            },
+            {
+                addWeightedImpl<uchar, short, uchar >,
+                addWeightedImpl<uchar, short, schar >,
+                addWeightedImpl<uchar, short, ushort>,
+                addWeightedImpl<uchar, short, short >,
+                addWeightedImpl<uchar, short, int   >,
+                addWeightedImpl<uchar, short, float >,
+                addWeightedImpl<uchar, short, double>
+            },
+            {
+                addWeightedImpl<uchar, int, uchar >,
+                addWeightedImpl<uchar, int, schar >,
+                addWeightedImpl<uchar, int, ushort>,
+                addWeightedImpl<uchar, int, short >,
+                addWeightedImpl<uchar, int, int   >,
+                addWeightedImpl<uchar, int, float >,
+                addWeightedImpl<uchar, int, double>
+            },
+            {
+                addWeightedImpl<uchar, float, uchar >,
+                addWeightedImpl<uchar, float, schar >,
+                addWeightedImpl<uchar, float, ushort>,
+                addWeightedImpl<uchar, float, short >,
+                addWeightedImpl<uchar, float, int   >,
+                addWeightedImpl<uchar, float, float >,
+                addWeightedImpl<uchar, float, double>
+            },
+            {
+                addWeightedImpl<uchar, double, uchar >,
+                addWeightedImpl<uchar, double, schar >,
+                addWeightedImpl<uchar, double, ushort>,
+                addWeightedImpl<uchar, double, short >,
+                addWeightedImpl<uchar, double, int   >,
+                addWeightedImpl<uchar, double, float >,
+                addWeightedImpl<uchar, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<schar, uchar, uchar >*/,
+                0/*addWeightedImpl<schar, uchar, schar >*/,
+                0/*addWeightedImpl<schar, uchar, ushort>*/,
+                0/*addWeightedImpl<schar, uchar, short >*/,
+                0/*addWeightedImpl<schar, uchar, int   >*/,
+                0/*addWeightedImpl<schar, uchar, float >*/,
+                0/*addWeightedImpl<schar, uchar, double>*/
+            },
+            {
+                addWeightedImpl<schar, schar, uchar >,
+                addWeightedImpl<schar, schar, schar >,
+                addWeightedImpl<schar, schar, ushort>,
+                addWeightedImpl<schar, schar, short >,
+                addWeightedImpl<schar, schar, int   >,
+                addWeightedImpl<schar, schar, float >,
+                addWeightedImpl<schar, schar, double>
+            },
+            {
+                addWeightedImpl<schar, ushort, uchar >,
+                addWeightedImpl<schar, ushort, schar >,
+                addWeightedImpl<schar, ushort, ushort>,
+                addWeightedImpl<schar, ushort, short >,
+                addWeightedImpl<schar, ushort, int   >,
+                addWeightedImpl<schar, ushort, float >,
+                addWeightedImpl<schar, ushort, double>
+            },
+            {
+                addWeightedImpl<schar, short, uchar >,
+                addWeightedImpl<schar, short, schar >,
+                addWeightedImpl<schar, short, ushort>,
+                addWeightedImpl<schar, short, short >,
+                addWeightedImpl<schar, short, int   >,
+                addWeightedImpl<schar, short, float >,
+                addWeightedImpl<schar, short, double>
+            },
+            {
+                addWeightedImpl<schar, int, uchar >,
+                addWeightedImpl<schar, int, schar >,
+                addWeightedImpl<schar, int, ushort>,
+                addWeightedImpl<schar, int, short >,
+                addWeightedImpl<schar, int, int   >,
+                addWeightedImpl<schar, int, float >,
+                addWeightedImpl<schar, int, double>
+            },
+            {
+                addWeightedImpl<schar, float, uchar >,
+                addWeightedImpl<schar, float, schar >,
+                addWeightedImpl<schar, float, ushort>,
+                addWeightedImpl<schar, float, short >,
+                addWeightedImpl<schar, float, int   >,
+                addWeightedImpl<schar, float, float >,
+                addWeightedImpl<schar, float, double>
+            },
+            {
+                addWeightedImpl<schar, double, uchar >,
+                addWeightedImpl<schar, double, schar >,
+                addWeightedImpl<schar, double, ushort>,
+                addWeightedImpl<schar, double, short >,
+                addWeightedImpl<schar, double, int   >,
+                addWeightedImpl<schar, double, float >,
+                addWeightedImpl<schar, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<ushort, uchar, uchar >*/,
+                0/*addWeightedImpl<ushort, uchar, schar >*/,
+                0/*addWeightedImpl<ushort, uchar, ushort>*/,
+                0/*addWeightedImpl<ushort, uchar, short >*/,
+                0/*addWeightedImpl<ushort, uchar, int   >*/,
+                0/*addWeightedImpl<ushort, uchar, float >*/,
+                0/*addWeightedImpl<ushort, uchar, double>*/
+            },
+            {
+                0/*addWeightedImpl<ushort, schar, uchar >*/,
+                0/*addWeightedImpl<ushort, schar, schar >*/,
+                0/*addWeightedImpl<ushort, schar, ushort>*/,
+                0/*addWeightedImpl<ushort, schar, short >*/,
+                0/*addWeightedImpl<ushort, schar, int   >*/,
+                0/*addWeightedImpl<ushort, schar, float >*/,
+                0/*addWeightedImpl<ushort, schar, double>*/
+            },
+            {
+                addWeightedImpl<ushort, ushort, uchar >,
+                addWeightedImpl<ushort, ushort, schar >,
+                addWeightedImpl<ushort, ushort, ushort>,
+                addWeightedImpl<ushort, ushort, short >,
+                addWeightedImpl<ushort, ushort, int   >,
+                addWeightedImpl<ushort, ushort, float >,
+                addWeightedImpl<ushort, ushort, double>
+            },
+            {
+                addWeightedImpl<ushort, short, uchar >,
+                addWeightedImpl<ushort, short, schar >,
+                addWeightedImpl<ushort, short, ushort>,
+                addWeightedImpl<ushort, short, short >,
+                addWeightedImpl<ushort, short, int   >,
+                addWeightedImpl<ushort, short, float >,
+                addWeightedImpl<ushort, short, double>
+            },
+            {
+                addWeightedImpl<ushort, int, uchar >,
+                addWeightedImpl<ushort, int, schar >,
+                addWeightedImpl<ushort, int, ushort>,
+                addWeightedImpl<ushort, int, short >,
+                addWeightedImpl<ushort, int, int   >,
+                addWeightedImpl<ushort, int, float >,
+                addWeightedImpl<ushort, int, double>
+            },
+            {
+                addWeightedImpl<ushort, float, uchar >,
+                addWeightedImpl<ushort, float, schar >,
+                addWeightedImpl<ushort, float, ushort>,
+                addWeightedImpl<ushort, float, short >,
+                addWeightedImpl<ushort, float, int   >,
+                addWeightedImpl<ushort, float, float >,
+                addWeightedImpl<ushort, float, double>
+            },
+            {
+                addWeightedImpl<ushort, double, uchar >,
+                addWeightedImpl<ushort, double, schar >,
+                addWeightedImpl<ushort, double, ushort>,
+                addWeightedImpl<ushort, double, short >,
+                addWeightedImpl<ushort, double, int   >,
+                addWeightedImpl<ushort, double, float >,
+                addWeightedImpl<ushort, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<short, uchar, uchar >*/,
+                0/*addWeightedImpl<short, uchar, schar >*/,
+                0/*addWeightedImpl<short, uchar, ushort>*/,
+                0/*addWeightedImpl<short, uchar, short >*/,
+                0/*addWeightedImpl<short, uchar, int   >*/,
+                0/*addWeightedImpl<short, uchar, float >*/,
+                0/*addWeightedImpl<short, uchar, double>*/
+            },
+            {
+                0/*addWeightedImpl<short, schar, uchar >*/,
+                0/*addWeightedImpl<short, schar, schar >*/,
+                0/*addWeightedImpl<short, schar, ushort>*/,
+                0/*addWeightedImpl<short, schar, short >*/,
+                0/*addWeightedImpl<short, schar, int   >*/,
+                0/*addWeightedImpl<short, schar, float >*/,
+                0/*addWeightedImpl<short, schar, double>*/
+            },
+            {
+                0/*addWeightedImpl<short, ushort, uchar >*/,
+                0/*addWeightedImpl<short, ushort, schar >*/,
+                0/*addWeightedImpl<short, ushort, ushort>*/,
+                0/*addWeightedImpl<short, ushort, short >*/,
+                0/*addWeightedImpl<short, ushort, int   >*/,
+                0/*addWeightedImpl<short, ushort, float >*/,
+                0/*addWeightedImpl<short, ushort, double>*/
+            },
+            {
+                addWeightedImpl<short, short, uchar >,
+                addWeightedImpl<short, short, schar >,
+                addWeightedImpl<short, short, ushort>,
+                addWeightedImpl<short, short, short >,
+                addWeightedImpl<short, short, int   >,
+                addWeightedImpl<short, short, float >,
+                addWeightedImpl<short, short, double>
+            },
+            {
+                addWeightedImpl<short, int, uchar >,
+                addWeightedImpl<short, int, schar >,
+                addWeightedImpl<short, int, ushort>,
+                addWeightedImpl<short, int, short >,
+                addWeightedImpl<short, int, int   >,
+                addWeightedImpl<short, int, float >,
+                addWeightedImpl<short, int, double>
+            },
+            {
+                addWeightedImpl<short, float, uchar >,
+                addWeightedImpl<short, float, schar >,
+                addWeightedImpl<short, float, ushort>,
+                addWeightedImpl<short, float, short >,
+                addWeightedImpl<short, float, int   >,
+                addWeightedImpl<short, float, float >,
+                addWeightedImpl<short, float, double>
+            },
+            {
+                addWeightedImpl<short, double, uchar >,
+                addWeightedImpl<short, double, schar >,
+                addWeightedImpl<short, double, ushort>,
+                addWeightedImpl<short, double, short >,
+                addWeightedImpl<short, double, int   >,
+                addWeightedImpl<short, double, float >,
+                addWeightedImpl<short, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<int, uchar, uchar >*/,
+                0/*addWeightedImpl<int, uchar, schar >*/,
+                0/*addWeightedImpl<int, uchar, ushort>*/,
+                0/*addWeightedImpl<int, uchar, short >*/,
+                0/*addWeightedImpl<int, uchar, int   >*/,
+                0/*addWeightedImpl<int, uchar, float >*/,
+                0/*addWeightedImpl<int, uchar, double>*/
+            },
+            {
+                0/*addWeightedImpl<int, schar, uchar >*/,
+                0/*addWeightedImpl<int, schar, schar >*/,
+                0/*addWeightedImpl<int, schar, ushort>*/,
+                0/*addWeightedImpl<int, schar, short >*/,
+                0/*addWeightedImpl<int, schar, int   >*/,
+                0/*addWeightedImpl<int, schar, float >*/,
+                0/*addWeightedImpl<int, schar, double>*/
+            },
+            {
+                0/*addWeightedImpl<int, ushort, uchar >*/,
+                0/*addWeightedImpl<int, ushort, schar >*/,
+                0/*addWeightedImpl<int, ushort, ushort>*/,
+                0/*addWeightedImpl<int, ushort, short >*/,
+                0/*addWeightedImpl<int, ushort, int   >*/,
+                0/*addWeightedImpl<int, ushort, float >*/,
+                0/*addWeightedImpl<int, ushort, double>*/
+            },
+            {
+                0/*addWeightedImpl<int, short, uchar >*/,
+                0/*addWeightedImpl<int, short, schar >*/,
+                0/*addWeightedImpl<int, short, ushort>*/,
+                0/*addWeightedImpl<int, short, short >*/,
+                0/*addWeightedImpl<int, short, int   >*/,
+                0/*addWeightedImpl<int, short, float >*/,
+                0/*addWeightedImpl<int, short, double>*/
+            },
+            {
+                addWeightedImpl<int, int, uchar >,
+                addWeightedImpl<int, int, schar >,
+                addWeightedImpl<int, int, ushort>,
+                addWeightedImpl<int, int, short >,
+                addWeightedImpl<int, int, int   >,
+                addWeightedImpl<int, int, float >,
+                addWeightedImpl<int, int, double>
+            },
+            {
+                addWeightedImpl<int, float, uchar >,
+                addWeightedImpl<int, float, schar >,
+                addWeightedImpl<int, float, ushort>,
+                addWeightedImpl<int, float, short >,
+                addWeightedImpl<int, float, int   >,
+                addWeightedImpl<int, float, float >,
+                addWeightedImpl<int, float, double>
+            },
+            {
+                addWeightedImpl<int, double, uchar >,
+                addWeightedImpl<int, double, schar >,
+                addWeightedImpl<int, double, ushort>,
+                addWeightedImpl<int, double, short >,
+                addWeightedImpl<int, double, int   >,
+                addWeightedImpl<int, double, float >,
+                addWeightedImpl<int, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<float, uchar, uchar >*/,
+                0/*addWeightedImpl<float, uchar, schar >*/,
+                0/*addWeightedImpl<float, uchar, ushort>*/,
+                0/*addWeightedImpl<float, uchar, short >*/,
+                0/*addWeightedImpl<float, uchar, int   >*/,
+                0/*addWeightedImpl<float, uchar, float >*/,
+                0/*addWeightedImpl<float, uchar, double>*/
+            },
+            {
+                0/*addWeightedImpl<float, schar, uchar >*/,
+                0/*addWeightedImpl<float, schar, schar >*/,
+                0/*addWeightedImpl<float, schar, ushort>*/,
+                0/*addWeightedImpl<float, schar, short >*/,
+                0/*addWeightedImpl<float, schar, int   >*/,
+                0/*addWeightedImpl<float, schar, float >*/,
+                0/*addWeightedImpl<float, schar, double>*/
+            },
+            {
+                0/*addWeightedImpl<float, ushort, uchar >*/,
+                0/*addWeightedImpl<float, ushort, schar >*/,
+                0/*addWeightedImpl<float, ushort, ushort>*/,
+                0/*addWeightedImpl<float, ushort, short >*/,
+                0/*addWeightedImpl<float, ushort, int   >*/,
+                0/*addWeightedImpl<float, ushort, float >*/,
+                0/*addWeightedImpl<float, ushort, double>*/
+            },
+            {
+                0/*addWeightedImpl<float, short, uchar >*/,
+                0/*addWeightedImpl<float, short, schar >*/,
+                0/*addWeightedImpl<float, short, ushort>*/,
+                0/*addWeightedImpl<float, short, short >*/,
+                0/*addWeightedImpl<float, short, int   >*/,
+                0/*addWeightedImpl<float, short, float >*/,
+                0/*addWeightedImpl<float, short, double>*/
+            },
+            {
+                0/*addWeightedImpl<float, int, uchar >*/,
+                0/*addWeightedImpl<float, int, schar >*/,
+                0/*addWeightedImpl<float, int, ushort>*/,
+                0/*addWeightedImpl<float, int, short >*/,
+                0/*addWeightedImpl<float, int, int   >*/,
+                0/*addWeightedImpl<float, int, float >*/,
+                0/*addWeightedImpl<float, int, double>*/
+            },
+            {
+                addWeightedImpl<float, float, uchar >,
+                addWeightedImpl<float, float, schar >,
+                addWeightedImpl<float, float, ushort>,
+                addWeightedImpl<float, float, short >,
+                addWeightedImpl<float, float, int   >,
+                addWeightedImpl<float, float, float >,
+                addWeightedImpl<float, float, double>
+            },
+            {
+                addWeightedImpl<float, double, uchar >,
+                addWeightedImpl<float, double, schar >,
+                addWeightedImpl<float, double, ushort>,
+                addWeightedImpl<float, double, short >,
+                addWeightedImpl<float, double, int   >,
+                addWeightedImpl<float, double, float >,
+                addWeightedImpl<float, double, double>
+            }
+        },
+        {
+            {
+                0/*addWeightedImpl<double, uchar, uchar >*/,
+                0/*addWeightedImpl<double, uchar, schar >*/,
+                0/*addWeightedImpl<double, uchar, ushort>*/,
+                0/*addWeightedImpl<double, uchar, short >*/,
+                0/*addWeightedImpl<double, uchar, int   >*/,
+                0/*addWeightedImpl<double, uchar, float >*/,
+                0/*addWeightedImpl<double, uchar, double>*/
+            },
+            {
+                0/*addWeightedImpl<double, schar, uchar >*/,
+                0/*addWeightedImpl<double, schar, schar >*/,
+                0/*addWeightedImpl<double, schar, ushort>*/,
+                0/*addWeightedImpl<double, schar, short >*/,
+                0/*addWeightedImpl<double, schar, int   >*/,
+                0/*addWeightedImpl<double, schar, float >*/,
+                0/*addWeightedImpl<double, schar, double>*/
+            },
+            {
+                0/*addWeightedImpl<double, ushort, uchar >*/,
+                0/*addWeightedImpl<double, ushort, schar >*/,
+                0/*addWeightedImpl<double, ushort, ushort>*/,
+                0/*addWeightedImpl<double, ushort, short >*/,
+                0/*addWeightedImpl<double, ushort, int   >*/,
+                0/*addWeightedImpl<double, ushort, float >*/,
+                0/*addWeightedImpl<double, ushort, double>*/
+            },
+            {
+                0/*addWeightedImpl<double, short, uchar >*/,
+                0/*addWeightedImpl<double, short, schar >*/,
+                0/*addWeightedImpl<double, short, ushort>*/,
+                0/*addWeightedImpl<double, short, short >*/,
+                0/*addWeightedImpl<double, short, int   >*/,
+                0/*addWeightedImpl<double, short, float >*/,
+                0/*addWeightedImpl<double, short, double>*/
+            },
+            {
+                0/*addWeightedImpl<double, int, uchar >*/,
+                0/*addWeightedImpl<double, int, schar >*/,
+                0/*addWeightedImpl<double, int, ushort>*/,
+                0/*addWeightedImpl<double, int, short >*/,
+                0/*addWeightedImpl<double, int, int   >*/,
+                0/*addWeightedImpl<double, int, float >*/,
+                0/*addWeightedImpl<double, int, double>*/
+            },
+            {
+                0/*addWeightedImpl<double, float, uchar >*/,
+                0/*addWeightedImpl<double, float, schar >*/,
+                0/*addWeightedImpl<double, float, ushort>*/,
+                0/*addWeightedImpl<double, float, short >*/,
+                0/*addWeightedImpl<double, float, int   >*/,
+                0/*addWeightedImpl<double, float, float >*/,
+                0/*addWeightedImpl<double, float, double>*/
+            },
+            {
+                addWeightedImpl<double, double, uchar >,
+                addWeightedImpl<double, double, schar >,
+                addWeightedImpl<double, double, ushort>,
+                addWeightedImpl<double, double, short >,
+                addWeightedImpl<double, double, int   >,
+                addWeightedImpl<double, double, float >,
+                addWeightedImpl<double, double, double>
+            }
+        }
     };
 
-    template <typename T1, typename T2, typename D> struct TransformFunctorTraits< arithm::AddWeighted<T1, T2, D> > : AddWeightedTraits<T1, T2, D, sizeof(T1), sizeof(T2), sizeof(D)>
-    {
-    };
-}}}
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
 
-namespace arithm
-{
-    template <typename T1, typename T2, typename D>
-    void addWeighted(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream)
-    {
-        AddWeighted<T1, T2, D> op(alpha, beta, gamma);
+    int sdepth1 = src1.depth();
+    int sdepth2 = src2.depth();
 
-        device::transform((PtrStepSz<T1>) src1, (PtrStepSz<T2>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+    ddepth = ddepth >= 0 ? CV_MAT_DEPTH(ddepth) : std::max(sdepth1, sdepth2);
+    const int cn = src1.channels();
+
+    CV_DbgAssert( src2.size() == src1.size() && src2.channels() == cn );
+    CV_DbgAssert( sdepth1 <= CV_64F && sdepth2 <= CV_64F && ddepth <= CV_64F );
+
+    _dst.create(src1.size(), CV_MAKE_TYPE(ddepth, cn));
+    GpuMat dst = _dst.getGpuMat();
+
+    GpuMat src1_ = src1.reshape(1);
+    GpuMat src2_ = src2.reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    if (sdepth1 > sdepth2)
+    {
+        src1_.swap(src2_);
+        std::swap(alpha, beta);
+        std::swap(sdepth1, sdepth2);
     }
 
-    template void addWeighted<uchar, uchar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, uchar, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+    const func_t func = funcs[sdepth1][sdepth2][ddepth];
 
-    template void addWeighted<uchar, schar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, schar, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
-    template void addWeighted<uchar, ushort, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, ushort, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<uchar, short, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, short, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<uchar, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, int, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<uchar, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<uchar, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<uchar, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<schar, schar, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, schar, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<schar, ushort, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, ushort, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<schar, short, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, short, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<schar, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, int, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<schar, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<schar, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<schar, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<ushort, ushort, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, ushort, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<ushort, short, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, short, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<ushort, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, int, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<ushort, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<ushort, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<ushort, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<short, short, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, short, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<short, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, int, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<short, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<short, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<short, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<int, int, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, int, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<int, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<int, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<int, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<float, float, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, float, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-    template void addWeighted<float, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<float, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-
-
-
-    template void addWeighted<double, double, uchar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, schar>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, ushort>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, short>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, int>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, float>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
-    template void addWeighted<double, double, double>(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
+    func(src1_, alpha, src2_, beta, gamma, dst_, stream);
 }
 
-#endif /* CUDA_DISABLER */
+#endif

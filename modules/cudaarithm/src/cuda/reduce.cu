@@ -40,301 +40,258 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/vec_traits.hpp"
-#include "opencv2/core/cuda/vec_math.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/reduce.hpp"
-#include "opencv2/core/cuda/limits.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "unroll_detail.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace reduce
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    struct Sum
+    template <typename T, typename S, typename D>
+    void reduceToRowImpl(const GpuMat& _src, GpuMat& _dst, int reduceOp, Stream& stream)
     {
-        template <typename T>
-        __device__ __forceinline__ T startValue() const
+        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
+        GpuMat_<D>& dst = (GpuMat_<D>&) _dst;
+
+        switch (reduceOp)
         {
-            return VecTraits<T>::all(0);
-        }
+        case cv::REDUCE_SUM:
+            gridReduceToRow< Sum<S> >(src, dst, stream);
+            break;
 
-        template <typename T>
-        __device__ __forceinline__ T operator ()(T a, T b) const
-        {
-            return a + b;
-        }
+        case cv::REDUCE_AVG:
+            gridReduceToRow< Avg<S> >(src, dst, stream);
+            break;
 
-        template <typename T>
-        __device__ __forceinline__ T result(T r, int) const
-        {
-            return r;
-        }
+        case cv::REDUCE_MIN:
+            gridReduceToRow< Min<S> >(src, dst, stream);
+            break;
 
-        __host__ __device__ __forceinline__ Sum() {}
-        __host__ __device__ __forceinline__ Sum(const Sum&) {}
-    };
-
-    template <typename T> struct OutputType
-    {
-        typedef float type;
-    };
-    template <> struct OutputType<double>
-    {
-        typedef double type;
-    };
-
-    struct Avg
-    {
-        template <typename T>
-        __device__ __forceinline__ T startValue() const
-        {
-            return VecTraits<T>::all(0);
-        }
-
-        template <typename T>
-        __device__ __forceinline__ T operator ()(T a, T b) const
-        {
-            return a + b;
-        }
-
-        template <typename T>
-        __device__ __forceinline__ typename TypeVec<typename OutputType<typename VecTraits<T>::elem_type>::type, VecTraits<T>::cn>::vec_type result(T r, float sz) const
-        {
-            return r / sz;
-        }
-
-        __host__ __device__ __forceinline__ Avg() {}
-        __host__ __device__ __forceinline__ Avg(const Avg&) {}
-    };
-
-    struct Min
-    {
-        template <typename T>
-        __device__ __forceinline__ T startValue() const
-        {
-            return VecTraits<T>::all(numeric_limits<typename VecTraits<T>::elem_type>::max());
-        }
-
-        template <typename T>
-        __device__ __forceinline__ T operator ()(T a, T b) const
-        {
-            minimum<T> minOp;
-            return minOp(a, b);
-        }
-
-        template <typename T>
-        __device__ __forceinline__ T result(T r, int) const
-        {
-            return r;
-        }
-
-        __host__ __device__ __forceinline__ Min() {}
-        __host__ __device__ __forceinline__ Min(const Min&) {}
-    };
-
-    struct Max
-    {
-        template <typename T>
-        __device__ __forceinline__ T startValue() const
-        {
-            return VecTraits<T>::all(-numeric_limits<typename VecTraits<T>::elem_type>::max());
-        }
-
-        template <typename T>
-        __device__ __forceinline__ T operator ()(T a, T b) const
-        {
-            maximum<T> maxOp;
-            return maxOp(a, b);
-        }
-
-        template <typename T>
-        __device__ __forceinline__ T result(T r, int) const
-        {
-            return r;
-        }
-
-        __host__ __device__ __forceinline__ Max() {}
-        __host__ __device__ __forceinline__ Max(const Max&) {}
-    };
-
-    ///////////////////////////////////////////////////////////
-
-    template <typename T, typename S, typename D, class Op>
-    __global__ void rowsKernel(const PtrStepSz<T> src, D* dst, const Op op)
-    {
-        __shared__ S smem[16 * 16];
-
-        const int x = blockIdx.x * 16 + threadIdx.x;
-
-        S myVal = op.template startValue<S>();
-
-        if (x < src.cols)
-        {
-            for (int y = threadIdx.y; y < src.rows; y += 16)
-            {
-                S srcVal = src(y, x);
-                myVal = op(myVal, srcVal);
-            }
-        }
-
-        smem[threadIdx.x * 16 + threadIdx.y] = myVal;
-
-        __syncthreads();
-
-        volatile S* srow = smem + threadIdx.y * 16;
-
-        myVal = srow[threadIdx.x];
-        device::reduce<16>(srow, myVal, threadIdx.x, op);
-
-        if (threadIdx.x == 0)
-            srow[0] = myVal;
-
-        __syncthreads();
-
-        if (threadIdx.y == 0 && x < src.cols)
-            dst[x] = (D) op.result(smem[threadIdx.x * 16], src.rows);
-    }
-
-    template <typename T, typename S, typename D, class Op>
-    void rowsCaller(PtrStepSz<T> src, D* dst, cudaStream_t stream)
-    {
-        const dim3 block(16, 16);
-        const dim3 grid(divUp(src.cols, block.x));
-
-        Op op;
-        rowsKernel<T, S, D, Op><<<grid, block, 0, stream>>>(src, dst, op);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+        case cv::REDUCE_MAX:
+            gridReduceToRow< Max<S> >(src, dst, stream);
+            break;
+        };
     }
 
     template <typename T, typename S, typename D>
-    void rows(PtrStepSzb src, void* dst, int op, cudaStream_t stream)
+    void reduceToColumnImpl_(const GpuMat& _src, GpuMat& _dst, int reduceOp, Stream& stream)
     {
-        typedef void (*func_t)(PtrStepSz<T> src, D* dst, cudaStream_t stream);
-        static const func_t funcs[] =
+        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
+        GpuMat_<D>& dst = (GpuMat_<D>&) _dst;
+
+        switch (reduceOp)
         {
-            rowsCaller<T, S, D, Sum>,
-            rowsCaller<T, S, D, Avg>,
-            rowsCaller<T, S, D, Max>,
-            rowsCaller<T, S, D, Min>
+        case cv::REDUCE_SUM:
+            gridReduceToColumn< Sum<S> >(src, dst, stream);
+            break;
+
+        case cv::REDUCE_AVG:
+            gridReduceToColumn< Avg<S> >(src, dst, stream);
+            break;
+
+        case cv::REDUCE_MIN:
+            gridReduceToColumn< Min<S> >(src, dst, stream);
+            break;
+
+        case cv::REDUCE_MAX:
+            gridReduceToColumn< Max<S> >(src, dst, stream);
+            break;
+        };
+    }
+
+    template <typename T, typename S, typename D>
+    void reduceToColumnImpl(const GpuMat& src, GpuMat& dst, int reduceOp, Stream& stream)
+    {
+        typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int reduceOp, Stream& stream);
+        static const func_t funcs[4] =
+        {
+            reduceToColumnImpl_<T, S, D>,
+            reduceToColumnImpl_<typename MakeVec<T, 2>::type, typename MakeVec<S, 2>::type, typename MakeVec<D, 2>::type>,
+            reduceToColumnImpl_<typename MakeVec<T, 3>::type, typename MakeVec<S, 3>::type, typename MakeVec<D, 3>::type>,
+            reduceToColumnImpl_<typename MakeVec<T, 4>::type, typename MakeVec<S, 4>::type, typename MakeVec<D, 4>::type>
         };
 
-        funcs[op]((PtrStepSz<T>) src, (D*) dst, stream);
+        funcs[src.channels() - 1](src, dst, reduceOp, stream);
     }
-
-    template void rows<unsigned char, int, unsigned char>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned char, int, int>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned char, float, float>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned char, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    template void rows<unsigned short, int, unsigned short>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned short, int, int>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned short, float, float>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<unsigned short, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    template void rows<short, int, short>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<short, int, int>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<short, float, float>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<short, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    template void rows<int, int, int>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<int, float, float>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<int, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    template void rows<float, float, float>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-    template void rows<float, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    template void rows<double, double, double>(PtrStepSzb src, void* dst, int op, cudaStream_t stream);
-
-    ///////////////////////////////////////////////////////////
-
-    template <int BLOCK_SIZE, typename T, typename S, typename D, int cn, class Op>
-    __global__ void colsKernel(const PtrStepSz<typename TypeVec<T, cn>::vec_type> src, typename TypeVec<D, cn>::vec_type* dst, const Op op)
-    {
-        typedef typename TypeVec<T, cn>::vec_type src_type;
-        typedef typename TypeVec<S, cn>::vec_type work_type;
-        typedef typename TypeVec<D, cn>::vec_type dst_type;
-
-        __shared__ S smem[BLOCK_SIZE * cn];
-
-        const int y = blockIdx.x;
-
-        const src_type* srcRow = src.ptr(y);
-
-        work_type myVal = op.template startValue<work_type>();
-
-        for (int x = threadIdx.x; x < src.cols; x += BLOCK_SIZE)
-            myVal = op(myVal, saturate_cast<work_type>(srcRow[x]));
-
-        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
-
-        if (threadIdx.x == 0)
-            dst[y] = saturate_cast<dst_type>(op.result(myVal, src.cols));
-    }
-
-    template <typename T, typename S, typename D, int cn, class Op> void colsCaller(PtrStepSzb src, void* dst, cudaStream_t stream)
-    {
-        const int BLOCK_SIZE = 256;
-
-        const dim3 block(BLOCK_SIZE);
-        const dim3 grid(src.rows);
-
-        Op op;
-        colsKernel<BLOCK_SIZE, T, S, D, cn, Op><<<grid, block, 0, stream>>>((PtrStepSz<typename TypeVec<T, cn>::vec_type>) src, (typename TypeVec<D, cn>::vec_type*) dst, op);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-
-    }
-
-    template <typename T, typename S, typename D> void cols(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream)
-    {
-        typedef void (*func_t)(PtrStepSzb src, void* dst, cudaStream_t stream);
-        static const func_t funcs[5][4] =
-        {
-            {0,0,0,0},
-            {colsCaller<T, S, D, 1, Sum>, colsCaller<T, S, D, 1, Avg>, colsCaller<T, S, D, 1, Max>, colsCaller<T, S, D, 1, Min>},
-            {colsCaller<T, S, D, 2, Sum>, colsCaller<T, S, D, 2, Avg>, colsCaller<T, S, D, 2, Max>, colsCaller<T, S, D, 2, Min>},
-            {colsCaller<T, S, D, 3, Sum>, colsCaller<T, S, D, 3, Avg>, colsCaller<T, S, D, 3, Max>, colsCaller<T, S, D, 3, Min>},
-            {colsCaller<T, S, D, 4, Sum>, colsCaller<T, S, D, 4, Avg>, colsCaller<T, S, D, 4, Max>, colsCaller<T, S, D, 4, Min>},
-        };
-
-        funcs[cn][op](src, dst, stream);
-    }
-
-    template void cols<unsigned char, int, unsigned char>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned char, int, int>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned char, float, float>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned char, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-
-    template void cols<unsigned short, int, unsigned short>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned short, int, int>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned short, float, float>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<unsigned short, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-
-    template void cols<short, int, short>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<short, int, int>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<short, float, float>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<short, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-
-    template void cols<int, int, int>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<int, float, float>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<int, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-
-    template void cols<float, float, float>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-    template void cols<float, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
-
-    template void cols<double, double, double>(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
 }
 
-#endif /* CUDA_DISABLER */
+void cv::cuda::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, int dtype, Stream& stream)
+{
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.channels() <= 4 );
+    CV_Assert( dim == 0 || dim == 1 );
+    CV_Assert( reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_MAX || reduceOp == REDUCE_MIN );
+
+    if (dtype < 0)
+        dtype = src.depth();
+
+    _dst.create(1, dim == 0 ? src.cols : src.rows, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()));
+    GpuMat dst = _dst.getGpuMat();
+
+    if (dim == 0)
+    {
+        typedef void (*func_t)(const GpuMat& _src, GpuMat& _dst, int reduceOp, Stream& stream);
+        static const func_t funcs[7][7] =
+        {
+            {
+                reduceToRowImpl<uchar, int, uchar>,
+                0 /*reduceToRowImpl<uchar, int, schar>*/,
+                0 /*reduceToRowImpl<uchar, int, ushort>*/,
+                0 /*reduceToRowImpl<uchar, int, short>*/,
+                reduceToRowImpl<uchar, int, int>,
+                reduceToRowImpl<uchar, float, float>,
+                reduceToRowImpl<uchar, double, double>
+            },
+            {
+                0 /*reduceToRowImpl<schar, int, uchar>*/,
+                0 /*reduceToRowImpl<schar, int, schar>*/,
+                0 /*reduceToRowImpl<schar, int, ushort>*/,
+                0 /*reduceToRowImpl<schar, int, short>*/,
+                0 /*reduceToRowImpl<schar, int, int>*/,
+                0 /*reduceToRowImpl<schar, float, float>*/,
+                0 /*reduceToRowImpl<schar, double, double>*/
+            },
+            {
+                0 /*reduceToRowImpl<ushort, int, uchar>*/,
+                0 /*reduceToRowImpl<ushort, int, schar>*/,
+                reduceToRowImpl<ushort, int, ushort>,
+                0 /*reduceToRowImpl<ushort, int, short>*/,
+                reduceToRowImpl<ushort, int, int>,
+                reduceToRowImpl<ushort, float, float>,
+                reduceToRowImpl<ushort, double, double>
+            },
+            {
+                0 /*reduceToRowImpl<short, int, uchar>*/,
+                0 /*reduceToRowImpl<short, int, schar>*/,
+                0 /*reduceToRowImpl<short, int, ushort>*/,
+                reduceToRowImpl<short, int, short>,
+                reduceToRowImpl<short, int, int>,
+                reduceToRowImpl<short, float, float>,
+                reduceToRowImpl<short, double, double>
+            },
+            {
+                0 /*reduceToRowImpl<int, int, uchar>*/,
+                0 /*reduceToRowImpl<int, int, schar>*/,
+                0 /*reduceToRowImpl<int, int, ushort>*/,
+                0 /*reduceToRowImpl<int, int, short>*/,
+                reduceToRowImpl<int, int, int>,
+                reduceToRowImpl<int, float, float>,
+                reduceToRowImpl<int, double, double>
+            },
+            {
+                0 /*reduceToRowImpl<float, float, uchar>*/,
+                0 /*reduceToRowImpl<float, float, schar>*/,
+                0 /*reduceToRowImpl<float, float, ushort>*/,
+                0 /*reduceToRowImpl<float, float, short>*/,
+                0 /*reduceToRowImpl<float, float, int>*/,
+                reduceToRowImpl<float, float, float>,
+                reduceToRowImpl<float, double, double>
+            },
+            {
+                0 /*reduceToRowImpl<double, double, uchar>*/,
+                0 /*reduceToRowImpl<double, double, schar>*/,
+                0 /*reduceToRowImpl<double, double, ushort>*/,
+                0 /*reduceToRowImpl<double, double, short>*/,
+                0 /*reduceToRowImpl<double, double, int>*/,
+                0 /*reduceToRowImpl<double, double, float>*/,
+                reduceToRowImpl<double, double, double>
+            }
+        };
+
+        const func_t func = funcs[src.depth()][dst.depth()];
+
+        if (!func)
+            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+
+        GpuMat dst_cont = dst.reshape(1);
+        func(src.reshape(1), dst_cont, reduceOp, stream);
+    }
+    else
+    {
+        typedef void (*func_t)(const GpuMat& _src, GpuMat& _dst, int reduceOp, Stream& stream);
+        static const func_t funcs[7][7] =
+        {
+            {
+                reduceToColumnImpl<uchar, int, uchar>,
+                0 /*reduceToColumnImpl<uchar, int, schar>*/,
+                0 /*reduceToColumnImpl<uchar, int, ushort>*/,
+                0 /*reduceToColumnImpl<uchar, int, short>*/,
+                reduceToColumnImpl<uchar, int, int>,
+                reduceToColumnImpl<uchar, float, float>,
+                reduceToColumnImpl<uchar, double, double>
+            },
+            {
+                0 /*reduceToColumnImpl<schar, int, uchar>*/,
+                0 /*reduceToColumnImpl<schar, int, schar>*/,
+                0 /*reduceToColumnImpl<schar, int, ushort>*/,
+                0 /*reduceToColumnImpl<schar, int, short>*/,
+                0 /*reduceToColumnImpl<schar, int, int>*/,
+                0 /*reduceToColumnImpl<schar, float, float>*/,
+                0 /*reduceToColumnImpl<schar, double, double>*/
+            },
+            {
+                0 /*reduceToColumnImpl<ushort, int, uchar>*/,
+                0 /*reduceToColumnImpl<ushort, int, schar>*/,
+                reduceToColumnImpl<ushort, int, ushort>,
+                0 /*reduceToColumnImpl<ushort, int, short>*/,
+                reduceToColumnImpl<ushort, int, int>,
+                reduceToColumnImpl<ushort, float, float>,
+                reduceToColumnImpl<ushort, double, double>
+            },
+            {
+                0 /*reduceToColumnImpl<short, int, uchar>*/,
+                0 /*reduceToColumnImpl<short, int, schar>*/,
+                0 /*reduceToColumnImpl<short, int, ushort>*/,
+                reduceToColumnImpl<short, int, short>,
+                reduceToColumnImpl<short, int, int>,
+                reduceToColumnImpl<short, float, float>,
+                reduceToColumnImpl<short, double, double>
+            },
+            {
+                0 /*reduceToColumnImpl<int, int, uchar>*/,
+                0 /*reduceToColumnImpl<int, int, schar>*/,
+                0 /*reduceToColumnImpl<int, int, ushort>*/,
+                0 /*reduceToColumnImpl<int, int, short>*/,
+                reduceToColumnImpl<int, int, int>,
+                reduceToColumnImpl<int, float, float>,
+                reduceToColumnImpl<int, double, double>
+            },
+            {
+                0 /*reduceToColumnImpl<float, float, uchar>*/,
+                0 /*reduceToColumnImpl<float, float, schar>*/,
+                0 /*reduceToColumnImpl<float, float, ushort>*/,
+                0 /*reduceToColumnImpl<float, float, short>*/,
+                0 /*reduceToColumnImpl<float, float, int>*/,
+                reduceToColumnImpl<float, float, float>,
+                reduceToColumnImpl<float, double, double>
+            },
+            {
+                0 /*reduceToColumnImpl<double, double, uchar>*/,
+                0 /*reduceToColumnImpl<double, double, schar>*/,
+                0 /*reduceToColumnImpl<double, double, ushort>*/,
+                0 /*reduceToColumnImpl<double, double, short>*/,
+                0 /*reduceToColumnImpl<double, double, int>*/,
+                0 /*reduceToColumnImpl<double, double, float>*/,
+                reduceToColumnImpl<double, double, double>
+            }
+        };
+
+        const func_t func = funcs[src.depth()][dst.depth()];
+
+        if (!func)
+            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output array formats");
+
+        func(src, dst, reduceOp, stream);
+    }
+}
+
+#endif

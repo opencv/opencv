@@ -51,6 +51,7 @@
 #include "../util/vec_traits.hpp"
 #include "../ptr2d/traits.hpp"
 #include "../ptr2d/gpumat.hpp"
+#include "../ptr2d/glob.hpp"
 #include "../ptr2d/mask.hpp"
 #include "detail/split_merge.hpp"
 
@@ -75,6 +76,24 @@ __host__ void gridMerge_(const SrcPtrTuple& src, GpuMat_<DstType>& dst, const Ma
                                                                               StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtrTuple, typename DstType, class MaskPtr>
+__host__ void gridMerge_(const SrcPtrTuple& src, const GlobPtrSz<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<DstType>::cn == tuple_size<SrcPtrTuple>::value, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst) == rows && getCols(dst) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_split_merge_detail::MergeImpl<VecTraits<DstType>::cn, Policy>::merge(shrinkPtr(src),
+                                                                              shrinkPtr(dst),
+                                                                              shrinkPtr(mask),
+                                                                              rows, cols,
+                                                                              StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtrTuple, typename DstType>
 __host__ void gridMerge_(const SrcPtrTuple& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
@@ -84,6 +103,23 @@ __host__ void gridMerge_(const SrcPtrTuple& src, GpuMat_<DstType>& dst, Stream& 
     const int cols = getCols(src);
 
     dst.create(rows, cols);
+
+    grid_split_merge_detail::MergeImpl<VecTraits<DstType>::cn, Policy>::merge(shrinkPtr(src),
+                                                                              shrinkPtr(dst),
+                                                                              WithOutMask(),
+                                                                              rows, cols,
+                                                                              StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtrTuple, typename DstType>
+__host__ void gridMerge_(const SrcPtrTuple& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<DstType>::cn == tuple_size<SrcPtrTuple>::value, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst) == rows && getCols(dst) == cols );
 
     grid_split_merge_detail::MergeImpl<VecTraits<DstType>::cn, Policy>::merge(shrinkPtr(src),
                                                                               shrinkPtr(dst),
@@ -132,6 +168,25 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[2], const Ma
                                            StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[2], const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 2, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]),
+                                           shrinkPtr(mask),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtr, typename DstType>
 __host__ void gridSplit_(const SrcPtr& src, const tuple< GpuMat_<DstType>&, GpuMat_<DstType>& >& dst, Stream& stream = Stream::Null())
 {
@@ -160,6 +215,24 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[2], Stream& 
 
     dst[0].create(rows, cols);
     dst[1].create(rows, cols);
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]),
+                                           WithOutMask(),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[2], Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 2, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
 
     grid_split_merge_detail::split<Policy>(shrinkPtr(src),
                                            shrinkPtr(dst[0]), shrinkPtr(dst[1]),
@@ -210,6 +283,26 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[3], const Ma
                                            StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[3], const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 3, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
+    CV_Assert( getRows(dst[2]) == rows && getCols(dst[2]) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]),
+                                           shrinkPtr(mask),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtr, typename DstType>
 __host__ void gridSplit_(const SrcPtr& src, const tuple< GpuMat_<DstType>&, GpuMat_<DstType>&, GpuMat_<DstType>& >& dst, Stream& stream = Stream::Null())
 {
@@ -240,6 +333,25 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[3], Stream& 
     dst[0].create(rows, cols);
     dst[1].create(rows, cols);
     dst[2].create(rows, cols);
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]),
+                                           WithOutMask(),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[3], Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 3, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
+    CV_Assert( getRows(dst[2]) == rows && getCols(dst[2]) == cols );
 
     grid_split_merge_detail::split<Policy>(shrinkPtr(src),
                                            shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]),
@@ -283,10 +395,31 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[4], const Ma
     dst[0].create(rows, cols);
     dst[1].create(rows, cols);
     dst[2].create(rows, cols);
-    dst[4].create(rows, cols);
+    dst[3].create(rows, cols);
 
     grid_split_merge_detail::split<Policy>(shrinkPtr(src),
-                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[4]),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[3]),
+                                           shrinkPtr(mask),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[4], const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 4, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
+    CV_Assert( getRows(dst[2]) == rows && getCols(dst[2]) == cols );
+    CV_Assert( getRows(dst[3]) == rows && getCols(dst[3]) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[3]),
                                            shrinkPtr(mask),
                                            rows, cols,
                                            StreamAccessor::getStream(stream));
@@ -323,10 +456,30 @@ __host__ void gridSplit_(const SrcPtr& src, GpuMat_<DstType> (&dst)[4], Stream& 
     dst[0].create(rows, cols);
     dst[1].create(rows, cols);
     dst[2].create(rows, cols);
-    dst[4].create(rows, cols);
+    dst[3].create(rows, cols);
 
     grid_split_merge_detail::split<Policy>(shrinkPtr(src),
-                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[4]),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[3]),
+                                           WithOutMask(),
+                                           rows, cols,
+                                           StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridSplit_(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[4], Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( VecTraits<typename PtrTraits<SrcPtr>::value_type>::cn == 4, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst[0]) == rows && getCols(dst[0]) == cols );
+    CV_Assert( getRows(dst[1]) == rows && getCols(dst[1]) == cols );
+    CV_Assert( getRows(dst[2]) == rows && getCols(dst[2]) == cols );
+    CV_Assert( getRows(dst[3]) == rows && getCols(dst[3]) == cols );
+
+    grid_split_merge_detail::split<Policy>(shrinkPtr(src),
+                                           shrinkPtr(dst[0]), shrinkPtr(dst[1]), shrinkPtr(dst[2]), shrinkPtr(dst[3]),
                                            WithOutMask(),
                                            rows, cols,
                                            StreamAccessor::getStream(stream));
@@ -348,8 +501,20 @@ __host__ void gridMerge(const SrcPtrTuple& src, GpuMat_<DstType>& dst, const Mas
     gridMerge_<DefaultSplitMergePolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtrTuple, typename DstType, class MaskPtr>
+__host__ void gridMerge(const SrcPtrTuple& src, const GlobPtrSz<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridMerge_<DefaultSplitMergePolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtrTuple, typename DstType>
 __host__ void gridMerge(const SrcPtrTuple& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
+{
+    gridMerge_<DefaultSplitMergePolicy>(src, dst, stream);
+}
+
+template <class SrcPtrTuple, typename DstType>
+__host__ void gridMerge(const SrcPtrTuple& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
 {
     gridMerge_<DefaultSplitMergePolicy>(src, dst, stream);
 }
@@ -396,8 +561,20 @@ __host__ void gridSplit(const SrcPtr& src, GpuMat_<DstType> (&dst)[COUNT], const
     gridSplit_<DefaultSplitMergePolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtr, typename DstType, int COUNT, class MaskPtr>
+__host__ void gridSplit(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[COUNT], const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridSplit_<DefaultSplitMergePolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtr, typename DstType, int COUNT>
 __host__ void gridSplit(const SrcPtr& src, GpuMat_<DstType> (&dst)[COUNT], Stream& stream = Stream::Null())
+{
+    gridSplit_<DefaultSplitMergePolicy>(src, dst, stream);
+}
+
+template <class SrcPtr, typename DstType, int COUNT>
+__host__ void gridSplit(const SrcPtr& src, GlobPtrSz<DstType> (&dst)[COUNT], Stream& stream = Stream::Null())
 {
     gridSplit_<DefaultSplitMergePolicy>(src, dst, stream);
 }
