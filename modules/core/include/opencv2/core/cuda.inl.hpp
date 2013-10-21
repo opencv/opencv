@@ -51,29 +51,29 @@ namespace cv { namespace cuda {
 //////////////////////////////// GpuMat ///////////////////////////////
 
 inline
-GpuMat::GpuMat()
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(Allocator* allocator_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {}
 
 inline
-GpuMat::GpuMat(int rows_, int cols_, int type_)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(int rows_, int cols_, int type_, Allocator* allocator_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (rows_ > 0 && cols_ > 0)
         create(rows_, cols_, type_);
 }
 
 inline
-GpuMat::GpuMat(Size size_, int type_)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(Size size_, int type_, Allocator* allocator_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (size_.height > 0 && size_.width > 0)
         create(size_.height, size_.width, type_);
 }
 
 inline
-GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_, Allocator* allocator_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (rows_ > 0 && cols_ > 0)
     {
@@ -83,8 +83,8 @@ GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_)
 }
 
 inline
-GpuMat::GpuMat(Size size_, int type_, Scalar s_)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(Size size_, int type_, Scalar s_, Allocator* allocator_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (size_.height > 0 && size_.width > 0)
     {
@@ -95,15 +95,15 @@ GpuMat::GpuMat(Size size_, int type_, Scalar s_)
 
 inline
 GpuMat::GpuMat(const GpuMat& m)
-    : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend)
+    : flags(m.flags), rows(m.rows), cols(m.cols), step(m.step), data(m.data), refcount(m.refcount), datastart(m.datastart), dataend(m.dataend), allocator(m.allocator)
 {
     if (refcount)
         CV_XADD(refcount, 1);
 }
 
 inline
-GpuMat::GpuMat(InputArray arr) :
-    flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0)
+GpuMat::GpuMat(InputArray arr, Allocator* allocator_) :
+    flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     upload(arr);
 }

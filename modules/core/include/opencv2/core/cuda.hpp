@@ -61,16 +61,30 @@ namespace cv { namespace cuda {
 class CV_EXPORTS GpuMat
 {
 public:
+    class CV_EXPORTS Allocator
+    {
+    public:
+        virtual ~Allocator() {}
+
+        // allocator must fill data, step and refcount fields
+        virtual bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize) = 0;
+        virtual void free(GpuMat* mat) = 0;
+    };
+
+    //! default allocator
+    static Allocator* defaultAllocator();
+    static void setDefaultAllocator(Allocator* allocator);
+
     //! default constructor
-    GpuMat();
+    explicit GpuMat(Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMat of the specified size and type
-    GpuMat(int rows, int cols, int type);
-    GpuMat(Size size, int type);
+    GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value _s
-    GpuMat(int rows, int cols, int type, Scalar s);
-    GpuMat(Size size, int type, Scalar s);
+    GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
     GpuMat(const GpuMat& m);
@@ -84,7 +98,7 @@ public:
     GpuMat(const GpuMat& m, Rect roi);
 
     //! builds GpuMat from host memory (Blocking call)
-    explicit GpuMat(InputArray arr);
+    explicit GpuMat(InputArray arr, Allocator* allocator = defaultAllocator());
 
     //! destructor - calls release()
     ~GpuMat();
@@ -249,6 +263,9 @@ public:
     //! helper fields used in locateROI and adjustROI
     uchar* datastart;
     uchar* dataend;
+
+    //! allocator
+    Allocator* allocator;
 };
 
 //! creates continuous matrix
@@ -259,6 +276,10 @@ CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
 CV_EXPORTS GpuMat allocMatFromBuf(int rows, int cols, int type, GpuMat& mat);
+
+//! BufferPool management (must be called before Stream creation)
+CV_EXPORTS void setBufferPoolUsage(bool on);
+CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
 
 //////////////////////////////// CudaMem ////////////////////////////////
 
@@ -382,6 +403,7 @@ private:
     Stream(const Ptr<Impl>& impl);
 
     friend struct StreamAccessor;
+    friend class BufferPool;
 };
 
 class CV_EXPORTS Event
