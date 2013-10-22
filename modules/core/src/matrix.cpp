@@ -80,8 +80,10 @@ public:
     void deallocate(UMatData* u) const
     {
         if(u)
+        {
             fastFree(u->origdata);
-        delete u;
+            delete u;
+        }
     }
 
     void map(UMatData*, int) const

@@ -1394,6 +1394,15 @@ struct Device::Impl
             sz == sizeof(temp) ? _TpOut(temp) : _TpOut();
     }
 
+    bool getBoolProp(cl_device_info prop) const
+    {
+        cl_bool temp = CL_FALSE;
+        size_t sz = 0;
+
+        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) >= 0 &&
+            sz == sizeof(temp) ? temp != 0 : false;
+    }
+
     String getStrProp(cl_device_info prop) const
     {
         char buf[1024];
@@ -1479,13 +1488,13 @@ int Device::addressBits() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS) : 0; }
 
 bool Device::available() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_AVAILABLE) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_AVAILABLE) : false; }
 
 bool Device::compilerAvailable() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_COMPILER_AVAILABLE) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_COMPILER_AVAILABLE) : false; }
 
 bool Device::linkerAvailable() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_LINKER_AVAILABLE) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_LINKER_AVAILABLE) : false; }
 
 int Device::doubleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG) : 0; }
@@ -1497,10 +1506,10 @@ int Device::halfFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
 
 bool Device::endianLittle() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_ENDIAN_LITTLE) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
 
 bool Device::errorCorrectionSupport() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_ERROR_CORRECTION_SUPPORT) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_ERROR_CORRECTION_SUPPORT) : false; }
 
 int Device::executionCapabilities() const
 { return p ? p->getProp<cl_device_exec_capabilities, int>(CL_DEVICE_EXECUTION_CAPABILITIES) : 0; }
@@ -1524,10 +1533,10 @@ int Device::localMemType() const
 { return p ? p->getProp<cl_device_local_mem_type, int>(CL_DEVICE_LOCAL_MEM_TYPE) : 0; }
 
 bool Device::hostUnifiedMemory() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_HOST_UNIFIED_MEMORY) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY) : false; }
 
 bool Device::imageSupport() const
-{ return p ? p->getProp<cl_bool, bool>(CL_DEVICE_IMAGE_SUPPORT) : 0; }
+{ return p ? p->getBoolProp(CL_DEVICE_IMAGE_SUPPORT) : false; }
 
 size_t Device::image2DMaxWidth() const
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE2D_MAX_WIDTH) : 0; }

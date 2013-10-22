@@ -346,6 +346,7 @@ struct CV_EXPORTS UMatData
 
     int flags;
     void* handle;
+    void* userdata;
 };
 
 

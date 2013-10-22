@@ -58,6 +58,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     size = 0;
     flags = 0;
     handle = 0;
+    userdata = 0;
 }
 
 void UMatData::lock()
@@ -554,7 +555,7 @@ Mat UMat::getMat(int accessFlags) const
     return hdr;
 }
 
-void* UMat::handle(int accessFlags) const
+void* UMat::handle(int /*accessFlags*/) const
 {
     if( !u )
         return 0;
