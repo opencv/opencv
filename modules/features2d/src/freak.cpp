@@ -224,7 +224,6 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
 
     ((FREAK*)this)->buildPattern();
 
-<<<<<<< HEAD
     // Convert to gray if not already
     Mat grayImage = image;
     if( image.channels() > 1 )
@@ -336,33 +335,6 @@ void FREAK::extractDescriptor(uchar *pointsValue, void ** ptr) const
     (*ptrSSE) -= 8;
 }
 #endif
-=======
-    // Use 32-bit integers if we won't overflow in the integral image
-    if ((image.type() == CV_8U || image.type() == CV_8S) &&
-        (image.rows * image.cols) < 8388608 ) // 8388608 = 2 ^ (32 - 8(bit depth) - 1(sign bit))
-    {
-        // Create the integral image appropriate for our type & usage
-        if (image.type() == CV_8U)
-            computeDescriptors<uchar, int>(image, keypoints, descriptors);
-        else if (image.type() == CV_8S)
-            computeDescriptors<char, int>(image, keypoints, descriptors);
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-    } else {
-        // Create the integral image appropriate for our type & usage
-        if ( image.type() == CV_8U )
-            computeDescriptors<uchar, double>(image, keypoints, descriptors);
-        else if ( image.type() == CV_8S )
-            computeDescriptors<char, double>(image, keypoints, descriptors);
-        else if ( image.type() == CV_16U )
-            computeDescriptors<ushort, double>(image, keypoints, descriptors);
-        else if ( image.type() == CV_16S )
-            computeDescriptors<short, double>(image, keypoints, descriptors);
-        else
-            CV_Error( CV_StsUnsupportedFormat, "" );
-    }
-}
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
 
 template <typename srcMatType, typename iiMatType>
 void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const {
