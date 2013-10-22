@@ -9,7 +9,7 @@ using std::tr1::get;
 
 typedef tr1::tuple<Size, MatType> Size_Source_t;
 typedef TestBaseWithParam<Size_Source_t> Size_Source;
-typedef TestBaseWithParam<Size> MatSize;
+typedef TestBaseWithParam<Size> TestMatSize;
 
 static const float rangeHight = 256.0f;
 static const float rangeLow = 0.0f;
@@ -99,7 +99,7 @@ PERF_TEST_P(Size_Source, calcHist3d,
     SANITY_CHECK(hist);
 }
 
-PERF_TEST_P(MatSize, equalizeHist,
+PERF_TEST_P(TestMatSize, equalizeHist,
             testing::Values(TYPICAL_MAT_SIZES)
             )
 {

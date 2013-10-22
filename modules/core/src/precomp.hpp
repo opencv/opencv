@@ -50,6 +50,7 @@
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #include <assert.h>
 #include <ctype.h>
@@ -214,6 +215,19 @@ inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
+
+struct TLSData
+{
+    TLSData();
+    RNG rng;
+    int device;
+    ocl::Queue oclQueue;
+    int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
+
+    static TLSData* get();
+};
+
+namespace ocl { MatAllocator* getOpenCLAllocator(); }
 
 }
 
