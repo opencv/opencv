@@ -1,0 +1,72 @@
+diff --git a/3rdparty/openexr/IlmImf/ImfAcesFile.cpp b/3rdparty/openexr/IlmImf/ImfAcesFile.cpp
+index de4bf83..9418b9d 100644
+--- a/3rdparty/openexr/IlmImf/ImfAcesFile.cpp
++++ b/3rdparty/openexr/IlmImf/ImfAcesFile.cpp
+@@ -42,6 +42,7 @@
+ #include <ImfRgbaFile.h>
+ #include <ImfStandardAttributes.h>
+ #include <Iex.h>
++#include <algorithm> // for std::max()
+ 
+ using namespace std;
+ using namespace Imath;
+diff --git a/3rdparty/openexr/IlmImf/ImfOutputFile.cpp b/3rdparty/openexr/IlmImf/ImfOutputFile.cpp
+index 8831ec9..e69b92b 100644
+--- a/3rdparty/openexr/IlmImf/ImfOutputFile.cpp
++++ b/3rdparty/openexr/IlmImf/ImfOutputFile.cpp
+@@ -58,6 +58,7 @@
+ #include <vector>
+ #include <fstream>
+ #include <assert.h>
++#include <algorithm> // for std::max()
+ 
+ 
+ namespace Imf {
+diff --git a/3rdparty/openexr/IlmImf/ImfScanLineInputFile.cpp b/3rdparty/openexr/IlmImf/ImfScanLineInputFile.cpp
+index f7a12a3..5d8b522 100644
+--- a/3rdparty/openexr/IlmImf/ImfScanLineInputFile.cpp
++++ b/3rdparty/openexr/IlmImf/ImfScanLineInputFile.cpp
+@@ -56,6 +56,7 @@
+ #include <string>
+ #include <vector>
+ #include <assert.h>
++#include <algorithm> // for std::max()
+ 
+ 
+ namespace Imf {
+diff --git a/3rdparty/openexr/IlmImf/ImfTiledMisc.cpp b/3rdparty/openexr/IlmImf/ImfTiledMisc.cpp
+index 57f52f1..9588e78 100644
+--- a/3rdparty/openexr/IlmImf/ImfTiledMisc.cpp
++++ b/3rdparty/openexr/IlmImf/ImfTiledMisc.cpp
+@@ -43,6 +43,7 @@
+ #include "Iex.h"
+ #include <ImfMisc.h>
+ #include <ImfChannelList.h>
++#include <algorithm> // for std::max()
+ 
+ 
+ namespace Imf {
+diff --git a/3rdparty/openexr/IlmImf/ImfTiledOutputFile.cpp b/3rdparty/openexr/IlmImf/ImfTiledOutputFile.cpp
+index 0882106..0bc3cb3 100644
+--- a/3rdparty/openexr/IlmImf/ImfTiledOutputFile.cpp
++++ b/3rdparty/openexr/IlmImf/ImfTiledOutputFile.cpp
+@@ -63,6 +63,7 @@
+ #include <fstream>
+ #include <assert.h>
+ #include <map>
++#include <algorithm> // for std::max()
+ 
+ 
+ namespace Imf {
+diff --git a/3rdparty/openexr/Imath/ImathMatrixAlgo.cpp b/3rdparty/openexr/Imath/ImathMatrixAlgo.cpp
+index f0d2ed6..7ddc649 100644
+--- a/3rdparty/openexr/Imath/ImathMatrixAlgo.cpp
++++ b/3rdparty/openexr/Imath/ImathMatrixAlgo.cpp
+@@ -44,6 +44,7 @@
+ 
+ #include "ImathMatrixAlgo.h"
+ #include <cmath>
++#include <algorithm> // for std::max()
+ 
+ #if defined(OPENEXR_DLL)
+     #define EXPORT_CONST __declspec(dllexport)
