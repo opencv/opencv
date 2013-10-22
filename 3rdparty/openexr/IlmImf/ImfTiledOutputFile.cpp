@@ -63,6 +63,7 @@
 #include <fstream>
 #include <assert.h>
 #include <map>
+#include <algorithm> // for std::max()
 
 
 namespace Imf {
