@@ -390,14 +390,7 @@ void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoin
     if( !extAll ) {
         // extract the best comparisons only
         descriptors = cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
-<<<<<<< HEAD
         void *ptr = descriptors.data+(keypoints.size()-1)*descriptors.step[0];
-=======
-#if CV_SSE2
-        __m128i* ptrSSE = (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
-#endif
-        std::bitset<FREAK_NB_PAIRS>* ptrScalar = (std::bitset<FREAK_NB_PAIRS>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
 
         for( size_t k = keypoints.size(); k--; ) {
             // estimate orientation (gradient)
@@ -435,85 +428,9 @@ void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoin
                                                                       keypoints[k].pt.x, keypoints[k].pt.y,
                                                                       kpScaleIdx[k], thetaIdx, i);
             }
-<<<<<<< HEAD
 
             // Extract descriptor
             extractDescriptor<srcMatType>(pointsValue, &ptr);
-=======
-#if CV_SSE2
-            if (sizeof(srcMatType) == sizeof(char)) {
-                // note that comparisons order is modified in each block (but first 128 comparisons remain globally the same-->does not affect the 128,384 bits segmanted matching strategy)
-                int cnt = 0;
-                for( int n = FREAK_NB_PAIRS/128; n-- ; )
-                {
-                    __m128i result128 = _mm_setzero_si128();
-                    for( int m = 128/16; m--; cnt += 16 )
-                    {
-                        __m128i operand1 = _mm_set_epi8(
-                            pointsValue[descriptionPairs[cnt+0].i],
-                            pointsValue[descriptionPairs[cnt+1].i],
-                            pointsValue[descriptionPairs[cnt+2].i],
-                            pointsValue[descriptionPairs[cnt+3].i],
-                            pointsValue[descriptionPairs[cnt+4].i],
-                            pointsValue[descriptionPairs[cnt+5].i],
-                            pointsValue[descriptionPairs[cnt+6].i],
-                            pointsValue[descriptionPairs[cnt+7].i],
-                            pointsValue[descriptionPairs[cnt+8].i],
-                            pointsValue[descriptionPairs[cnt+9].i],
-                            pointsValue[descriptionPairs[cnt+10].i],
-                            pointsValue[descriptionPairs[cnt+11].i],
-                            pointsValue[descriptionPairs[cnt+12].i],
-                            pointsValue[descriptionPairs[cnt+13].i],
-                            pointsValue[descriptionPairs[cnt+14].i],
-                            pointsValue[descriptionPairs[cnt+15].i]);
-
-                        __m128i operand2 = _mm_set_epi8(
-                            pointsValue[descriptionPairs[cnt+0].j],
-                            pointsValue[descriptionPairs[cnt+1].j],
-                            pointsValue[descriptionPairs[cnt+2].j],
-                            pointsValue[descriptionPairs[cnt+3].j],
-                            pointsValue[descriptionPairs[cnt+4].j],
-                            pointsValue[descriptionPairs[cnt+5].j],
-                            pointsValue[descriptionPairs[cnt+6].j],
-                            pointsValue[descriptionPairs[cnt+7].j],
-                            pointsValue[descriptionPairs[cnt+8].j],
-                            pointsValue[descriptionPairs[cnt+9].j],
-                            pointsValue[descriptionPairs[cnt+10].j],
-                            pointsValue[descriptionPairs[cnt+11].j],
-                            pointsValue[descriptionPairs[cnt+12].j],
-                            pointsValue[descriptionPairs[cnt+13].j],
-                            pointsValue[descriptionPairs[cnt+14].j],
-                            pointsValue[descriptionPairs[cnt+15].j]);
-
-                        __m128i workReg = _mm_min_epu8(operand1, operand2); // emulated "not less than" for 8-bit UNSIGNED integers
-                        workReg = _mm_cmpeq_epi8(workReg, operand2);        // emulated "not less than" for 8-bit UNSIGNED integers
-
-                        workReg = _mm_and_si128(_mm_set1_epi16(short(0x8080 >> m)), workReg); // merge the last 16 bits with the 128bits std::vector until full
-                        result128 = _mm_or_si128(result128, workReg);
-                    }
-                    (*ptrSSE) = result128;
-                    ++ptrSSE;
-                }
-                ptrSSE -= 8;
-            } else
-#endif
-            {
-                // extracting descriptor preserving the order of SSE version
-                int cnt = 0;
-                for( int n = 7; n < FREAK_NB_PAIRS; n += 128)
-                {
-                    for( int m = 8; m--; )
-                    {
-                        int nm = n-m;
-                        for(int kk = nm+15*8; kk >= nm; kk-=8, ++cnt)
-                        {
-                            ptrScalar->set(kk, pointsValue[descriptionPairs[cnt].i] >= pointsValue[descriptionPairs[cnt].j]);
-                        }
-                    }
-                }
-                --ptrScalar;
-            }
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
         }
     }
     else { // extract all possible comparisons for selection
@@ -573,21 +490,12 @@ void FREAK::computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoin
 
 // simply take average on a square patch, not even gaussian approx
 template <typename imgType, typename iiType>
-<<<<<<< HEAD
 imgType FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
                               const float kp_x,
                               const float kp_y,
                               const unsigned int scale,
                               const unsigned int rot,
                               const unsigned int point) const {
-=======
-int FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
-                            const float kp_x,
-                            const float kp_y,
-                            const unsigned int scale,
-                            const unsigned int rot,
-                            const unsigned int point) const {
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
     // get point position in image
     const PatternPoint& FreakPoint = patternLookup[scale*FREAK_NB_ORIENTATION*FREAK_NB_POINTS + rot*FREAK_NB_POINTS + point];
     const float xf = FreakPoint.x+kp_x;
@@ -613,11 +521,7 @@ int FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
                 + r_x  *r_y  *int(image.at<imgType>(y+1, x+1));
         //return the rounded mean
         ret_val += 2 * 1024 * 1024;
-<<<<<<< HEAD
         return static_cast<imgType>(ret_val / (4 * 1024 * 1024));
-=======
-        return static_cast<int>(ret_val / (4 * 1024 * 1024));
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
     }
 
     // expected case:
@@ -635,11 +539,7 @@ int FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
     ret_val -= integral.at<iiType>(y_top,x_right);
     ret_val = ret_val/( (x_right-x_left)* (y_bottom-y_top) );
     //~ std::cout<<integral.step[1]<<std::endl;
-<<<<<<< HEAD
     return static_cast<imgType>(ret_val);
-=======
-    return static_cast<int>(ret_val);
->>>>>>> Updating STAR detector and FREAK descriptor to work with large and/or 16-bit images
 }
 
 // pair selection algorithm from a set of training images and corresponding keypoints
