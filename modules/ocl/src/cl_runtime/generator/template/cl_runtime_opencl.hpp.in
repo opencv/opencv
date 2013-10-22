@@ -1,12 +1,6 @@
 #ifndef __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__
 #define __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__
 
-#ifdef HAVE_OPENCL
-
-#if defined __APPLE__ && !defined(IOS)
-#include <OpenCL/cl.h>
-#else
-
 @CL_REMAP_ORIGIN@
 
 #if defined __APPLE__
@@ -26,9 +20,5 @@
 #endif
 
 @CL_FN_DECLARATIONS@
-
-#endif
-
-#endif
 
 #endif // __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__

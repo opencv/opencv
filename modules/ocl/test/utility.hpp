@@ -44,7 +44,7 @@
 #include "opencv2/core.hpp"
 
 
-#define LOOP_TIMES 1
+extern int LOOP_TIMES;
 
 #define MWIDTH 256
 #define MHEIGHT 256
