@@ -1276,6 +1276,17 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
+        size_t i, n = v.size();
+        mv.resize(n);
+
+        for( i = 0; i < n; i++ )
+            mv[i] = v[i];
+        return;
+    }
+
     if( k == STD_VECTOR_UMAT )
     {
         const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;

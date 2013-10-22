@@ -391,7 +391,7 @@ typedef struct _cl_buffer_region {
 #define CL_MEM_USE_HOST_PTR                         (1 << 3)
 #define CL_MEM_ALLOC_HOST_PTR                       (1 << 4)
 #define CL_MEM_COPY_HOST_PTR                        (1 << 5)
-// reserved                                         (1 << 6)    
+// reserved                                         (1 << 6)
 #define CL_MEM_HOST_WRITE_ONLY                      (1 << 7)
 #define CL_MEM_HOST_READ_ONLY                       (1 << 8)
 #define CL_MEM_HOST_NO_ACCESS                       (1 << 9)
@@ -627,13 +627,13 @@ static void* initOpenCLAndLoad(const char* funcname)
         {
             handle = LoadLibraryA("OpenCL.dll");
             initialized = true;
-            g_haveOpenCL = handle != 0 && GetProcAddressA(handle, oclFuncToCheck) != 0;
+            g_haveOpenCL = handle != 0 && GetProcAddress(handle, oclFuncToCheck) != 0;
         }
         if(!handle)
             return 0;
     }
-    
-    return funcname ? (void*)GetProcAddressA(handle, funcname) : 0;
+
+    return funcname ? (void*)GetProcAddress(handle, funcname) : 0;
 }
 
 #elif defined(__linux)
@@ -649,16 +649,16 @@ static void* initOpenCLAndLoad(const char* funcname)
     {
         if(!initialized)
         {
-            handle = dlopen("libOpenCL.so");
+            handle = dlopen("libOpenCL.so", RTLD_LAZY);
             if(!handle)
-                handle = dlopen("libCL.so");
+                handle = dlopen("libCL.so", RTLD_LAZY);
             initialized = true;
             g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
         }
         if(!handle)
             return 0;
     }
-    
+
     return funcname ? (void*)dlsym(handle, funcname) : 0;
 }
 
@@ -726,9 +726,9 @@ OCL_FUNC(cl_int, clGetDeviceInfo,
 
 OCL_FUNC(cl_int, clGetDeviceIDs,
     (cl_platform_id platform,
-    cl_device_type device_type, 
-    cl_uint num_entries, 
-    cl_device_id * devices, 
+    cl_device_type device_type,
+    cl_uint num_entries,
+    cl_device_id * devices,
     cl_uint * num_devices),
     (platform, device_type, num_entries, devices, num_devices))
 
@@ -755,17 +755,17 @@ OCL_FUNC_P(cl_context, clCreateContextFromType,
     (properties, device_type, pfn_notify, user_data, errcode_ret))
 
 OCL_FUNC(cl_int, clGetContextInfo,
-    (cl_context context, 
-    cl_context_info param_name, 
-    size_t param_value_size, 
-    void * param_value, 
+    (cl_context context,
+    cl_context_info param_name,
+    size_t param_value_size,
+    void * param_value,
     size_t * param_value_size_ret),
-    (context, param_name, param_value_size, 
+    (context, param_name, param_value_size,
     param_value, param_value_size_ret))
 */
 OCL_FUNC_P(cl_command_queue, clCreateCommandQueue,
-    (cl_context context, 
-    cl_device_id device, 
+    (cl_context context,
+    cl_device_id device,
     cl_command_queue_properties properties,
     cl_int * errcode_ret),
     (context, device, properties, errcode_ret))
@@ -803,7 +803,7 @@ OCL_FUNC_P(cl_mem, clCreateImage,
     (cl_context context,
     cl_mem_flags flags,
     const cl_image_format * image_format,
-    const cl_image_desc * image_desc, 
+    const cl_image_desc * image_desc,
     void * host_ptr,
     cl_int * errcode_ret),
     (context, flags, image_format, image_desc, host_ptr, errcode_ret))
@@ -850,7 +850,7 @@ OCL_FUNC(cl_int, clGetKernelArgInfo,
  void * param_value,
  size_t * param_value_size_ret),
  (kernel, arg_indx, param_name, param_value_size, param_value, param_value_size_ret))
- 
+
 OCL_FUNC(cl_int, clEnqueueReadImage,
  (cl_command_queue command_queue,
  cl_mem image,
@@ -955,7 +955,7 @@ OCL_FUNC_P(void*, clEnqueueMapImage,
  event_wait_list, event, errcode_ret))
 
 OCL_FUNC(cl_int, clRetainProgram, (cl_program program), (program))
- 
+
 OCL_FUNC(cl_int, clGetKernelInfo,
  (cl_kernel kernel,
  cl_kernel_info param_name,
@@ -995,7 +995,7 @@ OCL_FUNC(cl_int, clBuildProgram,
     (cl_program program,
     cl_uint num_devices,
     const cl_device_id * device_list,
-    const char * options, 
+    const char * options,
     void (CL_CALLBACK * pfn_notify)(cl_program, void *),
     void * user_data),
     (program, num_devices, device_list, options, pfn_notify, user_data))
@@ -1016,7 +1016,7 @@ OCL_FUNC(cl_int, clGetProgramBuildInfo,
     void * param_value,
     size_t * param_value_size_ret),
     (program, device, param_name, param_value_size, param_value, param_value_size_ret))
-                      
+
 OCL_FUNC_P(cl_kernel, clCreateKernel,
     (cl_program program,
     const char * kernel_name,
@@ -1040,7 +1040,7 @@ OCL_FUNC(cl_int, clGetKernelWorkGroupInfo,
     void * param_value,
     size_t * param_value_size_ret),
     (kernel, device, param_name, param_value_size, param_value, param_value_size_ret))
-                         
+
 OCL_FUNC(cl_int, clFinish, (cl_command_queue command_queue), (command_queue))
 
 OCL_FUNC(cl_int, clEnqueueReadBuffer,
@@ -1048,7 +1048,7 @@ OCL_FUNC(cl_int, clEnqueueReadBuffer,
     cl_mem buffer,
     cl_bool blocking_read,
     size_t offset,
-    size_t size, 
+    size_t size,
     void * ptr,
     cl_uint num_events_in_wait_list,
     const cl_event * event_wait_list,
@@ -1061,12 +1061,12 @@ OCL_FUNC(cl_int, clEnqueueReadBufferRect,
     cl_mem buffer,
     cl_bool blocking_read,
     const size_t * buffer_offset,
-    const size_t * host_offset, 
+    const size_t * host_offset,
     const size_t * region,
     size_t buffer_row_pitch,
     size_t buffer_slice_pitch,
     size_t host_row_pitch,
-    size_t host_slice_pitch,                        
+    size_t host_slice_pitch,
     void * ptr,
     cl_uint num_events_in_wait_list,
     const cl_event * event_wait_list,
@@ -1076,14 +1076,14 @@ OCL_FUNC(cl_int, clEnqueueReadBufferRect,
     event_wait_list, event))
 
 OCL_FUNC(cl_int, clEnqueueWriteBuffer,
-    (cl_command_queue command_queue, 
-    cl_mem buffer, 
-    cl_bool blocking_write, 
-    size_t offset, 
-    size_t size, 
-    const void * ptr, 
-    cl_uint num_events_in_wait_list, 
-    const cl_event * event_wait_list, 
+    (cl_command_queue command_queue,
+    cl_mem buffer,
+    cl_bool blocking_write,
+    size_t offset,
+    size_t size,
+    const void * ptr,
+    cl_uint num_events_in_wait_list,
+    const cl_event * event_wait_list,
     cl_event * event),
     (command_queue, buffer, blocking_write, offset, size, ptr,
     num_events_in_wait_list, event_wait_list, event))
@@ -1093,12 +1093,12 @@ OCL_FUNC(cl_int, clEnqueueWriteBufferRect,
     cl_mem buffer,
     cl_bool blocking_write,
     const size_t * buffer_offset,
-    const size_t * host_offset, 
+    const size_t * host_offset,
     const size_t * region,
     size_t buffer_row_pitch,
     size_t buffer_slice_pitch,
     size_t host_row_pitch,
-    size_t host_slice_pitch,                        
+    size_t host_slice_pitch,
     const void * ptr,
     cl_uint num_events_in_wait_list,
     const cl_event * event_wait_list,
@@ -1107,26 +1107,26 @@ OCL_FUNC(cl_int, clEnqueueWriteBufferRect,
     region, buffer_row_pitch, buffer_slice_pitch, host_row_pitch,
     host_slice_pitch, ptr, num_events_in_wait_list, event_wait_list, event))
 
-OCL_FUNC(cl_int, clEnqueueFillBuffer,
+/*OCL_FUNC(cl_int, clEnqueueFillBuffer,
     (cl_command_queue command_queue,
-    cl_mem buffer, 
-    const void * pattern, 
-    size_t pattern_size, 
-    size_t offset, 
-    size_t size, 
-    cl_uint num_events_in_wait_list, 
-    const cl_event * event_wait_list, 
+    cl_mem buffer,
+    const void * pattern,
+    size_t pattern_size,
+    size_t offset,
+    size_t size,
+    cl_uint num_events_in_wait_list,
+    const cl_event * event_wait_list,
     cl_event * event),
-    (command_queue, buffer, pattern, pattern_size, offset, size, 
-    num_events_in_wait_list, event_wait_list, event))
+    (command_queue, buffer, pattern, pattern_size, offset, size,
+    num_events_in_wait_list, event_wait_list, event))*/
 
 OCL_FUNC(cl_int, clEnqueueCopyBuffer,
-    (cl_command_queue command_queue, 
+    (cl_command_queue command_queue,
     cl_mem src_buffer,
-    cl_mem dst_buffer, 
+    cl_mem dst_buffer,
     size_t src_offset,
     size_t dst_offset,
-    size_t size, 
+    size_t size,
     cl_uint num_events_in_wait_list,
     const cl_event * event_wait_list,
     cl_event * event),
@@ -1134,12 +1134,12 @@ OCL_FUNC(cl_int, clEnqueueCopyBuffer,
     size, num_events_in_wait_list, event_wait_list, event))
 
 OCL_FUNC(cl_int, clEnqueueCopyBufferRect,
-    (cl_command_queue command_queue, 
+    (cl_command_queue command_queue,
     cl_mem src_buffer,
-    cl_mem dst_buffer, 
+    cl_mem dst_buffer,
     const size_t * src_origin,
     const size_t * dst_origin,
-    const size_t * region, 
+    const size_t * region,
     size_t src_row_pitch,
     size_t src_slice_pitch,
     size_t dst_row_pitch,
@@ -1154,7 +1154,7 @@ OCL_FUNC(cl_int, clEnqueueCopyBufferRect,
 OCL_FUNC_P(void*, clEnqueueMapBuffer,
     (cl_command_queue command_queue,
     cl_mem buffer,
-    cl_bool blocking_map, 
+    cl_bool blocking_map,
     cl_map_flags map_flags,
     size_t offset,
     size_t size,
@@ -1737,7 +1737,6 @@ struct Context::Impl
 
     cl_context handle;
     std::vector<Device> devices;
-    int dtype;
     bool initialized;
 
     typedef ProgramSource::hash_t hash_t;
@@ -1764,11 +1763,6 @@ Context::Context(int dtype)
 {
     p = 0;
     create(dtype);
-}
-
-int Context::dtype() const
-{
-    return p ? p->dtype : 0;
 }
 
 bool Context::create(int dtype0)
@@ -2113,9 +2107,8 @@ int Kernel::set(int i, const KernelArg& arg)
         }
         else
         {
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t), &arg.m->offset);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t)*(dims-1), &arg.m->step.p[0]);
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(cl_int)*dims, &arg.m->size.p[0]);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(size_t)*(dims-1), &arg.m->step.p[0]);
+            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(cl_int)*dims, &arg.m->size.p[0]);
             return i + 4;
         }
     }
@@ -2249,13 +2242,13 @@ struct Program::Impl
         const Context& ctx = Context::getDefault();
         const Device& dev = Device::getDefault();
         const char* pos0 = _buf.c_str();
-        char* pos1 = strchr(pos0, '\n');
+        const char* pos1 = strchr(pos0, '\n');
         if(!pos1)
             return;
-        char* pos2 = strchr(pos1+1, '\n');
+        const char* pos2 = strchr(pos1+1, '\n');
         if(!pos2)
             return;
-        char* pos3 = strchr(pos2+1, '\n');
+        const char* pos3 = strchr(pos2+1, '\n');
         if(!pos3)
             return;
         size_t prefixlen = (pos3 - pos0)+1;
@@ -2580,6 +2573,9 @@ public:
             u->markHostCopyObsolete(false);
             clReleaseMemObject((cl_mem)u->handle);
             u->currAllocator = u->prevAllocator;
+            if(u->data && u->copyOnMap())
+                fastFree(u->data);
+            u->data = u->origdata;
             if(u->refcount == 0)
                 u->currAllocator->deallocate(u);
         }
@@ -2898,4 +2894,3 @@ MatAllocator* getOpenCLAllocator()
 }
 
 }}
-

@@ -57,7 +57,7 @@ class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource;
 class CV_EXPORTS Queue;
-    
+
 class CV_EXPORTS Device
 {
 public:
@@ -211,10 +211,9 @@ public:
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
-    int dtype() const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
-    
+
     static Context& getDefault();
     void* ptr() const;
 protected:
@@ -231,12 +230,12 @@ public:
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
-    
+
     bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
     void* ptr() const;
     static Queue& getDefault();
-    
+
 protected:
     struct Impl;
     Impl* p;
@@ -451,7 +450,7 @@ public:
 
     const String& source() const;
     hash_t hash() const;
-    
+
 protected:
     struct Impl;
     Impl* p;
