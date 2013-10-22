@@ -38,16 +38,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
 OCL_TEST_P(MomentsTest, Mat)
 {
     bool binaryImage = 0;
-    //Only double and float are supported for the source oclMat
-    //We convert the type to CV_32FC1 if the type of source Mat is neither CV_32FC1 nor CV_64FC1
-    //If double is not supported, we also change the type to CV_32FC1
-    if(mat1.type() == CV_64FC1)
-    {
-        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-        {
-            mat1.convertTo(mat1, CV_32FC1);
-        }
-    }else
+    if(mat1.type() == CV_64FC1 && !ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         mat1.convertTo(mat1, CV_32FC1);
     }
@@ -68,13 +59,13 @@ OCL_TEST_P(MomentsTest, Mat)
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 Moments m = moments( contours[i], false );
-                Moments dm = ocl::ocl_moments( contours[i], false, src_d);
+                Moments dm = ocl::ocl_moments( contours[i], false);
                 Compare(m, dm);
             }
         }
         cv::_InputArray _array(mat1);
         cv::Moments CvMom = cv::moments(_array, binaryImage);
-        cv::Moments oclMom = cv::ocl::ocl_moments(_array, binaryImage, src_d);
+        cv::Moments oclMom = cv::ocl::ocl_moments(src_d, binaryImage);
 
         Compare(CvMom, oclMom);
 

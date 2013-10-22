@@ -45,24 +45,14 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
-
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #elif defined (cl_amd_fp64)
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 typedef double T;
-typedef double F;
-typedef double4 F4;
-#define convert_F4 convert_double4
-#define convert_F convert_double
-
 #else
-typedef float F;
-typedef float4 F4;
 typedef long T;
-#define convert_F4 convert_float4
-#define convert_F convert_float
 #endif
 
 #define DST_ROW_00     0
@@ -126,8 +116,81 @@ __kernel void icvContourMoments(int contour_total,
         yi2 * (xi_1 + 3 * xi));
 }
 
-__kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int src_step,
-                        __global F* dst_m,
+#if defined (DOUBLE_SUPPORT)
+#define DSTT double
+#else
+#define DSTT float
+#endif
+
+#ifdef CV_8UC1
+#define TT uchar 
+#define WT int 
+#define MT int 
+#define WT4 int4
+#define MT4 int4
+#define convert_T4 convert_int4
+#define convert_T convert_int
+#define convert_L4 convert_T4
+#elif defined CV_16UC1
+#define TT ushort 
+#define WT int 
+#define MT long 
+#define WT4 int4
+#define MT4 long4
+#define convert_T4 convert_int4
+#define convert_T convert_int
+#define convert_L4 convert_long4
+#elif defined CV_16SC1
+#define TT short 
+#define WT int 
+#define MT long 
+#define WT4 int4
+#define MT4 long4
+#define convert_T4 convert_int4
+#define convert_T convert_int
+#define convert_L4 convert_long4
+#elif defined CV_32FC1
+#define TT float 
+#ifdef DOUBLE_SUPPORT 
+#define WT double 
+#define MT double 
+#define WT4 double4
+#define MT4 double4
+#define convert_T4 convert_double4
+#define convert_T convert_double
+#define convert_L4 convert_T4
+#else
+#define WT float 
+#define MT float 
+#define WT4 float4
+#define MT4 float4
+#define convert_T4 convert_float4
+#define convert_T convert_float
+#define convert_L4 convert_T4
+#endif
+#elif defined CV_64FC1
+#ifdef DOUBLE_SUPPORT 
+#define TT double
+#define WT double 
+#define MT double 
+#define WT4 double4
+#define MT4 double4
+#define convert_T4 convert_double4
+#define convert_T convert_double
+#define convert_L4 convert_T4
+#else
+#define TT float
+#define WT float 
+#define MT float 
+#define WT4 float4
+#define MT4 float4
+#define convert_T4 convert_float4
+#define convert_T convert_float
+#define convert_L4 convert_T4
+#endif
+#endif
+__kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int src_step,
+                        __global DSTT* dst_m,
                         int dst_cols, int dst_step)
 {
     int dy = get_global_id(1);
@@ -140,12 +203,12 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
     codxy[ly] = ly;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    F4 x0 = (F4)(0.f);
-    F4 x1 = (F4)(0.f);
-    F4 x2 = (F4)(0.f);
-    F4 x3 = (F4)(0.f);
+    WT4 x0 = (WT4)(0.f);
+    WT4 x1 = (WT4)(0.f);
+    WT4 x2 = (WT4)(0.f);
+    MT4 x3 = (MT4)(0.f);
 
-    __global F* row = 0;
+    __global TT* row = 0;
     bool switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
 
     switch(switchFlag)
@@ -168,12 +231,12 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
         break;
     }
 
-    F4 p;
-    F4 x;
-    F4 xp;
-    F4 xxp;
+    WT4 p;
+    WT4 x;
+    WT4 xp;
+    WT4 xxp;
 
-    F py = 0.f, sy = 0.f;
+    WT py = 0.f, sy = 0.f;
 
     if(dy < src_rows)
     {
@@ -186,15 +249,15 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
                 int i;
                 for(i = 0; i < x_rest - 4; i += 4)
                 {
-                    p = vload4(0, row + i);
-                    x = convert_F4(vload4(0, codxy + i));
+                    p = convert_T4(vload4(0, row + i));
+                    x = convert_T4(vload4(0, codxy + i));
                     xp = x * p;
                     xxp = xp * x;
 
                     x0 += p;
                     x1 += xp;
                     x2 += xxp;
-                    x3 += xxp * x;
+                    x3 += convert_L4(xxp * x);
                 }
 
                 x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
@@ -205,20 +268,20 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
 
                 x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3;
 
-                F x0_ = 0;
-                F x1_ = 0;
-                F x2_ = 0;
-                F x3_ = 0;
+                WT x0_ = 0;
+                WT x1_ = 0;
+                WT x2_ = 0;
+                MT x3_ = 0;
 
                 for(; i < x_rest; i++)
                 {
-                    F p_ = 0;
+                    WT p_ = 0;
                     p_ = row[i];
-                    F x_ = convert_F(codxy[i]);
+                    WT x_ = convert_T(codxy[i]);
 
 
-                    F xp_ = x_ * p_;
-                    F xxp_ = xp_ * x_;
+                    WT xp_ = x_ * p_;
+                    WT xxp_ = xp_ * x_;
 
                     x0_ += p_;
                     x1_ += xp_;
@@ -237,15 +300,15 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
             {
                 for(int i = 0; i < 256; i += 4)
                 {
-                    p = vload4(0, row + i);
-                    x = convert_F4(vload4(0, codxy + i));
+                    p = convert_T4(vload4(0, row + i));
+                    x = convert_T4(vload4(0, codxy + i));
                     xp = x * p;
                     xxp = xp * x;
 
                     x0 += p;
                     x1 += xp;
                     x2 += xxp;
-                    x3 += xxp * x;
+                    x3 += convert_L4(xxp * x);
                 }
 
                 x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
@@ -284,8 +347,8 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
             break;
         }
     }
-    __local F mom[10][256];
-#if 1
+    __local MT mom[10][256];
+
     switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
 
     switch(switchFlag)
@@ -453,11 +516,11 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
     default:
         break;
     }
-#endif
+
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    F xm = (gidx * 256) * mom[0][0];
-    F ym = (gidy * 256) * mom[0][0];
+    TT xm = (gidx * 256) * mom[0][0];
+    TT ym = (gidy * 256) * mom[0][0];
 
     if(ly == 0)
     {

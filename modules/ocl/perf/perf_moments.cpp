@@ -70,16 +70,8 @@ PERF_TEST_P(MomentsFixture, Moments,
 
     Mat  src(srcSize, type), dst(7, 1, CV_64F);
     randu(src, 0, 255);
-    //Only double and float are supported for the source oclMat
-    //We convert the type to CV_32FC1 if the type of source Mat is neither CV_32FC1 nor CV_64FC1
-    //If double is not supported, we also change the type to CV_32FC1
-    if(src.type() == CV_64FC1)
-    {
-        if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-        {
-            src.convertTo(src, CV_32FC1);
-        }
-    }else
+
+    if(src.type() == CV_64FC1 && !ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         src.convertTo(src, CV_32FC1);
     }
@@ -90,7 +82,7 @@ PERF_TEST_P(MomentsFixture, Moments,
     cv::InputArray array_(src);
     if (RUN_OCL_IMPL)
     {
-        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(array_, binaryImage, src_d);
+        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
     }
     else if (RUN_PLAIN_IMPL)
     {

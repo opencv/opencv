@@ -46,6 +46,9 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
+#if defined _MSC_VER
+#define snprintf sprintf_s
+#endif
 namespace cv
 {
     namespace ocl
@@ -141,7 +144,10 @@ namespace cv
                 cl_int dst_step = (cl_int)dst_a.step;
                 args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
-                openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
+                char builOption[128];
+                snprintf(builOption, 128, "-D CV_8UC1");
+
+                openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1, builOption);
 
                 cv::Mat dst(dst_a);
                 a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
@@ -214,57 +220,19 @@ namespace cv
             }
         }
 
-        static void ocl_cvMoments( const void* array, CvMoments* mom, int binary, oclMat& src)
+        Moments ocl_moments(oclMat& src, bool binary) //for image
         {
             CV_Assert(!binary);
             const int TILE_SIZE = 256;
-            int type, cn, coi = 0;
-            CvMat stub, *mat = (CvMat*)array;
-            CvContour contourHeader;
-            CvSeq* contour = 0;
-            CvSeqBlock block;
-            if( CV_IS_SEQ( array ))
-            {
-                contour = (CvSeq*)array;
-                if( !CV_IS_SEQ_POINT_SET( contour ))
-                    CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
-            }
 
-            if( !mom )
+            CvMoments mom;
+
+            if(!(&mom))
                 CV_Error( CV_StsNullPtr, "" );
 
-            memset( mom, 0, sizeof(*mom));
+            memset( &mom, 0, sizeof(*(&mom)));
 
-            if( !contour )
-            {
-
-                mat = cvGetMat( mat, &stub, &coi );
-                type = CV_MAT_TYPE( mat->type );
-
-                if( type == CV_32SC2 || type == CV_32FC2 )
-                {
-                    contour = cvPointSeqFromMat(
-                        CV_SEQ_KIND_CURVE | CV_SEQ_FLAG_CLOSED,
-                        mat, &contourHeader, &block );
-                }
-            }
-            if( contour )
-            {
-                icvContourMoments( contour, mom );
-                return;
-            }
-
-            type = CV_MAT_TYPE( mat->type );
-            cn = CV_MAT_CN( type );
-
-            cv::Size size = cvGetMatSize( mat );
-            if( cn > 1 && coi == 0 )
-                CV_Error( CV_StsBadArg, "Invalid image type" );
-
-            if( size.width <= 0 || size.height <= 0 )
-                return;
-
-            cv::Size tileSize;
+            cv::Size size = src.size();
             int blockx, blocky;
             blockx = (size.width + TILE_SIZE - 1)/TILE_SIZE;
             blocky = (size.height + TILE_SIZE - 1)/TILE_SIZE;
@@ -275,48 +243,51 @@ namespace cv
             size_t localThreads[3]  = {1, tile_height, 1};
             size_t globalThreads[3] = {blockx, size.height, 1};
 
-            dst_m.create(blocky * 10, blockx, CV_64FC1);
-            oclMat src_d;
             if(src.type() == CV_64FC1)
             {
-                if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-                {
-                    src.convertTo(src_d, CV_32FC1);
-                    dst_m.create(blocky * 10, blockx, CV_32FC1);
-                }else
-                {
-                    dst_m.create(blocky * 10, blockx, CV_64FC1);
-                }
+                CV_Assert(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE));
+            }
+            
+            if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            {
+                dst_m.create(blocky * 10, blockx, CV_64FC1);
             }else
             {
-                src.convertTo(src_d, CV_32FC1);
                 dst_m.create(blocky * 10, blockx, CV_32FC1);
             }
 
-//             if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-//             {
-//                 if(src.type() == CV_64FC1)
-//                 {
-//                     src.convertTo(src, CV_32FC1);
-//                 }
-//                 dst_m.create(blocky * 10, blockx, CV_32FC1);
-//             }else
-//             {
-//                 dst_m.create(blocky * 10, blockx, CV_64FC1);
-//             }
 
-            int src_step = (int)(src_d.step/src_d.elemSize());
+            int src_step = (int)(src.step/src.elemSize());
             int dstm_step = (int)(dst_m.step/dst_m.elemSize());
 
             vector<pair<size_t , const void *> > args,args_sum;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src_d.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src_d.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src_d.cols ));
+            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
             args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dstm_step ));
-            openCLExecuteKernel(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, -1);
+
+            char builOption[128];
+            if(src.type() == CV_8UC1)
+            {
+                snprintf(builOption, 128, "-D CV_8UC1");
+            }else if(src.type() == CV_16UC1)
+            {
+                snprintf(builOption, 128, "-D CV_16UC1");
+            }else if(src.type() == CV_16SC1)
+            {
+                snprintf(builOption, 128, "-D CV_16SC1");
+            }else if(src.type() == CV_32FC1)
+            {
+                snprintf(builOption, 128, "-D CV_32FC1");
+            }else if(src.type() == CV_64FC1)
+            {
+                snprintf(builOption, 128, "-D CV_64FC1");
+            }
+
+            openCLExecuteKernel(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, -1, builOption);
 
             Mat tmp(dst_m);
             tmp.convertTo(tmp, CV_64FC1);
@@ -340,25 +311,62 @@ namespace cv
                 }
             }
 
-            mom->m00 = tmp_m[0];
-            mom->m10 = tmp_m[1];
-            mom->m01 = tmp_m[2];
-            mom->m20 = tmp_m[3];
-            mom->m11 = tmp_m[4];
-            mom->m02 = tmp_m[5];
-            mom->m30 = tmp_m[6];
-            mom->m21 = tmp_m[7];
-            mom->m12 = tmp_m[8];
-            mom->m03 = tmp_m[9];
-            icvCompleteMomentState( mom );
+            mom.m00 = tmp_m[0];
+            mom.m10 = tmp_m[1];
+            mom.m01 = tmp_m[2];
+            mom.m20 = tmp_m[3];
+            mom.m11 = tmp_m[4];
+            mom.m02 = tmp_m[5];
+            mom.m30 = tmp_m[6];
+            mom.m21 = tmp_m[7];
+            mom.m12 = tmp_m[8];
+            mom.m03 = tmp_m[9];
+            icvCompleteMomentState( &mom );
+            return mom;
         }
 
-        Moments ocl_moments( InputArray _array, bool binaryImage, oclMat& src_d )
+        Moments ocl_moments( InputArray _array, bool binaryImage) //for contour 
         {
+            CV_Assert(!binaryImage);
             CvMoments om;
             Mat arr = _array.getMat();
             CvMat c_array = arr;
-            ocl_cvMoments(&c_array, &om, binaryImage, src_d);
+
+            CvSeq* contour = 0;
+            if( CV_IS_SEQ( &c_array ))
+            {
+                contour = (CvSeq*)(&c_array);
+                if( !CV_IS_SEQ_POINT_SET( contour ))
+                    CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
+            }
+
+            if( !(&om) )
+                CV_Error( CV_StsNullPtr, "" );
+            memset( &om, 0, sizeof(*(&om)));
+
+            int type, coi = 0;
+
+            CvMat stub, *mat = (CvMat*)(&c_array);
+            CvContour contourHeader;
+            CvSeqBlock block;
+
+            if( !contour )
+            {
+
+                mat = cvGetMat( mat, &stub, &coi );
+                type = CV_MAT_TYPE( mat->type );
+
+                if( type == CV_32SC2 || type == CV_32FC2 )
+                {
+                    contour = cvPointSeqFromMat(
+                        CV_SEQ_KIND_CURVE | CV_SEQ_FLAG_CLOSED,
+                        mat, &contourHeader, &block );
+                }
+            }
+
+            CV_Assert(contour);
+    
+            icvContourMoments( contour, &om );
             return om;
         }
     }
