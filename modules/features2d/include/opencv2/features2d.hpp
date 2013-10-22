@@ -397,8 +397,16 @@ public:
 protected:
     virtual void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
     void buildPattern();
-    uchar meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
-                         const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
+
+    template <typename imgType, typename iiType>
+    imgType meanIntensity( const Mat& image, const Mat& integral, const float kp_x, const float kp_y,
+                           const unsigned int scale, const unsigned int rot, const unsigned int point ) const;
+
+    template <typename srcMatType, typename iiMatType>
+    void computeDescriptors( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+
+    template <typename srcMatType>
+    void extractDescriptor(srcMatType *pointsValue, void ** ptr) const;
 
     bool orientationNormalized; //true if the orientation is normalized, false otherwise
     bool scaleNormalized; //true if the scale is normalized, false otherwise
