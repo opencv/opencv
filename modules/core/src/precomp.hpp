@@ -106,7 +106,7 @@ extern const uchar g_Saturate8u[];
 
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
-void deleteThreadRNGData();
+void deleteThreadData();
 #endif
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
