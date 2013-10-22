@@ -244,7 +244,7 @@ namespace cv
             {
                 CV_Assert(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE));
             }
-            
+
             if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
             {
                 dst_m.create(blocky * 10, blockx, CV_64FC1);
@@ -322,7 +322,7 @@ namespace cv
             return mom;
         }
 
-        Moments ocl_moments( InputArray _array, bool binaryImage) //for contour 
+        Moments ocl_moments( InputArray _array, bool binaryImage) //for contour
         {
             CV_Assert(!binaryImage);
             CvMoments om;
@@ -361,7 +361,7 @@ namespace cv
             }
 
             CV_Assert(contour);
-    
+
             icvContourMoments( contour, &om );
             return om;
         }

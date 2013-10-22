@@ -123,45 +123,45 @@ __kernel void icvContourMoments(int contour_total,
 #endif
 
 #ifdef CV_8UC1
-#define TT uchar 
-#define WT int 
-#define MT int 
+#define TT uchar
+#define WT int
+#define MT int
 #define WT4 int4
 #define MT4 int4
 #define convert_T4 convert_int4
 #define convert_T convert_int
 #define convert_L4 convert_T4
 #elif defined CV_16UC1
-#define TT ushort 
-#define WT int 
-#define MT long 
+#define TT ushort
+#define WT int
+#define MT long
 #define WT4 int4
 #define MT4 long4
 #define convert_T4 convert_int4
 #define convert_T convert_int
 #define convert_L4 convert_long4
 #elif defined CV_16SC1
-#define TT short 
-#define WT int 
-#define MT long 
+#define TT short
+#define WT int
+#define MT long
 #define WT4 int4
 #define MT4 long4
 #define convert_T4 convert_int4
 #define convert_T convert_int
 #define convert_L4 convert_long4
 #elif defined CV_32FC1
-#define TT float 
-#ifdef DOUBLE_SUPPORT 
-#define WT double 
-#define MT double 
+#define TT float
+#ifdef DOUBLE_SUPPORT
+#define WT double
+#define MT double
 #define WT4 double4
 #define MT4 double4
 #define convert_T4 convert_double4
 #define convert_T convert_double
 #define convert_L4 convert_T4
 #else
-#define WT float 
-#define MT float 
+#define WT float
+#define MT float
 #define WT4 float4
 #define MT4 float4
 #define convert_T4 convert_float4
@@ -169,10 +169,10 @@ __kernel void icvContourMoments(int contour_total,
 #define convert_L4 convert_T4
 #endif
 #elif defined CV_64FC1
-#ifdef DOUBLE_SUPPORT 
+#ifdef DOUBLE_SUPPORT
 #define TT double
-#define WT double 
-#define MT double 
+#define WT double
+#define MT double
 #define WT4 double4
 #define MT4 double4
 #define convert_T4 convert_double4
@@ -180,8 +180,8 @@ __kernel void icvContourMoments(int contour_total,
 #define convert_L4 convert_T4
 #else
 #define TT float
-#define WT float 
-#define MT float 
+#define WT float
+#define MT float
 #define WT4 float4
 #define MT4 float4
 #define convert_T4 convert_float4
