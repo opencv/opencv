@@ -227,9 +227,6 @@ namespace cv
 
             CvMoments mom;
 
-            if(!(&mom))
-                CV_Error( CV_StsNullPtr, "" );
-
             memset( &mom, 0, sizeof(*(&mom)));
 
             cv::Size size = src.size();
@@ -332,27 +329,26 @@ namespace cv
             Mat arr = _array.getMat();
             CvMat c_array = arr;
 
+            const void* array = &c_array;
+
             CvSeq* contour = 0;
-            if( CV_IS_SEQ( &c_array ))
+            if( CV_IS_SEQ( array ))
             {
-                contour = (CvSeq*)(&c_array);
+                contour = (CvSeq*)(array);
                 if( !CV_IS_SEQ_POINT_SET( contour ))
                     CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
             }
 
-            if( !(&om) )
-                CV_Error( CV_StsNullPtr, "" );
             memset( &om, 0, sizeof(*(&om)));
 
             int type, coi = 0;
 
-            CvMat stub, *mat = (CvMat*)(&c_array);
+            CvMat stub, *mat = (CvMat*)(array);
             CvContour contourHeader;
             CvSeqBlock block;
 
             if( !contour )
             {
-
                 mat = cvGetMat( mat, &stub, &coi );
                 type = CV_MAT_TYPE( mat->type );
 
