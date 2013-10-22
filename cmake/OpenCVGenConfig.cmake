@@ -74,10 +74,11 @@ if(ANDROID AND NOT BUILD_SHARED_LIBS AND HAVE_TBB)
   list(APPEND OpenCV2_INCLUDE_DIRS_CONFIGCMAKE ${TBB_INCLUDE_DIRS})
 endif()
 
+export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 #support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
-
 
 # --------------------------------------------------------------------------------------------
 #  Part 2/3: ${BIN_DIR}/unix-install/OpenCVConfig.cmake -> For use *with* "make install"

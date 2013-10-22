@@ -1147,7 +1147,7 @@ CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
                               double srn = 0, double stn = 0 );
 
-//! finds line segments in the black-n-white image using probabalistic Hough transform
+//! finds line segments in the black-n-white image using probabilistic Hough transform
 CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );

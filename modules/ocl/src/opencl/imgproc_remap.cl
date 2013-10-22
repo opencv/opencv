@@ -1,4 +1,3 @@
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -43,940 +42,282 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
 
-#if defined DOUBLE_SUPPORT
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
-typedef double4 F4 ;
-#else
-typedef float4 F4;
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#endif
 #endif
 
+#ifdef INTER_NEAREST
+#define convertToWT
+#endif
 
-/////////////////////////////////////////////////////////
-///////////////////////using buffer//////////////////////
-/////////////////////////////////////////////////////////
-__kernel void remapNNSConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-        x = x << 2;
-        int gx = x - (dst_offset&3);
-        int4 Gx = (int4)(gx, gx+1, gx+2, gx+3);
-
-        uchar4 nval =convert_uchar4(nVal);
-        uchar4 val = (uchar4)(nval.s0);
-
-        int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&3);
-
-        int map1Start = y * map1_step + (x << 2) + map1_offset - ((dst_offset & 3) << 2);
-        short8 map1_data;
-
-        map1_data = *((__global short8 *)((__global char*)map1 + map1Start));
-        int4 srcIdx = convert_int4(map1_data.odd) * src_step + convert_int4(map1_data.even) + src_offset;
-
-        uchar4 con = convert_uchar4(convert_int4(map1_data.even) >= (int4)(src_cols) || convert_int4(map1_data.odd) >= (int4)(src_rows) || convert_int4(map1_data.even) < (int4)(0) || convert_int4(map1_data.odd) < (int4)(0));
-        uchar4 src_data = val;
-
-        if (con.s0 == 0)
-        src_data.s0 = *(src + srcIdx.s0);
-        if (con.s1 == 0)
-        src_data.s1 = *(src + srcIdx.s1);
-        if (con.s2 == 0)
-        src_data.s2 = *(src + srcIdx.s2);
-        if (con.s3 == 0)
-        src_data.s3 = *(src + srcIdx.s3);
-
-        uchar4 dst_data;
-
-        __global uchar4* d = (__global uchar4 *)(dst + dstStart);
-
-        uchar4 dVal = *d;
-
-        int4 dcon = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-        dst_data = (convert_uchar4(dcon) != convert_uchar4((int4)(0))) ? src_data : dVal;
-
-        *d = dst_data;
-
+#ifdef BORDER_CONSTANT
+#define EXTRAPOLATE(v2, v) v = scalar;
+#elif defined BORDER_REPLICATE
+#define EXTRAPOLATE(v2, v) \
+    { \
+        v2 = max(min(v2, (int2)(src_cols - 1, src_rows - 1)), zero); \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
     }
-
-}
-
-__kernel void remapNNFConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-        x = x << 2;
-        int gx = x - (dst_offset&3);
-        int4 Gx = (int4)(gx, gx+1, gx+2, gx+3);
-
-        uchar4 nval =convert_uchar4(nVal);
-        uchar val = nval.s0;
-
-        int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&3);
-
-        int map1Start = y * map1_step + (x << 3) + map1_offset - ((dst_offset & 3) << 3);
-        float8 map1_data;
-
-        map1_data = *((__global float8 *)((__global char*)map1 + map1Start));
-        int8 map1_dataZ = convert_int8_sat_rte(map1_data);
-        int4 srcIdx = map1_dataZ.odd * src_step + map1_dataZ.even + src_offset;
-
-        uchar4 src_data = val;
-        uchar4 con = convert_uchar4(map1_dataZ.even >= (int4)(src_cols) || map1_dataZ.odd >= (int4)(src_rows) || map1_dataZ.even < (int4)(0) || map1_dataZ.odd < (int4)(0));
-
-        if (con.s0 == 0)
-        src_data.s0 = *(src + srcIdx.s0);
-        if (con.s1 == 0)
-        src_data.s1 = *(src + srcIdx.s1);
-        if (con.s2 == 0)
-        src_data.s2 = *(src + srcIdx.s2);
-        if (con.s3 == 0)
-        src_data.s3 = *(src + srcIdx.s3);
-        uchar4 dst_data;
-       // dst_data = convert_uchar4(map1_dataZ.even >= (int4)(src_cols) || map1_dataZ.odd >= (int4)(src_rows)) ? (uchar4)(val) : src_data;
-        __global uchar4* d = (__global uchar4 *)(dst + dstStart);
-
-        uchar4 dVal = *d;
-
-        int4 dcon = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-
-        dst_data = (convert_uchar4(dcon) != convert_uchar4((int4)(0))) ? src_data : dVal;
-        *d = dst_data;
+#elif defined BORDER_WRAP
+#define EXTRAPOLATE(v2, v) \
+    { \
+        if (v2.x < 0) \
+            v2.x -= ((v2.x - src_cols + 1) / src_cols) * src_cols; \
+        if (v2.x >= src_cols) \
+            v2.x %= src_cols; \
+        \
+        if (v2.y < 0) \
+            v2.y -= ((v2.y - src_rows + 1) / src_rows) * src_rows; \
+        if( v2.y >= src_rows ) \
+            v2.y %= src_rows; \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
     }
-}
-
-__kernel void remapNNF1Constant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-        x = x << 2;
-        int gx = x - (dst_offset&3);
-        int4 Gx = (int4)(gx, gx+1, gx+2, gx+3);
-
-        uchar4 nval =convert_uchar4(nVal);
-        uchar4 val = (uchar4)(nval.s0);
-
-        int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&3);
-
-        int map1Start = y * map1_step + (x << 2) + map1_offset - ((dst_offset & 3) << 2);
-        float4 map1_data;
-        float4 map2_data;
-
-        map1_data = *((__global float4 *)((__global char*)map1 + map1Start));
-        map2_data = *((__global float4 *)((__global char*)map2 + map1Start));
-        float8 map_data = (float8)(map1_data.s0, map2_data.s0, map1_data.s1, map2_data.s1, map1_data.s2, map2_data.s2, map1_data.s3, map2_data.s3);
-        int8 map_dataZ = convert_int8_sat_rte(map_data);
-        int4 srcIdx = map_dataZ.odd * src_step + map_dataZ.even + src_offset;
-
-        uchar4 src_data = val;
-        uchar4 con = convert_uchar4(map_dataZ.even >= (int4)(src_cols) || map_dataZ.odd >= (int4)(src_rows)|| map_dataZ.even < (int4)(0) || map_dataZ.odd < (int4)(0));
-
-        if (con.s0 == 0)
-        src_data.s0 = *(src + srcIdx.s0);
-        if (con.s1 == 0)
-        src_data.s1 = *(src + srcIdx.s1);
-        if (con.s2 == 0)
-        src_data.s2 = *(src + srcIdx.s2);
-        if (con.s3 == 0)
-        src_data.s3 = *(src + srcIdx.s3);
-        uchar4 dst_data;
-
-    //    dst_data = convert_uchar4(map_dataZ.even >= (int4)(src_cols) || map_dataZ.odd >= (int4)(src_rows)) ? (uchar4)(val) : src_data;
-        __global uchar4* d = (__global uchar4 *)(dst + dstStart);
-
-        uchar4 dVal = *d;
-
-        int4 dcon = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-
-        dst_data = (convert_uchar4(dcon) != convert_uchar4((int4)(0))) ? src_data : dVal;
-        *d = dst_data;
+#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
+#ifdef BORDER_REFLECT
+#define DELTA int delta = 0
+#else
+#define DELTA int delta = 1
+#endif
+#define EXTRAPOLATE(v2, v) \
+    { \
+        DELTA; \
+        if (src_cols == 1) \
+            v2.x = 0; \
+        else \
+            do \
+            { \
+                if( v2.x < 0 ) \
+                    v2.x = -v2.x - 1 + delta; \
+                else \
+                    v2.x = src_cols - 1 - (v2.x - src_cols) - delta; \
+            } \
+            while (v2.x >= src_cols || v2.x < 0); \
+        \
+        if (src_rows == 1) \
+            v2.y = 0; \
+        else \
+            do \
+            { \
+                if( v2.y < 0 ) \
+                    v2.y = -v2.y - 1 + delta; \
+                else \
+                    v2.y = src_rows - 1 - (v2.y - src_rows) - delta; \
+            } \
+            while (v2.y >= src_rows || v2.y < 0); \
+        v = convertToWT(src[mad24(v2.y, src_step, v2.x + src_offset)]); \
     }
-}
+#else
+#error No extrapolation method
+#endif
 
+#define NEED_EXTRAPOLATION(gx, gy) (gx >= src_cols || gy >= src_rows || gx < 0 || gy < 0)
 
-__kernel void remapNNSConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
+#ifdef INTER_NEAREST
+
+__kernel void remap_2_32FC1(__global const T * restrict src, __global T * dst,
+        __global float * map1, __global float * map2,
+        int src_offset, int dst_offset, int map1_offset, int map2_offset,
+        int src_step, int dst_step, int map1_step, int map2_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < threadCols && y < dst_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-         int dstIdx = y * dst_step + (x << 2) + dst_offset;
-         int mapIdx = y * map1_step + (x << 2) + map1_offset;
-         short2 map1_data = *((__global short2 *)((__global char*)map1 + mapIdx));
-         int srcIdx = map1_data.y * src_step + (map1_data.x << 2) + src_offset;
-         uchar4 nval = convert_uchar4(nVal);
-         uchar4 src_data;
-         if(map1_data.x >= src_cols || map1_data.y >= src_rows || map1_data.x <0 || map1_data.y < 0 )
-         src_data = nval;
-         else
-         src_data = *((__global uchar4 *)((__global uchar *)src + srcIdx));
-         *((__global uchar4 *)((__global uchar*)dst + dstIdx)) = src_data;
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+        int map2Idx = mad24(y, map2_step, x + map2_offset);
 
+        int gx = convert_int_sat_rte(map1[map1Idx]);
+        int gy = convert_int_sat_rte(map2[map2Idx]);
 
-    }
-
-
-}
-
-__kernel void remapNNFConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-         int dstIdx = y * dst_step + (x << 2) + dst_offset;
-         int mapIdx = y * map1_step + (x << 3) + map1_offset;
-         float2 map1_data = *((__global float2 *)((__global char*)map1 + mapIdx));
-         int2 map1_dataZ = convert_int2_sat_rte(map1_data);
-         int srcIdx = map1_dataZ.y * src_step + (map1_dataZ.x << 2) + src_offset;
-         uchar4 nval = convert_uchar4(nVal);
-         uchar4 src_data;
-         if(map1_dataZ.x >= src_cols || map1_dataZ.y >= src_rows || map1_dataZ.x < 0 || map1_dataZ.y < 0)
-         src_data = nval;
-         else
-         src_data = *((__global uchar4 *)((__global uchar *)src + srcIdx));
-         *((__global uchar4 *)((__global uchar*)dst + dstIdx)) = src_data;
-
-
-    }
-
-}
-
-__kernel void remapNNF1Constant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows, int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-         int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 2) + map1_offset;
-        float map1_data = *((__global float *)((__global char*)map1 + mapIdx));
-        float map2_data = *((__global float *)((__global char*)map2 + mapIdx));
-        int srcIdx = convert_int_sat_rte(map2_data) * src_step + (convert_int_sat_rte(map1_data) << 2) + src_offset;
-        uchar4 nval = convert_uchar4(nVal);
-        uchar4 src_data;
-         if(convert_int_sat_rte(map1_data) >= src_cols || convert_int_sat_rte(map2_data) >= src_rows || convert_int_sat_rte(map1_data) < 0 || convert_int_sat_rte(map2_data) < 0)
-           src_data = nval;
+        if (NEED_EXTRAPOLATION(gx, gy))
+        {
+            int2 gxy = (int2)(gx, gy), zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
+        }
         else
-           src_data = *((__global uchar4 *)((__global uchar *)src + srcIdx));
-         *((__global uchar4 *)((__global uchar*)dst + dstIdx)) = src_data;
+        {
+            int srcIdx = mad24(gy, src_step, gx + src_offset);
+            dst[dstIdx] = src[srcIdx];
+        }
     }
 }
 
-__kernel void remapNNSConstant_C1_D5(__global float* dst, __global float const * restrict  src,
-        __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+__kernel void remap_32FC2(__global const T * restrict src, __global T * dst, __global float2 * map1,
+        int src_offset, int dst_offset, int map1_offset,
+        int src_step, int dst_step, int map1_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < threadCols && y < dst_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 2) + map1_offset;
-        short2 map1_data = *((__global short2 *)((__global char*)map1 + mapIdx));
-        int srcIdx = map1_data.y * src_step + (map1_data.x << 2) + src_offset;
-        float nval = convert_float(nVal.x);
-        float src_data;
-        if(map1_data.x >= src_cols || map1_data.y >= src_rows|| map1_data.x < 0 || map1_data.y < 0)
-           src_data = nval;
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+
+        int2 gxy = convert_int2_sat_rte(map1[map1Idx]);
+        int gx = gxy.x, gy = gxy.y;
+
+        if (NEED_EXTRAPOLATION(gx, gy))
+        {
+            int2 zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
+        }
         else
-           src_data = *((__global float *)((__global uchar *)src + srcIdx));
-        *((__global float *)((__global uchar*)dst + dstIdx)) = src_data;
-
-
+        {
+            int srcIdx = mad24(gy, src_step, gx + src_offset);
+            dst[dstIdx] = src[srcIdx];
+        }
     }
-
-
 }
 
-__kernel void remapNNFConstant_C1_D5(__global float* dst, __global float const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+__kernel void remap_16SC2(__global const T * restrict src, __global T * dst, __global short2 * map1,
+        int src_offset, int dst_offset, int map1_offset,
+        int src_step, int dst_step, int map1_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < threadCols && y < dst_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 3) + map1_offset;
-        float2 map1_data = *((__global float2 *)((__global char*)map1 + mapIdx));
-        int2 map1_dataZ = convert_int2_sat_rte(map1_data);
-        int srcIdx = map1_dataZ.y * src_step + (map1_dataZ.x << 2) + src_offset;
-        float nval = convert_float(nVal.x);
-        float src_data;
-        if(map1_dataZ.x >= src_cols || map1_dataZ.y >= src_rows || map1_dataZ.x < 0 || map1_dataZ.y < 0)
-           src_data = nval;
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+
+        int2 gxy = convert_int2(map1[map1Idx]);
+        int gx = gxy.x, gy = gxy.y;
+
+        if (NEED_EXTRAPOLATION(gx, gy))
+        {
+            int2 zero = (int2)(0);
+            EXTRAPOLATE(gxy, dst[dstIdx]);
+        }
         else
-           src_data = *((__global float *)((__global uchar *)src + srcIdx));
-        *((__global float *)((__global uchar*)dst + dstIdx)) = src_data;
-
-
+        {
+            int srcIdx = mad24(gy, src_step, gx + src_offset);
+            dst[dstIdx] = src[srcIdx];
+        }
     }
-
 }
 
-__kernel void remapNNF1Constant_C1_D5(__global float* dst, __global float const * restrict  src,
-        __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows ,int threadCols, F4 nVal)
+#elif INTER_LINEAR
+
+__kernel void remap_2_32FC1(__global T const * restrict  src, __global T * dst,
+        __global float * map1, __global float * map2,
+        int src_offset, int dst_offset, int map1_offset, int map2_offset,
+        int src_step, int dst_step, int map1_step, int map2_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T nVal)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < threadCols && y < dst_rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 2) + map1_offset;
-        float map1_data = *((__global float *)((__global char*)map1 + mapIdx));
-        float map2_data = *((__global float *)((__global char*)map2 + mapIdx));
-        float2 map_data = (float2)(map1_data, map2_data);
-        int2 map1_dataZ = convert_int2_sat_rte(map_data);
-        int srcIdx = map1_dataZ.y * src_step + (map1_dataZ.x << 2) + src_offset;
-        float nval = convert_float(nVal.x);
-        float src_data;
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+        int map2Idx = mad24(y, map2_step, x + map2_offset);
 
-        if(map1_dataZ.x >= src_cols || map1_dataZ.y >= src_rows || map1_dataZ.x < 0 || map1_dataZ.y < 0)
-           src_data = nval;
-        else
-           src_data = *((__global float *)((__global uchar *)src + srcIdx));
-        *((__global float *)((__global uchar*)dst + dstIdx)) = src_data;
+        float2 map_data = (float2)(map1[map1Idx], map2[map2Idx]);
 
-
-    }
-
-}
-
-__kernel void remapNNSConstant_C4_D5(__global float * dst, __global float const * restrict  src,
-        __global short * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-      int dstIdx = y * dst_step + (x << 4) + dst_offset  ;
-      int mapIdx = y * map1_step + (x << 2) + map1_offset ;
-      short2 map1_data = *((__global short2 *)((__global char*)map1 + mapIdx));
-      int srcIdx = map1_data.y * src_step + (map1_data.x << 4) + src_offset;
-      float4 nval = convert_float4(nVal);
-      float4 src_data;
-      if (map1_data.x <0 || map1_data.x >= src_cols || map1_data.y <0 || map1_data.y >= src_rows)
-          src_data = nval;
-      else
-          src_data = *((__global float4 *)((__global uchar *)src + srcIdx));
-      *((__global float4 *)((__global uchar*)dst + dstIdx)) = src_data;
-
-
-    }
-}
-
-__kernel void remapNNFConstant_C4_D5(__global float * dst, __global float const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-      int dstIdx = y * dst_step + (x << 4) + dst_offset  ;
-      int mapIdx = y * map1_step + (x << 3) + map1_offset ;
-      float2 map1_data = *((__global float2 *)((__global char*)map1 + mapIdx));
-      int2 map1_dataZ = convert_int2_sat_rte(map1_data);
-      int srcIdx = map1_dataZ.y * src_step + (map1_dataZ.x << 4) + src_offset;
-      float4 nval = convert_float4(nVal);
-      float4 src_data = nval;
-      if(map1_dataZ.x >= 0 && map1_dataZ.x < src_cols && map1_dataZ.y >=0 && map1_dataZ.y < src_rows)
-      src_data = *((__global float4 *)((__global uchar *)src + srcIdx));
-       *((__global float4 *)((__global uchar*)dst + dstIdx)) = src_data;
-    }
-}
-
-__kernel void remapNNF1Constant_C4_D5(__global float * dst, __global float const * restrict  src,
-        __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-      int dstIdx = y * dst_step + (x << 4) + dst_offset  ;
-      int mapIdx = y * map1_step + (x << 2) + map1_offset ;
-      float map1_data = *((__global float *)((__global char*)map1 + mapIdx));
-      float map2_data = *((__global float *)((__global char*)map2 + mapIdx));
-      float2 map_data = (float2)(map1_data, map2_data);
-      int2 map1_dataZ = convert_int2_sat_rte(map_data);
-      int srcIdx = map1_dataZ.y * src_step + (map1_dataZ.x << 4) + src_offset;
-      float4 nval = convert_float4(nVal);
-      float4 src_data = nval;
-      if(map1_dataZ.x >= 0 && map1_dataZ.x < src_cols && map1_dataZ.y >= 0 && map1_dataZ.y < src_rows)
-      src_data = *((__global float4 *)((__global uchar *)src + srcIdx));
-       *((__global float4 *)((__global uchar*)dst + dstIdx)) = src_data;
-    }
-}
-
-
-
-__kernel void remapLNFConstant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
-    {
-      x = x << 2;
-      int gx = x - (dst_offset&3);
-      int4 Gx = (int4)(gx, gx+1, gx+2, gx+3);
-
-      uchar4 nval =convert_uchar4(nVal);
-      uchar4 val = (uchar4)(nval.s0);
-
-
-      int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&3);
-
-      int map1Start = y * map1_step + (x << 3) + map1_offset - ((dst_offset & 3) << 3);
-      float8 map1_data;
-
-      map1_data = *((__global float8 *)((__global char*)map1 + map1Start));
-      int8 map1_dataD = convert_int8(map1_data);
-      float8 temp = map1_data - convert_float8(map1_dataD);
-
-      float4 u = temp.even;
-      float4 v = temp.odd;
-      float4 ud = (float4)(1.0) - u;
-      float4 vd = (float4)(1.0) - v;
-      //float8 map1_dataU = map1_dataD + 1;
-
-      int4 map1_dataDx = map1_dataD.even;
-      int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
-      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
-      uchar4 a = val, b = val, c = val, d =val;
-
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          a.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s0 * src_step + map1_dataDx.s0 + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          a.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s1 * src_step + map1_dataDx.s1 + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          a.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s2 * src_step + map1_dataDx.s2 + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          a.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s3 * src_step + map1_dataDx.s3 + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          b.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s0 * src_step + map1_dataDx1.s0 + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          b.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s1 * src_step + map1_dataDx1.s1 + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          b.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s2 * src_step + map1_dataDx1.s2 + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          b.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s3 * src_step + map1_dataDx1.s3 + src_offset));
-
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          c.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s0 * src_step + map1_dataDx.s0 + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          c.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s1 * src_step + map1_dataDx.s1 + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          c.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s2 * src_step + map1_dataDx.s2 + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          c.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s3 * src_step + map1_dataDx.s3 + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          d.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s0 * src_step + map1_dataDx1.s0 + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          d.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s1 * src_step + map1_dataDx1.s1 + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          d.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s2 * src_step + map1_dataDx1.s2 + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          d.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s3 * src_step + map1_dataDx1.s3 + src_offset));
-
-      uchar4 dst_data = convert_uchar4_sat_rte((convert_float4(a))* ud * vd +(convert_float4(b))* u * vd + (convert_float4(c))* ud * v + (convert_float4(d)) * u * v );
-
-      __global uchar4* D = (__global uchar4 *)(dst + dstStart);
-
-      uchar4 dVal = *D;
-      int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-      dst_data = (convert_uchar4(con) != (uchar4)(0)) ? dst_data : dVal;
-
-      *D = dst_data;
-    }
-}
-
-__kernel void remapLNF1Constant_C1_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
-    {
-      x = x << 2;
-      int gx = x - (dst_offset&3);
-      int4 Gx = (int4)(gx, gx+1, gx+2, gx+3);
-
-      uchar4 nval =convert_uchar4(nVal);
-      uchar4 val = (uchar4)(nval.s0);
-
-
-      int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&3);
-
-      int map1Start = y * map1_step + (x << 2) + map1_offset - ((dst_offset & 3) << 2);
-      float4 map1_data;
-      float4 map2_data;
-
-      map1_data = *((__global float4 *)((__global char*)map1 + map1Start));
-      map2_data = *((__global float4 *)((__global char*)map2 + map1Start));
-      float8 map_data = (float8)(map1_data.s0, map2_data.s0, map1_data.s1, map2_data.s1, map1_data.s2, map2_data.s2, map1_data.s3, map2_data.s3);
-      int8 map1_dataD = convert_int8(map_data);
-      float8 temp = map_data - convert_float8(map1_dataD);
-
-      float4 u = temp.even;
-      float4 v = temp.odd;
-      float4 ud = (float4)(1.0) - u;
-      float4 vd = (float4)(1.0) - v;
-      //float8 map1_dataU = map1_dataD + 1;
-
-      int4 map1_dataDx = map1_dataD.even;
-      int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
-      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
-
-      uchar4 a = val, b = val, c = val, d =val;
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          a.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s0 * src_step + map1_dataDx.s0 + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          a.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s1 * src_step + map1_dataDx.s1 + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          a.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s2 * src_step + map1_dataDx.s2 + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          a.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s3 * src_step + map1_dataDx.s3 + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          b.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s0 * src_step + map1_dataDx1.s0 + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          b.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s1 * src_step + map1_dataDx1.s1 + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          b.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s2 * src_step + map1_dataDx1.s2 + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          b.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy.s3 * src_step + map1_dataDx1.s3 + src_offset));
-
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          c.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s0 * src_step + map1_dataDx.s0 + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          c.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s1 * src_step + map1_dataDx.s1 + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          c.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s2 * src_step + map1_dataDx.s2 + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          c.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s3 * src_step + map1_dataDx.s3 + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          d.s0 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s0 * src_step + map1_dataDx1.s0 + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          d.s1 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s1 * src_step + map1_dataDx1.s1 + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          d.s2 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s2 * src_step + map1_dataDx1.s2 + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          d.s3 = *((__global uchar*)((__global uchar *)src + map1_dataDy1.s3 * src_step + map1_dataDx1.s3 + src_offset));
-
-
-      uchar4 dst_data = convert_uchar4_sat_rte((convert_float4(a))* ud * vd +(convert_float4(b))* u * vd + (convert_float4(c))* ud * v + (convert_float4(d)) * u * v );
-
-      __global uchar4* D = (__global uchar4 *)(dst + dstStart);
-
-      uchar4 dVal = *D;
-      int4 con = (Gx >= 0 && Gx < dst_cols && y >= 0 && y < dst_rows);
-      dst_data = (convert_uchar4(con) != (uchar4)(0)) ? dst_data : dVal;
-
-      *D = dst_data;
-    }
-}
-
-
-
-__kernel void remapLNFConstant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
-    {
-        int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 3) + map1_offset;
-        float2 map_data = *((__global float2 *)((__global char*)map1 + mapIdx));
-        int2 map_dataA = convert_int2(map_data);
-        float2 u = map_data - convert_float2(map_dataA);
+        int2 map_dataA = convert_int2_sat_rtn(map_data);
         int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
         int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
         int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
-        uchar4 nval = convert_uchar4(nVal);
-        uchar4 a, b, c , d;
-        if(map_dataA.x < 0 || map_dataA.x >= src_cols || map_dataA.y >= src_rows || map_dataA.y < 0)
-        a = nval;
-        else
-        a = *((__global uchar4 *)((__global uchar *)src + map_dataA.y * src_step + (map_dataA.x<<2) + src_offset ));
-        if(map_dataB.x < 0 || map_dataB.x >= src_cols || map_dataB.y >= src_rows || map_dataB.y < 0)
-        b = nval;
-        else
-        b = *((__global uchar4 *)((__global uchar *)src + map_dataB.y * src_step + (map_dataB.x<<2) + src_offset ));
+        int2 zero = (int2)(0);
 
-        if(map_dataC.x < 0 || map_dataC.x >= src_cols || map_dataC.y >= src_rows || map_dataC.y < 0)
-        c = nval;
+        float2 _u = map_data - convert_float2(map_dataA);
+        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
+        WT scalar = convertToWT(nVal);
+        WT a = scalar, b = scalar, c = scalar, d = scalar;
+
+        if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
+            a = convertToWT(src[mad24(map_dataA.y, src_step, map_dataA.x + src_offset)]);
         else
-        c = *((__global uchar4 *)((__global uchar *)src + map_dataC.y * src_step + (map_dataC.x<<2) + src_offset ));
+            EXTRAPOLATE(map_dataA, a);
 
-        if(map_dataD.x < 0 || map_dataD.x >= src_cols || map_dataD.y >= src_rows || map_dataD.y < 0)
-        d = nval;
+        if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
+            b = convertToWT(src[mad24(map_dataB.y, src_step, map_dataB.x + src_offset)]);
         else
-        d = *((__global uchar4 *)((__global uchar *)src + map_dataD.y * src_step + (map_dataD.x<<2) + src_offset ));
-        float4 dst_data = convert_float4(a)*((float4)(1.0-u.x)*((float4)(1.0-u.y))) + convert_float4(b)*((float4)(u.x))*((float4)(1.0-u.y)) + convert_float4(c)*((float4)(1.0-u.x))*((float4)(u.y)) + convert_float4(d)*((float4)(u.x))*((float4)(u.y));
-        *((__global uchar4 *)((__global uchar*)dst + dstIdx)) = convert_uchar4_sat_rte(dst_data);
+            EXTRAPOLATE(map_dataB, b);
 
+        if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
+            c = convertToWT(src[mad24(map_dataC.y, src_step, map_dataC.x + src_offset)]);
+        else
+            EXTRAPOLATE(map_dataC, c);
 
+        if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
+            d = convertToWT(src[mad24(map_dataD.y, src_step, map_dataD.x + src_offset)]);
+        else
+            EXTRAPOLATE(map_dataD, d);
+
+        WT dst_data = a * (WT)(1 - u.x) * (WT)(1 - u.y) +
+                      b * (WT)(u.x)     * (WT)(1 - u.y) +
+                      c * (WT)(1 - u.x) * (WT)(u.y) +
+                      d * (WT)(u.x)     * (WT)(u.y);
+        dst[dstIdx] = convertToT(dst_data);
     }
-
 }
-__kernel void remapLNF1Constant_C4_D0(__global unsigned char* dst, __global unsigned char const * restrict  src,
-        __global float * map1,  __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
 
+__kernel void remap_32FC2(__global T const * restrict  src, __global T * dst,
+        __global float2 * map1,
+        int src_offset, int dst_offset, int map1_offset,
+        int src_step, int dst_step, int map1_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T nVal)
+{
     int x = get_global_id(0);
     int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
+
+    if (x < dst_cols && y < dst_rows)
     {
-        int dstIdx = y * dst_step + (x << 2) + dst_offset;
-        int mapIdx = y * map1_step + (x << 2) + map1_offset;
-        float map1_data = *((__global float *)((__global char*)map1 + mapIdx));
-        float map2_data = *((__global float *)((__global char*)map2 + mapIdx));
-        float2 map_data = (float2)(map1_data, map2_data);
-        int2 map_dataA = convert_int2(map_data);
-        float2 u = map_data - convert_float2(map_dataA);
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+
+        float2 map_data = map1[map1Idx];
+        int2 map_dataA = convert_int2_sat_rtn(map_data);
         int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
         int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
-        int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
-        uchar4 nval = convert_uchar4(nVal);
-        uchar4 a, b, c , d;
-        if(map_dataA.x < 0 || map_dataA.x >= src_cols || map_dataA.y >= src_rows || map_dataA.y < 0)
-        a = nval;
+        int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
+        int2 zero = (int2)(0);
+
+        float2 _u = map_data - convert_float2(map_dataA);
+        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
+        WT scalar = convertToWT(nVal);
+        WT a = scalar, b = scalar, c = scalar, d = scalar;
+
+        if (!NEED_EXTRAPOLATION(map_dataA.x, map_dataA.y))
+            a = convertToWT(src[mad24(map_dataA.y, src_step, map_dataA.x + src_offset)]);
         else
-        a = *((__global uchar4 *)((__global uchar *)src + map_dataA.y * src_step + (map_dataA.x<<2) + src_offset ));
-        if(map_dataB.x < 0 || map_dataB.x >= src_cols || map_dataB.y >= src_rows || map_dataB.y < 0)
-        b = nval;
+            EXTRAPOLATE(map_dataA, a);
+
+        if (!NEED_EXTRAPOLATION(map_dataB.x, map_dataB.y))
+            b = convertToWT(src[mad24(map_dataB.y, src_step, map_dataB.x + src_offset)]);
         else
-        b = *((__global uchar4 *)((__global uchar *)src + map_dataB.y * src_step + (map_dataB.x<<2) + src_offset ));
+            EXTRAPOLATE(map_dataB, b);
 
-        if(map_dataC.x < 0 || map_dataC.x >= src_cols || map_dataC.y >= src_rows || map_dataC.y < 0)
-        c = nval;
+        if (!NEED_EXTRAPOLATION(map_dataC.x, map_dataC.y))
+            c = convertToWT(src[mad24(map_dataC.y, src_step, map_dataC.x + src_offset)]);
         else
-        c = *((__global uchar4 *)((__global uchar *)src + map_dataC.y * src_step + (map_dataC.x<<2) + src_offset ));
+            EXTRAPOLATE(map_dataC, c);
 
-        if(map_dataD.x < 0 || map_dataD.x >= src_cols || map_dataD.y >= src_rows || map_dataD.y < 0)
-        d = nval;
+        if (!NEED_EXTRAPOLATION(map_dataD.x, map_dataD.y))
+            d = convertToWT(src[mad24(map_dataD.y, src_step, map_dataD.x + src_offset)]);
         else
-        d = *((__global uchar4 *)((__global uchar *)src + map_dataD.y * src_step + (map_dataD.x<<2) + src_offset ));
-        float4 dst_data = convert_float4(a)*((float4)(1.0-u.x)*((float4)(1.0-u.y))) + convert_float4(b)*((float4)(u.x))*((float4)(1.0-u.y)) + convert_float4(c)*((float4)(1.0-u.x))*((float4)(u.y)) + convert_float4(d)*((float4)(u.x))*((float4)(u.y));
-        *((__global uchar4 *)((__global uchar*)dst + dstIdx)) = convert_uchar4_sat_rte(dst_data);
+            EXTRAPOLATE(map_dataD, d);
 
-
-
+        WT dst_data = a * (WT)(1 - u.x) * (WT)(1 - u.y) +
+                      b * (WT)(u.x)     * (WT)(1 - u.y) +
+                      c * (WT)(1 - u.x) * (WT)(u.y) +
+                      d * (WT)(u.x)     * (WT)(u.y);
+        dst[dstIdx] = convertToT(dst_data);
     }
 }
 
-
-
-__kernel void remapLNFConstant_C1_D5(__global float* dst, __global float const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
-    {
-      x = x << 4;
-      int gx = x - (dst_offset&15);
-      int4 Gx = (int4)(gx, gx+4, gx+8, gx+12);
-
-      float4 nval =convert_float4(nVal);
-      float4 val = (float4)(nval.s0);
-
-      int dstStart = (y * dst_step + x  + dst_offset) - (dst_offset&15);
-      int map1Start = y * map1_step + (x << 1) + map1_offset - ((dst_offset & 15) << 1);
-      float8 map1_data;
-
-      map1_data = *((__global float8 *)((__global char*)map1 + map1Start));
-      int8 map1_dataD = convert_int8(map1_data);
-      float8 temp = map1_data - convert_float8(map1_dataD);
-
-      float4 u = temp.even;
-      float4 v = temp.odd;
-      float4 ud = (float4)(1.0) - u;
-      float4 vd = (float4)(1.0) - v;
-      //float8 map1_dataU = map1_dataD + 1;
-
-      int4 map1_dataDx = map1_dataD.even;
-      int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
-      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
-
-      float4 a = val, b = val, c = val, d = val;
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          a.s0 = *((__global float*)((__global uchar *)src + map1_dataDy.s0 * src_step + (map1_dataDx.s0 << 2) + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          a.s1 = *((__global float*)((__global uchar *)src + map1_dataDy.s1 * src_step + (map1_dataDx.s1 << 2) + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          a.s2 = *((__global float*)((__global uchar *)src + map1_dataDy.s2 * src_step + (map1_dataDx.s2 << 2) + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          a.s3 = *((__global float*)((__global uchar *)src + map1_dataDy.s3 * src_step + (map1_dataDx.s3 << 2) + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          b.s0 = *((__global float*)((__global uchar *)src + map1_dataDy.s0 * src_step + (map1_dataDx1.s0 << 2) + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          b.s1 = *((__global float*)((__global uchar *)src + map1_dataDy.s1 * src_step + (map1_dataDx1.s1 << 2) + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          b.s2 = *((__global float*)((__global uchar *)src + map1_dataDy.s2 * src_step + (map1_dataDx1.s2 << 2) + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          b.s3 = *((__global float*)((__global uchar *)src + map1_dataDy.s3 * src_step + (map1_dataDx1.s3 << 2) + src_offset));
-
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          c.s0 = *((__global float*)((__global uchar *)src + map1_dataDy1.s0 * src_step + (map1_dataDx.s0 << 2) + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          c.s1 = *((__global float*)((__global uchar *)src + map1_dataDy1.s1 * src_step + (map1_dataDx.s1 << 2) + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          c.s2 = *((__global float*)((__global uchar *)src + map1_dataDy1.s2 * src_step + (map1_dataDx.s2 << 2) + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          c.s3 = *((__global float*)((__global uchar *)src + map1_dataDy1.s3 * src_step + (map1_dataDx.s3 << 2) + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          d.s0 = *((__global float*)((__global uchar *)src + map1_dataDy1.s0 * src_step + (map1_dataDx1.s0 << 2) + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          d.s1 = *((__global float*)((__global uchar *)src + map1_dataDy1.s1 * src_step + (map1_dataDx1.s1 << 2) + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          d.s2 = *((__global float*)((__global uchar *)src + map1_dataDy1.s2 * src_step + (map1_dataDx1.s2 << 2) + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          d.s3 = *((__global float*)((__global uchar *)src + map1_dataDy1.s3 * src_step + (map1_dataDx1.s3 << 2) + src_offset));
-
-      float4 dst_data = a * ud * vd + b * u * vd + c * ud * v + d * u * v ;
-
-      __global float4* D = (__global float4 *)((__global char*)dst + dstStart);
-
-      float4 dVal = *D;
-      int4 con = (Gx >= 0 && Gx < (dst_cols << 2) && y >= 0 && y < dst_rows);
-      dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
-
-      *D = dst_data;
-    }
-}
-
-__kernel void remapLNF1Constant_C1_D5(__global float* dst, __global float const * restrict  src,
-        __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if(x < threadCols && y < dst_rows)
-    {
-      x = x << 4;
-      int gx = x - (dst_offset&15);
-      int4 Gx = (int4)(gx, gx+4, gx+8, gx+12);
-
-      float4 nval =convert_float4(nVal);
-      float4 val = (float4)(nval.s0);
-
-      int dstStart = y * dst_step + x  + dst_offset - (dst_offset & 15);
-      int map1Start = y * map1_step + x + map1_offset - (dst_offset & 15);
-      float4 map1_data;
-      float4 map2_data;
-
-      map1_data = *((__global float4 *)((__global char*)map1 + map1Start));
-      map2_data = *((__global float4 *)((__global char*)map2 + map1Start));
-      float8 map_data = (float8)(map1_data.s0, map2_data.s0, map1_data.s1, map2_data.s1, map1_data.s2, map2_data.s2, map1_data.s3, map2_data.s3);
-      int8 map1_dataD = convert_int8(map_data);
-      float8 temp = map_data - convert_float8(map1_dataD);
-
-      float4 u = temp.even;
-      float4 v = temp.odd;
-      float4 ud = (float4)(1.0) - u;
-      float4 vd = (float4)(1.0) - v;
-      //float8 map1_dataU = map1_dataD + 1;
-
-      int4 map1_dataDx = map1_dataD.even;
-      int4 map1_dataDy = map1_dataD.odd;
-      int4 map1_dataDx1 = map1_dataDx + (int4)(1);
-      int4 map1_dataDy1 = map1_dataDy + (int4)(1);
-
-      float4 a = val, b = val, c = val, d = val;
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          a.s0 = *((__global float*)((__global uchar *)src + map1_dataDy.s0 * src_step + (map1_dataDx.s0 << 2) + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          a.s1 = *((__global float*)((__global uchar *)src + map1_dataDy.s1 * src_step + (map1_dataDx.s1 << 2) + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          a.s2 = *((__global float*)((__global uchar *)src + map1_dataDy.s2 * src_step + (map1_dataDx.s2 << 2) + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          a.s3 = *((__global float*)((__global uchar *)src + map1_dataDy.s3 * src_step + (map1_dataDx.s3 << 2) + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy.s0 < src_rows && map1_dataDy.s0 >= 0)
-          b.s0 = *((__global float*)((__global uchar *)src + map1_dataDy.s0 * src_step + (map1_dataDx1.s0 << 2) + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy.s1 < src_rows && map1_dataDy.s1 >= 0)
-          b.s1 = *((__global float*)((__global uchar *)src + map1_dataDy.s1 * src_step + (map1_dataDx1.s1 << 2) + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy.s2 < src_rows && map1_dataDy.s2 >= 0)
-          b.s2 = *((__global float*)((__global uchar *)src + map1_dataDy.s2 * src_step + (map1_dataDx1.s2 << 2) + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy.s3 < src_rows && map1_dataDy.s3 >= 0)
-          b.s3 = *((__global float*)((__global uchar *)src + map1_dataDy.s3 * src_step + (map1_dataDx1.s3 << 2) + src_offset));
-
-      if (map1_dataDx.s0 < src_cols && map1_dataDx.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          c.s0 = *((__global float*)((__global uchar *)src + map1_dataDy1.s0 * src_step + (map1_dataDx.s0 << 2) + src_offset));
-      if (map1_dataDx.s1 < src_cols && map1_dataDx.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          c.s1 = *((__global float*)((__global uchar *)src + map1_dataDy1.s1 * src_step + (map1_dataDx.s1 << 2) + src_offset));
-      if (map1_dataDx.s2 < src_cols && map1_dataDx.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          c.s2 = *((__global float*)((__global uchar *)src + map1_dataDy1.s2 * src_step + (map1_dataDx.s2 << 2) + src_offset));
-      if (map1_dataDx.s3 < src_cols && map1_dataDx.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          c.s3 = *((__global float*)((__global uchar *)src + map1_dataDy1.s3 * src_step + (map1_dataDx.s3 << 2) + src_offset));
-
-      if (map1_dataDx1.s0 < src_cols && map1_dataDx1.s0 >= 0 && map1_dataDy1.s0 < src_rows && map1_dataDy1.s0 >= 0)
-          d.s0 = *((__global float*)((__global uchar *)src + map1_dataDy1.s0 * src_step + (map1_dataDx1.s0 << 2) + src_offset));
-      if (map1_dataDx1.s1 < src_cols && map1_dataDx1.s1 >= 0 && map1_dataDy1.s1 < src_rows && map1_dataDy1.s1 >= 0)
-          d.s1 = *((__global float*)((__global uchar *)src + map1_dataDy1.s1 * src_step + (map1_dataDx1.s1 << 2) + src_offset));
-      if (map1_dataDx1.s2 < src_cols && map1_dataDx1.s2 >= 0 && map1_dataDy1.s2 < src_rows && map1_dataDy1.s2 >= 0)
-          d.s2 = *((__global float*)((__global uchar *)src + map1_dataDy1.s2 * src_step + (map1_dataDx1.s2 << 2) + src_offset));
-      if (map1_dataDx1.s3 < src_cols && map1_dataDx1.s3 >= 0 && map1_dataDy1.s3 < src_rows && map1_dataDy1.s3 >= 0)
-          d.s3 = *((__global float*)((__global uchar *)src + map1_dataDy1.s3 * src_step + (map1_dataDx1.s3 << 2) + src_offset));
-
-
-      float4 dst_data = a * ud * vd + b * u * vd + c * ud * v + d * u * v ;
-
-      __global float4* D = (__global float4 *)((__global char*)dst + dstStart);
-
-      float4 dVal = *D;
-      int4 con = (Gx >= 0 && Gx < (dst_cols << 2) && y >= 0 && y < dst_rows);
-      dst_data = (convert_float4(con) != (float4)(0)) ? dst_data : dVal;
-
-      *D = dst_data;
-    }
-}
-
-
-
-__kernel void remapLNFConstant_C4_D5(__global float * dst, __global float const * restrict  src,
-        __global float * map1, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-      int dstIdx = y * dst_step + (x << 4) + dst_offset  ;
-      int mapIdx = y * map1_step + (x << 3) + map1_offset ;
-      float2 map_data = *((__global float2 *)((__global char*)map1 + mapIdx));
-      int2 map_dataA = convert_int2(map_data);
-      float2 u = map_data - convert_float2(map_dataA);
-      int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
-      int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
-      int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
-      float4 nval = convert_float4(nVal);
-      float4 a, b, c , d;
-      if(map_dataA.x < 0 || map_dataA.x >= src_cols || map_dataA.y >= src_rows || map_dataA.y < 0)
-      a = nval;
-      else
-      a = *((__global float4 *)((__global uchar *)src + map_dataA.y * src_step + (map_dataA.x<<4) + src_offset ));
-      if(map_dataB.x < 0 || map_dataB.x >= src_cols || map_dataB.y >= src_rows || map_dataB.y < 0)
-      b = nval;
-      else
-      b = *((__global float4 *)((__global uchar *)src + map_dataB.y * src_step + (map_dataB.x<<4) + src_offset ));
-
-      if(map_dataC.x < 0 || map_dataC.x >= src_cols || map_dataC.y >= src_rows || map_dataC.y < 0)
-      c = nval;
-      else
-      c = *((__global float4 *)((__global uchar *)src + map_dataC.y * src_step + (map_dataC.x<<4) + src_offset ));
-
-      if(map_dataD.x < 0 || map_dataD.x >= src_cols || map_dataD.y >= src_rows || map_dataD.y < 0)
-      d = nval;
-      else
-      d = *((__global float4 *)((__global uchar *)src + map_dataD.y * src_step + (map_dataD.x<<4) + src_offset ));
-
-      float4 dst_data = a * ((float4)(1.0-u.x)) * ((float4)(1.0-u.y)) + b *((float4)(u.x)) * ((float4)(1.0-u.y)) + c * ((float4)(1.0-u.x)) *((float4)(u.y)) + d *((float4)(u.x)) *((float4)(u.y));
-      *((__global float4 *)((__global uchar*)dst + dstIdx)) =  dst_data ;
-
-    }
-}
-
-__kernel void remapLNF1Constant_C4_D5(__global float * dst, __global float const * restrict  src,
-        __global float * map1, __global float * map2, int dst_offset, int src_offset, int map1_offset, int dst_step, int src_step,
-        int map1_step, int src_cols, int src_rows, int dst_cols, int dst_rows, int map1_cols, int map1_rows , int threadCols, F4 nVal)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < threadCols && y < dst_rows)
-    {
-      int dstIdx = y * dst_step + (x << 4) + dst_offset  ;
-      int mapIdx = y * map1_step + (x << 2) + map1_offset ;
-      float map1_data = *((__global float *)((__global char*)map1 + mapIdx));
-      float map2_data = *((__global float *)((__global char*)map2 + mapIdx));
-      float2 map_data = (float2)(map1_data, map2_data);
-      int2 map_dataA = convert_int2(map_data);
-      float2 u = map_data - convert_float2(map_dataA);
-      int2 map_dataB = (int2)(map_dataA.x + 1, map_dataA.y);
-      int2 map_dataC = (int2)(map_dataA.x, map_dataA.y + 1);
-      int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
-      float4 nval = convert_float4(nVal);
-      float4 a, b, c , d;
-      if(map_dataA.x < 0 || map_dataA.x >= src_cols || map_dataA.y >= src_rows || map_dataA.y < 0)
-      a = nval;
-      else
-      a = *((__global float4 *)((__global uchar *)src + map_dataA.y * src_step + (map_dataA.x<<4) + src_offset ));
-      if(map_dataB.x < 0 || map_dataB.x >= src_cols || map_dataB.y >= src_rows || map_dataB.y < 0)
-      b = nval;
-      else
-      b = *((__global float4 *)((__global uchar *)src + map_dataB.y * src_step + (map_dataB.x<<4) + src_offset ));
-
-      if(map_dataC.x < 0 || map_dataC.x >= src_cols || map_dataC.y >= src_rows || map_dataC.y < 0)
-      c = nval;
-      else
-      c = *((__global float4 *)((__global uchar *)src + map_dataC.y * src_step + (map_dataC.x<<4) + src_offset ));
-
-      if(map_dataD.x < 0 || map_dataD.x >= src_cols || map_dataD.y >= src_rows || map_dataD.y < 0)
-      d = nval;
-      else
-      d = *((__global float4 *)((__global uchar *)src + map_dataD.y * src_step + (map_dataD.x<<4) + src_offset ));
-
-      float4 dst_data = a * ((float4)(1.0-u.x)) * ((float4)(1.0-u.y)) + b *((float4)(u.x)) * ((float4)(1.0-u.y)) + c * ((float4)(1.0-u.x)) *((float4)(u.y)) + d *((float4)(u.x)) *((float4)(u.y));
-      *((__global float4 *)((__global uchar*)dst + dstIdx)) =  dst_data ;
-
-
-    }
-}
+#endif

@@ -1,6 +1,6 @@
 #include "precomp.hpp"
 
-#if defined(HAVE_OPENCL) && (!defined(__APPLE__) || defined(IOS))
+#if defined(HAVE_OPENCL) && !defined(HAVE_OPENCL_STATIC)
 
 #include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 
@@ -87,12 +87,6 @@ static void* opencl_check_fn(int ID)
     return func;
 }
 
-#if defined(HAVE_OPENCL12)
-#include "cl_runtime_opencl12_impl.hpp"
-#elif defined(HAVE_OPENCL11)
-#include "cl_runtime_opencl11_impl.hpp"
-#else
-#error Invalid OpenCL configuration
-#endif
+#include "cl_runtime_opencl_impl.hpp"
 
 #endif
