@@ -2498,7 +2498,7 @@ public:
         if(!useOpenCL())
             return defaultAllocate(dims, sizes, type, step);
         size_t total = CV_ELEM_SIZE(type);
-        for( int i = dims-1; i >= 0; i++ )
+        for( int i = dims-1; i >= 0; i-- )
         {
             if( step )
                 step[i] = total;

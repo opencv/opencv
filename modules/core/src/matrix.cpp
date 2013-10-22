@@ -54,7 +54,7 @@ public:
     UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
     {
         size_t total = CV_ELEM_SIZE(type);
-        for( int i = dims-1; i >= 0; i++ )
+        for( int i = dims-1; i >= 0; i-- )
         {
             if( step )
                 step[i] = total;
@@ -390,7 +390,8 @@ void Mat::copySize(const Mat& m)
 
 void Mat::deallocate()
 {
-    (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
+    if(u)
+        (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
