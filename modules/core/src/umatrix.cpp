@@ -548,7 +548,7 @@ Mat UMat::getMat(int accessFlags) const
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.refcount = &u->refcount;
     hdr.u = u;
-    hdr.datastart = u->data;
+    hdr.datastart = hdr.data = u->data;
     hdr.datalimit = hdr.dataend = u->data + u->size;
     CV_XADD(hdr.refcount, 1);
     return hdr;
@@ -565,24 +565,24 @@ void* UMat::handle(int accessFlags) const
         CV_Assert(u->refcount == 0);
         u->currAllocator->unmap(u);
     }
-    else if( u->refcount > 0 && (accessFlags & ACCESS_WRITE) )
+    /*else if( u->refcount > 0 && (accessFlags & ACCESS_WRITE) )
     {
         CV_Error(Error::StsError,
                  "it's not allowed to access UMat handle for writing "
                  "while it's mapped; call Mat::release() first for all its mappings");
-    }
+    }*/
     return u->handle;
 }
 
 void UMat::ndoffset(size_t* ofs) const
 {
     // offset = step[0]*ofs[0] + step[1]*ofs[1] + step[2]*ofs[2] + ...;
-    size_t t = offset;
+    size_t val = offset;
     for( int i = 0; i < dims; i++ )
     {
         size_t s = step.p[i];
-        ofs[i] = t / s;
-        t -= ofs[i]*s;
+        ofs[i] = val / s;
+        val -= ofs[i]*s;
     }
 }
 

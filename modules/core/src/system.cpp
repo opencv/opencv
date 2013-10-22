@@ -877,14 +877,14 @@ TLSData::TLSData()
     {
         if( tlsKey == TLS_OUT_OF_INDEXES )
         {
-            tlsRNGKey = TlsAlloc();
-            CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
+            tlsKey = TlsAlloc();
+            CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
         }
         TLSData* d = (TLSData*)TlsGetValue( tlsKey );
         if( !d )
         {
             d = new TLSData;
-            TlsSetValue( tlsRNGKey, d );
+            TlsSetValue( tlsKey, d );
         }
         return d;
     }
