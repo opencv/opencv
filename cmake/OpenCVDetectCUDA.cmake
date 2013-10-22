@@ -8,7 +8,7 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Cl
   return()
 endif()
 
-find_package(CUDA 4.2 QUIET)
+find_package(CUDA "${MIN_VER_CUDA}" QUIET)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
