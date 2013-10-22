@@ -250,12 +250,6 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
             computeDescriptors<ushort, double>(grayImage, keypoints, descriptors);
         else if ( image.depth() == CV_16S )
             computeDescriptors<short, double>(grayImage, keypoints, descriptors);
-        else if ( image.depth() == CV_32S )
-            CV_Error( Error::StsUnsupportedFormat, "CV_32S" );
-        else if ( image.depth() == CV_32F )
-            CV_Error( Error::StsUnsupportedFormat, "CV_32F" );
-        else if ( image.depth() == CV_64F )
-            CV_Error( Error::StsUnsupportedFormat, "CV_64F" );
         else
             CV_Error( Error::StsUnsupportedFormat, "" );
     }
