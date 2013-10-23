@@ -12,7 +12,8 @@ In this tutorial we will learn how to do basic image processing using OpenCV in 
 *Introduction*
 ==============
 
-In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIImage object to display image. One of the thing is to convert UIImage object to Mat object. Below is the code to convert UIImage to Mat.
+In *OpenCV* all the image processing operations are usually carried out on the *Mat* structure. In iOS however, to render an image on screen it have to be an instance of the *UIImage* class. To convert an *OpenCV Mat* to an *UIImage* we use the *Core Graphics* framework available in iOS. Below is the code needed to covert back and forth between Mat's and UIImage's.
+
 
 .. code-block:: cpp
 
@@ -22,7 +23,7 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
      CGFloat cols = image.size.width;
      CGFloat rows = image.size.height;
 
-     cv::Mat cvMat(rows, cols, CV_8UC4); // 8 bits per component, 4 channels
+     cv::Mat cvMat(rows, cols, CV_8UC4); // 8 bits per component, 4 channels (color channels + alpha)
 
      CGContextRef contextRef = CGBitmapContextCreate(cvMat.data,                 // Pointer to  data
                                                     cols,                       // Width of bitmap
@@ -35,8 +36,7 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
 
      CGContextDrawImage(contextRef, CGRectMake(0, 0, cols, rows), image.CGImage);
      CGContextRelease(contextRef);
-     CGColorSpaceRelease(colorSpace);
-
+     
      return cvMat;
    }
 
@@ -61,19 +61,18 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
 
      CGContextDrawImage(contextRef, CGRectMake(0, 0, cols, rows), image.CGImage);
      CGContextRelease(contextRef);
-     CGColorSpaceRelease(colorSpace);
 
      return cvMat;
     }
 
-Once we obtain the Mat Object. We can do all our processing on Mat object, similar to cpp. For example if we want to convert image to gray, we can do it via below code.
+Once we obtain the *Mat* object we can do all our processing on that particular Mat instance. For example if we want to convert image to gray, we can do it via below code.
 
 .. code-block:: cpp
 
     cv::Mat greyMat;
     cv::cvtColor(inputMat, greyMat, CV_BGR2GRAY);
 
-After the processing we need to convert it back to UIImage.
+After the processing we need to convert it back to UIImage. The code below can handle both gray-scale and color image conversions (determined by the number of channels in the *if* statement).
 
 .. code-block:: cpp
 
@@ -113,6 +112,7 @@ After the processing we need to convert it back to UIImage.
 
      return finalImage;
     }
+
 
 *Output*
 ==================================
