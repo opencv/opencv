@@ -222,7 +222,20 @@ namespace cv
 
         Moments ocl_moments(oclMat& src, bool binary) //for image
         {
-            CV_Assert(!binary);
+            if(binary)
+            {
+                if(src.type() != CV_8UC1)
+                {
+                    oclMat a;
+                    src.convertTo(a, CV_8UC1);
+                    src = a;
+                }
+                oclMat b(src.size(), src.type());
+                b.setTo(Scalar::all(0));
+                oclMat c;
+                cv::ocl::compare(src, b, c, CV_CMP_NE);
+                src = c;
+            }
             const int TILE_SIZE = 256;
 
             CvMoments mom;
@@ -266,8 +279,15 @@ namespace cv
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
             args.push_back( make_pair( sizeof(cl_int) , (void *)&dstm_step ));
 
+            int binary_;
+            if(binary)
+                binary_ = 1;
+            else
+                binary_ = 0;
+            args.push_back( make_pair( sizeof(cl_int) , (void *)&binary_));
+
             char builOption[128];
-            if(src.type() == CV_8UC1)
+            if(binary || src.type() == CV_8UC1)
             {
                 snprintf(builOption, 128, "-D CV_8UC1");
             }else if(src.type() == CV_16UC1)
@@ -282,6 +302,9 @@ namespace cv
             }else if(src.type() == CV_64FC1)
             {
                 snprintf(builOption, 128, "-D CV_64FC1");
+            }else
+            {
+                CV_Error( CV_StsUnsupportedFormat, "" );
             }
 
             openCLExecuteKernel(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, -1, builOption);

@@ -117,81 +117,35 @@ __kernel void icvContourMoments(int contour_total,
 }
 
 #if defined (DOUBLE_SUPPORT)
-#define DSTT double
+#define WT double
+#define WT4 double4
+#define convert_T4 convert_double4
+#define convert_T convert_double
 #else
-#define DSTT float
+#define WT float
+#define WT4 float4
+#define convert_T4 convert_float4
+#define convert_T convert_float
 #endif
 
 #ifdef CV_8UC1
 #define TT uchar
-#define WT int
-#define MT int
-#define WT4 int4
-#define MT4 int4
-#define convert_T4 convert_int4
-#define convert_T convert_int
-#define convert_L4 convert_T4
 #elif defined CV_16UC1
 #define TT ushort
-#define WT int
-#define MT long
-#define WT4 int4
-#define MT4 long4
-#define convert_T4 convert_int4
-#define convert_T convert_int
-#define convert_L4 convert_long4
 #elif defined CV_16SC1
 #define TT short
-#define WT int
-#define MT long
-#define WT4 int4
-#define MT4 long4
-#define convert_T4 convert_int4
-#define convert_T convert_int
-#define convert_L4 convert_long4
 #elif defined CV_32FC1
 #define TT float
-#ifdef DOUBLE_SUPPORT
-#define WT double
-#define MT double
-#define WT4 double4
-#define MT4 double4
-#define convert_T4 convert_double4
-#define convert_T convert_double
-#define convert_L4 convert_T4
-#else
-#define WT float
-#define MT float
-#define WT4 float4
-#define MT4 float4
-#define convert_T4 convert_float4
-#define convert_T convert_float
-#define convert_L4 convert_T4
-#endif
 #elif defined CV_64FC1
 #ifdef DOUBLE_SUPPORT
 #define TT double
-#define WT double
-#define MT double
-#define WT4 double4
-#define MT4 double4
-#define convert_T4 convert_double4
-#define convert_T convert_double
-#define convert_L4 convert_T4
 #else
 #define TT float
-#define WT float
-#define MT float
-#define WT4 float4
-#define MT4 float4
-#define convert_T4 convert_float4
-#define convert_T convert_float
-#define convert_L4 convert_T4
 #endif
 #endif
 __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int src_step,
-                        __global DSTT* dst_m,
-                        int dst_cols, int dst_step)
+                        __global WT* dst_m,
+                        int dst_cols, int dst_step, int binary)
 {
     int dy = get_global_id(1);
     int ly = get_local_id(1);
@@ -206,7 +160,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     WT4 x0 = (WT4)(0.f);
     WT4 x1 = (WT4)(0.f);
     WT4 x2 = (WT4)(0.f);
-    MT4 x3 = (MT4)(0.f);
+    WT4 x3 = (WT4)(0.f);
 
     __global TT* row = 0;
     bool switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
@@ -257,7 +211,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
                     x0 += p;
                     x1 += xp;
                     x2 += xxp;
-                    x3 += convert_L4(xxp * x);
+                    x3 += convert_T4(xxp * x);
                 }
 
                 x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
@@ -271,7 +225,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
                 WT x0_ = 0;
                 WT x1_ = 0;
                 WT x2_ = 0;
-                MT x3_ = 0;
+                WT x3_ = 0;
 
                 for(; i < x_rest; i++)
                 {
@@ -308,7 +262,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
                     x0 += p;
                     x1 += xp;
                     x2 += xxp;
-                    x3 += convert_L4(xxp * x);
+                    x3 += convert_T4(xxp * x);
                 }
 
                 x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
@@ -347,7 +301,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
             break;
         }
     }
-    __local MT mom[10][256];
+    __local WT mom[10][256];
 
     switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
 
@@ -519,8 +473,17 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    TT xm = (gidx * 256) * mom[0][0];
-    TT ym = (gidy * 256) * mom[0][0];
+    if(binary)
+    {
+        WT s = 1./255;
+        if(ly < 10)
+        {
+            mom[ly][0] *= s;
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    WT xm = (gidx * 256) * mom[0][0];
+    WT ym = (gidy * 256) * mom[0][0];
 
     if(ly == 0)
     {

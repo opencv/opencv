@@ -10,18 +10,19 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(MomentsTest, MatType, bool)
+PARAM_TEST_CASE(MomentsTest, MatType, bool, bool)
 {
     int type;
     cv::Mat mat1;
     bool test_contours;
-
+    bool binaryImage;
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         test_contours = GET_PARAM(1);
-        cv::Size size(10*MWIDTH, 10*MHEIGHT);
+        cv::Size size(10 * MWIDTH, 10 * MHEIGHT);
         mat1 = randomMat(size, type, 0, 256, false);
+        binaryImage = GET_PARAM(2);
     }
 
     void Compare(Moments& cpu, Moments& gpu)
@@ -29,22 +30,17 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
         Mat gpu_dst, cpu_dst;
         HuMoments(cpu, cpu_dst);
         HuMoments(gpu, gpu_dst);
-        EXPECT_MAT_NEAR(gpu_dst,cpu_dst, .5);
+        EXPECT_MAT_NEAR(gpu_dst,cpu_dst, 1e-3);
     }
-
 };
-
 
 OCL_TEST_P(MomentsTest, Mat)
 {
-    bool binaryImage = 0;
     if(mat1.type() == CV_64FC1 && !ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         mat1.convertTo(mat1, CV_32FC1);
     }
-
     oclMat src_d(mat1);
-
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         if(test_contours)
@@ -72,5 +68,5 @@ OCL_TEST_P(MomentsTest, Mat)
     }
 }
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MomentsTest, Combine(
-    Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1, CV_64FC1), Values(false, true)));
+    Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1, CV_64FC1), Values(false, true), Values(false, true)));
 #endif // HAVE_OPENCL

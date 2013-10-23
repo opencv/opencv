@@ -91,5 +91,5 @@ PERF_TEST_P(MomentsFixture, Moments,
     else
         OCL_PERF_ELSE
     cv::HuMoments(mom, dst);
-    SANITY_CHECK(dst,.5);
+    SANITY_CHECK(dst, 1e-3);
 }
