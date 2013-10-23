@@ -884,7 +884,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                             pWGInfo[WGNum].s[0] = scaleinfo[z].width_height;
                             pWGInfo[WGNum].s[1] = (gx << 16) | gy;
                             pWGInfo[WGNum].s[2] = scaleinfo[z].imgoff;
-                            pWGInfo[WGNum].s[3] = *(int*)&scaleinfo[z].factor;
+                            memcpy(&(pWGInfo[WGNum].s[3]),&(scaleinfo[z].factor),sizeof(float));
                             WGNum++;
                         }
                     }
