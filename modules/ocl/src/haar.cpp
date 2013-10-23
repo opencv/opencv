@@ -863,7 +863,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             int WGNum = 0; //accurate number of non -empty workgroups
             oclMat      oclWGInfo(1,sizeof(cl_int4) * WGNumX*WGNumY*WGNumZ,CV_8U);
             {
-                cl_int4*    pWGInfo = (cl_int4*)clEnqueueMapBuffer(getClCommandQueue(oclWGInfo.clCxt),(cl_mem)oclWGInfo.datastart,true,CL_MAP_WRITE_INVALIDATE_REGION, 0, oclWGInfo.step, 0,0,0,&status);
+                cl_int4*    pWGInfo = (cl_int4*)clEnqueueMapBuffer(getClCommandQueue(oclWGInfo.clCxt),(cl_mem)oclWGInfo.datastart,true,CL_MAP_WRITE, 0, oclWGInfo.step, 0,0,0,&status);
                 openCLVerifyCall(status);
                 for(int z=0;z<WGNumZ;++z)
                 {
@@ -903,7 +903,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             oclMat  oclNodesPK(1,sizeof(cl_int) * NODE_SIZE * nodenum,CV_8U);
             {
                 cl_int  status;
-                cl_int* pNodesPK = (cl_int*)clEnqueueMapBuffer(getClCommandQueue(oclNodesPK.clCxt),(cl_mem)oclNodesPK.datastart,true,CL_MAP_WRITE_INVALIDATE_REGION, 0, oclNodesPK.step, 0,0,0,&status);
+                cl_int* pNodesPK = (cl_int*)clEnqueueMapBuffer(getClCommandQueue(oclNodesPK.clCxt),(cl_mem)oclNodesPK.datastart,true,CL_MAP_WRITE, 0, oclNodesPK.step, 0,0,0,&status);
                 openCLVerifyCall(status);
                 //use known local data stride to precalulate indexes
                 int DATA_SIZE_X = (localThreads[0]+cascade->orig_window_size.width);
