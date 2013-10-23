@@ -283,13 +283,20 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 
     void random_roi()
     {
-        Size srcRoiSize = randomSize(1, MAX_VALUE);
-        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, srcRoiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+        CV_Assert(fx > 0 && fy > 0);
 
-        Size dstRoiSize;
+        Size srcRoiSize = randomSize(1, MAX_VALUE), dstRoiSize;
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
+
+        if (dstRoiSize.area() == 0)
+        {
+            random_roi();
+            return;
+        }
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, srcRoiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst_whole, dst_roi, dstRoiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
@@ -315,7 +322,7 @@ OCL_TEST_P(Resize, Mat)
     {
         random_roi();
 
-        resize(src_roi, dst_roi, Size(), fx, fy, interpolation);
+        cv::resize(src_roi, dst_roi, Size(), fx, fy, interpolation);
         ocl::resize(gsrc_roi, gdst_roi, Size(), fx, fy, interpolation);
 
         Near(1.0);
