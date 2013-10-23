@@ -61,6 +61,11 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
+static bool relativeError(double actual, double expected, double eps)
+{
+    return std::abs(actual - expected) / actual < eps;
+}
+
 //////////////////////////////// LUT /////////////////////////////////////////////////
 
 PARAM_TEST_CASE(Lut, MatDepth, MatDepth, bool, bool)
@@ -1466,7 +1471,7 @@ OCL_TEST_P(Norm, NORM_L1)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1484,7 +1489,7 @@ OCL_TEST_P(Norm, NORM_L2)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
