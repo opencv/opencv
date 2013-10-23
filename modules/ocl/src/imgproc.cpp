@@ -905,8 +905,56 @@ namespace cv
 
             if (ksize > 0)
             {
-                Sobel(src, Dx, CV_32F, 1, 0, ksize, scale, 0, borderType);
-                Sobel(src, Dy, CV_32F, 0, 1, ksize, scale, 0, borderType);
+                Context* clCxt = Context::getContext();
+                if(clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) && src.type() == CV_8UC1 &&
+                    src.cols % 8 == 0 && src.rows % 8 == 0 &&
+                    ksize==3)
+                {
+                    Dx.create(src.size(), CV_32FC1);
+                    Dy.create(src.size(), CV_32FC1);
+
+                    const unsigned int block_x = 8;
+                    const unsigned int block_y = 8;
+
+                    unsigned int src_pitch = src.step;
+                    unsigned int dst_pitch = Dx.cols;
+
+                    float _scale = scale;
+
+                    std::vector<std::pair<size_t , const void *> > args;
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dx.data ));
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dy.data ));
+                    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+                    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+                    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&src_pitch ));
+                    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&dst_pitch ));
+                    args.push_back( std::make_pair( sizeof(cl_float) , (void *)&_scale ));
+                    size_t gt2[3] = {src.cols, src.rows, 1}, lt2[3] = {block_x, block_y, 1};
+
+                    string option = "-D BLK_X=8 -D BLK_Y=8";
+                    switch(borderType)
+                    {
+                    case cv::BORDER_REPLICATE:
+                        option += " -D BORDER_REPLICATE";
+                        break;
+                    case cv::BORDER_REFLECT:
+                        option += " -D BORDER_REFLECT";
+                        break;
+                    case cv::BORDER_REFLECT101:
+                        option += " -D BORDER_REFLECT101";
+                        break;
+                    case cv::BORDER_WRAP:
+                        option += " -D BORDER_WRAP";
+                        break;
+                    }
+                    openCLExecuteKernel(src.clCxt, &imgproc_sobel2, "sobel3", gt2, lt2, args, -1, -1, option.c_str() );
+                }
+                else
+                {
+                    Sobel(src, Dx, CV_32F, 1, 0, ksize, scale, 0, borderType);
+                    Sobel(src, Dy, CV_32F, 0, 1, ksize, scale, 0, borderType);
+                }
             }
             else
             {

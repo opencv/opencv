@@ -111,6 +111,7 @@ namespace cv
 
             bool haveDoubleSupport;
             bool isUnifiedMemory; // 1 means integrated GPU, otherwise this value is 0
+            bool isIntelDevice;
 
             std::string compilationExtraOptions;
 
@@ -157,7 +158,8 @@ namespace cv
         {
             FEATURE_CL_DOUBLE = 1,
             FEATURE_CL_UNIFIED_MEM,
-            FEATURE_CL_VER_1_2
+            FEATURE_CL_VER_1_2,
+            FEATURE_CL_INTEL_DEVICE
         };
 
         // Represents OpenCL context, interface
