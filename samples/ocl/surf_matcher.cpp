@@ -14,21 +14,20 @@ const int LOOP_NUM = 10;
 const int GOOD_PTS_MAX = 50;
 const float GOOD_PORTION = 0.15f;
 
-namespace
-{
-
 int64 work_begin = 0;
 int64 work_end = 0;
 
-void workBegin()
+static void workBegin()
 {
     work_begin = getTickCount();
 }
-void workEnd()
+
+static void workEnd()
 {
     work_end = getTickCount() - work_begin;
 }
-double getTime()
+
+static double getTime()
 {
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
@@ -59,7 +58,7 @@ struct SURFMatcher
     }
 };
 
-Mat drawGoodMatches(
+static Mat drawGoodMatches(
     const Mat& cpu_img1,
     const Mat& cpu_img2,
     const vector<KeyPoint>& keypoints1,
@@ -129,7 +128,6 @@ Mat drawGoodMatches(
     return img_matches;
 }
 
-}
 ////////////////////////////////////////////////////
 // This program demonstrates the usage of SURF_OCL.
 // use cpu findHomography interface to calculate the transformation matrix
@@ -142,12 +140,14 @@ int main(int argc, char* argv[])
         "{ o | output   | SURF_output.jpg | specify output save path (only works in CPU or GPU only mode) }"
         "{ c | use_cpu  | false           | use CPU algorithms  }"
         "{ a | use_all  | false           | use both CPU and GPU algorithms}";
+
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
+        std::cout << "Usage: surf_matcher [options]" << std::endl;
         std::cout << "Available options:" << std::endl;
         cmd.printParams();
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     Mat cpu_img1, cpu_img2, cpu_img1_grey, cpu_img2_grey;
@@ -168,23 +168,17 @@ int main(int argc, char* argv[])
     cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
     img2 = cpu_img2_grey;
 
-    if(useALL)
-    {
-        useCPU = false;
-        useGPU = false;
-    }
-    else if(useCPU==false && useALL==false)
-    {
+    if (useALL)
+        useCPU = useGPU = false;
+    else if(!useCPU && !useALL)
         useGPU = true;
-    }
 
     if(!useCPU)
-    {
         std::cout
                 << "Device name:"
                 << cv::ocl::Context::getContext()->getDeviceInfo().deviceName
                 << std::endl;
-    }
+
     double surf_time = 0.;
 
     //declare input/output
@@ -330,5 +324,5 @@ int main(int argc, char* argv[])
         imshow("ocl surf matches", ocl_img_matches);
     }
     waitKey(0);
-    return 0;
+    return EXIT_SUCCESS;
 }
