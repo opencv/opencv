@@ -1893,6 +1893,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
         }
 
         m.create(dims, sizes, mtype);
+        return;
     }
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
@@ -1946,6 +1947,7 @@ void _OutputArray::release() const
     if( k == STD_VECTOR_MAT )
     {
         ((std::vector<Mat>*)obj)->clear();
+        return;
     }
 
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
