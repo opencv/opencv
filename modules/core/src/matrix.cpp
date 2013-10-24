@@ -205,7 +205,6 @@ void swap( Mat& a, Mat& b )
     std::swap(a.rows, b.rows);
     std::swap(a.cols, b.cols);
     std::swap(a.data, b.data);
-    std::swap(a.refcount, b.refcount);
     std::swap(a.datastart, b.datastart);
     std::swap(a.dataend, b.dataend);
     std::swap(a.datalimit, b.datalimit);
@@ -397,8 +396,8 @@ void Mat::deallocate()
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
@@ -443,9 +442,9 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
 
 Mat::Mat(const Mat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
-    data(m.data + roi.y*m.step[0]), refcount(m.refcount),
+    data(m.data + roi.y*m.step[0]),
     datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit),
-    allocator(m.allocator), size(&rows)
+    allocator(m.allocator), u(m.u), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
     flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
@@ -455,8 +454,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
     data += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
@@ -471,8 +470,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
 
 Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
     data = datastart = (uchar*)_data;
@@ -482,8 +481,8 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 
 
 Mat::Mat(const Mat& m, const Range* ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     int i, d = m.dims;
 
@@ -1470,6 +1469,9 @@ int _InputArray::type(int i) const
 {
     int k = kind();
 
+    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR || (flags & FIXED_TYPE))
+        return CV_MAT_TYPE(flags);
+
     if( k == MAT )
         return ((const Mat*)obj)->type();
 
@@ -1478,9 +1480,6 @@ int _InputArray::type(int i) const
 
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
-
-    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR )
-        return CV_MAT_TYPE(flags);
 
     if( k == NONE )
         return -1;
