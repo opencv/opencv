@@ -144,7 +144,7 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
         generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
 
-        border = randomBorder(0, 10);
+        border = randomBorder(0, MAX_VALUE << 2);
         val = randomScalar(-MAX_VALUE, MAX_VALUE);
     }
 
