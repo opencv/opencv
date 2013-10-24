@@ -99,7 +99,8 @@ PERF_TEST_P(Size_Source, calcHist3d,
     SANITY_CHECK(hist);
 }
 
-PERF_TEST_P(TestMatSize, equalizeHist,
+#define MatSize TestMatSize
+PERF_TEST_P(MatSize, equalizeHist,
             testing::Values(TYPICAL_MAT_SIZES)
             )
 {
@@ -115,6 +116,7 @@ PERF_TEST_P(TestMatSize, equalizeHist,
 
     SANITY_CHECK(destination);
 }
+#undef MatSize
 
 typedef tr1::tuple<Size, double> Sz_ClipLimit_t;
 typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;
