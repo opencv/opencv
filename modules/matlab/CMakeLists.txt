@@ -104,7 +104,7 @@ set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$(Configuration))
+prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$<CONFIGURATION>)
 set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)
@@ -229,7 +229,7 @@ add_custom_command(
             --opencv_version ${OPENCV_VERSION}
             --commit         ${GIT_COMMIT}
             --modules        ${opencv_modules}
-            --configuration  "$(Configuration)" ${CMAKE_BUILD_TYPE}
+            --configuration  $<CONFIGURATION>
             --outdir         ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
@@ -257,7 +257,7 @@ add_custom_command(
                              -DMEX_CXXFLAGS=${MEX_CXX_FLAGS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
                              -DMEX_LIB_DIR=${MEX_LIB_DIR}
-                             -DCONFIGURATION="$(Configuration)"
+                             -DCONFIGURATION="$<CONFIGURATION>"
                              -DMEX_LIBS="${MEX_LIBS}"
                              -DMEX_DEBUG_LIBS="${MEX_DEBUG_LIBS}"
                              -P ${CMAKE_CURRENT_SOURCE_DIR}/compile.cmake
