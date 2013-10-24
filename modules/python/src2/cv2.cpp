@@ -234,14 +234,14 @@ public:
         }
     }
 
-    void map(UMatData* u, int accessFlags) const
+    void map(UMatData*, int) const
     {
-        stdAllocator->map(u, accessFlags);
     }
 
     void unmap(UMatData* u) const
     {
-        stdAllocator->unmap(u);
+        if(u->urefcount == 0)
+            deallocate(u);
     }
 
     void download(UMatData* u, void* dstptr,
