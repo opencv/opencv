@@ -758,6 +758,9 @@ __Module::~__Module()
 #if defined(WIN32) && defined(CVAPI_EXPORTS)
 
 extern "C"
+BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved);
+
+extern "C"
 BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_PROCESS_DETACH)
