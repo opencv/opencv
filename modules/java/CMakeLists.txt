@@ -330,16 +330,16 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(ANDROID)
-  install(TARGETS ${the_module}
+  ocv_install_target(${the_module} EXPORT OpenCVModules
           LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 else()
   if(NOT INSTALL_CREATE_DISTRIB)
-    install(TARGETS ${the_module}
+    ocv_install_target(${the_module} EXPORT OpenCVModules
             RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
             LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
   else()
-    install(TARGETS ${the_module}
+    ocv_install_target(${the_module} EXPORT OpenCVModules
             RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main
             LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main)
   endif()

@@ -47,8 +47,6 @@ using namespace cv;
 
 #ifdef HAVE_FFMPEG
 
-#include "ffmpeg_codecs.hpp"
-
 using namespace std;
 
 class CV_FFmpegWriteBigVideoTest : public cvtest::BaseTest
@@ -61,32 +59,34 @@ public:
         const double fps0 = 15;
         const double time_sec = 1;
 
-        const size_t n = sizeof(codec_bmp_tags)/sizeof(codec_bmp_tags[0]);
+        const int tags[] = {
+            0,
+            //VideoWriter::fourcc('D', 'I', 'V', '3'),
+            //VideoWriter::fourcc('D', 'I', 'V', 'X'),
+            VideoWriter::fourcc('D', 'X', '5', '0'),
+            VideoWriter::fourcc('F', 'L', 'V', '1'),
+            VideoWriter::fourcc('H', '2', '6', '1'),
+            VideoWriter::fourcc('H', '2', '6', '3'),
+            VideoWriter::fourcc('I', '4', '2', '0'),
+            //VideoWriter::fourcc('j', 'p', 'e', 'g'),
+            VideoWriter::fourcc('M', 'J', 'P', 'G'),
+            VideoWriter::fourcc('m', 'p', '4', 'v'),
+            VideoWriter::fourcc('M', 'P', 'E', 'G'),
+            //VideoWriter::fourcc('W', 'M', 'V', '1'),
+            //VideoWriter::fourcc('W', 'M', 'V', '2'),
+            VideoWriter::fourcc('X', 'V', 'I', 'D'),
+            //VideoWriter::fourcc('Y', 'U', 'Y', '2'),
+        };
+
+        const size_t n = sizeof(tags)/sizeof(tags[0]);
 
         bool created = false;
 
         for (size_t j = 0; j < n; ++j)
         {
-        stringstream s; s << codec_bmp_tags[j].tag;
-        int tag = codec_bmp_tags[j].tag;
-
-        if( tag != MKTAG('H', '2', '6', '3') &&
-            tag != MKTAG('H', '2', '6', '1') &&
-            //tag != MKTAG('D', 'I', 'V', 'X') &&
-            tag != MKTAG('D', 'X', '5', '0') &&
-            tag != MKTAG('X', 'V', 'I', 'D') &&
-            tag != MKTAG('m', 'p', '4', 'v') &&
-            //tag != MKTAG('D', 'I', 'V', '3') &&
-            //tag != MKTAG('W', 'M', 'V', '1') &&
-            //tag != MKTAG('W', 'M', 'V', '2') &&
-            tag != MKTAG('M', 'P', 'E', 'G') &&
-            tag != MKTAG('M', 'J', 'P', 'G') &&
-            //tag != MKTAG('j', 'p', 'e', 'g') &&
-            tag != 0 &&
-            tag != MKTAG('I', '4', '2', '0') &&
-            //tag != MKTAG('Y', 'U', 'Y', '2') &&
-            tag != MKTAG('F', 'L', 'V', '1') )
-            continue;
+        int tag = tags[j];
+        stringstream s;
+        s << tag;
 
         const string filename = "output_"+s.str()+".avi";
 
@@ -104,7 +104,10 @@ public:
                 frame_s = Size(1920, 1080);*/
 
             if( tag == VideoWriter::fourcc('M', 'P', 'E', 'G') )
+            {
+                frame_s = Size(720, 576);
                 fps = 25;
+            }
 
             VideoWriter writer(filename, tag, fps, frame_s);
 

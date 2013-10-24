@@ -49,148 +49,194 @@ using namespace cv;
 
 #ifdef HAVE_OPENCL
 
-//#define MAT_DEBUG
-#ifdef MAT_DEBUG
-#define MAT_DIFF(mat, mat2)\
-{\
-    for(int i = 0; i < mat.rows; i ++)\
-    {\
-        for(int j = 0; j < mat.cols; j ++)\
-        {\
-            cv::Vec4b s = mat.at<cv::Vec4b>(i, j);\
-            cv::Vec4b s2 = mat2.at<cv::Vec4b>(i, j);\
-            if(s != s2) printf("*");\
-            else printf(".");\
-        }\
-        puts("\n");\
-    }\
-}
-#else
-#define MAT_DIFF(mat, mat2)
-#endif
-
-
 namespace
 {
+using namespace testing;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cvtColor
-PARAM_TEST_CASE(CvtColor, cv::Size, MatDepth)
-{
-    cv::Size size;
-    int depth;
-    bool useRoi;
 
-    cv::Mat img;
+PARAM_TEST_CASE(CvtColor, MatDepth, bool)
+{
+    int depth;
+    bool use_roi;
+
+    // src mat
+    cv::Mat src1;
+    cv::Mat dst1;
+
+    // src mat with roi
+    cv::Mat src1_roi;
+    cv::Mat dst1_roi;
+
+    // ocl dst mat for testing
+    cv::ocl::oclMat gsrc1_whole;
+    cv::ocl::oclMat gdst1_whole;
+
+    // ocl mat with roi
+    cv::ocl::oclMat gsrc1_roi;
+    cv::ocl::oclMat gdst1_roi;
 
     virtual void SetUp()
     {
-        size = GET_PARAM(0);
-        depth = GET_PARAM(1);
+        depth = GET_PARAM(0);
+        use_roi = GET_PARAM(1);
+    }
 
-        img = randomMat(size, CV_MAKE_TYPE(depth, 3), 0.0, depth == CV_32F ? 1.0 : 255.0);
+    virtual void random_roi(int channelsIn, int channelsOut)
+    {
+        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, roiSize, srcBorder, srcType, 2, 100);
+
+        Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst1, dst1_roi, roiSize, dst1Border, dstType, 5, 16);
+
+        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, srcBorder);
+        generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
+    }
+
+    void Near(double threshold = 1e-3)
+    {
+        EXPECT_MAT_NEAR(dst1, gdst1_whole, threshold);
+        EXPECT_MAT_NEAR(dst1_roi, gdst1_roi, threshold);
+    }
+
+    void doTest(int channelsIn, int channelsOut, int code)
+    {
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi(channelsIn, channelsOut);
+
+            cv::cvtColor(src1_roi, dst1_roi, code);
+            cv::ocl::cvtColor(gsrc1_roi, gdst1_roi, code);
+
+            Near();
+        }
     }
 };
 
 #define CVTCODE(name) cv::COLOR_ ## name
-#define OCL_TEST_P_CVTCOLOR(name) OCL_TEST_P(CvtColor, name)\
-{\
-    cv::Mat src = img;\
-    cv::ocl::oclMat ocl_img, dst;\
-    ocl_img.upload(img);\
-    cv::ocl::cvtColor(ocl_img, dst, CVTCODE(name));\
-    cv::Mat dst_gold;\
-    cv::cvtColor(src, dst_gold, CVTCODE(name));\
-    cv::Mat dst_mat;\
-    dst.download(dst_mat);\
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);\
+
+OCL_TEST_P(CvtColor, RGB2GRAY)
+{
+    doTest(3, 1, CVTCODE(RGB2GRAY));
 }
-
-//add new ones here using macro
-OCL_TEST_P_CVTCOLOR(RGB2GRAY)
-OCL_TEST_P_CVTCOLOR(BGR2GRAY)
-OCL_TEST_P_CVTCOLOR(RGBA2GRAY)
-OCL_TEST_P_CVTCOLOR(BGRA2GRAY)
-
-OCL_TEST_P_CVTCOLOR(RGB2YUV)
-OCL_TEST_P_CVTCOLOR(BGR2YUV)
-OCL_TEST_P_CVTCOLOR(YUV2RGB)
-OCL_TEST_P_CVTCOLOR(YUV2BGR)
-OCL_TEST_P_CVTCOLOR(RGB2YCrCb)
-OCL_TEST_P_CVTCOLOR(BGR2YCrCb)
-
-PARAM_TEST_CASE(CvtColor_Gray2RGB, cv::Size, MatDepth, int)
+OCL_TEST_P(CvtColor, GRAY2RGB)
 {
-    cv::Size size;
-    int code;
-    int depth;
-    cv::Mat img;
-
-    virtual void SetUp()
-    {
-        size  = GET_PARAM(0);
-        depth = GET_PARAM(1);
-        code  = GET_PARAM(2);
-        img   = randomMat(size, CV_MAKETYPE(depth, 1), 0.0, depth == CV_32F ? 1.0 : 255.0);
-    }
-};
-OCL_TEST_P(CvtColor_Gray2RGB, Accuracy)
-{
-    cv::Mat src = img;
-    cv::ocl::oclMat ocl_img, dst;
-    ocl_img.upload(src);
-    cv::ocl::cvtColor(ocl_img, dst, code);
-    cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, code);
-    cv::Mat dst_mat;
-    dst.download(dst_mat);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
-}
-
-
-PARAM_TEST_CASE(CvtColor_YUV420, cv::Size, int)
-{
-    cv::Size size;
-    int code;
-
-    cv::Mat img;
-
-    virtual void SetUp()
-    {
-        size = GET_PARAM(0);
-        code = GET_PARAM(1);
-        img  = randomMat(size, CV_8UC1, 0.0, 255.0);
-    }
+    doTest(1, 3, CVTCODE(GRAY2RGB));
 };
 
-OCL_TEST_P(CvtColor_YUV420, Accuracy)
+OCL_TEST_P(CvtColor, BGR2GRAY)
 {
-    cv::Mat src = img;
-    cv::ocl::oclMat ocl_img, dst;
-    ocl_img.upload(src);
-    cv::ocl::cvtColor(ocl_img, dst, code);
-    cv::Mat dst_gold;
-    cv::cvtColor(src, dst_gold, code);
-    cv::Mat dst_mat;
-    dst.download(dst_mat);
-    MAT_DIFF(dst_mat, dst_gold);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
+    doTest(3, 1, CVTCODE(BGR2GRAY));
+}
+OCL_TEST_P(CvtColor, GRAY2BGR)
+{
+    doTest(1, 3, CVTCODE(GRAY2BGR));
+};
+
+OCL_TEST_P(CvtColor, RGBA2GRAY)
+{
+    doTest(3, 1, CVTCODE(RGBA2GRAY));
+}
+OCL_TEST_P(CvtColor, GRAY2RGBA)
+{
+    doTest(1, 3, CVTCODE(GRAY2RGBA));
+};
+
+OCL_TEST_P(CvtColor, BGRA2GRAY)
+{
+    doTest(3, 1, CVTCODE(BGRA2GRAY));
+}
+OCL_TEST_P(CvtColor, GRAY2BGRA)
+{
+    doTest(1, 3, CVTCODE(GRAY2BGRA));
+};
+
+OCL_TEST_P(CvtColor, RGB2YUV)
+{
+    doTest(3, 3, CVTCODE(RGB2YUV));
+}
+OCL_TEST_P(CvtColor, BGR2YUV)
+{
+    doTest(3, 3, CVTCODE(BGR2YUV));
+}
+OCL_TEST_P(CvtColor, YUV2RGB)
+{
+    doTest(3, 3, CVTCODE(YUV2RGB));
+}
+OCL_TEST_P(CvtColor, YUV2BGR)
+{
+    doTest(3, 3, CVTCODE(YUV2BGR));
+}
+OCL_TEST_P(CvtColor, RGB2YCrCb)
+{
+    doTest(3, 3, CVTCODE(RGB2YCrCb));
+}
+OCL_TEST_P(CvtColor, BGR2YCrCb)
+{
+    doTest(3, 3, CVTCODE(BGR2YCrCb));
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor, testing::Combine(
-                            DIFFERENT_SIZES,
-                            testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F))
-                        ));
+struct CvtColor_YUV420 : CvtColor
+{
+    void random_roi(int channelsIn, int channelsOut)
+    {
+        const int srcType = CV_MAKE_TYPE(depth, channelsIn);
+        const int dstType = CV_MAKE_TYPE(depth, channelsOut);
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_YUV420, testing::Combine(
-                            testing::Values(cv::Size(128, 45), cv::Size(46, 132), cv::Size(1024, 1023)),
-                            testing::Values((int)COLOR_YUV2RGBA_NV12, (int)COLOR_YUV2BGRA_NV12, (int)COLOR_YUV2RGB_NV12, (int)COLOR_YUV2BGR_NV12)
-                        ));
+        Size roiSize = randomSize(1, MAX_VALUE);
+        roiSize.width *= 2;
+        roiSize.height *= 3;
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, roiSize, srcBorder, srcType, 2, 100);
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_Gray2RGB, testing::Combine(
-                            DIFFERENT_SIZES,
-                            testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
-                            testing::Values((int)COLOR_GRAY2BGR, (int)COLOR_GRAY2BGRA, (int)COLOR_GRAY2RGB, (int)COLOR_GRAY2RGBA)
-                        ));
+        Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst1, dst1_roi, roiSize, dst1Border, dstType, 5, 16);
+
+        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, srcBorder);
+        generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
+    }
+};
+
+OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_NV12)
+{
+    doTest(1, 4, COLOR_YUV2RGBA_NV12);
+};
+
+OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_NV12)
+{
+    doTest(1, 4, COLOR_YUV2BGRA_NV12);
+};
+
+OCL_TEST_P(CvtColor_YUV420, YUV2RGB_NV12)
+{
+    doTest(1, 3, COLOR_YUV2RGB_NV12);
+};
+
+OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12)
+{
+    doTest(1, 3, COLOR_YUV2BGR_NV12);
+};
+
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor,
+                            testing::Combine(
+                                testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
+                                Bool()
+                            )
+                        );
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_YUV420,
+                            testing::Combine(
+                                testing::Values(MatDepth(CV_8U)),
+                                Bool()
+                            )
+                        );
+
 }
 #endif
