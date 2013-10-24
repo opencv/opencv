@@ -11,6 +11,18 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
+# assert macro
+# Note: it doesn't support lists in arguments
+# Usage samples:
+#   ocv_assert(MyLib_FOUND)
+#   ocv_assert(DEFINED MyLib_INCLUDE_DIRS)
+macro(ocv_assert)
+  if(NOT (${ARGN}))
+    string(REPLACE ";" " " __assert_msg "${ARGN}")
+    message(AUTHOR_WARNING "Assertion failed: ${__assert_msg}")
+  endif()
+endmacro()
+
 macro(ocv_check_environment_variables)
   foreach(_var ${ARGN})
     if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
