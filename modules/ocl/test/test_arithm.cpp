@@ -181,9 +181,6 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         depth = GET_PARAM(0);
         cn = GET_PARAM(1);
         use_roi = GET_PARAM(2);
-
-        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
-                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
     void random_roi()
@@ -213,6 +210,9 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
         generateOclMat(gdst2_whole, gdst2_roi, dst2, roiSize, dst2Border);
         generateOclMat(gmask_whole, gmask_roi, mask, roiSize, maskBorder);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
     void Near(double threshold = 0.)
@@ -389,7 +389,7 @@ OCL_TEST_P(Mul, Scalar)
     {
         random_roi();
 
-        cv::multiply(val[0], src1_roi, dst1_roi);
+        cv::multiply(Scalar::all(val[0]), src1_roi, dst1_roi);
         cv::ocl::multiply(val[0], gsrc1_roi, gdst1_roi);
 
         Near(gdst1_roi.depth() >= CV_32F ? 1e-3 : 1);
