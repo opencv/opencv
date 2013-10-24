@@ -1469,9 +1469,6 @@ int _InputArray::type(int i) const
 {
     int k = kind();
 
-    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR || (flags & FIXED_TYPE))
-        return CV_MAT_TYPE(flags);
-
     if( k == MAT )
         return ((const Mat*)obj)->type();
 
@@ -1481,14 +1478,21 @@ int _InputArray::type(int i) const
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
 
+    if( k == MATX || k == STD_VECTOR || k == STD_VECTOR_VECTOR )
+        return CV_MAT_TYPE(flags);
+
     if( k == NONE )
         return -1;
 
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( vv.empty() )
+        {
+            CV_Assert((flags & FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
         CV_Assert( i < (int)vv.size() );
-
         return vv[i >= 0 ? i : 0].type();
     }
 

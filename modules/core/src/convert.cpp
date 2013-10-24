@@ -271,7 +271,7 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
         _mv.release();
         return;
     }
-    CV_Assert( !_mv.fixedType() || _mv.type() == m.depth() );
+    CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
     _mv.create(m.channels(), 1, m.depth());
     Mat* dst = &_mv.getMatRef(0);
     split(m, dst);
