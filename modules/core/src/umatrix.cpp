@@ -602,13 +602,14 @@ void UMat::copyTo(OutputArray _dst) const
         return;
     }
 
-    size_t i, sz[CV_MAX_DIM], srcofs[CV_MAX_DIM], dstofs[CV_MAX_DIM];
+    size_t i, sz[CV_MAX_DIM], srcofs[CV_MAX_DIM], dstofs[CV_MAX_DIM], esz = elemSize();
     for( i = 0; i < (size_t)dims; i++ )
         sz[i] = size.p[i];
-    sz[dims-1] *= elemSize();
+    sz[dims-1] *= esz;
     ndoffset(srcofs);
+    srcofs[dims-1] *= esz;
 
-    _dst.create( dims, size, type() );
+    _dst.create( dims, size.p, type() );
     if( _dst.kind() == _InputArray::UMAT )
     {
         UMat dst = _dst.getUMat();
