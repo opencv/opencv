@@ -274,13 +274,13 @@ inline _InputOutputArray::_InputOutputArray(const cuda::CudaMem& cuda_mem)
 
 inline
 Mat::Mat()
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {}
 
 inline
 Mat::Mat(int _rows, int _cols, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_rows, _cols, _type);
@@ -288,7 +288,7 @@ Mat::Mat(int _rows, int _cols, int _type)
 
 inline
 Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_rows, _cols, _type);
@@ -297,7 +297,7 @@ Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(Size _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create( _sz.height, _sz.width, _type );
@@ -305,7 +305,7 @@ Mat::Mat(Size _sz, int _type)
 
 inline
 Mat::Mat(Size _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_sz.height, _sz.width, _type);
@@ -314,7 +314,7 @@ Mat::Mat(Size _sz, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(int _dims, const int* _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_dims, _sz, _type);
@@ -322,7 +322,7 @@ Mat::Mat(int _dims, const int* _sz, int _type)
 
 inline
 Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_dims, _sz, _type);
@@ -331,12 +331,12 @@ Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(const Mat& m)
-    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data), refcount(m.refcount),
+    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
       u(m.u), size(&rows)
 {
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
@@ -351,7 +351,7 @@ Mat::Mat(const Mat& m)
 inline
 Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_rows), cols(_cols),
-      data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0), datalimit(0),
+      data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
     size_t esz = CV_ELEM_SIZE(_type);
@@ -376,7 +376,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
 inline
 Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_sz.height), cols(_sz.width),
-      data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0), datalimit(0),
+      data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
     size_t esz = CV_ELEM_SIZE(_type);
@@ -401,7 +401,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 template<typename _Tp> inline
 Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-      cols(1), data(0), refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      cols(1), data(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if(vec.empty())
         return;
@@ -418,7 +418,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
 template<typename _Tp, int n> inline
 Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -434,7 +434,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -450,7 +450,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -469,7 +469,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -489,7 +489,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     *this = commaInitializer.operator Mat_<_Tp>();
 }
@@ -507,8 +507,8 @@ Mat& Mat::operator = (const Mat& m)
 {
     if( this != &m )
     {
-        if( m.refcount )
-            CV_XADD(m.refcount, 1);
+        if( m.u )
+            CV_XADD(&m.u->refcount, 1);
         release();
         flags = m.flags;
         if( dims <= 2 && m.dims <= 2 )
@@ -525,7 +525,6 @@ Mat& Mat::operator = (const Mat& m)
         datastart = m.datastart;
         dataend = m.dataend;
         datalimit = m.datalimit;
-        refcount = m.refcount;
         allocator = m.allocator;
         u = m.u;
     }
@@ -604,17 +603,16 @@ void Mat::create(Size _sz, int _type)
 inline
 void Mat::addref()
 {
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
 }
 
 inline void Mat::release()
 {
-    if( refcount && CV_XADD(refcount, -1) == 1 )
+    if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
     data = datastart = dataend = datalimit = 0;
     size.p[0] = 0;
-    refcount = 0;
     u = 0;
 }
 

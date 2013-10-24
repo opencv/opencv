@@ -874,10 +874,6 @@ public:
     //! pointer to the data
     uchar* data;
 
-    //! pointer to the reference counter;
-    // when matrix points to user-allocated data, the pointer is NULL
-    int* refcount;
-
     //! helper fields used in locateROI and adjustROI
     uchar* datastart;
     uchar* dataend;
