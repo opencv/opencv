@@ -701,3 +701,17 @@ Performs linear blending of two images.
     :param weights2: Weights for second image. Must have tha same size as ``img2`` . Supports only ``CV_32F`` type.
 
     :param result: Destination image.
+
+ocl::medianFilter
+--------------------
+Blurs an image using the median filter.
+
+.. ocv:function:: void ocl::medianFilter(const oclMat &src, oclMat &dst, int m)
+
+    :param src: input ```1-``` or ```4```-channel image; the image depth should be ```CV_8U```, ```CV_32F```.
+
+    :param dst: destination array of the same size and type as ```src```.
+
+    :param m: aperture linear size; it must be odd and greater than ```1```. Currently only ```3```, ```5``` are supported.
+
+The function smoothes an image using the median filter with the \texttt{m} \times \texttt{m} aperture. Each channel of a multi-channel image is processed independently. In-place operation is supported.
