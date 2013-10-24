@@ -130,12 +130,10 @@ __kernel __attribute__((reqd_work_group_size(HISTOGRAM256_BIN_COUNT,1,1)))void c
         globalHist[mad24(gx, hist_step, lid)] = bin1+bin2+bin3+bin4;
 }
 
-__kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))calc_sub_hist_border_D0(
-                                                                      __global const uchar* src,
-                                                      int src_step,  int src_offset,
-                                                                      __global int* globalHist,
-                                                                      int left_col,  int cols,
-                                                      int rows,	 int hist_step)
+__kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))
+calc_sub_hist_border_D0(__global const uchar* src, int src_step, int src_offset,
+                        __global int* globalHist, int left_col, int cols,
+                        int rows, int hist_step)
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -162,6 +160,7 @@ __kernel void __attribute__((reqd_work_group_size(1,HISTOGRAM256_BIN_COUNT,1)))c
 
         globalHist[mad24(rowIndex, hist_step, lidy)] += subhist[lidy];
 }
+
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global int* buf,
                 __global int* hist,
                 int src_step)
@@ -188,32 +187,43 @@ __kernel __attribute__((reqd_work_group_size(256,1,1)))void merge_hist(__global 
         hist[gx] = data[0];
 }
 
-__kernel __attribute__((reqd_work_group_size(256,1,1)))void calLUT(
-                            __global uchar * dst,
-                            __constant int * hist,
-                            int total)
+__kernel __attribute__((reqd_work_group_size(256,1,1)))
+void calLUT(__global uchar * dst, __constant int * hist, int total)
 {
     int lid = get_local_id(0);
-    __local int sumhist[HISTOGRAM256_BIN_COUNT+1];
+    __local int sumhist[HISTOGRAM256_BIN_COUNT];
+    __local float scale;
 
-    sumhist[lid]=hist[lid];
+    sumhist[lid] = hist[lid];
     barrier(CLK_LOCAL_MEM_FENCE);
-    if(lid==0)
+    if (lid == 0)
     {
-        int sum = 0;
-        int i = 0;
-        while (!sumhist[i]) ++i;
-        sumhist[HISTOGRAM256_BIN_COUNT] = sumhist[i];
-        for(sumhist[i++] = 0; i<HISTOGRAM256_BIN_COUNT; i++)
+        int sum = 0, i = 0;
+        while (!sumhist[i])
+            ++i;
+
+        if (total == sumhist[i])
         {
-            sum+=sumhist[i];
-            sumhist[i]=sum;
+            scale = 1;
+            for (int j = 0; j < HISTOGRAM256_BIN_COUNT; ++j)
+                sumhist[i] = i;
+        }
+        else
+        {
+            scale = 255.f/(total - sumhist[i]);
+
+            for (sumhist[i++] = 0; i < HISTOGRAM256_BIN_COUNT; i++)
+            {
+                sum += sumhist[i];
+                sumhist[i] = sum;
+            }
         }
     }
+
     barrier(CLK_LOCAL_MEM_FENCE);
-    float scale = 255.f/(total - sumhist[HISTOGRAM256_BIN_COUNT]);
-    dst[lid]= lid == 0 ? 0 : convert_uchar_sat(convert_float(sumhist[lid])*scale);
+    dst[lid]= convert_uchar_sat_rte(convert_float(sumhist[lid])*scale);
 }
+
 /*
 ///////////////////////////////equalizeHist//////////////////////////////////////////////////
 __kernel __attribute__((reqd_work_group_size(256,1,1)))void equalizeHist(
