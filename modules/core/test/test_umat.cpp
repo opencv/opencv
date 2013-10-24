@@ -98,12 +98,12 @@ bool CV_UMatTest::TestUMat()
         a.copyTo(ua);
         ua.copyTo(b);
         CHECK_DIFF(a, b);
-        
+
         ura = ua(roi);
         ura.copyTo(rb);
-        
+
         CHECK_DIFF(ra, rb);
-        
+
         ra += Scalar::all(1.f);
         {
         Mat temp = ura.getMat(ACCESS_RW);
