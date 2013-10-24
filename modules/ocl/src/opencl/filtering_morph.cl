@@ -45,6 +45,7 @@
 //BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii
 #define ELEM(i,l_edge,r_edge,elem1,elem2) (i)<(l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
 #ifndef GENTYPE
+
 __kernel void morph_C1_D0(__global const uchar * restrict src,
                           __global uchar *dst,
                           int src_offset_x, int src_offset_y,
@@ -150,7 +151,9 @@ __kernel void morph_C1_D0(__global const uchar * restrict src,
         }
     }
 }
+
 #else
+
 __kernel void morph(__global const GENTYPE * restrict src,
                     __global GENTYPE *dst,
                     int src_offset_x, int src_offset_y,
@@ -221,4 +224,5 @@ __kernel void morph(__global const GENTYPE * restrict src,
         dst[out_addr] = res;
     }
 }
+
 #endif

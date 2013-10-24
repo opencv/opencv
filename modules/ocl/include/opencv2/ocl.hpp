@@ -858,11 +858,8 @@ namespace cv
         //! Applies a generic geometrical transformation to an image.
 
         // Supports INTER_NEAREST, INTER_LINEAR.
-
         // Map1 supports CV_16SC2, CV_32FC2  types.
-
         // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
-
         CV_EXPORTS void remap(const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int bordertype, const Scalar &value = Scalar());
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
@@ -870,7 +867,7 @@ namespace cv
         CV_EXPORTS void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar());
 
         //! Smoothes image using median filter
-        // The source 1- or 4-channel image. When m is 3 or 5, the image depth should be CV 8U or CV 32F.
+        // The source 1- or 4-channel image. m should be 3 or 5, the image depth should be CV_8U or CV_32F.
         CV_EXPORTS void medianFilter(const oclMat &src, oclMat &dst, int m);
 
         //! warps the image using affine transformation
