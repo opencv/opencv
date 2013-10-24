@@ -36,7 +36,7 @@ In *OpenCV* all the image processing operations are usually carried out on the *
 
      CGContextDrawImage(contextRef, CGRectMake(0, 0, cols, rows), image.CGImage);
      CGContextRelease(contextRef);
-     
+
      return cvMat;
    }
 
