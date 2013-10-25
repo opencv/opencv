@@ -83,9 +83,9 @@ public:
         CUDA_MEM          = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT,
         OCL_MAT           =10 << KIND_SHIFT,
-        UMAT              =OCL_MAT,
-        STD_VECTOR_UMAT   =11 << KIND_SHIFT,
-        UEXPR             =12 << KIND_SHIFT
+        UMAT              =11 << KIND_SHIFT,
+        STD_VECTOR_UMAT   =12 << KIND_SHIFT,
+        UEXPR             =13 << KIND_SHIFT
     };
 
     _InputArray();
