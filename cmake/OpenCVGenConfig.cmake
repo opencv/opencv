@@ -76,7 +76,9 @@ endif()
 
 set(modules_file_suffix "")
 if(ANDROID)
-  set(modules_file_suffix "-${ANDROID_NDK_ABI_NAME}")
+  # the REPLACE here is needed, because OpenCVModules_armeabi.cmake includes
+  # OpenCVModules_armeabi-*.cmake, which would match OpenCVModules_armeabi-v7a*.cmake.
+  string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
 endif()
 
 export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules${modules_file_suffix}.cmake")
