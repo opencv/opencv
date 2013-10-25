@@ -11,15 +11,6 @@
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
-# --------------------------------------------------------------
-# Indicate CMake 2.7 and above that we don't want to mix relative
-#  and absolute paths in linker lib lists.
-# Run "cmake --help-policy CMP0003" for more information.
-# --------------------------------------------------------------
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
-endif()
-
 # Following block can broke build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
@@ -46,6 +37,10 @@ elseif(IOS)
   cmake_minimum_required(VERSION 2.8.0)
 else()
   cmake_minimum_required(VERSION 2.6.3)
+endif()
+
+if(POLICY CMP0022)
+  cmake_policy(SET CMP0022 OLD)
 endif()
 
 # must go before the project command
