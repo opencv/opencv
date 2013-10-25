@@ -104,7 +104,10 @@ public:
                 frame_s = Size(1920, 1080);*/
 
             if( tag == CV_FOURCC('M', 'P', 'E', 'G') )
+            {
+                frame_s = Size(720, 576);
                 fps = 25;
+            }
 
             VideoWriter writer(filename, tag, fps, frame_s);
 
