@@ -47,6 +47,7 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include "opencv2/core/ocl.hpp"
 
 using namespace cv;
 using namespace std;
@@ -123,6 +124,10 @@ bool CV_UMatTest::TestUMat()
 
 void CV_UMatTest::run( int /* start_from */)
 {
+    printf("Use OpenCL: %s\nHave OpenCL: %s\n",
+           ocl::useOpenCL() ? "TRUE" : "FALSE",
+           ocl::haveOpenCL() ? "TRUE" : "FALSE" );
+
     if (!TestUMat())
         return;
 
