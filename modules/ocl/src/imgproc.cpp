@@ -948,7 +948,7 @@ namespace cv
                         option += " -D BORDER_WRAP";
                         break;
                     }
-                    openCLExecuteKernel(src.clCxt, &imgproc_sobel2, "sobel3", gt2, lt2, args, -1, -1, option.c_str() );
+                    openCLExecuteKernel(src.clCxt, &imgproc_sobel3, "sobel3", gt2, lt2, args, -1, -1, option.c_str() );
                 }
                 else
                 {
