@@ -17,6 +17,7 @@
 // @Authors
 //    Nathan, liujun@multicorewareinc.com
 //    Peng Xiao, pengxiao@outlook.com
+//    Baichuan Su, baichuan@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -128,7 +129,7 @@ result_type reduce_multi_block(
             s_query[lidy * MAX_DESC_LEN + block_index * BLOCK_SIZE + j],
             s_train[j * BLOCK_SIZE + lidx]);
     }
-    return DIST_RES(result);
+    return result;
 }
 
 /* 2dim launch, global size: dim0 is (query rows + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE, dim1 is BLOCK_SIZE
@@ -186,6 +187,8 @@ __kernel void BruteForceMatch_UnrollMatch(
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
+
+        result = DIST_RES(result);
 
         int trainIdx = t * BLOCK_SIZE + lidx;
 
@@ -492,6 +495,8 @@ __kernel void BruteForceMatch_knnUnrollMatch(
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
+
+        result = DIST_RES(result);
 
         const int trainIdx = t * BLOCK_SIZE + lidx;
 
