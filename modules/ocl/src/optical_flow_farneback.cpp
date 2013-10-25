@@ -336,8 +336,6 @@ void cv::ocl::FarnebackOpticalFlow::updateFlow_boxFilter(
 
     swap(M, bufM);
 
-    finish();
-
     optflow_farneback::updateFlowOcl(M, flowx, flowy);
 
     if (updateMatrices)
