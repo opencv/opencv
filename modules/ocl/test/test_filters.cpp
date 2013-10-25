@@ -432,7 +432,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(Size(0, 0)), // not used
                             Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE,
                                    (int)BORDER_REFLECT, (int)BORDER_WRAP, (int)BORDER_REFLECT_101),
-                            Values(false))); // TODO does not work with ROI
+                            Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),
