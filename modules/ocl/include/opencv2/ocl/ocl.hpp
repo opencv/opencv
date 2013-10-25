@@ -1519,7 +1519,12 @@ namespace cv
                                           float pos, oclMat &newFrame, oclMat &buf);
 
         //! computes moments of the rasterized shape or a vector of points
-        CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+        //! _array should be a vector a points standing for the contour
+        CV_EXPORTS Moments ocl_moments(InputArray _array, bool binary);
+        //! src should be a general image uploaded to the GPU.
+        //! the supported oclMat type are CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 and CV_64FC1
+        //! to use type of CV_64FC1, the GPU should support CV_64FC1
+        CV_EXPORTS Moments ocl_moments(oclMat& src, bool binary);
 
         class CV_EXPORTS StereoBM_OCL
         {
