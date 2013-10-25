@@ -592,7 +592,7 @@ static void* initOpenCLAndLoad(const char* funcname)
     {
         if(!initialized)
         {
-            handle = dlopen("/System/Library/Frameworks/OpenСL.framework/Versions/Current/OpenСL", RTLD_LAZY);
+            handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL", RTLD_LAZY);
             initialized = true;
             g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
         }
@@ -1831,18 +1831,18 @@ const Device& Context::device(size_t idx) const
 Context& Context::getDefault()
 {
     static Context ctx;
-    if( !ctx.p->handle && haveOpenCL() )
+    if( !ctx.p && haveOpenCL() )
     {
         // do not create new Context right away.
         // First, try to retrieve existing context of the same type.
         // In its turn, Platform::getContext() may call Context::create()
         // if there is no such context.
         ctx.create(Device::TYPE_ACCELERATOR);
-        if(!ctx.p->handle)
+        if(!ctx.p)
             ctx.create(Device::TYPE_DGPU);
-        if(!ctx.p->handle)
+        if(!ctx.p)
             ctx.create(Device::TYPE_IGPU);
-        if(!ctx.p->handle)
+        if(!ctx.p)
             ctx.create(Device::TYPE_CPU);
     }
 
@@ -1946,7 +1946,7 @@ void* Queue::ptr() const
 Queue& Queue::getDefault()
 {
     Queue& q = TLSData::get()->oclQueue;
-    if( !q.p->handle )
+    if( !q.p )
         q.create(Context::getDefault());
     return q;
 }
@@ -2684,7 +2684,7 @@ public:
         total = sz[dims-1];
         for( int i = dims-2; i >= 0; i-- )
         {
-            if( i > 0 && (total != srcstep[i] || total != dststep[i]) )
+            if( i >= 0 && (total != srcstep[i] || total != dststep[i]) )
                 iscontinuous = false;
             total *= sz[i];
             if( srcofs )
