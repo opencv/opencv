@@ -716,7 +716,7 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
     if( fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH )
     {
         cv::deleteThreadAllocData();
-        cv::deleteThreadRNGData();
+        cv::deleteThreadData();
     }
     return TRUE;
 }
@@ -828,6 +828,94 @@ void Mutex::lock() { impl->lock(); }
 void Mutex::unlock() { impl->unlock(); }
 bool Mutex::trylock() { return impl->trylock(); }
 
+}
+
+//////////////////////////////// thread-local storage ////////////////////////////////
+
+namespace cv
+{
+
+TLSData::TLSData()
+{
+    device = 0;
+    useOpenCL = -1;
+}
+
+#ifdef WIN32
+
+#ifdef HAVE_WINRT
+    // using C++11 thread attribute for local thread data
+    static __declspec( thread ) TLSData* g_tlsdata = NULL;
+
+    static void deleteThreadRNGData()
+    {
+        if (g_tlsdata)
+            delete g_tlsdata;
+    }
+
+    TLSData* TLSData::get()
+    {
+        if (!g_tlsdata)
+        {
+            g_tlsdata = new TLSData;
+        }
+        return g_tlsdata;
+    }
+#else
+#ifdef WINCE
+#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#endif
+    static DWORD tlsKey = TLS_OUT_OF_INDEXES;
+
+    void deleteThreadData()
+    {
+        if( tlsKey != TLS_OUT_OF_INDEXES )
+            delete (TLSData*)TlsGetValue( tlsKey );
+    }
+
+    TLSData* TLSData::get()
+    {
+        if( tlsKey == TLS_OUT_OF_INDEXES )
+        {
+            tlsKey = TlsAlloc();
+            CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
+        }
+        TLSData* d = (TLSData*)TlsGetValue( tlsKey );
+        if( !d )
+        {
+            d = new TLSData;
+            TlsSetValue( tlsKey, d );
+        }
+        return d;
+    }
+#endif //HAVE_WINRT
+#else
+    static pthread_key_t tlsKey = 0;
+    static pthread_once_t tlsKeyOnce = PTHREAD_ONCE_INIT;
+
+    static void deleteTLSData(void* data)
+    {
+        delete (TLSData*)data;
+    }
+
+    static void makeKey()
+    {
+        int errcode = pthread_key_create(&tlsKey, deleteTLSData);
+        CV_Assert(errcode == 0);
+    }
+
+    TLSData* TLSData::get()
+    {
+        pthread_once(&tlsKeyOnce, makeKey);
+        TLSData* d = (TLSData*)pthread_getspecific(tlsKey);
+        if( !d )
+        {
+            d = new TLSData;
+            pthread_setspecific(tlsKey, d);
+        }
+        return d;
+    }
+#endif
 }
 
 /* End of file. */
