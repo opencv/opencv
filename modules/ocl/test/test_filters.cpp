@@ -403,7 +403,7 @@ INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(0), // not used
                             Values(Size(0, 1), Size(1, 0)),
                             Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
