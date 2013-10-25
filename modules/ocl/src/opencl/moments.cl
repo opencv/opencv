@@ -162,28 +162,8 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     WT4 x2 = (WT4)(0.f);
     WT4 x3 = (WT4)(0.f);
 
-    __global TT* row = 0;
-    bool switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
-
-    switch(switchFlag)
-    {
-    case true:
-        {
-            if(ly < y_rest)
-            {
-                row = src_data + gidy * src_step + ly * src_step + gidx * 256;
-            }
-        }
-        break;
-
-    case false:
-        {
-            row = src_data + gidy * src_step + ly * src_step + gidx * 256;
-        }
-        break;
-    default:
-        break;
-    }
+    __global TT* row = src_data + gidy * src_step + ly * src_step + gidx * 256;
+    bool switchFlag = false;
 
     WT4 p;
     WT4 x;
@@ -278,28 +258,8 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
             break;
         }
 
-        switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
-
-        switch(switchFlag)
-        {
-        case true:
-            {
-                if(ly < y_rest)
-                {
-                    py = ly * x0.s0;
-                    sy = ly * ly;
-                }
-            }
-            break;
-        case false:
-            {
-                py = ly * x0.s0;
-                sy = ly * ly;
-            }
-            break;
-        default:
-            break;
-        }
+        py = ly * x0.s0;
+        sy = ly * ly;
     }
     __local WT mom[10][256];
 
