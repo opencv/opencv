@@ -1210,6 +1210,46 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 
 namespace cv { namespace ocl {
 
+struct UMat2D
+{
+    UMat2D(const UMat& m, int accessFlags)
+    {
+        CV_Assert(m.dims == 2);
+        data = (cl_mem)m.handle(accessFlags);
+        offset = m.offset;
+        step = m.step;
+        rows = m.rows;
+        cols = m.cols;
+    }
+    cl_mem data;
+    size_t offset;
+    size_t step;
+    int rows;
+    int cols;
+};
+
+struct UMat3D
+{
+    UMat3D(const UMat& m, int accessFlags)
+    {
+        CV_Assert(m.dims == 3);
+        data = (cl_mem)m.handle(accessFlags);
+        offset = m.offset;
+        step = m.step.p[1];
+        slicestep = m.step.p[0];
+        slices = m.size.p[0];
+        rows = m.size.p[1];
+        cols = m.size.p[2];
+    }
+    cl_mem data;
+    size_t offset;
+    size_t slicestep;
+    size_t step;
+    int slices;
+    int rows;
+    int cols;
+};
+
 // Computes 64-bit "cyclic redundancy check" sum, as specified in ECMA-182
 static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
 {
@@ -1264,6 +1304,15 @@ bool useOpenCL()
     if( data->useOpenCL < 0 )
         data->useOpenCL = (int)haveOpenCL();
     return data->useOpenCL > 0;
+}
+
+void setUseOpenCL(bool flag)
+{
+    if( haveOpenCL() )
+    {
+        TLSData* data = TLSData::get();
+        data->useOpenCL = flag ? 1 : 0;
+    }
 }
 
 void finish()
@@ -1980,10 +2029,33 @@ struct Kernel::Impl
         cl_int retval = 0;
         handle = ph != 0 ?
             clCreateKernel(ph, kname, &retval) : 0;
+        for( int i = 0; i < MAX_ARRS; i++ )
+            u[i] = 0;
     }
+
+    void cleanupUMats()
+    {
+        for( int i = 0; i < MAX_ARRS; i++ )
+            if( u[i] )
+            {
+                if( CV_XADD(&u[i]->urefcount, -1) == 1 )
+                    u[i]->currAllocator->deallocate(u[i]);
+                u[i] = 0;
+            }
+        nu = 0;
+    }
+
+    void addUMat(const UMat& m)
+    {
+        CV_Assert(nu < MAX_ARRS && m.u && m.u->urefcount > 0);
+        u[nu] = m.u;
+        CV_XADD(&m.u->urefcount, 1);
+        nu++;
+    }
+
     void finit()
     {
-        if(!f.empty()) f->operator()();
+        cleanupUMats();
         if(e) { clReleaseEvent(e); e = 0; }
         release();
     }
@@ -1998,7 +2070,9 @@ struct Kernel::Impl
 
     cl_kernel handle;
     cl_event e;
-    Ptr<Kernel::Callback> f;
+    enum { MAX_ARRS = 16 };
+    UMatData* u[MAX_ARRS];
+    int nu;
 };
 
 }}
@@ -2086,51 +2160,48 @@ void* Kernel::ptr() const
     return p ? p->handle : 0;
 }
 
-int Kernel::set(int i, const void* value, size_t sz)
+void Kernel::set(int i, const void* value, size_t sz)
 {
     CV_Assert( p && clSetKernelArg(p->handle, (cl_uint)i, sz, value) >= 0 );
-    return i+1;
+    if( i == 0 )
+        p->cleanupUMats();
 }
 
-int Kernel::set(int i, const UMat& m)
+void Kernel::set(int i, const UMat& m)
 {
-    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+    set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
 }
 
-int Kernel::set(int i, const KernelArg& arg)
+void Kernel::set(int i, const KernelArg& arg)
 {
     CV_Assert( p && p->handle );
+    if( i == 0 )
+        p->cleanupUMats();
     if( arg.m )
     {
-        int dims = arg.m->dims;
-        void* h = arg.m->handle(((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
-                                ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0));
-        clSetKernelArg(p->handle, (cl_uint)i, sizeof(cl_mem), &h);
-        clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(size_t), &arg.m->offset);
-        if( dims <= 2 )
+        int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
+                          ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        if( arg.m->dims <= 2 )
         {
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(size_t), &arg.m->step.p[0]);
-            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(arg.m->rows), &arg.m->rows);
-            clSetKernelArg(p->handle, (cl_uint)(i+4), sizeof(arg.m->cols), &arg.m->cols);
-            return i + 5;
+            UMat2D u2d(*arg.m, accessFlags);
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d), &u2d);
         }
         else
         {
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(size_t)*(dims-1), &arg.m->step.p[0]);
-            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(cl_int)*dims, &arg.m->size.p[0]);
-            return i + 4;
+            UMat3D u3d(*arg.m, accessFlags);
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d), &u3d);
         }
+        p->addUMat(*arg.m);
     }
     else
     {
         clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
-        return i+1;
     }
 }
 
 
 void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
-                 bool sync, const Ptr<Callback>& cleanupCallback, const Queue& q)
+                 bool sync, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
     cl_command_queue qq = getQueue(q);
@@ -2140,18 +2211,16 @@ void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsiz
     if( sync )
     {
         clFinish(qq);
-        if( !cleanupCallback.empty() )
-            cleanupCallback->operator()();
+        p->cleanupUMats();
     }
     else
     {
-        p->f = cleanupCallback;
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
 }
 
-void Kernel::runTask(bool sync, const Ptr<Callback>& cleanupCallback, const Queue& q)
+void Kernel::runTask(bool sync, const Queue& q)
 {
     CV_Assert(p && p->handle && p->e == 0);
     cl_command_queue qq = getQueue(q);
@@ -2159,12 +2228,10 @@ void Kernel::runTask(bool sync, const Ptr<Callback>& cleanupCallback, const Queu
     if( sync )
     {
         clFinish(qq);
-        if( !cleanupCallback.empty() )
-            cleanupCallback->operator()();
+        p->cleanupUMats();
     }
     else
     {
-        p->f = cleanupCallback;
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
