@@ -53,8 +53,8 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> BruteForceMatcherFixture;
 
-PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too big difference between implementations
+PERF_TEST_P(BruteForceMatcherFixture, match,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
@@ -82,14 +82,14 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
 
         oclMatcher.matchDownload(oclTrainIdx, oclDistance, matches);
 
-        SANITY_CHECK_MATCHES(matches);
+        SANITY_CHECK_MATCHES(matches, 1e-5);
     }
     else
         OCL_PERF_ELSE
 }
 
-PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too big difference between implementations
+PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
@@ -123,8 +123,8 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
         oclMatcher.knnMatchDownload(oclTrainIdx, oclDistance, matches);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
-        SANITY_CHECK_MATCHES(matches0);
-        SANITY_CHECK_MATCHES(matches1);
+        SANITY_CHECK_MATCHES(matches0, 1e-5);
+        SANITY_CHECK_MATCHES(matches1, 1e-5);
     }
     else
         OCL_PERF_ELSE
