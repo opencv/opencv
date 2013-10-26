@@ -72,6 +72,13 @@ double checkNorm(const cv::Mat &m);
 double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
 double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
+inline double checkNormRelative(const Mat &m1, const Mat &m2)
+{
+    return cv::norm(m1, m2, cv::NORM_INF) /
+            std::max((double)std::numeric_limits<float>::epsilon(),
+                     (double)std::max(cv::norm(m1, cv::NORM_INF), norm(m2, cv::NORM_INF)));
+}
+
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
@@ -82,6 +89,13 @@ double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
    ASSERT_EQ(mat1.type(), mat2.type()); \
    ASSERT_EQ(mat1.size(), mat2.size()); \
    EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+}
+
+#define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
+{ \
+   ASSERT_EQ(mat1.type(), mat2.type()); \
+   ASSERT_EQ(mat1.size(), mat2.size()); \
+   EXPECT_LE(checkNormRelative(cv::Mat(mat1), cv::Mat(mat2)), eps); \
 }
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
