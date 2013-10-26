@@ -722,7 +722,7 @@ namespace cv
         CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1);
 
         //! returns 2D box filter
-        // supports CV_8UC1 and CV_8UC4 source type, dst type must be the same as source type
+        // dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,
                 const Size &ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -740,8 +740,6 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! smooths the image using the normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP
         CV_EXPORTS void boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
                                   Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -757,8 +755,6 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int iterations = 1);
 
         //! a synonym for normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101
         static inline void blur(const oclMat &src, oclMat &dst, Size ksize, Point anchor = Point(-1, -1),
                                 int borderType = BORDER_CONSTANT)
         {

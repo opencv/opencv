@@ -10,12 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Zhang Ying, zhangying913@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -79,400 +75,298 @@
 #define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (i)-(b_edge) : (addr))
 #endif
 
-#define THREADS 256
-#define ELEM(i, l_edge, r_edge, elem1, elem2) (i) >= (l_edge) && (i) < (r_edge) ? (elem1) : (elem2)
-
-inline void update_dst_C1_D0(__global uchar *dst, __local uint* temp,
-                             int dst_rows, int dst_cols,
-                             int dst_startX, int dst_x_off,
-                             float alpha)
-{
-    if(get_local_id(0) < anX || get_local_id(0) >= (THREADS-ksX+anX+1))
-    {
-        return;
-    }
-
-    uint4 tmp_sum = 0;
-    int posX = dst_startX - dst_x_off + (get_local_id(0)-anX)*4;
-    int posY = (get_group_id(1) << 1);
-
-    for(int i=-anX; i<=anX; i++)
-    {
-        tmp_sum += vload4(get_local_id(0), temp+i);
-    }
-
-    if(posY < dst_rows && posX < dst_cols)
-    {
-        tmp_sum /= (uint4) alpha;
-        if(posX >= 0 && posX < dst_cols)
-            *(dst) = tmp_sum.x;
-        if(posX+1 >= 0 && posX+1 < dst_cols)
-            *(dst + 1) = tmp_sum.y;
-        if(posX+2 >= 0 && posX+2 < dst_cols)
-            *(dst + 2) = tmp_sum.z;
-        if(posX+3 >= 0 && posX+3 < dst_cols)
-            *(dst + 3) = tmp_sum.w;
-    }
-}
-
-
-inline void update_dst_C4_D0(__global uchar4 *dst, __local uint4* temp,
-                             int dst_rows, int dst_cols,
-                             int dst_startX, int dst_x_off,
-                             float alpha)
-{
-    if(get_local_id(0) >= (THREADS-ksX+1))
-    {
-        return;
-    }
-
-    int posX = dst_startX - dst_x_off + get_local_id(0);
-    int posY = (get_group_id(1) << 1);
-
-    uint4 temp_sum = 0;
-    for(int i=-anX; i<=anX; i++)
-    {
-        temp_sum += temp[get_local_id(0) + anX + i];
-    }
-
-    if(posX >= 0 && posX < dst_cols && posY >= 0 && posY < dst_rows)
-        *dst = convert_uchar4(convert_float4(temp_sum)/alpha);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////8uC1////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void boxFilter_C1_D0(__global const uchar * restrict src, __global uchar *dst, float alpha,
-                              int src_offset, int src_whole_rows, int src_whole_cols, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step
-                             )
-{
-
-    int col = get_local_id(0);
-    const int gX = get_group_id(0);
-    const int gY = get_group_id(1);
-    int src_x_off = src_offset % src_step;
-    int src_y_off = src_offset / src_step;
-    int dst_x_off = dst_offset % dst_step;
-    int dst_y_off = dst_offset / dst_step;
-
-    int head_off = dst_x_off%4;
-    int startX = ((gX * (THREADS-ksX+1)-anX) * 4) - head_off + src_x_off;
-    int startY = (gY << 1) - anY + src_y_off;
-    int dst_startX = (gX * (THREADS-ksX+1) * 4) - head_off + dst_x_off;
-    int dst_startY = (gY << 1) + dst_y_off;
-
-    uint4 data[ksY+1];
-    __local uint4 temp[2][THREADS];
-
+#ifdef EXTRA_EXTRAPOLATION // border > src image size
 #ifdef BORDER_CONSTANT
+// None
+#elif defined BORDER_REPLICATE
+#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+    { \
+        x = max(min(x, maxX - 1), minX); \
+        y = max(min(y, maxY - 1), minY); \
+    }
+#elif defined BORDER_WRAP
+#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+    { \
+        if (x < minX) \
+            x -= ((x - maxX + 1) / maxX) * maxX; \
+        if (x >= maxX) \
+            x %= maxX; \
+        if (y < minY) \
+            y -= ((y - maxY + 1) / maxY) * maxY; \
+        if (y >= maxY) \
+            y %= maxY; \
+    }
+#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
+#define EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, delta) \
+    { \
+        if (maxX - minX == 1) \
+            x = minX; \
+        else \
+            do \
+            { \
+                if (x < minX) \
+                    x = -(x - minX) - 1 + delta; \
+                else \
+                    x = maxX - 1 - (x - maxX) - delta; \
+            } \
+            while (x >= maxX || x < minX); \
+        \
+        if (maxY - minY == 1) \
+            y = minY; \
+        else \
+            do \
+            { \
+                if (y < minY) \
+                    y = -(y - minY) - 1 + delta; \
+                else \
+                    y = maxY - 1 - (y - maxY) - delta; \
+            } \
+            while (y >= maxY || y < minY); \
+    }
+#ifdef BORDER_REFLECT
+#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, 0)
+#elif defined(BORDER_REFLECT_101)
+#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) EXTRAPOLATE_(x, y, minX, minY, maxX, maxY, 1)
+#endif
+#else
+#error No extrapolation method
+#endif
+#else
+#define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
+    { \
+        int _row = y - minY, _col = x - minX; \
+        _row = ADDR_H(_row, 0, maxY - minY); \
+        _row = ADDR_B(_row, maxY - minY, _row); \
+        y = _row + minY; \
+        \
+        _col = ADDR_L(_col, 0, maxX - minX); \
+        _col = ADDR_R(_col, maxX - minX, _col); \
+        x = _col + minX; \
+    }
+#endif
 
-    for(int i=0; i < ksY+1; i++)
+#if USE_DOUBLE
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#define FPTYPE double
+#define CONVERT_TO_FPTYPE CAT(convert_double, VEC_SIZE)
+#else
+#define FPTYPE float
+#define CONVERT_TO_FPTYPE CAT(convert_float, VEC_SIZE)
+#endif
+
+#if DATA_DEPTH == 0
+#define BASE_TYPE uchar
+#elif DATA_DEPTH == 1
+#define BASE_TYPE char
+#elif DATA_DEPTH == 2
+#define BASE_TYPE ushort
+#elif DATA_DEPTH == 3
+#define BASE_TYPE short
+#elif DATA_DEPTH == 4
+#define BASE_TYPE int
+#elif DATA_DEPTH == 5
+#define BASE_TYPE float
+#elif DATA_DEPTH == 6
+#define BASE_TYPE double
+#else
+#error data_depth
+#endif
+
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
+
+#define uchar1 uchar
+#define char1 char
+#define ushort1 ushort
+#define short1 short
+#define int1 int
+#define float1 float
+#define double1 double
+
+#define convert_uchar1_sat_rte convert_uchar_sat_rte
+#define convert_char1_sat_rte convert_char_sat_rte
+#define convert_ushort1_sat_rte convert_ushort_sat_rte
+#define convert_short1_sat_rte convert_short_sat_rte
+#define convert_int1_sat_rte convert_int_sat_rte
+#define convert_float1
+#define convert_double1
+
+#if DATA_DEPTH == 5 || DATA_DEPTH == 6
+#define CONVERT_TO_TYPE CAT(CAT(convert_, BASE_TYPE), VEC_SIZE)
+#else
+#define CONVERT_TO_TYPE CAT(CAT(CAT(convert_, BASE_TYPE), VEC_SIZE), _sat_rte)
+#endif
+
+#define VEC_SIZE DATA_CHAN
+
+#define VEC_TYPE CAT(BASE_TYPE, VEC_SIZE)
+#define TYPE VEC_TYPE
+
+#define SCALAR_TYPE CAT(FPTYPE, VEC_SIZE)
+
+#define INTERMEDIATE_TYPE CAT(FPTYPE, VEC_SIZE)
+
+struct RectCoords
+{
+    int x1, y1, x2, y2;
+};
+
+//#define DEBUG
+#ifdef DEBUG
+#define DEBUG_ONLY(x) x
+#define ASSERT(condition) do { if (!(condition)) { printf("BUG in boxFilter kernel (global=%d,%d): " #condition "\n", get_global_id(0), get_global_id(1)); } } while (0)
+#else
+#define DEBUG_ONLY(x)
+#define ASSERT(condition)
+#endif
+
+
+inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global TYPE *src, const unsigned int srcStepBytes, const struct RectCoords srcCoords
+#ifdef BORDER_CONSTANT
+               , SCALAR_TYPE borderValue
+#endif
+    )
+{
+#ifdef BORDER_ISOLATED
+    if(pos.x >= srcCoords.x1 && pos.y >= srcCoords.y1 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
+#else
+    if(pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
+#endif
     {
-        if(startY+i >=0 && startY+i < src_whole_rows && startX+col*4 >=0 && startX+col*4+3<src_whole_cols)
+        __global TYPE* ptr = (__global TYPE*)((__global char*)src + pos.x * sizeof(TYPE) + pos.y * srcStepBytes);
+        return CONVERT_TO_FPTYPE(*ptr);
+    }
+    else
+    {
+#ifdef BORDER_CONSTANT
+        return borderValue;
+#else
+        int selected_col = pos.x;
+        int selected_row = pos.y;
+
+        EXTRAPOLATE(selected_col, selected_row,
+#ifdef BORDER_ISOLATED
+                srcCoords.x1, srcCoords.y1,
+#else
+                0, 0,
+#endif
+                srcCoords.x2, srcCoords.y2
+         );
+
+        // debug border mapping
+        //printf("pos=%d,%d --> %d, %d\n", pos.x, pos.y, selected_col, selected_row);
+
+        pos = (int2)(selected_col, selected_row);
+        if(pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
         {
-            data[i].x = *(src+(startY+i)*src_step + startX + col * 4);
-            data[i].y = *(src+(startY+i)*src_step + startX + col * 4 + 1);
-            data[i].z = *(src+(startY+i)*src_step + startX + col * 4 + 2);
-            data[i].w = *(src+(startY+i)*src_step + startX + col * 4 + 3);
+            __global TYPE* ptr = (__global TYPE*)((__global char*)src + pos.x * sizeof(TYPE) + pos.y * srcStepBytes);
+            return CONVERT_TO_FPTYPE(*ptr);
         }
         else
         {
-            data[i]=0;
-            int con = startY+i >=0 && startY+i < src_whole_rows && startX+col*4 >=0 && startX+col*4<src_whole_cols;
-            if(con)data[i].s0 = *(src+(startY+i)*src_step + startX + col*4);
-            con = startY+i >=0 && startY+i < src_whole_rows && startX+col*4+1 >=0 && startX+col*4+1<src_whole_cols;
-            if(con)data[i].s1 = *(src+(startY+i)*src_step + startX + col*4+1) ;
-            con = startY+i >=0 && startY+i < src_whole_rows && startX+col*4+2 >=0 && startX+col*4+2<src_whole_cols;
-            if(con)data[i].s2 = *(src+(startY+i)*src_step + startX + col*4+2);
-            con = startY+i >=0 && startY+i < src_whole_rows && startX+col*4+3 >=0 && startX+col*4+3<src_whole_cols;
-            if(con)data[i].s3 = *(src+(startY+i)*src_step + startX + col*4+3);
+            // for debug only
+            DEBUG_ONLY(printf("BUG in boxFilter kernel\n"));
+            return (FPTYPE)(0.0f);
         }
-    }
-
-#else
-    int not_all_in_range;
-    for(int i=0; i < ksY+1; i++)
-    {
-        not_all_in_range = (startX+col*4<0) | (startX+col*4+3>src_whole_cols-1)
-                           | (startY+i<0) | (startY+i>src_whole_rows-1);
-        if(not_all_in_range)
-        {
-            int selected_row;
-            int4 selected_col;
-            selected_row = ADDR_H(startY+i, 0, src_whole_rows);
-            selected_row = ADDR_B(startY+i, src_whole_rows, selected_row);
-
-            selected_col.x = ADDR_L(startX+col*4, 0, src_whole_cols);
-            selected_col.x = ADDR_R(startX+col*4, src_whole_cols, selected_col.x);
-
-            selected_col.y = ADDR_L(startX+col*4+1, 0, src_whole_cols);
-            selected_col.y = ADDR_R(startX+col*4+1, src_whole_cols, selected_col.y);
-
-            selected_col.z = ADDR_L(startX+col*4+2, 0, src_whole_cols);
-            selected_col.z = ADDR_R(startX+col*4+2, src_whole_cols, selected_col.z);
-
-            selected_col.w = ADDR_L(startX+col*4+3, 0, src_whole_cols);
-            selected_col.w = ADDR_R(startX+col*4+3, src_whole_cols, selected_col.w);
-
-            data[i].x = *(src + selected_row * src_step + selected_col.x);
-            data[i].y = *(src + selected_row * src_step + selected_col.y);
-            data[i].z = *(src + selected_row * src_step + selected_col.z);
-            data[i].w = *(src + selected_row * src_step + selected_col.w);
-        }
-        else
-        {
-            data[i] =  convert_uint4(vload4(col,(__global uchar*)(src+(startY+i)*src_step + startX)));
-        }
-    }
 #endif
-    uint4 tmp_sum = 0;
-    for(int i=1; i < ksY; i++)
-    {
-        tmp_sum += (data[i]);
     }
-
-    int index = dst_startY * dst_step + dst_startX + (col-anX)*4;
-
-    temp[0][col] = tmp_sum + (data[0]);
-    temp[1][col] = tmp_sum + (data[ksY]);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    update_dst_C1_D0(dst+index, (__local uint *)(temp[0]),
-                     dst_rows, dst_cols, dst_startX, dst_x_off, alpha);
-    update_dst_C1_D0(dst+index+dst_step, (__local uint *)(temp[1]),
-                     dst_rows, dst_cols, dst_startX, dst_x_off, alpha);
-
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////8uC4////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void boxFilter_C4_D0(__global const uchar4 * restrict src, __global uchar4 *dst, float alpha,
-                              int src_offset, int src_whole_rows, int src_whole_cols, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step
-                             )
-{
-    int col = get_local_id(0);
-    const int gX = get_group_id(0);
-    const int gY = get_group_id(1);
+// INPUT PARAMETER: BLOCK_SIZE_Y (via defines)
 
-    int src_x_off = (src_offset % src_step) >> 2;
-    int src_y_off = src_offset / src_step;
-    int dst_x_off = (dst_offset % dst_step) >> 2;
-    int dst_y_off = dst_offset / dst_step;
-
-    int startX = gX * (THREADS-ksX+1) - anX + src_x_off;
-    int startY = (gY << 1) - anY + src_y_off;
-    int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;
-    int dst_startY = (gY << 1) + dst_y_off;
-
-    uint4 data[ksY+1];
-    __local uint4 temp[2][THREADS];
-
+__kernel
+__attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
+void boxFilter(__global TYPE *src, const unsigned int srcStepBytes, const int4 srcRC,
+               __global TYPE *dst, const unsigned int dstStepBytes, const int4 dstRC,
 #ifdef BORDER_CONSTANT
-    bool con;
-    for(int i=0; i < ksY+1; i++)
-    {
-        con = startX+col >= 0 && startX+col < src_whole_cols && startY+i >= 0 && startY+i < src_whole_rows;
-        int cur_col = clamp(startX + col, 0, src_whole_cols);
-
-        data[i].x = con ? src[(startY+i)*(src_step>>2) + cur_col].x : 0;
-        data[i].y = con ? src[(startY+i)*(src_step>>2) + cur_col].y : 0;
-        data[i].z = con ? src[(startY+i)*(src_step>>2) + cur_col].z : 0;
-        data[i].w = con ? src[(startY+i)*(src_step>>2) + cur_col].w : 0;
-    }
-#else
-    for(int i=0; i < ksY+1; i++)
-    {
-        int selected_row;
-        int selected_col;
-        selected_row = ADDR_H(startY+i, 0, src_whole_rows);
-        selected_row = ADDR_B(startY+i, src_whole_rows, selected_row);
-
-        selected_col = ADDR_L(startX+col, 0, src_whole_cols);
-        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
-
-
-        data[i] = convert_uint4(src[selected_row * (src_step>>2) + selected_col]);
-    }
-
+               SCALAR_TYPE borderValue,
 #endif
-    uint4 tmp_sum = 0;
-    for(int i=1; i < ksY; i++)
-    {
-        tmp_sum += (data[i]);
-    }
-
-    int index = dst_startY * (dst_step>>2)+ dst_startX + col;
-
-    temp[0][col] = tmp_sum + (data[0]);
-    temp[1][col] = tmp_sum + (data[ksY]);
-    barrier(CLK_LOCAL_MEM_FENCE);
-    update_dst_C4_D0(dst+index, (__local uint4 *)(temp[0]),
-                     dst_rows, dst_cols, dst_startX, dst_x_off, alpha);
-    update_dst_C4_D0(dst+index+(dst_step>>2), (__local uint4 *)(temp[1]),
-                     dst_rows, dst_cols, dst_startX, dst_x_off, alpha);
-
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////32fC1////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void boxFilter_C1_D5(__global const float *restrict src, __global float *dst, float alpha,
-                              int src_offset, int src_whole_rows, int src_whole_cols, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step
-                             )
+               FPTYPE alpha
+               )
 {
-    int col = get_local_id(0);
-    const int gX = get_group_id(0);
-    const int gY = get_group_id(1);
+    const struct RectCoords srcCoords = {srcRC.s0, srcRC.s1, srcRC.s2, srcRC.s3}; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
+    const struct RectCoords dstCoords = {dstRC.s0, dstRC.s1, dstRC.s2, dstRC.s3};
 
-    int src_x_off = (src_offset % src_step) >> 2;
-    int src_y_off = src_offset / src_step;
-    int dst_x_off = (dst_offset % dst_step) >> 2;
-    int dst_y_off = dst_offset / dst_step;
+    const int x = get_local_id(0) + (LOCAL_SIZE - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
+    const int y = get_global_id(1) * BLOCK_SIZE_Y;
 
-    int startX = gX * (THREADS-ksX+1) - anX + src_x_off;
-    int startY = (gY << 1) - anY + src_y_off;
-    int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;
-    int dst_startY = (gY << 1) + dst_y_off;
-    float data[ksY+1];
-    __local float temp[2][THREADS];
+    const int local_id = get_local_id(0);
+
+    INTERMEDIATE_TYPE data[KERNEL_SIZE_Y];
+    __local INTERMEDIATE_TYPE sumOfCols[LOCAL_SIZE];
+
+    int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
+    for(int sy = 0; sy < KERNEL_SIZE_Y; sy++, srcPos.y++)
+    {
+        data[sy] = readSrcPixel(srcPos, src, srcStepBytes, srcCoords
 #ifdef BORDER_CONSTANT
-    bool con;
-    float ss;
-    for(int i=0; i < ksY+1; i++)
-    {
-        con = startX+col >= 0 && startX+col < src_whole_cols && startY+i >= 0 && startY+i < src_whole_rows;
-
-        int cur_col = clamp(startX + col, 0, src_whole_cols);
-        ss = (startY+i)<src_whole_rows&&(startY+i)>=0&&cur_col>=0&&cur_col<src_whole_cols?src[(startY+i)*(src_step>>2) + cur_col]:(float)0;
-
-        data[i] = con ? ss : 0.f;
-    }
-#else
-    for(int i=0; i < ksY+1; i++)
-    {
-        int selected_row;
-        int selected_col;
-        selected_row = ADDR_H(startY+i, 0, src_whole_rows);
-        selected_row = ADDR_B(startY+i, src_whole_rows, selected_row);
-
-        selected_col = ADDR_L(startX+col, 0, src_whole_cols);
-        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
-
-        data[i] = src[selected_row * (src_step>>2) + selected_col];
-    }
-
+                , borderValue
 #endif
-    float sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
-    for(int i=1; i < ksY; i++)
-    {
-        sum0 += (data[i]);
+                );
     }
-    sum1 = sum0 + (data[0]);
-    sum2 = sum0 + (data[ksY]);
-    temp[0][col] = sum1;
-    temp[1][col] = sum2;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(col < (THREADS-(ksX-1)))
-    {
-        col += anX;
-        int posX = dst_startX - dst_x_off + col - anX;
-        int posY = (gY << 1);
 
-        float tmp_sum[2]= {0.0, 0.0};
-        for(int k=0; k<2; k++)
-            for(int i=-anX; i<=anX; i++)
+    INTERMEDIATE_TYPE tmp_sum = 0;
+    for(int sy = 0; sy < KERNEL_SIZE_Y; sy++)
+    {
+        tmp_sum += (data[sy]);
+    }
+
+    sumOfCols[local_id] = tmp_sum;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    int2 pos = (int2)(dstCoords.x1 + x, dstCoords.y1 + y);
+    __global TYPE* dstPtr = (__global TYPE*)((__global char*)dst + pos.x * sizeof(TYPE) + pos.y * dstStepBytes); // Pointer can be out of bounds!
+
+    int sy_index = 0; // current index in data[] array
+    int stepsY = min(dstCoords.y2 - pos.y, BLOCK_SIZE_Y);
+    ASSERT(stepsY > 0);
+    for (; ;)
+    {
+        ASSERT(pos.y < dstCoords.y2);
+
+        if(local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
+            pos.x >= dstCoords.x1 && pos.x < dstCoords.x2)
+        {
+            ASSERT(pos.y >= dstCoords.y1 && pos.y < dstCoords.y2);
+
+            INTERMEDIATE_TYPE total_sum = 0;
+#pragma unroll
+            for (int sx = 0; sx < KERNEL_SIZE_X; sx++)
             {
-                tmp_sum[k] += temp[k][col+i];
+                total_sum += sumOfCols[local_id + sx - ANCHOR_X];
             }
-        for(int i=0; i<2; i++)
-        {
-            if(posX >= 0 && posX < dst_cols && (posY+i) >= 0 && (posY+i) < dst_rows)
-                dst[(dst_startY+i) * (dst_step>>2)+ dst_startX + col - anX] = tmp_sum[i]/alpha;
+            *dstPtr = CONVERT_TO_TYPE(((INTERMEDIATE_TYPE)alpha) * total_sum);
         }
 
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////32fC4////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void boxFilter_C4_D5(__global const float4 *restrict src, __global float4 *dst, float alpha,
-                              int src_offset, int src_whole_rows, int src_whole_cols, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step
-                             )
-{
-    int col = get_local_id(0);
-    const int gX = get_group_id(0);
-    const int gY = get_group_id(1);
-
-    int src_x_off = (src_offset % src_step) >> 4;
-    int src_y_off = src_offset / src_step;
-    int dst_x_off = (dst_offset % dst_step) >> 4;
-    int dst_y_off = dst_offset / dst_step;
-
-    int startX = gX * (THREADS-ksX+1) - anX + src_x_off;
-    int startY = (gY << 1) - anY + src_y_off;
-    int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;
-    int dst_startY = (gY << 1) + dst_y_off;
-    float4 data[ksY+1];
-    __local float4 temp[2][THREADS];
-#ifdef BORDER_CONSTANT
-    bool con;
-    float4 ss;
-    for(int i=0; i < ksY+1; i++)
-    {
-        con = startX+col >= 0 && startX+col < src_whole_cols && startY+i >= 0 && startY+i < src_whole_rows;
-
-        int cur_col = clamp(startX + col, 0, src_whole_cols);
-        ss = (startY+i)<src_whole_rows&&(startY+i)>=0&&cur_col>=0&&cur_col<src_whole_cols?src[(startY+i)*(src_step>>4) + cur_col]:(float4)0;
-
-        data[i] = con ? ss : (float4)(0.0,0.0,0.0,0.0);
-    }
+#if BLOCK_SIZE_Y == 1
+        break;
 #else
-    for(int i=0; i < ksY+1; i++)
-    {
-        int selected_row;
-        int selected_col;
-        selected_row = ADDR_H(startY+i, 0, src_whole_rows);
-        selected_row = ADDR_B(startY+i, src_whole_rows, selected_row);
+        if (--stepsY == 0)
+            break;
 
-        selected_col = ADDR_L(startX+col, 0, src_whole_cols);
-        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-        data[i] = src[selected_row * (src_step>>4) + selected_col];
-    }
+        tmp_sum = sumOfCols[local_id]; // TODO FIX IT: workaround for BUG in OpenCL compiler
+        // only works with scalars: ASSERT(fabs(tmp_sum - sumOfCols[local_id]) < (INTERMEDIATE_TYPE)1e-6);
+        tmp_sum -= data[sy_index];
 
+        data[sy_index] = readSrcPixel(srcPos, src, srcStepBytes, srcCoords
+#ifdef BORDER_CONSTANT
+                , borderValue
 #endif
-    float4 sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
-    for(int i=1; i < ksY; i++)
-    {
-        sum0 += (data[i]);
-    }
-    sum1 = sum0 + (data[0]);
-    sum2 = sum0 + (data[ksY]);
-    temp[0][col] = sum1;
-    temp[1][col] = sum2;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if(col < (THREADS-(ksX-1)))
-    {
-        col += anX;
-        int posX = dst_startX - dst_x_off + col - anX;
-        int posY = (gY << 1);
+                );
+        srcPos.y++;
 
-        float4 tmp_sum[2]= {(float4)(0.0,0.0,0.0,0.0), (float4)(0.0,0.0,0.0,0.0)};
-        for(int k=0; k<2; k++)
-            for(int i=-anX; i<=anX; i++)
-            {
-                tmp_sum[k] += temp[k][col+i];
-            }
-        for(int i=0; i<2; i++)
-        {
-            if(posX >= 0 && posX < dst_cols && (posY+i) >= 0 && (posY+i) < dst_rows)
-                dst[(dst_startY+i) * (dst_step>>4)+ dst_startX + col - anX] = tmp_sum[i]/alpha;
-        }
+        tmp_sum += data[sy_index];
+        sumOfCols[local_id] = tmp_sum;
 
+        sy_index = (sy_index + 1 < KERNEL_SIZE_Y) ? sy_index + 1 : 0;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        // next line
+        DEBUG_ONLY(pos.y++);
+        dstPtr = (__global TYPE*)((__global char*)dstPtr + dstStepBytes); // Pointer can be out of bounds!
+#endif // BLOCK_SIZE_Y == 1
     }
 }
