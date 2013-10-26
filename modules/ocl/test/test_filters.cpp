@@ -160,8 +160,8 @@ OCL_TEST_P(LaplacianTest, Accuracy)
     {
         random_roi();
 
-        Laplacian(src_roi, dst_roi, -1, ksize, scale); // TODO FIXIT , 0, borderType);
-        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, scale); // TODO FIXIT , 0, borderType);
+        Laplacian(src_roi, dst_roi, -1, ksize, scale, 0, borderType);
+        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, scale, 0, borderType);
 
         Near();
     }
@@ -298,7 +298,7 @@ OCL_TEST_P(Filter2D, Mat)
         kernel *= 1.0 / (double)(ksize * ksize);
 
         cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, 0.0, borderType);
-        ocl::filter2D(gsrc_roi, gdst_roi, -1, kernel, anchor, /* TODO FIXIT 0.0,*/ borderType);
+        ocl::filter2D(gsrc_roi, gdst_roi, -1, kernel, anchor, 0.0, borderType);
 
         Near();
     }
