@@ -321,28 +321,22 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
-Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat &kernel, const Size &ksize, Point anchor)
+Ptr<BaseFilter_GPU> cv::ocl::getMorphologyFilter_GPU(int op, int type, const Mat &_kernel, const Size &ksize, Point anchor)
 {
-    static const GPUMorfFilter_t GPUMorfFilter_callers[2][5] =
-    {
-        {0, GPUErode, 0, GPUErode, GPUErode },
-        {0, GPUDilate, 0, GPUDilate, GPUDilate}
-    };
-
     CV_Assert(op == MORPH_ERODE || op == MORPH_DILATE);
     CV_Assert(type == CV_8UC1 || type == CV_8UC3 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC3 || type == CV_32FC4);
 
     normalizeAnchor(anchor, ksize);
     Mat kernel8U;
-    kernel.convertTo(kernel8U, CV_8U);
-    Mat cont_krnl = kernel8U.reshape(1, 1);
+    _kernel.convertTo(kernel8U, CV_8U);
+    Mat kernel = kernel8U.reshape(1, 1);
 
     bool noZero = true;
     for(int i = 0; i < kernel.rows * kernel.cols; ++i)
-        if(kernel.data[i] != 1)
+        if(kernel.at<uchar>(i) != 1)
             noZero = false;
 
-    MorphFilter_GPU* mfgpu = new MorphFilter_GPU(ksize, anchor, cont_krnl, GPUMorfFilter_callers[op][CV_MAT_CN(type)]);
+    MorphFilter_GPU* mfgpu = new MorphFilter_GPU(ksize, anchor, kernel, op == MORPH_ERODE ? GPUErode : GPUDilate);
     if(noZero)
         mfgpu->rectKernel = true;
 
