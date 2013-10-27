@@ -90,6 +90,38 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The
 
 namespace cv { namespace cuda
 {
+    class MemoryStack;
+
+    class CV_EXPORTS StackAllocator : public GpuMat::Allocator
+    {
+    public:
+        explicit StackAllocator(cudaStream_t stream);
+        ~StackAllocator();
+
+        bool allocate(GpuMat* mat, int rows, int cols, size_t elemSize);
+        void free(GpuMat* mat);
+
+    private:
+        StackAllocator(const StackAllocator&);
+        StackAllocator& operator =(const StackAllocator&);
+
+        cudaStream_t stream_;
+        MemoryStack* memStack_;
+        size_t alignment_;
+    };
+
+    class CV_EXPORTS BufferPool
+    {
+    public:
+        explicit BufferPool(Stream& stream);
+
+        GpuMat getBuffer(int rows, int cols, int type);
+        GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+
+    private:
+        GpuMat::Allocator* allocator_;
+    };
+
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
         if (code < 0)

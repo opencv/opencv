@@ -66,6 +66,7 @@ class cv::cuda::Stream::Impl
 {
 public:
     cudaStream_t stream;
+    Ptr<StackAllocator> stackAllocator_;
 
     Impl();
     Impl(cudaStream_t stream);
@@ -73,17 +74,26 @@ public:
     ~Impl();
 };
 
+cv::cuda::BufferPool::BufferPool(Stream& stream) : allocator_(stream.impl_->stackAllocator_.get())
+{
+}
+
 cv::cuda::Stream::Impl::Impl() : stream(0)
 {
     cudaSafeCall( cudaStreamCreate(&stream) );
+
+    stackAllocator_ = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_)
 {
+    stackAllocator_ = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::~Impl()
 {
+    stackAllocator_.release();
+
     if (stream)
         cudaStreamDestroy(stream);
 }
@@ -197,7 +207,7 @@ cv::cuda::Stream::operator bool_type() const
 
 
 ////////////////////////////////////////////////////////////////
-// Stream
+// Event
 
 #ifndef HAVE_CUDA
 

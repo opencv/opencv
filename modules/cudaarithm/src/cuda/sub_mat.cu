@@ -40,146 +40,186 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace arithm
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int);
+
+namespace
 {
-    struct VSub4 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vsub4(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VSub4() {}
-        __host__ __device__ __forceinline__ VSub4(const VSub4&) {}
-    };
-
-    struct VSub2 : binary_function<uint, uint, uint>
-    {
-        __device__ __forceinline__ uint operator ()(uint a, uint b) const
-        {
-            return vsub2(a, b);
-        }
-
-        __host__ __device__ __forceinline__ VSub2() {}
-        __host__ __device__ __forceinline__ VSub2(const VSub2&) {}
-    };
-
-    template <typename T, typename D> struct SubMat : binary_function<T, T, D>
+    template <typename T, typename D> struct SubOp1 : binary_function<T, T, D>
     {
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
             return saturate_cast<D>(a - b);
         }
-
-        __host__ __device__ __forceinline__ SubMat() {}
-        __host__ __device__ __forceinline__ SubMat(const SubMat&) {}
     };
-}
-
-namespace cv { namespace cuda { namespace device
-{
-    template <> struct TransformFunctorTraits< arithm::VSub4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
-    };
-
-    template <> struct TransformFunctorTraits< arithm::VSub2 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
-    {
-    };
-
-    template <typename T, typename D> struct TransformFunctorTraits< arithm::SubMat<T, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    void subMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VSub4(), WithOutMask(), stream);
-    }
-
-    void subMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
-    {
-        device::transform(src1, src2, dst, VSub2(), WithOutMask(), stream);
-    }
 
     template <typename T, typename D>
-    void subMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
+    void subMat_v1(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream)
     {
         if (mask.data)
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), mask, stream);
+            gridTransformBinary(globPtr<T>(src1), globPtr<T>(src2), globPtr<D>(dst), SubOp1<T, D>(), globPtr<uchar>(mask), stream);
         else
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, SubMat<T, D>(), WithOutMask(), stream);
+            gridTransformBinary(globPtr<T>(src1), globPtr<T>(src2), globPtr<D>(dst), SubOp1<T, D>(), stream);
     }
 
-    template void subMat<uchar, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<uchar, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    struct SubOp2 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vsub2(a, b);
+        }
+    };
 
-    template void subMat<schar, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<schar, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    void subMat_v2(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 1;
 
-    //template void subMat<ushort, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<ushort, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<ushort, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<ushort, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<ushort, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<ushort, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<ushort, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
 
-    //template void subMat<short, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<short, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<short, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<short, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<short, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<short, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<short, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+        gridTransformBinary(src1_, src2_, dst_, SubOp2(), stream);
+    }
 
-    //template void subMat<int, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<int, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<int, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<int, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<int, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<int, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<int, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    struct SubOp4 : binary_function<uint, uint, uint>
+    {
+        __device__ __forceinline__ uint operator ()(uint a, uint b) const
+        {
+            return vsub4(a, b);
+        }
+    };
 
-    //template void subMat<float, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<float, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<float, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<float, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<float, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<float, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<float, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+    void subMat_v4(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream)
+    {
+        const int vcols = src1.cols >> 2;
 
-    //template void subMat<double, uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<double, schar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<double, ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<double, short>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<double, int>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    //template void subMat<double, float>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void subMat<double, double>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
+        GlobPtrSz<uint> src1_ = globPtr((uint*) src1.data, src1.step, src1.rows, vcols);
+        GlobPtrSz<uint> src2_ = globPtr((uint*) src2.data, src2.step, src1.rows, vcols);
+        GlobPtrSz<uint> dst_ = globPtr((uint*) dst.data, dst.step, src1.rows, vcols);
+
+        gridTransformBinary(src1_, src2_, dst_, SubOp4(), stream);
+    }
 }
 
-#endif // CUDA_DISABLER
+void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int)
+{
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream);
+    static const func_t funcs[7][7] =
+    {
+        {
+            subMat_v1<uchar, uchar>,
+            subMat_v1<uchar, schar>,
+            subMat_v1<uchar, ushort>,
+            subMat_v1<uchar, short>,
+            subMat_v1<uchar, int>,
+            subMat_v1<uchar, float>,
+            subMat_v1<uchar, double>
+        },
+        {
+            subMat_v1<schar, uchar>,
+            subMat_v1<schar, schar>,
+            subMat_v1<schar, ushort>,
+            subMat_v1<schar, short>,
+            subMat_v1<schar, int>,
+            subMat_v1<schar, float>,
+            subMat_v1<schar, double>
+        },
+        {
+            0 /*subMat_v1<ushort, uchar>*/,
+            0 /*subMat_v1<ushort, schar>*/,
+            subMat_v1<ushort, ushort>,
+            subMat_v1<ushort, short>,
+            subMat_v1<ushort, int>,
+            subMat_v1<ushort, float>,
+            subMat_v1<ushort, double>
+        },
+        {
+            0 /*subMat_v1<short, uchar>*/,
+            0 /*subMat_v1<short, schar>*/,
+            subMat_v1<short, ushort>,
+            subMat_v1<short, short>,
+            subMat_v1<short, int>,
+            subMat_v1<short, float>,
+            subMat_v1<short, double>
+        },
+        {
+            0 /*subMat_v1<int, uchar>*/,
+            0 /*subMat_v1<int, schar>*/,
+            0 /*subMat_v1<int, ushort>*/,
+            0 /*subMat_v1<int, short>*/,
+            subMat_v1<int, int>,
+            subMat_v1<int, float>,
+            subMat_v1<int, double>
+        },
+        {
+            0 /*subMat_v1<float, uchar>*/,
+            0 /*subMat_v1<float, schar>*/,
+            0 /*subMat_v1<float, ushort>*/,
+            0 /*subMat_v1<float, short>*/,
+            0 /*subMat_v1<float, int>*/,
+            subMat_v1<float, float>,
+            subMat_v1<float, double>
+        },
+        {
+            0 /*subMat_v1<double, uchar>*/,
+            0 /*subMat_v1<double, schar>*/,
+            0 /*subMat_v1<double, ushort>*/,
+            0 /*subMat_v1<double, short>*/,
+            0 /*subMat_v1<double, int>*/,
+            0 /*subMat_v1<double, float>*/,
+            subMat_v1<double, double>
+        }
+    };
+
+    const int sdepth = src1.depth();
+    const int ddepth = dst.depth();
+
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
+
+    GpuMat src1_ = src1.reshape(1);
+    GpuMat src2_ = src2.reshape(1);
+    GpuMat dst_ = dst.reshape(1);
+
+    if (mask.empty() && (sdepth == CV_8U || sdepth == CV_16U) && ddepth == sdepth)
+    {
+        const intptr_t src1ptr = reinterpret_cast<intptr_t>(src1_.data);
+        const intptr_t src2ptr = reinterpret_cast<intptr_t>(src2_.data);
+        const intptr_t dstptr = reinterpret_cast<intptr_t>(dst_.data);
+
+        const bool isAllAligned = (src1ptr & 31) == 0 && (src2ptr & 31) == 0 && (dstptr & 31) == 0;
+
+        if (isAllAligned)
+        {
+            if (sdepth == CV_8U && (src1_.cols & 3) == 0)
+            {
+                subMat_v4(src1_, src2_, dst_, stream);
+                return;
+            }
+            else if (sdepth == CV_16U && (src1_.cols & 1) == 0)
+            {
+                subMat_v2(src1_, src2_, dst_, stream);
+                return;
+            }
+        }
+    }
+
+    const func_t func = funcs[sdepth][ddepth];
+
+    if (!func)
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
+
+    func(src1_, src2_, dst_, mask, stream);
+}
+
+#endif

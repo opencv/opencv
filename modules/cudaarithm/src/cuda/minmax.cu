@@ -40,208 +40,72 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/vec_traits.hpp"
-#include "opencv2/core/cuda/vec_math.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/reduce.hpp"
-#include "opencv2/core/cuda/emulation.hpp"
-#include "opencv2/core/cuda/limits.hpp"
-#include "opencv2/core/cuda/utility.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#error "opencv_cudev is required"
 
-namespace minMax
+#else
+
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+namespace
 {
-    __device__ unsigned int blocks_finished = 0;
-
-    // To avoid shared bank conflicts we convert each value into value of
-    // appropriate type (32 bits minimum)
-    template <typename T> struct MinMaxTypeTraits;
-    template <> struct MinMaxTypeTraits<uchar> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<schar> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<ushort> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<short> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<int> { typedef int best_type; };
-    template <> struct MinMaxTypeTraits<float> { typedef float best_type; };
-    template <> struct MinMaxTypeTraits<double> { typedef double best_type; };
-
-    template <int BLOCK_SIZE, typename R>
-    struct GlobalReduce
-    {
-        static __device__ void run(R& mymin, R& mymax, R* minval, R* maxval, int tid, int bid, R* sminval, R* smaxval)
-        {
-        #if __CUDA_ARCH__ >= 200
-            if (tid == 0)
-            {
-                Emulation::glob::atomicMin(minval, mymin);
-                Emulation::glob::atomicMax(maxval, mymax);
-            }
-        #else
-            __shared__ bool is_last;
-
-            if (tid == 0)
-            {
-                minval[bid] = mymin;
-                maxval[bid] = mymax;
-
-                __threadfence();
-
-                unsigned int ticket = ::atomicAdd(&blocks_finished, 1);
-                is_last = (ticket == gridDim.x * gridDim.y - 1);
-            }
-
-            __syncthreads();
-
-            if (is_last)
-            {
-                int idx = ::min(tid, gridDim.x * gridDim.y - 1);
-
-                mymin = minval[idx];
-                mymax = maxval[idx];
-
-                const minimum<R> minOp;
-                const maximum<R> maxOp;
-                device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
-
-                if (tid == 0)
-                {
-                    minval[0] = mymin;
-                    maxval[0] = mymax;
-
-                    blocks_finished = 0;
-                }
-            }
-        #endif
-        }
-    };
-
-    template <int BLOCK_SIZE, typename T, typename R, class Mask>
-    __global__ void kernel(const PtrStepSz<T> src, const Mask mask, R* minval, R* maxval, const int twidth, const int theight)
-    {
-        __shared__ R sminval[BLOCK_SIZE];
-        __shared__ R smaxval[BLOCK_SIZE];
-
-        const int x0 = blockIdx.x * blockDim.x * twidth + threadIdx.x;
-        const int y0 = blockIdx.y * blockDim.y * theight + threadIdx.y;
-
-        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-        const int bid = blockIdx.y * gridDim.x + blockIdx.x;
-
-        R mymin = numeric_limits<R>::max();
-        R mymax = -numeric_limits<R>::max();
-
-        const minimum<R> minOp;
-        const maximum<R> maxOp;
-
-        for (int i = 0, y = y0; i < theight && y < src.rows; ++i, y += blockDim.y)
-        {
-            const T* ptr = src.ptr(y);
-
-            for (int j = 0, x = x0; j < twidth && x < src.cols; ++j, x += blockDim.x)
-            {
-                if (mask(y, x))
-                {
-                    const R srcVal = ptr[x];
-
-                    mymin = minOp(mymin, srcVal);
-                    mymax = maxOp(mymax, srcVal);
-                }
-            }
-        }
-
-        device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
-
-        GlobalReduce<BLOCK_SIZE, R>::run(mymin, mymax, minval, maxval, tid, bid, sminval, smaxval);
-    }
-
-    const int threads_x = 32;
-    const int threads_y = 8;
-
-    void getLaunchCfg(int cols, int rows, dim3& block, dim3& grid)
-    {
-        block = dim3(threads_x, threads_y);
-
-        grid = dim3(divUp(cols, block.x * block.y),
-                    divUp(rows, block.y * block.x));
-
-        grid.x = ::min(grid.x, block.x);
-        grid.y = ::min(grid.y, block.y);
-    }
-
-    void getBufSize(int cols, int rows, int& bufcols, int& bufrows)
-    {
-        dim3 block, grid;
-        getLaunchCfg(cols, rows, block, grid);
-
-        bufcols = grid.x * grid.y * sizeof(double);
-        bufrows = 2;
-    }
-
-    __global__ void setDefaultKernel(int* minval_buf, int* maxval_buf)
-    {
-        *minval_buf = numeric_limits<int>::max();
-        *maxval_buf = numeric_limits<int>::min();
-    }
-    __global__ void setDefaultKernel(float* minval_buf, float* maxval_buf)
-    {
-        *minval_buf = numeric_limits<float>::max();
-        *maxval_buf = -numeric_limits<float>::max();
-    }
-    __global__ void setDefaultKernel(double* minval_buf, double* maxval_buf)
-    {
-        *minval_buf = numeric_limits<double>::max();
-        *maxval_buf = -numeric_limits<double>::max();
-    }
-
-    template <typename R>
-    void setDefault(R* minval_buf, R* maxval_buf)
-    {
-        setDefaultKernel<<<1, 1>>>(minval_buf, maxval_buf);
-    }
-
     template <typename T>
-    void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf)
+    void minMaxImpl(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf, double* minVal, double* maxVal)
     {
-        typedef typename MinMaxTypeTraits<T>::best_type R;
+        typedef typename SelectIf<
+                TypesEquals<T, double>::value,
+                double,
+                typename SelectIf<TypesEquals<T, float>::value, float, int>::type
+                >::type work_type;
 
-        dim3 block, grid;
-        getLaunchCfg(src.cols, src.rows, block, grid);
+        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
+        GpuMat_<work_type>& buf = (GpuMat_<work_type>&) _buf;
 
-        const int twidth = divUp(divUp(src.cols, grid.x), block.x);
-        const int theight = divUp(divUp(src.rows, grid.y), block.y);
-
-        R* minval_buf = (R*) buf.ptr(0);
-        R* maxval_buf = (R*) buf.ptr(1);
-
-        setDefault(minval_buf, maxval_buf);
-
-        if (mask.data)
-            kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, SingleMask(mask), minval_buf, maxval_buf, twidth, theight);
+        if (mask.empty())
+            gridFindMinMaxVal(src, buf);
         else
-            kernel<threads_x * threads_y><<<grid, block>>>((PtrStepSz<T>) src, WithOutMask(), minval_buf, maxval_buf, twidth, theight);
+            gridFindMinMaxVal(src, buf, globPtr<uchar>(mask));
 
-        cudaSafeCall( cudaGetLastError() );
+        work_type data[2];
+        buf.download(cv::Mat(1, 2, buf.type(), data));
 
-        cudaSafeCall( cudaDeviceSynchronize() );
+        if (minVal)
+            *minVal = data[0];
 
-        R minval_, maxval_;
-        cudaSafeCall( cudaMemcpy(&minval_, minval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
-        cudaSafeCall( cudaMemcpy(&maxval_, maxval_buf, sizeof(R), cudaMemcpyDeviceToHost) );
-        *minval = minval_;
-        *maxval = maxval_;
+        if (maxVal)
+            *maxVal = data[1];
     }
-
-    template void run<uchar >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<schar >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<ushort>(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<short >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<int   >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<float >(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    template void run<double>(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
 }
 
-#endif // CUDA_DISABLER
+void cv::cuda::minMax(InputArray _src, double* minVal, double* maxVal, InputArray _mask, GpuMat& buf)
+{
+    typedef void (*func_t)(const GpuMat& _src, const GpuMat& mask, GpuMat& _buf, double* minVal, double* maxVal);
+    static const func_t funcs[] =
+    {
+        minMaxImpl<uchar>,
+        minMaxImpl<schar>,
+        minMaxImpl<ushort>,
+        minMaxImpl<short>,
+        minMaxImpl<int>,
+        minMaxImpl<float>,
+        minMaxImpl<double>
+    };
+
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
+
+    CV_Assert( src.channels() == 1 );
+    CV_DbgAssert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
+
+    const func_t func = funcs[src.depth()];
+
+    func(src, mask, buf, minVal, maxVal);
+}
+
+#endif

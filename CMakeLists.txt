@@ -46,6 +46,8 @@ endif()
 
 include(cmake/OpenCVUtils.cmake)
 
+ocv_clear_vars(OpenCVModules_TARGETS)
+
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
 # ----------------------------------------------------------------------------
@@ -423,6 +425,18 @@ endif()
 # --- Matlab/Octave ---
 include(cmake/OpenCVFindMatlab.cmake)
 
+# ----------------------------------------------------------------------------
+# Add CUDA libraries (needed for apps/tools, samples)
+# ----------------------------------------------------------------------------
+if(HAVE_CUDA)
+  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  if(HAVE_CUBLAS)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
+  endif()
+  if(HAVE_CUFFT)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
+  endif()
+endif()
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -826,11 +840,10 @@ endif()
 if(HAVE_OPENCL)
   status("")
   status("  OpenCL:")
-  set(__opencl_ver "invalid")
-  if(HAVE_OPENCL12)
-    set(__opencl_ver "1.2")
-  elseif(HAVE_OPENCL11)
-    set(__opencl_ver "1.1")
+  if(HAVE_OPENCL_STATIC)
+    set(__opencl_ver "static")
+  else()
+    set(__opencl_ver "dynamic")
   endif()
   status("    Version:"       ${__opencl_ver})
   if(OPENCL_INCLUDE_DIR)

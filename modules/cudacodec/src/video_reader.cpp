@@ -53,10 +53,7 @@ Ptr<VideoReader> cv::cudacodec::createVideoReader(const Ptr<RawVideoSource>&) { 
 
 #else // HAVE_NVCUVID
 
-namespace cv { namespace cuda { namespace device
-{
-    void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
-}}}
+void videoDecPostProcessFrame(const GpuMat& decodedFrame, OutputArray _outFrame, int width, int height);
 
 using namespace cv::cudacodec::detail;
 
@@ -125,18 +122,6 @@ namespace
         CUvideoctxlock m_lock;
     };
 
-    void cudaPostProcessFrame(const GpuMat& decodedFrame, OutputArray _outFrame, int width, int height)
-    {
-        using namespace cv::cuda::device;
-
-        // Final Stage: NV12toARGB color space conversion
-
-        _outFrame.create(height, width, CV_8UC4);
-        GpuMat outFrame = _outFrame.getGpuMat();
-
-        NV12_to_RGB(decodedFrame, outFrame);
-    }
-
     bool VideoReaderImpl::nextFrame(OutputArray frame)
     {
         if (videoSource_->hasError() || videoParser_->hasError())
@@ -195,7 +180,7 @@ namespace
 
             // perform post processing on the CUDA surface (performs colors space conversion and post processing)
             // comment this out if we inclue the line of code seen above
-            cudaPostProcessFrame(decodedFrame, frame, videoDecoder_->targetWidth(), videoDecoder_->targetHeight());
+            videoDecPostProcessFrame(decodedFrame, frame, videoDecoder_->targetWidth(), videoDecoder_->targetHeight());
 
             // unmap video frame
             // unmapFrame() synchronizes with the VideoDecode API (ensures the frame has finished decoding)

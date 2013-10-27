@@ -40,132 +40,126 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "cvconfig.h"
+#ifndef HAVE_OPENCV_CUDEV
 
-#ifdef HAVE_CUFFT
+#error "opencv_cudev is required"
 
-#include <cufft.h>
+#else
 
-#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
 
-namespace cv { namespace cuda { namespace device
+using namespace cv::cudev;
+
+//////////////////////////////////////////////////////////////////////////////
+// mulSpectrums
+
+namespace
 {
-    //////////////////////////////////////////////////////////////////////////
-    // mulSpectrums
-
-    __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
+    __device__ __forceinline__ float real(const float2& val)
     {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
+        return val.x;
+    }
 
-        if (x < c.cols && y < c.rows)
+    __device__ __forceinline__ float imag(const float2& val)
+    {
+        return val.y;
+    }
+
+    __device__ __forceinline__ float2 cmul(const float2& a, const float2& b)
+    {
+        return make_float2((real(a) * real(b)) - (imag(a) * imag(b)),
+                           (real(a) * imag(b)) + (imag(a) * real(b)));
+    }
+
+    __device__ __forceinline__ float2 conj(const float2& a)
+    {
+        return make_float2(real(a), -imag(a));
+    }
+
+    struct comlex_mul : binary_function<float2, float2, float2>
+    {
+        __device__ __forceinline__ float2 operator ()(const float2& a, const float2& b) const
         {
-            c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
+            return cmul(a, b);
         }
-    }
+    };
 
-
-    void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream)
+    struct comlex_mul_conj : binary_function<float2, float2, float2>
     {
-        dim3 threads(256);
-        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
-
-        mulSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, c);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-
-
-    //////////////////////////////////////////////////////////////////////////
-    // mulSpectrums_CONJ
-
-    __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
-    {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x < c.cols && y < c.rows)
+        __device__ __forceinline__ float2 operator ()(const float2& a, const float2& b) const
         {
-            c.ptr(y)[x] = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
+            return cmul(a, conj(b));
         }
-    }
+    };
 
-
-    void mulSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream)
+    struct comlex_mul_scale : binary_function<float2, float2, float2>
     {
-        dim3 threads(256);
-        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
+        float scale;
 
-        mulSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, c);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-
-
-    //////////////////////////////////////////////////////////////////////////
-    // mulAndScaleSpectrums
-
-    __global__ void mulAndScaleSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
-    {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x < c.cols && y < c.rows)
+        __device__ __forceinline__ float2 operator ()(const float2& a, const float2& b) const
         {
-            cufftComplex v = cuCmulf(a.ptr(y)[x], b.ptr(y)[x]);
-            c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+            return scale * cmul(a, b);
         }
-    }
+    };
 
-
-    void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream)
+    struct comlex_mul_conj_scale : binary_function<float2, float2, float2>
     {
-        dim3 threads(256);
-        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
+        float scale;
 
-        mulAndScaleSpectrumsKernel<<<grid, threads, 0, stream>>>(a, b, scale, c);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-
-
-    //////////////////////////////////////////////////////////////////////////
-    // mulAndScaleSpectrums_CONJ
-
-    __global__ void mulAndScaleSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
-    {
-        const int x = blockIdx.x * blockDim.x + threadIdx.x;
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-        if (x < c.cols && y < c.rows)
+        __device__ __forceinline__ float2 operator ()(const float2& a, const float2& b) const
         {
-            cufftComplex v = cuCmulf(a.ptr(y)[x], cuConjf(b.ptr(y)[x]));
-            c.ptr(y)[x] = make_cuFloatComplex(cuCrealf(v) * scale, cuCimagf(v) * scale);
+            return scale * cmul(a, conj(b));
         }
-    }
+    };
+}
 
+void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
+{
+    (void) flags;
 
-    void mulAndScaleSpectrums_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream)
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
+
+    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2 );
+    CV_Assert( src1.size() == src2.size() );
+
+    _dst.create(src1.size(), CV_32FC2);
+    GpuMat dst = _dst.getGpuMat();
+
+    if (conjB)
+        gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), comlex_mul_conj(), stream);
+    else
+        gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), comlex_mul(), stream);
+}
+
+void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
+{
+    (void) flags;
+
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
+
+    CV_Assert( src1.type() == src2.type() && src1.type() == CV_32FC2);
+    CV_Assert( src1.size() == src2.size() );
+
+    _dst.create(src1.size(), CV_32FC2);
+    GpuMat dst = _dst.getGpuMat();
+
+    if (conjB)
     {
-        dim3 threads(256);
-        dim3 grid(divUp(c.cols, threads.x), divUp(c.rows, threads.y));
-
-        mulAndScaleSpectrumsKernel_CONJ<<<grid, threads, 0, stream>>>(a, b, scale, c);
-        cudaSafeCall( cudaGetLastError() );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
+        comlex_mul_conj_scale op;
+        op.scale = scale;
+        gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), op, stream);
     }
-}}} // namespace cv { namespace cuda { namespace cudev
+    else
+    {
+        comlex_mul_scale op;
+        op.scale = scale;
+        gridTransformBinary(globPtr<float2>(src1), globPtr<float2>(src2), globPtr<float2>(dst), op, stream);
+    }
+}
 
-#endif // HAVE_CUFFT
-
-#endif /* CUDA_DISABLER */
+#endif
