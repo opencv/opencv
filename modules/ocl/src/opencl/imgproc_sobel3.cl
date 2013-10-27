@@ -55,11 +55,11 @@ __kernel void sobel3(
 
     lsmem[liy+1][lix+1] = convert_float(Src[ id_y * srcStride + id_x ]);
 
-    int id_y_h = ADDR_H(id_y-1, 0);
-    int id_y_b = ADDR_B(id_y+1, height);
+    int id_y_h = ADDR_H(id_y-1, 0,height);
+    int id_y_b = ADDR_B(id_y+1, height,id_y+1);
 
-    int id_x_l = ADDR_L(id_x-1, 0);
-    int id_x_r = ADDR_R(id_x+1, width);
+    int id_x_l = ADDR_L(id_x-1, 0,width);
+    int id_x_r = ADDR_R(id_x+1, width,id_x+1);
 
     if(liy==0)
     {

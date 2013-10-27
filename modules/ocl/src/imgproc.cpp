@@ -908,7 +908,11 @@ namespace cv
                 Context* clCxt = Context::getContext();
                 if(clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) && src.type() == CV_8UC1 &&
                     src.cols % 8 == 0 && src.rows % 8 == 0 &&
-                    ksize==3)
+                    ksize==3 &&
+                    (borderType ==cv::BORDER_REFLECT ||
+                     borderType == cv::BORDER_REPLICATE ||
+                     borderType ==cv::BORDER_REFLECT101 ||
+                     borderType ==cv::BORDER_WRAP))
                 {
                     Dx.create(src.size(), CV_32FC1);
                     Dy.create(src.size(), CV_32FC1);
