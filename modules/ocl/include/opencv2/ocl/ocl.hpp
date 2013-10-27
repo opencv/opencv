@@ -984,12 +984,12 @@ namespace cv
 
         struct CV_EXPORTS CannyBuf
         {
-            CannyBuf() : counter(NULL) {}
+            CannyBuf() : counter(1, 1, CV_32S) { }
             ~CannyBuf()
             {
                 release();
             }
-            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
+            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(1, 1, CV_32S)
             {
                 create(image_size, apperture_size);
             }
@@ -1001,7 +1001,7 @@ namespace cv
             oclMat dx_buf, dy_buf;
             oclMat edgeBuf;
             oclMat trackBuf1, trackBuf2;
-            void *counter;
+            oclMat counter;
             Ptr<FilterEngine_GPU> filterDX, filterDY;
         };
 
