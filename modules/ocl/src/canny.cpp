@@ -49,7 +49,7 @@
 using namespace cv;
 using namespace cv::ocl;
 
-cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(NULL)
+cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(1, 1, CV_32SC1)
 {
     CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
 
@@ -82,15 +82,6 @@ void cv::ocl::CannyBuf::create(const Size &image_size, int apperture_size)
 
     ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf1);
     ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf2);
-
-    int counter_i [1] = { 0 };
-    int err = 0;
-    if(counter)
-    {
-        openCLFree(counter);
-    }
-    counter = clCreateBuffer( *((cl_context*)getClContextPtr()), CL_MEM_COPY_HOST_PTR, sizeof(int), counter_i, &err );
-    openCLSafeCall(err);
 }
 
 void cv::ocl::CannyBuf::release()
@@ -102,7 +93,6 @@ void cv::ocl::CannyBuf::release()
     edgeBuf.release();
     trackBuf1.release();
     trackBuf2.release();
-    openCLFree(counter);
 }
 
 namespace cv
@@ -118,9 +108,9 @@ namespace cv
 
             void calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh);
 
-            void edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols);
+            void edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, oclMat& counter, int rows, int cols);
 
-            void edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols);
+            void edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, oclMat& counter, int rows, int cols);
 
             void getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols);
         }
@@ -322,7 +312,7 @@ void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int ro
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols)
+void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, oclMat& counter, int rows, int cols)
 {
     Context *clCxt = map.clCxt;
     string kernelName = "edgesHysteresisLocal";
@@ -330,7 +320,7 @@ void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, in
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&counter));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&counter.data));
     args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
     args.push_back( make_pair( sizeof(cl_int), (void *)&map.step));
@@ -342,26 +332,30 @@ void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, in
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols)
+void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, oclMat& counter, int rows, int cols)
 {
-    unsigned int count;
-    openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
+    Mat counterMat; counter.download(counterMat);
     Context *clCxt = map.clCxt;
     string kernelName = "edgesHysteresisGlobal";
     vector< pair<size_t, const void *> > args;
     size_t localThreads[3]  = {128, 1, 1};
 
-    int count_i[1] = {0};
-    while(count > 0)
+    while(1 > 0)
     {
-        openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
+        int count = counterMat.at<int>(0, 0);
+        CV_Assert(count >= 0);
+        if (count == 0)
+            break;
+
+        counterMat.at<int>(0, 0) = 0;
+        counter.upload(counterMat);
 
         args.clear();
-        size_t globalThreads[3] = {std::min(count, 65535u) * 128, divUp(count, 65535), 1};
+        size_t globalThreads[3] = {std::min((unsigned)count, 65535u) * 128, divUp(count, 65535), 1};
         args.push_back( make_pair( sizeof(cl_mem), (void *)&map.data));
         args.push_back( make_pair( sizeof(cl_mem), (void *)&st1.data));
         args.push_back( make_pair( sizeof(cl_mem), (void *)&st2.data));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&counter));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&counter.data));
         args.push_back( make_pair( sizeof(cl_int), (void *)&rows));
         args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
         args.push_back( make_pair( sizeof(cl_int), (void *)&count));
@@ -369,7 +363,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
         args.push_back( make_pair( sizeof(cl_int), (void *)&map.offset));
 
         openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
-        openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
+        counter.download(counterMat);
         std::swap(st1, st2);
     }
 }
