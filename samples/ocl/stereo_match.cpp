@@ -78,8 +78,9 @@ int main(int argc, char** argv)
         "{ l | left     |                           | specify left image }"
         "{ r | right    |                           | specify right image }"
         "{ m | method   | BM                        | specify match method(BM/BP/CSBP) }"
-        "{ n | ndisp    | 64                        |  specify number of disparity levels }"
+        "{ n | ndisp    | 64                        | specify number of disparity levels }"
         "{ o | output   | stereo_match_output.jpg   | specify output path when input is images}";
+
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
@@ -87,6 +88,7 @@ int main(int argc, char** argv)
         cmd.printMessage();
         return 0;
     }
+
     try
     {
         App app(cmd);
@@ -98,7 +100,8 @@ int main(int argc, char** argv)
     {
         cout << "error: " << e.what() << endl;
     }
-    return 0;
+
+    return EXIT_SUCCESS;
 }
 
 App::App(CommandLineParser& cmd)
@@ -116,6 +119,7 @@ App::App(CommandLineParser& cmd)
          << "\t2/w - increase/decrease window size (for BM only)\n"
          << "\t3/e - increase/decrease iteration count (for BP and CSBP only)\n"
          << "\t4/r - increase/decrease level count (for BP and CSBP only)\n";
+
     l_img = cmd.get<string>("l");
     r_img = cmd.get<string>("r");
     string mstr = cmd.get<string>("m");

@@ -33,7 +33,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -144,7 +144,7 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
         generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
 
-        border = randomBorder(0, 10);
+        border = randomBorder(0, MAX_VALUE << 2);
         val = randomScalar(-MAX_VALUE, MAX_VALUE);
     }
 

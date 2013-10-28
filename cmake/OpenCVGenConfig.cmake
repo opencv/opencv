@@ -74,7 +74,14 @@ if(ANDROID AND NOT BUILD_SHARED_LIBS AND HAVE_TBB)
   list(APPEND OpenCV2_INCLUDE_DIRS_CONFIGCMAKE ${TBB_INCLUDE_DIRS})
 endif()
 
-export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+set(modules_file_suffix "")
+if(ANDROID)
+  # the REPLACE here is needed, because OpenCVModules_armeabi.cmake includes
+  # OpenCVModules_armeabi-*.cmake, which would match OpenCVModules_armeabi-v7a*.cmake.
+  string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
+endif()
+
+export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules${modules_file_suffix}.cmake")
 
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 #support for version checking when finding opencv. find_package(OpenCV 2.3.1 EXACT) should now work.
@@ -94,7 +101,7 @@ endif()
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" IMMEDIATE @ONLY)
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
 
-if(UNIX)
+if(UNIX) # ANDROID configuration is created here also
   #http://www.vtk.org/Wiki/CMake/Tutorials/Packaging reference
   # For a command "find_package(<name> [major[.minor]] [EXACT] [REQUIRED|QUIET])"
   # cmake will look in the following dir on unix:
@@ -104,11 +111,11 @@ if(UNIX)
   if(INSTALL_TO_MANGLED_PATHS)
     install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/)
     install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/)
-    install(EXPORT OpenCVModules DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/)
+    install(EXPORT OpenCVModules DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}-${OPENCV_VERSION}/ FILE OpenCVModules${modules_file_suffix}.cmake)
   else()
     install(FILES "${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
     install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCVConfig-version.cmake DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
-    install(EXPORT OpenCVModules DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
+    install(EXPORT OpenCVModules DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/ FILE OpenCVModules${modules_file_suffix}.cmake)
   endif()
 endif()
 
@@ -128,10 +135,10 @@ if(WIN32)
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig-version.cmake" IMMEDIATE @ONLY)
   if(BUILD_SHARED_LIBS)
     install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/lib")
-    install(EXPORT OpenCVModules DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/lib")
+    install(EXPORT OpenCVModules DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/lib" FILE OpenCVModules${modules_file_suffix}.cmake)
   else()
     install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig.cmake" DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/staticlib")
-    install(EXPORT OpenCVModules DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/staticlib")
+    install(EXPORT OpenCVModules DESTINATION "${OpenCV_INSTALL_BINARIES_PREFIX}/staticlib" FILE OpenCVModules${modules_file_suffix}.cmake)
   endif()
   install(FILES "${CMAKE_BINARY_DIR}/win-install/OpenCVConfig-version.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   install(FILES "${OpenCV_SOURCE_DIR}/cmake/OpenCVConfig.cmake" DESTINATION "${CMAKE_INSTALL_PREFIX}/")
