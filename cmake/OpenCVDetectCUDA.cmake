@@ -13,6 +13,8 @@ if(CMAKE_COMPILER_IS_GNUCXX AND NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Cl
   return()
 endif()
 
+set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
 find_host_package(CUDA 4.2 QUIET)
 
 if(CUDA_FOUND)
@@ -26,188 +28,8 @@ if(CUDA_FOUND)
     set(HAVE_CUBLAS 1)
   endif()
 
-  ##############################################################################################
-  # Hack for CUDA >5.5 support
-  #
-  # The patch was submitted to CMake and might be available
-  # in the next CMake release.
-  #
-  # In the future we should check CMake version here, like
-  # if(CMAKE_VERSION VERSION_LESS "2.8.13")
-
-  set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
-  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
-
-  if(NOT "${CUDA_TOOLKIT_ROOT_DIR}" STREQUAL "${OPENCV_CUDA_TOOLKIT_ROOT_DIR_INTERNAL}")
-    unset(CUDA_TOOLKIT_TARGET_DIR CACHE)
-  endif()
-
-  if(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
-    set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf" CACHE PATH "Toolkit target location.")
-  else()
-    set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "Toolkit target location.")
-  endif()
-
-  if(NOT "${CUDA_TOOLKIT_TARGET_DIR}" STREQUAL "${OPENCV_CUDA_TOOLKIT_TARGET_DIR_INTERNAL}")
-    unset(CUDA_TOOLKIT_INCLUDE CACHE)
-    unset(CUDA_CUDART_LIBRARY CACHE)
-    unset(CUDA_CUDA_LIBRARY CACHE)
-    unset(CUDA_cupti_LIBRARY CACHE)
-    unset(CUDA_cublas_LIBRARY CACHE)
-    unset(CUDA_cublasemu_LIBRARY CACHE)
-    unset(CUDA_cufft_LIBRARY CACHE)
-    unset(CUDA_cufftemu_LIBRARY CACHE)
-    unset(CUDA_curand_LIBRARY CACHE)
-    unset(CUDA_cusparse_LIBRARY CACHE)
-    unset(CUDA_npp_LIBRARY CACHE)
-    unset(CUDA_nppc_LIBRARY CACHE)
-    unset(CUDA_nppi_LIBRARY CACHE)
-    unset(CUDA_npps_LIBRARY CACHE)
-    unset(CUDA_nvcuvenc_LIBRARY CACHE)
-    unset(CUDA_nvcuvid_LIBRARY CACHE)
-  endif()
-
-  # CUDA_TOOLKIT_INCLUDE
-  find_path(CUDA_TOOLKIT_INCLUDE
-    device_functions.h # Header included in toolkit
-    PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
-    ENV CUDA_PATH
-    ENV CUDA_INC_PATH
-    PATH_SUFFIXES include
-    NO_DEFAULT_PATH
-  )
-
-  # Search default search paths, after we search our own set of paths.
-  find_path(CUDA_TOOLKIT_INCLUDE device_functions.h)
-  mark_as_advanced(CUDA_TOOLKIT_INCLUDE)
-
-  macro(opencv_cuda_find_library_local_first_with_path_ext _var _names _doc _path_ext)
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      # CUDA 3.2+ on Windows moved the library directories, so we need the new
-      # and old paths.
-      set(_cuda_64bit_lib_dir "${_path_ext}lib/x64" "${_path_ext}lib64" "${_path_ext}libx64" )
-    endif()
-    # CUDA 3.2+ on Windows moved the library directories, so we need to new
-    # (lib/Win32) and the old path (lib).
-    find_library(${_var}
-      NAMES ${_names}
-      PATHS "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}"
-      ENV CUDA_PATH
-      ENV CUDA_LIB_PATH
-      PATH_SUFFIXES ${_cuda_64bit_lib_dir} "${_path_ext}lib/Win32" "${_path_ext}lib" "${_path_ext}libWin32"
-      DOC ${_doc}
-      NO_DEFAULT_PATH
-    )
-    # Search default search paths, after we search our own set of paths.
-    find_library(${_var} NAMES ${_names} DOC ${_doc})
-  endmacro()
-
-  macro(opencv_cuda_find_library_local_first _var _names _doc )
-    opencv_cuda_find_library_local_first_with_path_ext( "${_var}" "${_names}" "${_doc}" "" )
-  endmacro()
-
-  macro(opencv_find_library_local_first _var _names _doc )
-    opencv_cuda_find_library_local_first( "${_var}" "${_names}" "${_doc}" "" )
-  endmacro()
-
-  # CUDA_LIBRARIES
-  opencv_cuda_find_library_local_first(CUDA_CUDART_LIBRARY cudart "\"cudart\" library")
-  if(CUDA_VERSION VERSION_EQUAL "3.0")
-    # The cudartemu library only existed for the 3.0 version of CUDA.
-    opencv_cuda_find_library_local_first(CUDA_CUDARTEMU_LIBRARY cudartemu "\"cudartemu\" library")
-    mark_as_advanced(
-      CUDA_CUDARTEMU_LIBRARY
-    )
-  endif()
-
-  # CUPTI library showed up in cuda toolkit 4.0
-  if(NOT CUDA_VERSION VERSION_LESS "4.0")
-    opencv_cuda_find_library_local_first_with_path_ext(CUDA_cupti_LIBRARY cupti "\"cupti\" library" "extras/CUPTI/")
-    mark_as_advanced(CUDA_cupti_LIBRARY)
-  endif()
-
-  # If we are using emulation mode and we found the cudartemu library then use
-  # that one instead of cudart.
-  if(CUDA_BUILD_EMULATION AND CUDA_CUDARTEMU_LIBRARY)
-    set(CUDA_LIBRARIES ${CUDA_CUDARTEMU_LIBRARY})
-  else()
-    set(CUDA_LIBRARIES ${CUDA_CUDART_LIBRARY})
-  endif()
-  if(APPLE)
-    # We need to add the path to cudart to the linker using rpath, since the
-    # library name for the cuda libraries is prepended with @rpath.
-    if(CUDA_BUILD_EMULATION AND CUDA_CUDARTEMU_LIBRARY)
-      get_filename_component(_cuda_path_to_cudart "${CUDA_CUDARTEMU_LIBRARY}" PATH)
-    else()
-      get_filename_component(_cuda_path_to_cudart "${CUDA_CUDART_LIBRARY}" PATH)
-    endif()
-    if(_cuda_path_to_cudart)
-      list(APPEND CUDA_LIBRARIES -Wl,-rpath "-Wl,${_cuda_path_to_cudart}")
-    endif()
-  endif()
-
-  # 1.1 toolkit on linux doesn't appear to have a separate library on
-  # some platforms.
-  opencv_cuda_find_library_local_first(CUDA_CUDA_LIBRARY cuda "\"cuda\" library (older versions only).")
-
-  mark_as_advanced(
-    CUDA_CUDA_LIBRARY
-    CUDA_CUDART_LIBRARY
-  )
-
-  #######################
-  # Look for some of the toolkit helper libraries
-  macro(OPENCV_FIND_CUDA_HELPER_LIBS _name)
-    opencv_cuda_find_library_local_first(CUDA_${_name}_LIBRARY ${_name} "\"${_name}\" library")
-    mark_as_advanced(CUDA_${_name}_LIBRARY)
-  endmacro()
-
-  # Search for additional CUDA toolkit libraries.
-  if(CUDA_VERSION VERSION_LESS "3.1")
-    # Emulation libraries aren't available in version 3.1 onward.
-    opencv_find_cuda_helper_libs(cufftemu)
-    opencv_find_cuda_helper_libs(cublasemu)
-  endif()
-  opencv_find_cuda_helper_libs(cufft)
-  opencv_find_cuda_helper_libs(cublas)
-  if(NOT CUDA_VERSION VERSION_LESS "3.2")
-    # cusparse showed up in version 3.2
-    opencv_find_cuda_helper_libs(cusparse)
-    opencv_find_cuda_helper_libs(curand)
-    if (WIN32)
-      opencv_find_cuda_helper_libs(nvcuvenc)
-      opencv_find_cuda_helper_libs(nvcuvid)
-    endif()
-  endif()
-  if(CUDA_VERSION VERSION_GREATER "5.0")
-    # In CUDA 5.5 NPP was splitted onto 3 separate libraries.
-    opencv_find_cuda_helper_libs(nppc)
-    opencv_find_cuda_helper_libs(nppi)
-    opencv_find_cuda_helper_libs(npps)
-    set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
-  elseif(NOT CUDA_VERSION VERSION_LESS "4.0")
-    opencv_find_cuda_helper_libs(npp)
-  endif()
-
-  if(CUDA_BUILD_EMULATION)
-    set(CUDA_CUFFT_LIBRARIES ${CUDA_cufftemu_LIBRARY})
-    set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublasemu_LIBRARY})
-  else()
-    set(CUDA_CUFFT_LIBRARIES ${CUDA_cufft_LIBRARY})
-    set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublas_LIBRARY})
-  endif()
-
-  set(OPENCV_CUDA_TOOLKIT_ROOT_DIR_INTERNAL "${CUDA_TOOLKIT_ROOT_DIR}" CACHE INTERNAL
-    "This is the value of the last time CUDA_TOOLKIT_ROOT_DIR was set successfully." FORCE)
-  set(OPENCV_CUDA_TOOLKIT_TARGET_DIR_INTERNAL "${CUDA_TOOLKIT_TARGET_DIR}" CACHE INTERNAL
-    "This is the value of the last time CUDA_TOOLKIT_TARGET_DIR was set successfully." FORCE)
-
-  # Hack for CUDA >5.5 support
-  ##############################################################################################
-
   if(WITH_NVCUVID)
-    opencv_find_cuda_helper_libs(nvcuvid)
+    find_cuda_helper_libs(nvcuvid)
     set(HAVE_NVCUVID 1)
   endif()
 
@@ -306,10 +128,6 @@ if(CUDA_FOUND)
     set(OPENCV_CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX} ${ARCH}")
     set(OPENCV_CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES} ${ARCH}")
   endforeach()
-
-  if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm")
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --target-cpu-architecture=ARM")
-  endif()
 
   # These vars will be processed in other scripts
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
