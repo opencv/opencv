@@ -57,36 +57,31 @@ using namespace std;
 
 
 ///////////// Moments ////////////////////////
-
-typedef Size_MatType MomentsFixture;
+//*! performance of image
+typedef tuple<Size, MatType, bool> MomentsParamType;
+typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
 
 PERF_TEST_P(MomentsFixture, Moments,
     ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-    OCL_PERF_ENUM( CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1, CV_64FC1)))
+    OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1, CV_64FC1), ::testing::Values(false, true)))
 {
-    const Size_MatType_t params = GetParam();
+    const MomentsParamType params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+    const bool binaryImage = get<2>(params);
 
     Mat  src(srcSize, type), dst(7, 1, CV_64F);
     randu(src, 0, 255);
 
-    if(src.type() == CV_64FC1 && !ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-    {
-        src.convertTo(src, CV_32FC1);
-    }
-
     oclMat src_d(src);
-    const bool binaryImage = false;
     cv::Moments mom;
-    cv::InputArray array_(src);
     if (RUN_OCL_IMPL)
     {
         OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() mom = cv::moments(array_, binaryImage);
+        TEST_CYCLE() mom = cv::moments(src, binaryImage);
     }
     else
         OCL_PERF_ELSE

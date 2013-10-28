@@ -174,7 +174,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
 
     if(dy < src_rows)
     {
-        switchFlag = (x_rest > 0) && (gidx == (get_num_groups(0) - 1)) ? true : false;
+        switchFlag = (x_rest > 0) && (gidx == (get_num_groups(0) - 1));
 
         switch(switchFlag)
         {
@@ -263,7 +263,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     }
     __local WT mom[10][256];
 
-    switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1)) ? true : false;
+    switchFlag = (y_rest > 0) && (gidy == (get_num_groups(1) - 1));
 
     switch(switchFlag)
     {

@@ -222,25 +222,27 @@ namespace cv
 
         Moments ocl_moments(oclMat& src, bool binary) //for image
         {
+            CV_Assert(src.oclchannels() == 1);
+            
+            if(src.type() == CV_64FC1 && Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            {
+                CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
+            }
+
             if(binary)
             {
+                oclMat mask;
                 if(src.type() != CV_8UC1)
                 {
-                    oclMat a;
-                    src.convertTo(a, CV_8UC1);
-                    src = a;
+                    src.convertTo(mask, CV_8UC1);
                 }
-                oclMat b(src.size(), src.type());
-                b.setTo(Scalar::all(0));
-                oclMat c;
-                cv::ocl::compare(src, b, c, CV_CMP_NE);
-                src = c;
+                oclMat src8u(src.size(), CV_8UC1);
+                src8u.setTo(Scalar(255), mask);
+                src = src8u;
             }
             const int TILE_SIZE = 256;
 
-            CvMoments mom;
-
-            memset( &mom, 0, sizeof(*(&mom)));
+            CvMoments mom = {0};
 
             cv::Size size = src.size();
             int blockx, blocky;
@@ -253,11 +255,6 @@ namespace cv
             size_t localThreads[3]  = {1, tile_height, 1};
             size_t globalThreads[3] = {blockx, size.height, 1};
 
-            if(src.type() == CV_64FC1)
-            {
-                CV_Assert(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE));
-            }
-
             if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
             {
                 dst_m.create(blocky * 10, blockx, CV_64FC1);
@@ -265,7 +262,6 @@ namespace cv
             {
                 dst_m.create(blocky * 10, blockx, CV_32FC1);
             }
-
 
             int src_step = (int)(src.step/src.elemSize());
             int dstm_step = (int)(dst_m.step/dst_m.elemSize());
@@ -345,11 +341,10 @@ namespace cv
             return mom;
         }
 
-        Moments ocl_moments( InputArray _array, bool binaryImage) //for contour
+        Moments ocl_moments(InputArray _contour) //for contour
         {
-            CV_Assert(!binaryImage);
-            CvMoments om;
-            Mat arr = _array.getMat();
+            CvMoments om = {0};
+            Mat arr = _contour.getMat();
             CvMat c_array = arr;
 
             const void* array = &c_array;
@@ -361,8 +356,6 @@ namespace cv
                 if( !CV_IS_SEQ_POINT_SET( contour ))
                     CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
             }
-
-            memset( &om, 0, sizeof(*(&om)));
 
             int type, coi = 0;
 

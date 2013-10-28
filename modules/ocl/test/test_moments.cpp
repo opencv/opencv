@@ -13,7 +13,7 @@ using namespace std;
 PARAM_TEST_CASE(MomentsTest, MatType, bool, bool)
 {
     int type;
-    cv::Mat mat1;
+    cv::Mat mat;
     bool test_contours;
     bool binaryImage;
     virtual void SetUp()
@@ -21,7 +21,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool, bool)
         type = GET_PARAM(0);
         test_contours = GET_PARAM(1);
         cv::Size size(10 * MWIDTH, 10 * MHEIGHT);
-        mat1 = randomMat(size, type, 0, 256, false);
+        mat = randomMat(size, type, 0, 256, false);
         binaryImage = GET_PARAM(2);
     }
 
@@ -36,11 +36,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool, bool)
 
 OCL_TEST_P(MomentsTest, Mat)
 {
-    if(mat1.type() == CV_64FC1 && !ocl::Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
-    {
-        mat1.convertTo(mat1, CV_32FC1);
-    }
-    oclMat src_d(mat1);
+    oclMat src_d(mat);
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         if(test_contours)
@@ -55,16 +51,14 @@ OCL_TEST_P(MomentsTest, Mat)
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 Moments m = moments( contours[i], false );
-                Moments dm = ocl::ocl_moments( contours[i], false);
+                Moments dm = ocl::ocl_moments( contours[i]);
                 Compare(m, dm);
             }
         }
-        cv::_InputArray _array(mat1);
-        cv::Moments CvMom = cv::moments(_array, binaryImage);
+        cv::Moments CvMom = cv::moments(mat, binaryImage);
         cv::Moments oclMom = cv::ocl::ocl_moments(src_d, binaryImage);
 
         Compare(CvMom, oclMom);
-
     }
 }
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MomentsTest, Combine(
