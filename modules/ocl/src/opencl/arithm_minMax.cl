@@ -53,8 +53,13 @@
 #endif
 #endif
 
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics:enable
-#pragma OPENCL EXTENSION cl_khr_global_int32_extended_atomics:enable
+#ifdef DEPTH_5
+#define MIN_VAL (-FLT_MAX)
+#define MAX_VAL FLT_MAX
+#elif defined DEPTH_6
+#define MIN_VAL (-DBL_MAX)
+#define MAX_VAL DBL_MAX
+#endif
 
 /**************************************Array minMax**************************************/
 
@@ -78,14 +83,14 @@ __kernel void arithm_op_minMax(__global const T * src, __global T * dst,
        maxval = max(maxval, temp);
    }
 
-   if(lid > 127)
+   if (lid > 127)
    {
        localmem_min[lid - 128] = minval;
        localmem_max[lid - 128] = maxval;
    }
    barrier(CLK_LOCAL_MEM_FENCE);
 
-   if(lid < 128)
+   if (lid < 128)
    {
        localmem_min[lid] = min(minval, localmem_min[lid]);
        localmem_max[lid] = max(maxval, localmem_max[lid]);
@@ -138,14 +143,14 @@ __kernel void arithm_op_minMax_mask(__global const T * src, __global T * dst,
        }
    }
 
-   if(lid > 127)
+   if (lid > 127)
    {
        localmem_min[lid - 128] = minval;
        localmem_max[lid - 128] = maxval;
    }
    barrier(CLK_LOCAL_MEM_FENCE);
 
-   if(lid < 128)
+   if (lid < 128)
    {
        localmem_min[lid] = min(minval, localmem_min[lid]);
        localmem_max[lid] = max(maxval, localmem_max[lid]);
