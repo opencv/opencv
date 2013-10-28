@@ -223,7 +223,6 @@ namespace cv
         Moments ocl_moments(oclMat& src, bool binary) //for image
         {
             CV_Assert(src.oclchannels() == 1);
-            
             if(src.type() == CV_64FC1 && Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
             {
                 CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
@@ -242,7 +241,8 @@ namespace cv
             }
             const int TILE_SIZE = 256;
 
-            CvMoments mom = {0};
+            CvMoments mom;
+            memset(&mom, 0, sizeof(mom));
 
             cv::Size size = src.size();
             int blockx, blocky;
@@ -343,7 +343,9 @@ namespace cv
 
         Moments ocl_moments(InputArray _contour) //for contour
         {
-            CvMoments om = {0};
+            CvMoments mom;
+            memset(&mom, 0, sizeof(mom));
+
             Mat arr = _contour.getMat();
             CvMat c_array = arr;
 
@@ -378,8 +380,8 @@ namespace cv
 
             CV_Assert(contour);
 
-            icvContourMoments( contour, &om );
-            return om;
+            icvContourMoments(contour, &mom);
+            return mom;
         }
     }
 }
