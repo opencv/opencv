@@ -36,7 +36,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -437,7 +437,7 @@ namespace cv
 
             CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
 
-            if( _src.offset != 0 && (bordertype & BORDER_ISOLATED) == 0 )
+            if( (_src.wholecols != _src.cols || _src.wholerows != _src.rows) && (bordertype & BORDER_ISOLATED) == 0 )
             {
                 Size wholeSize;
                 Point ofs;
@@ -454,34 +454,25 @@ namespace cv
             }
             bordertype &= ~cv::BORDER_ISOLATED;
 
-            // TODO need to remove this conditions and fix the code
-            if (bordertype == cv::BORDER_REFLECT || bordertype == cv::BORDER_WRAP)
-            {
-                CV_Assert((_src.cols >= left) && (_src.cols >= right) && (_src.rows >= top) && (_src.rows >= bottom));
-            }
-            else if (bordertype == cv::BORDER_REFLECT_101)
-            {
-                CV_Assert((_src.cols > left) && (_src.cols > right) && (_src.rows > top) && (_src.rows > bottom));
-            }
-
             dst.create(_src.rows + top + bottom, _src.cols + left + right, _src.type());
-            int srcStep = _src.step1() / _src.oclchannels(),  dstStep = dst.step1() / dst.oclchannels();
+            int srcStep = _src.step / _src.elemSize(),  dstStep = dst.step / dst.elemSize();
             int srcOffset = _src.offset / _src.elemSize(), dstOffset = dst.offset / dst.elemSize();
             int depth = _src.depth(), ochannels = _src.oclchannels();
 
-            int __bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101};
-            const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-            size_t bordertype_index;
+            int __bordertype[] = { BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101 };
+            const char *borderstr[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
 
-            for(bordertype_index = 0; bordertype_index < sizeof(__bordertype) / sizeof(int); bordertype_index++)
-                if (__bordertype[bordertype_index] == bordertype)
+            int bordertype_index = -1;
+            for (int i = 0, end = sizeof(__bordertype) / sizeof(int); i < end; i++)
+                if (__bordertype[i] == bordertype)
+                {
+                    bordertype_index = i;
                     break;
-
-            if (bordertype_index == sizeof(__bordertype) / sizeof(int))
+                }
+            if (bordertype_index < 0)
                 CV_Error(Error::StsBadArg, "Unsupported border type");
 
-            String kernelName = "copymakeborder";
-            size_t localThreads[3] = {16, 16, 1};
+            size_t localThreads[3] = { 16, 16, 1 };
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             std::vector< std::pair<size_t, const void *> > args;
@@ -504,12 +495,6 @@ namespace cv
                                               typeMap[depth], channelMap[ochannels],
                                               borderstr[bordertype_index]);
 
-            if (src.type() == CV_8UC1 && (dst.offset & 3) == 0 && (dst.cols & 3) == 0)
-            {
-                kernelName = "copymakeborder_C1_D0";
-                globalThreads[0] = dst.cols >> 2;
-            }
-
             int cn = src.channels(), ocn = src.oclchannels();
             int bufSize = src.elemSize1() * ocn;
             AutoBuffer<uchar> _buf(bufSize);
@@ -519,7 +504,7 @@ namespace cv
 
             args.push_back( std::make_pair( bufSize , (void *)buf ));
 
-            openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, kernelName, globalThreads,
+            openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, "copymakeborder", globalThreads,
                                 localThreads, args, -1, -1, buildOptions.c_str());
         }
 

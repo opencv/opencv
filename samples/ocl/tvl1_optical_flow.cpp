@@ -97,10 +97,9 @@ int main(int argc, const char* argv[])
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
         cout << "Available options:" << endl;
         cmd.printMessage();
-        return 0;
+        return EXIT_SUCCESS;
     }
 
-    bool defaultPicturesFail = false;
     string fname0 = cmd.get<string>("l");
     string fname1 = cmd.get<string>("r");
     string vdofile = cmd.get<string>("v");
@@ -114,21 +113,10 @@ int main(int argc, const char* argv[])
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
 
-
     Mat flow, show_flow;
     Mat flow_vec[2];
     if (frame0.empty() || frame1.empty())
-    {
         useCamera = true;
-        defaultPicturesFail = true;
-        VideoCapture capture( inputName );
-        if (!capture.isOpened())
-        {
-            cout << "Can't load input images" << endl;
-            return -1;
-        }
-    }
-
 
     if (useCamera)
     {
@@ -137,22 +125,17 @@ int main(int argc, const char* argv[])
         Mat frame0Gray, frame1Gray;
         Mat ptr0, ptr1;
 
-        if(vdofile == "")
+        if(vdofile.empty())
             capture.open( inputName );
         else
             capture.open(vdofile.c_str());
 
-        int c = inputName ;
         if(!capture.isOpened())
         {
-            if(vdofile == "")
-                cout << "Capture from CAM " << c << " didn't work" << endl;
+            if(vdofile.empty())
+                cout << "Capture from CAM " << inputName << " didn't work" << endl;
             else
                 cout << "Capture from file " << vdofile << " failed" <<endl;
-            if (defaultPicturesFail)
-            {
-                return -1;
-            }
             goto nocamera;
         }
 
@@ -205,12 +188,9 @@ int main(int argc, const char* argv[])
             }
 
             if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+                break;
         }
 
-        waitKey(0);
-
-_cleanup_:
         capture.release();
     }
     else
@@ -253,5 +233,5 @@ nocamera:
 
     waitKey();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

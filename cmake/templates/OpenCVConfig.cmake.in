@@ -37,7 +37,12 @@
 #
 # ===================================================================================
 
-include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules.cmake)
+set(modules_file_suffix "")
+if(ANDROID)
+  string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
+endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
 
 # TODO All things below should be reviewed. What is about of moving this code into related modules (special vars/hooks/files)
 

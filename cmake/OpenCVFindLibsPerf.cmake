@@ -86,13 +86,13 @@ else()
 endif()
 
 # --- OpenMP ---
-if(NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
-  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/omptest.cpp")
-  file(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
-  try_compile(HAVE_OPENMP "${CMAKE_BINARY_DIR}" "${_fname}")
-  file(REMOVE "${_fname}")
-else()
-  set(HAVE_OPENMP 0)
+if(WITH_OPENMP AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  find_package(OpenMP)
+  if(OPENMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
+  set(HAVE_OPENMP "${OPENMP_FOUND}")
 endif()
 
 # --- GCD ---
