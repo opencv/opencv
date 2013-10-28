@@ -502,7 +502,9 @@ INSTANTIATE_TEST_CASE_P(Imgproc, Integral, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
-                            Values(CV_8UC1, CV_32FC1),
+                            Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                   CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
+                                   CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
                             Values(0),
                             Values(ThreshOp(THRESH_BINARY),
                                    ThreshOp(THRESH_BINARY_INV), ThreshOp(THRESH_TRUNC),
