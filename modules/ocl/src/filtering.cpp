@@ -451,7 +451,7 @@ void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point a
     else
         kernel = _kernel;
 
-    Ptr<FilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
+    Ptr<MorphologyFilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
 
     f->apply(src, dst);
 }
