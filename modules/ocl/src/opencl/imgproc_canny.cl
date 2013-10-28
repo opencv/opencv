@@ -553,6 +553,7 @@ edgesHysteresisGlobal
 
             if (subTaskIdx < portion)
                 pos = s_st[s_counter - 1 - subTaskIdx];
+            barrier(CLK_LOCAL_MEM_FENCE);
 
             if (lidx == 0)
                 s_counter -= portion;
