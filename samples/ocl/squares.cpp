@@ -293,7 +293,7 @@ int main(int argc, char** argv)
     }
 
     int iterations = 10;
-    namedWindow( wndname, CV_LOAD_IMAGE_COLOR );
+    namedWindow( wndname, CV_WINDOW_AUTOSIZE );
     vector<vector<Point> > squares_cpu, squares_ocl;
 
     Mat image = imread(inputName, 1);
