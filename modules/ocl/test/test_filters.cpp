@@ -384,14 +384,14 @@ INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
-                            testing::Range(1, 2),
+                            testing::Range(1, 4),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
-                            testing::Range(1, 2),
+                            testing::Range(1, 4),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
