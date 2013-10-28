@@ -86,17 +86,17 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 
     void random_roi()
     {
+        dsize = randomSize(1, MAX_VALUE);
+
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(dst_whole, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
         generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
-        generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
-
-        dsize = randomSize(1, MAX_VALUE);
+        generateOclMat(gdst_whole, gdst_roi, dst_whole, dsize, dstBorder);
     }
 
     void Near(double threshold = 0.0)
@@ -116,17 +116,12 @@ typedef WarpTestBase WarpAffine;
 
 OCL_TEST_P(WarpAffine, Mat)
 {
-    static const double coeffs[2][3] =
-    {
-        { cos(CV_PI / 6), -sin(CV_PI / 6),  100.0 },
-        { sin(CV_PI / 6),  cos(CV_PI / 6), -100.0 }
-    };
-
-    static Mat M(2, 3, CV_64FC1, (void *)coeffs);
-
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
+
+        Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
+            rng.uniform(-180.f, 180.f), rng.uniform(0.4f, 2.0f));
 
         warpAffine(src_roi, dst_roi, M, dsize, interpolation);
         ocl::warpAffine(gsrc_roi, gdst_roi, M, dsize, interpolation);
@@ -141,18 +136,18 @@ typedef WarpTestBase WarpPerspective;
 
 OCL_TEST_P(WarpPerspective, Mat)
 {
-    static const double coeffs[3][3] =
-    {
-        { cos(CV_PI / 6), -sin(CV_PI / 6),  100.0 },
-        { sin(CV_PI / 6),  cos(CV_PI / 6), -100.0 },
-        { 0.0,             0.0,             1.0   }
-    };
-
-    static Mat M(3, 3, CV_64FC1, (void *)coeffs);
-
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
+
+        float cols = static_cast<float>(src_roi.cols), rows = static_cast<float>(src_roi.rows);
+        float cols2 = cols / 2.0f, rows2 = rows / 2.0f;
+        Point2f sp[] = { Point2f(0.0f, 0.0f), Point2f(cols, 0.0f), Point2f(0.0f, rows), Point2f(cols, rows) };
+        Point2f dp[] = { Point2f(rng.uniform(0.0f, cols2), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(0.0f, cols2), rng.uniform(rows2, rows)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(rows2, rows)) };
+        Mat M = getPerspectiveTransform(sp, dp);
 
         warpPerspective(src_roi, dst_roi, M, dsize, interpolation);
         ocl::warpPerspective(gsrc_roi, gdst_roi, M, dsize, interpolation);
