@@ -113,6 +113,24 @@ result_type reduce_block(
     return DIST_RES(result);
 }
 
+result_type reduce_block_match(
+    __local value_type *s_query,
+    __local value_type *s_train,
+    int lidx,
+    int lidy
+    )
+{
+    result_type result = 0;
+    #pragma unroll
+    for (int j = 0 ; j < BLOCK_SIZE ; j++)
+    {
+        result += DIST(
+            s_query[lidy * BLOCK_SIZE + j],
+            s_train[j * BLOCK_SIZE + lidx]);
+    }
+    return (result);
+}
+
 result_type reduce_multi_block(
     __local value_type *s_query,
     __local value_type *s_train,
@@ -275,10 +293,12 @@ __kernel void BruteForceMatch_Match(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, lidx, lidy);
+            result += reduce_block_match(s_query, s_train, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
+
+        result = DIST_RES(result);
 
         const int trainIdx = t * BLOCK_SIZE + lidx;
 
@@ -636,10 +656,12 @@ __kernel void BruteForceMatch_knnMatch(
 
             barrier(CLK_LOCAL_MEM_FENCE);
 
-            result += reduce_block(s_query, s_train, lidx, lidy);
+            result += reduce_block_match(s_query, s_train, lidx, lidy);
 
             barrier(CLK_LOCAL_MEM_FENCE);
         }
+
+        result = DIST_RES(result);
 
         const int trainIdx = t * BLOCK_SIZE + lidx;
 
