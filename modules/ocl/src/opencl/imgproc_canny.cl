@@ -374,6 +374,14 @@ calcMap
 #undef CANNY_SHIFT
 #undef TG22
 
+struct PtrStepSz {
+    __global int *ptr;
+    int step;
+    int rows, cols;
+};
+inline int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)); }
+inline void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)) = value; }
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // do Hysteresis for pixel whose edge type is 1
 //
@@ -390,7 +398,7 @@ void
 __attribute__((reqd_work_group_size(16,16,1)))
 edgesHysteresisLocal
 (
-    __global int * map,
+    __global int * map_ptr,
     __global ushort2 * st,
     __global unsigned int * counter,
     int rows,
@@ -399,10 +407,11 @@ edgesHysteresisLocal
     int map_offset
 )
 {
+#if 0
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
-    map += map_offset;
+    const __global int* map = map_ptr + map_offset;
 
     __local int smem[18][18];
 
@@ -482,6 +491,92 @@ edgesHysteresisLocal
             st[ind] = (ushort2)(gidx + 1, gidy + 1);
         }
     }
+#else
+    struct PtrStepSz map = {((__global int *)((__global char*)map_ptr + map_offset)), map_step, rows, cols};
+
+    __local int smem[18][18];
+
+    int2 blockIdx = (int2)(get_group_id(0), get_group_id(1));
+    int2 blockDim = (int2)(get_local_size(0), get_local_size(1));
+    int2 threadIdx = (int2)(get_local_id(0), get_local_id(1));
+
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    smem[threadIdx.y + 1][threadIdx.x + 1] = x < map.cols && y < map.rows ? get(map, y, x) : 0;
+    if (threadIdx.y == 0)
+        smem[0][threadIdx.x + 1] = y > 0 ? get(map, y - 1, x) : 0;
+    if (threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][threadIdx.x + 1] = y + 1 < map.rows ? get(map, y + 1, x) : 0;
+    if (threadIdx.x == 0)
+        smem[threadIdx.y + 1][0] = x > 0 ? get(map, y, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1)
+        smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols ? get(map, y, x + 1) : 0;
+    if (threadIdx.x == 0 && threadIdx.y == 0)
+        smem[0][0] = y > 0 && x > 0 ? get(map, y - 1, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0)
+        smem[0][blockDim.x + 1] = y > 0 && x + 1 < map.cols ? get(map, y - 1, x + 1) : 0;
+    if (threadIdx.x == 0 && threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][0] = y + 1 < map.rows && x > 0 ? get(map, y + 1, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][blockDim.x + 1] = y + 1 < map.rows && x + 1 < map.cols ? get(map, y + 1, x + 1) : 0;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x >= map.cols || y >= map.rows)
+        return;
+
+    int n;
+
+    #pragma unroll
+    for (int k = 0; k < 16; ++k)
+    {
+        n = 0;
+
+        if (smem[threadIdx.y + 1][threadIdx.x + 1] == 1)
+        {
+            n += smem[threadIdx.y    ][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y    ][threadIdx.x + 1] == 2;
+            n += smem[threadIdx.y    ][threadIdx.x + 2] == 2;
+
+            n += smem[threadIdx.y + 1][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y + 1][threadIdx.x + 2] == 2;
+
+            n += smem[threadIdx.y + 2][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y + 2][threadIdx.x + 1] == 2;
+            n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
+        }
+
+        if (n > 0)
+            smem[threadIdx.y + 1][threadIdx.x + 1] = 2;
+    }
+
+    const int e = smem[threadIdx.y + 1][threadIdx.x + 1];
+
+    set(map, y, x, e);
+
+    n = 0;
+
+    if (e == 2)
+    {
+        n += smem[threadIdx.y    ][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y    ][threadIdx.x + 1] == 1;
+        n += smem[threadIdx.y    ][threadIdx.x + 2] == 1;
+
+        n += smem[threadIdx.y + 1][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y + 1][threadIdx.x + 2] == 1;
+
+        n += smem[threadIdx.y + 2][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y + 2][threadIdx.x + 1] == 1;
+        n += smem[threadIdx.y + 2][threadIdx.x + 2] == 1;
+    }
+
+    if (n > 0)
+    {
+        const int ind = atomic_inc(counter);
+        st[ind] = (ushort2)(x, y);
+    }
+#endif
 }
 
 __constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
