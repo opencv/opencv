@@ -102,7 +102,8 @@ float
 CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 {
     Mat prbs0 = cvarrToMat(_probs), prbs = prbs0, sample = cvarrToMat(_sample);
-    int cls = static_cast<int>(emObj.predict(sample, _probs ? _OutputArray(prbs) : cv::noArray())[1]);
+    int cls = static_cast<int>(emObj.predict(sample, _probs ? _OutputArray(prbs) :
+                                             (OutputArray)cv::noArray())[1]);
     if(_probs)
     {
         if( prbs.data != prbs0.data )
@@ -208,13 +209,16 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
     bool isOk = false;
     if( _params.start_step == EM::START_AUTO_STEP )
         isOk = emObj.train(_samples,
-                           logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                           logLikelihoods, _labels ? _OutputArray(*_labels) :
+                           (OutputArray)cv::noArray(), probs);
     else if( _params.start_step == EM::START_E_STEP )
         isOk = emObj.trainE(_samples, means, covshdrs, weights,
-                            logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                            logLikelihoods, _labels ? _OutputArray(*_labels) :
+                            (OutputArray)cv::noArray(), probs);
     else if( _params.start_step == EM::START_M_STEP )
         isOk = emObj.trainM(_samples, prbs,
-                            logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                            logLikelihoods, _labels ? _OutputArray(*_labels) :
+                            (OutputArray)cv::noArray(), probs);
     else
         CV_Error(CV_StsBadArg, "Bad start type of EM algorithm");
 
@@ -230,7 +234,9 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
 float
 CvEM::predict( const Mat& _sample, Mat* _probs ) const
 {
-    return static_cast<float>(emObj.predict(_sample, _probs ? _OutputArray(*_probs) : cv::noArray())[1]);
+    return static_cast<float>(emObj.predict(_sample, _probs ?
+                                            _OutputArray(*_probs) :
+                                            (OutputArray)cv::noArray())[1]);
 }
 
 int CvEM::getNClusters() const

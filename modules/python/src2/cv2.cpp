@@ -175,27 +175,27 @@ static PyObject* failmsgp(const char *fmt, ...)
   return 0;
 }
 
-static size_t REFCOUNT_OFFSET = (size_t)&(((PyObject*)0)->ob_refcnt) +
-    (0x12345678 != *(const size_t*)"\x78\x56\x34\x12\0\0\0\0\0")*sizeof(int);
-
-static inline PyObject* pyObjectFromRefcount(const int* refcount)
-{
-    return (PyObject*)((size_t)refcount - REFCOUNT_OFFSET);
-}
-
-static inline int* refcountFromPyObject(const PyObject* obj)
-{
-    return (int*)((size_t)obj + REFCOUNT_OFFSET);
-}
-
 class NumpyAllocator : public MatAllocator
 {
 public:
-    NumpyAllocator() {}
+    NumpyAllocator() { stdAllocator = Mat::getStdAllocator(); }
     ~NumpyAllocator() {}
 
-    void allocate(int dims, const int* sizes, int type, int*& refcount,
-                  uchar*& datastart, uchar*& data, size_t* step)
+    UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
+    {
+        UMatData* u = new UMatData(this);
+        u->refcount = 1;
+        u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
+        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
+        for( int i = 0; i < dims - 1; i++ )
+            step[i] = (size_t)_strides[i];
+        step[dims-1] = CV_ELEM_SIZE(type);
+        u->size = sizes[0]*step[0];
+        u->userdata = o;
+        return u;
+    }
+
+    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const
     {
         PyEnsureGIL gil;
 
@@ -203,10 +203,10 @@ public:
         int cn = CV_MAT_CN(type);
         const int f = (int)(sizeof(size_t)/8);
         int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
-                      depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
-                      depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
-                      depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
-        int i;
+        depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
+        depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
+        depth == CV_64F ? NPY_DOUBLE : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+        int i, dims = dims0;
         cv::AutoBuffer<npy_intp> _sizes(dims + 1);
         for( i = 0; i < dims; i++ )
             _sizes[i] = sizes[i];
@@ -215,22 +215,58 @@ public:
         PyObject* o = PyArray_SimpleNew(dims, _sizes, typenum);
         if(!o)
             CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
-        refcount = refcountFromPyObject(o);
-        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
-        for( i = 0; i < dims - (cn > 1); i++ )
-            step[i] = (size_t)_strides[i];
-        datastart = data = (uchar*)PyArray_DATA((PyArrayObject*) o);
+        return allocate(o, dims0, sizes, type, step);
     }
 
-    void deallocate(int* refcount, uchar*, uchar*)
+    bool allocate(UMatData* u, int accessFlags) const
     {
-        PyEnsureGIL gil;
-        if( !refcount )
-            return;
-        PyObject* o = pyObjectFromRefcount(refcount);
-        Py_INCREF(o);
-        Py_DECREF(o);
+        return stdAllocator->allocate(u, accessFlags);
     }
+
+    void deallocate(UMatData* u) const
+    {
+        if(u)
+        {
+            PyEnsureGIL gil;
+            PyObject* o = (PyObject*)u->userdata;
+            Py_DECREF(o);
+            delete u;
+        }
+    }
+
+    void map(UMatData*, int) const
+    {
+    }
+
+    void unmap(UMatData* u) const
+    {
+        if(u->urefcount == 0)
+            deallocate(u);
+    }
+
+    void download(UMatData* u, void* dstptr,
+                  int dims, const size_t sz[],
+                  const size_t srcofs[], const size_t srcstep[],
+                  const size_t dststep[]) const
+    {
+        stdAllocator->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
+    }
+
+    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+                const size_t dstofs[], const size_t dststep[],
+                const size_t srcstep[]) const
+    {
+        stdAllocator->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
+    }
+
+    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dstofs[], const size_t dststep[], bool sync) const
+    {
+        stdAllocator->copy(usrc, udst, dims, sz, srcofs, srcstep, dstofs, dststep, sync);
+    }
+
+    const MatAllocator* stdAllocator;
 };
 
 NumpyAllocator g_numpyAllocator;
@@ -400,16 +436,12 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     }
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
+    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
 
-    if( m.data )
+    if( !needcopy )
     {
-        m.refcount = refcountFromPyObject(o);
-        if (!needcopy)
-        {
-            m.addref(); // protect the original numpy array from deallocation
-                        // (since Mat destructor will decrement the reference counter)
-        }
-    };
+        Py_INCREF(o);
+    }
     m.allocator = &g_numpyAllocator;
 
     return true;
@@ -421,14 +453,15 @@ PyObject* pyopencv_from(const Mat& m)
     if( !m.data )
         Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
-    if(!p->refcount || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
         ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
-    p->addref();
-    return pyObjectFromRefcount(p->refcount);
+    PyObject* o = (PyObject*)p->u->userdata;
+    Py_INCREF(o);
+    return o;
 }
 
 template<>

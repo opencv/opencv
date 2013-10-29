@@ -564,7 +564,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 }
 
 void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
-                               OutputArray _flow0, double pyr_scale, int levels, int winsize,
+                               InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
