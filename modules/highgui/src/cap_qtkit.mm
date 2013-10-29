@@ -674,7 +674,7 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
         return;
     }
 
-    [mCaptureSession gotoEnd]; 
+    [mCaptureSession gotoEnd];
     endOfMovie = [mCaptureSession currentTime];
 
     [mCaptureSession gotoBeginning];
@@ -712,7 +712,7 @@ int CvCaptureFile::didStart() {
 bool CvCaptureFile::grabFrame() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     double t1 = getProperty(CV_CAP_PROP_POS_MSEC);
-    
+
     QTTime curTime;
     curTime = [mCaptureSession currentTime];
     bool isEnd=(QTTimeCompare(curTime,endOfMovie) == NSOrderedSame);
