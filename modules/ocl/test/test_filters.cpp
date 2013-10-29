@@ -30,7 +30,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -403,7 +403,7 @@ INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(0), // not used
                             Values(Size(0, 1), Size(1, 0)),
                             Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
@@ -432,7 +432,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(Size(0, 0)), // not used
                             Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE,
                                    (int)BORDER_REFLECT, (int)BORDER_WRAP, (int)BORDER_REFLECT_101),
-                            Values(false))); // TODO does not work with ROI
+                            Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),

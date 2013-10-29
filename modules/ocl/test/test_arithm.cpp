@@ -32,7 +32,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -60,6 +60,11 @@ using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
 using namespace std;
+
+static bool relativeError(double actual, double expected, double eps)
+{
+    return std::abs(actual - expected) / actual < eps;
+}
 
 //////////////////////////////// LUT /////////////////////////////////////////////////
 
@@ -181,9 +186,6 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         depth = GET_PARAM(0);
         cn = GET_PARAM(1);
         use_roi = GET_PARAM(2);
-
-        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
-                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
     void random_roi()
@@ -213,6 +215,9 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
         generateOclMat(gdst2_whole, gdst2_roi, dst2, roiSize, dst2Border);
         generateOclMat(gmask_whole, gmask_roi, mask, roiSize, maskBorder);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
     void Near(double threshold = 0.)
@@ -389,7 +394,7 @@ OCL_TEST_P(Mul, Scalar)
     {
         random_roi();
 
-        cv::multiply(val[0], src1_roi, dst1_roi);
+        cv::multiply(Scalar::all(val[0]), src1_roi, dst1_roi);
         cv::ocl::multiply(val[0], gsrc1_roi, gdst1_roi);
 
         Near(gdst1_roi.depth() >= CV_32F ? 1e-3 : 1);
@@ -1466,7 +1471,7 @@ OCL_TEST_P(Norm, NORM_L1)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1484,7 +1489,7 @@ OCL_TEST_P(Norm, NORM_L2)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 

@@ -45,7 +45,8 @@ static void download(const oclMat& d_mat, vector<uchar>& vec)
     d_mat.download(mat);
 }
 
-static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status, Scalar line_color = Scalar(0, 0, 255))
+static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<Point2f>& nextPts, const vector<uchar>& status,
+                       Scalar line_color = Scalar(0, 0, 255))
 {
     for (size_t i = 0; i < prevPts.size(); ++i)
     {
@@ -105,7 +106,7 @@ int main(int argc, const char* argv[])
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
         cout << "Available options:" << endl;
         cmd.printMessage();
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     bool defaultPicturesFail = false;
@@ -137,7 +138,7 @@ int main(int argc, const char* argv[])
         Mat frame0Gray, frame1Gray;
         Mat ptr0, ptr1;
 
-        if(vdofile == "")
+        if(vdofile.empty())
             capture.open( inputName );
         else
             capture.open(vdofile.c_str());
@@ -145,14 +146,12 @@ int main(int argc, const char* argv[])
         int c = inputName ;
         if(!capture.isOpened())
         {
-            if(vdofile == "")
+            if(vdofile.empty())
                 cout << "Capture from CAM " << c << " didn't work" << endl;
             else
                 cout << "Capture from file " << vdofile << " failed" <<endl;
             if (defaultPicturesFail)
-            {
-                return -1;
-            }
+                return EXIT_FAILURE;
             goto nocamera;
         }
 
@@ -212,12 +211,9 @@ int main(int argc, const char* argv[])
             }
 
             if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+                break;
         }
 
-        waitKey(0);
-
-_cleanup_:
         capture.release();
     }
     else
@@ -264,5 +260,5 @@ nocamera:
 
     waitKey();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
