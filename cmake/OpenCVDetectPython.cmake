@@ -12,7 +12,10 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
     )
   endforeach()
 endif()
+find_host_package(PythonInterp 2.7)
+if(NOT PYTHONINTERP_FOUND)
 find_host_package(PythonInterp "${MIN_VER_PYTHON}")
+endif()
 
 unset(HAVE_SPHINX CACHE)
 

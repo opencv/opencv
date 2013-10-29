@@ -52,127 +52,244 @@ namespace cv
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
+inline void _InputArray::init(int _flags, const void* _obj)
+{ flags = _flags; obj = (void*)_obj; }
+
+inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
+{ flags = _flags; obj = (void*)_obj; sz = _sz; }
+
+inline void* _InputArray::getObj() const { return obj; }
+
+inline _InputArray::_InputArray() { init(0, 0); }
+inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
+inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
+inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
+inline _InputArray::_InputArray(const UMat& m) { init(UMAT+ACCESS_READ, &m); }
+inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_READ, &vec); }
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
-    : flags(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type), obj((void*)&vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
-    : flags(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type), obj((void*)&vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
-    : flags(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type), obj((void*)&vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_READ, &vec); }
 
 template<typename _Tp, int m, int n> inline
 _InputArray::_InputArray(const Matx<_Tp, m, n>& mtx)
-    : flags(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type), obj((void*)&mtx), sz(n, m)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_READ, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const _Tp* vec, int n)
-    : flags(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type), obj((void*)vec), sz(n, 1)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_READ, vec, Size(n, 1)); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const Mat_<_Tp>& m)
-    : flags(FIXED_TYPE + MAT + DataType<_Tp>::type), obj((void*)&m)
-{}
+{ init(FIXED_TYPE + MAT + DataType<_Tp>::type + ACCESS_READ, &m); }
 
+inline _InputArray::_InputArray(const double& val)
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F + ACCESS_READ, &val, Size(1,1)); }
+
+inline _InputArray::_InputArray(const MatExpr& expr)
+{ init(FIXED_TYPE + FIXED_SIZE + EXPR + ACCESS_READ, &expr); }
+
+inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
+{ init(GPU_MAT + ACCESS_READ, &d_mat); }
+
+inline _InputArray::_InputArray(const ogl::Buffer& buf)
+{ init(OPENGL_BUFFER + ACCESS_READ, &buf); }
+
+inline _InputArray::_InputArray(const cuda::CudaMem& cuda_mem)
+{ init(CUDA_MEM + ACCESS_READ, &cuda_mem); }
+
+inline _InputArray::~_InputArray() {}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+inline _OutputArray::_OutputArray() { init(ACCESS_WRITE, 0); }
+inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags|ACCESS_WRITE, _obj); }
+inline _OutputArray::_OutputArray(Mat& m) { init(MAT+ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_WRITE, &vec); }
+inline _OutputArray::_OutputArray(UMat& m) { init(UMAT+ACCESS_WRITE, &m); }
+inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
-    : _InputArray(vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
-    : _InputArray(vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
-    : _InputArray(vec)
-{}
+{ init(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(Mat_<_Tp>& m)
-    : _InputArray(m)
-{}
+{ init(FIXED_TYPE + MAT + DataType<_Tp>::type + ACCESS_WRITE, &m); }
 
 template<typename _Tp, int m, int n> inline
 _OutputArray::_OutputArray(Matx<_Tp, m, n>& mtx)
-    : _InputArray(mtx)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_WRITE, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(_Tp* vec, int n)
-    : _InputArray(vec, n)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_WRITE, vec, Size(n, 1)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
-    : _InputArray(vec)
-{
-    flags |= FIXED_SIZE;
-}
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<std::vector<_Tp> >& vec)
-    : _InputArray(vec)
-{
-    flags |= FIXED_SIZE;
-}
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<Mat_<_Tp> >& vec)
-    : _InputArray(vec)
-{
-    flags |= FIXED_SIZE;
-}
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const Mat_<_Tp>& m)
-    : _InputArray(m)
-{
-    flags |= FIXED_SIZE;
-}
+{ init(FIXED_TYPE + FIXED_SIZE + MAT + DataType<_Tp>::type + ACCESS_WRITE, &m); }
 
 template<typename _Tp, int m, int n> inline
 _OutputArray::_OutputArray(const Matx<_Tp, m, n>& mtx)
-    : _InputArray(mtx)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_WRITE, &mtx, Size(n, m)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const _Tp* vec, int n)
-    : _InputArray(vec, n)
-{}
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_WRITE, vec, Size(n, 1)); }
 
+inline _OutputArray::_OutputArray(cuda::GpuMat& d_mat)
+{ init(GPU_MAT + ACCESS_WRITE, &d_mat); }
 
+inline _OutputArray::_OutputArray(ogl::Buffer& buf)
+{ init(OPENGL_BUFFER + ACCESS_WRITE, &buf); }
 
-//////////////////////////////// Mat ////////////////////////////////
+inline _OutputArray::_OutputArray(cuda::CudaMem& cuda_mem)
+{ init(CUDA_MEM + ACCESS_WRITE, &cuda_mem); }
+
+inline _OutputArray::_OutputArray(const Mat& m)
+{ init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_WRITE, &m); }
+
+inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
+{ init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
+
+inline _OutputArray::_OutputArray(const cuda::GpuMat& d_mat)
+{ init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_WRITE, &d_mat); }
+
+inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
+{ init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_WRITE, &buf); }
+
+inline _OutputArray::_OutputArray(const cuda::CudaMem& cuda_mem)
+{ init(FIXED_TYPE + FIXED_SIZE + CUDA_MEM + ACCESS_WRITE, &cuda_mem); }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+inline _InputOutputArray::_InputOutputArray() { init(ACCESS_RW, 0); }
+inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags|ACCESS_RW, _obj); }
+inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT+ACCESS_RW, &m); }
+inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
+inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT+ACCESS_RW, &m); }
+inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
+{ init(FIXED_TYPE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(std::vector<Mat_<_Tp> >& vec)
+{ init(FIXED_TYPE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(Mat_<_Tp>& m)
+{ init(FIXED_TYPE + MAT + DataType<_Tp>::type + ACCESS_RW, &m); }
+
+template<typename _Tp, int m, int n> inline
+_InputOutputArray::_InputOutputArray(Matx<_Tp, m, n>& mtx)
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_RW, &mtx, Size(n, m)); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(_Tp* vec, int n)
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_RW, vec, Size(n, 1)); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp> >& vec)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(const std::vector<Mat_<_Tp> >& vec)
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + DataType<_Tp>::type + ACCESS_RW, &vec); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(const Mat_<_Tp>& m)
+{ init(FIXED_TYPE + FIXED_SIZE + MAT + DataType<_Tp>::type + ACCESS_RW, &m); }
+
+template<typename _Tp, int m, int n> inline
+_InputOutputArray::_InputOutputArray(const Matx<_Tp, m, n>& mtx)
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_RW, &mtx, Size(n, m)); }
+
+template<typename _Tp> inline
+_InputOutputArray::_InputOutputArray(const _Tp* vec, int n)
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + DataType<_Tp>::type + ACCESS_RW, vec, Size(n, 1)); }
+
+inline _InputOutputArray::_InputOutputArray(cuda::GpuMat& d_mat)
+{ init(GPU_MAT + ACCESS_RW, &d_mat); }
+
+inline _InputOutputArray::_InputOutputArray(ogl::Buffer& buf)
+{ init(OPENGL_BUFFER + ACCESS_RW, &buf); }
+
+inline _InputOutputArray::_InputOutputArray(cuda::CudaMem& cuda_mem)
+{ init(CUDA_MEM + ACCESS_RW, &cuda_mem); }
+
+inline _InputOutputArray::_InputOutputArray(const Mat& m)
+{ init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_RW, &m); }
+
+inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
+{ init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
+
+inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
+{ init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_RW, &d_mat); }
+
+inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
+{ init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_RW, &buf); }
+
+inline _InputOutputArray::_InputOutputArray(const cuda::CudaMem& cuda_mem)
+{ init(FIXED_TYPE + FIXED_SIZE + CUDA_MEM + ACCESS_RW, &cuda_mem); }
+
+//////////////////////////////////////////// Mat //////////////////////////////////////////
 
 inline
 Mat::Mat()
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {}
 
 inline
 Mat::Mat(int _rows, int _cols, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_rows, _cols, _type);
 }
 
 inline
 Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_rows, _cols, _type);
     *this = _s;
@@ -180,16 +297,16 @@ Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(Size _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create( _sz.height, _sz.width, _type );
 }
 
 inline
 Mat::Mat(Size _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_sz.height, _sz.width, _type);
     *this = _s;
@@ -197,16 +314,16 @@ Mat::Mat(Size _sz, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(int _dims, const int* _sz, int _type)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_dims, _sz, _type);
 }
 
 inline
 Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     create(_dims, _sz, _type);
     *this = _s;
@@ -214,12 +331,12 @@ Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 
 inline
 Mat::Mat(const Mat& m)
-    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data), refcount(m.refcount),
+    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
-      size(&rows)
+      u(m.u), size(&rows)
 {
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
@@ -234,8 +351,8 @@ Mat::Mat(const Mat& m)
 inline
 Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_rows), cols(_cols),
-      data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0), datalimit(0),
-      allocator(0), size(&rows)
+      data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
+      allocator(0), u(0), size(&rows)
 {
     size_t esz = CV_ELEM_SIZE(_type);
     size_t minstep = cols * esz;
@@ -259,8 +376,8 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
 inline
 Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_sz.height), cols(_sz.width),
-      data((uchar*)_data), refcount(0), datastart((uchar*)_data), dataend(0), datalimit(0),
-      allocator(0), size(&rows)
+      data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
+      allocator(0), u(0), size(&rows)
 {
     size_t esz = CV_ELEM_SIZE(_type);
     size_t minstep = cols*esz;
@@ -284,7 +401,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 template<typename _Tp> inline
 Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-      cols(1), data(0), refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      cols(1), data(0), datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if(vec.empty())
         return;
@@ -301,7 +418,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
 template<typename _Tp, int n> inline
 Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(n), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -317,7 +434,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -333,7 +450,7 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(2), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -352,7 +469,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     if( !copyData )
     {
@@ -372,7 +489,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
     : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
-      refcount(0), datastart(0), dataend(0), allocator(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
     *this = commaInitializer.operator Mat_<_Tp>();
 }
@@ -390,8 +507,8 @@ Mat& Mat::operator = (const Mat& m)
 {
     if( this != &m )
     {
-        if( m.refcount )
-            CV_XADD(m.refcount, 1);
+        if( m.u )
+            CV_XADD(&m.u->refcount, 1);
         release();
         flags = m.flags;
         if( dims <= 2 && m.dims <= 2 )
@@ -408,8 +525,8 @@ Mat& Mat::operator = (const Mat& m)
         datastart = m.datastart;
         dataend = m.dataend;
         datalimit = m.datalimit;
-        refcount = m.refcount;
         allocator = m.allocator;
+        u = m.u;
     }
     return *this;
 }
@@ -486,17 +603,17 @@ void Mat::create(Size _sz, int _type)
 inline
 void Mat::addref()
 {
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
 }
 
 inline void Mat::release()
 {
-    if( refcount && CV_XADD(refcount, -1) == 1 )
+    if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
     data = datastart = dataend = datalimit = 0;
     size.p[0] = 0;
-    refcount = 0;
+    u = 0;
 }
 
 inline
@@ -913,41 +1030,39 @@ void Mat::push_back(const Mat_<_Tp>& m)
     push_back((const Mat&)m);
 }
 
-
-
-///////////////////////////// Mat::MSize ////////////////////////////
+///////////////////////////// MatSize ////////////////////////////
 
 inline
-Mat::MSize::MSize(int* _p)
+MatSize::MatSize(int* _p)
     : p(_p) {}
 
 inline
-Size Mat::MSize::operator()() const
+Size MatSize::operator()() const
 {
     CV_DbgAssert(p[-1] <= 2);
     return Size(p[1], p[0]);
 }
 
 inline
-const int& Mat::MSize::operator[](int i) const
+const int& MatSize::operator[](int i) const
 {
     return p[i];
 }
 
 inline
-int& Mat::MSize::operator[](int i)
+int& MatSize::operator[](int i)
 {
     return p[i];
 }
 
 inline
-Mat::MSize::operator const int*() const
+MatSize::operator const int*() const
 {
     return p;
 }
 
 inline
-bool Mat::MSize::operator == (const MSize& sz) const
+bool MatSize::operator == (const MatSize& sz) const
 {
     int d = p[-1];
     int dsz = sz.p[-1];
@@ -963,46 +1078,46 @@ bool Mat::MSize::operator == (const MSize& sz) const
 }
 
 inline
-bool Mat::MSize::operator != (const MSize& sz) const
+bool MatSize::operator != (const MatSize& sz) const
 {
     return !(*this == sz);
 }
 
 
 
-///////////////////////////// Mat::MStep ////////////////////////////
+///////////////////////////// MatStep ////////////////////////////
 
 inline
-Mat::MStep::MStep()
+MatStep::MatStep()
 {
     p = buf; p[0] = p[1] = 0;
 }
 
 inline
-Mat::MStep::MStep(size_t s)
+MatStep::MatStep(size_t s)
 {
     p = buf; p[0] = s; p[1] = 0;
 }
 
 inline
-const size_t& Mat::MStep::operator[](int i) const
+const size_t& MatStep::operator[](int i) const
 {
     return p[i];
 }
 
 inline
-size_t& Mat::MStep::operator[](int i)
+size_t& MatStep::operator[](int i)
 {
     return p[i];
 }
 
-inline Mat::MStep::operator size_t() const
+inline MatStep::operator size_t() const
 {
     CV_DbgAssert( p == buf );
     return buf[0];
 }
 
-inline Mat::MStep& Mat::MStep::operator = (size_t s)
+inline MatStep& MatStep::operator = (size_t s)
 {
     CV_DbgAssert( p == buf );
     buf[0] = s;
@@ -1436,43 +1551,6 @@ MatIterator_<_Tp> Mat_<_Tp>::end()
 {
     return Mat::end<_Tp>();
 }
-
-
-/*template<typename T1, typename T2, typename Op> inline
-void process( const Mat_<T1>& m1, Mat_<T2>& m2, Op op )
-{
-    int y, x, rows = m1.rows, cols = m1.cols;
-
-    CV_DbgAssert( m1.size() == m2.size() );
-
-    for( y = 0; y < rows; y++ )
-    {
-        const T1* src = m1[y];
-        T2* dst = m2[y];
-
-        for( x = 0; x < cols; x++ )
-            dst[x] = op(src[x]);
-    }
-}
-
-template<typename T1, typename T2, typename T3, typename Op> inline
-void process( const Mat_<T1>& m1, const Mat_<T2>& m2, Mat_<T3>& m3, Op op )
-{
-    int y, x, rows = m1.rows, cols = m1.cols;
-
-    CV_DbgAssert( m1.size() == m2.size() );
-
-    for( y = 0; y < rows; y++ )
-    {
-        const T1* src1 = m1[y];
-        const T2* src2 = m2[y];
-        T3* dst = m3[y];
-
-        for( x = 0; x < cols; x++ )
-            dst[x] = op( src1[x], src2[x] );
-    }
-}*/
-
 
 
 ///////////////////////////// SparseMat /////////////////////////////
@@ -2955,6 +3033,320 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
     b.op->augAssignDivide(b, (Mat&)a);
     return a;
 }
+
+
+//////////////////////////////// UMat ////////////////////////////////
+
+inline
+UMat::UMat()
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{}
+
+inline
+UMat::UMat(int _rows, int _cols, int _type)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create(_rows, _cols, _type);
+}
+
+inline
+UMat::UMat(int _rows, int _cols, int _type, const Scalar& _s)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create(_rows, _cols, _type);
+    *this = _s;
+}
+
+inline
+UMat::UMat(Size _sz, int _type)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create( _sz.height, _sz.width, _type );
+}
+
+inline
+UMat::UMat(Size _sz, int _type, const Scalar& _s)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create(_sz.height, _sz.width, _type);
+    *this = _s;
+}
+
+inline
+UMat::UMat(int _dims, const int* _sz, int _type)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create(_dims, _sz, _type);
+}
+
+inline
+UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+{
+    create(_dims, _sz, _type);
+    *this = _s;
+}
+
+inline
+UMat::UMat(const UMat& m)
+: flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
+u(m.u), offset(m.offset), size(&rows)
+{
+    if( u )
+        CV_XADD(&(u->urefcount), 1);
+    if( m.dims <= 2 )
+    {
+        step[0] = m.step[0]; step[1] = m.step[1];
+    }
+    else
+    {
+        dims = 0;
+        copySize(m);
+    }
+}
+
+
+template<typename _Tp> inline
+UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
+: flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+cols(1), allocator(0), u(0), offset(0), size(&rows)
+{
+    if(vec.empty())
+        return;
+    if( !copyData )
+    {
+        // !!!TODO!!!
+        CV_Error(Error::StsNotImplemented, "");
+    }
+    else
+        Mat((int)vec.size(), 1, DataType<_Tp>::type, (uchar*)&vec[0]).copyTo(*this);
+}
+
+
+inline
+UMat::~UMat()
+{
+    release();
+    if( step.p != step.buf )
+        fastFree(step.p);
+}
+
+inline
+UMat& UMat::operator = (const UMat& m)
+{
+    if( this != &m )
+    {
+        if( m.u )
+            CV_XADD(&(m.u->urefcount), 1);
+        release();
+        flags = m.flags;
+        if( dims <= 2 && m.dims <= 2 )
+        {
+            dims = m.dims;
+            rows = m.rows;
+            cols = m.cols;
+            step[0] = m.step[0];
+            step[1] = m.step[1];
+        }
+        else
+            copySize(m);
+        allocator = m.allocator;
+        u = m.u;
+        offset = m.offset;
+    }
+    return *this;
+}
+
+inline
+UMat UMat::row(int y) const
+{
+    return UMat(*this, Range(y, y + 1), Range::all());
+}
+
+inline
+UMat UMat::col(int x) const
+{
+    return UMat(*this, Range::all(), Range(x, x + 1));
+}
+
+inline
+UMat UMat::rowRange(int startrow, int endrow) const
+{
+    return UMat(*this, Range(startrow, endrow), Range::all());
+}
+
+inline
+UMat UMat::rowRange(const Range& r) const
+{
+    return UMat(*this, r, Range::all());
+}
+
+inline
+UMat UMat::colRange(int startcol, int endcol) const
+{
+    return UMat(*this, Range::all(), Range(startcol, endcol));
+}
+
+inline
+UMat UMat::colRange(const Range& r) const
+{
+    return UMat(*this, Range::all(), r);
+}
+
+inline
+UMat UMat::clone() const
+{
+    UMat m;
+    copyTo(m);
+    return m;
+}
+
+inline
+void UMat::assignTo( UMat& m, int _type ) const
+{
+    if( _type < 0 )
+        m = *this;
+    else
+        convertTo(m, _type);
+}
+
+inline
+void UMat::create(int _rows, int _cols, int _type)
+{
+    _type &= TYPE_MASK;
+    if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && u )
+        return;
+    int sz[] = {_rows, _cols};
+    create(2, sz, _type);
+}
+
+inline
+void UMat::create(Size _sz, int _type)
+{
+    create(_sz.height, _sz.width, _type);
+}
+
+inline
+void UMat::addref()
+{
+    if( u )
+        CV_XADD(&(u->urefcount), 1);
+}
+
+inline void UMat::release()
+{
+    if( u && CV_XADD(&(u->urefcount), -1) == 1 )
+        deallocate();
+    size.p[0] = 0;
+    u = 0;
+}
+
+inline
+UMat UMat::operator()( Range _rowRange, Range _colRange ) const
+{
+    return UMat(*this, _rowRange, _colRange);
+}
+
+inline
+UMat UMat::operator()( const Rect& roi ) const
+{
+    return UMat(*this, roi);
+}
+
+inline
+UMat UMat::operator()(const Range* ranges) const
+{
+    return UMat(*this, ranges);
+}
+
+inline
+bool UMat::isContinuous() const
+{
+    return (flags & CONTINUOUS_FLAG) != 0;
+}
+
+inline
+bool UMat::isSubmatrix() const
+{
+    return (flags & SUBMATRIX_FLAG) != 0;
+}
+
+inline
+size_t UMat::elemSize() const
+{
+    return dims > 0 ? step.p[dims - 1] : 0;
+}
+
+inline
+size_t UMat::elemSize1() const
+{
+    return CV_ELEM_SIZE1(flags);
+}
+
+inline
+int UMat::type() const
+{
+    return CV_MAT_TYPE(flags);
+}
+
+inline
+int UMat::depth() const
+{
+    return CV_MAT_DEPTH(flags);
+}
+
+inline
+int UMat::channels() const
+{
+    return CV_MAT_CN(flags);
+}
+
+inline
+size_t UMat::step1(int i) const
+{
+    return step.p[i] / elemSize1();
+}
+
+inline
+bool UMat::empty() const
+{
+    return u == 0 || total() == 0;
+}
+
+inline
+size_t UMat::total() const
+{
+    if( dims <= 2 )
+        return (size_t)rows * cols;
+    size_t p = 1;
+    for( int i = 0; i < dims; i++ )
+        p *= size[i];
+    return p;
+}
+
+inline bool UMatData::hostCopyObsolete() const { return (flags & HOST_COPY_OBSOLETE) != 0; }
+inline bool UMatData::deviceCopyObsolete() const { return (flags & DEVICE_COPY_OBSOLETE) != 0; }
+inline bool UMatData::copyOnMap() const { return (flags & COPY_ON_MAP) != 0; }
+inline bool UMatData::tempUMat() const { return (flags & TEMP_UMAT) != 0; }
+inline bool UMatData::tempCopiedUMat() const { return (flags & TEMP_COPIED_UMAT) == TEMP_COPIED_UMAT; }
+
+inline void UMatData::markHostCopyObsolete(bool flag)
+{
+    if(flag)
+        flags |= HOST_COPY_OBSOLETE;
+    else
+        flags &= ~HOST_COPY_OBSOLETE;
+}
+inline void UMatData::markDeviceCopyObsolete(bool flag)
+{
+    if(flag)
+        flags |= DEVICE_COPY_OBSOLETE;
+    else
+        flags &= ~DEVICE_COPY_OBSOLETE;
+}
+
+inline UMatDataAutoLock::UMatDataAutoLock(UMatData* _u) : u(_u) { u->lock(); }
+inline UMatDataAutoLock::~UMatDataAutoLock() { u->unlock(); }
 
 } //cv
 
