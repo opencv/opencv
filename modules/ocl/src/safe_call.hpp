@@ -66,7 +66,7 @@ namespace cv
 
         static inline void ___openCLSafeCall(int err, const char *file, const int line, const char *func = "")
         {
-            if( CL_SUCCESS != err)
+            if (CL_SUCCESS != err)
                 cv::ocl::error(getOpenCLErrorString(err), file, line, func);
         }
     }
