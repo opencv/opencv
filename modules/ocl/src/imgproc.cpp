@@ -939,6 +939,7 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
             args.push_back( make_pair( sizeof(cl_float) , (void *)&k));
+
             openCLExecuteKernel(dst.clCxt, source, kernelName, gt, lt, args, -1, -1, buildOptions.c_str());
         }
 
@@ -954,15 +955,15 @@ namespace cv
         {
             if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_OpenCLDoubleNotSupported, "Select device doesn't support double");
+                CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
                 return;
             }
 
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE
                       || borderType == cv::BORDER_REFLECT);
+
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
-            dst.create(src.size(), CV_32F);
+            dst.create(src.size(), CV_32FC1);
             corner_ocl(&imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
         }
 
@@ -976,12 +977,13 @@ namespace cv
         {
             if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(CV_OpenCLDoubleNotSupported, "select device don't support double");
+                CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
                 return;
             }
 
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 ||
+                      borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
 
