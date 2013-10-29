@@ -474,10 +474,14 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
 
     ostringstream stream;
     stream << "-D T=" << typeMap[src.depth()] << channelMap[src.channels()];
-    stream << " -D MAX_VAL=" << (WT)numeric_limits<T>::max();
-    stream << " -D MIN_VAL=" << (numeric_limits<T>::is_integer ?
-                  (WT)numeric_limits<T>::min() : -(WT)(std::numeric_limits<T>::max()));
-    string buildOptions = stream.str();
+    if (numeric_limits<T>::is_integer)
+    {
+        stream << " -D MAX_VAL=" << (WT)numeric_limits<T>::max();
+        stream << " -D MIN_VAL=" << (WT)numeric_limits<T>::min();
+    }
+    else
+        stream << " -D DEPTH_" << src.depth();
+    std::string buildOptions = stream.str();
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
