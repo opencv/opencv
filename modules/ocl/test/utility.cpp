@@ -230,4 +230,21 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     return final_test_result;
 }
 
+void showDiff(const Mat& gold, const Mat& actual, double eps)
+{
+    Mat diff;
+    absdiff(gold, actual, diff);
+    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
+
+    namedWindow("gold", WINDOW_NORMAL);
+    namedWindow("actual", WINDOW_NORMAL);
+    namedWindow("diff", WINDOW_NORMAL);
+
+    imshow("gold", gold);
+    imshow("actual", actual);
+    imshow("diff", diff);
+
+    waitKey();
+}
+
 } // namespace cvtest

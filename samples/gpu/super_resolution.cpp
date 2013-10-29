@@ -222,7 +222,11 @@ int main(int argc, const char* argv[])
 
         if(useOcl)
         {
-            MEASURE_TIME(superRes->nextFrame(result_));
+            MEASURE_TIME(
+            {
+                superRes->nextFrame(result_);
+                ocl::finish();
+            });
         }
         else
 #endif

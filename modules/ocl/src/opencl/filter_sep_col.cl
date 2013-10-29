@@ -47,36 +47,6 @@
 #define READ_TIMES_ROW ((2*(RADIUS+LSIZE0)-1)/LSIZE0)
 #endif
 
-#ifdef BORDER_CONSTANT
-//BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii
-#define ELEM(i,l_edge,r_edge,elem1,elem2) (i)<(l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
-#endif
-
-#ifdef BORDER_REPLICATE
-//BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
-#define ADDR_L(i,l_edge,r_edge)  (i) < (l_edge) ? (l_edge) : (i)
-#define ADDR_R(i,r_edge,addr)   (i) >= (r_edge) ? (r_edge)-1 : (addr)
-#endif
-
-#ifdef BORDER_REFLECT
-//BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
-#define ADDR_L(i,l_edge,r_edge)  (i) < (l_edge) ? -(i)-1 : (i)
-#define ADDR_R(i,r_edge,addr) (i) >= (r_edge) ? -(i)-1+((r_edge)<<1) : (addr)
-#endif
-
-#ifdef BORDER_REFLECT_101
-//BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
-#define ADDR_L(i,l_edge,r_edge)  (i) < (l_edge) ? -(i) : (i)
-#define ADDR_R(i,r_edge,addr) (i) >= (r_edge) ? -(i)-2+((r_edge)<<1) : (addr)
-#endif
-
-#ifdef BORDER_WRAP
-//BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
-#define ADDR_L(i,l_edge,r_edge)  (i) < (l_edge) ? (i)+(r_edge) : (i)
-#define ADDR_R(i,r_edge,addr)   (i) >= (r_edge) ?   (i)-(r_edge) : (addr)
-#endif
-
-
 /**********************************************************************************
 These kernels are written for separable filters such as Sobel, Scharr, GaussianBlur.
 Now(6/29/2011) the kernels only support 8U data type and the anchor of the convovle
@@ -107,15 +77,16 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void col_filter
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+
     int l_x = get_local_id(0);
     int l_y = get_local_id(1);
-    int start_addr = mad24(y,src_step_in_pixel,x);
-    int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
-    int i;
-    GENTYPE_SRC sum;
-    GENTYPE_SRC temp[READ_TIMES_COL];
 
-    __local GENTYPE_SRC LDS_DAT[LSIZE1*READ_TIMES_COL][LSIZE0+1];
+    int start_addr = mad24(y, src_step_in_pixel, x);
+    int end_addr = mad24(src_whole_rows - 1, src_step_in_pixel, src_whole_cols);
+
+    int i;
+    GENTYPE_SRC sum, temp[READ_TIMES_COL];
+    __local GENTYPE_SRC LDS_DAT[LSIZE1 * READ_TIMES_COL][LSIZE0 + 1];
 
     //read pixels from src
     for(i = 0;i<READ_TIMES_COL;i++)

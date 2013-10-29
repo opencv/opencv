@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -61,12 +61,16 @@ namespace cv { namespace ocl {
 cv::Mutex ProgramCache::mutexFiles;
 cv::Mutex ProgramCache::mutexCache;
 
-std::auto_ptr<ProgramCache> _programCache;
+ProgramCache* _programCache = NULL;
 ProgramCache* ProgramCache::getProgramCache()
 {
-    if (NULL == _programCache.get())
-        _programCache.reset(new ProgramCache());
-    return _programCache.get();
+    if (NULL == _programCache)
+    {
+        cv::AutoLock lock(getInitializationMutex());
+        if (NULL == _programCache)
+            _programCache = new ProgramCache();
+    }
+    return _programCache;
 }
 
 ProgramCache::ProgramCache()
@@ -78,6 +82,12 @@ ProgramCache::ProgramCache()
 ProgramCache::~ProgramCache()
 {
     releaseProgram();
+    if (this == _programCache)
+    {
+        cv::AutoLock lock(getInitializationMutex());
+        if (this == _programCache)
+            _programCache = NULL;
+    }
 }
 
 cl_program ProgramCache::progLookup(const String& srcsign)
@@ -420,22 +430,17 @@ struct ProgramFileCache
         {
             if(status == CL_BUILD_PROGRAM_FAILURE)
             {
-                cl_int logStatus;
-                char *buildLog = NULL;
                 size_t buildLogSize = 0;
-                logStatus = clGetProgramBuildInfo(program,
-                        getClDeviceID(ctx), CL_PROGRAM_BUILD_LOG, buildLogSize,
-                        buildLog, &buildLogSize);
-                if(logStatus != CL_SUCCESS)
-                    std::cout << "Failed to build the program and get the build info." << std::endl;
-                buildLog = new char[buildLogSize];
-                CV_DbgAssert(!!buildLog);
-                memset(buildLog, 0, buildLogSize);
                 openCLSafeCall(clGetProgramBuildInfo(program, getClDeviceID(ctx),
-                                                     CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
-                std::cout << "\nBUILD LOG: " << options << "\n";
-                std::cout << buildLog << std::endl;
-                delete [] buildLog;
+                        CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize));
+                std::vector<char> buildLog; buildLog.resize(buildLogSize);
+                memset(&buildLog[0], 0, buildLogSize);
+                openCLSafeCall(clGetProgramBuildInfo(program, getClDeviceID(ctx),
+                        CL_PROGRAM_BUILD_LOG, buildLogSize, &buildLog[0], NULL));
+                std::cout << std::endl << "BUILD LOG: "
+                        << (source->name ? source->name : "dynamic program") << ": "
+                        << options << "\n";
+                std::cout << &buildLog[0] << std::endl;
             }
             openCLVerifyCall(status);
         }
