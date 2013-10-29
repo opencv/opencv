@@ -76,14 +76,15 @@ enum { MORPH_RECT    = 0,
      };
 
 //! interpolation algorithm
-enum { INTER_NEAREST    = 0, //!< nearest neighbor interpolation
-       INTER_LINEAR     = 1, //!< bilinear interpolation
-       INTER_CUBIC      = 2, //!< bicubic interpolation
-       INTER_AREA       = 3, //!< area-based (or super) interpolation
-       INTER_LANCZOS4   = 4, //!< Lanczos interpolation over 8x8 neighborhood
+enum { INTER_NEAREST        = 0, //!< nearest neighbor interpolation
+       INTER_LINEAR         = 1, //!< bilinear interpolation
+       INTER_CUBIC          = 2, //!< bicubic interpolation
+       INTER_AREA           = 3, //!< area-based (or super) interpolation
+       INTER_LANCZOS4       = 4, //!< Lanczos interpolation over 8x8 neighborhood
 
-       INTER_MAX        = 7, //!< mask for interpolation codes
-       WARP_INVERSE_MAP = 16
+       INTER_MAX            = 7, //!< mask for interpolation codes
+       WARP_FILL_OUTLIERS   = 8,
+       WARP_INVERSE_MAP     = 16
      };
 
 enum { INTER_BITS      = 5,
@@ -1226,6 +1227,14 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 //! extracts rectangle from the image at sub-pixel location
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
+
+//! computes the log polar transform
+CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
+                            Point2f center, double M, int flags );
+
+//! computes the linear polar transform
+CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
+                               Point2f center, double maxRadius, int flags );
 
 //! computes the integral image
 CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
