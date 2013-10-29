@@ -56,9 +56,15 @@
 // Python3 strings are unicode, these defines mimic the Python2 functionality.
 #define PyString_Check PyUnicode_Check
 #define PyString_FromString PyUnicode_FromString
-#define PyString_AsString PyUnicode_AsUTF8
+#define PyString_AsString PyUnicode_AsUTF8  // Only available in Python 3.3+
 #define PyString_FromStringAndSize PyUnicode_FromStringAndSize
 #define PyString_Size PyUnicode_GET_SIZE
+
+#else
+
+// Support use of PyBytes in Python 2
+#include <bytesobject.h>
+
 #endif
 
 #endif // END HEADER GUARD

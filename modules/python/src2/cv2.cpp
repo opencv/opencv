@@ -646,10 +646,16 @@ bool pyopencv_to(PyObject* obj, String& value, const char* name)
     (void)name;
     if(!obj || obj == Py_None)
         return true;
-    char* str = PyString_AsString(obj);
-    if(!str)
+    PyObject *bytes = PyUnicode_AsUTF8String(obj);
+    if(!bytes)
         return false;
+    char* str = PyBytes_AsString(bytes);
+    if(!str) {
+        Py_DECREF(bytes);
+        return false;
+    }
     value = String(str);
+    Py_DECREF(bytes);
     return true;
 }
 
@@ -1081,11 +1087,28 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
             PyObject* item = PyList_GET_ITEM(values, i);
             if( !PyString_Check(key) )
                 break;
-            String k = PyString_AsString(key);
+            PyObject *bytes = PyUnicode_AsUTF8String(key);
+            if( !bytes )
+                break;
+            char *str = PyBytes_AsString(key);
+            if ( !str ) {
+                Py_DECREF(bytes);
+                break;
+            }
+            String k = str;
+            Py_DECREF(bytes);
             if( PyString_Check(item) )
             {
-                const char* value = PyString_AsString(item);
-                p.setString(k, value);
+                bytes = PyUnicode_AsUTF8String(key);
+                if( !bytes )
+                    break;
+                str = PyBytes_AsString(item);
+                if ( !str ) {
+                    Py_DECREF(bytes);
+                    break;
+                }
+                p.setString(k, str);
+                Py_DECREF(bytes);
             }
             else if( !!PyBool_Check(item) )
                 p.setBool(k, item == Py_True);
@@ -1246,7 +1269,16 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 static int convert_to_char(PyObject *o, char *dst, const char *name = "no_name")
 {
   if (PyString_Check(o) && PyString_Size(o) == 1) {
-    *dst = PyString_AsString(o)[0];
+    PyObject *bytes = PyUnicode_AsUTF8String(o);
+    if (!bytes)
+      return 0; // Exception already raised
+    char *str = PyBytes_AsString(bytes);
+    if (!str) {
+      Py_DECREF(bytes);
+      return 0; // Exception already raised
+    }
+    *dst = *str;
+    Py_DECREF(bytes);
     return 1;
   } else {
     (*dst) = 0;
