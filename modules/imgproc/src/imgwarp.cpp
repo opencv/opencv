@@ -4327,6 +4327,14 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     cvRemap( src, dst, mapx, mapy, flags, cvScalarAll(0) );
 }
 
+void cv::logPolar( InputArray _src, OutputArray _dst,
+                   Point2f center, double M, int flags )
+{
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvLogPolar( &c_src, &c_dst, center, M, flags );
+}
 
 /****************************************************************************************
                                    Linear-Polar Transform
@@ -4422,5 +4430,13 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     cvRemap( src, dst, mapx, mapy, flags, cvScalarAll(0) );
 }
 
+void cv::linearPolar( InputArray _src, OutputArray _dst,
+                      Point2f center, double maxRadius, int flags )
+{
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvLinearPolar( &c_src, &c_dst, center, maxRadius, flags );
+}
 
 /* End of file. */
