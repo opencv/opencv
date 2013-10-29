@@ -15,19 +15,18 @@ using namespace cv::ocl;
 
 int main(int argc, const char** argv)
 {
-
     cv::CommandLineParser cmd(argc, argv,
         "{ c camera | false       | use camera }"
         "{ f file   | 768x576.avi | input video file }"
         "{ m method | mog         | method (mog, mog2) }"
         "{ h help   | false       | print help message }");
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage : bgfg_segm [options]" << endl;
         cout << "Available options:" << endl;
         cmd.printMessage();
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     bool useCamera = cmd.get<bool>("camera");
@@ -37,13 +36,12 @@ int main(int argc, const char** argv)
     if (method != "mog" && method != "mog2")
     {
         cerr << "Incorrect method" << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
 
     int m = method == "mog" ? M_MOG : M_MOG2;
 
     VideoCapture cap;
-
     if (useCamera)
         cap.open(0);
     else
@@ -51,8 +49,8 @@ int main(int argc, const char** argv)
 
     if (!cap.isOpened())
     {
-        cerr << "can not open camera or video file" << endl;
-        return -1;
+        cout << "can not open camera or video file" << endl;
+        return EXIT_FAILURE;
     }
 
     Mat frame;
@@ -63,15 +61,11 @@ int main(int argc, const char** argv)
     cv::ocl::MOG mog;
     cv::ocl::MOG2 mog2;
 
-    oclMat d_fgmask;
-    oclMat d_fgimg;
-    oclMat d_bgimg;
+    oclMat d_fgmask, d_fgimg, d_bgimg;
 
     d_fgimg.create(d_frame.size(), d_frame.type());
 
-    Mat fgmask;
-    Mat fgimg;
-    Mat bgimg;
+    Mat fgmask, fgimg, bgimg;
 
     switch (m)
     {
@@ -84,7 +78,7 @@ int main(int argc, const char** argv)
         break;
     }
 
-    for(;;)
+    for (;;)
     {
         cap >> frame;
         if (frame.empty())
@@ -124,10 +118,9 @@ int main(int argc, const char** argv)
         if (!bgimg.empty())
             imshow("mean background image", bgimg);
 
-        int key = waitKey(30);
-        if (key == 27)
+        if (27 == waitKey(30))
             break;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

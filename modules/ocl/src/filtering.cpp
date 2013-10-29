@@ -29,7 +29,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -1059,74 +1059,39 @@ template <> struct index_and_sizeof<float>
 template <typename T>
 void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel, int ksize, int anchor, int bordertype)
 {
-    Context *clCxt = src.clCxt;
+    CV_Assert(bordertype <= BORDER_REFLECT_101);
+    CV_Assert(ksize == (anchor << 1) + 1);
     int channels = src.oclchannels();
 
-    size_t localThreads[3] = {16, 16, 1};
-    String kernelName = "row_filter";
+    size_t localThreads[3] = { 16, 16, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
-    char btype[30];
-
-    switch (bordertype)
-    {
-    case 0:
-        sprintf(btype, "BORDER_CONSTANT");
-        break;
-    case 1:
-        sprintf(btype, "BORDER_REPLICATE");
-        break;
-    case 2:
-        sprintf(btype, "BORDER_REFLECT");
-        break;
-    case 3:
-        sprintf(btype, "BORDER_WRAP");
-        break;
-    case 4:
-        sprintf(btype, "BORDER_REFLECT_101");
-        break;
-    }
-
-    char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s", anchor, (int)localThreads[0], (int)localThreads[1], channels, btype);
-
-    size_t globalThreads[3];
-    globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
-    globalThreads[2] = (1 + localThreads[2] - 1) / localThreads[2] * localThreads[2];
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
+    std::string buildOptions = format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s",
+            anchor, (int)localThreads[0], (int)localThreads[1], channels, borderMap[bordertype]);
 
     if (src.depth() == CV_8U)
     {
         switch (channels)
         {
         case 1:
-        case 3:
-            globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+            globalThreads[0] = (dst.cols + 3) >> 2;
             break;
         case 2:
-            globalThreads[0] = ((dst.cols + 1) / 2 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+            globalThreads[0] = (dst.cols + 1) >> 1;
             break;
         case 4:
-            globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+            globalThreads[0] = dst.cols;
             break;
         }
     }
-    else
-    {
-        globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-    }
 
-    //sanity checks
-    CV_Assert(clCxt == dst.clCxt);
-    CV_Assert(src.cols == dst.cols);
-    CV_Assert(src.oclchannels() == dst.oclchannels());
-    CV_Assert(ksize == (anchor << 1) + 1);
-    int src_pix_per_row, dst_pix_per_row;
-    int src_offset_x, src_offset_y;//, dst_offset_in_pixel;
-    src_pix_per_row = src.step / src.elemSize();
-    src_offset_x = (src.offset % src.step) / src.elemSize();
-    src_offset_y = src.offset / src.step;
-    dst_pix_per_row = dst.step / dst.elemSize();
-    //dst_offset_in_pixel = dst.offset / dst.elemSize();
+    int src_pix_per_row = src.step / src.elemSize();
+    int src_offset_x = (src.offset % src.step) / src.elemSize();
+    int src_offset_y = src.offset / src.step;
+    int dst_pix_per_row = dst.step / dst.elemSize();
     int ridusy = (dst.rows - src.rows) >> 1;
+
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
     args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
@@ -1141,7 +1106,8 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&ridusy));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
-    openCLExecuteKernel(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option);
+    openCLExecuteKernel(src.clCxt, &filter_sep_row, "row_filter", globalThreads, localThreads,
+                        args, channels, src.depth(), buildOptions.c_str());
 }
 
 Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufType*/, const Mat &rowKernel, int anchor, int bordertype)

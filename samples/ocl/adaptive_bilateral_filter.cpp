@@ -13,17 +13,27 @@ int main( int argc, const char** argv )
 {
     const char* keys =
         "{ i input   |          | specify input image }"
-        "{ k ksize   |     5    | specify kernel size }";
+        "{ k ksize   |     5    | specify kernel size }"
+        "{ h help    | false    | print help message }";
+
     CommandLineParser cmd(argc, argv, keys);
+    if (cmd.has("help"))
+    {
+        cout << "Usage : adaptive_bilateral_filter [options]" << endl;
+        cout << "Available options:" << endl;
+        cmd.printMessage();
+        return EXIT_SUCCESS;
+    }
+
     string src_path = cmd.get<string>("i");
     int ks = cmd.get<int>("k");
     const char * winName[] = {"input", "adaptive bilateral CPU", "adaptive bilateral OpenCL", "bilateralFilter OpenCL"};
 
-    Mat src = imread(src_path);
-    Mat abFilterCPU;
-    if(src.empty()){
-        //cout << "error read image: " << src_path << endl;
-        return -1;
+    Mat src = imread(src_path), abFilterCPU;
+    if (src.empty())
+    {
+        cout << "error read image: " << src_path << endl;
+        return EXIT_FAILURE;
     }
 
     ocl::oclMat dsrc(src), dABFilter, dBFilter;
@@ -33,17 +43,12 @@ int main( int argc, const char** argv )
     ocl::adaptiveBilateralFilter(dsrc, dABFilter, ksize, 10);
     ocl::bilateralFilter(dsrc, dBFilter, ks, 30, 9);
 
-    Mat abFilter = dABFilter;
-    Mat bFilter = dBFilter;
+    Mat abFilter = dABFilter, bFilter = dBFilter;
     imshow(winName[0], src);
-
     imshow(winName[1], abFilterCPU);
-
     imshow(winName[2], abFilter);
-
     imshow(winName[3], bFilter);
-
     waitKey();
-    return 0;
 
+    return EXIT_SUCCESS;
 }
