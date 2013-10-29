@@ -718,11 +718,12 @@ namespace cv
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
 
         //! applies Laplacian operator to the image
-        // supports only ksize = 1 and ksize = 3 8UC1 8UC4 32FC1 32FC4 data type
-        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1);
+        // supports only ksize = 1 and ksize = 3
+        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1,
+                double delta=0, int borderType=BORDER_DEFAULT);
 
         //! returns 2D box filter
-        // supports CV_8UC1 and CV_8UC4 source type, dst type must be the same as source type
+        // dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,
                 const Size &ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -731,17 +732,16 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns 2D filter with the specified kernel
-        // supports CV_8UC1 and CV_8UC4 types
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! smooths the image using the normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP
         CV_EXPORTS void boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
                                   Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -757,8 +757,6 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int iterations = 1);
 
         //! a synonym for normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101
         static inline void blur(const oclMat &src, oclMat &dst, Size ksize, Point anchor = Point(-1, -1),
                                 int borderType = BORDER_CONSTANT)
         {
@@ -766,10 +764,8 @@ namespace cv
         }
 
         //! applies non-separable 2D linear filter to the image
-        //  Note, at the moment this function only works when anchor point is in the kernel center
-        //  and kernel size supported is either 3x3 or 5x5; otherwise the function will fail to output valid result
         CV_EXPORTS void filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel,
-                                 Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                                 Point anchor = Point(-1, -1), double delta = 0.0, int borderType = BORDER_DEFAULT);
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY,
