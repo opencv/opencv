@@ -600,17 +600,12 @@ edgesHysteresisGlobal
     int map_offset
 )
 {
-
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
     map += map_offset;
 
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
     int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
 
     int grp_idx = get_group_id(0);
     int grp_idy = get_group_id(1);
@@ -631,14 +626,39 @@ edgesHysteresisGlobal
     if(ind < count)
     {
         ushort2 pos = st1[ind];
-        if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows)
+        if (lidx < 8)
         {
-            if (lidx < 8)
+            pos.x += c_dx[lidx];
+            pos.y += c_dy[lidx];
+            if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && map[pos.x + pos.y * map_step] == 1)
             {
-                pos.x += c_dx[lidx];
-                pos.y += c_dy[lidx];
+                map[pos.x + pos.y * map_step] = 2;
 
-                if (map[pos.x + pos.y * map_step] == 1)
+                ind = atomic_inc(&s_counter);
+
+                s_st[ind] = pos;
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
+        {
+            const int subTaskIdx = lidx >> 3;
+            const int portion = min(s_counter, (uint)(get_local_size(0)>> 3));
+
+            if (subTaskIdx < portion)
+                pos = s_st[s_counter - 1 - subTaskIdx];
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            if (lidx == 0)
+                s_counter -= portion;
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            if (subTaskIdx < portion)
+            {
+                pos.x += c_dx[lidx & 7];
+                pos.y += c_dy[lidx & 7];
+                if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && map[pos.x + pos.y * map_step] == 1)
                 {
                     map[pos.x + pos.y * map_step] = 2;
 
@@ -648,54 +668,22 @@ edgesHysteresisGlobal
                 }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
+        }
 
-            while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
+        if (s_counter > 0)
+        {
+            if (lidx == 0)
             {
-                const int subTaskIdx = lidx >> 3;
-                const int portion = min(s_counter, (uint)(get_local_size(0)>> 3));
-
-                pos.x = pos.y = 0;
-
-                if (subTaskIdx < portion)
-                    pos = s_st[s_counter - 1 - subTaskIdx];
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                if (lidx == 0)
-                    s_counter -= portion;
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows)
-                {
-                    pos.x += c_dx[lidx & 7];
-                    pos.y += c_dy[lidx & 7];
-
-                    if (map[pos.x + pos.y * map_step] == 1)
-                    {
-                        map[pos.x + pos.y * map_step] = 2;
-
-                        ind = atomic_inc(&s_counter);
-
-                        s_st[ind] = pos;
-                    }
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
+                ind = atomic_add(counter, s_counter);
+                s_ind = ind - s_counter;
             }
+            barrier(CLK_LOCAL_MEM_FENCE);
 
-            if (s_counter > 0)
+            ind = s_ind;
+
+            for (int i = lidx; i < s_counter; i += get_local_size(0))
             {
-                if (lidx == 0)
-                {
-                    ind = atomic_add(counter, s_counter);
-                    s_ind = ind - s_counter;
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                ind = s_ind;
-
-                for (int i = lidx; i < s_counter; i += get_local_size(0))
-                {
-                    st2[ind + i] = s_st[i];
-                }
+                st2[ind + i] = s_st[i];
             }
         }
     }
