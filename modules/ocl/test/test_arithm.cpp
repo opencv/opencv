@@ -126,8 +126,12 @@ PARAM_TEST_CASE(Lut, MatDepth, MatDepth, bool, bool)
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), threshold);
-        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), threshold);
+        Mat whole, roi;
+        gdst_whole.download(whole);
+        gdst_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 };
 
@@ -222,14 +226,22 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
-        EXPECT_MAT_NEAR(dst1_roi, Mat(gdst1_roi), threshold);
+        Mat whole, roi;
+        gdst1_whole.download(whole);
+        gdst1_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst1, whole, threshold);
+        EXPECT_MAT_NEAR(dst1_roi, roi, threshold);
     }
 
     void Near1(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), threshold);
-        EXPECT_MAT_NEAR(dst2_roi, Mat(gdst2_roi), threshold);
+        Mat whole, roi;
+        gdst2_whole.download(whole);
+        gdst2_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst2, whole, threshold);
+        EXPECT_MAT_NEAR(dst2_roi, roi, threshold);
     }
 };
 
@@ -724,6 +736,15 @@ OCL_TEST_P(MinMax, MAT)
 
 OCL_TEST_P(MinMax, MASK)
 {
+    enum { MAX_IDX = 0, MIN_IDX };
+    static const double minMaxGolds[2][7] =
+    {
+        { std::numeric_limits<uchar>::min(), std::numeric_limits<char>::min(), std::numeric_limits<ushort>::min(),
+          std::numeric_limits<short>::min(), std::numeric_limits<int>::min(), -std::numeric_limits<float>::max(), -std::numeric_limits<double>::max() },
+        { std::numeric_limits<uchar>::max(), std::numeric_limits<char>::max(), std::numeric_limits<ushort>::max(),
+          std::numeric_limits<short>::max(), std::numeric_limits<int>::max(), std::numeric_limits<float>::max(), std::numeric_limits<double>::max() },
+    };
+
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
@@ -750,8 +771,16 @@ OCL_TEST_P(MinMax, MASK)
         double minVal_, maxVal_;
         cv::ocl::minMax(gsrc1_roi, &minVal_, &maxVal_, gmask_roi);
 
-        EXPECT_DOUBLE_EQ(minVal, minVal_);
-        EXPECT_DOUBLE_EQ(maxVal, maxVal_);
+        if (cv::countNonZero(mask_roi) == 0)
+        {
+            EXPECT_DOUBLE_EQ(minMaxGolds[MIN_IDX][depth], minVal_);
+            EXPECT_DOUBLE_EQ(minMaxGolds[MAX_IDX][depth], maxVal_);
+        }
+        else
+        {
+            EXPECT_DOUBLE_EQ(minVal, minVal_);
+            EXPECT_DOUBLE_EQ(maxVal, maxVal_);
+        }
     }
 }
 
