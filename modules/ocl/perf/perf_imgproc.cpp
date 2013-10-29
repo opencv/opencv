@@ -56,6 +56,7 @@ typedef TestBaseWithParam<Size> equalizeHistFixture;
 PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
+    const double eps = 1 + DBL_EPSILON;
 
     Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -68,13 +69,13 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::equalizeHist(src, dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
@@ -82,15 +83,20 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
 /////////// CopyMakeBorder //////////////////////
 
-typedef Size_MatType CopyMakeBorderFixture;
+CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,
+        BORDER_WRAP, BORDER_REFLECT_101)
+
+typedef tuple<Size, MatType, Border> CopyMakeBorderParamType;
+typedef TestBaseWithParam<CopyMakeBorderParamType> CopyMakeBorderFixture;
 
 PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
+                               Border::all()))
 {
-    const Size_MatType_t params = GetParam();
+    const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_CONSTANT;
+    const int type = get<1>(params), borderType = get<2>(params);
 
     Mat src(srcSize, type), dst;
     const Size dstSize = srcSize + Size(12, 12);
@@ -360,7 +366,7 @@ PERF_TEST_P(resizeFixture, resize,
 
 ///////////// threshold////////////////////////
 
-CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TRUNC)
+CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 
 typedef tuple<Size, ThreshType> ThreshParams;
 typedef TestBaseWithParam<ThreshParams> ThreshFixture;
@@ -372,6 +378,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int threshType = get<1>(params);
+    const double maxValue = 220.0, threshold = 50;
 
     Mat src(srcSize, CV_8U), dst(srcSize, CV_8U);
     randu(src, 0, 100);
@@ -381,7 +388,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8U);
 
-        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, 50.0, 0.0, threshType);
+        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, threshold, maxValue, threshType);
 
         oclDst.download(dst);
 
@@ -389,7 +396,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::threshold(src, dst, 50.0, 0.0, threshType);
+        TEST_CYCLE() cv::threshold(src, dst, threshold, maxValue, threshType);
 
         SANITY_CHECK(dst);
     }
