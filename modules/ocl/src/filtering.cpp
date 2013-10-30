@@ -510,7 +510,7 @@ public:
         func(src, dst, kernel, ksize, anchor, borderType) ;
     }
 
-    oclMat kernel;
+    Mat kernel;
     GPUFilter2D_t func;
 };
 }
