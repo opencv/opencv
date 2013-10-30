@@ -15,11 +15,21 @@ endif()
 
 set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+foreach(var INCLUDE LIBRARY PROGRAM)
+  set(__old_frpm_${var} "${CMAKE_FIND_ROOT_PATH_MODE_${var}}")
+endforeach()
+
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
 
 find_package(CUDA 4.2 QUIET)
+
+foreach(var INCLUDE LIBRARY PROGRAM)
+  set(CMAKE_FIND_ROOT_PATH_MODE_${var} "${__old_frpm_${var}}")
+endforeach()
+
+list(REMOVE_AT CMAKE_MODULE_PATH 0)
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
