@@ -377,9 +377,12 @@ OCL_TEST_P(MedianFilter, Mat)
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
+#define FILTER_DATATYPES Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, \
+                                CV_32FC1, CV_32FC3, CV_32FC4, \
+                                CV_64FC1, CV_64FC3, CV_64FC4)
 
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            FILTER_DATATYPES,
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -387,7 +390,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            FILTER_DATATYPES,
                             Values(1, 3),
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -435,7 +438,7 @@ INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Filter2D, testing::Combine(
-                            Values(CV_8UC1, CV_32FC1, CV_32FC4),
+                            FILTER_DATATYPES,
                             Values(3, 15), // TODO 25: CPU implementation has some issues
                             Values(Size(-1, -1), Size(0, 0), Size(2, 1)), // anchor
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
@@ -459,7 +462,7 @@ INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, MedianFilter, Combine(
-                            Values((MatType)CV_8UC1, (MatType)CV_8UC4, (MatType)CV_32FC1, (MatType)CV_32FC4),
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(3, 5),
                             Values(Size(0, 0)), // not used
                             Values(0), // not used
