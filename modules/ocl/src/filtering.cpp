@@ -578,104 +578,124 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const Mat &kernel,
                 kernelDataFloat.size()*sizeof(float), 1, clMemcpyHostToDevice);
     }
 
-    size_t BLOCK_SIZE = src.clCxt->getDeviceInfo().maxWorkItemSizes[0];
+    size_t tryWorkItems = src.clCxt->getDeviceInfo().maxWorkItemSizes[0];
+    do {
+        size_t BLOCK_SIZE = tryWorkItems;
+        while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)src.cols * 2)
+            BLOCK_SIZE /= 2;
 #if 1 // TODO Mode with several blocks requires a much more VGPRs, so this optimization is not actual for the current devices
-    size_t BLOCK_SIZE_Y = 1;
+        size_t BLOCK_SIZE_Y = 1;
 #else
-    size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
-    while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
-        BLOCK_SIZE_Y *= 2;
+        size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
+        while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
+            BLOCK_SIZE_Y *= 2;
 #endif
 
-    CV_Assert((size_t)ksize.width <= BLOCK_SIZE);
+        CV_Assert((size_t)ksize.width <= BLOCK_SIZE);
 
-    bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
+        bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
 
-    vector<pair<size_t , const void *> > args;
+        vector<pair<size_t , const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    cl_uint stepBytes = src.step;
-    args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
-    int offsetXBytes = src.offset % src.step;
-    int offsetX = offsetXBytes / src.elemSize();
-    CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
-    int offsetY = src.offset / src.step;
-    int endX = (offsetX + src.cols);
-    int endY = (offsetY + src.rows);
-    cl_int rect[4] = {offsetX, offsetY, endX, endY};
-    if (!isIsolatedBorder)
-    {
-        rect[2] = src.wholecols;
-        rect[3] = src.wholerows;
-    }
-    args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+        cl_uint stepBytes = src.step;
+        args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
+        int offsetXBytes = src.offset % src.step;
+        int offsetX = offsetXBytes / src.elemSize();
+        CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
+        int offsetY = src.offset / src.step;
+        int endX = (offsetX + src.cols);
+        int endY = (offsetY + src.rows);
+        cl_int rect[4] = {offsetX, offsetY, endX, endY};
+        if (!isIsolatedBorder)
+        {
+            rect[2] = src.wholecols;
+            rect[3] = src.wholerows;
+        }
+        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    cl_uint _stepBytes = dst.step;
-    args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
-    int _offsetXBytes = dst.offset % dst.step;
-    int _offsetX = _offsetXBytes / dst.elemSize();
-    CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
-    int _offsetY = dst.offset / dst.step;
-    int _endX = (_offsetX + dst.cols);
-    int _endY = (_offsetY + dst.rows);
-    cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
-    args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+        cl_uint _stepBytes = dst.step;
+        args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
+        int _offsetXBytes = dst.offset % dst.step;
+        int _offsetX = _offsetXBytes / dst.elemSize();
+        CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
+        int _offsetY = dst.offset / dst.step;
+        int _endX = (_offsetX + dst.cols);
+        int _endY = (_offsetY + dst.rows);
+        cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
+        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
 
-    float borderValue[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
-    double borderValueDouble[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
-    if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
-    {
-        if (useDouble)
-            args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
-        else
-            args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
-    }
+        float borderValue[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
+        double borderValueDouble[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
+        if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
+        {
+            if (useDouble)
+                args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
+            else
+                args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
+        }
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&oclKernelParameter.data));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&oclKernelParameter.data));
 
-    const char* btype = NULL;
+        const char* btype = NULL;
 
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        btype = "BORDER_CONSTANT";
-        break;
-    case BORDER_REPLICATE:
-        btype = "BORDER_REPLICATE";
-        break;
-    case BORDER_REFLECT:
-        btype = "BORDER_REFLECT";
-        break;
-    case BORDER_WRAP:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
-        return;
-    case BORDER_REFLECT101:
-        btype = "BORDER_REFLECT_101";
-        break;
-    }
+        switch (borderType & ~BORDER_ISOLATED)
+        {
+        case BORDER_CONSTANT:
+            btype = "BORDER_CONSTANT";
+            break;
+        case BORDER_REPLICATE:
+            btype = "BORDER_REPLICATE";
+            break;
+        case BORDER_REFLECT:
+            btype = "BORDER_REFLECT";
+            break;
+        case BORDER_WRAP:
+            CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+            return;
+        case BORDER_REFLECT101:
+            btype = "BORDER_REFLECT_101";
+            break;
+        }
 
-    int requiredTop = anchor.y;
-    int requiredLeft = BLOCK_SIZE; // not this: anchor.x;
-    int requiredBottom = ksize.height - 1 - anchor.y;
-    int requiredRight = BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
-    int h = isIsolatedBorder ? src.rows : src.wholerows;
-    int w = isIsolatedBorder ? src.cols : src.wholecols;
-    bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
+        int requiredTop = anchor.y;
+        int requiredLeft = BLOCK_SIZE; // not this: anchor.x;
+        int requiredBottom = ksize.height - 1 - anchor.y;
+        int requiredRight = BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+        int h = isIsolatedBorder ? src.rows : src.wholerows;
+        int w = isIsolatedBorder ? src.cols : src.wholecols;
+        bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
 
-    char build_options[1024];
-    sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d "
-            "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D KERNEL_SIZE_Y2_ALIGNED=%d "
-            "-D %s -D %s -D %s",
-            (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
-            src.depth(), src.oclchannels(), useDouble ? 1 : 0,
-            anchor.x, anchor.y, ksize.width, ksize.height, kernel_size_y2_aligned,
-            btype,
-            extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
-            isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
+        char build_options[1024];
+        sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d "
+                "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D KERNEL_SIZE_Y2_ALIGNED=%d "
+                "-D %s -D %s -D %s",
+                (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
+                src.depth(), src.oclchannels(), useDouble ? 1 : 0,
+                anchor.x, anchor.y, ksize.width, ksize.height, kernel_size_y2_aligned,
+                btype,
+                extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
 
-    size_t gt[3] = {divUp(dst.cols, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE, divUp(dst.rows, BLOCK_SIZE_Y), 1}, lt[3] = {BLOCK_SIZE, 1, 1};
-    openCLExecuteKernel(src.clCxt, &filtering_filter2D, "filter2D", gt, lt, args, -1, -1, build_options);
+        size_t lt[3] = {BLOCK_SIZE, 1, 1};
+        size_t gt[3] = {divUp(dst.cols, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE, divUp(dst.rows, BLOCK_SIZE_Y), 1};
+
+        cl_kernel kernel = openCLGetKernelFromSource(src.clCxt, &filtering_filter2D, "filter2D", -1, -1, build_options);
+
+        size_t kernelWorkGroupSize;
+        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, getClDeviceID(src.clCxt),
+                                                CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
+        if (lt[0] > kernelWorkGroupSize)
+        {
+            clReleaseKernel(kernel);
+            CV_Assert(BLOCK_SIZE > kernelWorkGroupSize);
+            tryWorkItems = kernelWorkGroupSize;
+            continue;
+        }
+
+        openCLExecuteKernel(src.clCxt, kernel, gt, lt, args); // kernel will be released here
+    } while (false);
 }
 
 Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int /*srcType*/, int /*dstType*/, const Mat &kernel, const Size &ksize,
@@ -770,106 +790,126 @@ static void GPUFilterBox(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     CV_Assert(src.oclchannels() == dst.oclchannels());
 
-    size_t BLOCK_SIZE = src.clCxt->getDeviceInfo().maxWorkItemSizes[0];
-    size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
-    while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
-        BLOCK_SIZE_Y *= 2;
+    size_t tryWorkItems = src.clCxt->getDeviceInfo().maxWorkItemSizes[0];
+    do {
+        size_t BLOCK_SIZE = tryWorkItems;
+        while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)src.cols * 2)
+            BLOCK_SIZE /= 2;
+        size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
+        while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * src.clCxt->getDeviceInfo().maxComputeUnits * 32 < (size_t)src.rows)
+            BLOCK_SIZE_Y *= 2;
 
-    CV_Assert((size_t)ksize.width <= BLOCK_SIZE);
+        CV_Assert((size_t)ksize.width <= BLOCK_SIZE);
 
-    bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
+        bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
 
-    vector<pair<size_t , const void *> > args;
+        vector<pair<size_t , const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    cl_uint stepBytes = src.step;
-    args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
-    int offsetXBytes = src.offset % src.step;
-    int offsetX = offsetXBytes / src.elemSize();
-    CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
-    int offsetY = src.offset / src.step;
-    int endX = (offsetX + src.cols);
-    int endY = (offsetY + src.rows);
-    cl_int rect[4] = {offsetX, offsetY, endX, endY};
-    if (!isIsolatedBorder)
-    {
-        rect[2] = src.wholecols;
-        rect[3] = src.wholerows;
-    }
-    args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+        cl_uint stepBytes = src.step;
+        args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
+        int offsetXBytes = src.offset % src.step;
+        int offsetX = offsetXBytes / src.elemSize();
+        CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
+        int offsetY = src.offset / src.step;
+        int endX = (offsetX + src.cols);
+        int endY = (offsetY + src.rows);
+        cl_int rect[4] = {offsetX, offsetY, endX, endY};
+        if (!isIsolatedBorder)
+        {
+            rect[2] = src.wholecols;
+            rect[3] = src.wholerows;
+        }
+        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    cl_uint _stepBytes = dst.step;
-    args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
-    int _offsetXBytes = dst.offset % dst.step;
-    int _offsetX = _offsetXBytes / dst.elemSize();
-    CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
-    int _offsetY = dst.offset / dst.step;
-    int _endX = (_offsetX + dst.cols);
-    int _endY = (_offsetY + dst.rows);
-    cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
-    args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+        cl_uint _stepBytes = dst.step;
+        args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
+        int _offsetXBytes = dst.offset % dst.step;
+        int _offsetX = _offsetXBytes / dst.elemSize();
+        CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
+        int _offsetY = dst.offset / dst.step;
+        int _endX = (_offsetX + dst.cols);
+        int _endY = (_offsetY + dst.rows);
+        cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
+        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
 
-    bool useDouble = src.depth() == CV_64F;
+        bool useDouble = src.depth() == CV_64F;
 
-    float borderValue[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
-    double borderValueDouble[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
-    if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
-    {
+        float borderValue[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
+        double borderValueDouble[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
+        if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
+        {
+            if (useDouble)
+                args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
+            else
+                args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
+        }
+
+        double alphaDouble = alpha; // DON'T move into 'if' body
         if (useDouble)
-            args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
+            args.push_back( make_pair( sizeof(double), (void *)&alphaDouble));
         else
-            args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
-    }
+            args.push_back( make_pair( sizeof(float), (void *)&alpha));
 
-    double alphaDouble = alpha; // DON'T move into 'if' body
-    if (useDouble)
-        args.push_back( make_pair( sizeof(double), (void *)&alphaDouble));
-    else
-        args.push_back( make_pair( sizeof(float), (void *)&alpha));
+        const char* btype = NULL;
 
-    const char* btype = NULL;
+        switch (borderType & ~BORDER_ISOLATED)
+        {
+        case BORDER_CONSTANT:
+            btype = "BORDER_CONSTANT";
+            break;
+        case BORDER_REPLICATE:
+            btype = "BORDER_REPLICATE";
+            break;
+        case BORDER_REFLECT:
+            btype = "BORDER_REFLECT";
+            break;
+        case BORDER_WRAP:
+            CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+            return;
+        case BORDER_REFLECT101:
+            btype = "BORDER_REFLECT_101";
+            break;
+        }
 
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        btype = "BORDER_CONSTANT";
-        break;
-    case BORDER_REPLICATE:
-        btype = "BORDER_REPLICATE";
-        break;
-    case BORDER_REFLECT:
-        btype = "BORDER_REFLECT";
-        break;
-    case BORDER_WRAP:
-        CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
-        return;
-    case BORDER_REFLECT101:
-        btype = "BORDER_REFLECT_101";
-        break;
-    }
+        int requiredTop = anchor.y;
+        int requiredLeft = BLOCK_SIZE; // not this: anchor.x;
+        int requiredBottom = ksize.height - 1 - anchor.y;
+        int requiredRight = BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+        int h = isIsolatedBorder ? src.rows : src.wholerows;
+        int w = isIsolatedBorder ? src.cols : src.wholecols;
+        bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
 
-    int requiredTop = anchor.y;
-    int requiredLeft = BLOCK_SIZE; // not this: anchor.x;
-    int requiredBottom = ksize.height - 1 - anchor.y;
-    int requiredRight = BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
-    int h = isIsolatedBorder ? src.rows : src.wholerows;
-    int w = isIsolatedBorder ? src.cols : src.wholecols;
-    bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
+        CV_Assert(w >= ksize.width && h >= ksize.height); // TODO Other cases are not tested well
 
-    CV_Assert(w >= ksize.width && h >= ksize.height); // TODO Other cases are not tested well
+        char build_options[1024];
+        sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s -D %s -D %s",
+                (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
+                src.depth(), src.oclchannels(), useDouble ? 1 : 0,
+                anchor.x, anchor.y, ksize.width, ksize.height,
+                btype,
+                extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
 
-    char build_options[1024];
-    sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s -D %s -D %s",
-            (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
-            src.depth(), src.oclchannels(), useDouble ? 1 : 0,
-            anchor.x, anchor.y, ksize.width, ksize.height,
-            btype,
-            extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
-            isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
+        size_t lt[3] = {BLOCK_SIZE, 1, 1};
+        size_t gt[3] = {divUp(dst.cols, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE, divUp(dst.rows, BLOCK_SIZE_Y), 1};
 
-    size_t gt[3] = {divUp(dst.cols, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE, divUp(dst.rows, BLOCK_SIZE_Y), 1}, lt[3] = {BLOCK_SIZE, 1, 1};
-    openCLExecuteKernel(src.clCxt, &filtering_boxFilter, "boxFilter", gt, lt, args, -1, -1, build_options);
+        cl_kernel kernel = openCLGetKernelFromSource(src.clCxt, &filtering_boxFilter, "boxFilter", -1, -1, build_options);
+
+        size_t kernelWorkGroupSize;
+        openCLSafeCall(clGetKernelWorkGroupInfo(kernel, getClDeviceID(src.clCxt),
+                                                CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0));
+        if (lt[0] > kernelWorkGroupSize)
+        {
+            clReleaseKernel(kernel);
+            CV_Assert(BLOCK_SIZE > kernelWorkGroupSize);
+            tryWorkItems = kernelWorkGroupSize;
+            continue;
+        }
+
+        openCLExecuteKernel(src.clCxt, kernel, gt, lt, args); // kernel will be released here
+    } while (false);
 }
 
 Ptr<BaseFilter_GPU> cv::ocl::getBoxFilter_GPU(int /*srcType*/, int /*dstType*/,
