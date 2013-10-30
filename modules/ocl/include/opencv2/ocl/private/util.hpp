@@ -103,7 +103,11 @@ CV_EXPORTS cl_kernel openCLGetKernelFromSource(const Context *clCxt,
         const cv::ocl::ProgramEntry* source, std::string kernelName);
 CV_EXPORTS cl_kernel openCLGetKernelFromSource(const Context *clCxt,
         const cv::ocl::ProgramEntry* source, std::string kernelName, const char *build_options);
+CV_EXPORTS cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* source,
+        string kernelName, int channels, int depth, const char *build_options);
 CV_EXPORTS void openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
+CV_EXPORTS void openCLExecuteKernel(Context *ctx, cl_kernel kernel, size_t globalThreads[3],
+                          size_t localThreads[3], std::vector< std::pair<size_t, const void *> > &args);
 CV_EXPORTS void openCLExecuteKernel(Context *clCxt , const cv::ocl::ProgramEntry* source, string kernelName, std::vector< std::pair<size_t, const void *> > &args,
         int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
 CV_EXPORTS void openCLExecuteKernel_(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName,
