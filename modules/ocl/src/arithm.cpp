@@ -688,7 +688,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
         break;
     }
     if (isRelative)
-        r = r / norm(src2, normType);
+        r = r / (norm(src2, normType) + DBL_EPSILON);
 
     return r;
 }

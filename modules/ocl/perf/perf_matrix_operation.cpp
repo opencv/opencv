@@ -156,6 +156,8 @@ PERF_TEST_P(setToFixture, setTo,
         OCL_PERF_ELSE
 }
 
+#if 0
+
 /////////////////// upload ///////////////////////////
 
 typedef tuple<Size, MatDepth, int> uploadParams;
@@ -228,3 +230,5 @@ PERF_TEST_P(downloadFixture, download,
 
     SANITY_CHECK_NOTHING();
 }
+
+#endif
