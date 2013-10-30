@@ -223,7 +223,7 @@ namespace cv
         Moments ocl_moments(oclMat& src, bool binary) //for image
         {
             CV_Assert(src.oclchannels() == 1);
-            if(src.type() == CV_64FC1 && Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            if(src.type() == CV_64FC1 && !Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
             {
                 CV_Error(CV_StsUnsupportedFormat, "Moments - double is not supported by your GPU!");
             }
