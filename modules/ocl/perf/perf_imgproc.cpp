@@ -366,21 +366,23 @@ PERF_TEST_P(resizeFixture, resize,
 
 ///////////// threshold////////////////////////
 
-CV_ENUM(ThreshType, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TOZERO_INV)
 
-typedef tuple<Size, ThreshType> ThreshParams;
+typedef tuple<Size, MatType, ThreshType> ThreshParams;
 typedef TestBaseWithParam<ThreshParams> ThreshFixture;
 
 PERF_TEST_P(ThreshFixture, threshold,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC4, CV_32FC1),
                                ThreshType::all()))
 {
     const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int threshType = get<1>(params);
+    const int srcType = get<1>(params);
+    const int threshType = get<2>(params);
     const double maxValue = 220.0, threshold = 50;
 
-    Mat src(srcSize, CV_8U), dst(srcSize, CV_8U);
+    Mat src(srcSize, srcType), dst(srcSize, srcType);
     randu(src, 0, 100);
     declare.in(src).out(dst);
 
