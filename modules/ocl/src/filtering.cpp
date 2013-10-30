@@ -1369,6 +1369,15 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
 
 void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double sigma1, double sigma2, int bordertype)
 {
+    if (bordertype != BORDER_CONSTANT)
+    {
+        if (src.rows == 1)
+            ksize.height = 1;
+
+        if (src.cols == 1)
+            ksize.width = 1;
+    }
+
     if (ksize.width == 1 && ksize.height == 1)
     {
         src.copyTo(dst);
@@ -1390,15 +1399,6 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
     }
 
     dst.create(src.size(), src.type());
-
-    if (bordertype != BORDER_CONSTANT)
-    {
-        if (src.rows == 1)
-            ksize.height = 1;
-
-        if (src.cols == 1)
-            ksize.width = 1;
-    }
 
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype);
     f->apply(src, dst);
