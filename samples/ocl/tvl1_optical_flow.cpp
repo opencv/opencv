@@ -184,7 +184,7 @@ int main(int argc, const char* argv[])
                 else
                     frame0.copyTo(frameCopy);
                 getFlowField(flow_vec[0], flow_vec[1], show_flow);
-                imshow("PyrLK [Sparse]", show_flow);
+                imshow("tvl1 optical flow field", show_flow);
             }
 
             if( waitKey( 10 ) >= 0 )
