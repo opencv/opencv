@@ -158,81 +158,32 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int, bool)
     int channels;
     bool use_roi;
 
-    //src mat
-    cv::Mat mat;
+    cv::Mat src, src_roi;
+    cv::Mat dst[MAX_CHANNELS], dst_roi[MAX_CHANNELS];
 
-    //dstmat
-    cv::Mat dst[MAX_CHANNELS];
-
-    // set up roi
-    int roicols, roirows;
-    int srcx, srcy;
-    int dstx[MAX_CHANNELS];
-    int dsty[MAX_CHANNELS];
-
-    //src mat with roi
-    cv::Mat mat_roi;
-
-    //dst mat with roi
-    cv::Mat dst_roi[MAX_CHANNELS];
-
-    //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole[MAX_CHANNELS];
-
-    //ocl mat with roi
-    cv::ocl::oclMat gmat;
-    cv::ocl::oclMat gdst[MAX_CHANNELS];
+    cv::ocl::oclMat gsrc_whole, gsrc_roi;
+    cv::ocl::oclMat gdst_whole[MAX_CHANNELS], gdst_roi[MAX_CHANNELS];
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
         use_roi = GET_PARAM(2);
-
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat  = randomMat(size, CV_MAKETYPE(type, channels), 5, 16, false);
-        for (int i = 0; i < channels; ++i)
-            dst[i] = randomMat(size, CV_MAKETYPE(type, 1), 5, 16, false);    }
+    }
 
     void random_roi()
     {
-        if (use_roi)
-        {
-            //randomize ROI
-            roicols = rng.uniform(1, mat.cols);
-            roirows = rng.uniform(1, mat.rows);
-            srcx    = rng.uniform(0, mat.cols - roicols);
-            srcy    = rng.uniform(0, mat.rows - roirows);
-
-            for (int i = 0; i < channels; ++i)
-            {
-                dstx[i] = rng.uniform(0, dst[i].cols  - roicols);
-                dsty[i] = rng.uniform(0, dst[i].rows  - roirows);
-            }
-        }
-        else
-        {
-            roicols = mat.cols;
-            roirows = mat.rows;
-            srcx = srcy = 0;
-
-            for (int i = 0; i < channels; ++i)
-                dstx[i] = dsty[i] = 0;
-        }
-
-        mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-
-        for (int i = 0; i < channels; ++i)
-            dst_roi[i] = dst[i](Rect(dstx[i], dsty[i], roicols, roirows));
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, CV_MAKETYPE(type, channels), 0, 256);
+        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
 
         for (int i = 0; i < channels; ++i)
         {
-            gdst_whole[i] = dst[i];
-            gdst[i] = gdst_whole[i](Rect(dstx[i], dsty[i], roicols, roirows));
+            Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst[i], dst_roi[i], roiSize, dstBorder, CV_MAKETYPE(type, 1), 5, 16);
+            generateOclMat(gdst_whole[i], gdst_roi[i], dst[i], roiSize, dstBorder);
         }
-
-        gmat = mat_roi;
     }
 };
 
@@ -244,11 +195,14 @@ OCL_TEST_P(Split, Accuracy)
     {
         random_roi();
 
-        cv::split(mat_roi, dst_roi);
-        cv::ocl::split(gmat, gdst);
+        cv::split(src_roi, dst_roi);
+        cv::ocl::split(gsrc_roi, gdst_roi);
 
         for (int i = 0; i < channels; ++i)
-            EXPECT_MAT_NEAR(dst[i], Mat(gdst_whole[i]), 0.0);
+        {
+            EXPECT_MAT_NEAR(dst[i], gdst_whole[i], 0.0);
+            EXPECT_MAT_NEAR(dst_roi[i], gdst_roi[i], 0.0);
+        }
     }
 }
 

@@ -88,14 +88,16 @@ inline double checkNormRelative(const Mat &m1, const Mat &m2)
 { \
    ASSERT_EQ(mat1.type(), mat2.type()); \
    ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+   EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps) \
+       << cv::format("Size: %d x %d", mat1.cols, mat1.rows) << std::endl; \
 }
 
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
 { \
    ASSERT_EQ(mat1.type(), mat2.type()); \
    ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNormRelative(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+   EXPECT_LE(checkNormRelative(cv::Mat(mat1), cv::Mat(mat2)), eps) \
+       << cv::format("Size: %d x %d", mat1.cols, mat1.rows) << std::endl; \
 }
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
