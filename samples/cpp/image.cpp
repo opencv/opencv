@@ -32,7 +32,7 @@ int main( int argc, char** argv )
         fprintf(stderr, "Can not load image %s\n", imagename);
         return -1;
     }
-    Mat img(iplimg); // Mat replaces the Mat and Mat, but it's easy to convert
+    Mat img(iplimg); // Mat replaces the CvMat and IplImage, but it's easy to convert
     // between the old and the new data structures (by default, only the header
     // is converted, while the data is shared)
 #else
@@ -84,7 +84,7 @@ int main( int argc, char** argv )
     const double brightness_gain = 0;
     const double contrast_gain = 1.7;
 #if DEMO_MIXED_API_USE
-    // it's easy to pass the new matrices to the functions that only work with IplImage or Mat:
+    // it's easy to pass the new matrices to the functions that only work with IplImage or CvMat:
     // step 1) - convert the headers, data will not be copied
     IplImage cv_planes_0 = planes[0], cv_noise = noise;
     // step 2) call the function; do not forget unary "&" to form pointers

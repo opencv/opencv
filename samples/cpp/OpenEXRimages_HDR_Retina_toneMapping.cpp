@@ -1,6 +1,6 @@
 
 //============================================================================
-// Name        : HDR_RetinaCompression.cpp
+// Name        : OpenEXRimages_HDR_Retina_toneMapping.cpp
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.1
 // Copyright   : Alexandre Benoit, LISTIC Lab, july 2011
