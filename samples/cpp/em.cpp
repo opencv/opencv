@@ -59,7 +59,7 @@ int main( int /*argc*/, char** /*argv*/ )
     params.cov_mat_type = CvEM::COV_MAT_DIAGONAL;
     params.start_step = CvEM::START_E_STEP;
     params.means = em_model.get_means();
-    params.covs = (const CvMat**)em_model.get_covs();
+    params.covs = em_model.get_covs();
     params.weights = em_model.get_weights();
 
     em_model2.train( samples, Mat(), params, &labels );

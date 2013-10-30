@@ -51,8 +51,8 @@ namespace
             capture >> frame;
             if (frame.empty())
                 break;
-            cv::Mat gray;
-            cv::cvtColor(frame,gray,CV_RGB2GRAY);
+            Mat gray;
+            cvtColor(frame,gray,CV_RGB2GRAY);
             vector<string> codes;
             Mat corners;
             findDataMatrix(gray, codes, corners);
@@ -87,7 +87,7 @@ int main(int ac, char** av)
         help(av);
         return 1;
     }
-    std::string arg = av[1];
+    string arg = av[1];
     VideoCapture capture(arg); //try to open string, this will attempt to open it as a video file
     if (!capture.isOpened()) //if this fails, try to open as a video camera, through the use of an integer param
         capture.open(atoi(arg.c_str()));

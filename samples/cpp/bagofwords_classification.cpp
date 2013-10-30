@@ -54,10 +54,6 @@ static void help(char** argv)
     << "\n";
 }
 
-
-
-
-
 static void makeDir( const string& dir )
 {
 #if defined WIN32 || defined _WIN32
@@ -669,7 +665,7 @@ void VocData::writeClassifierResultsFile( const string& out_dir, const string& o
     }
 
     //output data to file
-    std::ofstream result_file(output_file.c_str());
+    ofstream result_file(output_file.c_str());
     if (result_file.is_open())
     {
         for (size_t i = 0; i < images.size(); ++i)
@@ -807,7 +803,7 @@ void VocData::calcClassifierPrecRecall(const string& input_file, vector<float>& 
         string input_file_std1 = checkFilenamePathsep(input_file);
         size_t fnamestart = input_file_std1.rfind("/");
         string scoregt_file_str = input_file_std1.substr(0,fnamestart+1) + "scoregt_" + class_name + ".txt";
-        std::ofstream scoregt_file(scoregt_file_str.c_str());
+        ofstream scoregt_file(scoregt_file_str.c_str());
         if (scoregt_file.is_open())
         {
             for (size_t i = 0; i < res_scores.size(); ++i)
@@ -841,7 +837,7 @@ void VocData::calcPrecRecall_impl(const vector<char>& ground_truth, const vector
     VocData::getSortOrder(scores, ranking);
 
 #ifdef PR_DEBUG
-    std::ofstream scoregt_file("D:/pr.txt");
+    ofstream scoregt_file("D:/pr.txt");
     if (scoregt_file.is_open())
     {
        for (int i = 0; i < scores.size(); ++i)
@@ -1022,10 +1018,10 @@ void VocData::calcClassifierConfMatRow(const string& obj_class, const vector<Obd
                 if (img_object_data[obj_idx].difficult == true)
                 {
                     vector<ObdObject>::iterator it1 = img_objects.begin();
-                    std::advance(it1,obj_idx);
+                    advance(it1,obj_idx);
                     img_objects.erase(it1);
                     vector<VocObjectData>::iterator it2 = img_object_data.begin();
-                    std::advance(it2,obj_idx);
+                    advance(it2,obj_idx);
                     img_object_data.erase(it2);
                     --obj_idx;
                 }
@@ -1444,7 +1440,7 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
     image_codes.clear();
     object_present.clear();
 
-    std::ifstream gtfile(filename.c_str());
+    ifstream gtfile(filename.c_str());
     if (!gtfile.is_open())
     {
         string err_msg = "could not open VOC ground truth textfile '" + filename + "'.";
@@ -1456,8 +1452,8 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
     int obj_present = 0;
     while (!gtfile.eof())
     {
-        std::getline(gtfile,line);
-        std::istringstream iss(line);
+        getline(gtfile,line);
+        istringstream iss(line);
         iss >> image >> obj_present;
         if (!iss.fail())
         {
@@ -1473,7 +1469,7 @@ void VocData::readClassifierGroundTruth(const string& filename, vector<string>& 
 void VocData::readClassifierResultsFile(const string& input_file, vector<string>& image_codes, vector<float>& scores)
 {
     //check if results file exists
-    std::ifstream result_file(input_file.c_str());
+    ifstream result_file(input_file.c_str());
     if (result_file.is_open())
     {
         string line;
@@ -1482,8 +1478,8 @@ void VocData::readClassifierResultsFile(const string& input_file, vector<string>
         //read in the results file
         while (!result_file.eof())
         {
-            std::getline(result_file,line);
-            std::istringstream iss(line);
+            getline(result_file,line);
+            istringstream iss(line);
             iss >> image >> score;
             if (!iss.fail())
             {
@@ -1507,7 +1503,7 @@ void VocData::readDetectorResultsFile(const string& input_file, vector<string>& 
     bounding_boxes.clear();
 
     //check if results file exists
-    std::ifstream result_file(input_file.c_str());
+    ifstream result_file(input_file.c_str());
     if (result_file.is_open())
     {
         string line;
@@ -1517,8 +1513,8 @@ void VocData::readDetectorResultsFile(const string& input_file, vector<string>& 
         //read in the results file
         while (!result_file.eof())
         {
-            std::getline(result_file,line);
-            std::istringstream iss(line);
+            getline(result_file,line);
+            istringstream iss(line);
             iss >> image >> score >> bounding_box.x >> bounding_box.y >> bounding_box.width >> bounding_box.height;
             if (!iss.fail())
             {
@@ -1797,14 +1793,14 @@ bool VocData::getClassifierGroundTruthImage(const string& obj_class, const strin
 void VocData::getSortOrder(const vector<float>& values, vector<size_t>& order, bool descending)
 {
     /* 1. store sorting order in 'order_pair' */
-    vector<std::pair<size_t, vector<float>::const_iterator> > order_pair(values.size());
+    vector<pair<size_t, vector<float>::const_iterator> > order_pair(values.size());
 
     size_t n = 0;
     for (vector<float>::const_iterator it = values.begin(); it != values.end(); ++it, ++n)
         order_pair[n] = make_pair(n, it);
 
-    std::sort(order_pair.begin(),order_pair.end(),orderingSorter());
-    if (descending == false) std::reverse(order_pair.begin(),order_pair.end());
+    sort(order_pair.begin(),order_pair.end(),orderingSorter());
+    if (descending == false) reverse(order_pair.begin(),order_pair.end());
 
     vector<size_t>(order_pair.size()).swap(order);
     for (size_t i = 0; i < order_pair.size(); ++i)
@@ -1815,7 +1811,7 @@ void VocData::getSortOrder(const vector<float>& values, vector<size_t>& order, b
 
 void VocData::readFileToString(const string filename, string& file_contents)
 {
-    std::ifstream ifs(filename.c_str());
+    ifstream ifs(filename.c_str());
     if (!ifs.is_open()) CV_Error(CV_StsError,"could not open text file");
 
     stringstream oss;

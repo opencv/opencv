@@ -35,12 +35,12 @@ static Mat toGrayscale(InputArray _src) {
     }
     // create and return normalized image
     Mat dst;
-    cv::normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
+    normalize(_src, dst, 0, 255, NORM_MINMAX, CV_8UC1);
     return dst;
 }
 
 static void read_csv(const string& filename, vector<Mat>& images, vector<int>& labels, char separator = ';') {
-    std::ifstream file(filename.c_str(), ifstream::in);
+    ifstream file(filename.c_str(), ifstream::in);
     if (!file) {
         string error_message = "No valid input file was given, please check the given filename.";
         CV_Error(CV_StsBadArg, error_message);
@@ -73,7 +73,7 @@ int main(int argc, const char *argv[]) {
     // input filename is given.
     try {
         read_csv(fn_csv, images, labels);
-    } catch (cv::Exception& e) {
+    } catch (Exception& e) {
         cerr << "Error opening file \"" << fn_csv << "\". Reason: " << e.msg << endl;
         // nothing more we can do
         exit(1);
@@ -103,12 +103,12 @@ int main(int argc, const char *argv[]) {
     // 10 principal components (read Eigenfaces), then call
     // the factory method like this:
     //
-    //      cv::createEigenFaceRecognizer(10);
+    //      createEigenFaceRecognizer(10);
     //
     // If you want to create a FaceRecognizer with a
     // confidennce threshold, call it with:
     //
-    //      cv::createEigenFaceRecognizer(10, 123.0);
+    //      createEigenFaceRecognizer(10, 123.0);
     //
     Ptr<FaceRecognizer> model = createEigenFaceRecognizer();
     model->train(images, labels);

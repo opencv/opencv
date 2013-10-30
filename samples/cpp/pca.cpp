@@ -104,7 +104,7 @@ static void onTrackbar(int pos, void* ptr)
 
     struct params *p = (struct params *)ptr;
 
-    p->pca = PCA(p->data, cv::Mat(), CV_PCA_DATA_AS_ROW, var);
+    p->pca = PCA(p->data, Mat(), CV_PCA_DATA_AS_ROW, var);
 
     Mat point = p->pca.project(p->data.row(0));
     Mat reconstruction = p->pca.backProject(point);
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
     Mat data = formatImagesForPCA(images);
 
     // perform PCA
-    PCA pca(data, cv::Mat(), CV_PCA_DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
+    PCA pca(data, Mat(), CV_PCA_DATA_AS_ROW, 0.95); // trackbar is initially set here, also this is a common value for retainedVariance
 
     // Demonstration of the effect of retainedVariance on the first image
     Mat point = pca.project(data.row(0)); // project into the eigenspace, thus the image becomes a "point"

@@ -53,7 +53,7 @@ int main(int, char**)
         }
         if(waitKey(30)>=0)
             break;
-        std::swap(prevgray, gray);
+        swap(prevgray, gray);
     }
     return 0;
 }
