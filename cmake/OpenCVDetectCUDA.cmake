@@ -152,6 +152,11 @@ if(CUDA_FOUND)
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
   set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
 
+  if(ANDROID)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-target-os-variant=Android")
+  endif()
+
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
   OCV_OPTION(CUDA_FAST_MATH "Enable --use_fast_math for CUDA compiler " OFF)
