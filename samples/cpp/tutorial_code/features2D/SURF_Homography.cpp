@@ -95,8 +95,8 @@ int main( int argc, char** argv )
 
   //-- Get the corners from the image_1 ( the object to be "detected" )
   std::vector<Point2f> obj_corners(4);
-  obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( img_object.cols, 0 );
-  obj_corners[2] = cvPoint( img_object.cols, img_object.rows ); obj_corners[3] = cvPoint( 0, img_object.rows );
+  obj_corners[0] = Point(0,0); obj_corners[1] = Point( img_object.cols, 0 );
+  obj_corners[2] = Point( img_object.cols, img_object.rows ); obj_corners[3] = Point( 0, img_object.rows );
   std::vector<Point2f> scene_corners(4);
 
   perspectiveTransform( obj_corners, scene_corners, H);

@@ -461,7 +461,7 @@ int main( int argc, char** argv )
             flip( view, view, 0 );
 
         vector<Point2f> pointbuf;
-        cvtColor(view, viewGray, CV_BGR2GRAY);
+        cvtColor(view, viewGray, COLOR_BGR2GRAY);
 
         bool found;
         switch( pattern )

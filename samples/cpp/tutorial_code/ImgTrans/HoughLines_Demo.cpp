@@ -46,7 +46,7 @@ int main( int, char** argv )
      }
 
    /// Pass the image to gray
-   cvtColor( src, src_gray, CV_RGB2GRAY );
+   cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
    /// Apply Canny edge detector
    Canny( src_gray, edges, 50, 200, 3 );
@@ -55,10 +55,10 @@ int main( int, char** argv )
    char thresh_label[50];
    sprintf( thresh_label, "Thres: %d + input", min_threshold );
 
-   namedWindow( standard_name, CV_WINDOW_AUTOSIZE );
+   namedWindow( standard_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, standard_name, &s_trackbar, max_trackbar, Standard_Hough);
 
-   namedWindow( probabilistic_name, CV_WINDOW_AUTOSIZE );
+   namedWindow( probabilistic_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, probabilistic_name, &p_trackbar, max_trackbar, Probabilistic_Hough);
 
    /// Initialize

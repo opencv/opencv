@@ -30,12 +30,12 @@ int main( int, char** argv )
   src = imread( argv[1], 1 );
 
   /// Convert image to gray and blur it
-  cvtColor( src, src_gray, CV_BGR2GRAY );
+  cvtColor( src, src_gray, COLOR_BGR2GRAY );
   blur( src_gray, src_gray, Size(3,3) );
 
   /// Create Window
   const char* source_window = "Source";
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, src );
 
   createTrackbar( " Threshold:", "Source", &thresh, max_thresh, thresh_callback );
@@ -62,7 +62,7 @@ void thresh_callback(int, void* )
   findContours( threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
   /// Find the convex hull object for each contour
- vector<vector<Point> >hull( contours.size() );
+  vector<vector<Point> >hull( contours.size() );
   for( size_t i = 0; i < contours.size(); i++ )
      {   convexHull( Mat(contours[i]), hull[i], false ); }
 
@@ -76,6 +76,6 @@ void thresh_callback(int, void* )
      }
 
   /// Show in a window
-  namedWindow( "Hull demo", CV_WINDOW_AUTOSIZE );
+  namedWindow( "Hull demo", WINDOW_AUTOSIZE );
   imshow( "Hull demo", drawing );
 }

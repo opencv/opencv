@@ -71,7 +71,7 @@ int main( int argc, char** argv )
             break;
 
         frame.copyTo(image);
-        cvtColor(image, gray, CV_BGR2GRAY);
+        cvtColor(image, gray, COLOR_BGR2GRAY);
 
         if( nightMode )
             image = Scalar::all(0);
