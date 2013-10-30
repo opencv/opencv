@@ -1,10 +1,10 @@
 
 //============================================================================
-// Name        : OpenEXRimages_HDR_Retina_toneMapping.cpp
+// Name        : HighDynamicRange_RetinaCompression.cpp
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.1
 // Copyright   : Alexandre Benoit, LISTIC Lab, july 2011
-// Description : High dynamic range retina tone mapping with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Description : HighDynamicRange compression (tone mapping) with the help of the Gipsa/Listic's retina in C++, Ansi-style
 //============================================================================
 
 #include <iostream>
@@ -12,7 +12,7 @@
 
 #include "opencv2/opencv.hpp"
 
-static void help(string errorMessage)
+static void help(std::string errorMessage)
 {
     std::cout<<"Program init error : "<<errorMessage<<std::endl;
     std::cout<<"\nProgram call procedure : ./OpenEXRimages_HDR_Retina_toneMapping [OpenEXR image to process]"<<std::endl;
@@ -35,12 +35,12 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
 
     for( int i = 0; i < curve.size().height; i++ )
         rectangle( displayedCurveImage, cv::Point(i*binW, displayedCurveImage.rows),
-            cv::Point((i+1)*binW, displayedCurveImage.rows - cvRound(windowNormalizedCurve.at<float>(i))),
-            cv::Scalar::all(0), -1, 8, 0 );
-	    rectangle( displayedCurveImage, Point(0, 0),
+                cv::Point((i+1)*binW, displayedCurveImage.rows - cvRound(windowNormalizedCurve.at<float>(i))),
+                cv::Scalar::all(0), -1, 8, 0 );
+    rectangle( displayedCurveImage, cv::Point(0, 0),
             cv::Point((lowerLimit)*binW, 200),
             cv::Scalar::all(128), -1, 8, 0 );
-	    rectangle( displayedCurveImage, Point(displayedCurveImage.cols, 0),
+    rectangle( displayedCurveImage, cv::Point(displayedCurveImage.cols, 0),
             cv::Point((upperLimit)*binW, 200),
             cv::Scalar::all(128), -1, 8, 0 );
 
@@ -58,7 +58,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      //std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputMat.elemSize()/inputMat.elemSize1()<<", "<<inputMat.elemSize1()<<std::endl;
 
      // rescale between 0-255, keeping floating point values
-     cv::normalize(inputMat, outputMat, 0.0, 255.0, NORM_MINMAX);
+     cv::normalize(inputMat, outputMat, 0.0, 255.0, cv::NORM_MINMAX);
 
      // extract a 8bit image that will be used for histogram edge cut
      cv::Mat intGrayImage;
@@ -75,17 +75,17 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel errors cancellation
      cv::Mat dst, hist;
      int histSize = 256;
-     calcHist(&intGrayImage, 1, 0, Mat(), hist, 1, &histSize, 0);
+     calcHist(&intGrayImage, 1, 0, cv::Mat(), hist, 1, &histSize, 0);
      cv::Mat normalizedHist;
-     normalize(hist, normalizedHist, 1, 0, NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
+     normalize(hist, normalizedHist, 1, 0, cv::NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
 
      double min_val, max_val;
-     cv::Mat histArr(normalizedHist);
+     CvMat histArr(normalizedHist);
      cvMinMaxLoc(&histArr, &min_val, &max_val);
      //std::cout<<"Hist max,min = "<<max_val<<", "<<min_val<<std::endl;
 
      // compute density probability
-     cv::Mat denseProb=Mat::zeros(normalizedHist.size(), CV_32F);
+     cv::Mat denseProb=cv::Mat::zeros(normalizedHist.size(), CV_32F);
      denseProb.at<float>(0)=normalizedHist.at<float>(0);
      int histLowerLimit=0, histUpperLimit=0;
      for (int i=1;i<normalizedHist.size().height;++i)
@@ -124,10 +124,10 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
  {
      std::cout<<"Histogram clipping value changed, current value = "<<histogramClippingValue<<std::endl;
      rescaleGrayLevelMat(inputImage, imageInputRescaled, (float)(histogramClippingValue/100.0));
-     normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, NORM_MINMAX);
+     normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, cv::NORM_MINMAX);
  }
 
- cv::Ptr<Retina> retina;
+ cv::Ptr<cv::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -183,7 +183,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      std::cout<<"RetinaDemo: processing image "<<inputImageName<<std::endl;
      // image processing case
      // declare the retina input buffer... that will be fed differently in regard of the input media
-     inputImage = imread(inputImageName, -1); // load image in RGB mode
+     inputImage = cv::imread(inputImageName, -1); // load image in RGB mode
      std::cout<<"=> image size (h,w) = "<<inputImage.size().height<<", "<<inputImage.size().width<<std::endl;
      if (!inputImage.total())
      {
@@ -191,7 +191,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
             return -1;
          }
      // rescale between 0 and 1
-     normalize(inputImage, inputImage, 0.0, 1.0, NORM_MINMAX);
+     normalize(inputImage, inputImage, 0.0, 1.0, cv::NORM_MINMAX);
      cv::Mat gammaTransformedImage;
      cv::pow(inputImage, 1./5, gammaTransformedImage); // apply gamma curve: img = img ** (1./5)
      imshow("EXR image original image, 16bits=>8bits linear rescaling ", inputImage);
@@ -211,7 +211,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
           */
          if (useLogSampling)
                 {
-                     retina = new cv::Retina(inputImage.size(),true, RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
              retina = new cv::Retina(inputImage.size());
@@ -264,7 +264,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
              cv::imshow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", retinaOutput_parvo);
              cv::waitKey(10);
          }
-     }catch(Exception e)
+     }catch(cv::Exception e)
      {
          std::cerr<<"Error using Retina : "<<e.what()<<std::endl;
      }

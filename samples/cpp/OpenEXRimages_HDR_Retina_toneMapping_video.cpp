@@ -4,7 +4,7 @@
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.2
 // Copyright   : Alexandre Benoit, LISTIC Lab, december 2011
-// Description : High Dynamid Range tone mapping for image sequences with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Description : HighDynamicRange compression (tone mapping) for image sequences with the help of the Gipsa/Listic's retina in C++, Ansi-style
 // Known issues: the input OpenEXR sequences can have bad computed pixels that should be removed
 //               => a simple method consists of cutting histogram edges (a slider for this on the UI is provided)
 //               => however, in image sequences, this histogramm cut must be done in an elegant way from frame to frame... still not done...
@@ -12,15 +12,19 @@
 
 #include <iostream>
 #include <stdio.h>
-#include <cstd::string>
+#include <cstring>
 
 #include "opencv2/opencv.hpp"
 
-static void help(std::string std::errorMessage)
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
+
+static void help(std::string errorMessage)
 {
-    std::cout<<"Program init std::error : "<<std::errorMessage<<std::endl;
+    std::cout<<"Program init error : "<<errorMessage<<std::endl;
     std::cout<<"\nProgram call procedure : ./OpenEXRimages_HDR_Retina_toneMapping [OpenEXR image sequence to process] [OPTIONNAL start frame] [OPTIONNAL end frame]"<<std::endl;
-    std::cout<<"\t[OpenEXR image sequence to process] : sprintf style ready prototype filename of the input HDR images to process, must be an OpenEXR forcv::Mat, see http://www.openexr.com/ to get some samples or create your own using camera bracketing and Photoshop or equivalent software for OpenEXR image synthesis"<<std::endl;
+    std::cout<<"\t[OpenEXR image sequence to process] : std::sprintf style ready prototype filename of the input HDR images to process, must be an OpenEXR format, see http://www.openexr.com/ to get some samples or create your own using camera bracketing and Photoshop or equivalent software for OpenEXR image synthesis"<<std::endl;
     std::cout<<"\t\t => WARNING : image index number of digits cannot exceed 10"<<std::endl;
     std::cout<<"\t[start frame] : the starting frame tat should be considered"<<std::endl;
     std::cout<<"\t[end frame] : the ending frame tat should be considered"<<std::endl;
@@ -44,15 +48,15 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
     int binW = cvRound((double)displayedCurveImage.cols/curve.size().height);
 
     for( int i = 0; i < curve.size().height; i++ )
-        rectangle( displayedCurveImage, Point(i*binW, displayedCurveImage.rows),
+        rectangle( displayedCurveImage, cv::Point(i*binW, displayedCurveImage.rows),
                 cv::Point((i+1)*binW, displayedCurveImage.rows - cvRound(windowNormalizedCurve.at<float>(i))),
-                cv::cv::Scalar::all(0), -1, 8, 0 );
-    rectangle( displayedCurveImage, Point(0, 0),
+                cv::Scalar::all(0), -1, 8, 0 );
+    rectangle( displayedCurveImage, cv::Point(0, 0),
             cv::Point((lowerLimit)*binW, 200),
-            cv::cv::Scalar::all(128), -1, 8, 0 );
-    rectangle( displayedCurveImage, Point(displayedCurveImage.cols, 0),
+            cv::Scalar::all(128), -1, 8, 0 );
+    rectangle( displayedCurveImage, cv::Point(displayedCurveImage.cols, 0),
             cv::Point((upperLimit)*binW, 200),
-            cv::cv::Scalar::all(128), -1, 8, 0 );
+            cv::Scalar::all(128), -1, 8, 0 );
 
     cv::imshow(figureTitle, displayedCurveImage);
 }
@@ -60,28 +64,28 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
 /*
  * objective : get the gray level map of the input image and rescale it to the range [0-255] if rescale0_255=TRUE, simply trunks else
  */
-static void rescaleGrayLevelcv::Mat(const cv::Mat &inputcv::Mat, cv::Mat &outputcv::Mat, const float histogramClippingLimit, const bool rescale0_255)
+static void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, const float histogramClippingLimit, const bool rescale0_255)
  {
-     // adjust output cv::Matrix wrt the input size but single channel
+     // adjust output matrix wrt the input size but single channel
      std::cout<<"Input image rescaling with histogram edges cutting (in order to eliminate bad pixels created during the HDR image creation) :"<<std::endl;
-     //std::cout<<"=> image size (h,w,channels) = "<<inputcv::Mat.size().height<<", "<<inputcv::Mat.size().width<<", "<<inputcv::Mat.channels()<<std::endl;
-     //std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputcv::Mat.elemSize()/inputcv::Mat.elemSize1()<<", "<<inputcv::Mat.elemSize1()<<std::endl;
+     //std::cout<<"=> image size (h,w,channels) = "<<inputMat.size().height<<", "<<inputMat.size().width<<", "<<inputMat.channels()<<std::endl;
+     //std::cout<<"=> pixel coding (nbchannel, bytes per channel) = "<<inputMat.elemSize()/inputMat.elemSize1()<<", "<<inputMat.elemSize1()<<std::endl;
 
      // get min and max values to use afterwards if no 0-255 rescaling is used
      double maxInput, minInput, histNormRescalefactor=1.f;
      double histNormOffset=0.f;
-     minMaxLoc(inputcv::Mat, &minInput, &maxInput);
+     minMaxLoc(inputMat, &minInput, &maxInput);
      histNormRescalefactor=255.f/(maxInput-minInput);
      histNormOffset=minInput;
      std::cout<<"Hist max,min = "<<maxInput<<", "<<minInput<<" => scale, offset = "<<histNormRescalefactor<<", "<<histNormOffset<<std::endl;
      // rescale between 0-255, keeping floating point values
      cv::Mat normalisedImage;
-     normalize(inputcv::Mat, normalisedImage, 0.f, 255.f, NORM_MINMAX);
+     cv::normalize(inputMat, normalisedImage, 0.f, 255.f, cv::NORM_MINMAX);
      if (rescale0_255)
-        normalisedImage.copyTo(outputcv::Mat);
+        normalisedImage.copyTo(outputMat);
      // extract a 8bit image that will be used for histogram edge cut
      cv::Mat intGrayImage;
-     if (inputcv::Mat.channels()==1)
+     if (inputMat.channels()==1)
      {
          normalisedImage.convertTo(intGrayImage, CV_8U);
      }else
@@ -91,13 +95,13 @@ static void rescaleGrayLevelcv::Mat(const cv::Mat &inputcv::Mat, cv::Mat &output
          cvtColor(rgbIntImg, intGrayImage, CV_BGR2GRAY);
      }
 
-     // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel std::errors cancellation
+     // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel errors cancellation
      cv::Mat dst, hist;
      int histSize = 256;
      calcHist(&intGrayImage, 1, 0, cv::Mat(), hist, 1, &histSize, 0);
      cv::Mat normalizedHist;
 
-     normalize(hist, normalizedHist, 1.f, 0.f, NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
+     normalize(hist, normalizedHist, 1.f, 0.f, cv::NORM_L1, CV_32F); // normalize histogram so that its sum equals 1
 
      // compute density probability
      cv::Mat denseProb=cv::Mat::zeros(normalizedHist.size(), CV_32F);
@@ -125,20 +129,20 @@ static void rescaleGrayLevelcv::Mat(const cv::Mat &inputcv::Mat, cv::Mat &output
 
     if(rescale0_255) // rescale between 0-255 if asked to
     {
-        cv::threshold( outputcv::Mat, outputcv::Mat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
-        cv::threshold( outputcv::Mat, outputcv::Mat, minInputValue, minInputValue, 3 ); //THRESH_TOZERO, clips values under minInputValue
+        cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
+        cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //THRESH_TOZERO, clips values under minInputValue
         // rescale image range [minInputValue-maxInputValue] to [0-255]
-        outputcv::Mat-=minInputValue;
-        outputcv::Mat*=255.f/(maxInputValue-minInputValue);
+        outputMat-=minInputValue;
+        outputMat*=255.f/(maxInputValue-minInputValue);
     }else
     {
-        inputcv::Mat.copyTo(outputcv::Mat);
-        // update cv::threshold in the initial input image range
+        inputMat.copyTo(outputMat);
+        // update threshold in the initial input image range
         maxInputValue=(float)((maxInputValue-255.f)/histNormRescalefactor+maxInput);
         minInputValue=(float)(minInputValue/histNormRescalefactor+minInput);
         std::cout<<"===> Input Hist clipping values (max,min) = "<<maxInputValue<<", "<<minInputValue<<std::endl;
-        cv::threshold( outputcv::Mat, outputcv::Mat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
-        cv::threshold( outputcv::Mat, outputcv::Mat, minInputValue, minInputValue, 3 ); //
+        cv::threshold( outputMat, outputMat, maxInputValue, maxInputValue, 2 ); //THRESH_TRUNC, clips values above maxInputValue
+        cv::threshold( outputMat, outputMat, minInputValue, minInputValue, 3 ); //
     }
  }
 
@@ -159,7 +163,7 @@ static void rescaleGrayLevelcv::Mat(const cv::Mat &inputcv::Mat, cv::Mat &output
 
  }
 
- cv::Ptr<Retina> retina;
+ cv::Ptr<cv::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -187,7 +191,7 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
      std::cout<<"RetinaDemo: reading image : "<<currentImageName<<std::endl;
      // image processing case
      // declare the retina input buffer... that will be fed differently in regard of the input media
-     inputImage = imread(currentImageName, -1); // load image in RGB mode
+     inputImage = cv::imread(currentImageName, -1); // load image in RGB mode
      std::cout<<"=> image size (h,w) = "<<inputImage.size().height<<", "<<inputImage.size().width<<std::endl;
      if (inputImage.empty())
      {
@@ -197,7 +201,7 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
 
     // rescaling/histogram clipping stage
     // rescale between 0 and 1
-    // TODO : take care of this step !!! maybe disable of do this in a nicer way ... each successive image should get the same transforcv::Mation... but it depends on the initial image forcv::Mat
+    // TODO : take care of this step !!! maybe disable of do this in a nicer way ... each successive image should get the same transformation... but it depends on the initial image format
     double maxInput, minInput;
     minMaxLoc(inputImage, &minInput, &maxInput);
     std::cout<<"ORIGINAL IMAGE pixels values range (max,min) : "<<maxInput<<", "<<minInput<<std::endl;
@@ -216,7 +220,7 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
         globalOffset= cv::Scalar(channelOffset, channelOffset, channelOffset, channelOffset);
     }
     // call the generic input image rescaling callback
-    callBack_rescaleGrayLevelcv::Mat(1,NULL);
+    callBack_rescaleGrayLevelMat(1,NULL);
 }
 
  int main(int argc, char* argv[]) {
@@ -231,11 +235,11 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
      std::cout<<"* => high frequency spatio-temporal noise reduction"<<std::endl;
      std::cout<<"* => low frequency luminance to be reduced (luminance range compression)"<<std::endl;
      std::cout<<"* => local logarithmic luminance compression allows details to be enhanced in low light conditions\n"<<std::endl;
-     std::cout<<"* for more inforcv::Mation, reer to the following papers :"<<std::endl;
+     std::cout<<"* for more information, reer to the following papers :"<<std::endl;
      std::cout<<"* Benoit A., Caplier A., Durette B., Herault, J., \"USING HUMAN VISUAL SYSTEM MODELING FOR BIO-INSPIRED LOW LEVEL IMAGE PROCESSING\", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773, DOI: http://dx.doi.org/10.1016/j.cviu.2010.01.011"<<std::endl;
      std::cout<<"* Vision: Images, Signals and Neural Networks: Models of Neural Processing in Visual Perception (Progress in Neural Processing),By: Jeanny Herault, ISBN: 9814273686. WAPI (Tower ID): 113266891."<<std::endl;
      std::cout<<"* => reports comments/remarks at benoit.alexandre.vision@gmail.com"<<std::endl;
-     std::cout<<"* => more inforcv::Mations and papers at : http://sites.google.com/site/benoitalexandrevision/"<<std::endl;
+     std::cout<<"* => more informations and papers at : http://sites.google.com/site/benoitalexandrevision/"<<std::endl;
      std::cout<<"*********************************************************************************"<<std::endl;
      std::cout<<"** WARNING : this sample requires OpenCV to be configured with OpenEXR support **"<<std::endl;
      std::cout<<"*********************************************************************************"<<std::endl;
@@ -271,7 +275,7 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
          }
 
      //////////////////////////////////////////////////////////////////////////////
-     // Program start in a try/catch safety context (Retina may throw std::errors)
+     // Program start in a try/catch safety context (Retina may throw errors)
      try
      {
          /* create a retina instance with default parameters setup, uncomment the initialisation you wanna test
@@ -279,15 +283,15 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
           */
          if (useLogSampling)
                 {
-                     retina = new Retina(inputImage.size(),true, RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = new Retina(inputImage.size());
+             retina = new cv::Retina(inputImage.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         retina->write("RetinaDefaultParameters.xml");
 
-                 // desactivate Magnocellular pathway processing (motion inforcv::Mation extraction) since it is not usefull here
+                 // desactivate Magnocellular pathway processing (motion information extraction) since it is not usefull here
                  retina->activateMovingContoursProcessing(false);
 
          // declare retina output buffers
@@ -297,9 +301,9 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
          // prepare displays and interactions
          histogramClippingValue=0; // default value... updated with interface slider
 
-         std::string retinaInputCorrected("Retina input image (with cut edges histogram for basic pixels std::error avoidance)");
+         std::string retinaInputCorrected("Retina input image (with cut edges histogram for basic pixels error avoidance)");
          cv::namedWindow(retinaInputCorrected,1);
-         cv::createTrackbar("histogram edges clipping limit", "Retina input image (with cut edges histogram for basic pixels std::error avoidance)",&histogramClippingValue,50,callBack_rescaleGrayLevelcv::Mat);
+         cv::createTrackbar("histogram edges clipping limit", "Retina input image (with cut edges histogram for basic pixels error avoidance)",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
 
          std::string RetinaParvoWindow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping");
          cv::namedWindow(RetinaParvoWindow, 1);
@@ -332,24 +336,24 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
                 std::cout<<"Could not load new image (index = "<<currentFrameIndex<<"), program end"<<std::endl;
                 return -1;
              }
-            // display input & process standard power transforcv::Mation
-            cv::imshow("EXR image original image, 16bits=>8bits linear rescaling ", imageInputRescaled);
-            cv::Mat gamcv::MatransformedImage;
-            pow(imageInputRescaled, 1./5, gamcv::MatransformedImage); // apply gamma curve: img = img ** (1./5)
-            cv::imshow(powerTransformedInput, gamcv::MatransformedImage);
+            // display input & process standard power transformation
+            imshow("EXR image original image, 16bits=>8bits linear rescaling ", imageInputRescaled);
+            cv::Mat gammaTransformedImage;
+            cv::pow(imageInputRescaled, 1./5, gammaTransformedImage); // apply gamma curve: img = img ** (1./5)
+            imshow(powerTransformedInput, gammaTransformedImage);
              // run retina filter
              retina->run(imageInputRescaled);
              // Retrieve and display retina output
              retina->getParvo(retinaOutput_parvo);
              cv::imshow(retinaInputCorrected, imageInputRescaled/255.f);
              cv::imshow(RetinaParvoWindow, retinaOutput_parvo);
-             waitKey(4);
+             cv::waitKey(4);
             // jump to next frame
             ++currentFrameIndex;
          }
-     }catch(Exception e)
+     }catch(cv::Exception e)
      {
-         cerr<<"std::error using Retina : "<<e.what()<<std::endl;
+         std::cerr<<"Error using Retina : "<<e.what()<<std::endl;
      }
 
      // Program end message
