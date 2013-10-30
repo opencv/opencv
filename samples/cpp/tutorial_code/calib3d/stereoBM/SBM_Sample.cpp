@@ -56,7 +56,7 @@ int main( int argc, char** argv )
   //-- 4. Display it as a CV_8UC1 image
   imgDisparity16S.convertTo( imgDisparity8U, CV_8UC1, 255/(maxVal - minVal));
 
-  namedWindow( windowDisparity, CV_WINDOW_NORMAL );
+  namedWindow( windowDisparity, WINDOW_NORMAL );
   imshow( windowDisparity, imgDisparity8U );
 
   //-- 5. Save the image

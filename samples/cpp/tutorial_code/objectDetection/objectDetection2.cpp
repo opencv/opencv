@@ -30,7 +30,7 @@ RNG rng(12345);
  */
 int main( void )
 {
-  CvCapture* capture;
+  VideoCapture capture;
   Mat frame;
 
   //-- 1. Load the cascade
@@ -38,12 +38,12 @@ int main( void )
   if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
 
   //-- 2. Read the video stream
-  capture = cvCaptureFromCAM( -1 );
-  if( capture )
+  capture.open( -1 );
+  if( capture.isOpened() )
   {
     for(;;)
     {
-      frame = cvQueryFrame( capture );
+      capture >> frame;
 
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )
@@ -67,7 +67,7 @@ void detectAndDisplay( Mat frame )
    std::vector<Rect> faces;
    Mat frame_gray;
 
-   cvtColor( frame, frame_gray, CV_BGR2GRAY );
+   cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
    equalizeHist( frame_gray, frame_gray );
 
    //-- Detect faces

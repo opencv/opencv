@@ -79,7 +79,7 @@ int main( int argc, char** argv )
 
         OpenClose(open_close_pos, 0);
         ErodeDilate(erode_dilate_pos, 0);
-        c = cvWaitKey(0);
+        c = waitKey(0);
 
         if( (char)c == 27 )
             break;

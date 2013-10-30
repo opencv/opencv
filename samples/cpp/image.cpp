@@ -109,7 +109,7 @@ int main( int argc, char** argv )
     cvtColor(img_yuv, img, CV_YCrCb2BGR);
 
     // this is counterpart for cvNamedWindow
-    namedWindow("image with grain", CV_WINDOW_AUTOSIZE);
+    namedWindow("image with grain", WINDOW_AUTOSIZE);
 #if DEMO_MIXED_API_USE
     // this is to demonstrate that img and iplimg really share the data - the result of the above
     // processing is stored in img and thus in iplimg too.

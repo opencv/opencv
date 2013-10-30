@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     colorRad = 10;
     maxPyrLevel = 1;
 
-    namedWindow( winName, CV_WINDOW_AUTOSIZE );
+    namedWindow( winName, WINDOW_AUTOSIZE );
 
     createTrackbar( "spatialRad", winName, &spatialRad, 80, meanShiftSegmentation );
     createTrackbar( "colorRad", winName, &colorRad, 60, meanShiftSegmentation );

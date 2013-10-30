@@ -54,7 +54,7 @@ int main( int /*argc*/, char** /*argv*/ )
 
         imshow( "rect & circle", img );
 
-        char key = (char)cvWaitKey();
+        char key = (char)waitKey();
         if( key == 27 || key == 'q' || key == 'Q' ) // 'ESC'
             break;
     }
