@@ -336,8 +336,7 @@ static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
     return opt;
 }
 
-void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
@@ -350,10 +349,14 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
         idxStr << "_D" << depth;
     kernelName += idxStr.str();
 
-    cl_kernel kernel;
     std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
-    kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
+    cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
+    return kernel;
+}
 
+void openCLExecuteKernel(Context *ctx, cl_kernel kernel, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args)
+{
     if ( localThreads != NULL)
     {
         globalThreads[0] = roundUp(globalThreads[0], localThreads[0]);
@@ -397,6 +400,15 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
 
     clFlush(getClCommandQueue(ctx));
     openCLSafeCall(clReleaseKernel(kernel));
+}
+
+void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+                          int depth, const char *build_options)
+{
+    cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, channels, depth, build_options);
+
+    openCLExecuteKernel(ctx, kernel, globalThreads, localThreads, args);
 }
 
 void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
