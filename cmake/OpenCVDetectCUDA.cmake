@@ -174,6 +174,14 @@ if(CUDA_FOUND)
 
       # we remove -Wsign-promo as it generates warnings under linux
       string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
+
+      # we remove -Wno-delete-non-virtual-dtor because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-Wno-delete-non-virtual-dtor" "" ${var} "${${var}}")
+
+      # we remove -frtti because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-frtti" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)
