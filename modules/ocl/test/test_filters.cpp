@@ -272,7 +272,7 @@ OCL_TEST_P(GaussianBlurTest, Mat)
         GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType);
         ocl::GaussianBlur(gsrc_roi, gdst_roi, Size(ksize, ksize), sigma1, sigma2, borderType);
 
-        Near();
+        Near(CV_MAT_DEPTH(type) == CV_8U ? 3 : 1e-6, false);
     }
 }
 
