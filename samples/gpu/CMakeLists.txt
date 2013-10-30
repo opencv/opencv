@@ -49,7 +49,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       target_link_libraries(${the_target} opencv_nonfree)
     endif()
 
-    if(HAVE_OPENCL)
+    if(HAVE_opencv_ocl)
       target_link_libraries(${the_target} opencv_ocl)
     endif()
 

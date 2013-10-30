@@ -499,7 +499,7 @@ macro(ocv_glob_module_sources)
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 
   file(GLOB cl_kernels "src/opencl/*.cl")
-  if(HAVE_OPENCL AND cl_kernels)
+  if(HAVE_opencv_ocl AND cl_kernels)
     ocv_include_directories(${OPENCL_INCLUDE_DIRS})
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
