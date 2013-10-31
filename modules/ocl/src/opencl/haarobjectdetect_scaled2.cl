@@ -120,7 +120,6 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
     int grpidx = get_group_id(0);
     int lclidx = get_local_id(0);
     int lclidy = get_local_id(1);
-    int lcl_sz = mul24(grpszx, grpszy);
     int lcl_id = mad24(lclidy, grpszx, lclidx);
     __local int glboutindex[1];
     __local int lclcount[1];

@@ -43,8 +43,6 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
-
 #if defined (DOUBLE_SUPPORT)
 
 #ifdef cl_khr_fp64
@@ -70,7 +68,7 @@
 #define SUMS_PTR(ox, oy) mad24(gidy + oy, img_sums_step, gidx + img_sums_offset + ox)
 // normAcc* are accurate normalization routines which make GPU matchTemplate
 // consistent with CPU one
-float normAcc(float num, float denum)
+inline float normAcc(float num, float denum)
 {
     if(fabs(num) < denum)
     {
@@ -83,7 +81,7 @@ float normAcc(float num, float denum)
     return 0;
 }
 
-float normAcc_SQDIFF(float num, float denum)
+inline float normAcc_SQDIFF(float num, float denum)
 {
     if(fabs(num) < denum)
     {

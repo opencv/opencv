@@ -37,7 +37,6 @@
 //
 //
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
 #define CV_HAAR_FEATURE_MAX           3
 
 #define calc_sum(rect,offset)        (sum[(rect).p0+offset] - sum[(rect).p1+offset] - sum[(rect).p2+offset] + sum[(rect).p3+offset])

@@ -47,7 +47,7 @@
 #define WAVE_SIZE 1
 #endif
 
-int calc_lut(__local int* smem, int val, int tid)
+static int calc_lut(__local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -61,7 +61,7 @@ int calc_lut(__local int* smem, int val, int tid)
 }
 
 #ifdef CPU
-void reduce(volatile __local int* smem, int val, int tid)
+static void reduce(volatile __local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -101,7 +101,7 @@ void reduce(volatile __local int* smem, int val, int tid)
 
 #else
 
-void reduce(__local volatile int* smem, int val, int tid)
+static void reduce(__local volatile int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -147,9 +147,9 @@ __kernel void calcLut(__global __const uchar * src, __global uchar * lut,
 {
     __local int smem[512];
 
-    const int tx = get_group_id(0);
-    const int ty = get_group_id(1);
-    const unsigned int tid = get_local_id(1) * get_local_size(0)
+    int tx = get_group_id(0);
+    int ty = get_group_id(1);
+    int tid = get_local_id(1) * get_local_size(0)
                              + get_local_id(0);
 
     smem[tid] = 0;
