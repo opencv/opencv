@@ -43,9 +43,6 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
-
 #ifdef L2GRAD
 inline float calc(int x, int y)
 {
@@ -248,7 +245,12 @@ void calcMagnitude
 //////////////////////////////////////////////////////////////////////////////////////////
 // 0.4142135623730950488016887242097 is tan(22.5)
 #define CANNY_SHIFT 15
-#define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
+
+#ifdef DOUBLE_SUPPORT
+    #define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
+#else
+    #define TG22        (int)(0.4142135623730950488016887242097f*(1<<CANNY_SHIFT) + 0.5f)
+#endif
 
 //First pass of edge detection and non-maximum suppression
 // edgetype is set to for each pixel:
@@ -681,7 +683,7 @@ edgesHysteresisGlobal
 
             ind = s_ind;
 
-            for (int i = lidx; i < s_counter; i += get_local_size(0))
+            for (int i = lidx; i < (int)s_counter; i += get_local_size(0))
             {
                 st2[ind + i] = s_st[i];
             }

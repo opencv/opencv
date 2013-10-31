@@ -71,18 +71,18 @@ __kernel void threshold(__global const T * restrict src, int src_offset, int src
 #else
         VT sdata = VLOADN(0, src + src_index);
 #endif
-        VT vthresh = (VT)(thresh), zero = (VT)(0);
+        VT vthresh = (VT)(thresh);
 
 #ifdef THRESH_BINARY
-        VT vecValue = sdata > vthresh ? max_val : zero;
+        VT vecValue = sdata > vthresh ? max_val : (VT)(0);
 #elif defined THRESH_BINARY_INV
-        VT vecValue = sdata > vthresh ? zero : max_val;
+        VT vecValue = sdata > vthresh ? (VT)(0) : max_val;
 #elif defined THRESH_TRUNC
         VT vecValue = sdata > vthresh ? thresh : sdata;
 #elif defined THRESH_TOZERO
-        VT vecValue = sdata > vthresh ? sdata : zero;
+        VT vecValue = sdata > vthresh ? sdata : (VT)(0);
 #elif defined THRESH_TOZERO_INV
-        VT vecValue = sdata > vthresh ? zero : sdata;
+        VT vecValue = sdata > vthresh ? (VT)(0) : sdata;
 #endif
 
         if (gx + VECSIZE <= max_index)
@@ -117,18 +117,18 @@ __kernel void threshold(__global const T * restrict src, int src_offset, int src
         int src_index = mad24(gy, src_step, src_offset + gx);
         int dst_index = mad24(gy, dst_step, dst_offset + gx);
 
-        T sdata = src[src_index], zero = (T)(0);
+        T sdata = src[src_index];
 
 #ifdef THRESH_BINARY
-        dst[dst_index] = sdata > thresh ? max_val : zero;
+        dst[dst_index] = sdata > thresh ? max_val : (T)(0);
 #elif defined THRESH_BINARY_INV
-        dst[dst_index] = sdata > thresh ? zero : max_val;
+        dst[dst_index] = sdata > thresh ? (T)(0) : max_val;
 #elif defined THRESH_TRUNC
         dst[dst_index] = sdata > thresh ? thresh : sdata;
 #elif defined THRESH_TOZERO
-        dst[dst_index] = sdata > thresh ? sdata : zero;
+        dst[dst_index] = sdata > thresh ? sdata : (T)(0);
 #elif defined THRESH_TOZERO_INV
-        dst[dst_index] = sdata > thresh ? zero : sdata;
+        dst[dst_index] = sdata > thresh ? (T)(0) : sdata;
 #endif
     }
 }

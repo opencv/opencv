@@ -63,7 +63,7 @@
 
 ///////////// parallel merge sort ///////////////
 // ported from https://github.com/HSA-Libraries/Bolt/blob/master/include/bolt/cl/stablesort_by_key_kernels.cl
-uint lowerBoundLinear( global K_T* data, uint left, uint right, K_T searchVal)
+static uint lowerBoundLinear( global K_T* data, uint left, uint right, K_T searchVal)
 {
     //  The values firstIndex and lastIndex get modified within the loop, narrowing down the potential sequence
     uint firstIndex = left;
@@ -94,7 +94,7 @@ uint lowerBoundLinear( global K_T* data, uint left, uint right, K_T searchVal)
 //  by a base pointer and left and right index for a particular candidate value.  The comparison operator is
 //  passed as a functor parameter my_comp
 //  This function returns an index that is the first index whos value would be equal to the searched value
-uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
+static uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
 {
     //  The values firstIndex and lastIndex get modified within the loop, narrowing down the potential sequence
     uint firstIndex = left;
@@ -130,7 +130,7 @@ uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
 //  passed as a functor parameter my_comp
 //  This function returns an index that is the first index whos value would be greater than the searched value
 //  If the search value is not found in the sequence, upperbound returns the same result as lowerbound
-uint upperBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
+static uint upperBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
 {
     uint upperBound = lowerBoundBinary( data, left, right, searchVal );
 
@@ -167,9 +167,6 @@ kernel void merge(
 )
 {
     size_t globalID     = get_global_id( 0 );
-    size_t groupID      = get_group_id( 0 );
-    size_t localID      = get_local_id( 0 );
-    size_t wgSize       = get_local_size( 0 );
 
     //  Abort threads that are passed the end of the input vector
     if( globalID >= srcVecSize )
@@ -230,12 +227,12 @@ kernel void blockInsertionSort(
     local V_T*    val_lds
 )
 {
-    size_t gloId    = get_global_id( 0 );
-    size_t groId    = get_group_id( 0 );
-    size_t locId    = get_local_id( 0 );
-    size_t wgSize   = get_local_size( 0 );
+    int gloId    = get_global_id( 0 );
+    int groId    = get_group_id( 0 );
+    int locId    = get_local_id( 0 );
+    int wgSize   = get_local_size( 0 );
 
-    bool in_range = gloId < vecSize;
+    bool in_range = gloId < (int)vecSize;
     K_T key;
     V_T val;
     //  Abort threads that are passed the end of the input vector
@@ -254,7 +251,7 @@ kernel void blockInsertionSort(
     {
         //  The last workgroup may have an irregular size, so we calculate a per-block endIndex
         //  endIndex is essentially emulating a mod operator with subtraction and multiply
-        size_t endIndex = vecSize - ( groId * wgSize );
+        int endIndex = vecSize - ( groId * wgSize );
         endIndex = min( endIndex, wgSize );
 
         // printf( "Debug: endIndex[%i]=%i\n", groId, endIndex );

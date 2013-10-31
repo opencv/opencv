@@ -53,7 +53,8 @@
 #define WAVE_SIZE 1
 #endif
 #ifdef CPU
-void reduce3(float val1, float val2, float val3,  __local float* smem1,  __local float* smem2,  __local float* smem3, int tid)
+
+static void reduce3(float val1, float val2, float val3,  __local float* smem1,  __local float* smem2,  __local float* smem3, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -72,7 +73,7 @@ void reduce3(float val1, float val2, float val3,  __local float* smem1,  __local
     }
 }
 
-void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid)
+static void reduce2(float val1, float val2, volatile __local float* smem1, volatile __local float* smem2, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -89,7 +90,7 @@ void reduce2(float val1, float val2, volatile __local float* smem1, volatile __l
     }
 }
 
-void reduce1(float val1, volatile __local float* smem1, int tid)
+static void reduce1(float val1, volatile __local float* smem1, int tid)
 {
     smem1[tid] = val1;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -104,7 +105,7 @@ void reduce1(float val1, volatile __local float* smem1, int tid)
     }
 }
 #else
-void reduce3(float val1, float val2, float val3,
+static void reduce3(float val1, float val2, float val3,
              __local volatile float* smem1, __local volatile float* smem2, __local volatile float* smem3, int tid)
 {
     smem1[tid] = val1;
@@ -151,7 +152,7 @@ void reduce3(float val1, float val2, float val3,
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-void reduce2(float val1, float val2, __local volatile float* smem1, __local volatile float* smem2, int tid)
+static void reduce2(float val1, float val2, __local volatile float* smem1, __local volatile float* smem2, int tid)
 {
     smem1[tid] = val1;
     smem2[tid] = val2;
@@ -190,7 +191,7 @@ void reduce2(float val1, float val2, __local volatile float* smem1, __local vola
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-void reduce1(float val1, __local volatile float* smem1, int tid)
+static void reduce1(float val1, __local volatile float* smem1, int tid)
 {
     smem1[tid] = val1;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -226,7 +227,7 @@ void reduce1(float val1, __local volatile float* smem1, int tid)
 // Image read mode
 __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
-void SetPatch(image2d_t I, float x, float y,
+static void SetPatch(image2d_t I, float x, float y,
               float* Pch, float* Dx, float* Dy,
               float* A11, float* A12, float* A22)
 {
@@ -247,7 +248,7 @@ void SetPatch(image2d_t I, float x, float y,
     *A22 += dIdy * dIdy;
 }
 
-void GetPatch(image2d_t J, float x, float y,
+inline void GetPatch(image2d_t J, float x, float y,
               float* Pch, float* Dx, float* Dy,
               float* b1, float* b2)
 {
@@ -257,13 +258,13 @@ void GetPatch(image2d_t J, float x, float y,
     *b2 += diff**Dy;
 }
 
-void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval)
+inline void GetError(image2d_t J, const float x, const float y, const float* Pch, float* errval)
 {
     float diff = read_imagef(J, sampler, (float2)(x,y)).x-*Pch;
     *errval += fabs(diff);
 }
 
-void SetPatch4(image2d_t I, const float x, const float y,
+static void SetPatch4(image2d_t I, const float x, const float y,
                float4* Pch, float4* Dx, float4* Dy,
                float* A11, float* A12, float* A22)
 {
@@ -286,7 +287,7 @@ void SetPatch4(image2d_t I, const float x, const float y,
     *A22 += sqIdx.x + sqIdx.y + sqIdx.z;
 }
 
-void GetPatch4(image2d_t J, const float x, const float y,
+static void GetPatch4(image2d_t J, const float x, const float y,
                const float4* Pch, const float4* Dx, const float4* Dy,
                float* b1, float* b2)
 {
@@ -298,7 +299,7 @@ void GetPatch4(image2d_t J, const float x, const float y,
     *b2 += xdiff.x + xdiff.y + xdiff.z;
 }
 
-void GetError4(image2d_t J, const float x, const float y, const float4* Pch, float* errval)
+static void GetError4(image2d_t J, const float x, const float y, const float4* Pch, float* errval)
 {
     float4 diff = read_imagef(J, sampler, (float2)(x,y))-*Pch;
     *errval += fabs(diff.x) + fabs(diff.y) + fabs(diff.z);
@@ -318,7 +319,7 @@ __kernel void lkSparse_C1_D5(image2d_t I, image2d_t J,
     unsigned int gid=get_group_id(0);
     unsigned int xsize=get_local_size(0);
     unsigned int ysize=get_local_size(1);
-    int xBase, yBase, i, j, k;
+    int xBase, yBase, k;
 
     float2 c_halfWin = (float2)((c_winSize_x - 1)>>1, (c_winSize_y - 1)>>1);
 
@@ -597,7 +598,7 @@ __kernel void lkSparse_C4_D5(image2d_t I, image2d_t J,
     unsigned int gid=get_group_id(0);
     unsigned int xsize=get_local_size(0);
     unsigned int ysize=get_local_size(1);
-    int xBase, yBase, i, j, k;
+    int xBase, yBase, k;
 
     float2 c_halfWin = (float2)((c_winSize_x - 1)>>1, (c_winSize_y - 1)>>1);
 
