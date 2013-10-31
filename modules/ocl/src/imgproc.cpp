@@ -118,22 +118,20 @@ namespace cv
         static void threshold_runner(const oclMat &src, oclMat &dst, double thresh, double maxVal, int thresholdType)
         {
             bool ival = src.depth() < CV_32F;
+            int cn = src.channels(), vecSize = 4, depth = src.depth();
             std::vector<uchar> thresholdValue = scalarToVector(cv::Scalar::all(ival ? cvFloor(thresh) : thresh), dst.depth(),
                                                                dst.oclchannels(), dst.channels());
             std::vector<uchar> maxValue = scalarToVector(cv::Scalar::all(maxVal), dst.depth(), dst.oclchannels(), dst.channels());
-
-            size_t localThreads[3] = { 16, 16, 1 };
-            size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
                                                   "THRESH_TOZERO", "THRESH_TOZERO_INV" };
             const char * const channelMap[] = { "", "", "2", "4", "4" };
             const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
-            std::string buildOptions = format("-D T=%s%s -D %s", typeMap[src.depth()], channelMap[src.channels()],
-                                              thresholdMap[thresholdType]);
+            std::string buildOptions = format("-D T=%s%s -D %s", typeMap[depth], channelMap[cn], thresholdMap[thresholdType]);
 
-            int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
-            int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
+            int elemSize = src.elemSize();
+            int src_step = src.step / elemSize, src_offset = src.offset / elemSize;
+            int dst_step = dst.step / elemSize, dst_offset = dst.offset / elemSize;
 
             vector< pair<size_t, const void *> > args;
             args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
@@ -142,10 +140,31 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst_offset));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst_step));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( make_pair(thresholdValue.size(), (void *)&thresholdValue[0]));
             args.push_back( make_pair(maxValue.size(), (void *)&maxValue[0]));
+
+            int max_index = dst.cols, cols = dst.cols;
+            if (cn == 1 && vecSize > 1)
+            {
+                CV_Assert(((vecSize - 1) & vecSize) == 0 && vecSize <= 16);
+                cols = divUp(cols, vecSize);
+                buildOptions += format(" -D VECTORIZED -D VT=%s%d -D VLOADN=vload%d -D VECSIZE=%d -D VSTOREN=vstore%d",
+                                       typeMap[depth], vecSize, vecSize, vecSize, vecSize);
+
+                int vecSizeBytes = vecSize * dst.elemSize1();
+                if ((dst.offset % dst.step) % vecSizeBytes == 0 && dst.step % vecSizeBytes == 0)
+                    buildOptions += " -D DST_ALIGNED";
+                if ((src.offset % src.step) % vecSizeBytes == 0 && src.step % vecSizeBytes == 0)
+                    buildOptions += " -D SRC_ALIGNED";
+
+                args.push_back( make_pair(sizeof(cl_int), (void *)&max_index));
+            }
+
+            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
+
+            size_t localThreads[3] = { 16, 16, 1 };
+            size_t globalThreads[3] = { cols, dst.rows, 1 };
 
             openCLExecuteKernel(src.clCxt, &imgproc_threshold, "threshold", globalThreads, localThreads, args,
                                 -1, -1, buildOptions.c_str());
