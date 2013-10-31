@@ -63,7 +63,7 @@ typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
 
 PERF_TEST_P(MomentsFixture, Moments,
     ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-    OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1, CV_64FC1), ::testing::Values(false, true)))
+    OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1), ::testing::Values(false, true)))
 {
     const MomentsParamType params = GetParam();
     const Size srcSize = get<0>(params);
