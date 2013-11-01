@@ -259,19 +259,19 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                     int y = (temp & (int)0xffff0000) >> 16;
                     temp = atomic_inc(glboutindex);
                     int4 candidate_result;
-                    candidate_result.zw = (int2)convert_int_rtn(round(factor * 20.f));
+                    candidate_result.zw = (int2)convert_int_rte(factor * 20.f);
                     candidate_result.x = x;
                     candidate_result.y = y;
 
                     int i = outputoff+temp+lcl_id;
                     if(candidate[i].z == 0)
-                    {                
+                    {
                         candidate[i] = candidate_result;
                     }
                     else
-                    {   
+                    {
                         for(i=i+1;;i++)
-                        {   
+                        {
                             if(candidate[i].z == 0)
                             {
                                 candidate[i] = candidate_result;
