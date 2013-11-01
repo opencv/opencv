@@ -192,7 +192,6 @@ __kernel
 {
     const int          i  = get_local_id(0); // index in workgroup
     const int numOfGroups = get_num_groups(0); // index in workgroup
-    const int groupID     = get_group_id(0);
     const int         wg  = get_local_size(0); // workgroup size = block size
     int pos = 0, same = 0;
     const int offset = get_group_id(0) * wg;

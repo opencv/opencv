@@ -55,11 +55,11 @@
 __kernel void arithm_op_nonzero(int cols, int invalid_cols, int offset, int elemnum, int groupnum,
                                   __global srcT *src, __global dstT *dst)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
-    unsigned int  id = get_global_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
+    int  id = get_global_id(0);
 
-    unsigned int idx = offset + id + (id / cols) * invalid_cols;
+    int idx = offset + id + (id / cols) * invalid_cols;
     __local dstT localmem_nonzero[128];
     dstT nonzero = (dstT)(0);
     srcT zero = (srcT)(0), one = (srcT)(1);
