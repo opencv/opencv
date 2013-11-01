@@ -426,7 +426,6 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
             {
                 if(result && lclidx %2 ==0 && lclidy %2 ==0 )
                 {
-                    
                     int queueindex = atomic_inc(lclcount);
                     lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
                     lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
@@ -436,7 +435,6 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
             {
                 if(result)
                 {
-                    
                     int queueindex = atomic_inc(lclcount);
                     lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
                     lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
@@ -563,20 +561,20 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int y = mad24(grpidy,grpszy,((temp & (int)0xffff0000) >> 16));
                 temp = glboutindex[0];
                 int4 candidate_result;
-                candidate_result.zw = (int2)convert_int_rtn(round(factor*20.f));
-                candidate_result.x = convert_int_rtn(round(x*factor));
-                candidate_result.y = convert_int_rtn(round(y*factor));
+                candidate_result.zw = (int2)convert_int_rte(factor*20.f);
+                candidate_result.x = convert_int_rte(x*factor);
+                candidate_result.y = convert_int_rte(y*factor);
                 atomic_inc(glboutindex);
 
                 int i = outputoff+temp+lcl_id;
                 if(candidate[i].z == 0)
-                {                
+                {
                     candidate[i] = candidate_result;
                 }
                 else
-                {   
+                {
                     for(i=i+1;;i++)
-                    {   
+                    {
                         if(candidate[i].z == 0)
                         {
                             candidate[i] = candidate_result;

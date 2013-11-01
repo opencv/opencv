@@ -1059,11 +1059,11 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         {
             sz = sizev[i];
             factor = scalev[i];
-            int ystep = cvRound(std::max(2., factor));
-            int equRect_x = (int)(factor * gcascade->p0 + 0.5);
-            int equRect_y = (int)(factor * gcascade->p1 + 0.5);
-            int equRect_w = (int)(factor * gcascade->p3 + 0.5);
-            int equRect_h = (int)(factor * gcascade->p2 + 0.5);
+            double ystep = std::max(2., factor);
+            int equRect_x = cvRound(factor * gcascade->p0);
+            int equRect_y = cvRound(factor * gcascade->p1);
+            int equRect_w = cvRound(factor * gcascade->p3);
+            int equRect_h = cvRound(factor * gcascade->p2);
             p[i].s[0] = equRect_x;
             p[i].s[1] = equRect_y;
             p[i].s[2] = equRect_x + equRect_w;
