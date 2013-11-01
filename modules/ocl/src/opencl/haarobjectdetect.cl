@@ -11,6 +11,7 @@
 //    Jia Haipeng, jiahaipeng95@gmail.com
 //    Nathan, liujun@multicorewareinc.com
 //    Peng Xiao, pengxiao@outlook.com
+//    Erping Pang, erping@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -321,7 +322,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int glb_x = grpoffx + (lcl_x<<2);
                 int glb_y = grpoffy + lcl_y;
 
-                int glb_off = mad24(min(glb_y, height - 1),pixelstep,glb_x);
+                int glb_off = mad24(min(glb_y, height + WINDOWSIZE - 1),pixelstep,glb_x);
                 int4 data = *(__global int4*)&sum[glb_off];
                 int lcl_off = mad24(lcl_y, readwidth, lcl_x<<2);
 
@@ -421,12 +422,25 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 
                 result = (stage_sum >= stagethreshold);
             }
-
-            if(result && (x < width) && (y < height))
+            if(factor < 2)
             {
-                int queueindex = atomic_inc(lclcount);
-                lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
-                lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
+                if(result && lclidx %2 ==0 && lclidy %2 ==0 )
+                {
+                    
+                    int queueindex = atomic_inc(lclcount);
+                    lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
+                    lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
+                }
+            }
+            else
+            {
+                if(result)
+                {
+                    
+                    int queueindex = atomic_inc(lclcount);
+                    lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
+                    lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
+                }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             int queuecount  = lclcount[0];
@@ -549,11 +563,27 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int y = mad24(grpidy,grpszy,((temp & (int)0xffff0000) >> 16));
                 temp = glboutindex[0];
                 int4 candidate_result;
-                candidate_result.zw = (int2)convert_int_rtn(factor*20.f);
-                candidate_result.x = convert_int_rtn(x*factor);
-                candidate_result.y = convert_int_rtn(y*factor);
+                candidate_result.zw = (int2)convert_int_rtn(round(factor*20.f));
+                candidate_result.x = convert_int_rtn(round(x*factor));
+                candidate_result.y = convert_int_rtn(round(y*factor));
                 atomic_inc(glboutindex);
-                candidate[outputoff+temp+lcl_id] = candidate_result;
+
+                int i = outputoff+temp+lcl_id;
+                if(candidate[i].z == 0)
+                {                
+                    candidate[i] = candidate_result;
+                }
+                else
+                {   
+                    for(i=i+1;;i++)
+                    {   
+                        if(candidate[i].z == 0)
+                        {
+                            candidate[i] = candidate_result;
+                            break;
+                        }
+                    }
+                }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }//end for(int grploop=grpidx;grploop<totalgrp;grploop+=grpnumx)
