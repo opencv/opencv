@@ -45,15 +45,17 @@
 //
 
 #if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
+    #ifdef cl_khr_fp64
+        #pragma OPENCL EXTENSION cl_khr_fp64:enable
+    #elif defined (cl_amd_fp64)
+        #pragma OPENCL EXTENSION cl_amd_fp64:enable
+    #endif
+    #define CV_PI 3.1415926535897932384626433832795
+    #define CV_2PI 2*CV_PI
+#else
+    #define CV_PI 3.1415926535897932384626433832795f
+    #define CV_2PI 2*CV_PI
 #endif
-#endif
-
-#define CV_PI 3.1415926535898
-#define CV_2PI 2*3.1415926535898
 
 /**************************************phase inradians**************************************/
 

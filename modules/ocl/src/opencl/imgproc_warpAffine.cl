@@ -537,9 +537,9 @@ __kernel void warpAffineLinear_C1_D5(__global float * src, __global float * dst,
 
         float tab[4];
         float taby[2], tabx[2];
-        taby[0] = 1.0 - 1.f/INTER_TAB_SIZE*ay0;
+        taby[0] = 1.0f - 1.f/INTER_TAB_SIZE*ay0;
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
-        tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
+        tabx[0] = 1.0f - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
 
         tab[0] = taby[0] * tabx[0];
@@ -680,9 +680,9 @@ __kernel void warpAffineLinear_C4_D5(__global float4 * src, __global float4 * ds
 
         float tab[4];
         float taby[2], tabx[2];
-        taby[0] = 1.0 - 1.f/INTER_TAB_SIZE*ay0;
+        taby[0] = 1.0f - 1.f/INTER_TAB_SIZE*ay0;
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
-        tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
+        tabx[0] = 1.0f - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
 
         tab[0] = taby[0] * tabx[0];

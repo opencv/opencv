@@ -162,7 +162,6 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     WT4 x3 = (WT4)(0.f);
 
     __global TT* row = src_data + gidy * src_step + ly * src_step + gidx * 256;
-    bool switchFlag = false;
 
     WT4 p;
     WT4 x;
@@ -173,7 +172,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
 
     if(dy < src_rows)
     {
-        if((x_rest > 0) && (gidx == (get_num_groups(0) - 1)))
+        if((x_rest > 0) && (gidx == ((int)get_num_groups(0) - 1)))
         {
             int i;
             for(i = 0; i < x_rest - 4; i += 4)
@@ -190,11 +189,8 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
             }
 
             x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
-
             x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3;
-
             x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3;
-
             x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3;
 
             WT x0_ = 0;
@@ -238,11 +234,8 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
             }
 
             x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3;
-
             x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3;
-
             x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3;
-
             x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3;
         }
 
@@ -251,7 +244,7 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     }
     __local WT mom[10][256];
 
-    if((y_rest > 0) && (gidy == (get_num_groups(1) - 1)))
+    if((y_rest > 0) && (gidy == ((int)get_num_groups(1) - 1)))
     {
         if(ly < y_rest)
         {
@@ -268,13 +261,10 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
         }
         barrier(CLK_LOCAL_MEM_FENCE);
         if(ly < 10)
-        {
             for(int i = 1; i < y_rest; i++)
-            {
                 mom[ly][0] = mom[ly][i] + mom[ly][0];
-            }
-        }
-    }else
+    }
+    else
     {
         mom[9][ly] = py * sy;
         mom[8][ly] = x1.s0 * sy;
@@ -413,11 +403,9 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
 
     if(binary)
     {
-        WT s = 1./255;
+        WT s = 1.0f/255;
         if(ly < 10)
-        {
             mom[ly][0] *= s;
-        }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     WT xm = (gidx * 256) * mom[0][0];
@@ -440,7 +428,5 @@ __kernel void CvMoments(__global TT* src_data, int src_rows, int src_cols, int s
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if(ly < 10)
-    {
         dst_m[10 * gidy * dst_step + ly * dst_step + gidx] = mom[ly][1];
-    }
 }
