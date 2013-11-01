@@ -280,7 +280,12 @@ set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
-  list(REMOVE_ITEM __deps ${the_module} opencv_ts)
+  foreach(m ${OPENCV_MODULES_BUILD}) # filterout INTERNAL (like opencv_ts) and BINDINGS (like opencv_python) modules
+    ocv_assert(DEFINED OPENCV_MODULE_${m}_CLASS)
+    if(NOT OPENCV_MODULE_${m}_CLASS STREQUAL "PUBLIC")
+      list(REMOVE_ITEM __deps ${m})
+    endif()
+  endforeach()
   ocv_list_unique(__deps)
   set(__extradeps ${__deps})
   ocv_list_filterout(__extradeps "^opencv_")

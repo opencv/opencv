@@ -378,7 +378,7 @@ Calculates the covariance matrix of a set of vectors.
 
 .. ocv:function:: void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, Mat& mean, int flags, int ctype=CV_64F)
 
-.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, OutputArray mean, int flags, int ctype=CV_64F)
+.. ocv:function:: void calcCovarMatrix( InputArray samples, OutputArray covar, InputOutputArray mean, int flags, int ctype=CV_64F)
 
 .. ocv:pyfunction:: cv2.calcCovarMatrix(samples, flags[, covar[, mean[, ctype]]]) -> covar, mean
 

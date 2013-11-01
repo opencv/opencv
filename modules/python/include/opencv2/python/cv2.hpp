@@ -90,14 +90,27 @@ private:
 
 class NumpyAllocator : public cv::MatAllocator
 {
+    const MatAllocator* stdAllocator;
 public:
     NumpyAllocator();
     ~NumpyAllocator();
 
-    void allocate(int dims, const int* sizes, int type, int*& refcount,
-                  uchar*& datastart, uchar*& data, size_t* step);
-
-    void deallocate(int* refcount, uchar*, uchar*);
+    UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const;
+    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const;
+    bool allocate(UMatData* u, int accessFlags) const;
+    void deallocate(UMatData* u) const;
+    void map(UMatData*, int) const;
+    void unmap(UMatData* u) const;
+    void download(UMatData* u, void* dstptr,
+              int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dststep[]) const;
+    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+            const size_t dstofs[], const size_t dststep[],
+            const size_t srcstep[]) const;
+    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+          const size_t srcofs[], const size_t srcstep[],
+          const size_t dstofs[], const size_t dststep[], bool sync) const;
 };
 
 static inline PyObject* pyObjectFromRefcount(const int* refcount);
