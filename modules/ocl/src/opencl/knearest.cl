@@ -129,58 +129,53 @@ __kernel void knn_find_nearest(__global float* sample, int sample_row, int sampl
     }
     /*! find_nearest_neighbor done!*/
     /*! write_results start!*/
-    switch (regression)
+    if (regression)
     {
-    case true:
-        {
-            TYPE s;
+        TYPE s;
 #ifdef DOUBLE_SUPPORT
-            s = 0.0;
+        s = 0.0;
 #else
-            s = 0.0f;
+        s = 0.0f;
 #endif
-            for(j = 0; j < K1; j++)
-                s += nr[j * nThreads + threadY];
+        for(j = 0; j < K1; j++)
+            s += nr[j * nThreads + threadY];
 
-            _results[y * _results_step] = (float)(s * inv_scale);
-        }
-        break;
-    case false:
+        _results[y * _results_step] = (float)(s * inv_scale);
+    }
+    else
+    {
+        int prev_start = 0, best_count = 0, cur_count;
+        float best_val;
+
+        for(j = K1 - 1; j > 0; j--)
         {
-            int prev_start = 0, best_count = 0, cur_count;
-            float best_val;
-
-            for(j = K1 - 1; j > 0; j--)
+            bool swap_f1 = false;
+            for(j1 = 0; j1 < j; j1++)
             {
-                bool swap_f1 = false;
-                for(j1 = 0; j1 < j; j1++)
+                if(nr[j1 * nThreads + threadY] > nr[(j1 + 1) * nThreads + threadY])
                 {
-                    if(nr[j1 * nThreads + threadY] > nr[(j1 + 1) * nThreads + threadY])
-                    {
-                        int t;
-                        CV_SWAP(nr[j1 * nThreads + threadY], nr[(j1 + 1) * nThreads + threadY], t);
-                        swap_f1 = true;
-                    }
+                    int t;
+                    CV_SWAP(nr[j1 * nThreads + threadY], nr[(j1 + 1) * nThreads + threadY], t);
+                    swap_f1 = true;
                 }
-                if(!swap_f1)
-                    break;
             }
-
-            best_val = 0;
-            for(j = 1; j <= K1; j++)
-                if(j == K1 || nr[j * nThreads + threadY] != nr[(j - 1) * nThreads + threadY])
-                {
-                    cur_count = j - prev_start;
-                    if(best_count < cur_count)
-                    {
-                        best_count = cur_count;
-                        best_val = nr[(j - 1) * nThreads + threadY];
-                    }
-                    prev_start = j;
-                }
-                _results[y * _results_step] = best_val;
+            if(!swap_f1)
+                break;
         }
-        break;
+
+        best_val = 0;
+        for(j = 1; j <= K1; j++)
+            if(j == K1 || nr[j * nThreads + threadY] != nr[(j - 1) * nThreads + threadY])
+            {
+                cur_count = j - prev_start;
+                if(best_count < cur_count)
+                {
+                    best_count = cur_count;
+                    best_val = nr[(j - 1) * nThreads + threadY];
+                }
+                prev_start = j;
+            }
+            _results[y * _results_step] = best_val;
     }
     ///*! write_results done!*/
 }

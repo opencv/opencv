@@ -183,7 +183,7 @@ __kernel void split_vector(
         int dst ## xOffsetLimitBytes = dst ## Offset.x + size.x * sizeof(TYPE); \
         int dst ## xOffsetBytes = dst ## Offset.x + x * sizeof(TYPE); \
         int dst ## yOffsetBytes = (dst ## Offset.y + y) * dst ## StepBytes; \
-        if (!BYPASS_VSTORE && dst ## xOffsetBytes + sizeof(DST_VEC_TYPE) <= dst ## xOffsetLimitBytes) \
+        if (!BYPASS_VSTORE && dst ## xOffsetBytes + (int)sizeof(DST_VEC_TYPE) <= dst ## xOffsetLimitBytes) \
         { \
             VSTORE_ ## dst(((__global char*)dst + dst ## yOffsetBytes + dst ## xOffsetBytes), vecValue); \
         } \
@@ -192,7 +192,7 @@ __kernel void split_vector(
             VEC_TO_ARRAY(vecValue, vecValue##Array); \
             for (int i = 0; i < VEC_SIZE; i++, dst ## xOffsetBytes += sizeof(TYPE)) \
             { \
-                if (dst ## xOffsetBytes + sizeof(TYPE) <= dst ## xOffsetLimitBytes) \
+                if (dst ## xOffsetBytes + (int)sizeof(TYPE) <= dst ## xOffsetLimitBytes) \
                     *(__global TYPE*)((__global char*)dst + dst ## yOffsetBytes + dst ## xOffsetBytes) = vecValue##Array[i]; \
                 else \
                     break; \

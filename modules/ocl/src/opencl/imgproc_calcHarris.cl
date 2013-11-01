@@ -99,7 +99,6 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
     int col = get_local_id(0);
     int gX = get_group_id(0);
     int gY = get_group_id(1);
-    int glx = get_global_id(0);
     int gly = get_global_id(1);
 
     int dx_x_off = (dx_offset % dx_step) >> 2;
@@ -126,11 +125,11 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
     {
         dx_con = dx_startX+col >= 0 && dx_startX+col < dx_whole_cols && dx_startY+i >= 0 && dx_startY+i < dx_whole_rows;
         dx_s = Dx[(dx_startY+i)*(dx_step>>2)+(dx_startX+col)];
-        dx_data[i] = dx_con ? dx_s : 0.0;
+        dx_data[i] = dx_con ? dx_s : 0.0f;
 
         dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
         dy_s = Dy[(dy_startY+i)*(dy_step>>2)+(dy_startX+col)];
-        dy_data[i] = dy_con ? dy_s : 0.0;
+        dy_data[i] = dy_con ? dy_s : 0.0f;
 
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
@@ -155,7 +154,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #endif
-    float sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
+    float sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f;
     for (int i=1; i < ksY; i++)
     {
         sum0 += data[0][i];
@@ -183,7 +182,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         int posX = dst_startX - dst_x_off + col - anX;
         int posY = (gly << 1);
         int till = (ksX + 1)%2;
-        float tmp_sum[6] = { 0.0, 0.0 , 0.0, 0.0, 0.0, 0.0 };
+        float tmp_sum[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         for (int k=0; k<6; k++)
             for (int i=-anX; i<=anX - till; i++)
                 tmp_sum[k] += temp[k][col+i];
