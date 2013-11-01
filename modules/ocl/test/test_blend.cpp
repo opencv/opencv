@@ -103,7 +103,8 @@ PARAM_TEST_CASE(Blend, MatDepth, int, bool)
     {
         const int type = CV_MAKE_TYPE(depth, channels);
 
-        const double upValue = 1200;
+        const double upValue = 256;
+        const double sumMinValue = 0.01; // we don't want to divide by "zero"
 
         Size roiSize = randomSize(1, 20);
         Border src1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
@@ -116,7 +117,12 @@ PARAM_TEST_CASE(Blend, MatDepth, int, bool)
         randomSubMat(weights1, weights1_roi, roiSize, weights1Border, CV_32FC1, -upValue, upValue);
 
         Border weights2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(weights2, weights2_roi, roiSize, weights2Border, CV_32FC1, -upValue, upValue);
+        randomSubMat(weights2, weights2_roi, roiSize, weights2Border, CV_32FC1, sumMinValue, upValue); // fill it as a (w1 + w12)
+
+        weights2_roi = weights2_roi - weights1_roi;
+        // check that weights2_roi is still a part of weights2 (not a new matrix)
+        CV_Assert(checkNorm(weights2_roi,
+            weights2(Rect(weights2Border.lef, weights2Border.top, roiSize.width, roiSize.height))) < 1e-6);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
