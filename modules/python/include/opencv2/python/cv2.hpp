@@ -95,20 +95,20 @@ public:
     NumpyAllocator();
     ~NumpyAllocator();
 
-    UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const;
-    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const;
-    bool allocate(UMatData* u, int accessFlags) const;
-    void deallocate(UMatData* u) const;
-    void map(UMatData*, int) const;
-    void unmap(UMatData* u) const;
-    void download(UMatData* u, void* dstptr,
+    cv::UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const;
+    cv::UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const;
+    bool allocate(cv::UMatData* u, int accessFlags) const;
+    void deallocate(cv::UMatData* u) const;
+    void map(cv::UMatData*, int) const;
+    void unmap(cv::UMatData* u) const;
+    void download(cv::UMatData* u, void* dstptr,
               int dims, const size_t sz[],
               const size_t srcofs[], const size_t srcstep[],
               const size_t dststep[]) const;
-    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+    void upload(cv::UMatData* u, const void* srcptr, int dims, const size_t sz[],
             const size_t dstofs[], const size_t dststep[],
             const size_t srcstep[]) const;
-    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+    void copy(cv::UMatData* usrc, cv::UMatData* udst, int dims, const size_t sz[],
           const size_t srcofs[], const size_t srcstep[],
           const size_t dstofs[], const size_t dststep[], bool sync) const;
 };

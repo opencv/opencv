@@ -49,12 +49,12 @@ PyEnsureGIL::~PyEnsureGIL()
 
 
 
-NumpyAllocator::NumpyAllocator() { stdAllocator = Mat::getStdAllocator(); }
+NumpyAllocator::NumpyAllocator() { stdAllocator = cv::Mat::getStdAllocator(); }
 NumpyAllocator::~NumpyAllocator() {}
 
-UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
+cv::UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
 {
-    UMatData* u = new UMatData(this);
+    cv::UMatData* u = new cv::UMatData(this);
     u->refcount = 1;
     u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
     npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
@@ -66,7 +66,7 @@ UMatData* NumpyAllocator::allocate(PyObject* o, int dims, const int* sizes, int 
     return u;
 }
 
-UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, size_t* step) const
+cv::UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, size_t* step) const
 {
     PyEnsureGIL gil;
 
@@ -89,12 +89,12 @@ UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, size_t
     return allocate(o, dims0, sizes, type, step);
 }
 
-bool NumpyAllocator::allocate(UMatData* u, int accessFlags) const
+bool NumpyAllocator::allocate(cv::UMatData* u, int accessFlags) const
 {
     return stdAllocator->allocate(u, accessFlags);
 }
 
-void NumpyAllocator::deallocate(UMatData* u) const
+void NumpyAllocator::deallocate(cv::UMatData* u) const
 {
     if(u)
     {
@@ -105,18 +105,18 @@ void NumpyAllocator::deallocate(UMatData* u) const
     }
 }
 
-void NumpyAllocator::map(UMatData*, int) const
+void NumpyAllocator::map(cv::UMatData*, int) const
 {
 
 }
 
-void NumpyAllocator::unmap(UMatData* u) const
+void NumpyAllocator::unmap(cv::UMatData* u) const
 {
     if(u->urefcount == 0)
         deallocate(u);
 }
 
-void NumpyAllocator::download(UMatData* u, void* dstptr,
+void NumpyAllocator::download(cv::UMatData* u, void* dstptr,
               int dims, const size_t sz[],
               const size_t srcofs[], const size_t srcstep[],
               const size_t dststep[]) const
@@ -124,14 +124,14 @@ void NumpyAllocator::download(UMatData* u, void* dstptr,
     stdAllocator->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
 }
 
-void NumpyAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+void NumpyAllocator::upload(cv::UMatData* u, const void* srcptr, int dims, const size_t sz[],
             const size_t dstofs[], const size_t dststep[],
             const size_t srcstep[]) const
 {
     stdAllocator->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
 }
 
-void NumpyAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+void NumpyAllocator::copy(cv::UMatData* usrc, cv::UMatData* udst, int dims, const size_t sz[],
           const size_t srcofs[], const size_t srcstep[],
           const size_t dstofs[], const size_t dststep[], bool sync) const
 {
@@ -300,7 +300,7 @@ bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo info)
     m = cv::Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
 
-    if !needcopy )
+    if( !needcopy )
     {
         Py_INCREF(o);
     };
