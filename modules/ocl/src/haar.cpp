@@ -1676,9 +1676,9 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
         {
             sz = sizev[i];
             factor = scalev[i];
-            int ystep = cvRound(std::max(2., factor));
-            int width = (cols - 1 - sz.width  + ystep - 1) / ystep;
-            int height = (rows - 1 - sz.height + ystep - 1) / ystep;
+            double ystep = cv::max(2.,factor);
+            int width = cvRound((cols - 1 - sz.width  + ystep - 1) / ystep);
+            int height = cvRound((rows - 1 - sz.height + ystep - 1) / ystep);
             int grpnumperline = (width + localThreads[0] - 1) / localThreads[0];
             int totalgrp = ((height + localThreads[1] - 1) / localThreads[1]) * grpnumperline;
 
