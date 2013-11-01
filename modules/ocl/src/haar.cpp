@@ -1059,11 +1059,11 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         {
             sz = sizev[i];
             factor = scalev[i];
-            int ystep = cvRound(std::max(2., factor));
-            int equRect_x = (int)(factor * gcascade->p0 + 0.5);
-            int equRect_y = (int)(factor * gcascade->p1 + 0.5);
-            int equRect_w = (int)(factor * gcascade->p3 + 0.5);
-            int equRect_h = (int)(factor * gcascade->p2 + 0.5);
+            double ystep = std::max(2., factor);
+            int equRect_x = cvRound(factor * gcascade->p0);
+            int equRect_y = cvRound(factor * gcascade->p1);
+            int equRect_w = cvRound(factor * gcascade->p3);
+            int equRect_h = cvRound(factor * gcascade->p2);
             p[i].s[0] = equRect_x;
             p[i].s[1] = equRect_y;
             p[i].s[2] = equRect_x + equRect_w;
@@ -1676,9 +1676,9 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
         {
             sz = sizev[i];
             factor = scalev[i];
-            int ystep = cvRound(std::max(2., factor));
-            int width = (cols - 1 - sz.width  + ystep - 1) / ystep;
-            int height = (rows - 1 - sz.height + ystep - 1) / ystep;
+            double ystep = cv::max(2.,factor);
+            int width = cvRound((cols - 1 - sz.width  + ystep - 1) / ystep);
+            int height = cvRound((rows - 1 - sz.height + ystep - 1) / ystep);
             int grpnumperline = (width + localThreads[0] - 1) / localThreads[0];
             int totalgrp = ((height + localThreads[1] - 1) / localThreads[1]) * grpnumperline;
 
