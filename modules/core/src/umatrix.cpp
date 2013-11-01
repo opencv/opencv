@@ -617,7 +617,7 @@ void UMat::copyTo(OutputArray _dst) const
         void* dsthandle = dst.handle(ACCESS_WRITE);
         if( srchandle == dsthandle && dst.offset == offset )
             return;
-        ndoffset(dstofs);
+        dst.ndoffset(dstofs);
         CV_Assert(u->currAllocator == dst.u->currAllocator);
         u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
     }

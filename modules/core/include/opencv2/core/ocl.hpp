@@ -272,45 +272,47 @@ public:
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
 
+    bool empty() const;
     bool create(const char* kname, const Program& prog);
     bool create(const char* kname, const ProgramSource& prog,
                 const String& buildopts, String& errmsg);
 
-    void set(int i, const void* value, size_t sz);
-    void set(int i, const UMat& m);
-    void set(int i, const KernelArg& arg);
-    template<typename _Tp> void set(int i, const _Tp& value)
+    int set(int i, const void* value, size_t sz);
+    int set(int i, const UMat& m);
+    int set(int i, const KernelArg& arg);
+    template<typename _Tp> int set(int i, const _Tp& value)
     { return set(i, &value, sizeof(value)); }
 
     template<typename _Tp0>
     Kernel& args(const _Tp0& a0)
     {
-        set(0, a0); return *this;
+        int i = set(0, a0); return *this;
     }
 
     template<typename _Tp0, typename _Tp1>
     Kernel& args(const _Tp0& a0, const _Tp1& a1)
     {
-        set(0, a0); set(1, a1); return *this;
+        int i = set(0, a0); set(i, a1); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2)
     {
-        set(0, a0); set(1, a1); set(2, a2); return *this;
+        int i = set(0, a0); i = set(i, a1); set(i, a2); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4>
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
                  const _Tp3& a3, const _Tp4& a4)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
+        i = set(i, a3); set(i, a4); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2,
@@ -318,8 +320,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
                  const _Tp3& a3, const _Tp4& a4, const _Tp5& a5)
     {
-        set(0, a0); set(1, a1); set(2, a2);
-        set(3, a3); set(4, a4); set(5, a5); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
+        i = set(i, a3); i = set(i, a4); set(i, a5); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -327,8 +329,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3);
-        set(4, a4); set(5, a5); set(6, a6); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
+        i = set(i, a4); i = set(i, a5); set(i, a6); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -336,8 +338,8 @@ public:
     Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3);
-        set(4, a4); set(5, a5); set(6, a6); set(7, a7); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
+        i = set(i, a4); i = set(i, a5); i = set(i, a6); set(i, a7); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
@@ -346,8 +348,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4);
-        set(5, a5); set(6, a6); set(7, a7); set(8, a8); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
+        i = set(i, a5); i = set(i, a6); i = set(i, a7); set(i, a8); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
@@ -356,8 +358,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); set(i, a9); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -367,8 +369,8 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9, const _Tp10& a10)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); set(10, a10); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); set(i, a10); return *this;
     }
 
     template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
@@ -378,13 +380,13 @@ public:
                  const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
                  const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11)
     {
-        set(0, a0); set(1, a1); set(2, a2); set(3, a3); set(4, a4); set(5, a5);
-        set(6, a6); set(7, a7); set(8, a8); set(9, a9); set(10, a10); set(11, a11); return *this;
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
     }
 
-    void run(int dims, size_t offset[], size_t globalsize[],
+    bool run(int dims, size_t offset[], size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
-    void runTask(bool sync, const Queue& q=Queue());
+    bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
     bool compileWorkGroupSize(size_t wsz[]) const;

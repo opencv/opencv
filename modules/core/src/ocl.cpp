@@ -1212,16 +1212,13 @@ namespace cv { namespace ocl {
 
 struct UMat2D
 {
-    UMat2D(const UMat& m, int accessFlags)
+    UMat2D(const UMat& m)
     {
-        CV_Assert(m.dims == 2);
-        data = (cl_mem)m.handle(accessFlags);
         offset = m.offset;
         step = m.step;
         rows = m.rows;
         cols = m.cols;
     }
-    cl_mem data;
     size_t offset;
     size_t step;
     int rows;
@@ -1230,10 +1227,8 @@ struct UMat2D
 
 struct UMat3D
 {
-    UMat3D(const UMat& m, int accessFlags)
+    UMat3D(const UMat& m)
     {
-        CV_Assert(m.dims == 3);
-        data = (cl_mem)m.handle(accessFlags);
         offset = m.offset;
         step = m.step.p[1];
         slicestep = m.step.p[0];
@@ -1241,7 +1236,6 @@ struct UMat3D
         rows = m.size.p[1];
         cols = m.size.p[2];
     }
-    cl_mem data;
     size_t offset;
     size_t slicestep;
     size_t step;
@@ -1528,7 +1522,7 @@ String Device::OpenCLVersion() const
 { return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
 
 String Device::driverVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DRIVER_VERSION) : String(); }
 
 int Device::type() const
 { return p ? p->getProp<cl_device_type, int>(CL_DEVICE_TYPE) : 0; }
@@ -1787,7 +1781,8 @@ struct Context::Impl
             return it->second;
         //String filename = format("%08x%08x_%08x%08x.clb2",
         Program prog(src, buildflags, errmsg);
-        phash.insert(std::pair<HashKey,Program>(k, prog));
+        if(prog.ptr())
+            phash.insert(std::pair<HashKey,Program>(k, prog));
         return prog;
     }
 
@@ -2160,55 +2155,72 @@ void* Kernel::ptr() const
     return p ? p->handle : 0;
 }
 
-void Kernel::set(int i, const void* value, size_t sz)
+bool Kernel::empty() const
 {
-    CV_Assert( p && clSetKernelArg(p->handle, (cl_uint)i, sz, value) >= 0 );
-    if( i == 0 )
-        p->cleanupUMats();
+    return ptr() == 0;
 }
 
-void Kernel::set(int i, const UMat& m)
+int Kernel::set(int i, const void* value, size_t sz)
 {
-    set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
-}
-
-void Kernel::set(int i, const KernelArg& arg)
-{
-    CV_Assert( p && p->handle );
+    CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
+    if( !p || !p->handle || clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+        return -1;
+    return i+1;
+}
+
+int Kernel::set(int i, const UMat& m)
+{
+    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+}
+
+int Kernel::set(int i, const KernelArg& arg)
+{
+    CV_Assert( i >= 0 );
+    if( i == 0 )
+        p->cleanupUMats();
+    if( !p || !p->handle )
+        return -1;
     if( arg.m )
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        cl_mem h = (cl_mem)arg.m->handle(accessFlags);
+        clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
         if( arg.m->dims <= 2 )
         {
-            UMat2D u2d(*arg.m, accessFlags);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d), &u2d);
+            UMat2D u2d(*arg.m);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.offset), &u2d.offset);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.step), &u2d.step);
+            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u2d.cols), &u2d.cols);
+            clSetKernelArg(p->handle, (cl_uint)(i+4), sizeof(u2d.rows), &u2d.rows);
+            i += 5;
         }
         else
         {
-            UMat3D u3d(*arg.m, accessFlags);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d), &u3d);
+            UMat3D u3d(*arg.m);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d), &u3d);
+            i += 2;
         }
         p->addUMat(*arg.m);
+        return i;
     }
-    else
-    {
-        clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
-    }
+    clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
+    return i+1;
 }
 
 
-void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
+bool Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
                  bool sync, const Queue& q)
 {
-    CV_Assert(p && p->handle && p->e == 0);
+    if(!p || !p->handle || p->e != 0)
+        return false;
     cl_command_queue qq = getQueue(q);
-    clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                           offset, globalsize, localsize, 0, 0,
-                           sync ? 0 : &p->e);
-    if( sync )
+    cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
+                                           offset, globalsize, localsize, 0, 0,
+                                           sync ? 0 : &p->e);
+    if( sync || retval < 0 )
     {
         clFinish(qq);
         p->cleanupUMats();
@@ -2218,14 +2230,17 @@ void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsiz
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
+    return retval >= 0;
 }
 
-void Kernel::runTask(bool sync, const Queue& q)
+bool Kernel::runTask(bool sync, const Queue& q)
 {
-    CV_Assert(p && p->handle && p->e == 0);
+    if(!p || !p->handle || p->e != 0)
+        return false;
+
     cl_command_queue qq = getQueue(q);
-    clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
-    if( sync )
+    cl_int retval = clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
+    if( sync || retval < 0 )
     {
         clFinish(qq);
         p->cleanupUMats();
@@ -2235,6 +2250,7 @@ void Kernel::runTask(bool sync, const Queue& q)
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
+    return retval >= 0;
 }
 
 
@@ -2303,7 +2319,9 @@ struct Program::Impl
                 clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
                                       sizeof(buf)-16, buf, &retsz);
                 errmsg = String(buf);
+                CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
             }
+            CV_Assert(retval >= 0);
         }
     }
 
@@ -2848,7 +2866,6 @@ public:
                             new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
                             new_dststep[0], new_dststep[1], dstptr, 0, 0, 0) >= 0 );
         }
-        clFinish(q);
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
@@ -2890,6 +2907,9 @@ public:
 
         if( iscontinuous )
         {
+            int crc = 0;
+            for( size_t i = 0; i < total; i++ )
+                crc ^= ((uchar*)srcptr)[i];
             CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
                 CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) >= 0 );
         }
@@ -2949,10 +2969,11 @@ public:
         }
         else
         {
-            CV_Assert( clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+            cl_int retval;
+            CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
                                                new_srcstep[0], new_srcstep[1], new_dststep[0], new_dststep[1],
-                                               0, 0, 0) >= 0 );
+                                               0, 0, 0)) >= 0 );
         }
 
         dst->markHostCopyObsolete(true);
@@ -2968,5 +2989,7 @@ MatAllocator* getOpenCLAllocator()
     static OpenCLAllocator allocator;
     return &allocator;
 }
+
+const char* depth2str[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
 
 }}

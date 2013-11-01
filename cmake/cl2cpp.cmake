@@ -17,7 +17,7 @@ namespace ocl
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
 
-#include \"opencv2/ocl/private/util.hpp\"
+#include \"opencv2/core/ocl_genbase.hpp\"
 
 namespace cv
 {

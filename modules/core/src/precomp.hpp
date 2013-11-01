@@ -227,7 +227,11 @@ struct TLSData
     static TLSData* get();
 };
 
-namespace ocl { MatAllocator* getOpenCLAllocator(); }
+namespace ocl
+{
+    MatAllocator* getOpenCLAllocator();
+    extern const char* depth2str[];
+}
 
 }
 

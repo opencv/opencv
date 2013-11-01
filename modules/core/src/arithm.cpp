@@ -47,6 +47,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -911,14 +912,52 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
         scbuf[i] = scbuf[i - esz];
 }
 
+static ocl::ProgramSource arithm_ocl_src(ocl::arithm.programStr);
+
 static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
-               InputArray _mask, const BinaryFunc* tab, bool bitwise)
+                      InputArray _mask, const BinaryFunc* tab,
+                      bool bitwise, const char* oclop)
 {
+    static const char* bitop_depth2str[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "long" };
     int kind1 = _src1.kind(), kind2 = _src2.kind();
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     bool haveMask = !_mask.empty(), haveScalar = false;
     BinaryFunc func;
     int c;
+
+    if( kind1 == kind2 && kind1 == _InputArray::UMAT && ocl::useOpenCL() )
+    {
+        UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+        _dst.create(src1.size(), src1.type());
+        UMat dst = _dst.getUMat();
+
+        char opts[1024];
+        int depth = src1.depth();
+        sprintf(opts, "-D %s -D dstT=%s -D SAMETYPE_MODE",
+                oclop, bitwise ? bitop_depth2str[depth] : ocl::depth2str[depth]);
+        c = src1.channels();
+
+        UMat src1_, src2_, dst_;
+        if( c > 1 )
+        {
+            src1_ = src1.reshape(1);
+            src2_ = src2.reshape(1);
+            dst_ = dst.reshape(1);
+        }
+        else
+        {
+            src1_ = src1;
+            src2_ = src2;
+            dst_ = dst;
+        }
+
+        String errmsg;
+        ocl::Kernel k("binop", arithm_ocl_src, opts, errmsg);
+        size_t globalsize[] = { src1_.cols, src1_.rows };
+        if( src1.dims <= 2 && k.args(src1_, src2_, dst_).run(2, 0, globalsize, 0, false) )
+            return;
+    }
+
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
     if( src1.dims <= 2 && src2.dims <= 2 && kind1 == kind2 &&
         src1.size() == src2.size() && src1.type() == src2.type() && !haveMask )
@@ -1101,47 +1140,59 @@ static BinaryFunc* getMinTab()
 void cv::bitwise_and(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(and8u);
-    binary_op(a, b, c, mask, &f, true);
+    binary_op(a, b, c, mask, &f, true, "BINOP_AND");
 }
 
 void cv::bitwise_or(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(or8u);
-    binary_op(a, b, c, mask, &f, true);
+    binary_op(a, b, c, mask, &f, true, "BINOP_OR");
 }
 
 void cv::bitwise_xor(InputArray a, InputArray b, OutputArray c, InputArray mask)
 {
     BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(xor8u);
-    binary_op(a, b, c, mask, &f, true);
+    binary_op(a, b, c, mask, &f, true, "BINOP_XOR");
 }
 
 void cv::bitwise_not(InputArray a, OutputArray c, InputArray mask)
 {
     BinaryFunc f = (BinaryFunc)GET_OPTIMIZED(not8u);
-    binary_op(a, a, c, mask, &f, true);
+    binary_op(a, a, c, mask, &f, true, "BINOP_NOT");
 }
 
 void cv::max( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, noArray(), getMaxTab(), false );
+    binary_op(src1, src2, dst, noArray(), getMaxTab(), false, "BINOP_MAX" );
 }
 
 void cv::min( InputArray src1, InputArray src2, OutputArray dst )
 {
-    binary_op(src1, src2, dst, noArray(), getMinTab(), false );
+    binary_op(src1, src2, dst, noArray(), getMinTab(), false, "BINOP_MIN" );
 }
 
 void cv::max(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false );
+    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, "BINOP_MAX" );
 }
 
 void cv::min(const Mat& src1, const Mat& src2, Mat& dst)
 {
     OutputArray _dst(dst);
-    binary_op(src1, src2, _dst, noArray(), getMinTab(), false );
+    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, "BINOP_MIN" );
+}
+
+void cv::max(const UMat& src1, const UMat& src2, UMat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, noArray(), getMaxTab(), false, "BINOP_MAX" );
+}
+
+void cv::min(const UMat& src1, const UMat& src2, UMat& dst)
+{
+    OutputArray _dst(dst);
+    binary_op(src1, src2, _dst, noArray(), getMinTab(), false, "BINOP_MIN" );
 }
 
 

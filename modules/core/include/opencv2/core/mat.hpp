@@ -122,6 +122,11 @@ public:
     virtual int depth(int i=-1) const;
     virtual int channels(int i=-1) const;
     virtual bool empty() const;
+    bool isMat() const;
+    bool isUMat() const;
+    bool isMatVectot() const;
+    bool isUMatVector() const;
+    bool isMatx();
 
     virtual ~_InputArray();
 
