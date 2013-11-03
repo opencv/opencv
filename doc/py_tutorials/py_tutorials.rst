@@ -159,7 +159,7 @@ OpenCV-Python Tutorials
                  :alt: OD Icon
 
 
-*  :ref:`PY_Table-Of-Content-ExternalModule`
+*  :ref:`PY_ExternalModule`
 
    .. tabularcolumns:: m{100pt} m{300pt}
    .. cssclass:: toctableopencv

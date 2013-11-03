@@ -1,4 +1,4 @@
-.. _ExternalCPPModule:
+.. _PY_ExternalModule:
 
 Use C++ code from Python
 ************************
