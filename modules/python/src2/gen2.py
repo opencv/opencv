@@ -142,7 +142,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to(tmp, dst.$propname);
+        ok = tmp && pyopencv_coerce(tmp, dst.$propname);
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")

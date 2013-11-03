@@ -142,8 +142,6 @@ NumpyAllocator g_numpyAllocator;
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
-bool pyopencv_coerce(PyObject *obj, cv::TermCriteria& dst);
-
 // special case, when the convertor needs full ArgInfo structure
 template<>
 bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo info)

@@ -57,6 +57,9 @@ typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
 
 #include "cv2support.cpp"
 
+bool pyopencv_coerce(PyObject *obj, cv::TermCriteria& dst);
+bool pyopencv_coerce(PyObject *obj, CvTermCriteria& dst);
+
 template<>
 PyObject* pyopencv_from(const cvflann_flann_algorithm_t& value)
 {
@@ -134,6 +137,13 @@ template<> struct pyopencvVecConverter<DMatch>
         return pyopencv_from_generic_vec(value);
     }
 };
+
+bool pyopencv_coerce(PyObject *obj, CvTermCriteria& dst)
+{
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.max_iter, &dst.epsilon) > 0;
+}
 
 bool pyopencv_coerce(PyObject *obj, TermCriteria& dst)
 {
