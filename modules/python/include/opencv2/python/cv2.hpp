@@ -128,33 +128,42 @@ template<> PyObject* pyopencv_from(const cv::Mat& m);
 template<> bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Scalar& src);
+bool pyopencv_coerce(PyObject* obj, cv::Scalar& value, const ArgInfo info);
 template<> bool pyopencv_to(PyObject *o, cv::Scalar& s, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const bool& value);
+bool pyopencv_coerce(PyObject* obj, bool& value);
 template<> bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const size_t& value);
+bool pyopencv_coerce(PyObject* obj, size_t& value);
 template<> bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const int& value);
+bool pyopencv_coerce(PyObject* obj, int& value);
 template<> bool pyopencv_to(PyObject* obj, int& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const int64& value);
 template<> bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const uchar& value);
+bool pyopencv_coerce(PyObject* obj, uchar& value);
 template<> bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const double& value);
+bool pyopencv_coerce(PyObject* obj, double& value);
 template<> bool pyopencv_to(PyObject* obj, double& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const float& value);
+bool pyopencv_coerce(PyObject* obj, float& value);
 template<> bool pyopencv_to(PyObject* obj, float& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const std::string& value);
+bool pyopencv_coerce(PyObject* obj, std::string& value);
 template<> bool pyopencv_to(PyObject* obj, std::string& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::String& value);
+bool pyopencv_coerce(PyObject* obj, cv::String& value);
 template<> bool pyopencv_to(PyObject* obj, cv::String& value, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Rect& r);
@@ -164,6 +173,7 @@ template<> PyObject* pyopencv_from(const cv::Point& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point& p, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Point2f& p);
+bool pyopencv_coerce(PyObject* obj, cv::Point2f& value);
 template<> bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Vec2d& v);
@@ -178,6 +188,7 @@ template<> PyObject* pyopencv_from(const cv::RotatedRect& src);
 template<> bool pyopencv_to(PyObject *obj, cv::RotatedRect& dst, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Size& sz);
+bool pyopencv_coerce(PyObject* obj, cv::Size& value);
 template<> bool pyopencv_to(PyObject* obj, cv::Size& sz, const ArgInfo info);
 
 template<> PyObject* pyopencv_from(const cv::Moments& m);

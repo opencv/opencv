@@ -142,6 +142,8 @@ NumpyAllocator g_numpyAllocator;
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
+bool pyopencv_coerce(PyObject *obj, cv::TermCriteria& dst);
+
 // special case, when the convertor needs full ArgInfo structure
 template<>
 bool pyopencv_to(PyObject* o, cv::Mat& m, const ArgInfo info)
@@ -326,8 +328,7 @@ PyObject* pyopencv_from(const cv::Mat& m)
     return o;
 }
 
-template<>
-bool pyopencv_to(PyObject *o, cv::Scalar& s, const ArgInfo info)
+bool pyopencv_coerce(PyObject *o, cv::Scalar& s, const ArgInfo info)
 {
     if(!o || o == Py_None)
         return true;
@@ -362,6 +363,12 @@ bool pyopencv_to(PyObject *o, cv::Scalar& s, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject *obj, cv::Scalar& value, const ArgInfo info)
+{
+    return pyopencv_coerce(obj, value, info);
+}
+
+template<>
 PyObject* pyopencv_from(const cv::Scalar& src)
 {
     return Py_BuildValue("(dddd)", src[0], src[1], src[2], src[3]);
@@ -374,10 +381,8 @@ PyObject* pyopencv_from(const bool& value)
     return PyBool_FromLong(value);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, bool& value)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     int _val = PyObject_IsTrue(obj);
@@ -388,19 +393,31 @@ bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, bool& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
+}
+
+template<>
 PyObject* pyopencv_from(const size_t& value)
 {
     return PyLong_FromSize_t(value);
+}
+
+bool pyopencv_coerce(PyObject* obj, size_t& value)
+{
+    if(!obj || obj == Py_None)
+        return true;
+    value = (int)PyLong_AsUnsignedLong(obj);
+    return value != (size_t)-1 || !PyErr_Occurred();
 }
 
 template<>
 bool pyopencv_to(PyObject* obj, size_t& value, const ArgInfo info)
 {
     (void)info.name;
-    if(!obj || obj == Py_None)
-        return true;
-    value = (int)PyLong_AsUnsignedLong(obj);
-    return value != (size_t)-1 || !PyErr_Occurred();
+    return pyopencv_coerce(obj, value);
 }
 
 template<>
@@ -409,10 +426,7 @@ PyObject* pyopencv_from(const int& value)
     return PyInt_FromLong(value);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, int& value, const ArgInfo info)
-{
-    (void)info.name;
+bool pyopencv_coerce(PyObject* obj, int& value) {
     if(!obj || obj == Py_None)
         return true;
     if(PyInt_Check(obj))
@@ -422,6 +436,13 @@ bool pyopencv_to(PyObject* obj, int& value, const ArgInfo info)
     else
         return false;
     return value != -1 || !PyErr_Occurred();
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, int& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
 }
 
 
@@ -437,10 +458,8 @@ PyObject* pyopencv_from(const uchar& value)
     return PyInt_FromLong(value);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, uchar& value)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     int ivalue = (int)PyInt_AsLong(obj);
@@ -449,15 +468,20 @@ bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
+}
+
+template<>
 PyObject* pyopencv_from(const double& value)
 {
     return PyFloat_FromDouble(value);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, double& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, double& value)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     if(!!PyInt_CheckExact(obj))
@@ -468,15 +492,20 @@ bool pyopencv_to(PyObject* obj, double& value, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, double& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
+}
+
+template<>
 PyObject* pyopencv_from(const float& value)
 {
     return PyFloat_FromDouble(value);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, float& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, float& value)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     if(!!PyInt_CheckExact(obj))
@@ -487,15 +516,20 @@ bool pyopencv_to(PyObject* obj, float& value, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, float& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
+}
+
+template<>
 PyObject* pyopencv_from(const std::string& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, std::string& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, std::string& value)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     char* str = PyString_AsString(obj);
@@ -506,15 +540,20 @@ bool pyopencv_to(PyObject* obj, std::string& value, const ArgInfo info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, std::string& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
+}
+
+template<>
 PyObject* pyopencv_from(const cv::String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, cv::String& value, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, cv::String& value)
 {
-    (void)info;
     if(!obj || obj == Py_None)
         return true;
     char* str = PyString_AsString(obj);
@@ -522,6 +561,13 @@ bool pyopencv_to(PyObject* obj, cv::String& value, const ArgInfo info)
         return false;
     value = cv::String(str);
     return true;
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::String& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
 }
 
 template<>
@@ -567,10 +613,8 @@ PyObject* pyopencv_from(const cv::Point2f& p)
     return Py_BuildValue("(dd)", p.x, p.y);
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo info)
+bool pyopencv_coerce(PyObject* obj, cv::Point2f& p)
 {
-    (void)info.name;
     if(!obj || obj == Py_None)
         return true;
     if(!!PyComplex_CheckExact(obj))
@@ -581,6 +625,13 @@ bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo info)
         return true;
     }
     return PyArg_ParseTuple(obj, "ff", &p.x, &p.y) > 0;
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::Point2f& value, const ArgInfo info)
+{
+    (void)info.name;
+    return pyopencv_coerce(obj, value);
 }
 
 template<>
@@ -641,13 +692,18 @@ bool pyopencv_to(PyObject *obj, cv::RotatedRect& dst, const ArgInfo info)
     return PyArg_ParseTuple(obj, "(ff)(ff)f", &dst.center.x, &dst.center.y, &dst.size.width, &dst.size.height, &dst.angle) > 0;
 }
 
+bool pyopencv_coerce(PyObject* obj, cv::Size& sz)
+{
+    if(!obj || obj == Py_None)
+        return true;
+    return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
+}
+
 template<>
 bool pyopencv_to(PyObject* obj, cv::Size& sz, const ArgInfo info)
 {
     (void)info.name;
-    if(!obj || obj == Py_None)
-        return true;
-    return PyArg_ParseTuple(obj, "ii", &sz.width, &sz.height) > 0;
+    return pyopencv_coerce(obj, sz);
 }
 
 template<>

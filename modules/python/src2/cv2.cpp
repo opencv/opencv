@@ -135,13 +135,18 @@ template<> struct pyopencvVecConverter<DMatch>
     }
 };
 
+bool pyopencv_coerce(PyObject *obj, TermCriteria& dst)
+{
+    if(!obj)
+        return true;
+    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
+}
+
 template<>
 bool pyopencv_to(PyObject *obj, TermCriteria& dst, const ArgInfo info)
 {
     (void)info.name;
-    if(!obj)
-        return true;
-    return PyArg_ParseTuple(obj, "iid", &dst.type, &dst.maxCount, &dst.epsilon) > 0;
+    return pyopencv_coerce(obj, dst);
 }
 
 template<>
