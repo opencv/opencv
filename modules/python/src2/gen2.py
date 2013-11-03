@@ -215,7 +215,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
+    return pyopencv_coerce(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
 }
 """)
 
