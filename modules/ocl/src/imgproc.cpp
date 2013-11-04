@@ -195,9 +195,14 @@ namespace cv
                 return;
             }
 
+            if (map1.empty())
+                map1.swap(map2);
+
             CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST
-                      || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4);
-            CV_Assert((map1.type() == CV_16SC2 && !map2.data) || (map1.type() == CV_32FC2 && !map2.data) ||
+                      /*|| interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4*/);
+            CV_Assert((map1.type() == CV_16SC2 && (map2.empty() || (interpolation == INTER_NEAREST &&
+                                                                    (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) )) ||
+                      (map1.type() == CV_32FC2 && !map2.data) ||
                       (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
             CV_Assert(!map2.data || map2.size() == map1.size());
             CV_Assert(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE || borderType == BORDER_WRAP
@@ -212,10 +217,14 @@ namespace cv
                                    "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
 
             string kernelName = "remap";
-            if ( map1.type() == CV_32FC2 && !map2.data )
+            if (map1.type() == CV_32FC2 && map2.empty())
                 kernelName += "_32FC2";
-            else if (map1.type() == CV_16SC2 && !map2.data)
+            else if (map1.type() == CV_16SC2)
+            {
                 kernelName += "_16SC2";
+                if (!map2.empty())
+                    kernelName += "_16UC1";
+            }
             else if (map1.type() == CV_32FC1 && map2.type() == CV_32FC1)
                 kernelName += "_2_32FC1";
             else
@@ -232,9 +241,6 @@ namespace cv
             if (interpolation != INTER_NEAREST)
             {
                 int wdepth = std::max(CV_32F, dst.depth());
-                if (!supportsDouble)
-                    wdepth = std::min(CV_32F, wdepth);
-
                 buildOptions += format(" -D WT=%s%s -D convertToT=convert_%s%s%s -D convertToWT=convert_%s%s"
                                        " -D convertToWT2=convert_%s2 -D WT2=%s2",
                                        typeMap[wdepth], channelMap[ocn],
