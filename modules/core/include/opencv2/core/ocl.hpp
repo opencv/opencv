@@ -245,21 +245,33 @@ protected:
 class CV_EXPORTS KernelArg
 {
 public:
-    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8 };
-    KernelArg(int _flags, UMat* _m, void* _obj=0, size_t _sz=0);
+    enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, NO_SIZE=256 };
+    KernelArg(int _flags, UMat* _m, int wscale=1, void* _obj=0, size_t _sz=0);
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
-    static KernelArg ReadOnly(const UMat& m) { return KernelArg(READ_ONLY, (UMat*)&m); }
-    static KernelArg WriteOnly(const UMat& m) { return KernelArg(WRITE_ONLY, (UMat*)&m); }
+    static KernelArg ReadWrite(const UMat& m, int wscale=1)
+    { return KernelArg(READ_WRITE, (UMat*)&m, wscale); }
+    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1)
+    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale); }
+    static KernelArg ReadOnly(const UMat& m, int wscale=1)
+    { return KernelArg(READ_ONLY, (UMat*)&m, wscale); }
+    static KernelArg WriteOnly(const UMat& m, int wscale=1)
+    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale); }
+    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1)
+    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale); }
+    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1)
+    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale); }
     static KernelArg Constant(const Mat& m);
     template<typename _Tp> static KernelArg Constant(const _Tp* arr, size_t n)
-    { return KernelArg(CONSTANT, 0, (void*)arr, n); }
+    { return KernelArg(CONSTANT, 0, 1, (void*)arr, n); }
 
     int flags;
     UMat* m;
     void* obj;
     size_t sz;
+    int wscale;
 };
+
 
 class CV_EXPORTS Kernel
 {

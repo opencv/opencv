@@ -141,6 +141,12 @@ bool CV_UMatTest::TestUMat()
 
         CHECK_DIFF(rc0, rc);
 
+        {
+        UMat tmp = rc0.getUMat(ACCESS_WRITE);
+        cv::max(ura, urb, tmp);
+        }
+        CHECK_DIFF(rc0, rc);
+
         ura.copyTo(urc);
         cv::max(urc, urb, urc);
         urc.copyTo(rc0);

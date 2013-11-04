@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -34,7 +35,7 @@
 // This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the copyright holders or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -44,6 +45,20 @@
 //
 //M*/
 
+/*
+  Usage:
+     after compiling this program user gets a single kernel called KF.
+     the following flags should be passed:
+     1) one of "-D BINARY_OP", "-D UNARY_OP", "-D MASK_BINARY_OP" or "-D MASK_UNARY_OP"
+     2) the actual operation performed, one of "-D OP_...", see below the list of operations.
+     2a) "-D SAMETYPE_MODE -D dstDepth=<destination depth> [-D cn=<num channels]"
+         for some operations, like min/max/and/or/xor it's enough
+     2b) "-D srcDepth1=<source1 depth> -D
+         "-D srcT2=<source2 type> -D convertToWT2=<convert_from_source1_type_to_work_type> "
+         "-D dstT=<destination type> -D convertToDT=<convert_from_work_type_to_dst_type> "
+         "-D workT=<work type> "
+*/
+
 #if defined (DOUBLE_SUPPORT)
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
@@ -52,56 +67,232 @@
 #endif
 #endif
 
-typedef struct UMat2D
-{
-    size_t offset;
-    size_t step;
-    int rows;
-    int cols;
-}
-UMat2D;
+#define CV_32S 4
+#define CV_32F 5
 
-#if defined BINOP_ADD
-#define BINOP(x,y) sat_add(x,y)
-#elif defined BINOP_ADD_FLT
-#define BINOP(x,y) x + y
-#elif defined BINOP_SUB
-#define BINOP(x,y) sat_sub(x, y)
-#elif defined BINOP_SUB_FLT
-#define BINOP(x,y) x - y
-#elif defined BINOP_ABSDIFF
-#define BINOP(x,y) abs_diff(x, y)
-#elif defined BINOP_AND
-#define BINOP(x,y) x & y
-#elif defined BINOP_OR
-#define BINOP(x,y) x | y
-#elif defined BINOP_XOR
-#define BINOP(x,y) x ^ y
-#elif defined BINOP_NOT
-#define BINOP(x,y) ~x
-#elif defined BINOP_MIN
-#define BINOP(x,y) min(x, y)
-#elif defined BINOP_MAX
-#define BINOP(x,y) max(x, y)
-#elif defined BINOP_MUL
-#define BINOP(x,y) x * y
-#elif defined BINOP_DIV
-#define BINOP(x,y) x / y
+#define TYPE0 uchar
+#define TYPE1 char
+#define TYPE2 ushort
+#define TYPE3 short
+#define TYPE4 int
+#define TYPE5 float
+#define TYPE6 double
+/* specially for bit & byte-level operations */
+#define TYPE7 long
+
+#define EXPAND(a) a
+
+#if defined cn && cn != 1
+#define ADD_CN(s) s##cn
+#else
+#define ADD_CN(s) s
+#endif
+
+#define dstT_ TYPE##dstDepth
+#define dstT ADD_CN(dstT_)
+#define dstelem *(dstT*)(dstptr + dst_index)
+
+#ifdef SAMETYPE_MODE
+
+#define srcT1_ dstT_
+#define srcT1 dstT
+#define srcT2_ dstT_
+#define srcT2 dstT
+#define workT_ dstT_
+#define workT dstT
+#define srcelem1 *(dstT*)(srcptr1 + src1_index)
+#define srcelem2 *(dstT*)(srcptr2 + src2_index)
+
+#else
+
+#define srcT1_ TYPE##srcDepth1
+#define srcT1 ADD_CN(srcT1_)
+#define srcT2_ TYPE##srcDepth2
+#define srcT2 ADD_CN(srcT2_)
+#define workT_ TYPE##workDepth
+#define workT ADD_CN(workT_)
+
+#if workDepth == srcDepth1
+    #define convertToWT1
+#elif workDepth > srcDepth1
+    #define convertToWT1 convert_##workT
+#elif workDepth < CV_32S
+    #if srcDepth1 >= CV_32F
+        #define convertToWT1 convert_##workT##_sat_rte
+    #else
+        #define convertToWT1 convert_##workT##_sat
+    #endif
+#else
+    #define convertToWT1 convert_##workT##_rte
+#endif
+
+#if workDepth == srcDepth2
+    #define convertToWT2
+#elif workDepth > srcDepth2
+    #define convertToWT2 convert_##workT
+#elif workDepth < CV_32S
+    #if srcDepth2 >= CV_32F
+        #define convertToWT2 convert_##workT##_sat_rte
+    #else
+        #define convertToWT2 convert_##workT##_sat
+    #endif
+#else
+    #define convertToWT2 convert_##workT##_rte
+#endif
+
+#if workDepth == dstDepth
+    #define convertToDT
+#if dstDepth < CV_32S
+    #if workDepth >= CV_32F
+        #define convertToDT convert_##dstT##_sat_rte
+    #else
+        #define convertToDT convert_##dstT##_sat
+    #endif
+#elif dstDepth == CV_32S && workDepth >= CV_32F
+    #define convertToDT convert_##dstT##_rte
+#else
+    #define convertToDT convert_##dstT
+#endif
+
+#define srcelem1 convertToWT1(*(srcT1*)(srcptr1 + src1_index))
+#define srcelem2 convertToWT2(*(srcT2*)(srcptr2 + src2_index))
+
+#endif
+
+
+#define EXTRA_PARAMS
+
+#if defined OP_SAT_ADD
+#define PROCESS_ELEM dstelem = sat_add(srcelem1, srcelem2)
+
+#elif defined OP_ADD
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 + srcelem2)
+
+#elif defined OP_SAT_SUB
+#define PROCESS_ELEM dstelem = sat_sub(srcelem1, srcelem2)
+
+#elif defined OP_SUB
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 - srcelem2)
+
+#elif defined OP_SAT_RSUB
+#define PROCESS_ELEM dstelem = sat_sub(srcelem2, srcelem1)
+
+#elif defined OP_RSUB
+#define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
+
+#elif defined OP_ABSDIFF
+#define PROCESS_ELEM dstelem = abs_diff(srcelem1, srcelem2)
+
+#elif defined OP_AND
+#define PROCESS_ELEM dstelem = srcelem1 & srcelem2
+
+#elif defined OP_OR
+#define PROCESS_ELEM dstelem = srcelem1 | srcelem2
+
+#elif defined OP_XOR
+#define PROCESS_ELEM dstelem = srcelem1 ^ srcelem2
+
+#elif defined OP_NOT
+#define PROCESS_ELEM dstelem = ~srcelem1
+
+#elif defined OP_MIN
+#define PROCESS_ELEM dstelem = min(srcelem1, srcelem2)
+
+#elif defined OP_MAX
+#define PROCESS_ELEM dstelem = max(srcelem1, srcelem2)
+
+#elif defined OP_MUL
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * srcelem2)
+
+#elif defined OP_MUL_SCALE
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT scale
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * srcelem2 * scale)
+
+#elif defined OP_DIV
+#define PROCESS_ELEM \
+        workT e2 = srcelem2, zero = (workT)(0); \
+        dstelem = convertToDT(e2 != zero ? srcelem1 / e2 : zero)
+
+#elif defined OP_DIV_SCALE
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT scale
+#define PROCESS_ELEM \
+        workT e2 = srcelem2, zero = (workT)(0); \
+        dstelem = convertToDT(e2 != zero ? srcelem1 * scale / e2 : zero)
+
+#elif defined OP_RECIP_SCALE
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT scale
+#define PROCESS_ELEM \
+        workT e1 = srcelem1, zero = (workT)(0); \
+        dstelem = convertToDT(e1 != zero ? scale / e1 : zero)
+
+#elif defined OP_ADDW
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT alpha, workT beta, workT gamma
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + srcelem2*beta + gamma)
+
+#elif defined OP_MAG
+#define PROCESS_ELEM dstelem = hypot(srcelem1, srcelem2)
+
+#elif defined OP_PHASE_RADIANS
+#define PROCESS_ELEM \
+        workT tmp = atan2(srcelem2, srcelem1); \
+        if(tmp < 0) tmp += 6.283185307179586232; \
+        dstelem = tmp
+
+#elif defined OP_PHASE_DEGREES
+    #define PROCESS_ELEM \
+    workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465; \
+    if(tmp < 0) tmp += 360; \
+    dstelem = tmp
+
+#elif defined OP_EXP
+#define PROCESS_ELEM dstelem = exp(srcelem1)
+
+#elif defined OP_SQRT
+#define PROCESS_ELEM dstelem = sqrt(srcelem1)
+
+#elif defined OP_LOG
+#define PROCESS_ELEM dstelem = log(abs(srcelem1))
+
+#elif defined OP_CMP
+#define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
+
+#elif defined OP_CONVERT
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1)
+
+#elif defined OP_CONVERT_SCALE
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT alpha, workT beta
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + beta)
+
+#elif defined OP_SET
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , dstT value
+#define PROCESS_ELEM dstelem = value
+
 #else
 #error "unknown op type"
 #endif
 
-#if defined SAMETYPE_MODE
-#define srcT
-#define convertToWT(x) (x)
-#define convertToDstT(x) (x)
-#define srcT1 dstT
-#define srcT2 dstT
+#if defined UNARY_OP || defined MASK_UNARY_OP
+#undef srcelem2
+#if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
+    defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
+    defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX
+    #undef EXTRA_PARAMS
+    #define EXTRA_PARAMS , workT srcelem2
+#endif
 #endif
 
-__kernel void binop(__global const uchar* srcptr1, int srcoffset1, int srcstep1, int cols1, int rows1,
-                    __global const uchar* srcptr2, int srcoffset2, int srcstep2, int cols2, int rows2,
-                    __global uchar* dstptr, int dstoffset, int dststep, int cols, int rows)
+#if defined BINARY_OP
+
+__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
+                 __global uchar* dstptr, int dststep, int dstoffset,
+                 int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -111,8 +302,83 @@ __kernel void binop(__global const uchar* srcptr1, int srcoffset1, int srcstep1,
         int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
         int src2_index = mad24(y, srcstep2, x*sizeof(srcT2) + srcoffset2);
         int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
-        *(dstT*)(dstptr + dst_index) = convertToDstT(BINOP(convertToWT(*(srcT1*)(srcptr1 + src1_index)),
-                                                           convertToWT(*(srcT2*)(srcptr2 + src2_index))));
+
+        PROCESS_ELEM;
     }
 }
+
+#elif defined MASK_BINARY_OP
+
+__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
+                 __global const uchar* mask, int maskstep, int maskoffset,
+                 __global uchar* dstptr, int dststep, int dstoffset,
+                 int rows, int cols EXTRA_PARAMS )
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int mask_index = mad24(y, maskstep, x + maskoffset);
+        if( mask[mask_index] )
+        {
+            int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
+            int src2_index = mad24(y, srcstep2, x*sizeof(srcT2) + srcoffset2);
+            int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+
+            PROCESS_ELEM;
+        }
+    }
+}
+
+#elif defined UNARY_OP
+
+__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
+                 __global uchar* dstptr, int dststep, int dstoffset,
+                 int rows, int cols EXTRA_PARAMS )
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
+        int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+
+        PROCESS_ELEM;
+    }
+}
+
+#elif defined MASK_UNARY_OP
+
+__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar* mask, int maskstep, int maskoffset,
+                 __global uchar* dstptr, int dststep, int dstoffset,
+                 int rows, int cols EXTRA_PARAMS )
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        int mask_index = mad24(y, maskstep, x + maskoffset);
+        if( mask[mask_index] )
+        {
+            int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
+            int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+
+            PROCESS_ELEM;
+        }
+    }
+}
+
+#else
+
+#error "Unknown operation type"
+
+#endif
+
+
+
 

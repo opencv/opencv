@@ -116,6 +116,7 @@ public:
     void* getObj() const;
 
     virtual int kind() const;
+    virtual int dims(int i=-1) const;
     virtual Size size(int i=-1) const;
     virtual size_t total(int i=-1) const;
     virtual int type(int i=-1) const;

@@ -2003,15 +2003,15 @@ static cl_command_queue getQueue(const Queue& q)
     return qq;
 }
 
-KernelArg::KernelArg(int _flags, UMat* _m, void* _obj, size_t _sz)
-    : flags(_flags), m(_m), obj(_obj), sz(_sz)
+KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, void* _obj, size_t _sz)
+    : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale)
 {
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 1, m.data, m.total()*m.elemSize());
 }
 
 
@@ -2187,21 +2187,39 @@ int Kernel::set(int i, const KernelArg& arg)
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
-        clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+
         if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.offset), &u2d.offset);
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.step), &u2d.step);
-            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u2d.cols), &u2d.cols);
-            clSetKernelArg(p->handle, (cl_uint)(i+4), sizeof(u2d.rows), &u2d.rows);
-            i += 5;
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
+            i += 3;
+
+            if( !(arg.flags & KernelArg::NO_SIZE) )
+            {
+                int cols = u2d.cols*arg.wscale;
+                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.cols), &cols);
+                i += 2;
+            }
         }
         else
         {
             UMat3D u3d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d), &u3d);
-            i += 2;
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step);
+            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset);
+            i += 4;
+            if( !(arg.flags & KernelArg::NO_SIZE) )
+            {
+                int cols = u3d.cols*arg.wscale;
+                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols);
+                i += 3;
+            }
         }
         p->addUMat(*arg.m);
         return i;

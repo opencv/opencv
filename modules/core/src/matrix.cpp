@@ -1436,6 +1436,87 @@ Size _InputArray::size(int i) const
     }
 }
 
+int _InputArray::dims(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const Mat*)obj)->dims;
+    }
+
+    if( k == EXPR )
+    {
+        CV_Assert( i < 0 );
+        return ((const MatExpr*)obj)->a.dims;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->dims;
+    }
+
+    if( k == MATX )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == STD_VECTOR )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == NONE )
+        return 0;
+
+    if( k == STD_VECTOR_VECTOR )
+    {
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+        return 2;
+    }
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+
+        return vv[i].dims;
+    }
+
+    if( k == OPENGL_BUFFER )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+    
+    if( k == OCL_MAT )
+    {
+        return 2;
+    }
+    
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+}
+
 size_t _InputArray::total(int i) const
 {
     int k = kind();

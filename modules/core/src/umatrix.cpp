@@ -548,7 +548,8 @@ Mat UMat::getMat(int accessFlags) const
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.u = u;
-    hdr.datastart = hdr.data = u->data;
+    hdr.datastart = u->data;
+    hdr.data = hdr.datastart + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
     CV_XADD(&hdr.u->refcount, 1);
     return hdr;

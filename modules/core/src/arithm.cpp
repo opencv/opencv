@@ -914,48 +914,93 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 
 static ocl::ProgramSource arithm_ocl_src(ocl::arithm.programStr);
 
+static void ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
+                          InputArray _mask, bool bitwise, const char* oclop)
+    {
+        UMat src1, src2, mask = _mask.getUMat();
+
+        if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
+           _src1.size() != _src2.size() || _src1.type() != _src2.type() )
+        {
+            if( checkScalar(_src1, _src2.type(), kind1, kind2) )
+                // src1 is a scalar; swap it with src2
+                swap(_src1, _src2);
+                else if( !checkScalar(_src2, _src1.type(), kind2, kind1) )
+                    CV_Error( CV_StsUnmatchedSizes,
+                             "The operation is neither 'array op array' (where arrays have the same size and type), "
+                             "nor 'array op scalar', nor 'scalar op array'" );
+                    haveScalar = true;
+                    }
+
+        src1 = _src1.getUMat();
+        int c0 = c = src1.channels();
+
+        if( src1.dims <= 2 &&
+           (!haveMask || (mask.size() == src1.size() && mask.type() == CV_8U)) &&
+           ((!haveMask && !haveScalar) || c <= 4))
+        {
+            int srctype = src1.type();
+            int srcdepth = src1.depth();
+
+            size_t esz = src1.elemSize();
+            double buf[4];
+            if( haveScalar )
+            {
+                Mat src2sc = _src2.getMat();
+                convertAndUnrollScalar(src2sc, srctype, (uchar*)buf, esz);
+            }
+            else
+            {
+                src2 = _src2.getUMat();
+                if( )
+
+
+                    if( src1.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() &&
+                       (!haveMask || (mask.size() == src1.size() && mask.type() == CV_8U && c <= 4)))
+                    {
+                        _dst.create(src1.size(), src1.type());
+                        UMat dst = _dst.getUMat();
+                        char opts[1024];
+                        int depth = src1.depth();
+
+                        if( haveMask || haveScalar)
+                            c0 = 1;
+
+                            sprintf(opts, "-D %s -D %s -D dstDepth=%d -D cn=%d -D SAMETYPE_MODE",
+                                    haveMask ? "MASK_BINARY_OP" : "BINARY_OP",
+                                    oclop, bitwise ? bitop_depthmap[depth] : depth, c);
+
+                            String errmsg;
+                        ocl::Kernel k("KF", arithm_ocl_src, opts, errmsg);
+                        size_t globalsize[] = { src1.cols*c, src1.rows };
+                        if( !haveMask )
+                            k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn),
+                                   ocl::KernelArg::ReadOnlyNoSize(src2, cn),
+                                   ocl::KernelArg::WriteOnly(dst, cn));
+                            else
+                                k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
+                                       ocl::KernelArg::ReadOnlyNoSize(src2),
+                                       ocl::KernelArg::ReadOnlyNoSize(mask),
+                                       ocl::KernelArg::WriteOnly(dst));
+                                
+                                if( k.run(2, 0, globalsize, 0, false) )
+                                    return;
+                    }
+            }
+
 static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, const BinaryFunc* tab,
                       bool bitwise, const char* oclop)
 {
-    static const char* bitop_depth2str[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "long" };
+    static const int bitop_depthmap[] = { CV_8U, CV_8U, CV_16U, CV_16U, CV_32S, CV_32S, 7 };
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     bool haveMask = !_mask.empty(), haveScalar = false;
     BinaryFunc func;
     int c;
 
-    if( kind1 == kind2 && kind1 == _InputArray::UMAT && ocl::useOpenCL() )
-    {
-        UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
-        _dst.create(src1.size(), src1.type());
-        UMat dst = _dst.getUMat();
-
-        char opts[1024];
-        int depth = src1.depth();
-        sprintf(opts, "-D %s -D dstT=%s -D SAMETYPE_MODE",
-                oclop, bitwise ? bitop_depth2str[depth] : ocl::depth2str[depth]);
-        c = src1.channels();
-
-        UMat src1_, src2_, dst_;
-        if( c > 1 )
-        {
-            src1_ = src1.reshape(1);
-            src2_ = src2.reshape(1);
-            dst_ = dst.reshape(1);
-        }
-        else
-        {
-            src1_ = src1;
-            src2_ = src2;
-            dst_ = dst;
-        }
-
-        String errmsg;
-        ocl::Kernel k("binop", arithm_ocl_src, opts, errmsg);
-        size_t globalsize[] = { src1_.cols, src1_.rows };
-        if( src1.dims <= 2 && k.args(src1_, src2_, dst_).run(2, 0, globalsize, 0, false) )
-            return;
-    }
+    if( (kind1 == _InputArray::UMAT || kind2 == _InputArray::UMAT) && ocl::useOpenCL() &&
+        ocl_binary_op(_src1, _src2, _dst, _mask, bitwise, oclop) )
+        return;
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
 
@@ -1222,14 +1267,131 @@ static int actualScalarDepth(const double* data, int len)
         CV_32S;
 }
 
+enum { OCL_OP_ADD=0, OCL_OP_SUB=1, OCL_OP_ABSDIFF=2, OCL_OP_MUL=3, OCL_OP_DIV=4, OCL_OP_ADDW=5 };
+
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
-               InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false, void* usrdata=0)
+                      InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false,
+                      void* usrdata=0, int oclop=-1 )
 {
+    static const char* ocloptab[] = { 0, "BINOP_ADD", "BINOP_SUB", "BINOP_ABSDIFF", "BINOP_MUL", "BINOP_DIV", "BINOP_ADDW", 0 };
     int kind1 = _src1.kind(), kind2 = _src2.kind();
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
 
+    if( kind1 == kind2 && kind1 == _InputArray::UMAT && ocl::useOpenCL() && !haveMask )
+    {
+        UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+        int c = src1.channels();
+
+        if( src1.dims <= 2 && src1.size() == src2.size() && c == src2.channels() )
+        {
+            int depth1 = src1.depth();
+            int depth2 = src2.depth();
+
+            if( dtype < 0 )
+            {
+                if(_dst.fixedType())
+                    dtype = _dst.type();
+                else if( depth1 == depth2 )
+                    dtype = depth1;
+                else
+                    CV_Error(Error::StsBadArg, "destination array type can not be deduced");
+            }
+            dtype = CV_MAT_DEPTH(dtype);
+            _dst.create(src1.size(), CV_MAKETYPE(dtype, c));
+            UMat dst = _dst.getUMat();
+            bool sametype = depth1 == depth2 && dtype == depth1;
+            bool satop = sametype && depth1 < CV_32F;
+            const char* oclop_str = oclop == OCL_OP_ADD ? (satop ? "BINOP_SAT_ADD" : "BINOP_ADD") :
+                                oclop == OCL_OP_SUB ? (satop ? "BINOP_SAT_SUB" : "BINOP_SUB") :
+                                ocloptab[oclop+1];
+            char opts[1024];
+            int wtype = dtype;
+            if( sametype )
+            {
+                sprintf(opts, "-D %s -D dstT=%s -D SAMETYPE_MODE",
+                        oclop_str, ocl::depth2str[depth1]);
+            }
+            else
+            {
+                const char* wcvtop1;
+                const char* wcvtop2;
+                if( !muldiv )
+                {
+                    wtype = depth1 <= CV_8S && depth2 <= CV_8S ? CV_16S :
+                    depth1 <= CV_32S && depth2 <= CV_32S ? CV_32S : std::max(depth1, depth2);
+                    wtype = std::max(wtype, dtype);
+
+                    // when the result of addition should be converted to an integer type,
+                    // and just one of the input arrays is floating-point, it makes sense to convert that input to integer type before the operation,
+                    // instead of converting the other input to floating-point and then converting the operation result back to integers.
+                    if( dtype < CV_32F && (depth1 < CV_32F || depth2 < CV_32F) )
+                        wtype = CV_32S;
+                }
+                else
+                {
+                    wtype = std::max(depth1, std::max(depth2, CV_32F));
+                    wtype = std::max(wtype, dtype);
+                }
+
+                if( wtype == CV_32S )
+                {
+                    wcvtop1 = depth1 < CV_32S ? "-D convertToWT1=convert_int " :
+                              depth1 == CV_32S ? "" : "-D convertToWT1=convert_int_rte ";
+                    wcvtop2 = depth2 < CV_32S ? "-D convertToWT2=convert_int " :
+                              depth2 == CV_32S ? "" : "-D convertToWT2=convert_int_rte ";
+                }
+                else if( wtype == CV_16S )
+                {
+                    wcvtop1 = "-D convertToWT1=convert_short ";
+                    wcvtop2 = "-D convertToWT2=convert_short ";
+                }
+                else if( wtype == CV_32F )
+                {
+                    wcvtop1 = depth1 != CV_32F ? "-D convertToWT1=convert_float " : "";
+                    wcvtop2 = depth2 != CV_32F ? "-D convertToWT2=convert_float " : "";
+                }
+                else
+                {
+                    CV_Assert( wtype == CV_64F );
+                    wcvtop1 = depth1 != CV_64F ? "-D convertToWT1=convert_double " : "";
+                    wcvtop2 = depth2 != CV_64F ? "-D convertToWT2=convert_double " : "";
+                }
+                char dcvtopbuf[32];
+                const char* dcvtop = dcvtopbuf;
+                if( dtype == wtype )
+                    dcvtop = "";
+                else
+                    sprintf(dcvtopbuf, "-D convertToDT=convert_%s%s%s ",
+                            ocl::depth2str[dtype],
+                            dtype < CV_32S ? "_sat" : "",
+                            dtype <= CV_32S && wtype >= CV_32F ? "_rte" : "");
+
+                sprintf(opts, "-D %s -D srcT1=%s%s -D srcT2=%s%s -D dstT=%s%s",
+                        oclop_str, ocl::depth2str[depth1], wcvtop1,
+                        ocl::depth2str[depth2], wcvtop2,
+                        ocl::depth2str[dtype], dcvtop);
+            }
+
+            String errmsg;
+            ocl::Kernel k("binop", arithm_ocl_src, opts, errmsg);
+            size_t globalsize[] = { src1.cols*c, src1.rows };
+            ocl::KernelArg srcarg1 = ocl::KernelArg::ReadOnlyNoSize(src1, c),
+                           srcarg2 = ocl::KernelArg::ReadOnlyNoSize(src2, c),
+                           dstarg = ocl::KernelArg::WriteOnly(dst, c);
+            if( !muldiv || (oclop == OCL_OP_MUL && *(const double*)usrdata == 1.))
+                k.args(srcarg1, srcarg2, dstarg);
+            else
+
+            {
+                if( run(2, 0, globalsize, 0, false) )
+                    return;
+            }
+
+        }
+    }
+
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     bool src1Scalar = checkScalar(src1, src2.type(), kind1, kind2);
     bool src2Scalar = checkScalar(src2, src1.type(), kind2, kind1);
 
