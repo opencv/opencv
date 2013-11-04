@@ -93,22 +93,14 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
     }
 
-    void Near(double threshold = 0.0, bool relative = false)
+    void Near(double threshold = 0.0)
     {
         Mat roi, whole;
         gdst_whole.download(whole);
         gdst_roi.download(roi);
 
-        if (relative)
-        {
-            EXPECT_MAT_NEAR_RELATIVE(dst_whole, whole, threshold);
-            EXPECT_MAT_NEAR_RELATIVE(dst_roi, roi, threshold);
-        }
-        else
-        {
-            EXPECT_MAT_NEAR(dst_whole, whole, threshold);
-            EXPECT_MAT_NEAR(dst_roi, roi, threshold);
-        }
+        EXPECT_MAT_NEAR(dst_whole, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 };
 
@@ -207,11 +199,19 @@ struct CornerTestBase :
         Mat image = readImageType("gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
 
+        bool isFP = CV_MAT_DEPTH(type) >= CV_32F;
+        float val = 255.0f;
+        if (isFP)
+        {
+            image.convertTo(image, -1, 1.0 / 255);
+            val /= 255.0f;
+        }
+
         Size roiSize = image.size();
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
 
         Size wholeSize = Size(roiSize.width + srcBorder.lef + srcBorder.rig, roiSize.height + srcBorder.top + srcBorder.bot);
-        src = randomMat(wholeSize, type, -255, 255, false);
+        src = randomMat(wholeSize, type, -val, val, false);
         src_roi = src(Rect(srcBorder.lef, srcBorder.top, roiSize.width, roiSize.height));
         image.copyTo(src_roi);
 
@@ -236,7 +236,7 @@ OCL_TEST_P(CornerMinEigenVal, Mat)
         cornerMinEigenVal(src_roi, dst_roi, blockSize, apertureSize, borderType);
         ocl::cornerMinEigenVal(gsrc_roi, gdst_roi, blockSize, apertureSize, borderType);
 
-        Near(1e-5, true);
+        Near(1e-6);
     }
 }
 
@@ -256,7 +256,7 @@ OCL_TEST_P(CornerHarris, Mat)
         cornerHarris(src_roi, dst_roi, blockSize, apertureSize, k, borderType);
         ocl::cornerHarris(gsrc_roi, gdst_roi, blockSize, apertureSize, k, borderType);
 
-        Near(1e-5, true);
+        Near(1e-6);
     }
 }
 
@@ -522,7 +522,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
-                            Values((MatType)CV_8UC1), // TODO does not work properly with CV_32FC1
+                            Values((MatType)CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values( (int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
                             Bool()));
