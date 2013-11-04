@@ -69,23 +69,16 @@ __global float* dx, __global float* dy, int dx_step)
 
 }
 
-float bicubicCoeff(float x_)
+static float bicubicCoeff(float x_)
 {
 
     float x = fabs(x_);
     if (x <= 1.0f)
-    {
         return x * x * (1.5f * x - 2.5f) + 1.0f;
-    }
     else if (x < 2.0f)
-    {
         return x * (x * (-0.5f * x + 2.5f) - 4.0f) + 2.0f;
-    }
     else
-    {
         return 0.0f;
-    }
-
 }
 
 __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_col, int I0_row,
@@ -170,12 +163,10 @@ __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_c
 
 }
 
-float readImage(__global const float *image,  const int x,  const int y,  const int rows,  const int cols, const int elemCntPerRow)
+static float readImage(__global const float *image,  const int x,  const int y,  const int rows,  const int cols, const int elemCntPerRow)
 {
     int i0 = clamp(x, 0, cols - 1);
     int j0 = clamp(y, 0, rows - 1);
-    int i1 = clamp(x + 1, 0, cols - 1);
-    int j1 = clamp(y + 1, 0, rows - 1);
 
     return image[j0 * elemCntPerRow + i0];
 }
@@ -303,7 +294,7 @@ __kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, 
 
 }
 
-float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
+static float divergence(__global const float* v1, __global const float* v2, int y, int x, int v1_step, int v2_step)
 {
 
     if (x > 0 && y > 0)
@@ -407,5 +398,4 @@ __kernel void estimateUKernel(__global const float* I1wx, int I1wx_col, int I1wx
             error[y * I1wx_step + x] = n1 + n2;
         }
     }
-
 }
