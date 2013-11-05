@@ -43,9 +43,6 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
-
 #ifdef L2GRAD
 inline float calc(int x, int y)
 {
@@ -248,7 +245,12 @@ void calcMagnitude
 //////////////////////////////////////////////////////////////////////////////////////////
 // 0.4142135623730950488016887242097 is tan(22.5)
 #define CANNY_SHIFT 15
-#define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
+
+#ifdef DOUBLE_SUPPORT
+    #define TG22        (int)(0.4142135623730950488016887242097*(1<<CANNY_SHIFT) + 0.5)
+#else
+    #define TG22        (int)(0.4142135623730950488016887242097f*(1<<CANNY_SHIFT) + 0.5f)
+#endif
 
 //First pass of edge detection and non-maximum suppression
 // edgetype is set to for each pixel:
@@ -374,6 +376,14 @@ calcMap
 #undef CANNY_SHIFT
 #undef TG22
 
+struct PtrStepSz {
+    __global int *ptr;
+    int step;
+    int rows, cols;
+};
+inline int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)); }
+inline void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)) = value; }
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // do Hysteresis for pixel whose edge type is 1
 //
@@ -390,7 +400,7 @@ void
 __attribute__((reqd_work_group_size(16,16,1)))
 edgesHysteresisLocal
 (
-    __global int * map,
+    __global int * map_ptr,
     __global ushort2 * st,
     __global unsigned int * counter,
     int rows,
@@ -399,10 +409,11 @@ edgesHysteresisLocal
     int map_offset
 )
 {
+#if 0
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
-    map += map_offset;
+    const __global int* map = map_ptr + map_offset;
 
     __local int smem[18][18];
 
@@ -482,6 +493,92 @@ edgesHysteresisLocal
             st[ind] = (ushort2)(gidx + 1, gidy + 1);
         }
     }
+#else
+    struct PtrStepSz map = {((__global int *)((__global char*)map_ptr + map_offset)), map_step, rows, cols};
+
+    __local int smem[18][18];
+
+    int2 blockIdx = (int2)(get_group_id(0), get_group_id(1));
+    int2 blockDim = (int2)(get_local_size(0), get_local_size(1));
+    int2 threadIdx = (int2)(get_local_id(0), get_local_id(1));
+
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    smem[threadIdx.y + 1][threadIdx.x + 1] = x < map.cols && y < map.rows ? get(map, y, x) : 0;
+    if (threadIdx.y == 0)
+        smem[0][threadIdx.x + 1] = y > 0 ? get(map, y - 1, x) : 0;
+    if (threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][threadIdx.x + 1] = y + 1 < map.rows ? get(map, y + 1, x) : 0;
+    if (threadIdx.x == 0)
+        smem[threadIdx.y + 1][0] = x > 0 ? get(map, y, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1)
+        smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols ? get(map, y, x + 1) : 0;
+    if (threadIdx.x == 0 && threadIdx.y == 0)
+        smem[0][0] = y > 0 && x > 0 ? get(map, y - 1, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0)
+        smem[0][blockDim.x + 1] = y > 0 && x + 1 < map.cols ? get(map, y - 1, x + 1) : 0;
+    if (threadIdx.x == 0 && threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][0] = y + 1 < map.rows && x > 0 ? get(map, y + 1, x - 1) : 0;
+    if (threadIdx.x == blockDim.x - 1 && threadIdx.y == blockDim.y - 1)
+        smem[blockDim.y + 1][blockDim.x + 1] = y + 1 < map.rows && x + 1 < map.cols ? get(map, y + 1, x + 1) : 0;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (x >= map.cols || y >= map.rows)
+        return;
+
+    int n;
+
+    #pragma unroll
+    for (int k = 0; k < 16; ++k)
+    {
+        n = 0;
+
+        if (smem[threadIdx.y + 1][threadIdx.x + 1] == 1)
+        {
+            n += smem[threadIdx.y    ][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y    ][threadIdx.x + 1] == 2;
+            n += smem[threadIdx.y    ][threadIdx.x + 2] == 2;
+
+            n += smem[threadIdx.y + 1][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y + 1][threadIdx.x + 2] == 2;
+
+            n += smem[threadIdx.y + 2][threadIdx.x    ] == 2;
+            n += smem[threadIdx.y + 2][threadIdx.x + 1] == 2;
+            n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
+        }
+
+        if (n > 0)
+            smem[threadIdx.y + 1][threadIdx.x + 1] = 2;
+    }
+
+    const int e = smem[threadIdx.y + 1][threadIdx.x + 1];
+
+    set(map, y, x, e);
+
+    n = 0;
+
+    if (e == 2)
+    {
+        n += smem[threadIdx.y    ][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y    ][threadIdx.x + 1] == 1;
+        n += smem[threadIdx.y    ][threadIdx.x + 2] == 1;
+
+        n += smem[threadIdx.y + 1][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y + 1][threadIdx.x + 2] == 1;
+
+        n += smem[threadIdx.y + 2][threadIdx.x    ] == 1;
+        n += smem[threadIdx.y + 2][threadIdx.x + 1] == 1;
+        n += smem[threadIdx.y + 2][threadIdx.x + 2] == 1;
+    }
+
+    if (n > 0)
+    {
+        const int ind = atomic_inc(counter);
+        st[ind] = (ushort2)(x, y);
+    }
+#endif
 }
 
 __constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
@@ -505,17 +602,12 @@ edgesHysteresisGlobal
     int map_offset
 )
 {
-
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
     map += map_offset;
 
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
     int lidx = get_local_id(0);
-    int lidy = get_local_id(1);
 
     int grp_idx = get_group_id(0);
     int grp_idy = get_group_id(1);
@@ -536,14 +628,39 @@ edgesHysteresisGlobal
     if(ind < count)
     {
         ushort2 pos = st1[ind];
-        if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows)
+        if (lidx < 8)
         {
-            if (lidx < 8)
+            pos.x += c_dx[lidx];
+            pos.y += c_dy[lidx];
+            if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && map[pos.x + pos.y * map_step] == 1)
             {
-                pos.x += c_dx[lidx];
-                pos.y += c_dy[lidx];
+                map[pos.x + pos.y * map_step] = 2;
 
-                if (map[pos.x + pos.y * map_step] == 1)
+                ind = atomic_inc(&s_counter);
+
+                s_st[ind] = pos;
+            }
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
+        {
+            const int subTaskIdx = lidx >> 3;
+            const int portion = min(s_counter, (uint)(get_local_size(0)>> 3));
+
+            if (subTaskIdx < portion)
+                pos = s_st[s_counter - 1 - subTaskIdx];
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            if (lidx == 0)
+                s_counter -= portion;
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            if (subTaskIdx < portion)
+            {
+                pos.x += c_dx[lidx & 7];
+                pos.y += c_dy[lidx & 7];
+                if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows && map[pos.x + pos.y * map_step] == 1)
                 {
                     map[pos.x + pos.y * map_step] = 2;
 
@@ -553,54 +670,22 @@ edgesHysteresisGlobal
                 }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
+        }
 
-            while (s_counter > 0 && s_counter <= stack_size - get_local_size(0))
+        if (s_counter > 0)
+        {
+            if (lidx == 0)
             {
-                const int subTaskIdx = lidx >> 3;
-                const int portion = min(s_counter, (uint)(get_local_size(0)>> 3));
-
-                pos.x = pos.y = 0;
-
-                if (subTaskIdx < portion)
-                    pos = s_st[s_counter - 1 - subTaskIdx];
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                if (lidx == 0)
-                    s_counter -= portion;
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                if (pos.x > 0 && pos.x <= cols && pos.y > 0 && pos.y <= rows)
-                {
-                    pos.x += c_dx[lidx & 7];
-                    pos.y += c_dy[lidx & 7];
-
-                    if (map[pos.x + pos.y * map_step] == 1)
-                    {
-                        map[pos.x + pos.y * map_step] = 2;
-
-                        ind = atomic_inc(&s_counter);
-
-                        s_st[ind] = pos;
-                    }
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
+                ind = atomic_add(counter, s_counter);
+                s_ind = ind - s_counter;
             }
+            barrier(CLK_LOCAL_MEM_FENCE);
 
-            if (s_counter > 0)
+            ind = s_ind;
+
+            for (int i = lidx; i < (int)s_counter; i += get_local_size(0))
             {
-                if (lidx == 0)
-                {
-                    ind = atomic_add(counter, s_counter);
-                    s_ind = ind - s_counter;
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
-
-                ind = s_ind;
-
-                for (int i = lidx; i < s_counter; i += get_local_size(0))
-                {
-                    st2[ind + i] = s_st[i];
-                }
+                st2[ind + i] = s_st[i];
             }
         }
     }

@@ -474,9 +474,13 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
 
     std::ostringstream stream;
     stream << "-D T=" << typeMap[src.depth()] << channelMap[src.channels()];
-    stream << " -D MAX_VAL=" << (WT)std::numeric_limits<T>::max();
-    stream << " -D MIN_VAL=" << (std::numeric_limits<T>::is_integer ?
-                  (WT)std::numeric_limits<T>::min() : -(WT)(std::numeric_limits<T>::max()));
+    if (std::numeric_limits<T>::is_integer)
+    {
+        stream << " -D MAX_VAL=" << (WT)std::numeric_limits<T>::max();
+        stream << " -D MIN_VAL=" << (WT)std::numeric_limits<T>::min();
+    }
+    else
+        stream << " -D DEPTH_" << src.depth();
     std::string buildOptions = stream.str();
 
     std::vector<std::pair<size_t , const void *> > args;
@@ -684,7 +688,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
         break;
     }
     if (isRelative)
-        r = r / norm(src2, normType);
+        r = r / (norm(src2, normType) + DBL_EPSILON);
 
     return r;
 }
@@ -693,83 +697,47 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 ////////////////////////////////// flip //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, String kernelName)
+enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
+
+static void arithmetic_flip_run(const oclMat &src, oclMat &dst, String kernelName, int flipType)
 {
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
+    int cols = dst.cols, rows = dst.rows;
+    if ((cols == 1 && flipType == FLIP_COLS) ||
+            (rows == 1 && flipType == FLIP_ROWS) ||
+            (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
+    {
+        src.copyTo(dst);
+        return;
+    }
 
-    int vector_lengths[4][7] = {{4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1},
-        {4, 4, 4, 4, 1, 1, 1}
-    };
+    cols = flipType == FLIP_COLS ? divUp(cols, 2) : cols;
+    rows = flipType & FLIP_ROWS ? divUp(rows, 2) : rows;
 
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
-
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-    int rows = divUp(dst.rows, 2);
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    std::string buildOptions = format("-D T=%s%s", typeMap[dst.depth()], channelMap[dst.oclchannels()]);
 
     size_t localThreads[3]  = { 64, 4, 1 };
     size_t globalThreads[3] = { cols, rows, 1 };
 
-    int dst_step1 = dst.cols * dst.elemSize();
+    int elemSize = src.elemSize();
+    int src_step = src.step / elemSize, src_offset = src.offset / elemSize;
+    int dst_step = dst.step / elemSize, dst_offset = dst.offset / elemSize;
+
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    openCLExecuteKernel(src.clCxt, &arithm_flip, kernelName, globalThreads, localThreads, args, -1, depth);
-}
-
-static void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, String kernelName, bool isVertical)
-{
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    int vector_lengths[4][7] = {{1, 1, 1, 1, 1, 1, 1},
-        {1, 1, 1, 1, 1, 1, 1},
-        {1, 1, 1, 1, 1, 1, 1},
-        {1, 1, 1, 1, 1, 1, 1}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
-    int cols = divUp(dst.cols + offset_cols, vector_length);
-    cols = isVertical ? cols : divUp(cols, 2);
-    int rows = isVertical ?  divUp(dst.rows, 2) : dst.rows;
-
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    std::vector<std::pair<size_t , const void *> > args;
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset ));
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
 
-    if (isVertical)
-        args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
-    else
-        args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
-
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    const cv::ocl::ProgramEntry* source = isVertical ? &arithm_flip_rc : &arithm_flip;
-
-    openCLExecuteKernel(src.clCxt, source, kernelName, globalThreads, localThreads, args, src.oclchannels(), depth);
+    openCLExecuteKernel(src.clCxt, &arithm_flip, kernelName, globalThreads, localThreads, args,
+                        -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
@@ -783,11 +751,11 @@ void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
     dst.create(src.size(), src.type());
 
     if (flipCode == 0)
-        arithmetic_flip_rows_run(src, dst, "arithm_flip_rows");
+        arithmetic_flip_run(src, dst, "arithm_flip_rows", FLIP_ROWS);
     else if (flipCode > 0)
-        arithmetic_flip_cols_run(src, dst, "arithm_flip_cols", false);
+        arithmetic_flip_run(src, dst, "arithm_flip_cols", FLIP_COLS);
     else
-        arithmetic_flip_cols_run(src, dst, "arithm_flip_rc", true);
+        arithmetic_flip_run(src, dst, "arithm_flip_rows_cols", FLIP_BOTH);
 }
 
 //////////////////////////////////////////////////////////////////////////////

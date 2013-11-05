@@ -39,9 +39,6 @@
 //
 //M*/
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////Macro for border type////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef BORDER_REPLICATE
 //BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
 #define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
@@ -216,8 +213,8 @@ struct RectCoords
 #define DEBUG_ONLY(x) x
 #define ASSERT(condition) do { if (!(condition)) { printf("BUG in boxFilter kernel (global=%d,%d): " #condition "\n", get_global_id(0), get_global_id(1)); } } while (0)
 #else
-#define DEBUG_ONLY(x)
-#define ASSERT(condition)
+#define DEBUG_ONLY(x) (void)0
+#define ASSERT(condition) (void)0
 #endif
 
 
@@ -276,97 +273,98 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global TYPE *src, const unsign
 
 __kernel
 __attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
-void boxFilter(__global TYPE *src, const unsigned int srcStepBytes, const int4 srcRC,
-               __global TYPE *dst, const unsigned int dstStepBytes, const int4 dstRC,
+void filter2D(__global TYPE *src, const unsigned int srcStepBytes, const int4 srcRC,
+              __global TYPE *dst, const unsigned int dstStepBytes, const int4 dstRC,
 #ifdef BORDER_CONSTANT
-               SCALAR_TYPE borderValue,
+              SCALAR_TYPE borderValue,
 #endif
-               FPTYPE alpha
-               )
+              __constant FPTYPE* kernelData // transposed: [KERNEL_SIZE_X][KERNEL_SIZE_Y2_ALIGNED]
+              )
 {
     const struct RectCoords srcCoords = {srcRC.s0, srcRC.s1, srcRC.s2, srcRC.s3}; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
-    const struct RectCoords dstCoords = {dstRC.s0, dstRC.s1, dstRC.s2, dstRC.s3};
-
-    const int x = get_local_id(0) + (LOCAL_SIZE - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
-    const int y = get_global_id(1) * BLOCK_SIZE_Y;
+    struct RectCoords dstCoords = {dstRC.s0, dstRC.s1, dstRC.s2, dstRC.s3};
 
     const int local_id = get_local_id(0);
+    const int x = local_id + (LOCAL_SIZE - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
+    const int y = get_global_id(1) * BLOCK_SIZE_Y;
 
     INTERMEDIATE_TYPE data[KERNEL_SIZE_Y];
     __local INTERMEDIATE_TYPE sumOfCols[LOCAL_SIZE];
 
     int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
-    for(int sy = 0; sy < KERNEL_SIZE_Y; sy++, srcPos.y++)
-    {
-        data[sy] = readSrcPixel(srcPos, src, srcStepBytes, srcCoords
-#ifdef BORDER_CONSTANT
-                , borderValue
-#endif
-                );
-    }
-
-    INTERMEDIATE_TYPE tmp_sum = 0;
-    for(int sy = 0; sy < KERNEL_SIZE_Y; sy++)
-    {
-        tmp_sum += (data[sy]);
-    }
-
-    sumOfCols[local_id] = tmp_sum;
-    barrier(CLK_LOCAL_MEM_FENCE);
 
     int2 pos = (int2)(dstCoords.x1 + x, dstCoords.y1 + y);
     __global TYPE* dstPtr = (__global TYPE*)((__global char*)dst + pos.x * sizeof(TYPE) + pos.y * dstStepBytes); // Pointer can be out of bounds!
+    bool writeResult = (local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
+                        pos.x >= dstCoords.x1 && pos.x < dstCoords.x2);
 
+#if BLOCK_SIZE_Y > 1
+    bool readAllpixels = true;
     int sy_index = 0; // current index in data[] array
-    int stepsY = min(dstCoords.y2 - pos.y, BLOCK_SIZE_Y);
-    ASSERT(stepsY > 0);
-    for (; ;)
+
+    dstCoords.y2 = min(dstCoords.y2, pos.y + BLOCK_SIZE_Y);
+    for (;
+         pos.y < dstCoords.y2;
+         pos.y++,
+         dstPtr = (__global TYPE*)((__global char*)dstPtr + dstStepBytes))
+#endif
     {
         ASSERT(pos.y < dstCoords.y2);
 
-        if(local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
-            pos.x >= dstCoords.x1 && pos.x < dstCoords.x2)
+        for (
+#if BLOCK_SIZE_Y > 1
+            int sy = readAllpixels ? 0 : -1; sy < (readAllpixels ? KERNEL_SIZE_Y : 0);
+#else
+            int sy = 0, sy_index = 0; sy < KERNEL_SIZE_Y;
+#endif
+            sy++, srcPos.y++)
         {
-            ASSERT(pos.y >= dstCoords.y1 && pos.y < dstCoords.y2);
-
-            INTERMEDIATE_TYPE total_sum = 0;
-#pragma unroll
-            for (int sx = 0; sx < KERNEL_SIZE_X; sx++)
-            {
-                total_sum += sumOfCols[local_id + sx - ANCHOR_X];
-            }
-            *dstPtr = CONVERT_TO_TYPE(((INTERMEDIATE_TYPE)alpha) * total_sum);
+            data[sy + sy_index] = readSrcPixel(srcPos, src, srcStepBytes, srcCoords
+#ifdef BORDER_CONSTANT
+                    , borderValue
+#endif
+                    );
         }
 
-#if BLOCK_SIZE_Y == 1
-        break;
-#else
-        if (--stepsY == 0)
-            break;
-
-        barrier(CLK_LOCAL_MEM_FENCE);
-
-        tmp_sum = sumOfCols[local_id]; // TODO FIX IT: workaround for BUG in OpenCL compiler
-        // only works with scalars: ASSERT(fabs(tmp_sum - sumOfCols[local_id]) < (INTERMEDIATE_TYPE)1e-6);
-        tmp_sum -= data[sy_index];
-
-        data[sy_index] = readSrcPixel(srcPos, src, srcStepBytes, srcCoords
-#ifdef BORDER_CONSTANT
-                , borderValue
+        INTERMEDIATE_TYPE total_sum = 0;
+        for (int sx = 0; sx < KERNEL_SIZE_X; sx++)
+        {
+            {
+                __constant FPTYPE* k = &kernelData[KERNEL_SIZE_Y2_ALIGNED * sx
+#if BLOCK_SIZE_Y > 1
+                                                   + KERNEL_SIZE_Y - sy_index
 #endif
-                );
-        srcPos.y++;
+                                                   ];
+                INTERMEDIATE_TYPE tmp_sum = 0;
+                for (int sy = 0; sy < KERNEL_SIZE_Y; sy++)
+                {
+                    tmp_sum += data[sy] * k[sy];
+                }
 
-        tmp_sum += data[sy_index];
-        sumOfCols[local_id] = tmp_sum;
+                sumOfCols[local_id] = tmp_sum;
+                barrier(CLK_LOCAL_MEM_FENCE);
+            }
 
-        sy_index = (sy_index + 1 < KERNEL_SIZE_Y) ? sy_index + 1 : 0;
+            int id = local_id + sx - ANCHOR_X;
+            if (id >= 0 && id < LOCAL_SIZE)
+               total_sum += sumOfCols[id];
 
-        barrier(CLK_LOCAL_MEM_FENCE);
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
 
-        // next line
-        DEBUG_ONLY(pos.y++);
-        dstPtr = (__global TYPE*)((__global char*)dstPtr + dstStepBytes); // Pointer can be out of bounds!
+        if (writeResult)
+        {
+            ASSERT(pos.y >= dstCoords.y1 && pos.y < dstCoords.y2);
+            *dstPtr = CONVERT_TO_TYPE(total_sum);
+        }
+
+#if BLOCK_SIZE_Y > 1
+        readAllpixels = false;
+#if BLOCK_SIZE_Y > KERNEL_SIZE_Y
+        sy_index = (sy_index + 1 <= KERNEL_SIZE_Y) ? sy_index + 1 : 1;
+#else
+        sy_index++;
+#endif
 #endif // BLOCK_SIZE_Y == 1
     }
 }

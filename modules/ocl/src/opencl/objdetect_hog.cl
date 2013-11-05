@@ -200,7 +200,7 @@ __kernel void normalize_hists_36_kernel(__global float* block_hists,
 //-------------------------------------------------------------
 //  Normalization of histograms via L2Hys_norm
 //
-float reduce_smem(volatile __local float* smem, int size)
+static float reduce_smem(volatile __local float* smem, int size)
 {
     unsigned int tid = get_local_id(0);
     float sum = smem[tid];
@@ -564,7 +564,6 @@ __kernel void compute_gradients_8UC4_kernel(
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
     const int gSizeX = get_local_size(0);
-    const int gidX = get_group_id(0);
     const int gidY = get_group_id(1);
 
     __global const uchar4* row = img + gidY * img_step;
@@ -667,7 +666,6 @@ __kernel void compute_gradients_8UC1_kernel(
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
     const int gSizeX = get_local_size(0);
-    const int gidX = get_group_id(0);
     const int gidY = get_group_id(1);
 
     __global const uchar* row = img + gidY * img_step;

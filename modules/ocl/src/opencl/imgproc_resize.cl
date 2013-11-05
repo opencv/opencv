@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -182,10 +182,10 @@ __kernel void resizeLN_C4_D0(__global uchar4 * dst, __global uchar4 * src,
     int x = floor(sx), y = floor(sy);
     float u = sx - x, v = sy - y;
 
-    x<0 ? x=0,u=0 : x,u;
-    x>=src_cols ? x=src_cols-1,u=0 : x,u;
-    y<0 ? y=0,v=0 : y,v;
-    y>=src_rows ? y=src_rows-1,v=0 : y,v;
+    if ( x<0 ) x=0,u=0;
+    if ( x>=src_cols ) x=src_cols-1,u=0;
+    if ( y<0 ) y=0,v=0;
+    if (y>=src_rows ) y=src_rows-1,v=0;
 
     u = u * INTER_RESIZE_COEF_SCALE;
     v = v * INTER_RESIZE_COEF_SCALE;
@@ -225,10 +225,10 @@ __kernel void resizeLN_C1_D5(__global float * dst, __global float * src,
     int x = floor(sx), y = floor(sy);
     float u = sx - x, v = sy - y;
 
-    x<0 ? x=0,u=0 : x,u;
-    x>=src_cols ? x=src_cols-1,u=0 : x,u;
-    y<0 ? y=0,v=0 : y,v;
-    y>=src_rows ? y=src_rows-1,v=0 : y,v;
+    if ( x<0 ) x=0,u=0;
+    if ( x>=src_cols ) x=src_cols-1,u=0;
+    if ( y<0 ) y=0,v=0;
+    if (y>=src_rows ) y=src_rows-1,v=0;
 
     int y_ = INC(y,src_rows);
     int x_ = INC(x,src_cols);
@@ -264,10 +264,10 @@ __kernel void resizeLN_C4_D5(__global float4 * dst, __global float4 * src,
     int x = floor(sx), y = floor(sy);
     float u = sx - x, v = sy - y;
 
-    x<0 ? x=0,u=0 : x;
-    x>=src_cols ? x=src_cols-1,u=0 : x;
-    y<0 ? y=0,v=0 : y;
-    y>=src_rows ? y=src_rows-1,v=0 : y;
+    if ( x<0 ) x=0,u=0;
+    if ( x>=src_cols ) x=src_cols-1,u=0;
+    if ( y<0 ) y=0,v=0;
+    if (y>=src_rows ) y=src_rows-1,v=0;
 
     int y_ = INC(y,src_rows);
     int x_ = INC(x,src_cols);
