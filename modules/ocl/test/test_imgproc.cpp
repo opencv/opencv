@@ -93,14 +93,22 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
     }
 
-    void Near(double threshold = 0.0)
+    void Near(double threshold = 0.0, bool relative = false)
     {
         Mat roi, whole;
         gdst_whole.download(whole);
         gdst_roi.download(roi);
 
-        EXPECT_MAT_NEAR(dst_whole, whole, threshold);
-        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
+        if (relative)
+        {
+            EXPECT_MAT_NEAR_RELATIVE(dst_whole, whole, threshold);
+            EXPECT_MAT_NEAR_RELATIVE(dst_roi, roi, threshold);
+        }
+        else
+        {
+            EXPECT_MAT_NEAR(dst_whole, whole, threshold);
+            EXPECT_MAT_NEAR(dst_roi, roi, threshold);
+        }
     }
 };
 
@@ -236,7 +244,7 @@ OCL_TEST_P(CornerMinEigenVal, Mat)
         cornerMinEigenVal(src_roi, dst_roi, blockSize, apertureSize, borderType);
         ocl::cornerMinEigenVal(gsrc_roi, gdst_roi, blockSize, apertureSize, borderType);
 
-        Near(1e-6);
+        Near(1e-5, true);
     }
 }
 
@@ -256,7 +264,7 @@ OCL_TEST_P(CornerHarris, Mat)
         cornerHarris(src_roi, dst_roi, blockSize, apertureSize, k, borderType);
         ocl::cornerHarris(gsrc_roi, gdst_roi, blockSize, apertureSize, k, borderType);
 
-        Near(1e-6);
+        Near(1e-5, true);
     }
 }
 
