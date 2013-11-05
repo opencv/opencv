@@ -140,7 +140,7 @@ LogisticRegression::LogisticRegression
 --------------------------------------
 The constructors.
 
-.. ocv:function:: LogisticRegression( const LogisticRegressionParams& params)
+.. ocv:function:: LogisticRegression::LogisticRegression( const LogisticRegressionParams& params)
 
     :param params: The training parameters for the classifier of type ``LogisticRegressionParams``.
 
