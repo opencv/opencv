@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -63,8 +63,8 @@
 kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global float *sqsum,
                           int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
     float4 sqsum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
@@ -75,8 +75,8 @@ kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global fl
     gid = gid << 1;
     for(int i = 0; i < rows; i =i + LSIZE_1)
     {
-        src_t[0] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + min(gid, (uint)cols - 1)]) : 0);
-        src_t[1] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + min(gid + 1, (uint)cols - 1)]) : 0);
+        src_t[0] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + min(gid, cols - 1)]) : 0);
+        src_t[1] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + min(gid + 1, cols - 1)]) : 0);
 
         sum_t[0] = (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
         sqsum_t[0] = (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
@@ -163,8 +163,8 @@ kernel void integral_rows_D4(__global int4 *srcsum,__global float4 * srcsqsum,__
                           __global float *sqsum,int rows,int cols,int src_step,int sum_step,
                           int sqsum_step,int sum_offset,int sqsum_offset)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
     float4 sqsrc_t[2],sqsum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
@@ -279,8 +279,8 @@ kernel void integral_rows_D4(__global int4 *srcsum,__global float4 * srcsqsum,__
 kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global float *sqsum,
                           int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
     float4 sqsum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
@@ -291,8 +291,8 @@ kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global 
     gid = gid << 1;
     for(int i = 0; i < rows; i =i + LSIZE_1)
     {
-        src_t[0] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + min(gid, (uint)cols - 1)]) : (float4)0);
-        src_t[1] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + min(gid + 1, (uint)cols - 1)]) : (float4)0);
+        src_t[0] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + min(gid, cols - 1)]) : (float4)0);
+        src_t[1] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + min(gid + 1, cols - 1)]) : (float4)0);
 
         sum_t[0] = (i == 0 ? (float4)0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
         sqsum_t[0] = (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
@@ -379,8 +379,8 @@ kernel void integral_rows_D5(__global float4 *srcsum,__global float4 * srcsqsum,
                           __global float *sqsum,int rows,int cols,int src_step,int sum_step,
                           int sqsum_step,int sum_offset,int sqsum_offset)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
     float4 sqsrc_t[2],sqsum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];

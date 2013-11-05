@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -64,8 +64,8 @@
 kernel void integral_sum_cols_D4(__global uchar4 *src,__global int *sum ,
                               int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
     __local int* sum_p;
@@ -146,8 +146,8 @@ kernel void integral_sum_rows_D4(__global int4 *srcsum,__global int *sum ,
                               int rows,int cols,int src_step,int sum_step,
                               int sum_offset)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
     __local int *sum_p;
@@ -239,8 +239,8 @@ kernel void integral_sum_rows_D4(__global int4 *srcsum,__global int *sum ,
 kernel void integral_sum_cols_D5(__global uchar4 *src,__global float *sum ,
                               int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
     __local float* sum_p;
@@ -321,8 +321,8 @@ kernel void integral_sum_rows_D5(__global float4 *srcsum,__global float *sum ,
                               int rows,int cols,int src_step,int sum_step,
                               int sum_offset)
 {
-    unsigned int lid = get_local_id(0);
-    unsigned int gid = get_group_id(0);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
     __local float *sum_p;

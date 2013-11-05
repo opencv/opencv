@@ -56,6 +56,7 @@ typedef TestBaseWithParam<Size> equalizeHistFixture;
 PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
+    const double eps = 1 + DBL_EPSILON;
 
     Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -68,13 +69,13 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::equalizeHist(src, dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
@@ -82,15 +83,20 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
 /////////// CopyMakeBorder //////////////////////
 
-typedef Size_MatType CopyMakeBorderFixture;
+CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,
+        BORDER_WRAP, BORDER_REFLECT_101)
+
+typedef tuple<Size, MatType, Border> CopyMakeBorderParamType;
+typedef TestBaseWithParam<CopyMakeBorderParamType> CopyMakeBorderFixture;
 
 PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
+                               Border::all()))
 {
-    const Size_MatType_t params = GetParam();
+    const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_CONSTANT;
+    const int type = get<1>(params), borderType = get<2>(params);
 
     Mat src(srcSize, type), dst;
     const Size dstSize = srcSize + Size(12, 12);
@@ -360,20 +366,23 @@ PERF_TEST_P(resizeFixture, resize,
 
 ///////////// threshold////////////////////////
 
-CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TRUNC)
+CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TOZERO_INV)
 
-typedef tuple<Size, ThreshType> ThreshParams;
+typedef tuple<Size, MatType, ThreshType> ThreshParams;
 typedef TestBaseWithParam<ThreshParams> ThreshFixture;
 
 PERF_TEST_P(ThreshFixture, threshold,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC4, CV_32FC1),
                                ThreshType::all()))
 {
     const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int threshType = get<1>(params);
+    const int srcType = get<1>(params);
+    const int threshType = get<2>(params);
+    const double maxValue = 220.0, threshold = 50;
 
-    Mat src(srcSize, CV_8U), dst(srcSize, CV_8U);
+    Mat src(srcSize, srcType), dst(srcSize, srcType);
     randu(src, 0, 100);
     declare.in(src).out(dst);
 
@@ -381,7 +390,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8U);
 
-        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, 50.0, 0.0, threshType);
+        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, threshold, maxValue, threshType);
 
         oclDst.download(dst);
 
@@ -389,7 +398,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::threshold(src, dst, 50.0, 0.0, threshType);
+        TEST_CYCLE() cv::threshold(src, dst, threshold, maxValue, threshType);
 
         SANITY_CHECK(dst);
     }
@@ -856,6 +865,67 @@ PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
         TEST_CYCLE() columnSumPerfTest(src, dst);
 
         SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+//////////////////////////////distanceToCenters////////////////////////////////////////////////
+
+CV_ENUM(DistType, NORM_L1, NORM_L2SQR);
+typedef tuple<Size, DistType> distanceToCentersParameters;
+typedef TestBaseWithParam<distanceToCentersParameters> distanceToCentersFixture;
+
+static void distanceToCentersPerfTest(Mat& src, Mat& centers, Mat& dists, Mat& labels, int distType)
+{
+    Mat batch_dists;
+    cv::batchDistance(src,centers,batch_dists, CV_32FC1, noArray(), distType);
+    std::vector<float> dists_v;
+    std::vector<int> labels_v;
+    for(int i = 0; i<batch_dists.rows; i++)
+    {
+        Mat r = batch_dists.row(i);
+        double mVal;
+        Point mLoc;
+        minMaxLoc(r, &mVal, NULL, &mLoc, NULL);
+        dists_v.push_back((float)mVal);
+        labels_v.push_back(mLoc.x);
+    }
+    Mat temp_dists(dists_v);
+    Mat temp_labels(labels_v);
+    temp_dists.reshape(1,1).copyTo(dists);
+    temp_labels.reshape(1,1).copyTo(labels);
+}
+
+PERF_TEST_P(distanceToCentersFixture, distanceToCenters, ::testing::Combine(::testing::Values(cv::Size(256,256), cv::Size(512,512)), DistType::all()) )
+{
+    Size size = get<0>(GetParam());
+    int distType = get<1>(GetParam());
+    Mat src(size, CV_32FC1);
+    Mat centers(size, CV_32FC1);
+    Mat dists(cv::Size(src.rows,1), CV_32FC1);
+    Mat labels(cv::Size(src.rows,1), CV_32SC1);
+    declare.in(src, centers, WARMUP_RNG).out(dists, labels);
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat ocl_src(src);
+        ocl::oclMat ocl_centers(centers);
+        ocl::oclMat ocl_dists(dists);
+        ocl::oclMat ocl_labels(labels);
+
+        OCL_TEST_CYCLE() ocl::distanceToCenters(ocl_dists,ocl_labels,ocl_src, ocl_centers, distType);
+
+        ocl_dists.download(dists);
+        ocl_labels.download(labels);
+
+        SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
+        SANITY_CHECK(labels);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() distanceToCentersPerfTest(src,centers,dists,labels,distType);
+        SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
+        SANITY_CHECK(labels);
     }
     else
         OCL_PERF_ELSE
