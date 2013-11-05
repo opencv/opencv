@@ -91,11 +91,7 @@ ocl::distanceToCenters
 ----------------------
 For each samples in ``source``, find its closest neighour in ``centers``.
 
-.. ocv:function:: void ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType = NORM_L2SQR, const oclMat &indices = oclMat())
-
-    :param dists: The output distances calculated from each sample to the best matched center.
-
-    :param labels: The output index of best matched center for each row of sample.
+.. ocv:function:: void ocl::distanceToCenters(const oclMat &src, const oclMat &centers, Mat &dists, Mat &labels, int distType = NORM_L2SQR)
 
     :param src: Floating-point matrix of input samples. One row per sample.
 
@@ -103,10 +99,8 @@ For each samples in ``source``, find its closest neighour in ``centers``.
 
     :param distType: Distance metric to calculate distances. Supports ``NORM_L1`` and ``NORM_L2SQR``.
 
-    :param indices: Optional source indices. If not empty:
+    :param dists: The output distances calculated from each sample to the best matched center.
 
-            * only the indexed source samples will be processed
-            * outputs, i.e., ``dists`` and ``labels``, have the same size of indices
-            * outputs are in the same order of indices instead of the order of src
+    :param labels: The output index of best matched center for each row of sample.
 
 The method is a utility function which maybe used for multiple clustering algorithms such as K-means.
