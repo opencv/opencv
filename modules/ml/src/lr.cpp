@@ -177,7 +177,6 @@ bool LogisticRegression::train(cv::InputArray data_ip, cv::InputArray labels_ip)
         {
             new_local_labels = (labels_l == it->second)/255;
             new_local_labels.convertTo(labels, CV_32F);
-            
             // new_theta = compute_batch_gradient(data_t, labels, init_theta);
             // currently supported training methods LogisticRegression::BATCH and LogisticRegression::MINI_BATCH
             if(this->params.train_method == LogisticRegression::BATCH)
