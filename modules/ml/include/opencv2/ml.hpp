@@ -642,9 +642,6 @@ CV_EXPORTS void randGaussMixture( InputArray means, InputArray covs, InputArray 
 /* creates test set */
 CV_EXPORTS void createConcentricSpheresTestSet( int nsamples, int nfeatures, int nclasses,
                                                 OutputArray samples, OutputArray responses);
-typedef LogisticRegressionParams LRParams;
-typedef LogisticRegression LR;
-
 
 }
 }
