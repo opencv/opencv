@@ -1,7 +1,6 @@
 *.pyc
 .DS_Store
-refman.rst
-OpenCV4Tegra/
+/modules/refman.rst
 tegra/
 *.user
 .sw[a-z]
