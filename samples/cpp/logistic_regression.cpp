@@ -76,6 +76,7 @@ int main()
     Mat labels_train, labels_test;
 
     Mat responses, result;
+    FileStorage fs1, fs2;
 
     FileStorage f;
 
@@ -120,12 +121,17 @@ int main()
 
     cout<<"initializing Logisitc Regression Parameters\n"<<endl;
 
-    LogisticRegressionParams params = LogisticRegressionParams(0.001, 10, LogisticRegression::REG_L2, 1, LogisticRegression::BATCH, 1);
+    // LogisticRegressionParams params1 = LogisticRegressionParams(0.001, 10, LogisticRegression::BATCH, LogisticRegression::REG_L2, 1, 1);
+    // params1 (above) with batch gradient performs better than mini batch gradient below with same parameters
+    LogisticRegressionParams params1 = LogisticRegressionParams(0.001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
+
+    // however mini batch gradient descent parameters with slower learning rate(below) can be used to get higher accuracy than with parameters mentioned above
+    // LogisticRegressionParams params1 = LogisticRegressionParams(0.000001, 10, LogisticRegression::MINI_BATCH, LogisticRegression::REG_L2, 1, 1);
 
     cout<<"training Logisitc Regression classifier\n"<<endl;
 
-    LogisticRegression lr_(data_train, labels_train, params);
-    lr_.predict(data_test, responses);
+    LogisticRegression lr1(data_train, labels_train, params1);
+    lr1.predict(data_test, responses);
     labels_test.convertTo(labels_test, CV_32S);
 
     cout<<"Original Label ::  Predicted Label"<<endl;
@@ -141,21 +147,24 @@ int main()
     cout<<"saving the classifier"<<endl;
 
     // save the classfier
-    lr_.save("NewLR_Trained.xml");
+    fs1.open("NewLR_Trained.xml",FileStorage::WRITE);
+    lr1.write(fs1);
+    fs1.release();
 
     // load the classifier onto new object
-    LogisticRegression lr2;
+    LogisticRegressionParams params2 = LogisticRegressionParams();
+    LogisticRegression lr2(params2);
     cout<<"loading a new classifier"<<endl;
-
-    lr2.load("NewLR_Trained.xml");
+    fs2.open("NewLR_Trained.xml",FileStorage::READ);
+    FileNode fn2 = fs2.root();
+    lr2.read(fn2);
+    fs2.release();
 
     Mat responses2;
 
     // predict using loaded classifier
     cout<<"predicting the dataset using the loaded classfier\n"<<endl;
-
     lr2.predict(data_test, responses2);
-
     // calculate accuracy
     cout<<"accuracy using loaded classifier: "<<100 * (float)cv::countNonZero(labels_test == responses2)/responses2.rows<<"%"<<endl;
     waitKey(0);
