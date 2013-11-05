@@ -20,6 +20,7 @@
 //    Zero Lin, Zero.Lin@amd.com
 //    Zhang Ying, zhangying913@gmail.com
 //    Yao Wang, bitwangyaoyao@gmail.com
+//    Harris Gasparakis, harris.gasparakis@amd.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -1407,7 +1408,7 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Adaptive Bilateral Filter
 
-void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor, int borderType)
+void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double min_sigma_val, Point anchor, int borderType)
 {
     CV_Assert((ksize.width & 1) && (ksize.height & 1));  // ksize must be odd
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);  // source must be 8bit RGB image
@@ -1418,18 +1419,32 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     int idx = 0;
     int w = ksize.width / 2;
     int h = ksize.height / 2;
-    for(int y=-h; y<=h; y++)
-        for(int x=-w; x<=w; x++)
-    {
-        lut.at<float>(idx++) = sigma2 / (sigma2 + x * x + y * y);
-    }
+
+	int ABF_GAUSSIAN_ocl = 1;
+
+    if(ABF_GAUSSIAN_ocl)
+	{
+        for(int y=-h; y<=h; y++)
+            for(int x=-w; x<=w; x++)
+        {
+            lut.at<float>(idx++) = expf( (float)(-0.5 * (x * x + y * y)/sigma2));
+        }
+	}
+	else
+	{
+        for(int y=-h; y<=h; y++)
+            for(int x=-w; x<=w; x++)
+        {
+            lut.at<float>(idx++) = (float) (sigma2 / (sigma2 + x * x + y * y));
+        }
+	}
 
     oclMat dlut(lut);
     int depth = src.depth();
     int cn = src.oclchannels();
 
     normalizeAnchor(anchor, ksize);
-    const static String kernelName = "edgeEnhancingFilter";
+    const static String kernelName = "adaptiveBilateralFilter";
 
     dst.create(src.size(), src.type());
 
@@ -1478,9 +1493,10 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
 
     //LDATATYPESIZE is sizeof local data store. This is to exemplify effect of LDS on kernel performance
     sprintf(build_options,
-        "-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d"
+		"-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d -D MIN_VAR_VAL=%d -D ABF_GAUSSIAN=%d"
         " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
-        static_cast<int>(EXTRA), static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
+        static_cast<int>(EXTRA), static_cast<float>(min_sigma_val*min_sigma_val), static_cast<int>(ABF_GAUSSIAN_ocl),
+        static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
 
     std::vector<pair<size_t , const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
