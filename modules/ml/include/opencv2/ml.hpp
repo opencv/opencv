@@ -585,7 +585,6 @@ struct CV_EXPORTS LogisticRegressionParams
 
     LogisticRegressionParams();
     LogisticRegressionParams(double learning_rate, int iters, int train_method, int normlization, int reg, int mini_batch_size);
-    
 };
 
 class CV_EXPORTS LogisticRegression
