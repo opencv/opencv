@@ -686,9 +686,6 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     }
 
 #else
-    // TODO fix it
-    CV_Error(CV_StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
-
     double degree1 = 0.0;
     if (params.kernel_type == CvSVM::POLY)
         degree1 = params.degree;
@@ -813,9 +810,6 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
-    // TODO fix it
-    CV_Error(CV_StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
-
     double degree1 = 0.0;
     if(params->kernel_type == CvSVM::POLY)
         degree1 = params->degree;
