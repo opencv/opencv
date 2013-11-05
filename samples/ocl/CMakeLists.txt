@@ -1,7 +1,7 @@
 SET(OPENCV_OCL_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_ocl
-                                     opencv_nonfree)
+                                     opencv_nonfree opencv_bioinspired)
 
 ocv_check_dependencies(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
 
