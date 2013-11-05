@@ -116,6 +116,7 @@ The constructors.
 The full constructor initializes corresponding members. The default constructor creates an object with dummy parameters.
 
 ::
+
     LogisticRegressionParams::LogisticRegressionParams()
     {
         term_crit = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.001);
@@ -174,11 +175,12 @@ Predicts responses for input samples and returns a float type.
 
     :param predicted_labels: Predicted labels as a column matrix and of type ``CV_32S``.
 
+
 LogisticRegression::get_learnt_thetas
 -------------------------------------
 This function returns the trained paramters arranged across rows. For a two class classifcation problem, it returns a row matrix.
 
-.. ocv:function:: cv::Mat LogisticRegression::get_learnt_thetas()
+.. ocv:function:: cv::Mat LogisticRegression::get_learnt_thetas() const;
 
 It returns learnt paramters of the Logistic Regression as a matrix of type ``CV_32F``.
 
@@ -189,7 +191,7 @@ This function reads the trained LogisticRegression clasifier from disk.
 .. ocv:function:: void LogisticRegression::read(const FileNode& fn)
 
 LogisticRegression::write
--------------------------
+------------------------
 This function writes the trained LogisticRegression clasifier to disk.
 
-.. ocv:function:: void LogisticRegression::write(FileStorage& fs) const
+.. ocv:function:: void LogisticRegression::write(FileStorage& fs) const;
