@@ -109,12 +109,15 @@ cl_mem openCLCreateBuffer(Context *ctx, size_t flag , size_t size)
     return buffer;
 }
 
+#define MEMORY_CORRUPTION_GUARD
+#ifdef MEMORY_CORRUPTION_GUARD
 //#define CHECK_MEMORY_CORRUPTION
-#ifdef CHECK_MEMORY_CORRUPTION
-//#define CHECK_MEMORY_CORRUPTION_PRINT_ERROR
+#define CHECK_MEMORY_CORRUPTION_PRINT_ERROR
 #define CHECK_MEMORY_CORRUPTION_RAISE_ERROR
-static const int __memory_corruption_check_bytes = 1024*1024;
+static const int __memory_corruption_guard_bytes = 64*1024;
+#ifdef CHECK_MEMORY_CORRUPTION
 static const int __memory_corruption_check_pattern = 0x14326547; // change pattern for sizeof(int)==8
+#endif
 struct CheckBuffers
 {
     cl_mem mainBuffer;
@@ -128,7 +131,7 @@ struct CheckBuffers
     CheckBuffers(cl_mem _mainBuffer, size_t _size, size_t _widthInBytes, size_t _height)
         : mainBuffer(_mainBuffer), size(_size), widthInBytes(_widthInBytes), height(_height)
     {
-        // notihng
+        // nothing
     }
 };
 static std::map<cl_mem, CheckBuffers> __check_buffers;
@@ -145,30 +148,33 @@ void openCLMallocPitchEx(Context *ctx, void **dev_ptr, size_t *pitch,
 {
     cl_int status;
     size_t size = widthInBytes * height;
-#ifndef CHECK_MEMORY_CORRUPTION
+#ifndef MEMORY_CORRUPTION_GUARD
     *dev_ptr = clCreateBuffer(getClContext(ctx), gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
                               size, 0, &status);
     openCLVerifyCall(status);
 #else
-    size_t allocSize = size + __memory_corruption_check_bytes * 2;
+    size_t allocSize = size + __memory_corruption_guard_bytes * 2;
     cl_mem mainBuffer = clCreateBuffer(getClContext(ctx), gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
             allocSize, 0, &status);
     openCLVerifyCall(status);
-    cl_buffer_region r = {__memory_corruption_check_bytes, size};
+    cl_buffer_region r = {__memory_corruption_guard_bytes, size};
     *dev_ptr =  clCreateSubBuffer(mainBuffer,
             gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
             CL_BUFFER_CREATE_TYPE_REGION, &r,
             &status);
     openCLVerifyCall(status);
-    std::vector<int> tmp(__memory_corruption_check_bytes / sizeof(int),
+#ifdef CHECK_MEMORY_CORRUPTION
+    std::vector<int> tmp(__memory_corruption_guard_bytes / sizeof(int),
             __memory_corruption_check_pattern);
-    CV_Assert(tmp.size() * sizeof(int) == __memory_corruption_check_bytes);
+    CV_Assert(tmp.size() * sizeof(int) == __memory_corruption_guard_bytes);
     openCLVerifyCall(clEnqueueWriteBuffer(getClCommandQueue(ctx),
-            mainBuffer, CL_TRUE, 0, __memory_corruption_check_bytes, &tmp[0],
+            mainBuffer, CL_FALSE, 0, __memory_corruption_guard_bytes, &tmp[0],
             0, NULL, NULL));
     openCLVerifyCall(clEnqueueWriteBuffer(getClCommandQueue(ctx),
-            mainBuffer, CL_TRUE, __memory_corruption_check_bytes + size, __memory_corruption_check_bytes, &tmp[0],
+            mainBuffer, CL_FALSE, __memory_corruption_guard_bytes + size, __memory_corruption_guard_bytes, &tmp[0],
             0, NULL, NULL));
+    clFinish(getClCommandQueue(ctx));
+#endif
     CheckBuffers data(mainBuffer, size, widthInBytes, height);
     __check_buffers.insert(std::pair<cl_mem, CheckBuffers>((cl_mem)*dev_ptr, data));
 #endif
@@ -224,40 +230,49 @@ void openCLCopyBuffer2D(Context *ctx, void *dst, size_t dpitch, int dst_offset,
 
 void openCLFree(void *devPtr)
 {
+#ifdef MEMORY_CORRUPTION_GUARD
 #ifdef CHECK_MEMORY_CORRUPTION
     bool failBefore = false, failAfter = false;
+#endif
     CheckBuffers data;
     std::map<cl_mem, CheckBuffers>::iterator i = __check_buffers.find((cl_mem)devPtr);
     if (i != __check_buffers.end())
     {
         data = i->second;
+#ifdef CHECK_MEMORY_CORRUPTION
         Context* ctx = Context::getContext();
-        std::vector<uchar> checkBefore(__memory_corruption_check_bytes);
-        std::vector<uchar> checkAfter(__memory_corruption_check_bytes);
+        std::vector<uchar> checkBefore(__memory_corruption_guard_bytes);
+        std::vector<uchar> checkAfter(__memory_corruption_guard_bytes);
         openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(ctx),
-                data.mainBuffer, CL_TRUE, 0, __memory_corruption_check_bytes, &checkBefore[0],
+                data.mainBuffer, CL_FALSE, 0, __memory_corruption_guard_bytes, &checkBefore[0],
                 0, NULL, NULL));
         openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(ctx),
-                data.mainBuffer, CL_TRUE, __memory_corruption_check_bytes + data.size, __memory_corruption_check_bytes, &checkAfter[0],
+                data.mainBuffer, CL_FALSE, __memory_corruption_guard_bytes + data.size, __memory_corruption_guard_bytes, &checkAfter[0],
                 0, NULL, NULL));
+        clFinish(getClCommandQueue(ctx));
 
-        std::vector<int> tmp(__memory_corruption_check_bytes / sizeof(int),
+        std::vector<int> tmp(__memory_corruption_guard_bytes / sizeof(int),
                 __memory_corruption_check_pattern);
 
-        if (memcmp(&checkBefore[0], &tmp[0], __memory_corruption_check_bytes) != 0)
+        if (memcmp(&checkBefore[0], &tmp[0], __memory_corruption_guard_bytes) != 0)
         {
             failBefore = true;
         }
-        if (memcmp(&checkAfter[0], &tmp[0], __memory_corruption_check_bytes) != 0)
+        if (memcmp(&checkAfter[0], &tmp[0], __memory_corruption_guard_bytes) != 0)
         {
             failAfter = true;
         }
+#else
+        // TODO FIXIT Attach clReleaseMemObject call to event completion callback
+        Context* ctx = Context::getContext();
+        clFinish(getClCommandQueue(ctx));
+#endif
         openCLSafeCall(clReleaseMemObject(data.mainBuffer));
         __check_buffers.erase(i);
     }
 #endif
     openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
-#ifdef CHECK_MEMORY_CORRUPTION
+#if defined(MEMORY_CORRUPTION_GUARD) && defined(CHECK_MEMORY_CORRUPTION)
     if (failBefore)
     {
 #ifdef CHECK_MEMORY_CORRUPTION_PRINT_ERROR
