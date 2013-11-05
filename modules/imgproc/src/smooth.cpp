@@ -2360,7 +2360,7 @@ public:
                             sumValSqr += (currVal *currVal);
                         }
                     }
-                    var = min_sigma_vals*min_sigma_vals + ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
+                    var = (float)(min_sigma_vals*min_sigma_vals) + ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
 #else
                     var = min_sigma_vals*min_sigma_vals;
 #endif
@@ -2380,7 +2380,7 @@ public:
                             currWRTCenter = currVal - currValCenter;
 
 #if ABF_GAUSSIAN
-                            weight = exp ( -0.5 * currWRTCenter * currWRTCenter/var ) * space_weight[x*ksize.width+y+anX];
+                            weight = exp ( -0.5f * currWRTCenter * currWRTCenter/var ) * space_weight[x*ksize.width+y+anX];
 #else
                             weight = var / ( var + (currWRTCenter * currWRTCenter) ) * space_weight[x*ksize.width+y+anX];
 #endif
@@ -2420,6 +2420,7 @@ public:
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
 #if ABF_CALCVAR
+					float min_var = (float)( min_sigma_vals*min_sigma_vals);
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
@@ -2434,9 +2435,9 @@ public:
                             sumValSqr_r += (currVal_r *currVal_r);
                         }
                     }
-                    var_b = min_sigma_vals*min_sigma_vals + ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
-                    var_g = min_sigma_vals*min_sigma_vals + ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
-                    var_r = min_sigma_vals*min_sigma_vals + ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
+                    var_b = min_var + ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
+                    var_g = min_var + ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
+                    var_r = min_var + ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
 #else
                     var_b = min_sigma_vals*min_sigma_vals; var_g = min_sigma_vals*min_sigma_vals; var_r = min_sigma_vals*min_sigma_vals;
 #endif
@@ -2462,9 +2463,9 @@ public:
                             float cur_spw = space_weight[x*ksize.width+y+anX];
 
 #if ABF_GAUSSIAN
-                            weight_b = exp( -0.5 * currWRTCenter_b * currWRTCenter_b/ var_b ) * cur_spw;
-                            weight_g = exp( -0.5 * currWRTCenter_g * currWRTCenter_g/ var_g ) * cur_spw;
-                            weight_r = exp( -0.5 * currWRTCenter_r * currWRTCenter_r/ var_r ) * cur_spw;
+                            weight_b = exp( -0.5f * currWRTCenter_b * currWRTCenter_b/ var_b ) * cur_spw;
+                            weight_g = exp( -0.5f * currWRTCenter_g * currWRTCenter_g/ var_g ) * cur_spw;
+                            weight_r = exp( -0.5f * currWRTCenter_r * currWRTCenter_r/ var_r ) * cur_spw;
 #else
                             weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) ) * cur_spw;
                             weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) ) * cur_spw;
