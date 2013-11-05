@@ -416,24 +416,23 @@ adaptiveBilateralFilter
 -----------------------
 Applies the adaptive bilateral filter to an image.
 
-.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
+.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize, sigmaSpace[, dst[, anchor[, borderType]]]) -> dst
 
-    :param src: Source 8-bit, 1-channel or 3-channel image.
+    :param src: The source image
 
-    :param dst: Destination image of the same size and type as  ``src`` .
+    :param dst: The destination image; will have the same size and the same type as src
 
-    :param ksize: filter kernel size.
+    :param ksize: The kernel size. This is the neighborhood where the local variance will be calculated, and where pixels will contribute (in a weighted manner).
 
-    :param sigmaSpace: Filter sigma in the coordinate space. It has similar meaning with ``sigmaSpace`` in ``bilateralFilter``.
+    :param sigmaSpace: Filter sigma in the coordinate space. Larger value of the parameter means that farther pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
 
-    :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center. Only default value is supported now.
+    :param maxSigmaColor: Maximum allowed sigma color (will clamp the value calculated in the ksize neighborhood. Larger value of the parameter means that more dissimilar pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
 
-    :param borderType: border mode used to extrapolate pixels outside of the image.
+    :param borderType: Pixel extrapolation method.
 
-The function applies adaptive bilateral filtering to the input image. This filter is similar to ``bilateralFilter``, in that dissimilarity from and distance to the center pixel is punished. Instead of using ``sigmaColor``, we employ the variance of pixel values in the neighbourhood.
-
+A main part of our strategy will be to load each raw pixel once, and reuse it to calculate all pixels in the output (filtered) image that need this pixel value. The math of the filter is that of the usual bilateral filter, except that the sigma color is calculated in the neighborhood, and clamped by the optional input value.
 
 
 blur
