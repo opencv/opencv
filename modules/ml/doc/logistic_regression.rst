@@ -88,6 +88,9 @@ LogisticRegressionParams
 
     If the training method is set to LogisticRegression::MINI_BATCH, it has to be set to positive integer. It can range from 1 to number of training samples.
 
+  .. ocv:member:: cv::TermCriteria term_crit
+
+    Sets termination criteria for training algorithm.
 
 LogisticRegressionParams::LogisticRegressionParams
 --------------------------------------------------
@@ -95,19 +98,34 @@ The constructors.
 
 .. ocv:function:: LogisticRegressionParams::LogisticRegressionParams()
 
-.. ocv:function:: LogisticRegressionParams::LogisticRegressionParams(double alpha, int num_iters, int norm, int regularized, int train_method, int minbatchsize)
+.. ocv:function:: LogisticRegressionParams::LogisticRegressionParams(double learning_rate, int iters, int train_method, int normlization, int reg, int mini_batch_size)
 
-    :param alpha: Specifies the learning rate.
+    :param learning_rate: Specifies the learning rate.
 
-    :param num_iters: Specifies the number of iterations.
-
-    :param norm: Specifies the kind of regularization to be applied. ``LogisticRegression::REG_L1`` or ``LogisticRegression::REG_L2``. To use this, set ``LogisticRegressionParams.regularized`` to a integer greater than zero.
-
-    :param: regularized: To enable or disable regularization. Set to positive integer (greater than zero) to enable and to 0 to disable.
+    :param iters: Specifies the number of iterations.
 
     :param: train_method: Specifies the kind of training method used. It should be set to either ``LogisticRegression::BATCH`` or ``LogisticRegression::MINI_BATCH``. If using ``LogisticRegression::MINI_BATCH``, set ``LogisticRegressionParams.mini_batch_size`` to a positive integer.
 
-    :param: mini_batch_size: Specifies the number of training samples taken in each step of Mini-Batch Gradient Descent.
+    :param normalization: Specifies the kind of regularization to be applied. ``LogisticRegression::REG_L1`` or ``LogisticRegression::REG_L2`` (L1 norm or L2 norm). To use this, set ``LogisticRegressionParams.regularized`` to a integer greater than zero.
+
+    :param: reg: To enable or disable regularization. Set to positive integer (greater than zero) to enable and to 0 to disable.
+
+    :param: mini_batch_size: Specifies the number of training samples taken in each step of Mini-Batch Gradient Descent. Will only be used if using ``LogisticRegression::MINI_BATCH`` training algorithm.
+
+
+The full constructor initializes corresponding members. The default constructor creates an object with dummy parameters.
+
+::
+    LogisticRegressionParams::LogisticRegressionParams()
+    {
+        term_crit = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 1000, 0.001);
+        alpha = 0.001;
+        num_iters = 1000;
+        norm = LogisticRegression::REG_L2;
+        regularized = 1;
+        train_method = LogisticRegression::BATCH;
+        mini_batch_size = 1;
+    }
 
 By initializing this structure, one can set all the parameters required for Logistic Regression classifier.
 
@@ -121,7 +139,9 @@ LogisticRegression::LogisticRegression
 --------------------------------------
 The constructors.
 
-.. ocv:function:: LogisticRegression::LogisticRegression()
+.. ocv:function:: LogisticRegression( const LogisticRegressionParams& params)
+
+    :param params: The training parameters for the classifier of type ``LogisticRegressionParams``.
 
 .. ocv:function:: LogisticRegression::LogisticRegression(cv::InputArray data_ip, cv::InputArray labels_ip, const LogisticRegressionParams& params)
 
@@ -154,23 +174,22 @@ Predicts responses for input samples and returns a float type.
 
     :param predicted_labels: Predicted labels as a column matrix and of type ``CV_32S``.
 
-
 LogisticRegression::get_learnt_thetas
----------------------------------------
+-------------------------------------
 This function returns the trained paramters arranged across rows. For a two class classifcation problem, it returns a row matrix.
 
 .. ocv:function:: cv::Mat LogisticRegression::get_learnt_thetas()
 
 It returns learnt paramters of the Logistic Regression as a matrix of type ``CV_32F``.
 
-LogisticRegression::save
+LogisticRegression::read
 ------------------------
-This function saves the trained LogisticRegression clasifier to disk.
+This function reads the trained LogisticRegression clasifier from disk.
 
-.. ocv:function:: void LogisticRegression::save(string filepath) const
+.. ocv:function:: void LogisticRegression::read(const FileNode& fn)
 
-LogisticRegression::load
-------------------------
-This function loads the trained LogisticRegression clasifier from disk.
+LogisticRegression::write
+-------------------------
+This function writes the trained LogisticRegression clasifier to disk.
 
-.. ocv:function:: void LogisticRegression::load(const string filepath)
+.. ocv:function:: void LogisticRegression::write(FileStorage& fs) const
