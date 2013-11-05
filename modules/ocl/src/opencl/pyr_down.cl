@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,32 +43,32 @@
 //
 //M*/
 
-int idx_row_low(int y, int last_row)
+inline int idx_row_low(int y, int last_row)
 {
     return abs(y) % (last_row + 1);
 }
 
-int idx_row_high(int y, int last_row)
+inline int idx_row_high(int y, int last_row)
 {
     return abs(last_row - (int)abs(last_row - y)) % (last_row + 1);
 }
 
-int idx_row(int y, int last_row)
+inline int idx_row(int y, int last_row)
 {
     return idx_row_low(idx_row_high(y, last_row), last_row);
 }
 
-int idx_col_low(int x, int last_col)
+inline int idx_col_low(int x, int last_col)
 {
     return abs(x) % (last_col + 1);
 }
 
-int idx_col_high(int x, int last_col)
+inline int idx_col_high(int x, int last_col)
 {
     return abs(last_col - (int)abs(last_col - x)) % (last_col + 1);
 }
 
-int idx_col(int x, int last_col)
+inline int idx_col(int x, int last_col)
 {
     return idx_col_low(idx_col_high(x, last_col), last_col);
 }

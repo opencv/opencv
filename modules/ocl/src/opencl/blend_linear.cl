@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,99 +42,37 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-__kernel void BlendLinear_C1_D0(
-    __global uchar4 *dst,
-    __global uchar4 *img1,
-    __global uchar4 *img2,
-    __global float4 *weight1,
-    __global float4 *weight2,
-    int rows,
-    int cols,
-    int istep,
-    int wstep
-    )
-{
-    int idx = get_global_id(0);
-    int idy = get_global_id(1);
-    if (idx << 2 < cols && idy < rows)
-    {
-        int pos = mad24(idy,istep >> 2,idx);
-        int wpos = mad24(idy,wstep >> 2,idx);
-        float4 w1 = weight1[wpos], w2 = weight2[wpos];
-        dst[pos] = convert_uchar4((convert_float4(img1[pos]) * w1 +
-            convert_float4(img2[pos]) * w2) / (w1 + w2 + 1e-5f));
-    }
-}
 
-__kernel void BlendLinear_C4_D0(
-    __global uchar4 *dst,
-    __global uchar4 *img1,
-    __global uchar4 *img2,
-    __global float *weight1,
-    __global float *weight2,
-    int rows,
-    int cols,
-    int istep,
-    int wstep
-    )
-{
-    int idx = get_global_id(0);
-    int idy = get_global_id(1);
-    if (idx < cols && idy < rows)
-    {
-        int pos = mad24(idy,istep >> 2,idx);
-        int wpos = mad24(idy,wstep, idx);
-        float w1 = weight1[wpos];
-        float w2 = weight2[wpos];
-        dst[pos] = convert_uchar4((convert_float4(img1[pos]) * w1 +
-            convert_float4(img2[pos]) * w2) / (w1 + w2 + 1e-5f));
-    }
-}
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
 
-
-__kernel void BlendLinear_C1_D5(
-    __global float4 *dst,
-    __global float4 *img1,
-    __global float4 *img2,
-    __global float4 *weight1,
-    __global float4 *weight2,
-    int rows,
-    int cols,
-    int istep,
-    int wstep
-    )
+__kernel void blendLinear(__global const T * src1, int src1_offset, int src1_step,
+                          __global const T * src2, int src2_offset, int src2_step,
+                          __global const float * weight1, int weight1_offset, int weight1_step,
+                          __global const float * weight2, int weight2_offset, int weight2_step,
+                          __global T * dst, int dst_offset, int dst_step,
+                          int rows, int cols)
 {
-    int idx = get_global_id(0);
-    int idy = get_global_id(1);
-    if (idx << 2 < cols && idy < rows)
-    {
-        int pos = mad24(idy,istep >> 2,idx);
-        int wpos = mad24(idy,wstep >> 2,idx);
-        float4 w1 = weight1[wpos], w2 = weight2[wpos];
-        dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
-    }
-}
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-__kernel void BlendLinear_C4_D5(
-    __global float4 *dst,
-    __global float4 *img1,
-    __global float4 *img2,
-    __global float *weight1,
-    __global float *weight2,
-    int rows,
-    int cols,
-    int istep,
-    int wstep
-    )
-{
-    int idx = get_global_id(0);
-    int idy = get_global_id(1);
-    if (idx < cols && idy < rows)
+    if (x < cols && y < rows)
     {
-        int pos = mad24(idy,istep >> 2,idx);
-        int wpos = mad24(idy,wstep, idx);
-        float w1 = weight1[wpos];
-        float w2 = weight2[wpos];
-        dst[pos] = (img1[pos] * w1 + img2[pos] * w2) / (w1 + w2 + 1e-5f);
+        int src1_index = mad24(y, src1_step, src1_offset + x);
+        int src2_index = mad24(y, src2_step, src2_offset + x);
+        int weight1_index = mad24(y, weight1_step, weight1_offset + x);
+        int weight2_index = mad24(y, weight2_step, weight2_offset + x);
+        int dst_index = mad24(y, dst_step, dst_offset + x);
+
+        FT w1 = (FT)(weight1[weight1_index]), w2 = (FT)(weight2[weight2_index]);
+        FT den = w1 + w2 + (FT)(1e-5f);
+        FT num = w1 * convertToFT(src1[src1_index]) + w2 * convertToFT(src2[src2_index]);
+
+        dst[dst_index] = convertToT(num / den);
     }
 }

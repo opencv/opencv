@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -147,96 +147,96 @@
 __kernel void arithm_op_minMaxLoc_mask (int cols,int invalid_cols,int offset,int elemnum,int groupnum,__global TYPE *src,
                                         int minvalid_cols,int moffset,__global uchar *mask,__global RES_TYPE  *dst)
 {
-   unsigned int lid = get_local_id(0);
-   unsigned int gid = get_group_id(0);
-   unsigned int  id = get_global_id(0);
-   unsigned int idx = id + (id / cols) * invalid_cols;
-   unsigned int midx = id + (id / cols) * minvalid_cols;
-   __local VEC_TYPE lm_max[128],lm_min[128];
-   VEC_TYPE minval,maxval,temp,m_temp;
-   __local VEC_TYPE_LOC lm_maxloc[128],lm_minloc[128];
-   VEC_TYPE_LOC minloc,maxloc,temploc,negative = -1,one = 1,zero = 0;
-   if(id < elemnum)
-   {
-       temp = vload4(idx, &src[offset]);
-       m_temp = CONVERT_TYPE(vload4(midx,&mask[moffset]));
-       int idx_c = (idx << 2) + offset;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
-       if(id % cols == cols - 1)
-       {
-           repeat_me(m_temp);
-           repeat_e(temploc);
-       }
-       minval = m_temp != (VEC_TYPE)0 ? temp : (VEC_TYPE)MAX_VAL;
-       maxval = m_temp != (VEC_TYPE)0 ? temp : (VEC_TYPE)MIN_VAL;
-       minloc = CONDITION_FUNC(m_temp != (VEC_TYPE)0, temploc , negative);
-       maxloc = minloc;
-   }
-   else
-   {
-       minval = MAX_VAL;
-       maxval = MIN_VAL;
-       minloc = negative;
-       maxloc = negative;
-   }
-   for(id=id + (groupnum << 8); id < elemnum;id = id + (groupnum << 8))
-   {
-       idx = id + (id / cols) * invalid_cols;
-       midx = id + (id / cols) * minvalid_cols;
-       temp = vload4(idx, &src[offset]);
-       m_temp = CONVERT_TYPE(vload4(midx,&mask[moffset]));
-       int idx_c = (idx << 2) + offset;
-       temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
-       if(id % cols == cols - 1)
-       {
-           repeat_me(m_temp);
-           repeat_e(temploc);
-       }
-       minval = min(minval,m_temp != (VEC_TYPE)0 ? temp : minval);
-       maxval = max(maxval,m_temp != (VEC_TYPE)0 ? temp : maxval);
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
+    int  id = get_global_id(0);
+    int idx = id + (id / cols) * invalid_cols;
+    int midx = id + (id / cols) * minvalid_cols;
+    __local VEC_TYPE lm_max[128],lm_min[128];
+    VEC_TYPE minval,maxval,temp,m_temp;
+    __local VEC_TYPE_LOC lm_maxloc[128],lm_minloc[128];
+    VEC_TYPE_LOC minloc,maxloc,temploc,negative = -1,one = 1,zero = 0;
+    if(id < elemnum)
+    {
+        temp = vload4(idx, &src[offset]);
+        m_temp = CONVERT_TYPE(vload4(midx,&mask[moffset]));
+        int idx_c = (idx << 2) + offset;
+        temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
+        if(id % cols == cols - 1)
+        {
+            repeat_me(m_temp);
+            repeat_e(temploc);
+        }
+        minval = m_temp != (VEC_TYPE)0 ? temp : (VEC_TYPE)MAX_VAL;
+        maxval = m_temp != (VEC_TYPE)0 ? temp : (VEC_TYPE)MIN_VAL;
+        minloc = CONDITION_FUNC(m_temp != (VEC_TYPE)0, temploc , negative);
+        maxloc = minloc;
+    }
+    else
+    {
+        minval = MAX_VAL;
+        maxval = MIN_VAL;
+        minloc = negative;
+        maxloc = negative;
+    }
+    for(id=id + (groupnum << 8); id < elemnum;id = id + (groupnum << 8))
+    {
+        idx = id + (id / cols) * invalid_cols;
+        midx = id + (id / cols) * minvalid_cols;
+        temp = vload4(idx, &src[offset]);
+        m_temp = CONVERT_TYPE(vload4(midx,&mask[moffset]));
+        int idx_c = (idx << 2) + offset;
+        temploc = (VEC_TYPE_LOC)(idx_c,idx_c+1,idx_c+2,idx_c+3);
+        if(id % cols == cols - 1)
+        {
+            repeat_me(m_temp);
+            repeat_e(temploc);
+        }
+        minval = min(minval,m_temp != (VEC_TYPE)0 ? temp : minval);
+        maxval = max(maxval,m_temp != (VEC_TYPE)0 ? temp : maxval);
 
-       minloc = CONDITION_FUNC((minval == temp) && (m_temp != (VEC_TYPE)0), temploc , minloc);
-       maxloc = CONDITION_FUNC((maxval == temp) && (m_temp != (VEC_TYPE)0), temploc , maxloc);
-   }
-   if(lid > 127)
-   {
-       lm_min[lid - 128] = minval;
-       lm_max[lid - 128] = maxval;
-       lm_minloc[lid - 128] = minloc;
-       lm_maxloc[lid - 128] = maxloc;
-   }
-   barrier(CLK_LOCAL_MEM_FENCE);
-   if(lid < 128)
-   {
-       lm_min[lid] = min(minval,lm_min[lid]);
-       lm_max[lid] = max(maxval,lm_max[lid]);
-       VEC_TYPE con_min = CONVERT_TYPE(minloc != negative ? one : zero);
-       VEC_TYPE con_max = CONVERT_TYPE(maxloc != negative ? one : zero);
-       lm_minloc[lid] = CONDITION_FUNC((lm_min[lid] == minval) && (con_min != (VEC_TYPE)0), minloc , lm_minloc[lid]);
-       lm_maxloc[lid] = CONDITION_FUNC((lm_max[lid] == maxval) && (con_max != (VEC_TYPE)0), maxloc , lm_maxloc[lid]);
-   }
-   barrier(CLK_LOCAL_MEM_FENCE);
-   for(int lsize = 64; lsize > 0; lsize >>= 1)
-   {
-       if(lid < lsize)
-       {
-           int lid2 = lsize + lid;
-           lm_min[lid] = min(lm_min[lid] , lm_min[lid2]);
-           lm_max[lid] = max(lm_max[lid] , lm_max[lid2]);
-           VEC_TYPE con_min = CONVERT_TYPE(lm_minloc[lid2] != negative ? one : zero);
-           VEC_TYPE con_max = CONVERT_TYPE(lm_maxloc[lid2] != negative ? one : zero);
-           lm_minloc[lid] =
-              CONDITION_FUNC((lm_min[lid] == lm_min[lid2]) && (con_min != (VEC_TYPE)0), lm_minloc[lid2] , lm_minloc[lid]);
-           lm_maxloc[lid] =
-              CONDITION_FUNC((lm_max[lid] == lm_max[lid2]) && (con_max != (VEC_TYPE)0), lm_maxloc[lid2] , lm_maxloc[lid]);
-       }
-       barrier(CLK_LOCAL_MEM_FENCE);
-   }
-   if( lid == 0)
-   {
-       dst[gid] = CONVERT_RES_TYPE(lm_min[0]);
-       dst[gid + groupnum] = CONVERT_RES_TYPE(lm_max[0]);
-       dst[gid + 2 * groupnum] = CONVERT_RES_TYPE(lm_minloc[0]);
-       dst[gid + 3 * groupnum] = CONVERT_RES_TYPE(lm_maxloc[0]);
-   }
+        minloc = CONDITION_FUNC((minval == temp) && (m_temp != (VEC_TYPE)0), temploc , minloc);
+        maxloc = CONDITION_FUNC((maxval == temp) && (m_temp != (VEC_TYPE)0), temploc , maxloc);
+    }
+    if(lid > 127)
+    {
+        lm_min[lid - 128] = minval;
+        lm_max[lid - 128] = maxval;
+        lm_minloc[lid - 128] = minloc;
+        lm_maxloc[lid - 128] = maxloc;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid < 128)
+    {
+        lm_min[lid] = min(minval,lm_min[lid]);
+        lm_max[lid] = max(maxval,lm_max[lid]);
+        VEC_TYPE con_min = CONVERT_TYPE(minloc != negative ? one : zero);
+        VEC_TYPE con_max = CONVERT_TYPE(maxloc != negative ? one : zero);
+        lm_minloc[lid] = CONDITION_FUNC((lm_min[lid] == minval) && (con_min != (VEC_TYPE)0), minloc , lm_minloc[lid]);
+        lm_maxloc[lid] = CONDITION_FUNC((lm_max[lid] == maxval) && (con_max != (VEC_TYPE)0), maxloc , lm_maxloc[lid]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    for(int lsize = 64; lsize > 0; lsize >>= 1)
+    {
+        if(lid < lsize)
+        {
+            int lid2 = lsize + lid;
+            lm_min[lid] = min(lm_min[lid] , lm_min[lid2]);
+            lm_max[lid] = max(lm_max[lid] , lm_max[lid2]);
+            VEC_TYPE con_min = CONVERT_TYPE(lm_minloc[lid2] != negative ? one : zero);
+            VEC_TYPE con_max = CONVERT_TYPE(lm_maxloc[lid2] != negative ? one : zero);
+            lm_minloc[lid] =
+                CONDITION_FUNC((lm_min[lid] == lm_min[lid2]) && (con_min != (VEC_TYPE)0), lm_minloc[lid2] , lm_minloc[lid]);
+            lm_maxloc[lid] =
+                CONDITION_FUNC((lm_max[lid] == lm_max[lid2]) && (con_max != (VEC_TYPE)0), lm_maxloc[lid2] , lm_maxloc[lid]);
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if( lid == 0)
+    {
+        dst[gid] = CONVERT_RES_TYPE(lm_min[0]);
+        dst[gid + groupnum] = CONVERT_RES_TYPE(lm_max[0]);
+        dst[gid + 2 * groupnum] = CONVERT_RES_TYPE(lm_minloc[0]);
+        dst[gid + 3 * groupnum] = CONVERT_RES_TYPE(lm_maxloc[0]);
+    }
 }

@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -448,6 +448,17 @@ static int initializeOpenCLDevices()
                 {
                     deviceInfo.info.haveDoubleSupport = false;
                 }
+
+                size_t intel_platform = platformInfo.info.platformVendor.find("Intel");
+                if(intel_platform != std::string::npos)
+                {
+                    deviceInfo.info.compilationExtraOptions += " -D INTEL_DEVICE";
+                    deviceInfo.info.isIntelDevice = true;
+                }
+                else
+                {
+                    deviceInfo.info.isIntelDevice = false;
+                }
             }
         }
     }
@@ -471,7 +482,7 @@ DeviceInfo::DeviceInfo()
       deviceVendorId(-1),
       maxWorkGroupSize(0), maxComputeUnits(0), localMemorySize(0), maxMemAllocSize(0),
       deviceVersionMajor(0), deviceVersionMinor(0),
-      haveDoubleSupport(false), isUnifiedMemory(false),
+      haveDoubleSupport(false), isUnifiedMemory(false),isIntelDevice(false),
       platform(NULL)
 {
     // nothing
@@ -572,6 +583,8 @@ bool ContextImpl::supportsFeature(FEATURE_TYPE featureType) const
 {
     switch (featureType)
     {
+    case FEATURE_CL_INTEL_DEVICE:
+        return deviceInfo.isIntelDevice;
     case FEATURE_CL_DOUBLE:
         return deviceInfo.haveDoubleSupport;
     case FEATURE_CL_UNIFIED_MEM:
@@ -756,6 +769,9 @@ __Module::~__Module()
 
 
 #if defined(WIN32) && defined(CVAPI_EXPORTS)
+
+extern "C"
+BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved);
 
 extern "C"
 BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved)
