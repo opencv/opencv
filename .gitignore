@@ -1,9 +1,9 @@
-*.pyc
-.DS_Store
-/modules/refman.rst
-tegra/
-*.user
-.sw[a-z]
-.*.swp
-tags
 *.autosave
+*.pyc
+*.user
+.*.swp
+.DS_Store
+.sw[a-z]
+/modules/refman.rst
+tags
+tegra/
