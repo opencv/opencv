@@ -137,6 +137,7 @@ add_custom_command(OUTPUT ${documented_java_files}
                    COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2> "${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS ${step2_depends}
+                   VERBATIM
                   )
 
 # step 3: copy files to destination
