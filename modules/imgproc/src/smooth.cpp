@@ -2420,7 +2420,7 @@ public:
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
 #if ABF_CALCVAR
-					float min_var = (float)( min_sigma_vals*min_sigma_vals);
+                    float min_var = (float)( min_sigma_vals*min_sigma_vals);
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
