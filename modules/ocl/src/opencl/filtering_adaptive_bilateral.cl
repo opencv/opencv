@@ -85,7 +85,7 @@
 #endif
 
 __kernel void
-edgeEnhancingFilter_C4_D0(
+adaptiveBilateralFilter_C4_D0(
     __global const uchar4 * restrict src,
     __global uchar4 *dst,
     float alpha,
@@ -173,14 +173,14 @@ edgeEnhancingFilter_C4_D0(
         //find variance of all data
         int startLMj;
         int endLMj ;
-#if CALCVAR
         // Top row: don't sum the very last element
         for(int extraCnt = 0; extraCnt <=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
-            sumVal =0;
-            sumValSqr=0;
+            sumVal = (int4)0;
+            sumValSqr= (int4)0;
             for(int j = startLMj; j < endLMj; j++)
                 for(int i=-anX; i<=anX; i++)
                 {
@@ -190,9 +190,10 @@ edgeEnhancingFilter_C4_D0(
                     sumValSqr += mul24(currVal, currVal);
                 }
 
-            var[extraCnt] = convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+            var[extraCnt] = clamp( convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ), (float4)(0.1f, 0.1f, 0.1f, 0.1f), (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL)) ;
+
 #else
-        var[extraCnt] = (float4)(900.0, 900.0, 900.0, 0.0);
+            var[extraCnt] = (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL);
 #endif
         }
 
@@ -221,32 +222,48 @@ edgeEnhancingFilter_C4_D0(
 #else
                     weight = 1.0f;
 #endif
-#else
+#else // !FIXED_WEIGHT
                     currVal = convert_int4(data[j][col+anX+i]);
                     currWRTCenter = currVal-currValCenter;
+
+#if ABF_GAUSSIAN
+
+#if VAR_PER_CHANNEL
+                    weight = exp( (float4)(-0.5f, -0.5f, -0.5f, -0.5f) * convert_float4(currWRTCenter * currWRTCenter) / var[extraCnt] )*
+                        (float4)(lut[lut_j*lut_step+anX+i]);
+#else
+                    weight = exp( -0.5f * (mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +
+                        mul24(currWRTCenter.z, currWRTCenter.z) ) / (var[extraCnt].x+var[extraCnt].y+var[extraCnt].z) ) * lut[lut_j*lut_step+anX+i];
+#endif
+
+#else // !ABF_GAUSSIAN
 
 #if VAR_PER_CHANNEL
                     weight = var[extraCnt] / (var[extraCnt] + convert_float4(currWRTCenter * currWRTCenter)) *
                         (float4)(lut[lut_j*lut_step+anX+i]);
 #else
-                    weight = 1.0f/(1.0f+( mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +
-                        mul24(currWRTCenter.z, currWRTCenter.z))/(var.x+var.y+var.z));
+                    weight = ((float)lut[lut_j*lut_step+anX+i]) /(1.0f+( mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +
+                        mul24(currWRTCenter.z, currWRTCenter.z))/(var[extraCnt].x+var[extraCnt].y+var[extraCnt].z));
 #endif
-#endif
+
+#endif //ABF_GAUSSIAN
+
+
+
+#endif  // FIXED_WEIGHT
+
                     tmp_sum[extraCnt] += convert_float4(data[j][col+anX+i]) * weight;
                     totalWeight += weight;
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
-                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4(tmp_sum[extraCnt]);
+                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4_rtz( (tmp_sum[extraCnt] / (float4)totalWeight) + (float4)0.5f);
 
 #if VAR_PER_CHANNEL
             totalWeight = (float4)(0,0,0,0);
 #else
-            totalWeight = 0;
+            totalWeight = 0.0f;
 #endif
         }
     }
@@ -254,7 +271,7 @@ edgeEnhancingFilter_C4_D0(
 
 
 __kernel void
-edgeEnhancingFilter_C1_D0(
+adaptiveBilateralFilter_C1_D0(
     __global const uchar * restrict src,
     __global uchar *dst,
     float alpha,
@@ -343,10 +360,11 @@ edgeEnhancingFilter_C1_D0(
         //find variance of all data
         int startLMj;
         int endLMj;
-#if CALCVAR
+
         // Top row: don't sum the very last element
         for(int extraCnt=0; extraCnt<=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
             sumVal = 0;
@@ -361,9 +379,9 @@ edgeEnhancingFilter_C1_D0(
                     sumValSqr += mul24(currVal, currVal);
                 }
             }
-            var[extraCnt] = (float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+            var[extraCnt] =  clamp((float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) , 0.1f, (float)(MAX_VAR_VAL) );
 #else
-        var[extraCnt] = (float)(900.0);
+            var[extraCnt] = (float)(MAX_VAR_VAL);
 #endif
         }
 
@@ -389,19 +407,20 @@ edgeEnhancingFilter_C1_D0(
                     currVal	= (int)(data[j][col+anX+i])	;
                     currWRTCenter = currVal-currValCenter;
 
+#if ABF_GAUSSIAN
+                    weight = exp( -0.5f * (float)mul24(currWRTCenter,currWRTCenter)/var[extraCnt]) * lut[lut_j*lut_step+anX+i] ;
+#else
                     weight = var[extraCnt] / (var[extraCnt] + (float)mul24(currWRTCenter,currWRTCenter)) * lut[lut_j*lut_step+anX+i] ;
+#endif
 #endif
                     tmp_sum[extraCnt] += (float)(data[j][col+anX+i] * weight);
                     totalWeight += weight;
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
             {
-                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = (uchar)(tmp_sum[extraCnt]);
+                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = convert_uchar_rtz(tmp_sum[extraCnt]/totalWeight+0.5f);
             }
 
             totalWeight = 0;
