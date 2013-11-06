@@ -2364,7 +2364,7 @@ public:
                     
                     if(var < 0.01) 
                         var = 0.01f;
-					else if(var > (float)(min_sigma_vals*min_sigma_vals) )
+                    else if(var > (float)(min_sigma_vals*min_sigma_vals) )
                         var =  (float)(min_sigma_vals*min_sigma_vals) ;
 
 #else
@@ -2447,17 +2447,17 @@ public:
                     
                     if(var_b < 0.01) 
                         var_b = 0.01f;
-					else if(var_b > max_var )
+                    else if(var_b > max_var )
                         var_b =  (float)(max_var) ;
 
                     if(var_g < 0.01) 
                         var_g = 0.01f;
-					else if(var_g > max_var )
+                    else if(var_g > max_var )
                         var_g =  (float)(max_var) ;
 
                     if(var_r < 0.01) 
                         var_r = 0.01f;
-					else if(var_r > max_var )
+                    else if(var_r > max_var )
                         var_r =  (float)(max_var) ;
 
 #else

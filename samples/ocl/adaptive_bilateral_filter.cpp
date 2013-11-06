@@ -37,8 +37,6 @@ int main( int argc, const char** argv )
         return EXIT_FAILURE;
     }
 
-	int resizeScale = cmd.get<int>("f");
-
 	double sigmaSpace = cmd.get<int>("s");
 
     // sigma for checking pixel values. This is used as is in the "normal" bilateral filter,
