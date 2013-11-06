@@ -292,7 +292,6 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
     for(int scalei = 0; scalei <loopcount; scalei++)
     {
         int4 scaleinfo1= info[scalei];
-        int width = (scaleinfo1.x & 0xffff0000) >> 16;
         int height = scaleinfo1.x & 0xffff;
         int grpnumperline =(scaleinfo1.y & 0xffff0000) >> 16;
         int totalgrp = scaleinfo1.y & 0xffff;
