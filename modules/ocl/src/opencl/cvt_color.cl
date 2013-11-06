@@ -50,8 +50,6 @@
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 
-#define DATA_TYPE UNDEFINED
-
 #if defined (DEPTH_0)
 #define DATA_TYPE uchar
 #define MAX_NUM  255
@@ -71,6 +69,10 @@
 #define MAX_NUM  1.0f
 #define HALF_MAX 0.5f
 #define SAT_CAST(num) (num)
+#endif
+
+#ifndef DATA_TYPE
+    #define DATA_TYPE UNDEFINED
 #endif
 
 #define CV_DESCALE(x,n) (((x) + (1 << ((n)-1))) >> (n))

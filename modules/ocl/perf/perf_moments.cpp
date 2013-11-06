@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other Materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -49,41 +49,42 @@
 using namespace perf;
 using std::tr1::tuple;
 using std::tr1::get;
+using namespace cv;
+using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
+using namespace std;
+
 
 ///////////// Moments ////////////////////////
+//*! performance of image
+typedef tuple<Size, MatType, bool> MomentsParamType;
+typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
 
-typedef Size_MatType MomentsFixture;
-
-PERF_TEST_P(MomentsFixture, DISABLED_Moments,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)))  // TODO does not work properly (see below)
+PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                       OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1), ::testing::Bool()))
 {
-    const Size_MatType_t params = GetParam();
+    const MomentsParamType params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+    const bool binaryImage = get<2>(params);
 
-    Mat src(srcSize, type), dst(7, 1, CV_64F);
-    const bool binaryImage = false;
+    Mat  src(srcSize, type), dst(7, 1, CV_64F);
+    randu(src, 0, 255);
+
+    oclMat src_d(src);
     cv::Moments mom;
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
+        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() mom = cv::moments(src, binaryImage);
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
     }
     else
         OCL_PERF_ELSE
+    cv::HuMoments(mom, dst);
+    SANITY_CHECK(dst, 2e-1);
 }

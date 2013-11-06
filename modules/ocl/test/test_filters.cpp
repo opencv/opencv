@@ -59,10 +59,15 @@ using namespace cv;
 PARAM_TEST_CASE(FilterTestBase, MatType,
                 int, // kernel size
                 Size, // dx, dy
-                int, // border type, or iteration
+                int, // border type
+                double, // optional parameter
                 bool) // roi or not
 {
+    bool isFP;
+
     int type, borderType, ksize;
+    Size size;
+    double param;
     bool useRoi;
 
     Mat src, dst_whole, src_roi, dst_roi;
@@ -72,31 +77,53 @@ PARAM_TEST_CASE(FilterTestBase, MatType,
     {
         type = GET_PARAM(0);
         ksize = GET_PARAM(1);
+        size = GET_PARAM(2);
         borderType = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
+        param = GET_PARAM(4);
+        useRoi = GET_PARAM(5);
+
+        isFP = (CV_MAT_DEPTH(type) == CV_32F || CV_MAT_DEPTH(type) == CV_64F);
     }
 
-    void random_roi()
+    void random_roi(int minSize = 1)
     {
-        Size roiSize = randomSize(1, MAX_VALUE);
+        if (minSize == 0)
+            minSize = ksize;
+        Size roiSize = randomSize(minSize, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, isFP ? 0 : 5, isFP ? 1 : 256);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, 5, 16);
+        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, isFP ? 0.20 : 60, isFP ? 0.25 : 70);
 
         generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
     }
 
-    void Near(double threshold = 0.0)
+    void Near()
+    {
+        if (isFP)
+            Near(1e-6, true);
+        else
+            Near(1, false);
+    }
+
+    void Near(double threshold, bool relative)
     {
         Mat roi, whole;
         gdst_whole.download(whole);
         gdst_roi.download(roi);
 
-        EXPECT_MAT_NEAR(dst_whole, whole, threshold);
-        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
+        if (relative)
+        {
+            EXPECT_MAT_NEAR_RELATIVE(dst_whole, whole, threshold);
+            EXPECT_MAT_NEAR_RELATIVE(dst_roi, roi, threshold);
+        }
+        else
+        {
+            EXPECT_MAT_NEAR(dst_whole, whole, threshold);
+            EXPECT_MAT_NEAR(dst_roi, roi, threshold);
+        }
     }
 };
 
@@ -111,12 +138,12 @@ OCL_TEST_P(Blur, Mat)
 
     for (int j = 0; j < LOOP_TIMES; j++)
     {
-        random_roi();
+        random_roi(0); // TODO NOTE: min value for size is kernel size (temporary bypass border issues in CPU implementation)
 
         blur(src_roi, dst_roi, kernelSize, Point(-1, -1), borderType);
         ocl::blur(gsrc_roi, gdst_roi, kernelSize, Point(-1, -1), borderType); // TODO anchor
 
-        Near(1.0);
+        Near();
     }
 }
 
@@ -127,64 +154,51 @@ typedef FilterTestBase LaplacianTest;
 
 OCL_TEST_P(LaplacianTest, Accuracy)
 {
+    double scale = param;
+
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        // border type is used as a scale factor for the Laplacian kernel
-        double scale = static_cast<double>(borderType);
+        Laplacian(src_roi, dst_roi, -1, ksize, scale, 0, borderType);
+        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, scale, 0, borderType);
 
-        Laplacian(src_roi, dst_roi, -1, ksize, scale);
-        ocl::Laplacian(gsrc_roi, gdst_roi, -1, ksize, scale);
-
-        Near(1e-5);
+        Near();
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // erode & dilate
 
-struct ErodeDilate :
-        public FilterTestBase
-{
-    int iterations;
-
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        ksize = GET_PARAM(1);
-        iterations = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
-    }
-};
-
-typedef ErodeDilate Erode;
+typedef FilterTestBase Erode;
 
 OCL_TEST_P(Erode, Mat)
 {
     // erode or dilate kernel
     Size kernelSize(ksize, ksize);
     Mat kernel;
+    int iterations = (int)param;
 
     for (int j = 0; j < LOOP_TIMES; j++)
     {
-        kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
-
         random_roi();
 
-        cv::erode(src_roi, dst_roi, kernel, Point(-1, -1), iterations);
-        ocl::erode(gsrc_roi, gdst_roi, kernel, Point(-1, -1), iterations); // TODO iterations, borderType
+        kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
 
-        Near(1e-5);
+        cv::erode(src_roi, dst_roi, kernel, Point(-1, -1), iterations);//, borderType);
+        ocl::erode(gsrc_roi, gdst_roi, kernel, Point(-1, -1), iterations);//, borderType);
+
+        Near();
     }
 }
 
-typedef ErodeDilate Dilate;
+typedef FilterTestBase Dilate;
 
 OCL_TEST_P(Dilate, Mat)
 {
     // erode or dilate kernel
     Mat kernel;
+    int iterations = (int)param;
 
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -195,79 +209,56 @@ OCL_TEST_P(Dilate, Mat)
         cv::dilate(src_roi, dst_roi, kernel, Point(-1, -1), iterations);
         ocl::dilate(gsrc_roi, gdst_roi, kernel, Point(-1, -1), iterations); // TODO iterations, borderType
 
-        Near(1e-5);
+        Near();
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Sobel
 
-struct SobelTest :
-        public FilterTestBase
-{
-    int dx, dy;
-
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        ksize = GET_PARAM(1);
-        borderType = GET_PARAM(3);
-        useRoi = GET_PARAM(4);
-
-        Size d = GET_PARAM(2);
-        dx = d.width, dy = d.height;
-    }
-};
+typedef FilterTestBase SobelTest;
 
 OCL_TEST_P(SobelTest, Mat)
 {
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        Sobel(src_roi, dst_roi, -1, dx, dy, ksize, /* scale */ 0.00001, /* delta */0, borderType);
-        ocl::Sobel(gsrc_roi, gdst_roi, -1, dx, dy, ksize, /* scale */ 0.00001, /* delta */ 0, borderType);
+        Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType);
+        ocl::Sobel(gsrc_roi, gdst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType);
 
-        Near(1);
+        Near();
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Scharr
 
-typedef SobelTest ScharrTest;
+typedef FilterTestBase ScharrTest;
 
 OCL_TEST_P(ScharrTest, Mat)
 {
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        Scharr(src_roi, dst_roi, -1, dx, dy, /* scale */ 1, /* delta */ 0, borderType);
-        ocl::Scharr(gsrc_roi, gdst_roi, -1, dx, dy, /* scale */ 1, /* delta */ 0, borderType);
+        Scharr(src_roi, dst_roi, -1, dx, dy, scale, /* delta */ 0, borderType);
+        ocl::Scharr(gsrc_roi, gdst_roi, -1, dx, dy, scale, /* delta */ 0, borderType);
 
-        Near(1);
+        Near();
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-struct GaussianBlurTest :
-        public FilterTestBase
-{
-    double sigma1, sigma2;
-
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        ksize = GET_PARAM(1);
-        borderType = GET_PARAM(3);
-
-        sigma1 = rng.uniform(0.1, 1.0);
-        sigma2 = rng.uniform(0.1, 1.0);
-    }
-};
+typedef FilterTestBase GaussianBlurTest;
 
 OCL_TEST_P(GaussianBlurTest, Mat)
 {
@@ -275,10 +266,13 @@ OCL_TEST_P(GaussianBlurTest, Mat)
     {
         random_roi();
 
+        double sigma1 = rng.uniform(0.1, 1.0);
+        double sigma2 = rng.uniform(0.1, 1.0);
+
         GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType);
         ocl::GaussianBlur(gsrc_roi, gdst_roi, Size(ksize, ksize), sigma1, sigma2, borderType);
 
-        Near(1);
+        Near(CV_MAT_DEPTH(type) == CV_8U ? 3 : 1e-6, false);
     }
 }
 
@@ -289,19 +283,24 @@ typedef FilterTestBase Filter2D;
 
 OCL_TEST_P(Filter2D, Mat)
 {
-    const Size kernelSize(ksize, ksize);
-    Mat kernel;
-
     for (int j = 0; j < LOOP_TIMES; j++)
     {
-        kernel = randomMat(kernelSize, CV_32FC1, 0.0, 1.0);
-
         random_roi();
 
-        cv::filter2D(src_roi, dst_roi, -1, kernel, Point(-1, -1), 0.0, borderType); // TODO anchor
-        ocl::filter2D(gsrc_roi, gdst_roi, -1, kernel, Point(-1, -1), borderType);
+        Point anchor(-1, -1);
+        if (size.width >= 0)
+            anchor.x = size.width % ksize;
+        if (size.height >= 0)
+            anchor.y = size.height % ksize;
 
-        Near(1);
+        const Size kernelSize(ksize, ksize);
+        Mat kernel = randomMat(kernelSize, CV_32FC1, 0, 1.0);
+        kernel *= 1.0 / (double)(ksize * ksize);
+
+        cv::filter2D(src_roi, dst_roi, -1, kernel, anchor, 0.0, borderType);
+        ocl::filter2D(gsrc_roi, gdst_roi, -1, kernel, anchor, 0.0, borderType);
+
+        Near();
     }
 }
 
@@ -322,7 +321,7 @@ OCL_TEST_P(Bilateral, Mat)
         cv::bilateralFilter(src_roi, dst_roi, ksize, sigmacolor, sigmaspace, borderType);
         ocl::bilateralFilter(gsrc_roi, gdst_roi, ksize, sigmacolor, sigmaspace, borderType);
 
-        Near(1);
+        Near();
     }
 }
 
@@ -342,7 +341,7 @@ OCL_TEST_P(AdaptiveBilateral, Mat)
         adaptiveBilateralFilter(src_roi, dst_roi, kernelSize, 5, Point(-1, -1), borderType); // TODO anchor
         ocl::adaptiveBilateralFilter(gsrc_roi, gdst_roi, kernelSize, 5, Point(-1, -1), borderType);
 
-        Near(1);
+        Near();
     }
 }
 
@@ -366,87 +365,108 @@ OCL_TEST_P(MedianFilter, Mat)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#define FILTER_BORDER_SET_NO_ISOLATED \
+    Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_WRAP, (int)BORDER_REFLECT_101/*, \
+            (int)BORDER_CONSTANT|BORDER_ISOLATED, (int)BORDER_REPLICATE|BORDER_ISOLATED, \
+            (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
+            (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
+
+#define FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED \
+    Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, /*(int)BORDER_WRAP,*/ (int)BORDER_REFLECT_101/*, \
+            (int)BORDER_CONSTANT|BORDER_ISOLATED, (int)BORDER_REPLICATE|BORDER_ISOLATED, \
+            (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
+            (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
+
+#define FILTER_DATATYPES Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, \
+                                CV_32FC1, CV_32FC3, CV_32FC4, \
+                                CV_64FC1, CV_64FC3, CV_64FC4)
+
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
+                            FILTER_DATATYPES,
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            FILTER_DATATYPES,
                             Values(1, 3),
                             Values(Size(0, 0)), // not used
-                            Values(1, 2), // value is used as scale factor for kernel
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2, 3.0), // scalar
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
-                            testing::Range(1, 2),
+                            Values(0), // not used
+                            Values(1.0, 2.0, 3.0),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5, 7),
                             Values(Size(0, 0)), // not used
-                            testing::Range(1, 2),
+                            Values(0), // not used
+                            Values(1.0, 2.0, 3.0),
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                             Values(3, 5),
-                            Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)),
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
-                                   (int)BORDER_REPLICATE, (int)BORDER_REFLECT),
+                            Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(0), // not used
-                            Values(Size(0, 1), Size(1, 0)),
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
-                                   (int)BORDER_REPLICATE, (int)BORDER_REFLECT),
+                            Values(1),
+                            Values(Size(0, 1), Size(1, 0)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2), // scalar
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(3, 5),
                             Values(Size(0, 0)), // not used
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
-                                   (int)BORDER_REPLICATE, (int)BORDER_REFLECT),
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Filter2D, testing::Combine(
-                            Values(CV_8UC1, CV_32FC1, CV_32FC4),
-                            Values(3, 15, 25),
-                            Values(Size(0, 0)), // not used
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REFLECT101,
-                                   (int)BORDER_REPLICATE, (int)BORDER_REFLECT),
+                            FILTER_DATATYPES,
+                            Values(3, 15), // TODO 25: CPU implementation has some issues
+                            Values(Size(-1, -1), Size(0, 0), Size(2, 1)), // anchor
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),
                             Values(5, 9),
                             Values(Size(0, 0)), // not used
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE,
-                                   (int)BORDER_REFLECT, (int)BORDER_WRAP, (int)BORDER_REFLECT_101),
+                            FILTER_BORDER_SET_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),
                             Values(5, 9),
                             Values(Size(0, 0)), // not used
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE,
-                                   (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Filter, MedianFilter, Combine(
-                            Values((MatType)CV_8UC1, (MatType)CV_8UC4, (MatType)CV_32FC1, (MatType)CV_32FC4),
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(3, 5),
                             Values(Size(0, 0)), // not used
                             Values(0), // not used
+                            Values(0.0), // not used
                             Bool()));
 
 #endif // HAVE_OPENCL

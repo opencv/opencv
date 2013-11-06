@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,11 +43,12 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#ifdef DOUBLE_SUPPORT
+    #pragma OPENCL EXTENSION cl_khr_fp64:enable
+    #define CV_PI   3.1415926535897932384626433832795
+#else
+    #define CV_PI   3.1415926535897932384626433832795f
 #endif
-
-#define CV_PI   3.1415926535897932384626433832795
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////polarToCart with magnitude//////////////////////////////
@@ -72,7 +73,7 @@ __kernel void arithm_polarToCart_mag_D5 (__global float *src1, int src1_step, in
         float x = *((__global float *)((__global char *)src1 + src1_index));
         float y = *((__global float *)((__global char *)src2 + src2_index));
 
-        float ascale = CV_PI/180.0;
+        float ascale = CV_PI/180.0f;
         float alpha  = angInDegree == 1 ? y * ascale : y;
         float a = cos(alpha) * x;
         float b = sin(alpha) * x;
@@ -134,7 +135,7 @@ __kernel void arithm_polarToCart_D5 (__global float *src,  int src_step,  int sr
 
         float y = *((__global float *)((__global char *)src + src_index));
 
-        float ascale = CV_PI/180.0;
+        float ascale = CV_PI/180.0f;
         float alpha  = angInDegree == 1 ? y * ascale : y;
         float a = cos(alpha);
         float b = sin(alpha);
