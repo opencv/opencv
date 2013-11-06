@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-<opencv_storage>
+<?xml version="1.0" ?><opencv_storage>
 <tvl1flowFixture--tvl1flow>
   <flow1>
     <kind>65536</kind>
@@ -7289,117 +7288,6 @@
       <y>145</y>
       <cn>1</cn>
       <val>41.</val></rng2></dst></BilateralFixture_Bilateral--Bilateral---4000x4000--8UC3->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>48.</min>
-    <max>201.</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>182.</val></last>
-    <rng1>
-      <x>179</x>
-      <y>554</y>
-      <val>125.</val></rng1>
-    <rng2>
-      <x>518</x>
-      <y>737</y>
-      <val>91.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC1->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC3->
-  <dst>
-    <kind>65536</kind>
-    <type>16</type>
-    <min>46.</min>
-    <max>201.</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>85.</val></last>
-    <rng1>
-      <x>934</x>
-      <y>754</y>
-      <cn>2</cn>
-      <val>110.</val></rng1>
-    <rng2>
-      <x>249</x>
-      <y>395</y>
-      <val>84.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC3->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>48.</min>
-    <max>202.</max>
-    <last>
-      <x>1999</x>
-      <y>1999</y>
-      <val>155.</val></last>
-    <rng1>
-      <x>1735</x>
-      <y>312</y>
-      <val>92.</val></rng1>
-    <rng2>
-      <x>1380</x>
-      <y>832</y>
-      <val>93.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC1->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC3->
-  <dst>
-    <kind>65536</kind>
-    <type>16</type>
-    <min>43.</min>
-    <max>203.</max>
-    <last>
-      <x>1999</x>
-      <y>1999</y>
-      <val>75.</val></last>
-    <rng1>
-      <x>714</x>
-      <y>465</y>
-      <val>142.</val></rng1>
-    <rng2>
-      <x>1285</x>
-      <y>1100</y>
-      <val>78.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC3->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>47.</min>
-    <max>204.</max>
-    <last>
-      <x>3999</x>
-      <y>3999</y>
-      <val>115.</val></last>
-    <rng1>
-      <x>2341</x>
-      <y>1205</y>
-      <val>116.</val></rng1>
-    <rng2>
-      <x>564</x>
-      <y>3381</y>
-      <val>143.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC1->
-<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC3->
-  <dst>
-    <kind>65536</kind>
-    <type>16</type>
-    <min>45.</min>
-    <max>205.</max>
-    <last>
-      <x>3999</x>
-      <y>3999</y>
-      <val>117.</val></last>
-    <rng1>
-      <x>72</x>
-      <y>1554</y>
-      <cn>2</cn>
-      <val>172.</val></rng1>
-    <rng2>
-      <x>1989</x>
-      <y>3500</y>
-      <cn>1</cn>
-      <val>185.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC3->
 <KalmanFilterFixture_KalmanFilter--KalmanFilter---1000->
   <statePre_>
     <kind>65536</kind>
@@ -9668,7 +9556,6 @@
       <y>2208</y>
       <val>4.1064632415771484e+01</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--32FC1--THRESH_TOZERO_INV->
  <!-- resumed -->
-
 <MomentsFixture_Moments--Moments---1000x1000--8UC1--false->
   <dst>
     <kind>65536</kind>
@@ -9976,7 +9863,6 @@
         -3.2605694047291328e-34 -1.8799903489721574e-25
         4.5806279507330150e-42</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--32FC1--true->
  <!-- resumed -->
-
 <RepeatFixture_Repeat--Repeat---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -10128,4 +10014,116 @@
       <y>2504</y>
       <cn>3</cn>
       <val>3.5674184570312500e+03</val></rng2></dst></RepeatFixture_Repeat--Repeat---2000x2000--32FC4->
+ <!-- resumed -->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>6.</min>
+    <max>249.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>240.</val></last>
+    <rng1>
+      <x>177</x>
+      <y>305</y>
+      <val>186.</val></rng1>
+    <rng2>
+      <x>239</x>
+      <y>76</y>
+      <val>90.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC1->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>5.</min>
+    <max>250.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>59.</val></last>
+    <rng1>
+      <x>822</x>
+      <y>444</y>
+      <val>228.</val></rng1>
+    <rng2>
+      <x>94</x>
+      <y>737</y>
+      <cn>1</cn>
+      <val>216.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---1000x1000--8UC3->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>4.</min>
+    <max>249.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>189.</val></last>
+    <rng1>
+      <x>1957</x>
+      <y>603</y>
+      <val>75.</val></rng1>
+    <rng2>
+      <x>1164</x>
+      <y>714</y>
+      <val>206.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC1->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>4.</min>
+    <max>250.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>36.</val></last>
+    <rng1>
+      <x>1749</x>
+      <y>327</y>
+      <cn>1</cn>
+      <val>87.</val></rng1>
+    <rng2>
+      <x>18</x>
+      <y>1958</y>
+      <val>21.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---2000x2000--8UC3->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>5.</min>
+    <max>250.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>97.</val></last>
+    <rng1>
+      <x>2230</x>
+      <y>897</y>
+      <val>89.</val></rng1>
+    <rng2>
+      <x>3033</x>
+      <y>3468</y>
+      <val>97.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC1->
+<adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>3.</min>
+    <max>251.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>93.</val></last>
+    <rng1>
+      <x>774</x>
+      <y>885</y>
+      <val>16.</val></rng1>
+    <rng2>
+      <x>3906</x>
+      <y>1122</y>
+      <cn>2</cn>
+      <val>79.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC3->
 </opencv_storage>
