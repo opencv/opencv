@@ -212,11 +212,19 @@ struct CornerTestBase :
         Mat image = readImageType("gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
 
+        bool isFP = CV_MAT_DEPTH(type) >= CV_32F;
+        float val = 255.0f;
+        if (isFP)
+        {
+            image.convertTo(image, -1, 1.0 / 255);
+            val /= 255.0f;
+        }
+
         Size roiSize = image.size();
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
 
         Size wholeSize = Size(roiSize.width + srcBorder.lef + srcBorder.rig, roiSize.height + srcBorder.top + srcBorder.bot);
-        src = randomMat(wholeSize, type, -255, 255, false);
+        src = randomMat(wholeSize, type, -val, val, false);
         src_roi = src(Rect(srcBorder.lef, srcBorder.top, roiSize.width, roiSize.height));
         image.copyTo(src_roi);
 
@@ -527,7 +535,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
-                            Values((MatType)CV_8UC1), // TODO does not work properly with CV_32FC1
+                            Values((MatType)CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values( (int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
                             Bool()));

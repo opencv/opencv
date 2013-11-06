@@ -48,22 +48,22 @@
 #define T_MEAN_VAR float
 #define CONVERT_TYPE convert_uchar_sat
 #define F_ZERO (0.0f)
-float cvt(uchar val)
+inline float cvt(uchar val)
 {
     return val;
 }
 
-float sqr(float val)
+inline float sqr(float val)
 {
     return val * val;
 }
 
-float sum(float val)
+inline float sum(float val)
 {
     return val;
 }
 
-float clamp1(float var, float learningRate, float diff, float minVar)
+static float clamp1(float var, float learningRate, float diff, float minVar)
 {
     return fmax(var + learningRate * (diff * diff - var), minVar);
 }
@@ -72,7 +72,7 @@ float clamp1(float var, float learningRate, float diff, float minVar)
 #define T_MEAN_VAR float4
 #define CONVERT_TYPE convert_uchar4_sat
 #define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
-float4 cvt(const uchar4 val)
+inline float4 cvt(const uchar4 val)
 {
     float4 result;
     result.x = val.x;
@@ -83,17 +83,17 @@ float4 cvt(const uchar4 val)
     return result;
 }
 
-float sqr(const float4 val)
+inline float sqr(const float4 val)
 {
     return val.x * val.x + val.y * val.y + val.z * val.z;
 }
 
-float sum(const float4 val)
+inline float sum(const float4 val)
 {
     return (val.x + val.y + val.z);
 }
 
-float4 clamp1(const float4 var, float learningRate, const float4 diff, float minVar)
+static float4 clamp1(const float4 var, float learningRate, const float4 diff, float minVar)
 {
     float4 result;
     result.x = fmax(var.x + learningRate * (diff.x * diff.x - var.x), minVar);
@@ -116,14 +116,14 @@ typedef struct
     uchar c_shadowVal;
 }con_srtuct_t;
 
-void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
+static void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
 {
     float val = ptr[(k * rows + y) * ptr_step + x];
     ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
     ptr[((k + 1) * rows + y) * ptr_step + x] = val;
 }
 
-void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
+static void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
 {
     float4 val = ptr[(k * rows + y) * ptr_step + x];
     ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
@@ -412,7 +412,7 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
 
             if (_weight < -prune)
             {
-                _weight = 0.0;
+                _weight = 0.0f;
                 nmodes--;
             }
 
