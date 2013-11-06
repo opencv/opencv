@@ -1525,15 +1525,8 @@ if __name__ == "__main__":
         hdr_parser_path = os.path.dirname(hdr_parser_path)
     sys.path.append(hdr_parser_path)
     import hdr_parser
-    if (sys.argv[2] == "-android"):
-        class_ignore_list += ("VideoCapture",)
-        ManualFuncs.pop("VideoCapture")
-        module = sys.argv[3]
-        srcfiles = sys.argv[4:]
-    else:
-        module = sys.argv[2]
-        srcfiles = sys.argv[3:]
-
+    module = sys.argv[2]
+    srcfiles = sys.argv[3:]
     #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)
