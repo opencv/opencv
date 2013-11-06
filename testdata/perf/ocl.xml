@@ -951,201 +951,6 @@
       <x>424</x>
       <y>184</y>
       <val>7.7660880982875824e-002</val></rng2></flowy></FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---OPTFLOW_FARNEBACK_GAUSSIAN--true->
-<MomentsFixture_Moments--Moments---1000x1000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3140284771878219e-003 4.2758267125190334e-013
-        1.5823098254201730e-016 8.1031689926281706e-016
-        8.5405034395069110e-032 5.2234244981906038e-022
-        2.7729974275706747e-031</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--8UC1->
-<MomentsFixture_Moments--Moments---1000x1000--16SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3140284771878219e-003 4.2758267125190334e-013
-        1.5823098254201730e-016 8.1031689926281706e-016
-        8.5405034395069110e-032 5.2234244981906038e-022
-        2.7729974275706747e-031</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16SC1->
-<MomentsFixture_Moments--Moments---1000x1000--16UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3140284771878219e-003 4.2758267125190334e-013
-        1.5823098254201730e-016 8.1031689926281706e-016
-        8.5405034395069110e-032 5.2234244981906038e-022
-        2.7729974275706747e-031</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16UC1->
-<MomentsFixture_Moments--Moments---1000x1000--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3071431753853427e-003 3.9323909307627183e-014
-        4.8129241944886187e-016 4.9330995208386949e-016
-        1.6075827947816668e-031 7.4536717392861316e-024
-        1.7870532591101367e-031</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--32FC1->
-<MomentsFixture_Moments--Moments---1000x1000--64FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3071431751429476e-003 3.9323932855052781e-014
-        4.8129245746452426e-016 4.9330992061143912e-016
-        1.6075825720170415e-031 7.4536682791420587e-024
-        1.7870532777833469e-031</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--64FC1->
-<MomentsFixture_Moments--Moments---2000x2000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3127104826339627e-003 1.0592332940682656e-012
-        7.0044625263470168e-017 4.9955093361898601e-016
-        -9.0993677171032357e-032 3.9979542930389044e-022
-        -2.1264031592466185e-032</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--8UC1->
-<MomentsFixture_Moments--Moments---2000x2000--16SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3127104826339627e-003 1.0592332940682656e-012
-        7.0044625263470168e-017 4.9955093361898601e-016
-        -9.0993677171032357e-032 3.9979542930389044e-022
-        -2.1264031592466185e-032</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16SC1->
-<MomentsFixture_Moments--Moments---2000x2000--16UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3127104826339627e-003 1.0592332940682656e-012
-        7.0044625263470168e-017 4.9955093361898601e-016
-        -9.0993677171032357e-032 3.9979542930389044e-022
-        -2.1264031592466185e-032</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16UC1->
-<MomentsFixture_Moments--Moments---2000x2000--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3070939886487584e-003 9.6455580913880418e-015
-        9.6542499465924158e-016 1.4531869552848683e-017
-        -1.2437764519588863e-033 4.4533265741832906e-025
-        1.1898270044462545e-033</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--32FC1->
-<MomentsFixture_Moments--Moments---2000x2000--64FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3070939883329806e-003 9.6455563085343315e-015
-        9.6542510161678964e-016 1.4531869037744283e-017
-        -1.2437763706653815e-033 4.4533270492970328e-025
-        1.1898270949640873e-033</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--64FC1->
-<MomentsFixture_Moments--Moments---4000x4000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3122762414586996e-003 1.2156371232167160e-013
-        1.8110019142270776e-017 7.5595451667877005e-017
-        -6.4183759907793577e-034 2.4595308638472331e-023
-        2.7224311460526856e-033</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--8UC1->
-<MomentsFixture_Moments--Moments---4000x4000--16SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3122762414586996e-003 1.2156371232167160e-013
-        1.8110019142270776e-017 7.5595451667877005e-017
-        -6.4183759907793577e-034 2.4595308638472331e-023
-        2.7224311460526856e-033</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16SC1->
-<MomentsFixture_Moments--Moments---4000x4000--16UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3122762414586996e-003 1.2156371232167160e-013
-        1.8110019142270776e-017 7.5595451667877005e-017
-        -6.4183759907793577e-034 2.4595308638472331e-023
-        2.7224311460526856e-033</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16UC1->
-<MomentsFixture_Moments--Moments---4000x4000--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3066826239691899e-003 1.5656994424255344e-014
-        1.8406330838824182e-016 1.7920091169308292e-017
-        4.1244324968716838e-036 1.7975395537290843e-024
-        -1.0291778880404376e-033</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--32FC1->
-<MomentsFixture_Moments--Moments---4000x4000--64FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>7</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3066826236788620e-003 1.5656997277447405e-014
-        1.8406330712727735e-016 1.7920088482683533e-017
-        4.1246779623115345e-036 1.7975393543797605e-024
-        -1.0291776520822673e-033</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--64FC1->
 <ConvertToFixture_ConvertTo--ConvertTo---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -1663,119 +1468,6 @@
       <x>2816</x>
       <y>3900</y>
       <val>49.</val></rng2></dst></equalizeHistFixture_equalizeHist--equalizeHist--4000x4000>
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1011</x>
-      <y>1011</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>119</x>
-      <y>738</y>
-      <val>46.</val></rng1>
-    <rng2>
-      <x>42</x>
-      <y>446</y>
-      <val>125.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1->
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1011</x>
-      <y>1011</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>45</x>
-      <y>391</y>
-      <cn>2</cn>
-      <val>75.</val></rng1>
-    <rng2>
-      <x>294</x>
-      <y>500</y>
-      <cn>1</cn>
-      <val>44.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4->
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>2011</x>
-      <y>2011</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>1849</x>
-      <y>387</y>
-      <val>76.</val></rng1>
-    <rng2>
-      <x>822</x>
-      <y>1416</y>
-      <val>144.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1->
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>2011</x>
-      <y>2011</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>406</x>
-      <y>1914</y>
-      <cn>1</cn>
-      <val>252.</val></rng1>
-    <rng2>
-      <x>106</x>
-      <y>1370</y>
-      <cn>1</cn>
-      <val>231.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4->
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>4011</x>
-      <y>4011</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>2800</x>
-      <y>512</y>
-      <val>191.</val></rng1>
-    <rng2>
-      <x>2539</x>
-      <y>1915</y>
-      <val>180.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1->
-<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4->
-  <dst>
-    <kind>65536</kind>
-    <type>24</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>4011</x>
-      <y>4011</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>3989</x>
-      <y>1887</y>
-      <cn>1</cn>
-      <val>135.</val></rng1>
-    <rng2>
-      <x>1822</x>
-      <y>1277</y>
-      <val>34.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4->
 <cornerMinEigenValFixture_cornerMinEigenVal--cornerMinEigenVal---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -2724,114 +2416,6 @@
       <y>5828</y>
       <cn>2</cn>
       <val>110.</val></rng2></dst></resizeFixture_resize--resize---4000x4000--8UC4--INTER_LINEAR--2->
-<ThreshFixture_threshold--threshold---1000x1000--THRESH_BINARY->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>568</x>
-      <y>42</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>178</x>
-      <y>230</y>
-      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--THRESH_BINARY->
-<ThreshFixture_threshold--threshold---1000x1000--THRESH_TRUNC->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>50.</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>11.</val></last>
-    <rng1>
-      <x>557</x>
-      <y>390</y>
-      <val>3.</val></rng1>
-    <rng2>
-      <x>519</x>
-      <y>603</y>
-      <val>19.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--THRESH_TRUNC->
-<ThreshFixture_threshold--threshold---2000x2000--THRESH_BINARY->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>1999</x>
-      <y>1999</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>1739</x>
-      <y>1622</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>16</x>
-      <y>721</y>
-      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--THRESH_BINARY->
-<ThreshFixture_threshold--threshold---2000x2000--THRESH_TRUNC->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>50.</max>
-    <last>
-      <x>1999</x>
-      <y>1999</y>
-      <val>50.</val></last>
-    <rng1>
-      <x>660</x>
-      <y>347</y>
-      <val>34.</val></rng1>
-    <rng2>
-      <x>472</x>
-      <y>1014</y>
-      <val>50.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--THRESH_TRUNC->
-<ThreshFixture_threshold--threshold---4000x4000--THRESH_BINARY->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>3999</x>
-      <y>3999</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>3077</x>
-      <y>306</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>421</x>
-      <y>2093</y>
-      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--THRESH_BINARY->
-<ThreshFixture_threshold--threshold---4000x4000--THRESH_TRUNC->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>50.</max>
-    <last>
-      <x>3999</x>
-      <y>3999</y>
-      <val>25.</val></last>
-    <rng1>
-      <x>767</x>
-      <y>1855</y>
-      <val>28.</val></rng1>
-    <rng2>
-      <x>893</x>
-      <y>1014</y>
-      <val>50.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--THRESH_TRUNC->
 <meanShiftFilteringFixture_meanShiftFiltering--meanShiftFiltering--1000x1000>
   <dst>
     <kind>65536</kind>
@@ -7337,8 +6921,6 @@
       <dt>d</dt>
       <data>
         0.</data></val></value></PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000----gpu-stereobm-aloe-L-png----gpu-stereobm-aloe-R-png---IMREAD_GRAYSCALE-->
- <!-- resumed -->
-
 <VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---1--0->
   <foreground>
     <kind>65536</kind>
@@ -7483,8 +7065,6 @@
       <x>1003</x>
       <y>207</y>
       <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---3--0-01->
- <!-- resumed -->
-
 <VideoMOG2Fixture_MOG2--MOG2----gpu-video-768x576-avi---1->
   <foreground>
     <kind>65536</kind>
@@ -7557,8 +7137,6 @@
       <x>134</x>
       <y>574</y>
       <val>0.</val></rng2></foreground></VideoMOG2Fixture_MOG2--MOG2----gpu-video-1920x1080-avi---3->
- <!-- resumed -->
-
 <Video_MOG2GetBackgroundImage_MOG2--MOG2----gpu-video-768x576-avi---3->
   <background>
     <kind>65536</kind>
@@ -7822,8 +7400,6 @@
       <y>3500</y>
       <cn>1</cn>
       <val>185.</val></rng2></dst></adaptiveBilateralFixture_adaptiveBilateral--adaptiveBilateral---4000x4000--8UC3->
- <!-- resumed -->
-
 <KalmanFilterFixture_KalmanFilter--KalmanFilter---1000->
   <statePre_>
     <kind>65536</kind>
@@ -7860,8 +7436,6 @@
       <x>0</x>
       <y>239</y>
       <val>0.</val></rng2></statePre_></KalmanFilterFixture_KalmanFilter--KalmanFilter---1500->
- <!-- resumed -->
-
 <KNNFixture_KNN--KNN---1000->
   <best_label>
     <kind>65536</kind>
@@ -8098,8 +7672,6 @@
       <dt>d</dt>
       <data>
         0.</data></val></value></Size_Dp_MinDist_OCL_HoughCircles--OCL_HoughCircles---1920x1080--4--10->
- <!-- resumed -->
-
 <normFixture_norm--norm---1000x1000--8UC1->
   <value>
     <kind>131072</kind>
@@ -8160,8 +7732,6 @@
       <dt>d</dt>
       <data>
         8.1874501953125000e+03</data></val></value></normFixture_norm--norm---4000x4000--32FC1->
- <!-- resumed -->
-
 <AbsFixture_Abs--Abs---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -8270,8 +7840,6 @@
       <x>2055</x>
       <y>690</y>
       <val>2.4399226074218750e+03</val></rng2></dst></AbsFixture_Abs--Abs---4000x4000--32FC1->
- <!-- resumed -->
-
 <MinFixture_Min--Min---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -8380,8 +7948,6 @@
       <x>2234</x>
       <y>2525</y>
       <val>-2.9656928710937500e+03</val></rng2></dst></MinFixture_Min--Min---4000x4000--32FC1->
- <!-- resumed -->
-
 <MaxFixture_Max--Max---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -8490,4 +8056,2105 @@
       <x>2234</x>
       <y>925</y>
       <val>-1.8420159912109375e+03</val></rng2></dst></MaxFixture_Max--Max---4000x4000--32FC1->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---256x256--NORM_L1->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>5.5528825000000000e+005</min>
+    <max>6.5010237500000000e+005</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>6.1278437500000000e+005</val></last>
+    <rng1>
+      <x>126</x>
+      <y>0</y>
+      <val>6.1957956250000000e+005</val></rng1>
+    <rng2>
+      <x>169</x>
+      <y>0</y>
+      <val>6.2993743750000000e+005</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>69.</val></last>
+    <rng1>
+      <x>164</x>
+      <y>0</y>
+      <val>126.</val></rng1>
+    <rng2>
+      <x>19</x>
+      <y>0</y>
+      <val>237.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---256x256--NORM_L1->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---256x256--NORM_L2SQR->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1930160256.</min>
+    <max>2.5635765760000000e+009</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>2.2689062400000000e+009</val></last>
+    <rng1>
+      <x>167</x>
+      <y>0</y>
+      <val>2.3224611840000000e+009</val></rng1>
+    <rng2>
+      <x>73</x>
+      <y>0</y>
+      <val>2.2159994880000000e+009</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>156.</val></last>
+    <rng1>
+      <x>212</x>
+      <y>0</y>
+      <val>162.</val></rng1>
+    <rng2>
+      <x>205</x>
+      <y>0</y>
+      <val>179.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---256x256--NORM_L2SQR->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---512x512--NORM_L1->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.1804291250000000e+006</min>
+    <max>1.3262007500000000e+006</max>
+    <last>
+      <x>511</x>
+      <y>0</y>
+      <val>1.2805393750000000e+006</val></last>
+    <rng1>
+      <x>440</x>
+      <y>0</y>
+      <val>1.2589263750000000e+006</val></rng1>
+    <rng2>
+      <x>386</x>
+      <y>0</y>
+      <val>1.2485101250000000e+006</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>1.</min>
+    <max>510.</max>
+    <last>
+      <x>511</x>
+      <y>0</y>
+      <val>55.</val></last>
+    <rng1>
+      <x>104</x>
+      <y>0</y>
+      <val>150.</val></rng1>
+    <rng2>
+      <x>197</x>
+      <y>0</y>
+      <val>55.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---512x512--NORM_L1->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---512x512--NORM_L2SQR->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>4.4323430400000000e+009</min>
+    <max>5.3023877120000000e+009</max>
+    <last>
+      <x>511</x>
+      <y>0</y>
+      <val>4.8721638400000000e+009</val></last>
+    <rng1>
+      <x>217</x>
+      <y>0</y>
+      <val>4.9818624000000000e+009</val></rng1>
+    <rng2>
+      <x>436</x>
+      <y>0</y>
+      <val>4.7674542080000000e+009</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>510.</max>
+    <last>
+      <x>511</x>
+      <y>0</y>
+      <val>343.</val></last>
+    <rng1>
+      <x>371</x>
+      <y>0</y>
+      <val>102.</val></rng1>
+    <rng2>
+      <x>284</x>
+      <y>0</y>
+      <val>456.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---512x512--NORM_L2SQR->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---1024x1024--NORM_L1->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>2.4968825000000000e+006</min>
+    <max>2.6708557500000000e+006</max>
+    <last>
+      <x>1023</x>
+      <y>0</y>
+      <val>2.6045747500000000e+006</val></last>
+    <rng1>
+      <x>987</x>
+      <y>0</y>
+      <val>2596990.</val></rng1>
+    <rng2>
+      <x>181</x>
+      <y>0</y>
+      <val>2599536.</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>1023.</max>
+    <last>
+      <x>1023</x>
+      <y>0</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>448</x>
+      <y>0</y>
+      <val>978.</val></rng1>
+    <rng2>
+      <x>90</x>
+      <y>0</y>
+      <val>202.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---1024x1024--NORM_L1->
+<distanceToCentersFixture_distanceToCenters--distanceToCenters---1024x1024--NORM_L2SQR->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>9.4597888000000000e+009</min>
+    <max>1.0862525440000000e+010</max>
+    <last>
+      <x>1023</x>
+      <y>0</y>
+      <val>1.0127459328000000e+010</val></last>
+    <rng1>
+      <x>870</x>
+      <y>0</y>
+      <val>1.0240116736000000e+010</val></rng1>
+    <rng2>
+      <x>432</x>
+      <y>0</y>
+      <val>9.9355914240000000e+009</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>1023.</max>
+    <last>
+      <x>1023</x>
+      <y>0</y>
+      <val>988.</val></last>
+    <rng1>
+      <x>695</x>
+      <y>0</y>
+      <val>981.</val></rng1>
+    <rng2>
+      <x>782</x>
+      <y>0</y>
+      <val>622.</val></rng2></labels></distanceToCentersFixture_distanceToCenters--distanceToCenters---1024x1024--NORM_L2SQR->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>187</x>
+      <y>412</y>
+      <val>185.</val></rng1>
+    <rng2>
+      <x>964</x>
+      <y>606</y>
+      <val>94.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>253.</val></last>
+    <rng1>
+      <x>761</x>
+      <y>976</y>
+      <val>76.</val></rng1>
+    <rng2>
+      <x>1010</x>
+      <y>711</y>
+      <val>99.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>828</x>
+      <y>528</y>
+      <val>112.</val></rng1>
+    <rng2>
+      <x>984</x>
+      <y>37</y>
+      <val>132.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>44.</val></last>
+    <rng1>
+      <x>868</x>
+      <y>695</y>
+      <val>183.</val></rng1>
+    <rng2>
+      <x>753</x>
+      <y>992</y>
+      <val>39.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>113.</val></last>
+    <rng1>
+      <x>550</x>
+      <y>398</y>
+      <val>198.</val></rng1>
+    <rng2>
+      <x>279</x>
+      <y>917</y>
+      <val>126.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC1--BORDER_REFLECT_101->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>736</x>
+      <y>408</y>
+      <val>180.</val></rng1>
+    <rng2>
+      <x>145</x>
+      <y>118</y>
+      <cn>2</cn>
+      <val>214.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>455</x>
+      <y>854</y>
+      <cn>1</cn>
+      <val>99.</val></rng1>
+    <rng2>
+      <x>774</x>
+      <y>1008</y>
+      <cn>2</cn>
+      <val>68.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>522</x>
+      <y>550</y>
+      <cn>2</cn>
+      <val>18.</val></rng1>
+    <rng2>
+      <x>627</x>
+      <y>893</y>
+      <val>172.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>567</x>
+      <y>779</y>
+      <cn>2</cn>
+      <val>153.</val></rng1>
+    <rng2>
+      <x>126</x>
+      <y>609</y>
+      <cn>3</cn>
+      <val>208.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1011</x>
+      <y>1011</y>
+      <val>40.</val></last>
+    <rng1>
+      <x>1002</x>
+      <y>238</y>
+      <val>245.</val></rng1>
+    <rng2>
+      <x>76</x>
+      <y>821</y>
+      <cn>3</cn>
+      <val>5.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---1000x1000--8UC4--BORDER_REFLECT_101->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>192</x>
+      <y>1550</y>
+      <val>147.</val></rng1>
+    <rng2>
+      <x>979</x>
+      <y>560</y>
+      <val>25.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>623</x>
+      <y>1255</y>
+      <val>169.</val></rng1>
+    <rng2>
+      <x>1623</x>
+      <y>1925</y>
+      <val>234.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>158.</val></last>
+    <rng1>
+      <x>1886</x>
+      <y>1762</y>
+      <val>78.</val></rng1>
+    <rng2>
+      <x>1385</x>
+      <y>1586</y>
+      <val>68.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>57.</val></last>
+    <rng1>
+      <x>1258</x>
+      <y>1087</y>
+      <val>21.</val></rng1>
+    <rng2>
+      <x>857</x>
+      <y>1759</y>
+      <val>200.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>4.</val></last>
+    <rng1>
+      <x>907</x>
+      <y>1821</y>
+      <val>179.</val></rng1>
+    <rng2>
+      <x>983</x>
+      <y>832</y>
+      <val>128.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC1--BORDER_REFLECT_101->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>329</x>
+      <y>1060</y>
+      <cn>2</cn>
+      <val>108.</val></rng1>
+    <rng2>
+      <x>774</x>
+      <y>1810</y>
+      <cn>1</cn>
+      <val>190.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>99.</val></last>
+    <rng1>
+      <x>48</x>
+      <y>1107</y>
+      <cn>1</cn>
+      <val>84.</val></rng1>
+    <rng2>
+      <x>323</x>
+      <y>37</y>
+      <cn>1</cn>
+      <val>192.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>32.</val></last>
+    <rng1>
+      <x>370</x>
+      <y>251</y>
+      <cn>1</cn>
+      <val>58.</val></rng1>
+    <rng2>
+      <x>524</x>
+      <y>1066</y>
+      <val>135.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>78.</val></last>
+    <rng1>
+      <x>1842</x>
+      <y>505</y>
+      <cn>2</cn>
+      <val>50.</val></rng1>
+    <rng2>
+      <x>198</x>
+      <y>1291</y>
+      <cn>3</cn>
+      <val>132.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2011</x>
+      <y>2011</y>
+      <val>68.</val></last>
+    <rng1>
+      <x>371</x>
+      <y>1986</y>
+      <cn>2</cn>
+      <val>141.</val></rng1>
+    <rng2>
+      <x>572</x>
+      <y>1757</y>
+      <val>69.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---2000x2000--8UC4--BORDER_REFLECT_101->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>1740</x>
+      <y>2010</y>
+      <val>42.</val></rng1>
+    <rng2>
+      <x>363</x>
+      <y>1198</y>
+      <val>12.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>99.</val></last>
+    <rng1>
+      <x>3003</x>
+      <y>231</y>
+      <val>35.</val></rng1>
+    <rng2>
+      <x>544</x>
+      <y>2479</y>
+      <val>25.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>116.</val></last>
+    <rng1>
+      <x>1785</x>
+      <y>900</y>
+      <val>78.</val></rng1>
+    <rng2>
+      <x>1659</x>
+      <y>3426</y>
+      <val>236.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>243.</val></last>
+    <rng1>
+      <x>1761</x>
+      <y>1376</y>
+      <val>35.</val></rng1>
+    <rng2>
+      <x>1198</x>
+      <y>1419</y>
+      <val>129.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>212.</val></last>
+    <rng1>
+      <x>3223</x>
+      <y>1539</y>
+      <val>107.</val></rng1>
+    <rng2>
+      <x>3787</x>
+      <y>2314</y>
+      <val>215.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC1--BORDER_REFLECT_101->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_CONSTANT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>211</x>
+      <y>3945</y>
+      <cn>1</cn>
+      <val>182.</val></rng1>
+    <rng2>
+      <x>2187</x>
+      <y>3272</y>
+      <cn>3</cn>
+      <val>183.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_CONSTANT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REPLICATE->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>98.</val></last>
+    <rng1>
+      <x>2233</x>
+      <y>2960</y>
+      <val>160.</val></rng1>
+    <rng2>
+      <x>2819</x>
+      <y>1209</y>
+      <cn>2</cn>
+      <val>185.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REPLICATE->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REFLECT->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>9.</val></last>
+    <rng1>
+      <x>597</x>
+      <y>3773</y>
+      <cn>2</cn>
+      <val>50.</val></rng1>
+    <rng2>
+      <x>2325</x>
+      <y>560</y>
+      <cn>3</cn>
+      <val>111.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REFLECT->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_WRAP->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>193.</val></last>
+    <rng1>
+      <x>225</x>
+      <y>942</y>
+      <cn>2</cn>
+      <val>174.</val></rng1>
+    <rng2>
+      <x>3279</x>
+      <y>1169</y>
+      <cn>1</cn>
+      <val>9.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_WRAP->
+<CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REFLECT_101->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>4011</x>
+      <y>4011</y>
+      <val>57.</val></last>
+    <rng1>
+      <x>1260</x>
+      <y>2297</y>
+      <val>58.</val></rng1>
+    <rng2>
+      <x>2657</x>
+      <y>67</y>
+      <val>103.</val></rng2></dst></CopyMakeBorderFixture_CopyMakeBorder--CopyMakeBorder---4000x4000--8UC4--BORDER_REFLECT_101->
+<BitwiseOrFixture_bitwise_or--bitwise_or---1000x1000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>558</x>
+      <y>41</y>
+      <val>223.</val></rng1>
+    <rng2>
+      <x>97</x>
+      <y>944</y>
+      <val>254.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---1000x1000--8UC1->
+<BitwiseOrFixture_bitwise_or--bitwise_or---1000x1000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>17</x>
+      <y>127</y>
+      <val>241.</val></rng1>
+    <rng2>
+      <x>929</x>
+      <y>256</y>
+      <val>190.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---1000x1000--32SC1->
+<BitwiseOrFixture_bitwise_or--bitwise_or---2000x2000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>447</x>
+      <y>1863</y>
+      <val>255.</val></rng1>
+    <rng2>
+      <x>536</x>
+      <y>1053</y>
+      <val>122.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---2000x2000--8UC1->
+<BitwiseOrFixture_bitwise_or--bitwise_or---2000x2000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>654</x>
+      <y>806</y>
+      <val>191.</val></rng1>
+    <rng2>
+      <x>28</x>
+      <y>1634</y>
+      <val>239.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---2000x2000--32SC1->
+<BitwiseOrFixture_bitwise_or--bitwise_or---4000x4000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>107.</val></last>
+    <rng1>
+      <x>2946</x>
+      <y>1199</y>
+      <val>246.</val></rng1>
+    <rng2>
+      <x>1904</x>
+      <y>539</y>
+      <val>123.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---4000x4000--8UC1->
+<BitwiseOrFixture_bitwise_or--bitwise_or---4000x4000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>107.</val></last>
+    <rng1>
+      <x>368</x>
+      <y>3334</y>
+      <val>245.</val></rng1>
+    <rng2>
+      <x>2360</x>
+      <y>2664</y>
+      <val>244.</val></rng2></dst></BitwiseOrFixture_bitwise_or--bitwise_or---4000x4000--32SC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---1000x1000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>62.</val></last>
+    <rng1>
+      <x>283</x>
+      <y>573</y>
+      <val>107.</val></rng1>
+    <rng2>
+      <x>763</x>
+      <y>61</y>
+      <val>171.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---1000x1000--8UC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---1000x1000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>62.</val></last>
+    <rng1>
+      <x>56</x>
+      <y>755</y>
+      <val>94.</val></rng1>
+    <rng2>
+      <x>601</x>
+      <y>149</y>
+      <val>241.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---1000x1000--32SC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---2000x2000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>135.</val></last>
+    <rng1>
+      <x>1156</x>
+      <y>1391</y>
+      <val>65.</val></rng1>
+    <rng2>
+      <x>890</x>
+      <y>1604</y>
+      <val>86.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---2000x2000--8UC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---2000x2000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>135.</val></last>
+    <rng1>
+      <x>334</x>
+      <y>174</y>
+      <val>60.</val></rng1>
+    <rng2>
+      <x>355</x>
+      <y>1537</y>
+      <val>146.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---2000x2000--32SC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---4000x4000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>107.</val></last>
+    <rng1>
+      <x>3837</x>
+      <y>2079</y>
+      <val>217.</val></rng1>
+    <rng2>
+      <x>3205</x>
+      <y>184</y>
+      <val>150.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---4000x4000--8UC1->
+<BitwiseXorFixture_bitwise_xor--bitwise_xor---4000x4000--32SC1->
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>107.</val></last>
+    <rng1>
+      <x>2919</x>
+      <y>470</y>
+      <val>154.</val></rng1>
+    <rng2>
+      <x>720</x>
+      <y>652</y>
+      <val>217.</val></rng2></dst></BitwiseXorFixture_bitwise_xor--bitwise_xor---4000x4000--32SC1->
+<blendLinearFixture_blendLinear--blendLinear---1000x1000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>236.</val></last>
+    <rng1>
+      <x>19</x>
+      <y>192</y>
+      <val>153.</val></rng1>
+    <rng2>
+      <x>168</x>
+      <y>588</y>
+      <val>186.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---1000x1000--8UC1->
+<blendLinearFixture_blendLinear--blendLinear---1000x1000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>29.</val></last>
+    <rng1>
+      <x>557</x>
+      <y>494</y>
+      <cn>1</cn>
+      <val>121.</val></rng1>
+    <rng2>
+      <x>908</x>
+      <y>849</y>
+      <cn>2</cn>
+      <val>89.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---1000x1000--8UC3->
+<blendLinearFixture_blendLinear--blendLinear---1000x1000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0926625976562500e+03</min>
+    <max>4.0924790039062500e+03</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>1.9134239196777344e+02</val></last>
+    <rng1>
+      <x>766</x>
+      <y>367</y>
+      <val>-2.9285046386718750e+03</val></rng1>
+    <rng2>
+      <x>383</x>
+      <y>485</y>
+      <val>-2.9710480957031250e+03</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---1000x1000--32FC1->
+<blendLinearFixture_blendLinear--blendLinear---2000x2000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>91.</val></last>
+    <rng1>
+      <x>1649</x>
+      <y>290</y>
+      <val>159.</val></rng1>
+    <rng2>
+      <x>663</x>
+      <y>321</y>
+      <val>127.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---2000x2000--8UC1->
+<blendLinearFixture_blendLinear--blendLinear---2000x2000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>120.</val></last>
+    <rng1>
+      <x>1193</x>
+      <y>1736</y>
+      <val>140.</val></rng1>
+    <rng2>
+      <x>63</x>
+      <y>757</y>
+      <cn>2</cn>
+      <val>34.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---2000x2000--8UC3->
+<blendLinearFixture_blendLinear--blendLinear---2000x2000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0934597167968750e+03</min>
+    <max>4.0942497558593750e+03</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>1.7109842529296875e+03</val></last>
+    <rng1>
+      <x>370</x>
+      <y>1747</y>
+      <val>1.7162562255859375e+03</val></rng1>
+    <rng2>
+      <x>981</x>
+      <y>222</y>
+      <val>2.5296457519531250e+03</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---2000x2000--32FC1->
+<blendLinearFixture_blendLinear--blendLinear---4000x4000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>69.</val></last>
+    <rng1>
+      <x>2447</x>
+      <y>2526</y>
+      <val>56.</val></rng1>
+    <rng2>
+      <x>2711</x>
+      <y>2273</y>
+      <val>103.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---4000x4000--8UC1->
+<blendLinearFixture_blendLinear--blendLinear---4000x4000--8UC3->
+  <dst>
+    <kind>65536</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>80.</val></last>
+    <rng1>
+      <x>963</x>
+      <y>2572</y>
+      <val>68.</val></rng1>
+    <rng2>
+      <x>965</x>
+      <y>3719</y>
+      <cn>2</cn>
+      <val>171.</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---4000x4000--8UC3->
+<blendLinearFixture_blendLinear--blendLinear---4000x4000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0943974609375000e+03</min>
+    <max>4.0946794433593750e+03</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>3.3565595703125000e+03</val></last>
+    <rng1>
+      <x>1546</x>
+      <y>1312</y>
+      <val>6.9672729492187500e+02</val></rng1>
+    <rng2>
+      <x>2548</x>
+      <y>303</y>
+      <val>6.7585662841796875e+02</val></rng2></dst></blendLinearFixture_blendLinear--blendLinear---4000x4000--32FC1->
+<ThreshFixture_threshold--threshold---1000x1000--8UC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>45</x>
+      <y>349</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>810</x>
+      <y>846</y>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--8UC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--8UC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>11.</val></last>
+    <rng1>
+      <x>428</x>
+      <y>168</y>
+      <val>30.</val></rng1>
+    <rng2>
+      <x>898</x>
+      <y>63</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--8UC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---1000x1000--8UC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>812</x>
+      <y>226</y>
+      <cn>1</cn>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>349</x>
+      <y>676</y>
+      <cn>1</cn>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--8UC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--8UC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>505</x>
+      <y>573</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>974</x>
+      <y>202</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--8UC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---1000x1000--16SC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>813</x>
+      <y>727</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>278</x>
+      <y>749</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--16SC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--16SC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>11.</val></last>
+    <rng1>
+      <x>927</x>
+      <y>729</y>
+      <val>22.</val></rng1>
+    <rng2>
+      <x>304</x>
+      <y>440</y>
+      <val>44.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--16SC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---1000x1000--16SC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>391</x>
+      <y>524</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>703</x>
+      <y>49</y>
+      <cn>2</cn>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--16SC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--16SC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>132</x>
+      <y>907</y>
+      <cn>3</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>800</x>
+      <y>924</y>
+      <cn>3</cn>
+      <val>29.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--16SC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---1000x1000--32FC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>180</x>
+      <y>531</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>725</x>
+      <y>569</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--32FC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--32FC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>4.9999961853027344e+01</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>2.4613445281982422e+01</val></last>
+    <rng1>
+      <x>495</x>
+      <y>313</y>
+      <val>3.7334442138671875e+01</val></rng1>
+    <rng2>
+      <x>329</x>
+      <y>912</y>
+      <val>3.3867630004882812e+01</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--32FC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---1000x1000--32FC3--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>21</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>596</x>
+      <y>709</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>316</x>
+      <y>744</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--32FC3--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---1000x1000--32FC3--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>21</type>
+    <min>0.</min>
+    <max>4.9999961853027344e+01</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>671</x>
+      <y>732</y>
+      <cn>1</cn>
+      <val>4.1134498596191406e+01</val></rng1>
+    <rng2>
+      <x>65</x>
+      <y>833</y>
+      <cn>2</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---1000x1000--32FC3--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--8UC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>471</x>
+      <y>563</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1420</x>
+      <y>1739</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--8UC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--8UC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>624</x>
+      <y>1385</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>740</x>
+      <y>1524</y>
+      <val>29.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--8UC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--8UC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>681</x>
+      <y>1626</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>75</x>
+      <y>1479</y>
+      <cn>1</cn>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--8UC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--8UC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>728</x>
+      <y>730</y>
+      <cn>1</cn>
+      <val>13.</val></rng1>
+    <rng2>
+      <x>1651</x>
+      <y>1696</y>
+      <cn>1</cn>
+      <val>27.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--8UC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--16SC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>42</x>
+      <y>935</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1493</x>
+      <y>1950</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--16SC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--16SC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1758</x>
+      <y>1801</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>534</x>
+      <y>1237</y>
+      <val>39.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--16SC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--16SC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1447</x>
+      <y>1199</y>
+      <cn>3</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>726</x>
+      <y>1944</y>
+      <cn>3</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--16SC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--16SC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>1466</x>
+      <y>702</y>
+      <cn>2</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1297</x>
+      <y>1070</y>
+      <cn>2</cn>
+      <val>14.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--16SC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--32FC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>675</x>
+      <y>1136</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1436</x>
+      <y>756</y>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--32FC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--32FC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>4.9999961853027344e+01</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1851</x>
+      <y>252</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1436</x>
+      <y>1765</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--32FC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---2000x2000--32FC3--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>21</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>225</x>
+      <y>551</y>
+      <cn>2</cn>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>70</x>
+      <y>1092</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--32FC3--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---2000x2000--32FC3--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>21</type>
+    <min>0.</min>
+    <max>4.9999980926513672e+01</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1797</x>
+      <y>1405</y>
+      <val>2.0973543167114258e+01</val></rng1>
+    <rng2>
+      <x>305</x>
+      <y>741</y>
+      <cn>2</cn>
+      <val>4.9812622070312500e+01</val></rng2></dst></ThreshFixture_threshold--threshold---2000x2000--32FC3--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---4000x4000--8UC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>3989</x>
+      <y>417</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>2568</x>
+      <y>3522</y>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--8UC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---4000x4000--8UC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>3267</x>
+      <y>1980</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1208</x>
+      <y>1238</y>
+      <val>43.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--8UC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---4000x4000--8UC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>2605</x>
+      <y>2683</y>
+      <cn>2</cn>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>764</x>
+      <y>2280</y>
+      <cn>3</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--8UC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---4000x4000--8UC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>23.</val></last>
+    <rng1>
+      <x>377</x>
+      <y>2196</y>
+      <cn>3</cn>
+      <val>9.</val></rng1>
+    <rng2>
+      <x>2856</x>
+      <y>1668</y>
+      <cn>2</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--8UC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---4000x4000--16SC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>776</x>
+      <y>2518</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>3577</x>
+      <y>2835</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--16SC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---4000x4000--16SC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>3</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>25.</val></last>
+    <rng1>
+      <x>1381</x>
+      <y>2543</y>
+      <val>32.</val></rng1>
+    <rng2>
+      <x>272</x>
+      <y>2101</y>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--16SC1--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---4000x4000--16SC4--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>3953</x>
+      <y>65</y>
+      <cn>3</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>3037</x>
+      <y>2998</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--16SC4--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---4000x4000--16SC4--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>27</type>
+    <min>0.</min>
+    <max>50.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>23.</val></last>
+    <rng1>
+      <x>2711</x>
+      <y>2957</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>3609</x>
+      <y>1251</y>
+      <cn>3</cn>
+      <val>15.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--16SC4--THRESH_TOZERO_INV->
+<ThreshFixture_threshold--threshold---4000x4000--32FC1--THRESH_BINARY->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>220.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>220.</val></last>
+    <rng1>
+      <x>2308</x>
+      <y>1036</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1241</x>
+      <y>3974</y>
+      <val>220.</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--32FC1--THRESH_BINARY->
+<ThreshFixture_threshold--threshold---4000x4000--32FC1--THRESH_TOZERO_INV->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>4.9999988555908203e+01</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1571</x>
+      <y>452</y>
+      <val>9.4425125122070312e+00</val></rng1>
+    <rng2>
+      <x>2240</x>
+      <y>2208</y>
+      <val>4.1064632415771484e+01</val></rng2></dst></ThreshFixture_threshold--threshold---4000x4000--32FC1--THRESH_TOZERO_INV->
+ <!-- resumed -->
+
+<MomentsFixture_Moments--Moments---1000x1000--8UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3140284771878219e-03 4.2758267125190334e-13
+        1.5823098254201730e-16 8.1031689926281706e-16
+        8.5405034395069110e-32 5.2234244981906038e-22
+        2.7729974275706747e-31</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--8UC1--false->
+<MomentsFixture_Moments--Moments---1000x1000--8UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6731724370367884e-01 1.3208552164787401e-10
+        9.3053365469231723e-11 1.4286895002886918e-11
+        4.2574499509565390e-22 1.5848720610669577e-16
+        -3.0016842368171006e-22</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--8UC1--true->
+<MomentsFixture_Moments--Moments---1000x1000--16SC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3140284771878219e-03 4.2758267125190334e-13
+        1.5823098254201730e-16 8.1031689926281706e-16
+        8.5405034395069110e-32 5.2234244981906038e-22
+        2.7729974275706747e-31</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16SC1--false->
+<MomentsFixture_Moments--Moments---1000x1000--16SC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6731724370367884e-01 1.3208552164787401e-10
+        9.3053365469231723e-11 1.4286895002886918e-11
+        4.2574499509565390e-22 1.5848720610669577e-16
+        -3.0016842368171006e-22</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16SC1--true->
+<MomentsFixture_Moments--Moments---1000x1000--16UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3140284771878219e-03 4.2758267125190334e-13
+        1.5823098254201730e-16 8.1031689926281706e-16
+        8.5405034395069110e-32 5.2234244981906038e-22
+        2.7729974275706747e-31</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16UC1--false->
+<MomentsFixture_Moments--Moments---1000x1000--16UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6731724370367884e-01 1.3208552164787401e-10
+        9.3053365469231723e-11 1.4286895002886918e-11
+        4.2574499509565390e-22 1.5848720610669577e-16
+        -3.0016842368171006e-22</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--16UC1--true->
+<MomentsFixture_Moments--Moments---1000x1000--32FC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3071431753853427e-03 3.9323909307627183e-14
+        4.8129241944886187e-16 4.9330995208386949e-16
+        1.6075827947816668e-31 7.4536717392861316e-24
+        1.7870532591101367e-31</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--32FC1--false->
+<MomentsFixture_Moments--Moments---1000x1000--32FC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6666650000000000e-01 0. 0. 0. 0. 0. 0.</data></val></dst></MomentsFixture_Moments--Moments---1000x1000--32FC1--true->
+<MomentsFixture_Moments--Moments---2000x2000--8UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3127104826339627e-03 1.0592332940682656e-12
+        7.0044625263470168e-17 4.9955093361898601e-16
+        -9.0993677171032357e-32 3.9979542930389044e-22
+        -2.1264031592466185e-32</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--8UC1--false->
+<MomentsFixture_Moments--Moments---2000x2000--8UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732097918704791e-01 8.1167670538174949e-12
+        2.0023386511844182e-11 2.7886976817385641e-12
+        -1.5195024975716235e-23 -7.2309779052834319e-18
+        -1.4260547894258170e-23</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--8UC1--true->
+<MomentsFixture_Moments--Moments---2000x2000--16SC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3127104826339627e-03 1.0592332940682656e-12
+        7.0044625263470168e-17 4.9955093361898601e-16
+        -9.0993677171032357e-32 3.9979542930389044e-22
+        -2.1264031592466185e-32</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16SC1--false->
+<MomentsFixture_Moments--Moments---2000x2000--16SC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732097918704791e-01 8.1167670538174949e-12
+        2.0023386511844182e-11 2.7886976817385641e-12
+        -1.5195024975716235e-23 -7.2309779052834319e-18
+        -1.4260547894258170e-23</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16SC1--true->
+<MomentsFixture_Moments--Moments---2000x2000--16UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3127104826339627e-03 1.0592332940682656e-12
+        7.0044625263470168e-17 4.9955093361898601e-16
+        -9.0993677171032357e-32 3.9979542930389044e-22
+        -2.1264031592466185e-32</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16UC1--false->
+<MomentsFixture_Moments--Moments---2000x2000--16UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732097918704791e-01 8.1167670538174949e-12
+        2.0023386511844182e-11 2.7886976817385641e-12
+        -1.5195024975716235e-23 -7.2309779052834319e-18
+        -1.4260547894258170e-23</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--16UC1--true->
+<MomentsFixture_Moments--Moments---2000x2000--32FC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3070939886487584e-03 9.6455580913880418e-15
+        9.6542499465924158e-16 1.4531869552848683e-17
+        -1.2437764519588863e-33 4.4533265741832906e-25
+        1.1898270044462545e-33</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--32FC1--false->
+<MomentsFixture_Moments--Moments---2000x2000--32FC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6666662499999998e-01 0. 0. 0. 0. 0. 0.</data></val></dst></MomentsFixture_Moments--Moments---2000x2000--32FC1--true->
+<MomentsFixture_Moments--Moments---4000x4000--8UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3122762414586996e-03 1.2156371232167160e-13
+        1.8110019142270776e-17 7.5595451667877005e-17
+        -6.4183759907793577e-34 2.4595308638472331e-23
+        2.7224311460526856e-33</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--8UC1--false->
+<MomentsFixture_Moments--Moments---4000x4000--8UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732365017831125e-01 6.6592321575367694e-12
+        7.6039474073879691e-12 1.3760471326413240e-12
+        4.2114336488418247e-24 -3.5332145474092220e-18
+        1.4409425373636674e-24</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--8UC1--true->
+<MomentsFixture_Moments--Moments---4000x4000--16SC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3122762414586996e-03 1.2156371232167160e-13
+        1.8110019142270776e-17 7.5595451667877005e-17
+        -6.4183759907793577e-34 2.4595308638472331e-23
+        2.7224311460526856e-33</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16SC1--false->
+<MomentsFixture_Moments--Moments---4000x4000--16SC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732365017831125e-01 6.6592321575367694e-12
+        7.6039474073879691e-12 1.3760471326413240e-12
+        4.2114336488418247e-24 -3.5332145474092220e-18
+        1.4409425373636674e-24</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16SC1--true->
+<MomentsFixture_Moments--Moments---4000x4000--16UC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3122762414586996e-03 1.2156371232167160e-13
+        1.8110019142270776e-17 7.5595451667877005e-17
+        -6.4183759907793577e-34 2.4595308638472331e-23
+        2.7224311460526856e-33</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16UC1--false->
+<MomentsFixture_Moments--Moments---4000x4000--16UC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6732365017831125e-01 6.6592321575367694e-12
+        7.6039474073879691e-12 1.3760471326413240e-12
+        4.2114336488418247e-24 -3.5332145474092220e-18
+        1.4409425373636674e-24</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--16UC1--true->
+<MomentsFixture_Moments--Moments---4000x4000--32FC1--false->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3066826239691899e-03 1.5656994424255344e-14
+        1.8406330838824182e-16 1.7920091169308292e-17
+        4.1244324968716838e-36 1.7975395537290843e-24
+        -1.0291778880404376e-33</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--32FC1--false->
+<MomentsFixture_Moments--Moments---4000x4000--32FC1--true->
+  <dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>7</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.6666666699804891e-01 1.0171297554170941e-16
+        1.6412871826552624e-17 1.8640924182033279e-17
+        -3.2605694047291328e-34 -1.8799903489721574e-25
+        4.5806279507330150e-42</data></val></dst></MomentsFixture_Moments--Moments---4000x4000--32FC1--true->
 </opencv_storage>
