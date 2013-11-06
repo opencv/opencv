@@ -173,14 +173,14 @@ adaptiveBilateralFilter_C4_D0(
         //find variance of all data
         int startLMj;
         int endLMj ;
-#if CALCVAR
         // Top row: don't sum the very last element
         for(int extraCnt = 0; extraCnt <=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
-            sumVal =0;
-            sumValSqr=0;
+            sumVal = (int4)0;
+            sumValSqr= (int4)0;
             for(int j = startLMj; j < endLMj; j++)
                 for(int i=-anX; i<=anX; i++)
                 {
@@ -190,9 +190,10 @@ adaptiveBilateralFilter_C4_D0(
                     sumValSqr += mul24(currVal, currVal);
                 }
 
-            var[extraCnt] = (float4)(MIN_VAR_VAL, MIN_VAR_VAL, MIN_VAR_VAL, MIN_VAR_VAL) + (convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) )) ;
+            var[extraCnt] = clamp( convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ), (float4)(0.1f, 0.1f, 0.1f, 0.1f), (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL)) ;
+
 #else
-        var[extraCnt] = (float4)(MIN_VAR_VAL, MIN_VAR_VAL, MIN_VAR_VAL, MIN_VAR_VAL);
+            var[extraCnt] = (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL);
 #endif
         }
 
@@ -256,15 +257,13 @@ adaptiveBilateralFilter_C4_D0(
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
-                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4(tmp_sum[extraCnt]);
+                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4_rtz( (tmp_sum[extraCnt] / (float4)totalWeight) + (float4)0.5f);
 
 #if VAR_PER_CHANNEL
             totalWeight = (float4)(0,0,0,0);
 #else
-            totalWeight = 0;
+            totalWeight = 0.0f;
 #endif
         }
     }
@@ -361,10 +360,11 @@ adaptiveBilateralFilter_C1_D0(
         //find variance of all data
         int startLMj;
         int endLMj;
-#if CALCVAR
+
         // Top row: don't sum the very last element
         for(int extraCnt=0; extraCnt<=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
             sumVal = 0;
@@ -379,9 +379,9 @@ adaptiveBilateralFilter_C1_D0(
                     sumValSqr += mul24(currVal, currVal);
                 }
             }
-            var[extraCnt] = (float)(MIN_VAR_VAL) + (float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+            var[extraCnt] =  clamp((float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) , 0.1f, (float)(MAX_VAR_VAL) );
 #else
-        var[extraCnt] = (float)(MIN_VAR_VAL);
+            var[extraCnt] = (float)(MAX_VAR_VAL);
 #endif
         }
 
@@ -418,12 +418,9 @@ adaptiveBilateralFilter_C1_D0(
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
             {
-                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = (uchar)(tmp_sum[extraCnt]);
+                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = convert_uchar_rtz(tmp_sum[extraCnt]/totalWeight+0.5f);
             }
 
             totalWeight = 0;

@@ -1493,7 +1493,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
 
     //LDATATYPESIZE is sizeof local data store. This is to exemplify effect of LDS on kernel performance
     sprintf(build_options,
-		"-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d -D MIN_VAR_VAL=%f -D ABF_GAUSSIAN=%d"
+		"-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d -D MAX_VAR_VAL=%f -D ABF_GAUSSIAN=%d"
         " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
         static_cast<int>(EXTRA), static_cast<float>(min_sigma_val*min_sigma_val), static_cast<int>(ABF_GAUSSIAN_ocl),
         static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);

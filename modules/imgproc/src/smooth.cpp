@@ -2360,7 +2360,13 @@ public:
                             sumValSqr += (currVal *currVal);
                         }
                     }
-                    var = (float)(min_sigma_vals*min_sigma_vals) + ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
+                    var = ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
+                    
+                    if(var < 0.01) 
+                        var = 0.01f;
+					else if(var > (float)(min_sigma_vals*min_sigma_vals) )
+                        var =  (float)(min_sigma_vals*min_sigma_vals) ;
+
 #else
                     var = min_sigma_vals*min_sigma_vals;
 #endif
@@ -2420,7 +2426,7 @@ public:
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
 #if ABF_CALCVAR
-                    float min_var = (float)( min_sigma_vals*min_sigma_vals);
+                    float max_var = (float)( min_sigma_vals*min_sigma_vals);
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
@@ -2435,9 +2441,25 @@ public:
                             sumValSqr_r += (currVal_r *currVal_r);
                         }
                     }
-                    var_b = min_var + ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
-                    var_g = min_var + ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
-                    var_r = min_var + ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
+                    var_b =  ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
+                    var_g =  ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
+                    var_r =  ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
+                    
+                    if(var_b < 0.01) 
+                        var_b = 0.01f;
+					else if(var_b > max_var )
+                        var_b =  (float)(max_var) ;
+
+                    if(var_g < 0.01) 
+                        var_g = 0.01f;
+					else if(var_g > max_var )
+                        var_g =  (float)(max_var) ;
+
+                    if(var_r < 0.01) 
+                        var_r = 0.01f;
+					else if(var_r > max_var )
+                        var_r =  (float)(max_var) ;
+
 #else
                     var_b = min_sigma_vals*min_sigma_vals; var_g = min_sigma_vals*min_sigma_vals; var_r = min_sigma_vals*min_sigma_vals;
 #endif
