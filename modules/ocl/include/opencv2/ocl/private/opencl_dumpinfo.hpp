@@ -39,7 +39,7 @@
 //
 //M*/
 
-#if !defined(DUMP_INFO_STDOUT) && !defined(DUMP_INFO_XML)
+#if !defined(DUMP_INFO_STDOUT) && !defined(DUMP_INFO_XML) && !defined(DUMP_DEVICES_INFO_STDOUT) && !defined(DUMP_DEVICES_INFO_XML)
 #error Invalid usage
 #endif
 
@@ -49,6 +49,14 @@
 
 #if !defined(DUMP_INFO_XML)
 #define DUMP_INFO_XML(...)
+#endif
+
+#if !defined(DUMP_DEVICES_INFO_STDOUT)
+#define DUMP_DEVICES_INFO_STDOUT(...)
+#endif
+
+#if !defined(DUMP_DEVICES_INFO_XML)
+#define DUMP_DEVICES_INFO_XML(...)
 #endif
 
 #include <sstream>
@@ -85,43 +93,72 @@ static void dumpOpenCLDevice()
     using namespace cv::ocl;
     try
     {
+        cv::ocl::PlatformsInfo platforms;
+        cv::ocl::getOpenCLPlatforms(platforms);
+        DUMP_INFO_STDOUT("OpenCL Platforms","");
+        DUMP_INFO_XML("OpenCL Platforms","");
+        for(unsigned int i=0; i < platforms.size(); i++)
+        {
+            DUMP_INFO_STDOUT("    ", platforms.at(i)->platformName);
+            DUMP_INFO_XML("    ", platforms.at(i)->platformName);
+            cv::ocl::DevicesInfo devices;
+            cv::ocl::getOpenCLDevices(devices);
+            for(unsigned int j=0; j < devices.size(); j++)
+            {
+                const char* deviceTypeStr = devices.at(j)->deviceType == CVCL_DEVICE_TYPE_CPU
+                            ? ("CPU") : (devices.at(j)->deviceType == CVCL_DEVICE_TYPE_GPU ? "GPU" : "unknown");
+                try
+                {
+                    DUMP_DEVICES_INFO_STDOUT(deviceTypeStr, j, devices.at(j)->deviceName, devices.at(i)->deviceVersion);
+                    DUMP_DEVICES_INFO_XML(deviceTypeStr, j, devices.at(j)->deviceName, devices.at(i)->deviceVersion);
+                }
+                catch(...)
+                {
+                    DUMP_DEVICES_INFO_STDOUT(deviceTypeStr, j, devices.at(j)->deviceName, "not avaliable");
+                    DUMP_DEVICES_INFO_XML(deviceTypeStr, j, devices.at(j)->deviceName, "not avaliable");
+                }
+            }
+        }
+        DUMP_INFO_STDOUT("Current OpenCL device","");
+        DUMP_INFO_XML("Current OpenCL device","");
+
         const cv::ocl::DeviceInfo& deviceInfo = cv::ocl::Context::getContext()->getDeviceInfo();
+
+        DUMP_INFO_STDOUT("    Platform", deviceInfo.platform->platformName);
+        DUMP_INFO_XML("cv_ocl_platformName", deviceInfo.platform->platformName);
 
         const char* deviceTypeStr = deviceInfo.deviceType == CVCL_DEVICE_TYPE_CPU
                         ? "CPU" :
                         (deviceInfo.deviceType == CVCL_DEVICE_TYPE_GPU ? "GPU" : "unknown");
-        DUMP_INFO_STDOUT("Device type", deviceTypeStr);
+        DUMP_INFO_STDOUT("    Type", deviceTypeStr);
         DUMP_INFO_XML("cv_ocl_deviceType", deviceTypeStr);
 
-        DUMP_INFO_STDOUT("Platform name", deviceInfo.platform->platformName);
-        DUMP_INFO_XML("cv_ocl_platformName", deviceInfo.platform->platformName);
-
-        DUMP_INFO_STDOUT("Device name", deviceInfo.deviceName);
+        DUMP_INFO_STDOUT("    Name", deviceInfo.deviceName);
         DUMP_INFO_XML("cv_ocl_deviceName", deviceInfo.deviceName);
 
-        DUMP_INFO_STDOUT("Device version", deviceInfo.deviceVersion);
+        DUMP_INFO_STDOUT("    Version", deviceInfo.deviceVersion);
         DUMP_INFO_XML("cv_ocl_deviceVersion", deviceInfo.deviceVersion);
 
-        DUMP_INFO_STDOUT("Compute units", deviceInfo.maxComputeUnits);
+        DUMP_INFO_STDOUT("    Compute units", deviceInfo.maxComputeUnits);
         DUMP_INFO_XML("cv_ocl_maxComputeUnits", deviceInfo.maxComputeUnits);
 
-        DUMP_INFO_STDOUT("Max work group size", deviceInfo.maxWorkGroupSize);
+        DUMP_INFO_STDOUT("    Max work group size", deviceInfo.maxWorkGroupSize);
         DUMP_INFO_XML("cv_ocl_maxWorkGroupSize", deviceInfo.maxWorkGroupSize);
 
         std::string localMemorySizeStr = bytesToStringRepr(deviceInfo.localMemorySize);
-        DUMP_INFO_STDOUT("Local memory size", localMemorySizeStr.c_str());
+        DUMP_INFO_STDOUT("    Local memory size", localMemorySizeStr.c_str());
         DUMP_INFO_XML("cv_ocl_localMemorySize", deviceInfo.localMemorySize);
 
         std::string maxMemAllocSizeStr = bytesToStringRepr(deviceInfo.maxMemAllocSize);
-        DUMP_INFO_STDOUT("Max memory allocation size", maxMemAllocSizeStr.c_str());
+        DUMP_INFO_STDOUT("    Max memory allocation size", maxMemAllocSizeStr.c_str());
         DUMP_INFO_XML("cv_ocl_maxMemAllocSize", deviceInfo.maxMemAllocSize);
 
         const char* doubleSupportStr = deviceInfo.haveDoubleSupport ? "Yes" : "No";
-        DUMP_INFO_STDOUT("Double support", doubleSupportStr);
+        DUMP_INFO_STDOUT("    Double support", doubleSupportStr);
         DUMP_INFO_XML("cv_ocl_haveDoubleSupport", deviceInfo.haveDoubleSupport);
 
         const char* isUnifiedMemoryStr = deviceInfo.isUnifiedMemory ? "Yes" : "No";
-        DUMP_INFO_STDOUT("Unified memory", isUnifiedMemoryStr);
+        DUMP_INFO_STDOUT("    Unified memory", isUnifiedMemoryStr);
         DUMP_INFO_XML("cv_ocl_isUnifiedMemory", deviceInfo.isUnifiedMemory);
     }
     catch (...)

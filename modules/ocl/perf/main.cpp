@@ -45,13 +45,25 @@
 #define DUMP_INFO_STDOUT(propertyDisplayName, propertyValue) \
     do { \
         std::cout << (propertyDisplayName) << ": " << (propertyValue) << std::endl; \
-    } while (false)
+    } while (false)\
 
 #define DUMP_INFO_XML(propertyXMLName, propertyValue) \
     do { \
         std::stringstream ss; ss << propertyValue; \
         ::testing::Test::RecordProperty((propertyXMLName), ss.str()); \
-    } while (false)
+    } while (false)\
+
+#define DUMP_DEVICES_INFO_STDOUT(deviceType, deviceIndex, deviceName, deviceVersion) \
+    do { \
+        std::cout << "        " << (deviceType) << " " << (deviceIndex) << " : " << (deviceName) << " : " << deviceVersion << std::endl; \
+    } while (false)\
+
+#define DUMP_DEVICES_INFO_XML(deviceType, deviceIndex, deviceName, deviceVersion) \
+    do { \
+        std::stringstream ss; \
+        ss << " " << deviceIndex << " : " << deviceName << " : " << deviceVersion; \
+        ::testing::Test::RecordProperty((deviceType), ss.str()); \
+    } while (false)\
 
 #include "opencv2/ocl/private/opencl_dumpinfo.hpp"
 
