@@ -44,10 +44,10 @@
 //M*/
 
 
-#define tx  get_local_id(0)
+#define tx  (int)get_local_id(0)
 #define ty  get_local_id(1)
 #define bx  get_group_id(0)
-#define bdx get_local_size(0)
+#define bdx (int)get_local_size(0)
 
 #define BORDER_SIZE 5
 #define MAX_KSIZE_HALF 100

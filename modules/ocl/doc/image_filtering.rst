@@ -133,7 +133,7 @@ Creates a normalized 2D box filter.
 
 .. ocv:function:: Ptr<BaseFilter_GPU> ocl::getBoxFilter_GPU(int srcType, int dstType, const Size &ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
 
-    :param srcType: Input image type supporting ``CV_8UC1`` and ``CV_8UC4`` .
+    :param srcType: Input image type.
 
     :param dstType: Output image type.  It supports only the same values as the source type.
 
@@ -141,9 +141,7 @@ Creates a normalized 2D box filter.
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-    :param borderType: Supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP.
-
-.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    :param borderType: Border type.
 
 .. seealso:: :ocv:func:`boxFilter`
 
@@ -153,21 +151,19 @@ Smooths the image using the normalized box filter.
 
 .. ocv:function:: void ocl::boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
 
-    :param src: Input image. ``CV_8UC1`` and ``CV_8UC4`` source types are supported.
+    :param src: Input image.
 
     :param dst: Output image type. The size and type is the same as ``src`` .
 
-    :param ddepth: Output image depth. If -1, the output image has the same depth as the input one. The only values allowed here are ``CV_8U`` and -1.
+    :param ddepth: Desired depth of the destination image. If it is negative, it is the same as  ``src.depth()`` . It supports only the same depth as the source image depth.
 
     :param ksize: Kernel size.
 
     :param anchor: Anchor point. The default value ``Point(-1, -1)`` means that the anchor is at the kernel center.
 
-    :param borderType: Supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP.
+    :param borderType: Border type.
 
-Smoothes image using box filter.Supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4.
-
-.. note::    This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+Smoothes image using box filter.
 
 ocl::blur
 -------------
@@ -175,7 +171,7 @@ Acts as a synonym for the normalized box filter.
 
 .. ocv:function:: void ocl::blur(const oclMat &src, oclMat &dst, Size ksize, Point anchor = Point(-1, -1), int borderType = BORDER_CONSTANT)
 
-    :param src: Input image.  ``CV_8UC1``  and  ``CV_8UC4``  source types are supported.
+    :param src: Input image.
 
     :param dst: Output image type with the same size and type as  ``src`` .
 
@@ -183,9 +179,7 @@ Acts as a synonym for the normalized box filter.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
-    :param borderType: Supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP.
-
-.. note:: This filter does not check out-of-border accesses, so only a proper sub-matrix of a bigger matrix has to be passed to it.
+    :param borderType: Border type.
 
 .. seealso:: :ocv:func:`blur`, :ocv:func:`ocl::boxFilter`
 
@@ -217,11 +211,11 @@ Creates a non-separable linear filter.
 
 .. ocv:function:: Ptr<FilterEngine_GPU> ocl::createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
 
-    :param srcType: Input image type. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
+    :param srcType: Input image type..
 
     :param dstType: Output image type. The same type as ``src`` is supported.
 
-    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing. Supports size up to 16. For larger kernels use :ocv:func:`ocl::convolve`.
+    :param kernel: 2D array of filter coefficients.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
@@ -234,9 +228,9 @@ ocl::filter2D
 -----------------
 Applies the non-separable 2D linear filter to an image.
 
-.. ocv:function:: void ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT)
+.. ocv:function:: void ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel, Point anchor = Point(-1, -1), double delta = 0.0, int borderType = BORDER_DEFAULT)
 
-    :param src: Source image. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
+    :param src: Source image.
 
     :param dst: Destination image. The size and the number of channels is the same as  ``src`` .
 
@@ -246,9 +240,9 @@ Applies the non-separable 2D linear filter to an image.
 
     :param anchor: Anchor of the kernel that indicates the relative position of a filtered point within the kernel. The anchor resides within the kernel. The special default value (-1,-1) means that the anchor is at the kernel center.
 
-    :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate` .
+    :param delta: optional value added to the filtered pixels before storing them in ``dst``. Value '0' is supported only.
 
-    :param stream: Stream for the asynchronous version.
+    :param borderType: Pixel extrapolation method. For details, see :ocv:func:`borderInterpolate` .
 
 ocl::getLinearRowFilter_GPU
 -------------------------------
@@ -447,7 +441,7 @@ ocl::Laplacian
 ------------------
 Returns void
 
-.. ocv:function:: void ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1)
+.. ocv:function:: void ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1, double delta = 0, int borderType = BORDER_DEFAULT)
 
     :param src: The source image
 
@@ -458,6 +452,10 @@ Returns void
     :param ksize: The aperture size used to compute the second-derivative filters. It must be positive and odd
 
     :param scale: The optional scale factor for the computed Laplacian values (by default, no scaling is applied
+
+    :param delta: Optional delta value that is added to the results prior to storing them in  ``dst`` . Supported value is 0 only.
+
+    :param bordertype: Pixel extrapolation method.
 
 The function calculates the Laplacian of the source image by adding up the second x and y derivatives calculated using the Sobel operator.
 

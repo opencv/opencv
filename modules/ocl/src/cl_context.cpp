@@ -448,6 +448,17 @@ static int initializeOpenCLDevices()
                 {
                     deviceInfo.info.haveDoubleSupport = false;
                 }
+
+                size_t intel_platform = platformInfo.info.platformVendor.find("Intel");
+                if(intel_platform != std::string::npos)
+                {
+                    deviceInfo.info.compilationExtraOptions += " -D INTEL_DEVICE";
+                    deviceInfo.info.isIntelDevice = true;
+                }
+                else
+                {
+                    deviceInfo.info.isIntelDevice = false;
+                }
             }
         }
     }
@@ -471,7 +482,7 @@ DeviceInfo::DeviceInfo()
       deviceVendorId(-1),
       maxWorkGroupSize(0), maxComputeUnits(0), localMemorySize(0), maxMemAllocSize(0),
       deviceVersionMajor(0), deviceVersionMinor(0),
-      haveDoubleSupport(false), isUnifiedMemory(false),
+      haveDoubleSupport(false), isUnifiedMemory(false),isIntelDevice(false),
       platform(NULL)
 {
     // nothing
@@ -572,6 +583,8 @@ bool ContextImpl::supportsFeature(FEATURE_TYPE featureType) const
 {
     switch (featureType)
     {
+    case FEATURE_CL_INTEL_DEVICE:
+        return deviceInfo.isIntelDevice;
     case FEATURE_CL_DOUBLE:
         return deviceInfo.haveDoubleSupport;
     case FEATURE_CL_UNIFIED_MEM:

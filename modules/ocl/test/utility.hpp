@@ -54,7 +54,7 @@ extern int LOOP_TIMES;
 
 namespace cvtest {
 
-void showDiff(const Mat& gold, const Mat& actual, double eps);
+void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
 
 cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi);
 cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi);
@@ -74,6 +74,13 @@ double checkNorm(const cv::Mat &m);
 double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
 double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
+inline double checkNormRelative(const Mat &m1, const Mat &m2)
+{
+    return cv::norm(m1, m2, cv::NORM_INF) /
+            std::max((double)std::numeric_limits<float>::epsilon(),
+                     (double)std::max(cv::norm(m1, cv::NORM_INF), norm(m2, cv::NORM_INF)));
+}
+
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
@@ -83,7 +90,16 @@ double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 { \
    ASSERT_EQ(mat1.type(), mat2.type()); \
    ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
+   EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps) \
+       << cv::format("Size: %d x %d", mat1.cols, mat1.rows) << std::endl; \
+}
+
+#define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
+{ \
+   ASSERT_EQ(mat1.type(), mat2.type()); \
+   ASSERT_EQ(mat1.size(), mat2.size()); \
+   EXPECT_LE(checkNormRelative(cv::Mat(mat1), cv::Mat(mat2)), eps) \
+       << cv::format("Size: %d x %d", mat1.cols, mat1.rows) << std::endl; \
 }
 
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \

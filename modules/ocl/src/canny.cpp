@@ -49,7 +49,7 @@
 using namespace cv;
 using namespace cv::ocl;
 
-cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(NULL)
+cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(1, 1, CV_32SC1)
 {
     CV_Assert(dx_.type() == CV_32SC1 && dy_.type() == CV_32SC1 && dx_.size() == dy_.size());
 
@@ -81,17 +81,8 @@ void cv::ocl::CannyBuf::create(const Size &image_size, int apperture_size)
     ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, magBuf);
     ensureSizeIsEnough(image_size.height + 2, image_size.width + 2, CV_32FC1, mapBuf);
 
-    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf1);
-    ensureSizeIsEnough(1, image_size.width * image_size.height, CV_16UC2, trackBuf2);
-
-    int counter_i [1] = { 0 };
-    int err = 0;
-    if(counter)
-    {
-        openCLFree(counter);
-    }
-    counter = clCreateBuffer( *((cl_context*)getClContextPtr()), CL_MEM_COPY_HOST_PTR, sizeof(int), counter_i, &err );
-    openCLSafeCall(err);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf1);
+    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, trackBuf2);
 }
 
 void cv::ocl::CannyBuf::release()
@@ -104,11 +95,6 @@ void cv::ocl::CannyBuf::release()
     mapBuf.release();
     trackBuf1.release();
     trackBuf2.release();
-    if(counter)
-    {
-        openCLFree(counter);
-        counter = NULL;
-    }
 }
 
 namespace cv
@@ -124,9 +110,9 @@ namespace cv
 
             void calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh);
 
-            void edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols);
+            void edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, oclMat& counter, int rows, int cols);
 
-            void edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols);
+            void edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, oclMat& counter, int rows, int cols);
 
             void getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols);
         }
@@ -320,54 +306,61 @@ void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int ro
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols)
+void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, oclMat& counter, int rows, int cols)
 {
     Context *clCxt = map.clCxt;
-    String kernelName = "edgesHysteresisLocal";
     std::vector< std::pair<size_t, const void *> > args;
+
+    Mat counterMat(counter.rows, counter.cols, counter.type());
+    counterMat.at<int>(0, 0) = 0;
+    counter.upload(counterMat);
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map.data));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&st1.data));
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&counter));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&counter.data));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.step));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.offset));
+    cl_int stepBytes = map.step;
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&stepBytes));
+    cl_int offsetBytes = map.offset;
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&offsetBytes));
 
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
 
-    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, "edgesHysteresisLocal", globalThreads, localThreads, args, -1, -1);
 }
 
-void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols)
+void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, oclMat& counter, int rows, int cols)
 {
-    unsigned int count;
-    openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(float), &count, 0, NULL, NULL));
     Context *clCxt = map.clCxt;
-    String kernelName = "edgesHysteresisGlobal";
     std::vector< std::pair<size_t, const void *> > args;
     size_t localThreads[3]  = {128, 1, 1};
 
-    int count_i[1] = {0};
-    while(count > 0)
+    while(1 > 0)
     {
-        openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
+        Mat counterMat; counter.download(counterMat);
+        int count = counterMat.at<int>(0, 0);
+        CV_Assert(count >= 0);
+        if (count == 0)
+            break;
+
+        counterMat.at<int>(0, 0) = 0;
+        counter.upload(counterMat);
 
         args.clear();
-        size_t globalThreads[3] = {std::min(count, 65535u) * 128, divUp(count, 65535), 1};
+        size_t globalThreads[3] = {std::min((unsigned)count, 65535u) * 128, divUp(count, 65535), 1};
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map.data));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&st1.data));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&st2.data));
-        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&counter));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&counter.data));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&count));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.step));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.offset));
 
-        openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
-        openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getClCommandQueuePtr(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
+        openCLExecuteKernel(clCxt, &imgproc_canny, "edgesHysteresisGlobal", globalThreads, localThreads, args, -1, -1);
         std::swap(st1, st2);
     }
 }

@@ -11,6 +11,7 @@
 //    Jia Haipeng, jiahaipeng95@gmail.com
 //    Nathan, liujun@multicorewareinc.com
 //    Peng Xiao, pengxiao@outlook.com
+//    Erping Pang, erping@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -37,7 +38,6 @@
 //
 //
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
 #define CV_HAAR_FEATURE_MAX           3
 
 #define calc_sum(rect,offset)        (sum[(rect).p0+offset] - sum[(rect).p1+offset] - sum[(rect).p2+offset] + sum[(rect).p3+offset])
@@ -100,6 +100,144 @@ typedef struct __attribute__((aligned (64))) GpuHidHaarClassifierCascade
     int p3 __attribute__((aligned (4)));
     float inv_window_area __attribute__((aligned (4)));
 } GpuHidHaarClassifierCascade;
+
+
+#ifdef PACKED_CLASSIFIER
+// this code is scalar, one pixel -> one workitem
+__kernel void gpuRunHaarClassifierCascadePacked(
+    global const GpuHidHaarStageClassifier * stagecascadeptr,
+    global const int4 * info,
+    global const GpuHidHaarTreeNode * nodeptr,
+    global const int * restrict sum,
+    global const float * restrict sqsum,
+    volatile global int4 * candidate,
+    const int pixelstep,
+    const int loopcount,
+    const int start_stage,
+    const int split_stage,
+    const int end_stage,
+    const int startnode,
+    const int splitnode,
+    const int4 p,
+    const int4 pq,
+    const float correction,
+    global const int* pNodesPK,
+    global const int4* pWGInfo
+    )
+
+{
+// this version used information provided for each workgroup
+// no empty WG
+    int     gid = (int)get_group_id(0);
+    int     lid_x = (int)get_local_id(0);
+    int     lid_y = (int)get_local_id(1);
+    int     lid = lid_y*LSx+lid_x;
+    int4    WGInfo = pWGInfo[gid];
+    int     GroupX = (WGInfo.y >> 16)&0xFFFF;
+    int     GroupY = (WGInfo.y >> 0 )& 0xFFFF;
+    int     Width  = (WGInfo.x >> 16)&0xFFFF;
+    int     Height = (WGInfo.x >> 0 )& 0xFFFF;
+    int     ImgOffset = WGInfo.z;
+    float   ScaleFactor = as_float(WGInfo.w);
+
+#define DATA_SIZE_X (LSx+WND_SIZE_X)
+#define DATA_SIZE_Y (LSy+WND_SIZE_Y)
+#define DATA_SIZE (DATA_SIZE_X*DATA_SIZE_Y)
+
+    local int SumL[DATA_SIZE];
+
+    // read input data window into local mem
+    for(int i = 0; i<DATA_SIZE; i+=(LSx*LSy))
+    {
+        int     index = i+lid; // index in shared local memory
+        if(index<DATA_SIZE)
+        {// calc global x,y coordinat and read data from there
+            int     x = min(GroupX + (index % (DATA_SIZE_X)),Width-1);
+            int     y = min(GroupY + (index / (DATA_SIZE_X)),Height-1);
+            SumL[index] = sum[ImgOffset+y*pixelstep+x];
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // calc variance_norm_factor for all stages
+    float   variance_norm_factor;
+    int     nodecounter= startnode;
+    int4    info1 = p;
+    int4    info2 = pq;
+
+    {
+        int     xl = lid_x;
+        int     yl = lid_y;
+        int     OffsetLocal =          yl * DATA_SIZE_X +         xl;
+        int     OffsetGlobal = (GroupY+yl)* pixelstep   + (GroupX+xl);
+
+        // add shift to get position on scaled image
+        OffsetGlobal += ImgOffset;
+
+        float   mean =
+            SumL[info1.y*DATA_SIZE_X+info1.x+OffsetLocal] -
+            SumL[info1.y*DATA_SIZE_X+info1.z+OffsetLocal] -
+            SumL[info1.w*DATA_SIZE_X+info1.x+OffsetLocal] +
+            SumL[info1.w*DATA_SIZE_X+info1.z+OffsetLocal];
+        float sq =
+            sqsum[info2.y*pixelstep+info2.x+OffsetGlobal] -
+            sqsum[info2.y*pixelstep+info2.z+OffsetGlobal] -
+            sqsum[info2.w*pixelstep+info2.x+OffsetGlobal] +
+            sqsum[info2.w*pixelstep+info2.z+OffsetGlobal];
+
+        mean *= correction;
+        sq *= correction;
+
+        variance_norm_factor = sq - mean * mean;
+        variance_norm_factor = (variance_norm_factor >=0.f) ? sqrt(variance_norm_factor) : 1.f;
+    }// end calc variance_norm_factor for all stages
+
+    int result = (1.0f>0.0f);
+    for(int stageloop = start_stage; (stageloop < end_stage) && result; stageloop++ )
+    {// iterate until candidate is exist
+        float   stage_sum = 0.0f;
+        int2    stageinfo = *(global int2*)(stagecascadeptr+stageloop);
+        float   stagethreshold = as_float(stageinfo.y);
+        int     lcl_off = (lid_y*DATA_SIZE_X)+(lid_x);
+        for(int nodeloop = 0; nodeloop < stageinfo.x; nodecounter++,nodeloop++ )
+        {
+        // simple macro to extract shorts from int
+#define M0(_t) ((_t)&0xFFFF)
+#define M1(_t) (((_t)>>16)&0xFFFF)
+            // load packed node data from global memory (L3) into registers
+            global const int4* pN = (__global int4*)(pNodesPK+nodecounter*NODE_SIZE);
+            int4    n0 = pN[0];
+            int4    n1 = pN[1];
+            int4    n2 = pN[2];
+            float   nodethreshold  = as_float(n2.y) * variance_norm_factor;
+            // calc sum of intensity pixels according to node information
+            float classsum =
+                (SumL[M0(n0.x)+lcl_off] - SumL[M1(n0.x)+lcl_off] - SumL[M0(n0.y)+lcl_off] + SumL[M1(n0.y)+lcl_off]) * as_float(n1.z) +
+                (SumL[M0(n0.z)+lcl_off] - SumL[M1(n0.z)+lcl_off] - SumL[M0(n0.w)+lcl_off] + SumL[M1(n0.w)+lcl_off]) * as_float(n1.w) +
+                (SumL[M0(n1.x)+lcl_off] - SumL[M1(n1.x)+lcl_off] - SumL[M0(n1.y)+lcl_off] + SumL[M1(n1.y)+lcl_off]) * as_float(n2.x);
+            //accumulate stage responce
+            stage_sum += (classsum >= nodethreshold) ? as_float(n2.w) : as_float(n2.z);
+        }
+        result = (stage_sum >= stagethreshold);
+    }// next stage if needed
+
+    if(result)
+    {// all stages will be passed and there is a detected face on the tested position
+        int index = 1+atomic_inc((volatile global int*)candidate); //get index to write global data with face info
+        if(index<OUTPUTSZ)
+        {
+            int     x = GroupX+lid_x;
+            int     y = GroupY+lid_y;
+            int4 candidate_result;
+            candidate_result.x = convert_int_rtn(x*ScaleFactor);
+            candidate_result.y = convert_int_rtn(y*ScaleFactor);
+            candidate_result.z = convert_int_rtn(ScaleFactor*WND_SIZE_X);
+            candidate_result.w = convert_int_rtn(ScaleFactor*WND_SIZE_Y);
+            candidate[index] = candidate_result;
+        }
+    }
+}//end gpuRunHaarClassifierCascade
+#else
 
 __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCascade(
     global GpuHidHaarStageClassifier * stagecascadeptr,
@@ -183,7 +321,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int glb_x = grpoffx + (lcl_x<<2);
                 int glb_y = grpoffy + lcl_y;
 
-                int glb_off = mad24(min(glb_y, height - 1),pixelstep,glb_x);
+                int glb_off = mad24(min(glb_y, height + WINDOWSIZE - 1),pixelstep,glb_x);
                 int4 data = *(__global int4*)&sum[glb_off];
                 int lcl_off = mad24(lcl_y, readwidth, lcl_x<<2);
 
@@ -283,12 +421,23 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 
                 result = (stage_sum >= stagethreshold);
             }
-
-            if(result && (x < width) && (y < height))
+            if(factor < 2)
             {
-                int queueindex = atomic_inc(lclcount);
-                lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
-                lcloutindex[(queueindex<<1)+1] = as_int(variance_norm_factor);
+                if(result && lclidx %2 ==0 && lclidy %2 ==0 )
+                {
+                    int queueindex = atomic_inc(lclcount);
+                    lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
+                    lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
+                }
+            }
+            else
+            {
+                if(result)
+                {
+                    int queueindex = atomic_inc(lclcount);
+                    lcloutindex[queueindex<<1] = (lclidy << 16) | lclidx;
+                    lcloutindex[(queueindex<<1)+1] = as_int((float)variance_norm_factor);
+                }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
             int queuecount  = lclcount[0];
@@ -411,13 +560,30 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 int y = mad24(grpidy,grpszy,((temp & (int)0xffff0000) >> 16));
                 temp = glboutindex[0];
                 int4 candidate_result;
-                candidate_result.zw = (int2)convert_int_rtn(factor*20.f);
-                candidate_result.x = convert_int_rtn(x*factor);
-                candidate_result.y = convert_int_rtn(y*factor);
+                candidate_result.zw = (int2)convert_int_rte(factor*20.f);
+                candidate_result.x = convert_int_rte(x*factor);
+                candidate_result.y = convert_int_rte(y*factor);
                 atomic_inc(glboutindex);
-                candidate[outputoff+temp+lcl_id] = candidate_result;
+
+                int i = outputoff+temp+lcl_id;
+                if(candidate[i].z == 0)
+                {
+                    candidate[i] = candidate_result;
+                }
+                else
+                {
+                    for(i=i+1;;i++)
+                    {
+                        if(candidate[i].z == 0)
+                        {
+                            candidate[i] = candidate_result;
+                            break;
+                        }
+                    }
+                }
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }//end for(int grploop=grpidx;grploop<totalgrp;grploop+=grpnumx)
     }//end for(int scalei = 0; scalei <loopcount; scalei++)
 }
+#endif

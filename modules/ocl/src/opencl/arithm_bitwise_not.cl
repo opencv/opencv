@@ -67,7 +67,6 @@ __kernel void arithm_bitwise_not_D0 (__global uchar *src1, int src1_step, int sr
         x = x << 2;
         int src1_index = mad24(y, src1_step, x + src1_offset);
 
-        int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x);
 
@@ -97,7 +96,6 @@ __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src
         x = x << 2;
         int src1_index = mad24(y, src1_step, x + src1_offset);
 
-        int dst_start  = mad24(y, dst_step, dst_offset);
         int dst_end    = mad24(y, dst_step, dst_offset + dst_step1);
         int dst_index  = mad24(y, dst_step, dst_offset + x);
 

@@ -160,32 +160,61 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     }
 }
 
-void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers)
+void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType, const oclMat &indices)
 {
-    //if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
-    //{
-    //    CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
-    //    return;
-    //}
+    CV_Assert(src.cols*src.oclchannels() == centers.cols*centers.oclchannels());
+    CV_Assert(src.depth() == CV_32F && centers.depth() == CV_32F);
+    bool is_label_row_major = false;
+    ensureSizeIsEnough(1, src.rows, CV_32FC1, dists);
+    if(labels.empty() || (!labels.empty() && labels.rows == src.rows && labels.cols == 1))
+    {
+        ensureSizeIsEnough(src.rows, 1, CV_32SC1, labels);
+        is_label_row_major = true;
+    }
+    CV_Assert(distType == NORM_L1 || distType == NORM_L2SQR);
 
-    Context  *clCxt = src.clCxt;
-    int labels_step = (int)(labels.step/labels.elemSize());
+    std::stringstream build_opt_ss;
+    build_opt_ss
+        << (distType == NORM_L1 ? "-D L1_DIST" : "-D L2SQR_DIST")
+        << (indices.empty() ? "" : " -D USE_INDEX");
+
+    String build_opt = build_opt_ss.str();
+
+    const int src_step = (int)(src.oclchannels() * src.step / src.elemSize());
+    const int centers_step = (int)(centers.oclchannels() * centers.step / centers.elemSize());
+
+    const int colsNumb = centers.cols*centers.oclchannels();
+
+    const int label_step   = is_label_row_major ? (int)(labels.step / labels.elemSize()) : 1;
     String kernelname = "distanceToCenters";
-    int threadNum = src.rows > 256 ? 256 : src.rows;
-    size_t localThreads[3]  = {1, threadNum, 1};
-    size_t globalThreads[3] = {1, src.rows, 1};
+
+    const int number_of_input = indices.empty() ? src.rows : indices.size().area();
+
+    const int src_offset = (int)src.offset/src.elemSize();
+    const int centers_offset = (int)centers.offset/centers.elemSize();
+
+    size_t globalThreads[3] = {number_of_input, 1, 1};
 
     std::vector<std::pair<size_t, const void *> > args;
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&labels_step));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers.rows));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&labels.data));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers.cols));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&centers.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&dists.data));
+    if(!indices.empty())
+    {
+        args.push_back(std::make_pair(sizeof(cl_mem), (void *)&indices.data));
+    }
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&labels.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dists.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&colsNumb));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&label_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&number_of_input));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers_offset));
 
-    openCLExecuteKernel(clCxt, &kmeans_kernel, kernelname, globalThreads, localThreads, args, -1, -1, NULL);
+    openCLExecuteKernel(Context::getContext(), &kmeans_kernel,
+        kernelname, globalThreads, NULL, args, -1, -1, build_opt.c_str());
 }
 ///////////////////////////////////k - means /////////////////////////////////////////////////////////
 double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
@@ -404,17 +433,17 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
 
             _bestLabels.upload(_labels);
             _centers.upload(centers);
+
             distanceToCenters(_dists, _bestLabels, _src, _centers);
 
             Mat dists;
             _dists.download(dists);
             _bestLabels.download(_labels);
-
-            double* dist = dists.ptr<double>(0);
+            float* dist = dists.ptr<float>(0);
             compactness = 0;
             for( i = 0; i < N; i++ )
             {
-                compactness += dist[i];
+                    compactness += (double)dist[i];
             }
         }
 

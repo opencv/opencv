@@ -428,7 +428,7 @@ struct ProgramFileCache
 
         if(status != CL_SUCCESS)
         {
-            if(status == CL_BUILD_PROGRAM_FAILURE)
+            if (status == CL_BUILD_PROGRAM_FAILURE || status == CL_INVALID_BUILD_OPTIONS)
             {
                 size_t buildLogSize = 0;
                 openCLSafeCall(clGetProgramBuildInfo(program, getClDeviceID(ctx),
