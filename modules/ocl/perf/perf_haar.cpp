@@ -52,7 +52,7 @@ PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;
 
-    Mat img = imread(getDataPath("gpu/haarcascade/group_1_640x480_VGA.pgm"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
     ASSERT_TRUE(!img.empty()) << "can't open basketball1.png";
     declare.in(img);
 
