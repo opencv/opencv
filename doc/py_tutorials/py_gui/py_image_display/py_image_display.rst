@@ -22,9 +22,9 @@ Use the function **cv2.imread()** to read an image. The image should be in the w
 
 Second argument is a flag which specifies the way image should be read.
 
-* cv2.CV_LOAD_IMAGE_COLOR : Loads a color image. Any transparency of image will be neglected. It is the default flag.
-* cv2.CV_LOAD_IMAGE_GRAYSCALE : Loads image in grayscale mode
-* cv2.CV_LOAD_IMAGE_UNCHANGED : Loads image as such including alpha channel
+* cv2.IMREAD_COLOR : Loads a color image. Any transparency of image will be neglected. It is the default flag.
+* cv2.IMREAD_GRAYSCALE : Loads image in grayscale mode
+* cv2.IMREAD_UNCHANGED : Loads image as such including alpha channel
 
 .. note:: Instead of these three flags, you can simply pass integers 1, 0 or -1 respectively.
 
