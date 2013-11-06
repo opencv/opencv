@@ -41,7 +41,7 @@ static double getTime()
 
 
 static void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime);
 
 
@@ -87,7 +87,7 @@ int main( int argc, const char** argv )
     outputName = cmd.get<string>("o");
     string cascadeName = cmd.get<string>("t");
     double scale = cmd.get<double>("c");
-    ocl::OclCascadeClassifierBuf cascade;
+    ocl::OclCascadeClassifier cascade;
     CascadeClassifier  cpu_cascade;
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
@@ -180,7 +180,7 @@ int main( int argc, const char** argv )
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime)
 {
     ocl::oclMat image(img);

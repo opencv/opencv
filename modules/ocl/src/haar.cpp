@@ -1186,6 +1186,28 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     return result_seq;
 }
 
+
+struct getRect
+{
+    Rect operator()(const CvAvgComp &e) const
+    {
+        return e.rect;
+    }
+};
+
+void cv::ocl::OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv::Rect>& faces,
+                                                        double scaleFactor, int minNeighbors, int flags,
+                                                        Size minSize, Size maxSize)
+{
+    CvSeq* _objects;
+    MemStorage storage(cvCreateMemStorage(0));
+    _objects = oclHaarDetectObjects(gimg, storage, scaleFactor, minNeighbors, flags, minSize, maxSize);
+    vector<CvAvgComp> vecAvgComp;
+    Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
+    faces.resize(vecAvgComp.size());
+    std::transform(vecAvgComp.begin(), vecAvgComp.end(), faces.begin(), getRect());
+}
+
 struct OclBuffers
 {
     cl_mem stagebuffer;
@@ -1197,13 +1219,6 @@ struct OclBuffers
     cl_mem newnodebuffer;
 };
 
-struct getRect
-{
-    Rect operator()(const CvAvgComp &e) const
-    {
-        return e.rect;
-    }
-};
 
 void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv::Rect>& faces,
                                                         double scaleFactor, int minNeighbors, int flags,
