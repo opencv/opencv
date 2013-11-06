@@ -901,6 +901,9 @@ namespace cv
 
             CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                Size minSize = Size(), Size maxSize = Size());
         };
 
         class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
