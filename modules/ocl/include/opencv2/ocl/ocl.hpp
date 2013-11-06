@@ -631,6 +631,9 @@ namespace cv
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
 
+        //! fills the output array with repeated copies of the input array
+        CV_EXPORTS void repeat(const oclMat & src, int ny, int nx, oclMat & dst);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
