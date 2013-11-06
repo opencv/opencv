@@ -308,16 +308,13 @@ namespace cv
             void copyTo( oclMat &m, const oclMat &mask = oclMat()) const;
 
             //! converts oclMatrix to another datatype with optional scalng. See cvConvertScale.
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             void convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const;
 
             void assignTo( oclMat &m, int type = -1 ) const;
 
             //! sets every oclMatrix element to s
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& operator = (const Scalar &s);
             //! sets some of the oclMatrix elements to s, according to the mask
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& setTo(const Scalar &s, const oclMat &mask = oclMat());
             //! creates alternative oclMatrix header for the same data, with different
             // number of channels and/or different number of rows. see cvReshape.
