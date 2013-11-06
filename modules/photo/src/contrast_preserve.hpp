@@ -427,7 +427,6 @@ void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
                 maxval = Gray.at<float>(i,j);
         }
 
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            Gray.at<float>(i,j) = (Gray.at<float>(i,j) - minval)/(maxval - minval);
+    Gray -= minval;
+    Gray /= maxval - minval;
 }
