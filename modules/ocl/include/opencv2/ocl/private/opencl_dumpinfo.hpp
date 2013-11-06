@@ -87,28 +87,33 @@ static void dumpOpenCLDevice()
     {
         cv::ocl::PlatformsInfo platforms;
         cv::ocl::getOpenCLPlatforms(platforms);
-        std::cout << "OpenCL Platforms: \n";
-        for(int i=0; i< platforms.size(); i++)
+        DUMP_INFO_STDOUT("OpenCL Platforms","");
+        DUMP_INFO_XML("OpenCL Platforms","");
+        for(unsigned int i=0; i < platforms.size(); i++)
         {
-            std::cout << "    " << platforms.at(i)->platformName << ":\n";
+            DUMP_INFO_STDOUT("    ", platforms.at(i)->platformName);
+            DUMP_INFO_XML("    ", platforms.at(i)->platformName);
             cv::ocl::DevicesInfo devices;
             cv::ocl::getOpenCLDevices(devices);
-            for(int j=0; j< devices.size(); j++)
+            for(unsigned int j=0; j < devices.size(); j++)
             {
                 const char* deviceTypeStr = devices.at(j)->deviceType == CVCL_DEVICE_TYPE_CPU
-                            ? "        CPU" : (devices.at(j)->deviceType == CVCL_DEVICE_TYPE_GPU ? "        GPU" : "unknown");
-                std::cout << deviceTypeStr << " " << j << "  :  " << devices.at(j)->deviceName << "  :  ";
+                            ? ("CPU") : (devices.at(j)->deviceType == CVCL_DEVICE_TYPE_GPU ? "GPU" : "unknown");
                 try
                 {
-                    std::cout << devices.at(i)->deviceVersion << std::endl;
+                    DUMP_DVICES_INFO_STDOUT(deviceTypeStr, j, devices.at(j)->deviceName, devices.at(i)->deviceVersion);
+                    DUMP_DEVICES_INFO_XML(deviceTypeStr, j, devices.at(j)->deviceName, devices.at(i)->deviceVersion);
                 }
                 catch(...)
                 {
-                    std::cout << "not avaliable" << std::endl;
+                    DUMP_DVICES_INFO_STDOUT(deviceTypeStr, j, devices.at(j)->deviceName, "not avaliable");
+                    DUMP_DEVICES_INFO_XML(deviceTypeStr, j, devices.at(j)->deviceName, "not avaliable");
                 }
             }
         }
-        std::cout << "Current OpenCL device: " << std::endl;
+        DUMP_INFO_STDOUT("Current OpenCL device","");
+        DUMP_INFO_XML("Current OpenCL device","");
+
         const cv::ocl::DeviceInfo& deviceInfo = cv::ocl::Context::getContext()->getDeviceInfo();
 
         DUMP_INFO_STDOUT("    Platform", deviceInfo.platform->platformName);

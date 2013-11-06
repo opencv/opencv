@@ -53,6 +53,18 @@
         ::testing::Test::RecordProperty((propertyXMLName), ss.str()); \
     } while (false)
 
+#define DUMP_DVICES_INFO_STDOUT(deviceType, deviceIndex, deviceName, deviceVersion) \
+    do { \
+        std::cout << "        " << (deviceType) << " " << (deviceIndex) << " : " << (deviceName) << " : " << deviceVersion << std::endl; \
+    } while (false)
+
+#define DUMP_DEVICES_INFO_XML(deviceType, deviceIndex, deviceName, deviceVersion) \
+    do { \
+        std::stringstream ss; \
+        ss << " " << deviceIndex << " : " << deviceName << " : " << deviceVersion; \
+        ::testing::Test::RecordProperty((deviceType), ss.str()); \
+    } while (false)
+
 #include "opencv2/ocl/private/opencl_dumpinfo.hpp"
 
 static const char * impls[] =
