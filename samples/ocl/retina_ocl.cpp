@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     ocl::setBinaryDiskCache();
     const char* keys =
         "{ h   | help     | false           | print help message }"
-        "{ c   | use_cpp  | false           | use cpp (original version) or gpu(OpenCL) to process the image }"
+        "{ c   | cpu      | false           | use cpu (original version) or gpu(OpenCL) to process the image }"
         "{ i   | image    | cat.jpg         | specify the input image }";
 
     CommandLineParser cmd(argc, argv, keys);
@@ -38,12 +38,12 @@ int main(int argc, char* argv[])
     }
 
     String fname = cmd.get<String>("i");
-    bool useCPP = cmd.get<bool>("c");
+    bool useCPU = cmd.get<bool>("c");
 
     cv::Mat input = imread(fname);
     if(input.empty())
     {
-        help(cmd, fname + " not found!");
+        help(cmd, "Error opening: " + fname);
         return EXIT_FAILURE;
     }
     //////////////////////////////////////////////////////////////////////////////
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
         cv::Mat retina_parvo;
         cv::Mat retina_magno;
 
-        if(useCPP)
+        if(useCPU)
         {
             retina = cv::bioinspired::createRetina(input.size());
             retina->clearBuffers();
@@ -73,10 +73,9 @@ int main(int argc, char* argv[])
         int64 temp_time = 0, total_time = 0;
 
         int loop_counter = 0;
-        static bool initialized = false;
         for(; loop_counter <= total_loop_count; ++loop_counter)
         {
-            if(useCPP)
+            if(useCPU)
             {
                 temp_time = cv::getTickCount();
                 retina->run(input);
@@ -92,17 +91,13 @@ int main(int argc, char* argv[])
                 oclRetina->getMagno(retina_magno_ocl);
             }
             // will not count the first loop, which is considered as warm-up period
-            if(initialized)
+            if(loop_counter > 0)
             {
                 temp_time = (cv::getTickCount() - temp_time);
                 total_time += temp_time;
                 printf("Frame id %2d: %3.4fms\n", loop_counter, (double)temp_time / cv::getTickFrequency() * 1000.0);
             }
-            else
-            {
-                initialized = true;
-            }
-            if(!useCPP)
+            if(!useCPU)
             {
                 retina_parvo = retina_parvo_ocl;
                 retina_magno = retina_magno_ocl;
