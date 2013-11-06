@@ -254,8 +254,28 @@ OCL_TEST_P(CornerMinEigenVal, Mat)
 }
 
 ////////////////////////////////cornerHarris//////////////////////////////////////////
+struct CornerHarris :
+    public ImgprocTestBase
+{
+    void Near(double threshold = 0.0)
+    {
+        Mat whole, roi;
+        gdst_whole.download(whole);
+        gdst_roi.download(roi);
 
-typedef CornerTestBase CornerHarris;
+        absdiff(whole, dst_whole, whole);
+        absdiff(roi, dst_roi, roi);
+
+        divide(whole, dst_whole, whole);
+        divide(roi, dst_roi, roi);
+
+        absdiff(dst_whole, dst_whole, dst_whole);
+        absdiff(dst_roi, dst_roi, dst_roi);
+
+        EXPECT_MAT_NEAR(dst_whole, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
+    }
+};
 
 OCL_TEST_P(CornerHarris, Mat)
 {
