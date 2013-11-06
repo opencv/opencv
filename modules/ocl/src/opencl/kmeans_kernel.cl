@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Xiaopeng Fu, fuxiaopeng2222@163.com
+//    Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -25,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,42 +44,81 @@
 //
 //M*/
 
-__kernel void distanceToCenters(
-    int label_step, int K,
-    __global float *src,
-    __global int *labels, int dims, int rows,
-    __global float *centers,
-    __global float *dists)
+#ifdef L1_DIST
+#  define DISTANCE(A, B) fabs((A) - (B))
+#elif defined L2SQR_DIST
+#  define DISTANCE(A, B) ((A) - (B)) * ((A) - (B))
+#else
+#  define DISTANCE(A, B) ((A) - (B)) * ((A) - (B))
+#endif
+
+inline float dist(__global const float * center, __global const float * src, int feature_cols)
 {
-    int gid = get_global_id(1);
-
-    float dist, euDist, min;
-    int minCentroid;
-
-    if(gid >= rows)
-        return;
-
-    for(int i = 0 ; i < K; i++)
+    float res = 0;
+    float4 tmp4;
+    int i;
+    for(i = 0; i < feature_cols / 4; i += 4, center += 4, src += 4)
     {
-        euDist = 0;
-        for(int j = 0; j < dims; j++)
-        {
-            dist = (src[j + gid * dims]
-                    - centers[j + i * dims]);
-            euDist += dist * dist;
-        }
+        tmp4 = vload4(0, center) - vload4(0, src);
+#ifdef L1_DIST
+        tmp4 = fabs(tmp4);
+#else
+        tmp4 *= tmp4;
+#endif
+        res += tmp4.x + tmp4.y + tmp4.z + tmp4.w;
+    }
 
-        if(i == 0)
+    for(; i < feature_cols; ++i, ++center, ++src)
+    {
+        res += DISTANCE(*src, *center);
+    }
+    return res;
+}
+
+// to be distinguished with distanceToCenters in kmeans_kernel.cl
+__kernel void distanceToCenters(
+    __global const float *src,
+    __global const float *centers,
+#ifdef USE_INDEX
+    __global const int   *indices,
+#endif
+    __global int   *labels,
+    __global float *dists,
+    int feature_cols,
+    int src_step,
+    int centers_step,
+    int label_step,
+    int input_size,
+    int K,
+    int offset_src,
+    int offset_centers
+)
+{
+    int gid = get_global_id(0);
+    float euDist, minval;
+    int minCentroid;
+    if(gid >= input_size)
+    {
+        return;
+    }
+    src += offset_src;
+    centers += offset_centers;
+#ifdef USE_INDEX
+    src += indices[gid] * src_step;
+#else
+    src += gid * src_step;
+#endif
+    minval = dist(centers, src, feature_cols);
+    minCentroid = 0;
+    for(int i = 1 ; i < K; i++)
+    {
+        euDist = dist(centers + i * centers_step, src, feature_cols);
+        if(euDist < minval)
         {
-            min = euDist;
-            minCentroid = 0;
-        }
-        else if(euDist < min)
-        {
-            min = euDist;
+            minval = euDist;
             minCentroid = i;
         }
     }
-    dists[gid] = min;
-    labels[label_step * gid] = minCentroid;
+    labels[gid * label_step] = minCentroid;
+    dists[gid] = minval;
 }

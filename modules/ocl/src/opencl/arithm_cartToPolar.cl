@@ -44,14 +44,18 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
+    #pragma OPENCL EXTENSION cl_khr_fp64:enable
+    #define CV_PI   3.1415926535897932384626433832795
+    #ifndef DBL_EPSILON
+        #define DBL_EPSILON 0x1.0p-52
+    #endif
+#else
+    #define CV_PI   3.1415926535897932384626433832795f
+    #ifndef DBL_EPSILON
+        #define DBL_EPSILON 0x1.0p-52f
+    #endif
 #endif
 
-#define CV_PI   3.1415926535897932384626433832795
-
-#ifndef DBL_EPSILON
-#define DBL_EPSILON 0x1.0p-52
-#endif
 
 __kernel void arithm_cartToPolar_D5 (__global float *src1, int src1_step, int src1_offset,
                                      __global float *src2, int src2_step, int src2_offset,
@@ -82,9 +86,9 @@ __kernel void arithm_cartToPolar_D5 (__global float *src1, int src1_step, int sr
         float tmp = y >= 0 ? 0 : CV_PI*2;
         tmp = x < 0 ? CV_PI : tmp;
 
-        float tmp1 = y >= 0 ? CV_PI*0.5 : CV_PI*1.5;
-        cartToPolar = y2 <= x2 ? x*y/(x2 + 0.28f*y2 + (float)DBL_EPSILON)  + tmp :
-                                 tmp1 - x*y/(y2 + 0.28f*x2 + (float)DBL_EPSILON);
+        float tmp1 = y >= 0 ? CV_PI*0.5f : CV_PI*1.5f;
+        cartToPolar = y2 <= x2 ? x*y/(x2 + 0.28f*y2 + DBL_EPSILON)  + tmp :
+                                 tmp1 - x*y/(y2 + 0.28f*x2 + DBL_EPSILON);
 
         cartToPolar = angInDegree == 0 ? cartToPolar : cartToPolar * (float)(180/CV_PI);
 

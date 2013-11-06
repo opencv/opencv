@@ -23,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -111,6 +111,7 @@ namespace cv
 
             bool haveDoubleSupport;
             bool isUnifiedMemory; // 1 means integrated GPU, otherwise this value is 0
+            bool isIntelDevice;
 
             std::string compilationExtraOptions;
 
@@ -154,7 +155,8 @@ namespace cv
         {
             FEATURE_CL_DOUBLE = 1,
             FEATURE_CL_UNIFIED_MEM,
-            FEATURE_CL_VER_1_2
+            FEATURE_CL_VER_1_2,
+            FEATURE_CL_INTEL_DEVICE
         };
 
         // Represents OpenCL context, interface
@@ -737,11 +739,12 @@ namespace cv
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
 
         //! applies Laplacian operator to the image
-        // supports only ksize = 1 and ksize = 3 8UC1 8UC4 32FC1 32FC4 data type
-        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1);
+        // supports only ksize = 1 and ksize = 3
+        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1,
+                double delta=0, int borderType=BORDER_DEFAULT);
 
         //! returns 2D box filter
-        // supports CV_8UC1 and CV_8UC4 source type, dst type must be the same as source type
+        // dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,
                 const Size &ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -750,17 +753,16 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns 2D filter with the specified kernel
-        // supports CV_8UC1 and CV_8UC4 types
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! smooths the image using the normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP
         CV_EXPORTS void boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
                                   Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -776,8 +778,6 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int iterations = 1);
 
         //! a synonym for normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101
         static inline void blur(const oclMat &src, oclMat &dst, Size ksize, Point anchor = Point(-1, -1),
                                 int borderType = BORDER_CONSTANT)
         {
@@ -785,10 +785,8 @@ namespace cv
         }
 
         //! applies non-separable 2D linear filter to the image
-        //  Note, at the moment this function only works when anchor point is in the kernel center
-        //  and kernel size supported is either 3x3 or 5x5; otherwise the function will fail to output valid result
         CV_EXPORTS void filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel,
-                                 Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                                 Point anchor = Point(-1, -1), double delta = 0.0, int borderType = BORDER_DEFAULT);
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY,
@@ -897,7 +895,10 @@ namespace cv
 
         //! Compute closest centers for each lines in source and lable it after center's index
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
-        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
+        // supports NORM_L1 and NORM_L2 distType
+        // if indices is provided, only the indexed rows will be calculated and their results are in the same
+        // order of indices
+        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType = NORM_L2SQR, const oclMat &indices = oclMat());
 
         //!Does k-means procedure on GPU
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
@@ -964,12 +965,12 @@ namespace cv
 
         struct CV_EXPORTS CannyBuf
         {
-            CannyBuf() : counter(NULL) {}
+            CannyBuf() : counter(1, 1, CV_32S) { }
             ~CannyBuf()
             {
                 release();
             }
-            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
+            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(1, 1, CV_32S)
             {
                 create(image_size, apperture_size);
             }
@@ -981,7 +982,7 @@ namespace cv
             oclMat dx_buf, dy_buf;
             oclMat magBuf, mapBuf;
             oclMat trackBuf1, trackBuf2;
-            void *counter;
+            oclMat counter;
             Ptr<FilterEngine_GPU> filterDX, filterDY;
         };
 
@@ -1618,7 +1619,12 @@ namespace cv
                                           float pos, oclMat &newFrame, oclMat &buf);
 
         //! computes moments of the rasterized shape or a vector of points
-        CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+        //! _array should be a vector a points standing for the contour
+        CV_EXPORTS Moments ocl_moments(InputArray contour);
+        //! src should be a general image uploaded to the GPU.
+        //! the supported oclMat type are CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 and CV_64FC1
+        //! to use type of CV_64FC1, the GPU should support CV_64FC1
+        CV_EXPORTS Moments ocl_moments(oclMat& src, bool binary);
 
         class CV_EXPORTS StereoBM_OCL
         {

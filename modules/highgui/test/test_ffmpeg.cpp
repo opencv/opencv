@@ -84,64 +84,63 @@ public:
 
         for (size_t j = 0; j < n; ++j)
         {
-        int tag = tags[j];
-        stringstream s;
-        s << tag;
+            int tag = tags[j];
+            stringstream s;
+            s << tag;
 
-        const string filename = "output_"+s.str()+".avi";
+            const string filename = "output_"+s.str()+".avi";
 
-        try
-        {
-            double fps = fps0;
-            Size frame_s = Size(img_c, img_r);
-
-            if( tag == VideoWriter::fourcc('H', '2', '6', '1') )
-                frame_s = Size(352, 288);
-            else if( tag == VideoWriter::fourcc('H', '2', '6', '3') )
-                frame_s = Size(704, 576);
-            /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
-                     tag == CV_FOURCC('j', 'p', 'e', 'g') )
-                frame_s = Size(1920, 1080);*/
-
-            if( tag == VideoWriter::fourcc('M', 'P', 'E', 'G') )
+            try
             {
-                frame_s = Size(720, 576);
-                fps = 25;
-            }
+                double fps = fps0;
+                Size frame_s = Size(img_c, img_r);
 
-            VideoWriter writer(filename, tag, fps, frame_s);
+                if( tag == VideoWriter::fourcc('H', '2', '6', '1') )
+                    frame_s = Size(352, 288);
+                else if( tag == VideoWriter::fourcc('H', '2', '6', '3') )
+                    frame_s = Size(704, 576);
+                /*else if( tag == CV_FOURCC('M', 'J', 'P', 'G') ||
+                         tag == CV_FOURCC('j', 'p', 'e', 'g') )
+                    frame_s = Size(1920, 1080);*/
 
-            if (writer.isOpened() == false)
-            {
-                ts->printf(ts->LOG, "\n\nFile name: %s\n", filename.c_str());
-                ts->printf(ts->LOG, "Codec id: %d   Codec tag: %c%c%c%c\n", j,
-                           tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
-                ts->printf(ts->LOG, "Error: cannot create video file.");
-                ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
-            }
-            else
-            {
-                Mat img(frame_s, CV_8UC3, Scalar::all(0));
-                const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
-
-                for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
+                if( tag == VideoWriter::fourcc('M', 'P', 'E', 'G') )
                 {
-                    //circle(img, Point2i(img_c / 2, img_r / 2), min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
-                    rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
-                              Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
-                    writer << img;
+                    frame_s = Size(720, 576);
+                    fps = 25;
                 }
 
-                if (!created) created = true;
-                else remove(filename.c_str());
-            }
-        }
-        catch(...)
-        {
-            ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
-        }
-        ts->set_failed_test_info(cvtest::TS::OK);
+                VideoWriter writer(filename, tag, fps, frame_s);
 
+                if (writer.isOpened() == false)
+                {
+                    ts->printf(ts->LOG, "\n\nFile name: %s\n", filename.c_str());
+                    ts->printf(ts->LOG, "Codec id: %d   Codec tag: %c%c%c%c\n", j,
+                               tag & 255, (tag >> 8) & 255, (tag >> 16) & 255, (tag >> 24) & 255);
+                    ts->printf(ts->LOG, "Error: cannot create video file.");
+                    ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+                }
+                else
+                {
+                    Mat img(frame_s, CV_8UC3, Scalar::all(0));
+                    const int coeff = cvRound(min(frame_s.width, frame_s.height)/(fps0 * time_sec));
+
+                    for (int i = 0 ; i < static_cast<int>(fps * time_sec); i++ )
+                    {
+                        //circle(img, Point2i(img_c / 2, img_r / 2), min(img_r, img_c) / 2 * (i + 1), Scalar(255, 0, 0, 0), 2);
+                        rectangle(img, Point2i(coeff * i, coeff * i), Point2i(coeff * (i + 1), coeff * (i + 1)),
+                                  Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2) )), -1);
+                        writer << img;
+                    }
+
+                    if (!created) created = true;
+                    else remove(filename.c_str());
+                }
+            }
+            catch(...)
+            {
+                ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
+            }
+            ts->set_failed_test_info(cvtest::TS::OK);
         }
     }
 };

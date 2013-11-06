@@ -99,79 +99,85 @@ namespace cv
         /////////////////////////////////////////////////////////////////////////////////////
         // threshold
 
-        typedef void (*gpuThresh_t)(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type);
-
-        static void threshold_8u(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
+        static std::vector<uchar> scalarToVector(const cv::Scalar & sc, int depth, int ocn, int cn)
         {
-            uchar thresh_uchar = cvFloor(thresh);
-            uchar max_val = cvRound(maxVal);
+            CV_Assert(ocn == cn || (ocn == 4 && cn == 3));
 
-            size_t cols = (dst.cols + (dst.offset % 16) + 15) / 16;
-            size_t bSizeX = 16, bSizeY = 16;
-            size_t gSizeX = cols % bSizeX == 0 ? cols : (cols + bSizeX - 1) / bSizeX * bSizeX;
-            size_t gSizeY = dst.rows;
-            size_t globalThreads[3] = {gSizeX, gSizeY, 1};
-            size_t localThreads[3] = {bSizeX, bSizeY, 1};
+            static const int sizeMap[] = { sizeof(uchar), sizeof(char), sizeof(ushort),
+                                       sizeof(short), sizeof(int), sizeof(float), sizeof(double) };
 
-            std::vector< std::pair<size_t, const void *> > args;
-            args.push_back( std::make_pair(sizeof(cl_mem), &src.data));
-            args.push_back( std::make_pair(sizeof(cl_mem), &dst.data));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.offset));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.step));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
-            args.push_back( std::make_pair(sizeof(cl_uchar), (void *)&thresh_uchar));
-            args.push_back( std::make_pair(sizeof(cl_uchar), (void *)&max_val));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&type));
-            openCLExecuteKernel(src.clCxt, &imgproc_threshold, "threshold", globalThreads, localThreads, args, src.oclchannels(), src.depth());
+            int elemSize1 = sizeMap[depth];
+            int bufSize = elemSize1 * ocn;
+            std::vector<uchar> _buf(bufSize);
+            uchar * buf = &_buf[0];
+            scalarToRawData(sc, buf, CV_MAKE_TYPE(depth, cn));
+            memset(buf + elemSize1 * cn, 0, (ocn - cn) * elemSize1);
+
+            return _buf;
         }
 
-        static void threshold_32f(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
+        static void threshold_runner(const oclMat &src, oclMat &dst, double thresh, double maxVal, int thresholdType)
         {
-            float thresh_f = thresh;
-            float max_val = maxVal;
-            int dst_offset = (dst.offset >> 2);
-            int dst_step = (dst.step >> 2);
-            int src_offset = (src.offset >> 2);
-            int src_step = (src.step >> 2);
+            bool ival = src.depth() < CV_32F;
+            int cn = src.channels(), vecSize = 4, depth = src.depth();
+            std::vector<uchar> thresholdValue = scalarToVector(cv::Scalar::all(ival ? cvFloor(thresh) : thresh), dst.depth(),
+                                                               dst.oclchannels(), dst.channels());
+            std::vector<uchar> maxValue = scalarToVector(cv::Scalar::all(maxVal), dst.depth(), dst.oclchannels(), dst.channels());
 
-            size_t cols = (dst.cols + (dst_offset & 3) + 3) / 4;
-            size_t bSizeX = 16, bSizeY = 16;
-            size_t gSizeX = cols % bSizeX == 0 ? cols : (cols + bSizeX - 1) / bSizeX * bSizeX;
-            size_t gSizeY = dst.rows;
-            size_t globalThreads[3] = {gSizeX, gSizeY, 1};
-            size_t localThreads[3] = {bSizeX, bSizeY, 1};
+            const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
+                                                  "THRESH_TOZERO", "THRESH_TOZERO_INV" };
+            const char * const channelMap[] = { "", "", "2", "4", "4" };
+            const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+            std::string buildOptions = format("-D T=%s%s -D %s", typeMap[depth], channelMap[cn], thresholdMap[thresholdType]);
+
+            int elemSize = src.elemSize();
+            int src_step = src.step / elemSize, src_offset = src.offset / elemSize;
+            int dst_step = dst.step / elemSize, dst_offset = dst.offset / elemSize;
 
             std::vector< std::pair<size_t, const void *> > args;
-            args.push_back( std::make_pair(sizeof(cl_mem), &src.data));
-            args.push_back( std::make_pair(sizeof(cl_mem), &dst.data));
+            args.push_back( std::make_pair(sizeof(cl_mem), (void *)&src.data));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&src_offset));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&src_step));
+            args.push_back( std::make_pair(sizeof(cl_mem), (void *)&dst.data));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst_offset));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst_step));
-            args.push_back( std::make_pair(sizeof(cl_float), (void *)&thresh_f));
-            args.push_back( std::make_pair(sizeof(cl_float), (void *)&max_val));
-            args.push_back( std::make_pair(sizeof(cl_int), (void *)&type));
+            args.push_back( std::make_pair(thresholdValue.size(), (void *)&thresholdValue[0]));
+            args.push_back( std::make_pair(maxValue.size(), (void *)&maxValue[0]));
 
-            openCLExecuteKernel(src.clCxt, &imgproc_threshold, "threshold", globalThreads, localThreads, args, src.oclchannels(), src.depth());
+            int max_index = dst.cols, cols = dst.cols;
+            if (cn == 1 && vecSize > 1)
+            {
+                CV_Assert(((vecSize - 1) & vecSize) == 0 && vecSize <= 16);
+                cols = divUp(cols, vecSize);
+                buildOptions += format(" -D VECTORIZED -D VT=%s%d -D VLOADN=vload%d -D VECSIZE=%d -D VSTOREN=vstore%d",
+                                       typeMap[depth], vecSize, vecSize, vecSize, vecSize);
+
+                int vecSizeBytes = vecSize * dst.elemSize1();
+                if ((dst.offset % dst.step) % vecSizeBytes == 0 && dst.step % vecSizeBytes == 0)
+                    buildOptions += " -D DST_ALIGNED";
+                if ((src.offset % src.step) % vecSizeBytes == 0 && src.step % vecSizeBytes == 0)
+                    buildOptions += " -D SRC_ALIGNED";
+
+                args.push_back( std::make_pair(sizeof(cl_int), (void *)&max_index));
+            }
+
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( std::make_pair(sizeof(cl_int), (void *)&cols));
+
+            size_t localThreads[3] = { 16, 16, 1 };
+            size_t globalThreads[3] = { cols, dst.rows, 1 };
+
+            openCLExecuteKernel(src.clCxt, &imgproc_threshold, "threshold", globalThreads, localThreads, args,
+                                -1, -1, buildOptions.c_str());
         }
 
-        // threshold: support 8UC1 and 32FC1 data type and five threshold type
-        double threshold(const oclMat &src, oclMat &dst, double thresh, double maxVal, int type)
+        double threshold(const oclMat &src, oclMat &dst, double thresh, double maxVal, int thresholdType)
         {
-            //TODO: These limitations shall be removed later.
-            CV_Assert(src.type() == CV_8UC1 || src.type() == CV_32FC1);
-            CV_Assert(type == THRESH_BINARY || type == THRESH_BINARY_INV || type == THRESH_TRUNC
-                      || type == THRESH_TOZERO || type == THRESH_TOZERO_INV );
+            CV_Assert(thresholdType == THRESH_BINARY || thresholdType == THRESH_BINARY_INV || thresholdType == THRESH_TRUNC
+                      || thresholdType == THRESH_TOZERO || thresholdType == THRESH_TOZERO_INV);
 
-            static const gpuThresh_t gpuThresh_callers[2] = {threshold_8u, threshold_32f};
-
-            dst.create( src.size(), src.type() );
-            gpuThresh_callers[(src.type() == CV_32FC1)](src, dst, thresh, maxVal, type);
+            dst.create(src.size(), src.type());
+            threshold_runner(src, dst, thresh, maxVal, thresholdType);
 
             return thresh;
         }
@@ -891,8 +897,60 @@ namespace cv
 
             if (ksize > 0)
             {
-                Sobel(src, Dx, CV_32F, 1, 0, ksize, scale, 0, borderType);
-                Sobel(src, Dy, CV_32F, 0, 1, ksize, scale, 0, borderType);
+                Context* clCxt = Context::getContext();
+                if(clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) && src.type() == CV_8UC1 &&
+                    src.cols % 8 == 0 && src.rows % 8 == 0 &&
+                    ksize==3 &&
+                    (borderType ==cv::BORDER_REFLECT ||
+                     borderType == cv::BORDER_REPLICATE ||
+                     borderType ==cv::BORDER_REFLECT101 ||
+                     borderType ==cv::BORDER_WRAP))
+                {
+                    Dx.create(src.size(), CV_32FC1);
+                    Dy.create(src.size(), CV_32FC1);
+
+                    const unsigned int block_x = 8;
+                    const unsigned int block_y = 8;
+
+                    unsigned int src_pitch = src.step;
+                    unsigned int dst_pitch = Dx.cols;
+
+                    float _scale = scale;
+
+                    std::vector<std::pair<size_t , const void *> > args;
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dx.data ));
+                    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&Dy.data ));
+                    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+                    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+                    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&src_pitch ));
+                    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&dst_pitch ));
+                    args.push_back( std::make_pair( sizeof(cl_float) , (void *)&_scale ));
+                    size_t gt2[3] = {src.cols, src.rows, 1}, lt2[3] = {block_x, block_y, 1};
+
+                    String option = "-D BLK_X=8 -D BLK_Y=8";
+                    switch(borderType)
+                    {
+                    case cv::BORDER_REPLICATE:
+                        option = option + " -D BORDER_REPLICATE";
+                        break;
+                    case cv::BORDER_REFLECT:
+                        option = option + " -D BORDER_REFLECT";
+                        break;
+                    case cv::BORDER_REFLECT101:
+                        option = option + " -D BORDER_REFLECT101";
+                        break;
+                    case cv::BORDER_WRAP:
+                        option = option + " -D BORDER_WRAP";
+                        break;
+                    }
+                    openCLExecuteKernel(src.clCxt, &imgproc_sobel3, "sobel3", gt2, lt2, args, -1, -1, option.c_str() );
+                }
+                else
+                {
+                    Sobel(src, Dx, CV_32F, 1, 0, ksize, scale, 0, borderType);
+                    Sobel(src, Dy, CV_32F, 0, 1, ksize, scale, 0, borderType);
+                }
             }
             else
             {
@@ -954,6 +1012,7 @@ namespace cv
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.step));
             args.push_back( std::make_pair( sizeof(cl_float) , (void *)&k));
+
             openCLExecuteKernel(dst.clCxt, source, kernelName, gt, lt, args, -1, -1, buildOptions.c_str());
         }
 
@@ -969,15 +1028,15 @@ namespace cv
         {
             if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(Error::OpenCLDoubleNotSupported, "Select device doesn't support double");
+                CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
                 return;
             }
 
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE
                       || borderType == cv::BORDER_REFLECT);
+
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
-            dst.create(src.size(), CV_32F);
+            dst.create(src.size(), CV_32FC1);
             corner_ocl(&imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
         }
 
@@ -991,12 +1050,13 @@ namespace cv
         {
             if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
-                CV_Error(Error::OpenCLDoubleNotSupported, "select device don't support double");
+                CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
                 return;
             }
 
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 ||
+                      borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
 

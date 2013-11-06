@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCV_OCL
 
 #include "opencv2/ocl.hpp"
 using namespace std;

@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -100,8 +100,8 @@ __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __glo
         F4 Y0 = M[3]*DX + M[4]*dy + M[5];
         F4 W = M[6]*DX + M[7]*dy + M[8],one=1,zero=0;
         W = (W!=zero) ? one/W : zero;
-        short4 X = convert_short4(rint(X0*W));
-        short4 Y = convert_short4(rint(Y0*W));
+        short4 X = convert_short4_sat_rte(X0*W);
+        short4 Y = convert_short4_sat_rte(Y0*W);
         int4 sx = convert_int4(X);
         int4 sy = convert_int4(Y);
 
@@ -133,12 +133,12 @@ __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, _
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        int sx = (short)(X >> INTER_BITS);
-        int sy = (short)(Y >> INTER_BITS);
+        int sx = convert_short_sat(X >> INTER_BITS);
+        int sy = convert_short_sat(Y >> INTER_BITS);
         int ay = (short)(Y & (INTER_TAB_SIZE-1));
         int ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -150,16 +150,16 @@ __kernel void warpPerspectiveLinear_C1_D0(__global const uchar * restrict src, _
 
         short itab[4];
         float tab1y[2], tab1x[2];
-        tab1y[0] = 1.0 - 1.f/INTER_TAB_SIZE*ay;
+        tab1y[0] = 1.0f - 1.f/INTER_TAB_SIZE*ay;
         tab1y[1] = 1.f/INTER_TAB_SIZE*ay;
-        tab1x[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax;
+        tab1x[0] = 1.0f - 1.f/INTER_TAB_SIZE*ax;
         tab1x[1] = 1.f/INTER_TAB_SIZE*ax;
 
 #pragma unroll 4
         for(i=0; i<4;  i++)
         {
             float v = tab1y[(i>>1)] * tab1x[(i&1)];
-            itab[i] = convert_short_sat(rint( v * INTER_REMAP_COEF_SCALE ));
+            itab[i] = convert_short_sat_rte( v * INTER_REMAP_COEF_SCALE );
         }
         if(dx >=0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
         {
@@ -185,12 +185,12 @@ __kernel void warpPerspectiveCubic_C1_D0(__global uchar * src, __global uchar * 
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS) - 1;
-        short sy = (short)(Y >> INTER_BITS) - 1;
+        short sx = convert_short_sat(X >> INTER_BITS) - 1;
+        short sy = convert_short_sat(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -265,11 +265,9 @@ __kernel void warpPerspectiveNN_C4_D0(__global uchar4 const * restrict src, __gl
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? 1./W : 0.0;
-        int X = rint(X0*W);
-        int Y = rint(Y0*W);
-        short sx = (short)X;
-        short sy = (short)Y;
+        W = (W != 0.0f) ? 1.f/W : 0.0f;
+        short sx = convert_short_sat_rte(X0*W);
+        short sy = convert_short_sat_rte(Y0*W);
 
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*(srcStep>>2)+sx] : (uchar4)0;
@@ -291,12 +289,12 @@ __kernel void warpPerspectiveLinear_C4_D0(__global uchar4 const * restrict src, 
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS);
-        short sy = (short)(Y >> INTER_BITS);
+        short sx = convert_short_sat(X >> INTER_BITS);
+        short sy = convert_short_sat(Y >> INTER_BITS);
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -343,12 +341,12 @@ __kernel void warpPerspectiveCubic_C4_D0(__global uchar4 const * restrict src, _
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS) - 1;
-        short sy = (short)(Y >> INTER_BITS) - 1;
+        short sx = convert_short_sat(X >> INTER_BITS) - 1;
+        short sy = convert_short_sat(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -426,11 +424,9 @@ __kernel void warpPerspectiveNN_C1_D5(__global float * src, __global float * dst
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? 1./W : 0.0;
-        int X = rint(X0*W);
-        int Y = rint(Y0*W);
-        short sx = (short)X;
-        short sy = (short)Y;
+        W = (W != 0.0f) ? 1.f/W : 0.0f;
+        short sx = convert_short_sat_rte(X0*W);
+        short sy = convert_short_sat_rte(Y0*W);
 
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>2)+dy*dstStep+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>2)+sy*srcStep+sx] : 0;
@@ -451,12 +447,12 @@ __kernel void warpPerspectiveLinear_C1_D5(__global float * src, __global float *
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS);
-        short sy = (short)(Y >> INTER_BITS);
+        short sx = convert_short_sat(X >> INTER_BITS);
+        short sy = convert_short_sat(Y >> INTER_BITS);
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -469,9 +465,9 @@ __kernel void warpPerspectiveLinear_C1_D5(__global float * src, __global float *
 
         float tab[4];
         float taby[2], tabx[2];
-        taby[0] = 1.0 - 1.f/INTER_TAB_SIZE*ay;
+        taby[0] = 1.0f - 1.f/INTER_TAB_SIZE*ay;
         taby[1] = 1.f/INTER_TAB_SIZE*ay;
-        tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax;
+        tabx[0] = 1.0f - 1.f/INTER_TAB_SIZE*ax;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax;
 
         tab[0] = taby[0] * tabx[0];
@@ -501,12 +497,12 @@ __kernel void warpPerspectiveCubic_C1_D5(__global float * src, __global float * 
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS) - 1;
-        short sy = (short)(Y >> INTER_BITS) - 1;
+        short sx = convert_short_sat(X >> INTER_BITS) - 1;
+        short sy = convert_short_sat(Y >> INTER_BITS) - 1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -561,11 +557,9 @@ __kernel void warpPerspectiveNN_C4_D5(__global float4 * src, __global float4 * d
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W =(W != 0.0)? 1./W : 0.0;
-        int X = rint(X0*W);
-        int Y = rint(Y0*W);
-        short sx = (short)X;
-        short sy = (short)Y;
+        W =(W != 0.0f)? 1.f/W : 0.0f;
+        short sx = convert_short_sat_rte(X0*W);
+        short sy = convert_short_sat_rte(Y0*W);
 
         if(dx >= 0 && dx < dst_cols && dy >= 0 && dy < dst_rows)
             dst[(dst_offset>>4)+dy*(dstStep>>2)+dx]= (sx>=0 && sx<src_cols && sy>=0 && sy<src_rows) ? src[(src_offset>>4)+sy*(srcStep>>2)+sx] : (float)0;
@@ -589,12 +583,12 @@ __kernel void warpPerspectiveLinear_C4_D5(__global float4 * src, __global float4
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx0 = (short)(X >> INTER_BITS);
-        short sy0 = (short)(Y >> INTER_BITS);
+        short sx0 = convert_short_sat(X >> INTER_BITS);
+        short sy0 = convert_short_sat(Y >> INTER_BITS);
         short ay0 = (short)(Y & (INTER_TAB_SIZE-1));
         short ax0 = (short)(X & (INTER_TAB_SIZE-1));
 
@@ -608,9 +602,9 @@ __kernel void warpPerspectiveLinear_C4_D5(__global float4 * src, __global float4
 
         float tab[4];
         float taby[2], tabx[2];
-        taby[0] = 1.0 - 1.f/INTER_TAB_SIZE*ay0;
+        taby[0] = 1.0f - 1.f/INTER_TAB_SIZE*ay0;
         taby[1] = 1.f/INTER_TAB_SIZE*ay0;
-        tabx[0] = 1.0 - 1.f/INTER_TAB_SIZE*ax0;
+        tabx[0] = 1.0f - 1.f/INTER_TAB_SIZE*ax0;
         tabx[1] = 1.f/INTER_TAB_SIZE*ax0;
 
         tab[0] = taby[0] * tabx[0];
@@ -642,12 +636,12 @@ __kernel void warpPerspectiveCubic_C4_D5(__global float4 * src, __global float4 
         F X0 = M[0]*dx + M[1]*dy + M[2];
         F Y0 = M[3]*dx + M[4]*dy + M[5];
         F W = M[6]*dx + M[7]*dy + M[8];
-        W = (W != 0.0) ? INTER_TAB_SIZE/W : 0.0;
+        W = (W != 0.0f) ? INTER_TAB_SIZE/W : 0.0f;
         int X = rint(X0*W);
         int Y = rint(Y0*W);
 
-        short sx = (short)(X >> INTER_BITS)-1;
-        short sy = (short)(Y >> INTER_BITS)-1;
+        short sx = convert_short_sat(X >> INTER_BITS)-1;
+        short sy = convert_short_sat(Y >> INTER_BITS)-1;
         short ay = (short)(Y & (INTER_TAB_SIZE-1));
         short ax = (short)(X & (INTER_TAB_SIZE-1));
 
