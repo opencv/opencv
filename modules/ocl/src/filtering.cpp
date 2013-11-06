@@ -1408,7 +1408,7 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Adaptive Bilateral Filter
 
-void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double min_sigma_val, Point anchor, int borderType)
+void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double maxSigmaColor, Point anchor, int borderType)
 {
     CV_Assert((ksize.width & 1) && (ksize.height & 1));  // ksize must be odd
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);  // source must be 8bit RGB image
@@ -1495,7 +1495,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     sprintf(build_options,
 		"-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d -D MAX_VAR_VAL=%f -D ABF_GAUSSIAN=%d"
         " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
-        static_cast<int>(EXTRA), static_cast<float>(min_sigma_val*min_sigma_val), static_cast<int>(ABF_GAUSSIAN_ocl),
+        static_cast<int>(EXTRA), static_cast<float>(maxSigmaColor*maxSigmaColor), static_cast<int>(ABF_GAUSSIAN_ocl),
         static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
 
     std::vector<pair<size_t , const void *> > args;

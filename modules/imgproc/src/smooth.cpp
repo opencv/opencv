@@ -2295,8 +2295,8 @@ class adaptiveBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
 public:
-    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, double _sigma_space, double _min_sigma_vals, Point _anchor) :
-        temp(&_temp), dest(&_dest), ksize(_ksize), sigma_space(_sigma_space), min_sigma_vals(_min_sigma_vals), anchor(_anchor)
+    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, double _sigma_space, double _maxSigmaColor, Point _anchor) :
+        temp(&_temp), dest(&_dest), ksize(_ksize), sigma_space(_sigma_space), maxSigma_Color(_maxSigmaColor), anchor(_anchor)
     {
         if( sigma_space <= 0 )
             sigma_space = 1;
@@ -2364,11 +2364,11 @@ public:
                     
                     if(var < 0.01) 
                         var = 0.01f;
-                    else if(var > (float)(min_sigma_vals*min_sigma_vals) )
-                        var =  (float)(min_sigma_vals*min_sigma_vals) ;
+                    else if(var > (float)(maxSigma_Color*maxSigma_Color) )
+                        var =  (float)(maxSigma_Color*maxSigma_Color) ;
 
 #else
-                    var = min_sigma_vals*min_sigma_vals;
+                    var = maxSigmaColor*maxSigmaColor;
 #endif
                     startLMJ = 0;
                     endLMJ = ksize.width;
@@ -2426,7 +2426,7 @@ public:
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
 #if ABF_CALCVAR
-                    float max_var = (float)( min_sigma_vals*min_sigma_vals);
+                    float max_var = (float)( maxSigma_Color*maxSigma_Color);
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
@@ -2461,7 +2461,7 @@ public:
                         var_r =  (float)(max_var) ;
 
 #else
-                    var_b = min_sigma_vals*min_sigma_vals; var_g = min_sigma_vals*min_sigma_vals; var_r = min_sigma_vals*min_sigma_vals;
+                    var_b = maxSigma_Color*maxSigma_Color; var_g = maxSigma_Color*maxSigma_Color; var_r = maxSigma_Color*maxSigma_Color;
 #endif
                     startLMJ = 0;
                     endLMJ = ksize.width;
@@ -2516,11 +2516,11 @@ private:
     Mat *dest;
     Size ksize;
     double sigma_space;
-    double min_sigma_vals;
+    double maxSigma_Color;
     Point anchor;
     vector<float> space_weight;
 };
-static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, double sigmaSpace, double min_sigma_vals, Point anchor, int borderType )
+static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, double sigmaSpace, double maxSigmaColor, Point anchor, int borderType )
 {
     Size size = src.size();
 
@@ -2530,12 +2530,12 @@ static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, do
     Mat temp;
     copyMakeBorder(src, temp, anchor.x, anchor.y, anchor.x, anchor.y, borderType);
 
-    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, min_sigma_vals, anchor);
+    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, maxSigmaColor, anchor);
     parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
-                                  double sigmaSpace, double min_sigma_vals, Point anchor, int borderType )
+                                  double sigmaSpace, double maxSigmaColor, Point anchor, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
@@ -2545,7 +2545,7 @@ void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
 
     anchor = normalizeAnchor(anchor,ksize);
     if( src.depth() == CV_8U )
-        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, min_sigma_vals, anchor, borderType );
+        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, maxSigmaColor, anchor, borderType );
     else
         CV_Error( CV_StsUnsupportedFormat,
         "Adaptive Bilateral filtering is only implemented for 8u images" );
