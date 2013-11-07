@@ -110,8 +110,7 @@ The constructors.
 
     :param: reg: To enable or disable regularization. Set to positive integer (greater than zero) to enable and to 0 to disable.
 
-    :param: mini_batch_size: Specifies the number of training samples taken in each step of Mini-Batch Gradient Descent. Will only be used if using ``LogisticRegression::MINI_BATCH`` training algorithm.
-
+    :param: mini_batch_size: Specifies the number of training samples taken in each step of Mini-Batch Gradient Descent. Will only be used if using ``LogisticRegression::MINI_BATCH`` training algorithm. It has to take values less than the total number of training samples.
 
 The full constructor initializes corresponding members. The default constructor creates an object with dummy parameters.
 
