@@ -634,6 +634,12 @@ void UMat::convertTo(OutputArray, int, double, double) const
     CV_Error(Error::StsNotImplemented, "");
 }
 
+UMat& UMat::setTo(InputArray, InputArray)
+{
+    CV_Error(Error::StsNotImplemented, "");
+    return *this;
+}
+
 UMat& UMat::operator = (const Scalar&)
 {
     CV_Error(Error::StsNotImplemented, "");

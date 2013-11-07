@@ -2003,7 +2003,7 @@ static cl_command_queue getQueue(const Queue& q)
     return qq;
 }
 
-KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, void* _obj, size_t _sz)
+KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale)
 {
 }
@@ -2332,7 +2332,7 @@ struct Program::Impl
                                     buildflags.c_str(), 0, 0);
             if( retval == CL_BUILD_PROGRAM_FAILURE )
             {
-                char buf[1024];
+                char buf[1<<16];
                 size_t retsz = 0;
                 clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
                                       sizeof(buf)-16, buf, &retsz);

@@ -51,12 +51,10 @@
      the following flags should be passed:
      1) one of "-D BINARY_OP", "-D UNARY_OP", "-D MASK_BINARY_OP" or "-D MASK_UNARY_OP"
      2) the actual operation performed, one of "-D OP_...", see below the list of operations.
-     2a) "-D SAMETYPE_MODE -D dstDepth=<destination depth> [-D cn=<num channels]"
+     2a) "-D dstDepth=<destination depth> [-D cn=<num channels]"
          for some operations, like min/max/and/or/xor it's enough
-     2b) "-D srcDepth1=<source1 depth> -D
-         "-D srcT2=<source2 type> -D convertToWT2=<convert_from_source1_type_to_work_type> "
-         "-D dstT=<destination type> -D convertToDT=<convert_from_work_type_to_dst_type> "
-         "-D workT=<work type> "
+     2b) "-D srcDepth1=<source1 depth> -D srcDepth2=<source2 depth> -D dstDepth=<destination depth>
+          -D workDepth=<work depth> [-D cn=<num channels>]" - for mixed-type operations
 */
 
 #if defined (DOUBLE_SUPPORT)
@@ -70,95 +68,117 @@
 #define CV_32S 4
 #define CV_32F 5
 
-#define TYPE0 uchar
-#define TYPE1 char
-#define TYPE2 ushort
-#define TYPE3 short
-#define TYPE4 int
-#define TYPE5 float
-#define TYPE6 double
+#if dstDepth == 0
+#define dstT_ uchar
+#elif dstDepth == 1
+#define dstT_ char
+#elif dstDepth == 2
+#define dstT_ ushort
+#elif dstDepth == 3
+#define dstT_ short
+#elif dstDepth == 4
+#define dstT_ int
+#elif dstDepth == 5
+#define dstT_ float
+#elif dstDepth == 6
+#define dstT_ double
+#elif dstDepth == 7
 /* specially for bit & byte-level operations */
-#define TYPE7 long
+#define dstT_ long
+#endif
 
-#define EXPAND(a) a
+#define PASTE(a, b) a##b
 
 #if defined cn && cn != 1
-#define ADD_CN(s) s##cn
+#define ADD_CN(s) PASTE(s, cn)
 #else
 #define ADD_CN(s) s
 #endif
 
-#define dstT_ TYPE##dstDepth
 #define dstT ADD_CN(dstT_)
 #define dstelem *(dstT*)(dstptr + dst_index)
 
-#ifdef SAMETYPE_MODE
+#ifndef workDepth
 
-#define srcT1_ dstT_
-#define srcT1 dstT
-#define srcT2_ dstT_
-#define srcT2 dstT
-#define workT_ dstT_
-#define workT dstT
-#define srcelem1 *(dstT*)(srcptr1 + src1_index)
-#define srcelem2 *(dstT*)(srcptr2 + src2_index)
+    #define srcT1_ dstT_
+    #define srcT1 dstT
+    #define srcT2_ dstT_
+    #define srcT2 dstT
+    #define workT_ dstT_
+    #define workT dstT
+    #define srcelem1 *(dstT*)(srcptr1 + src1_index)
+    #define srcelem2 *(dstT*)(srcptr2 + src2_index)
 
-#else
-
-#define srcT1_ TYPE##srcDepth1
-#define srcT1 ADD_CN(srcT1_)
-#define srcT2_ TYPE##srcDepth2
-#define srcT2 ADD_CN(srcT2_)
-#define workT_ TYPE##workDepth
-#define workT ADD_CN(workT_)
-
-#if workDepth == srcDepth1
-    #define convertToWT1
-#elif workDepth > srcDepth1
-    #define convertToWT1 convert_##workT
-#elif workDepth < CV_32S
-    #if srcDepth1 >= CV_32F
-        #define convertToWT1 convert_##workT##_sat_rte
-    #else
-        #define convertToWT1 convert_##workT##_sat
+    #ifdef OP_ADD
+    #undef OP_ADD
+    #define OP_SAT_ADD
     #endif
-#else
-    #define convertToWT1 convert_##workT##_rte
-#endif
 
-#if workDepth == srcDepth2
-    #define convertToWT2
-#elif workDepth > srcDepth2
-    #define convertToWT2 convert_##workT
-#elif workDepth < CV_32S
-    #if srcDepth2 >= CV_32F
-        #define convertToWT2 convert_##workT##_sat_rte
-    #else
-        #define convertToWT2 convert_##workT##_sat
+    #ifdef OP_SUB
+    #undef OP_SUB
+    #define OP_SAT_SUB
     #endif
-#else
-    #define convertToWT2 convert_##workT##_rte
-#endif
 
-#if workDepth == dstDepth
-    #define convertToDT
-#if dstDepth < CV_32S
-    #if workDepth >= CV_32F
-        #define convertToDT convert_##dstT##_sat_rte
-    #else
-        #define convertToDT convert_##dstT##_sat
+    #ifdef OP_RSUB
+    #undef OP_RSUB
+    #define OP_SAT_RSUB
     #endif
-#elif dstDepth == CV_32S && workDepth >= CV_32F
-    #define convertToDT convert_##dstT##_rte
+
 #else
-    #define convertToDT convert_##dstT
+
+    #define srcT1_ PASTE(TYPE, srcDepth1)
+    #define srcT1 ADD_CN(srcT1_)
+    #define srcT2_ PASTE(TYPE, srcDepth2)
+    #define srcT2 ADD_CN(srcT2_)
+    #define workT_ PASTE(TYPE, workDepth)
+    #define workT ADD_CN(workT_)
+
+    #if workDepth == srcDepth1
+        #define convertToWT1
+    #elif workDepth > srcDepth1
+        #define convertToWT1 PASTE(convert_, workT)
+    #elif workDepth < CV_32S
+        #if srcDepth1 >= CV_32F
+            #define convertToWT1 PASTE(PASTE(convert_, workT), _sat_rte)
+        #else
+            #define convertToWT1 PASTE(PASTE(convert_, workT), _sat)
+        #endif
+    #else
+        #define convertToWT1 PASTE(PASTE(convert_, workT), _rte)
+    #endif
+
+    #if workDepth == srcDepth2
+        #define convertToWT2
+    #elif workDepth > srcDepth2
+        #define convertToWT2 convert_##workT
+    #elif workDepth < CV_32S
+        #if srcDepth2 >= CV_32F
+            #define convertToWT2 PASTE(PASTE(convert_, workT), _sat_rte)
+        #else
+            #define convertToWT2 PASTE(PASTE(convert_, workT), _sat)
+        #endif
+    #else
+        #define convertToWT2 PASTE(PASTE(convert_, workT), _rte)
+    #endif
+
+    #if workDepth == dstDepth
+        #define convertToDT
+    #elif dstDepth < CV_32S
+        #if workDepth >= CV_32F
+            #define convertToDT PASTE(PASTE(convert_, dstT), _sat_rte)
+        #else
+            #define convertToDT PASTE(PASTE(convert_, dstT), _sat)
+        #endif
+    #elif dstDepth == CV_32S && workDepth >= CV_32F
+        #define convertToDT PASTE(PASTE(convert_, dstT), _rte)
+    #else
+        #define convertToDT PASTE(convert_, dstT)
+    #endif
+
+    #define srcelem1 convertToWT1(*(srcT1*)(srcptr1 + src1_index))
+    #define srcelem2 convertToWT2(*(srcT2*)(srcptr2 + src2_index))
+
 #endif
-
-#define srcelem1 convertToWT1(*(srcT1*)(srcptr1 + src1_index))
-#define srcelem2 convertToWT2(*(srcT2*)(srcptr2 + src2_index))
-
-#endif
-
 
 #define EXTRA_PARAMS
 

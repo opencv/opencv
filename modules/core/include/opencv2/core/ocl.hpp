@@ -246,7 +246,7 @@ class CV_EXPORTS KernelArg
 {
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, NO_SIZE=256 };
-    KernelArg(int _flags, UMat* _m, int wscale=1, void* _obj=0, size_t _sz=0);
+    KernelArg(int _flags, UMat* _m, int wscale=1, const void* _obj=0, size_t _sz=0);
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
     static KernelArg ReadWrite(const UMat& m, int wscale=1)
@@ -267,7 +267,7 @@ public:
 
     int flags;
     UMat* m;
-    void* obj;
+    const void* obj;
     size_t sz;
     int wscale;
 };
