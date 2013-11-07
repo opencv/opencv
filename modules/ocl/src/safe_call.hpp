@@ -48,13 +48,8 @@
 
 #include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 
-#if defined(__GNUC__)
-#define openCLSafeCall(expr)  ___openCLSafeCall(expr, __FILE__, __LINE__, __func__)
-#define openCLVerifyCall(res) ___openCLSafeCall(res, __FILE__, __LINE__, __func__)
-#else /* defined(__OPENCLCC__) || defined(__MSVC__) */
-#define openCLSafeCall(expr)  ___openCLSafeCall(expr, __FILE__, __LINE__)
-#define openCLVerifyCall(res) ___openCLSafeCall(res, __FILE__, __LINE__)
-#endif
+#define openCLSafeCall(expr)  ___openCLSafeCall(expr, __FILE__, __LINE__, CV_Func)
+#define openCLVerifyCall(res) ___openCLSafeCall(res, __FILE__, __LINE__, CV_Func)
 
 
 namespace cv
