@@ -198,10 +198,8 @@ namespace cv
             if (map1.empty())
                 map1.swap(map2);
 
-            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST
-                      /*|| interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4*/);
-            CV_Assert((map1.type() == CV_16SC2 && (map2.empty() || (interpolation == INTER_NEAREST &&
-                                                                    (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) )) ||
+            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST);
+            CV_Assert((map1.type() == CV_16SC2 && (map2.empty() || (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) ) ||
                       (map1.type() == CV_32FC2 && !map2.data) ||
                       (map1.type() == CV_32FC1 && map2.type() == CV_32FC1));
             CV_Assert(!map2.data || map2.size() == map1.size());
@@ -231,8 +229,8 @@ namespace cv
                 CV_Error(CV_StsBadArg, "Unsupported map types");
 
             int ocn = dst.oclchannels();
-            size_t localThreads[3] = { 16, 16, 1};
-            size_t globalThreads[3] = { dst.cols, dst.rows, 1};
+            size_t localThreads[3] = { 256, 1, 1 };
+            size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             Mat scalar(1, 1, CV_MAKE_TYPE(dst.depth(), ocn), borderValue);
             std::string buildOptions = format("-D %s -D %s -D T=%s%s", interMap[interpolation],
