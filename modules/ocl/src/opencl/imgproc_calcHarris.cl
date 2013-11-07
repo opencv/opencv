@@ -195,7 +195,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
             FPTYPE temp_sum = 0;
             for (int i=-anX; i<=anX - till; i++)
             {
-                temp_sum += temp[k][col+i];  
+                temp_sum += temp[k][col+i];
             }
             tmp_sum[k] = temp_sum;
         }
