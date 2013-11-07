@@ -289,7 +289,7 @@ OCL_TEST_P(CornerHarris, Mat)
         cornerHarris(src_roi, dst_roi, blockSize, apertureSize, k, borderType);
         ocl::cornerHarris(gsrc_roi, gdst_roi, blockSize, apertureSize, k, borderType);
 
-        Near(1e-5, true);
+        Near(1e-5);
     }
 }
 
