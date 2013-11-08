@@ -72,13 +72,8 @@ using namespace cv::gpu;
 
 namespace
 {
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
-#endif
+#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
+#define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
     inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {

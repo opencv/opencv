@@ -774,11 +774,7 @@ namespace cv { namespace ogl {
 CV_EXPORTS bool checkError(const char* file, const int line, const char* func = "");
 }}
 
-#if defined(__GNUC__)
-    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__, __func__)) )
-#else
-    #define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__)) )
-#endif
+#define CV_CheckGlError() CV_DbgAssert( (cv::ogl::checkError(__FILE__, __LINE__, CV_Func)) )
 
 #endif //__cplusplus
 

@@ -69,11 +69,7 @@ namespace
         #else
             void throw_nocuda() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
-            #if defined(__GNUC__)
-                #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-            #else /* defined(__CUDACC__) || defined(__MSVC__) */
-                #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-            #endif
+            #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
             void ___cudaSafeCall(cudaError_t err, const char* file, const int line, const char* func = "")
             {
