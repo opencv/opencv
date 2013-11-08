@@ -48,6 +48,7 @@
 #endif
 
 using namespace std;
+using namespace cv;
 
 static inline double
 logRatio( double val )

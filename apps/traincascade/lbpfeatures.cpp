@@ -4,6 +4,8 @@
 #include "lbpfeatures.h"
 #include "cascadeclassifier.h"
 
+using namespace cv;
+
 CvLBPFeatureParams::CvLBPFeatureParams()
 {
     maxCatCount = 256;
