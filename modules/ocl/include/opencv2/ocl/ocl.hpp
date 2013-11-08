@@ -879,7 +879,7 @@ namespace cv
         // supports NORM_L1 and NORM_L2 distType
         // if indices is provided, only the indexed rows will be calculated and their results are in the same
         // order of indices
-        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType = NORM_L2SQR, const oclMat &indices = oclMat());
+        CV_EXPORTS void distanceToCenters(const oclMat &src, const oclMat &centers, Mat &dists, Mat &labels, int distType = NORM_L2SQR);
 
         //!Does k-means procedure on GPU
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
