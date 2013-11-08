@@ -46,8 +46,6 @@
 #include "test_precomp.hpp"
 #ifdef HAVE_OPENCL
 
-namespace
-{
 using namespace testing;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,8 +106,8 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
         {
             random_roi(channelsIn, channelsOut);
 
-            cv::cvtColor(src1_roi, dst1_roi, code);
-            cv::ocl::cvtColor(gsrc1_roi, gdst1_roi, code);
+            cv::cvtColor(src1_roi, dst1_roi, code, channelsOut);
+            cv::ocl::cvtColor(gsrc1_roi, gdst1_roi, code, channelsOut);
 
             Near();
         }
@@ -125,7 +123,7 @@ OCL_TEST_P(CvtColor, RGB2GRAY)
 OCL_TEST_P(CvtColor, GRAY2RGB)
 {
     doTest(1, 3, CVTCODE(GRAY2RGB));
-};
+}
 
 OCL_TEST_P(CvtColor, BGR2GRAY)
 {
@@ -134,25 +132,26 @@ OCL_TEST_P(CvtColor, BGR2GRAY)
 OCL_TEST_P(CvtColor, GRAY2BGR)
 {
     doTest(1, 3, CVTCODE(GRAY2BGR));
-};
+}
 
 OCL_TEST_P(CvtColor, RGBA2GRAY)
 {
-    doTest(3, 1, CVTCODE(RGBA2GRAY));
+    doTest(4, 1, CVTCODE(RGBA2GRAY));
 }
 OCL_TEST_P(CvtColor, GRAY2RGBA)
 {
-    doTest(1, 3, CVTCODE(GRAY2RGBA));
-};
+    doTest(1, 4, CVTCODE(GRAY2RGBA));
+}
 
 OCL_TEST_P(CvtColor, BGRA2GRAY)
 {
-    doTest(3, 1, CVTCODE(BGRA2GRAY));
+    doTest(4, 1, CVTCODE(BGRA2GRAY));
 }
 OCL_TEST_P(CvtColor, GRAY2BGRA)
 {
-    doTest(1, 3, CVTCODE(GRAY2BGRA));
-};
+    doTest(1, 4, CVTCODE(GRAY2BGRA));
+}
+
 
 OCL_TEST_P(CvtColor, RGB2YUV)
 {
@@ -162,6 +161,14 @@ OCL_TEST_P(CvtColor, BGR2YUV)
 {
     doTest(3, 3, CVTCODE(BGR2YUV));
 }
+OCL_TEST_P(CvtColor, RGBA2YUV)
+{
+    doTest(4, 3, CVTCODE(RGB2YUV));
+}
+OCL_TEST_P(CvtColor, BGRA2YUV)
+{
+    doTest(4, 3, CVTCODE(BGR2YUV));
+}
 OCL_TEST_P(CvtColor, YUV2RGB)
 {
     doTest(3, 3, CVTCODE(YUV2RGB));
@@ -170,6 +177,16 @@ OCL_TEST_P(CvtColor, YUV2BGR)
 {
     doTest(3, 3, CVTCODE(YUV2BGR));
 }
+OCL_TEST_P(CvtColor, YUV2RGBA)
+{
+    doTest(3, 4, CVTCODE(YUV2RGB));
+}
+OCL_TEST_P(CvtColor, YUV2BGRA)
+{
+    doTest(3, 4, CVTCODE(YUV2BGR));
+}
+
+
 OCL_TEST_P(CvtColor, RGB2YCrCb)
 {
     doTest(3, 3, CVTCODE(RGB2YCrCb));
@@ -178,8 +195,33 @@ OCL_TEST_P(CvtColor, BGR2YCrCb)
 {
     doTest(3, 3, CVTCODE(BGR2YCrCb));
 }
+OCL_TEST_P(CvtColor, RGBA2YCrCb)
+{
+    doTest(4, 3, CVTCODE(RGB2YCrCb));
+}
+OCL_TEST_P(CvtColor, BGRA2YCrCb)
+{
+    doTest(4, 3, CVTCODE(BGR2YCrCb));
+}
+//OCL_TEST_P(CvtColor, YCrCb2RGB)
+//{
+//    doTest(3, 3, CVTCODE(YCrCb2RGB));
+//}
+//OCL_TEST_P(CvtColor, YCrCb2BGR)
+//{
+//    doTest(3, 3, CVTCODE(YCrCb2BGR));
+//}
+//OCL_TEST_P(CvtColor, YCrCb2RGBA)
+//{
+//    doTest(3, 4, CVTCODE(YCrCb2RGB));
+//}
+//OCL_TEST_P(CvtColor, YCrCb2BGRA)
+//{
+//    doTest(3, 4, CVTCODE(YCrCb2BGR));
+//}
 
-struct CvtColor_YUV420 : CvtColor
+struct CvtColor_YUV420 :
+        public CvtColor
 {
     void random_roi(int channelsIn, int channelsOut)
     {
@@ -203,37 +245,32 @@ struct CvtColor_YUV420 : CvtColor
 OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_NV12)
 {
     doTest(1, 4, CV_YUV2RGBA_NV12);
-};
+}
 
 OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_NV12)
 {
     doTest(1, 4, CV_YUV2BGRA_NV12);
-};
+}
 
 OCL_TEST_P(CvtColor_YUV420, YUV2RGB_NV12)
 {
     doTest(1, 3, CV_YUV2RGB_NV12);
-};
+}
 
 OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12)
 {
     doTest(1, 3, CV_YUV2BGR_NV12);
-};
+}
 
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor,
                             testing::Combine(
                                 testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
-                                Bool()
-                            )
-                        );
+                                Bool()));
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_YUV420,
                             testing::Combine(
                                 testing::Values(MatDepth(CV_8U)),
-                                Bool()
-                            )
-                        );
+                                Bool()));
 
-}
 #endif
