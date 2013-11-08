@@ -61,7 +61,7 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
     int type;
     int K;
     int flags;
-    cv::Mat src ;
+    Mat src ;
     ocl::oclMat d_src, d_dists;
 
     Mat labels, centers;
@@ -73,7 +73,7 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
         flags = GET_PARAM(2);
 
         // MWIDTH=256, MHEIGHT=256. defined in utility.hpp
-        cv::Size size = cv::Size(MWIDTH, MHEIGHT);
+        Size size = Size(MWIDTH, MHEIGHT);
         src.create(size, type);
         int row_idx = 0;
         const int max_neighbour = MHEIGHT / K - 1;
@@ -159,15 +159,15 @@ INSTANTIATE_TEST_CASE_P(OCL_ML, Kmeans, Combine(
 
 /////////////////////////////// DistanceToCenters //////////////////////////////////////////
 
-CV_ENUM(DistType, NORM_L1, NORM_L2SQR);
+CV_ENUM(DistType, NORM_L1, NORM_L2SQR)
 
 PARAM_TEST_CASE(distanceToCenters, DistType, bool)
 {
-    cv::Size size;
     int distType;
     bool useRoi;
-    cv::Mat src, centers, src_roi, centers_roi;
-    cv::ocl::oclMat ocl_src, ocl_centers, ocl_src_roi, ocl_centers_roi;
+
+    Mat src, centers, src_roi, centers_roi;
+    ocl::oclMat ocl_src, ocl_centers, ocl_src_roi, ocl_centers_roi;
 
     virtual void SetUp()
     {
@@ -177,70 +177,59 @@ PARAM_TEST_CASE(distanceToCenters, DistType, bool)
 
     void random_roi()
     {
-        Size roiSize_src = randomSize(10,1000);
-        Size roiSize_centers = randomSize(10, 1000);
-        roiSize_src.width = roiSize_centers.width;
+        Size roiSizeSrc = randomSize(1, MAX_VALUE);
+        Size roiSizeCenters = randomSize(1, MAX_VALUE);
+        roiSizeSrc.width = roiSizeCenters.width;
 
-        Border srcBorder = randomBorder(0, useRoi ? 500 : 0);
-        randomSubMat(src, src_roi, roiSize_src, srcBorder, CV_32FC1, -SHRT_MAX, SHRT_MAX);
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSizeSrc, srcBorder, CV_32FC1, -MAX_VALUE, MAX_VALUE);
 
         Border centersBorder = randomBorder(0, useRoi ? 500 : 0);
-        randomSubMat(centers, centers_roi, roiSize_centers, centersBorder, CV_32FC1, -SHRT_MAX, SHRT_MAX);
+        randomSubMat(centers, centers_roi, roiSizeCenters, centersBorder, CV_32FC1, -MAX_VALUE, MAX_VALUE);
 
-        for(int i = 0; i<centers.rows; i++)
-            centers.at<float>(i, randomInt(0,centers.cols-1)) = (float)randomDouble(SHRT_MAX, INT_MAX);
+        for (int i = 0; i < centers.rows; i++)
+            centers.at<float>(i, randomInt(0, centers.cols)) = (float)randomDouble(SHRT_MAX, INT_MAX);
 
-        generateOclMat(ocl_src, ocl_src_roi, src, roiSize_src, srcBorder);
-        generateOclMat(ocl_centers, ocl_centers_roi, centers, roiSize_centers, centersBorder);
-
+        generateOclMat(ocl_src, ocl_src_roi, src, roiSizeSrc, srcBorder);
+        generateOclMat(ocl_centers, ocl_centers_roi, centers, roiSizeCenters, centersBorder);
     }
-
 };
 
 OCL_TEST_P(distanceToCenters, Accuracy)
 {
-    for(int j = 0; j< LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::ocl::oclMat ocl_dists;
-        cv::ocl::oclMat ocl_labels;
-
-        cv::ocl::distanceToCenters(ocl_dists,ocl_labels,ocl_src_roi, ocl_centers_roi, distType);
-
         Mat labels, dists;
-        ocl_labels.download(labels);
-        ocl_dists.download(dists);
+        ocl::distanceToCenters(ocl_src_roi, ocl_centers_roi, dists, labels, distType);
 
-        ASSERT_EQ(ocl_dists.cols, ocl_labels.rows);
+        EXPECT_EQ(dists.size(), labels.size());
 
         Mat batch_dists;
-
         cv::batchDistance(src_roi, centers_roi, batch_dists, CV_32FC1, noArray(), distType);
 
-        std::vector<double> gold_dists_v;
+        std::vector<float> gold_dists_v;
+        gold_dists_v.reserve(batch_dists.rows);
 
-        for(int i = 0; i<batch_dists.rows; i++)
+        for (int i = 0; i < batch_dists.rows; i++)
         {
             Mat r = batch_dists.row(i);
             double mVal;
             Point mLoc;
             minMaxLoc(r, &mVal, NULL, &mLoc, NULL);
 
-            int ocl_label = *(int*)labels.row(i).col(0).data;
-            ASSERT_EQ(mLoc.x, ocl_label);
+            int ocl_label = labels.at<int>(i, 0);
+            EXPECT_EQ(mLoc.x, ocl_label);
 
-            gold_dists_v.push_back(mVal);
+            gold_dists_v.push_back(static_cast<float>(mVal));
         }
-        Mat gold_dists(gold_dists_v);
-        dists.convertTo(dists, CV_64FC1);
-        double relative_error = cv::norm(gold_dists.t(), dists, NORM_INF|NORM_RELATIVE);
+
+        double relative_error = cv::norm(Mat(gold_dists_v), dists, NORM_INF | NORM_RELATIVE);
         ASSERT_LE(relative_error, 1e-5);
     }
 }
 
-
-INSTANTIATE_TEST_CASE_P (OCL_ML, distanceToCenters, Combine(DistType::all(), Bool()) );
-
+INSTANTIATE_TEST_CASE_P (OCL_ML, distanceToCenters, Combine(DistType::all(), Bool()));
 
 #endif
