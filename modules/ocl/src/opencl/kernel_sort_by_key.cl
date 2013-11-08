@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -192,7 +192,6 @@ __kernel
 {
     const int          i  = get_local_id(0); // index in workgroup
     const int numOfGroups = get_num_groups(0); // index in workgroup
-    const int groupID     = get_group_id(0);
     const int         wg  = get_local_size(0); // workgroup size = block size
     int pos = 0, same = 0;
     const int offset = get_group_id(0) * wg;

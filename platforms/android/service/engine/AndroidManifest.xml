@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.opencv.engine"
-    android:versionCode="210@ANDROID_PLATFORM_VERSION_CODE@"
-    android:versionName="2.10" >
+    android:versionCode="214@ANDROID_PLATFORM_VERSION_CODE@"
+    android:versionName="2.14" >
 
     <uses-sdk android:minSdkVersion="@ANDROID_NATIVE_API_LEVEL@" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>

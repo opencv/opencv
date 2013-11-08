@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -119,6 +119,12 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
 
 void cv::ocl::oclMat::upload(const Mat &m)
 {
+    if (!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE) && m.depth() == CV_64F)
+    {
+        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
+        return;
+    }
+
     CV_DbgAssert(!m.empty());
     Size wholeSize;
     Point ofs;
@@ -308,7 +314,7 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) &&
             (depth() == CV_64F || dst.depth() == CV_64F))
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 
@@ -346,6 +352,66 @@ oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
     return *this;
 }
 
+#ifdef CL_VERSION_1_2
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt1(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf[0] = saturate_cast<PT>(s[0]);
+    return _buf;
+}
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt2(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    return _buf;
+}
+
+template <typename CLT, typename PT>
+static std::vector<uchar> cvt4(const cv::Scalar & s)
+{
+    std::vector<uchar> _buf(sizeof(CLT));
+    CLT * const buf = reinterpret_cast<CLT *>(&_buf[0]);
+    buf->s[0] = saturate_cast<PT>(s[0]);
+    buf->s[1] = saturate_cast<PT>(s[1]);
+    buf->s[2] = saturate_cast<PT>(s[2]);
+    buf->s[3] = saturate_cast<PT>(s[3]);
+    return _buf;
+}
+
+typedef std::vector<uchar> (*ConvertFunc)(const cv::Scalar & s);
+
+static std::vector<uchar> scalarToCLVector(const cv::Scalar & s, int type)
+{
+    const int depth = CV_MAT_DEPTH(type);
+    const int channels = CV_MAT_CN(type);
+
+    static const ConvertFunc funcs[4][7] =
+    {
+        { cvt1<cl_uchar, uchar>, cvt1<cl_char, char>, cvt1<cl_ushort, ushort>, cvt1<cl_short, short>,
+          cvt1<cl_int, int>, cvt1<cl_float, float>, cvt1<cl_double, double> },
+
+        { cvt2<cl_uchar2, uchar>, cvt2<cl_char2, char>, cvt2<cl_ushort2, ushort>, cvt2<cl_short2, short>,
+          cvt2<cl_int2, int>, cvt2<cl_float2, float>, cvt2<cl_double2, double> },
+
+        { 0, 0, 0, 0, 0, 0, 0 },
+
+        { cvt4<cl_uchar4, uchar>, cvt4<cl_char4, char>, cvt4<cl_ushort4, ushort>, cvt4<cl_short4, short>,
+          cvt4<cl_int4, int>, cvt4<cl_float4, float>, cvt4<cl_double4, double> }
+    };
+
+    ConvertFunc func = funcs[channels - 1][depth];
+    return func(s);
+}
+
+#endif
+
 static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, string kernelName)
 {
     vector<pair<size_t , const void *> > args;
@@ -366,23 +432,14 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
 #ifdef CL_VERSION_1_2
     // this enables backwards portability to
     // run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-//    if (Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
-//        dst.offset == 0 && dst.cols == dst.wholecols)
-//    {
-//        const int sizeofMap[][7] =
-//            {
-//                { sizeof(cl_uchar) , sizeof(cl_char) , sizeof(cl_ushort) , sizeof(cl_short) , sizeof(cl_int) , sizeof(cl_float) , sizeof(cl_double)  },
-//                { sizeof(cl_uchar2), sizeof(cl_char2), sizeof(cl_ushort2), sizeof(cl_short2), sizeof(cl_int2), sizeof(cl_float2), sizeof(cl_double2) },
-//                { 0                , 0               , 0                 , 0                , 0              , 0                ,  0                 },
-//                { sizeof(cl_uchar4), sizeof(cl_char4), sizeof(cl_ushort4), sizeof(cl_short4), sizeof(cl_int4), sizeof(cl_float4), sizeof(cl_double4) },
-//            };
-//        int sizeofGeneric = sizeofMap[dst.oclchannels() - 1][dst.depth()];
-
-//        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
-//                            (cl_mem)dst.data, (void*)mat.data, sizeofGeneric,
-//                            0, dst.step * dst.rows, 0, NULL, NULL);
-//    }
-//    else
+    if (Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2) && dst.isContinuous())
+    {
+        std::vector<uchar> p = ::scalarToCLVector(scalar, CV_MAKE_TYPE(dst.depth(), dst.oclchannels()));
+        clEnqueueFillBuffer(getClCommandQueue(dst.clCxt),
+                (cl_mem)dst.data, (void*)&p[0], p.size(),
+                0, dst.step * dst.rows, 0, NULL, NULL);
+    }
+    else
 #endif
     {
         oclMat m(mat);

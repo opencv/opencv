@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -50,7 +50,7 @@ using namespace cv::ocl;
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL DFT is not implemented");
 }
 namespace cv { namespace ocl {
     void fft_teardown();
@@ -90,8 +90,7 @@ namespace cv
         protected:
             PlanCache();
             ~PlanCache();
-            friend class auto_ptr<PlanCache>;
-            static auto_ptr<PlanCache> planCache;
+            static PlanCache* planCache;
 
             bool started;
             vector<FftPlan *> planStore;
@@ -102,9 +101,9 @@ namespace cv
 
             static PlanCache* getPlanCache()
             {
-                if( NULL == planCache.get())
-                    planCache.reset(new PlanCache());
-                return planCache.get();
+                if (NULL == planCache)
+                    planCache = new PlanCache();
+                return planCache;
             }
             // return a baked plan->
             // if there is one matched plan, return it
@@ -118,7 +117,7 @@ namespace cv
         };
     }
 }
-auto_ptr<PlanCache> PlanCache::planCache;
+PlanCache* PlanCache::planCache = NULL;
 
 void cv::ocl::fft_setup()
 {
@@ -127,24 +126,30 @@ void cv::ocl::fft_setup()
     {
         return;
     }
-    pCache.setupData = new clAmdFftSetupData;
+    if (pCache.setupData == NULL)
+        pCache.setupData = new clAmdFftSetupData;
     openCLSafeCall(clAmdFftInitSetupData( pCache.setupData ));
     pCache.started = true;
 }
 void cv::ocl::fft_teardown()
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
+
     if(!pCache.started)
-    {
         return;
-    }
-    delete pCache.setupData;
+
     for(size_t i = 0; i < pCache.planStore.size(); i ++)
-    {
         delete pCache.planStore[i];
-    }
     pCache.planStore.clear();
-    openCLSafeCall( clAmdFftTeardown( ) );
+
+    try
+    {
+        openCLSafeCall( clAmdFftTeardown( ) );
+    }
+    catch (const std::bad_alloc &)
+    { }
+
+    delete pCache.setupData; pCache.setupData = NULL;
     pCache.started = false;
 }
 

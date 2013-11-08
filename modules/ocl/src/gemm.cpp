@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -58,12 +58,12 @@ void clBlasTeardown();
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasSetup()
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(CV_OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
 
 void cv::ocl::clBlasTeardown()
@@ -76,13 +76,12 @@ void cv::ocl::clBlasTeardown()
 using namespace cv;
 
 static bool clBlasInitialized = false;
-static Mutex cs;
 
 void cv::ocl::clBlasSetup()
 {
     if(!clBlasInitialized)
     {
-        AutoLock al(cs);
+        AutoLock lock(getInitializationMutex());
         if(!clBlasInitialized)
         {
             openCLSafeCall(clAmdBlasSetup());
@@ -93,7 +92,7 @@ void cv::ocl::clBlasSetup()
 
 void cv::ocl::clBlasTeardown()
 {
-    AutoLock al(cs);
+    AutoLock lock(getInitializationMutex());
     if(clBlasInitialized)
     {
         clAmdBlasTeardown();

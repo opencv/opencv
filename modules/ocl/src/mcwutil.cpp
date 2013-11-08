@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,26 +44,6 @@
 //M*/
 
 #include "precomp.hpp"
-
-#ifdef __GNUC__
-#if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
-#define GCC_DIAG_STR(s) #s
-#define GCC_DIAG_JOINSTR(x,y) GCC_DIAG_STR(x ## y)
-# define GCC_DIAG_DO_PRAGMA(x) _Pragma (#x)
-# define GCC_DIAG_PRAGMA(x) GCC_DIAG_DO_PRAGMA(GCC diagnostic x)
-# if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
-#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(push) \
-GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
-#  define GCC_DIAG_ON(x) GCC_DIAG_PRAGMA(pop)
-# else
-#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
-#  define GCC_DIAG_ON(x)  GCC_DIAG_PRAGMA(warning GCC_DIAG_JOINSTR(-W,x))
-# endif
-#else
-# define GCC_DIAG_OFF(x)
-# define GCC_DIAG_ON(x)
-#endif
-#endif /* __GNUC__ */
 
 using namespace std;
 
@@ -134,9 +114,6 @@ namespace cv
                                   build_options, finish_mode);
         }
 
-#ifdef __GNUC__
-        GCC_DIAG_OFF(deprecated-declarations)
-#endif
         cl_mem bindTexture(const oclMat &mat)
         {
             cl_mem texture;
@@ -234,48 +211,15 @@ namespace cv
             openCLSafeCall(err);
             return texture;
         }
-#ifdef __GNUC__
-        GCC_DIAG_ON(deprecated-declarations)
-#endif
 
         Ptr<TextureCL> bindTexturePtr(const oclMat &mat)
         {
             return Ptr<TextureCL>(new TextureCL(bindTexture(mat), mat.rows, mat.cols, mat.type()));
         }
+
         void releaseTexture(cl_mem& texture)
         {
             openCLFree(texture);
-        }
-
-        bool support_image2d(Context *clCxt)
-        {
-            const cv::ocl::ProgramEntry _kernel = {NULL, "__kernel void test_func(image2d_t img) {}", NULL};
-            static bool _isTested = false;
-            static bool _support = false;
-            if(_isTested)
-            {
-                return _support;
-            }
-            try
-            {
-                cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel, "test_func");
-                cv::ocl::finish();
-                _support = true;
-            }
-            catch (const cv::Exception& e)
-            {
-                if(e.code == -217)
-                {
-                    _support = false;
-                }
-                else
-                {
-                    // throw e once again
-                    throw e;
-                }
-            }
-            _isTested = true;
-            return _support;
         }
     }//namespace ocl
 

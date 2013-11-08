@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -201,8 +201,6 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
 {
     CV_Assert(qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
-
-    CV_DbgAssert(support_image2d());
 
     ensureSizeIsEnough(image.size(), CV_32F, eig_);
 

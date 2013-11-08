@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -85,14 +85,12 @@ PARAM_TEST_CASE(mog, UseGray, LearningRate, bool)
     virtual void SetUp()
     {
         useGray = GET_PARAM(0);
-
         learningRate = GET_PARAM(1);
-
         useRoi = GET_PARAM(2);
     }
 };
 
-TEST_P(mog, Update)
+OCL_TEST_P(mog, Update)
 {
     std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
@@ -103,7 +101,7 @@ TEST_P(mog, Update)
     ASSERT_FALSE(frame.empty());
 
     cv::ocl::MOG mog;
-    cv::ocl::oclMat foreground = createMat_ocl(frame.size(), CV_8UC1, useRoi);
+    cv::ocl::oclMat foreground = createMat_ocl(rng, frame.size(), CV_8UC1, useRoi);
 
     cv::BackgroundSubtractorMOG mog_gold;
     cv::Mat foreground_gold;
@@ -120,7 +118,7 @@ TEST_P(mog, Update)
             cv::swap(temp, frame);
         }
 
-        mog(loadMat_ocl(frame, useRoi), foreground, (float)learningRate);
+        mog(loadMat_ocl(rng, frame, useRoi), foreground, (float)learningRate);
 
         mog_gold(frame, foreground_gold, learningRate);
 
@@ -153,7 +151,7 @@ PARAM_TEST_CASE(mog2, UseGray, DetectShadow, bool)
     }
 };
 
-TEST_P(mog2, Update)
+OCL_TEST_P(mog2, Update)
 {
     std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
@@ -165,7 +163,7 @@ TEST_P(mog2, Update)
 
     cv::ocl::MOG2 mog2;
     mog2.bShadowDetection = detectShadow;
-    cv::ocl::oclMat foreground = createMat_ocl(frame.size(), CV_8UC1, useRoi);
+    cv::ocl::oclMat foreground = createMat_ocl(rng, frame.size(), CV_8UC1, useRoi);
 
     cv::BackgroundSubtractorMOG2 mog2_gold;
     mog2_gold.set("detectShadows", detectShadow);
@@ -183,7 +181,7 @@ TEST_P(mog2, Update)
             cv::swap(temp, frame);
         }
 
-        mog2(loadMat_ocl(frame, useRoi), foreground);
+        mog2(loadMat_ocl(rng, frame, useRoi), foreground);
 
         mog2_gold(frame, foreground_gold);
 
@@ -194,7 +192,7 @@ TEST_P(mog2, Update)
     }
 }
 
-TEST_P(mog2, getBackgroundImage)
+OCL_TEST_P(mog2, getBackgroundImage)
 {
     if (useGray)
         return;
@@ -218,12 +216,12 @@ TEST_P(mog2, getBackgroundImage)
         cap >> frame;
         ASSERT_FALSE(frame.empty());
 
-        mog2(loadMat_ocl(frame, useRoi), foreground);
+        mog2(loadMat_ocl(rng, frame, useRoi), foreground);
 
         mog2_gold(frame, foreground_gold);
     }
 
-    cv::ocl::oclMat background = createMat_ocl(frame.size(), frame.type(), useRoi);
+    cv::ocl::oclMat background = createMat_ocl(rng, frame.size(), frame.type(), useRoi);
     mog2.getBackgroundImage(background);
 
     cv::Mat background_gold;

@@ -73,4 +73,6 @@
 #include "utility.hpp"
 //#include "add_test_info.h"
 
+using namespace cvtest;
+
 #endif

@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -70,7 +70,7 @@ __kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_st
         dstT t1 = convertToDstT(src2[src2_index]);
         dstT t2 = t0 - t1;
 
-        dst[dst_index] = t2 >= 0 ? t2 : -t2;
+        dst[dst_index] = t2 >= (dstT)(0) ? t2 : -t2;
     }
 }
 
@@ -88,6 +88,6 @@ __kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int
 
         dstT t0 = convertToDstT(src1[src1_index]);
 
-        dst[dst_index] = t0 >= 0 ? t0 : -t0;
+        dst[dst_index] = t0 >= (dstT)(0) ? t0 : -t0;
     }
 }

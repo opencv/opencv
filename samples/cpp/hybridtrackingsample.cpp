@@ -11,16 +11,16 @@
  *
  */
 
-//#include <cv.h>
-//#include <ml.h>
-//#include <cvaux.h>
-//#include <highgui.h>
 #include <stdio.h>
 #include <time.h>
 #include <iostream>
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/hybridtracker.hpp"
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
 
 using namespace cv;
 using namespace std;

@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -54,9 +54,6 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-extern string workdir;
-
-
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
 namespace
@@ -73,7 +70,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
     }
 };
 
-TEST_P(GoodFeaturesToTrack, Accuracy)
+OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
 {
     cv::Mat frame = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame.empty());
@@ -114,7 +111,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-TEST_P(GoodFeaturesToTrack, EmptyCorners)
+OCL_TEST_P(GoodFeaturesToTrack, EmptyCorners)
 {
     int maxCorners = 1000;
     double qualityLevel = 0.01;
@@ -144,7 +141,7 @@ PARAM_TEST_CASE(TVL1, bool)
 
 };
 
-TEST_P(TVL1, Accuracy)
+OCL_TEST_P(TVL1, Accuracy)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -153,9 +150,8 @@ TEST_P(TVL1, Accuracy)
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
-    cv::RNG &rng = TS::ptr()->get_rng();
-    cv::Mat flowx = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
-    cv::Mat flowy = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowx = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowy = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
     cv::ocl::oclMat d_flowx(flowx), d_flowy(flowy);
     d_alg(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
 
@@ -186,7 +182,7 @@ PARAM_TEST_CASE(Sparse, bool, bool)
     }
 };
 
-TEST_P(Sparse, Mat)
+OCL_TEST_P(Sparse, Mat)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
@@ -299,7 +295,7 @@ PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
     }
 };
 
-TEST_P(Farneback, Accuracy)
+OCL_TEST_P(Farneback, Accuracy)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());

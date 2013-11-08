@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -48,44 +48,6 @@
 using namespace perf;
 
 ///////////// Haar ////////////////////////
-namespace cv
-{
-namespace ocl
-{
-
-struct getRect
-{
-    Rect operator()(const CvAvgComp &e) const
-    {
-        return e.rect;
-    }
-};
-
-class CascadeClassifier_GPU : public OclCascadeClassifier
-{
-public:
-    void detectMultiScale(oclMat &image,
-                          CV_OUT std::vector<cv::Rect>& faces,
-                          double scaleFactor = 1.1,
-                          int minNeighbors = 3, int flags = 0,
-                          Size minSize = Size(),
-                          Size maxSize = Size())
-    {
-        (void)maxSize;
-        MemStorage storage(cvCreateMemStorage(0));
-        //CvMat img=image;
-        CvSeq *objs = oclHaarDetectObjects(image, storage, scaleFactor, minNeighbors, flags, minSize);
-        vector<CvAvgComp> vecAvgComp;
-        Seq<CvAvgComp>(objs).copyTo(vecAvgComp);
-        faces.resize(vecAvgComp.size());
-        std::transform(vecAvgComp.begin(), vecAvgComp.end(), faces.begin(), getRect());
-    }
-
-};
-
-}
-}
-
 PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;
@@ -107,7 +69,7 @@ PERF_TEST(HaarFixture, Haar)
     }
     else if (RUN_OCL_IMPL)
     {
-        ocl::CascadeClassifier_GPU faceCascade;
+        ocl::OclCascadeClassifier faceCascade;
         ocl::oclMat oclImg(img);
 
         ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
