@@ -259,8 +259,8 @@ OCL_TEST_P(BuildWarpPerspectiveMaps, Mat)
         buildWarpPerspectiveMaps(M, mapInverse, dsize, xmap_roi, ymap_roi);
         ocl::buildWarpPerspectiveMaps(M, mapInverse, dsize, gxmap_roi, gymap_roi);
 
-        Near(1e-6);
-        Near1(1e-6);
+        Near(5e-3);
+        Near1(5e-3);
     }
 }
 
