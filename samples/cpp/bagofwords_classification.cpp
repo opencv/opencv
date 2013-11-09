@@ -1,8 +1,12 @@
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/ml/ml.hpp"
+#ifdef HAVE_OPENCV_OCL
+#include "opencv2/ocl/ocl.hpp"
+#endif
 
 #include <fstream>
 #include <iostream>
@@ -2373,9 +2377,15 @@ static void setSVMTrainAutoParams( CvParamGrid& c_grid, CvParamGrid& gamma_grid,
     degree_grid.step = 0;
 }
 
+#ifdef HAVE_OPENCV_OCL
+static void trainSVMClassifier( cv::ocl::CvSVM_OCL& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
+                               Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
+                               const string& resPath )
+#else
 static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
+#endif
 {
     /* first check if a previously trained svm for the current class has been saved to file */
     string svmFilename = resPath + svmsDir + "/" + objClassName + ".xml.gz";
@@ -2448,9 +2458,15 @@ static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsEx
     }
 }
 
+#ifdef HAVE_OPENCV_OCL
+static void computeConfidences( cv::ocl::CvSVM_OCL& svm, const string& objClassName, VocData& vocData,
+                               Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
+                               const string& resPath )
+#else
 static void computeConfidences( CvSVM& svm, const string& objClassName, VocData& vocData,
                          Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                          const string& resPath )
+#endif
 {
     cout << "*** CALCULATING CONFIDENCES FOR CLASS " << objClassName << " ***" << endl;
     cout << "CALCULATING BOW VECTORS FOR TEST SET OF " << objClassName << "..." << endl;
@@ -2589,7 +2605,11 @@ int main(int argc, char** argv)
     for( size_t classIdx = 0; classIdx < objClasses.size(); ++classIdx )
     {
         // Train a classifier on train dataset
+#ifdef HAVE_OPENCV_OCL
+        cv::ocl::CvSVM_OCL svm;
+#else
         CvSVM svm;
+#endif
         trainSVMClassifier( svm, svmTrainParamsExt, objClasses[classIdx], vocData,
                             bowExtractor, featureDetector, resPath );
 
