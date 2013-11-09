@@ -162,6 +162,30 @@ static void YUV2RGB_NV12_caller(const oclMat &src, oclMat &dst, int bidx)
     openCLExecuteKernel(src.clCxt, &cvt_color, "YUV2RGBA_NV12", gt, lt, args, -1, -1, build_options.c_str());
 }
 
+static void YCrCb2RGB_caller(const oclMat &src, oclMat &dst, int bidx)
+{
+    int channels = dst.channels();
+    int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
+    int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
+
+    std::string buildOptions = format("-D DEPTH_%d", src.depth());
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&channels));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&bidx));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_offset ));
+
+    size_t gt[3] = { src.cols, src.rows, 1 }, lt[3] = { 16, 16, 1 };
+    openCLExecuteKernel(src.clCxt, &cvt_color, "YCrCb2RGB", gt, lt, args, -1, -1, buildOptions.c_str());
+}
+
 static void RGB2YCrCb_caller(const oclMat &src, oclMat &dst, int bidx)
 {
     std::string build_options = format("-D DEPTH_%d", src.depth());
@@ -270,9 +294,9 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         if( dcn <= 0 )
             dcn = 3;
         CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
-        bidx = code == CV_YCrCb2RGB ? 0 : 2;
+        bidx = code == CV_YCrCb2BGR ? 0 : 2;
         dst.create(sz, CV_MAKETYPE(depth, dcn));
-//        YUV2RGB_caller(src, dst, bidx);
+        YCrCb2RGB_caller(src, dst, bidx);
         break;
     }
     /*
