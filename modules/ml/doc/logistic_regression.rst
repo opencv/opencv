@@ -139,7 +139,7 @@ LogisticRegression::LogisticRegression
 --------------------------------------
 The constructors.
 
-.. ocv:function:: LogisticRegression::LogisticRegression( const LogisticRegressionParams& params)
+.. ocv:function:: LogisticRegression::LogisticRegression( const LogisticRegressionParams& params = LogisticRegressionParams())
 
     :param params: The training parameters for the classifier of type ``LogisticRegressionParams``.
 
@@ -179,7 +179,7 @@ LogisticRegression::get_learnt_thetas
 -------------------------------------
 This function returns the trained paramters arranged across rows. For a two class classifcation problem, it returns a row matrix.
 
-.. ocv:function:: cv::Mat LogisticRegression::get_learnt_thetas() const
+.. ocv:function:: const cv::Mat LogisticRegression::get_learnt_thetas() const
 
 It returns learnt paramters of the Logistic Regression as a matrix of type ``CV_32F``.
 
