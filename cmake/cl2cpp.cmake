@@ -4,6 +4,14 @@ list(SORT cl_list)
 string(REPLACE ".cpp" ".hpp" OUTPUT_HPP "${OUTPUT}")
 get_filename_component(OUTPUT_HPP_NAME "${OUTPUT_HPP}" NAME)
 
+if("${MODULE_NAME}" STREQUAL "ocl")
+    set(nested_namespace_start "")
+    set(nested_namespace_end "")
+else()
+    set(nested_namespace_start "namespace ${MODULE_NAME}\n{")
+    set(nested_namespace_end "}") 
+endif()
+
 set(STR_CPP "// This file is auto-generated. Do not edit!
 
 #include \"precomp.hpp\"
@@ -13,6 +21,8 @@ namespace cv
 {
 namespace ocl
 {
+${nested_namespace_start}
+
 ")
 
 set(STR_HPP "// This file is auto-generated. Do not edit!
@@ -23,6 +33,7 @@ namespace cv
 {
 namespace ocl
 {
+${nested_namespace_start}
 
 ")
 
@@ -53,8 +64,8 @@ foreach(cl ${cl_list})
   set(STR_HPP "${STR_HPP}extern const struct ProgramEntry ${cl_filename};\n")
 endforeach()
 
-set(STR_CPP "${STR_CPP}}\n}\n")
-set(STR_HPP "${STR_HPP}}\n}\n")
+set(STR_CPP "${STR_CPP}}\n${nested_namespace_end}}\n")
+set(STR_HPP "${STR_HPP}}\n${nested_namespace_end}}\n")
 
 file(WRITE "${OUTPUT}" "${STR_CPP}")
 

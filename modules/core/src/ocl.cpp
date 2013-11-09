@@ -2003,6 +2003,11 @@ static cl_command_queue getQueue(const Queue& q)
     return qq;
 }
 
+KernelArg::KernelArg()
+    : flags(0), m(0), obj(0), sz(0), wscale(1)
+{
+}
+
 KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, const void* _obj, size_t _sz)
     : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale)
 {
@@ -2095,7 +2100,7 @@ Kernel::Kernel(const char* kname, const Program& prog)
 }
 
 Kernel::Kernel(const char* kname, const ProgramSource& src,
-               const String& buildopts, String& errmsg)
+               const String& buildopts, String* errmsg)
 {
     p = 0;
     create(kname, src, buildopts, errmsg);
@@ -2139,14 +2144,16 @@ bool Kernel::create(const char* kname, const Program& prog)
 }
 
 bool Kernel::create(const char* kname, const ProgramSource& src,
-                    const String& buildopts, String& errmsg)
+                    const String& buildopts, String* errmsg)
 {
     if(p)
     {
         p->release();
         p = 0;
     }
-    const Program& prog = Context::getDefault().getProg(src, buildopts, errmsg);
+    String tempmsg;
+    if( !errmsg ) errmsg = &tempmsg;
+    const Program& prog = Context::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
 
@@ -3009,5 +3016,33 @@ MatAllocator* getOpenCLAllocator()
 }
 
 const char* depth2str[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+const char* bitop_depth2str[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "long" };
+const char* cn2str[] = { "?", "", "2", "3", "4", "?", "?", "?", "8" };
+
+const char* convertstr(int sdepth, int ddepth, int cn, char* buf)
+{
+    if( sdepth == ddepth )
+        return "noconvert";
+    const char *ddepthstr = depth2str[ddepth], *cnstr = cn2str[cn];
+    if( ddepth >= CV_32F ||
+        (ddepth == CV_32S && sdepth < CV_32S) ||
+        (ddepth == CV_16S && sdepth <= CV_8S) ||
+        (ddepth == CV_16U && sdepth == CV_8U))
+    {
+        sprintf(buf, "convert_%s%s", ddepthstr, cnstr);
+    }
+    else if( sdepth >= CV_32F )
+    {
+        sprintf(buf, "convert_%s%s%s_rte", ddepthstr, cnstr, (ddepth < CV_32S ? "_sat" : ""));
+    }
+    else
+    {
+        sprintf(buf, "convert_%s%s_sat", ddepthstr, cnstr);
+    }
+    return buf;
+}
+
+ProgramSource arithm_src(core::arithm.programStr);
+ProgramSource copyset_src(core::copyset.programStr);
 
 }}

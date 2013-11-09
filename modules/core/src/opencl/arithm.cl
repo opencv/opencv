@@ -68,112 +68,19 @@
 #define CV_32S 4
 #define CV_32F 5
 
-#if dstDepth == 0
-#define dstT_ uchar
-#elif dstDepth == 1
-#define dstT_ char
-#elif dstDepth == 2
-#define dstT_ ushort
-#elif dstDepth == 3
-#define dstT_ short
-#elif dstDepth == 4
-#define dstT_ int
-#elif dstDepth == 5
-#define dstT_ float
-#elif dstDepth == 6
-#define dstT_ double
-#elif dstDepth == 7
-/* specially for bit & byte-level operations */
-#define dstT_ long
-#endif
-
-#define PASTE(a, b) a##b
-
-#if defined cn && cn != 1
-#define ADD_CN(s) PASTE(s, cn)
-#else
-#define ADD_CN(s) s
-#endif
-
-#define dstT ADD_CN(dstT_)
 #define dstelem *(dstT*)(dstptr + dst_index)
+#define noconvert(x) x
 
-#ifndef workDepth
+#ifndef workT
 
-    #define srcT1_ dstT_
     #define srcT1 dstT
-    #define srcT2_ dstT_
     #define srcT2 dstT
-    #define workT_ dstT_
     #define workT dstT
     #define srcelem1 *(dstT*)(srcptr1 + src1_index)
     #define srcelem2 *(dstT*)(srcptr2 + src2_index)
-
-    #ifdef OP_ADD
-    #undef OP_ADD
-    #define OP_SAT_ADD
-    #endif
-
-    #ifdef OP_SUB
-    #undef OP_SUB
-    #define OP_SAT_SUB
-    #endif
-
-    #ifdef OP_RSUB
-    #undef OP_RSUB
-    #define OP_SAT_RSUB
-    #endif
+    #define convertToDT noconvert
 
 #else
-
-    #define srcT1_ PASTE(TYPE, srcDepth1)
-    #define srcT1 ADD_CN(srcT1_)
-    #define srcT2_ PASTE(TYPE, srcDepth2)
-    #define srcT2 ADD_CN(srcT2_)
-    #define workT_ PASTE(TYPE, workDepth)
-    #define workT ADD_CN(workT_)
-
-    #if workDepth == srcDepth1
-        #define convertToWT1
-    #elif workDepth > srcDepth1
-        #define convertToWT1 PASTE(convert_, workT)
-    #elif workDepth < CV_32S
-        #if srcDepth1 >= CV_32F
-            #define convertToWT1 PASTE(PASTE(convert_, workT), _sat_rte)
-        #else
-            #define convertToWT1 PASTE(PASTE(convert_, workT), _sat)
-        #endif
-    #else
-        #define convertToWT1 PASTE(PASTE(convert_, workT), _rte)
-    #endif
-
-    #if workDepth == srcDepth2
-        #define convertToWT2
-    #elif workDepth > srcDepth2
-        #define convertToWT2 convert_##workT
-    #elif workDepth < CV_32S
-        #if srcDepth2 >= CV_32F
-            #define convertToWT2 PASTE(PASTE(convert_, workT), _sat_rte)
-        #else
-            #define convertToWT2 PASTE(PASTE(convert_, workT), _sat)
-        #endif
-    #else
-        #define convertToWT2 PASTE(PASTE(convert_, workT), _rte)
-    #endif
-
-    #if workDepth == dstDepth
-        #define convertToDT
-    #elif dstDepth < CV_32S
-        #if workDepth >= CV_32F
-            #define convertToDT PASTE(PASTE(convert_, dstT), _sat_rte)
-        #else
-            #define convertToDT PASTE(PASTE(convert_, dstT), _sat)
-        #endif
-    #elif dstDepth == CV_32S && workDepth >= CV_32F
-        #define convertToDT PASTE(PASTE(convert_, dstT), _rte)
-    #else
-        #define convertToDT PASTE(convert_, dstT)
-    #endif
 
     #define srcelem1 convertToWT1(*(srcT1*)(srcptr1 + src1_index))
     #define srcelem2 convertToWT2(*(srcT2*)(srcptr2 + src2_index))
@@ -182,20 +89,20 @@
 
 #define EXTRA_PARAMS
 
-#if defined OP_SAT_ADD
-#define PROCESS_ELEM dstelem = sat_add(srcelem1, srcelem2)
+#if defined OP_ADD_SAT
+#define PROCESS_ELEM dstelem = add_sat(srcelem1, srcelem2)
 
 #elif defined OP_ADD
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1 + srcelem2)
 
-#elif defined OP_SAT_SUB
-#define PROCESS_ELEM dstelem = sat_sub(srcelem1, srcelem2)
+#elif defined OP_SUB_SAT
+#define PROCESS_ELEM dstelem = sub_sat(srcelem1, srcelem2)
 
 #elif defined OP_SUB
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1 - srcelem2)
 
-#elif defined OP_SAT_RSUB
-#define PROCESS_ELEM dstelem = sat_sub(srcelem2, srcelem1)
+#elif defined OP_RSUB_SAT
+#define PROCESS_ELEM dstelem = sub_sat(srcelem2, srcelem1)
 
 #elif defined OP_RSUB
 #define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
@@ -288,11 +195,6 @@
 #define EXTRA_PARAMS , workT alpha, workT beta
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + beta)
 
-#elif defined OP_SET
-#undef EXTRA_PARAMS
-#define EXTRA_PARAMS , dstT value
-#define PROCESS_ELEM dstelem = value
-
 #else
 #error "unknown op type"
 #endif
@@ -324,6 +226,7 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
 
         PROCESS_ELEM;
+        //printf("(x=%d, y=%d). %d, %d, %d\n", x, y, (int)srcelem1, (int)srcelem2, (int)dstelem);
     }
 }
 

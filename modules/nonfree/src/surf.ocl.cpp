@@ -51,6 +51,8 @@
 using namespace cv;
 using namespace cv::ocl;
 
+static ProgramEntry surf = cv::ocl::nonfree::surf;
+
 namespace cv
 {
     namespace ocl

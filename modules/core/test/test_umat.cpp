@@ -91,7 +91,7 @@ bool CV_UMatTest::TestUMat()
 {
     try
     {
-        Mat a(100, 100, CV_16S), b, c;
+        Mat a(100, 100, CV_16SC2), b, c;
         randu(a, Scalar::all(-100), Scalar::all(100));
         Rect roi(1, 3, 5, 4);
         Mat ra(a, roi), rb, rc, rc0;
@@ -139,6 +139,10 @@ bool CV_UMatTest::TestUMat()
         cv::max(ura, urb, urc);
         urc.copyTo(rc0);
 
+        /*std::cout << "==============================================\nafter op:\n";
+        std::cout << "rc: " << rc << std::endl;
+        std::cout << "rc0: " << rc0 << std::endl;*/
+
         CHECK_DIFF(rc0, rc);
 
         {
@@ -162,7 +166,17 @@ bool CV_UMatTest::TestUMat()
 
         CHECK_DIFF(rc0, rc);
 
+        rc = ra + rb;
+        cv::add(ura, urb, urc);
+        urc.copyTo(rc0);
 
+        CHECK_DIFF(rc0, rc);
+
+        cv::subtract(ra, Scalar::all(5), rc);
+        cv::subtract(ura, Scalar::all(5), urc);
+        urc.copyTo(rc0);
+
+        CHECK_DIFF(rc0, rc);
     }
     catch (const test_excep& e)
     {

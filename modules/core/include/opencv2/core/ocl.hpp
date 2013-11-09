@@ -247,6 +247,7 @@ class CV_EXPORTS KernelArg
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, NO_SIZE=256 };
     KernelArg(int _flags, UMat* _m, int wscale=1, const void* _obj=0, size_t _sz=0);
+    KernelArg();
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
     static KernelArg ReadWrite(const UMat& m, int wscale=1)
@@ -279,7 +280,7 @@ public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource& prog,
-           const String& buildopts, String& errmsg);
+           const String& buildopts, String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
@@ -287,7 +288,7 @@ public:
     bool empty() const;
     bool create(const char* kname, const Program& prog);
     bool create(const char* kname, const ProgramSource& prog,
-                const String& buildopts, String& errmsg);
+                const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
     int set(int i, const UMat& m);
@@ -298,7 +299,7 @@ public:
     template<typename _Tp0>
     Kernel& args(const _Tp0& a0)
     {
-        int i = set(0, a0); return *this;
+        set(0, a0); return *this;
     }
 
     template<typename _Tp0, typename _Tp1>

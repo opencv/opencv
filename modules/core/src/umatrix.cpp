@@ -634,9 +634,47 @@ void UMat::convertTo(OutputArray, int, double, double) const
     CV_Error(Error::StsNotImplemented, "");
 }
 
-UMat& UMat::setTo(InputArray, InputArray)
+UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
-    CV_Error(Error::StsNotImplemented, "");
+    bool haveMask = !_mask.empty();
+    int t = type(), d = CV_MAT_DEPTH(t), cn = CV_MAT_CN(t);
+    if( dims <= 2 && cn <= 4 && ocl::useOpenCL() )
+    {
+        Mat value = _value.getMat();
+        CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
+        double buf[4];
+        convertAndUnrollScalar(value, t, (uchar*)buf, 1);
+
+        char opts[1024];
+        sprintf(opts, "-D dstT=%s%s", ocl::bitop_depth2str[d], ocl::cn2str[cn]);
+
+        ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::copyset_src, opts);
+        if( !setK.empty() )
+        {
+            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(t));
+            UMat mask;
+
+            if( haveMask )
+            {
+                mask = _mask.getUMat();
+                CV_Assert( mask.size() == size() && mask.type() == CV_8U );
+                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+                ocl::KernelArg dstarg = ocl::KernelArg::ReadWrite(*this);
+                setK.args(maskarg, dstarg, scalararg);
+            }
+            else
+            {
+                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this);
+                setK.args(dstarg, scalararg);
+            }
+
+            size_t globalsize[] = { cols, rows };
+            if( setK.run(2, 0, globalsize, 0, false) )
+                return *this;
+        }
+    }
+    Mat m = getMat(haveMask ? ACCESS_RW : ACCESS_WRITE);
+    m.setTo(_value, _mask);
     return *this;
 }
 
