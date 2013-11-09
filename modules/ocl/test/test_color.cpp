@@ -203,22 +203,22 @@ OCL_TEST_P(CvtColor, BGRA2YCrCb)
 {
     doTest(4, 3, CVTCODE(BGR2YCrCb));
 }
-//OCL_TEST_P(CvtColor, YCrCb2RGB)
-//{
-//    doTest(3, 3, CVTCODE(YCrCb2RGB));
-//}
-//OCL_TEST_P(CvtColor, YCrCb2BGR)
-//{
-//    doTest(3, 3, CVTCODE(YCrCb2BGR));
-//}
-//OCL_TEST_P(CvtColor, YCrCb2RGBA)
-//{
-//    doTest(3, 4, CVTCODE(YCrCb2RGB));
-//}
-//OCL_TEST_P(CvtColor, YCrCb2BGRA)
-//{
-//    doTest(3, 4, CVTCODE(YCrCb2BGR));
-//}
+OCL_TEST_P(CvtColor, YCrCb2RGB)
+{
+    doTest(3, 3, CVTCODE(YCrCb2RGB));
+}
+OCL_TEST_P(CvtColor, YCrCb2BGR)
+{
+    doTest(3, 3, CVTCODE(YCrCb2BGR));
+}
+OCL_TEST_P(CvtColor, YCrCb2RGBA)
+{
+    doTest(3, 4, CVTCODE(YCrCb2RGB));
+}
+OCL_TEST_P(CvtColor, YCrCb2BGRA)
+{
+    doTest(3, 4, CVTCODE(YCrCb2BGR));
+}
 
 struct CvtColor_YUV420 :
         public CvtColor
