@@ -590,7 +590,7 @@ struct CV_EXPORTS LogisticRegressionParams
 class CV_EXPORTS LogisticRegression
 {
 public:
-    LogisticRegression( const LogisticRegressionParams& params);
+    LogisticRegression( const LogisticRegressionParams& params = LogisticRegressionParams());
     LogisticRegression(cv::InputArray data_ip, cv::InputArray labels_ip, const LogisticRegressionParams& params);
     virtual ~LogisticRegression();
 
