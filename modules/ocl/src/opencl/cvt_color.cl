@@ -100,7 +100,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
     }
 }
 
-__kernel void Gray2RGB(int cols, int rows, int src_step, int dst_step, int channels,
+__kernel void Gray2RGB(int cols, int rows, int src_step, int dst_step, int channels, int bidx,
                        __global const DATA_TYPE* src, __global DATA_TYPE* dst,
                        int src_offset, int dst_offset)
 {
@@ -203,17 +203,17 @@ __constant int ITUR_BT_601_CVG = 852492;
 __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
-__kernel void YUV2RGBA_NV12(int cols,int rows,int src_step,int dst_step,
-                            int bidx, int width, int height, __global const uchar* src, __global uchar* dst,
+__kernel void YUV2RGBA_NV12(int cols, int rows, int src_step, int dst_step, int channels,
+                            int bidx, __global const uchar* src, __global uchar* dst,
                             int src_offset, int dst_offset)
 {
-    const int x = get_global_id(0); // max_x = width / 2
-    const int y = get_global_id(1); // max_y = height/ 2
+    const int x = get_global_id(0);
+    const int y = get_global_id(1);
 
-    if (y < height / 2 && x < width / 2 )
+    if (y < rows / 2 && x < cols / 2 )
     {
         __global const uchar* ysrc = src + mad24(y << 1, src_step, (x << 1) + src_offset);
-        __global const uchar* usrc = src + mad24(height + y, src_step, (x << 1) + src_offset);
+        __global const uchar* usrc = src + mad24(rows + y, src_step, (x << 1) + src_offset);
         __global uchar*       dst1 = dst + mad24(y << 1, dst_step, (x << 3) + dst_offset);
         __global uchar*       dst2 = dst + mad24((y << 1) + 1, dst_step, (x << 3) + dst_offset);
 

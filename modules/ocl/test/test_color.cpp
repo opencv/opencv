@@ -116,6 +116,8 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 
 #define CVTCODE(name) cv::COLOR_ ## name
 
+// RGB <-> Gray
+
 OCL_TEST_P(CvtColor, RGB2GRAY)
 {
     doTest(3, 1, CVTCODE(RGB2GRAY));
@@ -152,6 +154,7 @@ OCL_TEST_P(CvtColor, GRAY2BGRA)
     doTest(1, 4, CVTCODE(GRAY2BGRA));
 }
 
+// RGB <-> YUV
 
 OCL_TEST_P(CvtColor, RGB2YUV)
 {
@@ -186,6 +189,7 @@ OCL_TEST_P(CvtColor, YUV2BGRA)
     doTest(3, 4, CVTCODE(YUV2BGR));
 }
 
+// RGB <-> YCrCb
 
 OCL_TEST_P(CvtColor, RGB2YCrCb)
 {
@@ -219,6 +223,8 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA)
 {
     doTest(3, 4, CVTCODE(YCrCb2BGR));
 }
+
+// YUV -> RGBA_NV12
 
 struct CvtColor_YUV420 :
         public CvtColor
@@ -261,7 +267,6 @@ OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12)
 {
     doTest(1, 3, CV_YUV2BGR_NV12);
 }
-
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor,
                             testing::Combine(
