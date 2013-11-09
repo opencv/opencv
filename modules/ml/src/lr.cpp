@@ -80,7 +80,7 @@ LogisticRegressionParams::LogisticRegressionParams( double learning_rate, int it
     mini_batch_size = mb_size;
 }
 
-LogisticRegression::LogisticRegression(const LogisticRegressionParams& pms = LogisticRegressionParams() )
+LogisticRegression::LogisticRegression(const LogisticRegressionParams& pms)
 {
     default_model_name = "my_lr";
     this->params = pms;
