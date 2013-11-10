@@ -62,74 +62,95 @@ void CvCaptureCAM_XIMEA::init()
 // Initialize camera input
 bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
-#define HandleXiResult(res) if (res!=XI_OK)  goto error;
-
+    bool res = true;
     int mvret = XI_OK;
 
-    if(numDevices == 0)
-        return false;
-
-    if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
+    if(0 == numDevices)
     {
+      res = false;
+    }
+    else if(XI_OK != (mvret = xiOpenDevice(wIndex, &hmv)))
+    {
+      errMsg("Open XI_DEVICE failed", mvret);
+      res = false;
+    }
+    else
+    {
+      int width   = 0;
+      int height  = 0;
+      int isColor = 0;
+
+      // always use auto exposure/gain
+      if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AEAG, 1)))
+      {
+        res = false;
+      }
+      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_WIDTH, &width)))
+      {
+        res = false;
+      }
+      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_HEIGHT, &height)))
+      {
+        res = false;
+      }
+      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor)))
+      {
+        res = false;
+      }
+      else
+      {
+        if(isColor) // for color cameras
+        {
+          // default image format RGB24
+          if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24)))
+          {
+            res = false;
+          }
+          // always use auto white ballance for color cameras
+          else if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AUTO_WB, 1)))
+          {
+            res = false;
+          }
+          else
+          {
+            // allocate frame buffer for RGB24 image
+            frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+          }
+        }
+        else // for mono cameras
+        {
+          // default image format MONO8
+          if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8)))
+          {
+            res = false;
+          }
+          else
+          {
+            // allocate frame buffer for MONO8 image
+            frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+          }
+        }
+      }
+
+      if(true == res)
+      {
+        //default capture timeout 10s
+        timeout = 10000;
+
+        if(XI_OK != (mvret = xiStartAcquisition(hmv)))
+        {
+          errMsg("StartAcquisition XI_DEVICE failed", mvret);
+          res = false;
+        }
+      }
+      else
+      {
         errMsg("Open XI_DEVICE failed", mvret);
-        return false;
-    }
-
-    // always use auto exposure/gain
-    mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
-    HandleXiResult(mvret);
-
-    int width = 0;
-    mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
-    HandleXiResult(mvret);
-
-    int height = 0;
-    mvret = xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
-    HandleXiResult(mvret);
-
-    int isColor = 0;
-    mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor);
-    HandleXiResult(mvret);
-
-    if(isColor)	// for color cameras
-    {
-        // default image format RGB24
-        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
-        HandleXiResult(mvret);
-
-        // always use auto white ballance for color cameras
-        mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
-        HandleXiResult(mvret);
-
-        // allocate frame buffer for RGB24 image
-        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
-    }
-    else // for mono cameras
-    {
-        // default image format MONO8
-        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8);
-        HandleXiResult(mvret);
-
-        // allocate frame buffer for MONO8 image
-        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 1);
-    }
-
-    //default capture timeout 10s
-    timeout = 10000;
-
-    mvret = xiStartAcquisition(hmv);
-    if(mvret != XI_OK)
-    {
-        errMsg("StartAcquisition XI_DEVICE failed", mvret);
-        goto error;
+        xiCloseDevice(hmv);
+        hmv = NULL;
+      }
     }
     return true;
-
-error:
-    errMsg("Open XI_DEVICE failed", mvret);
-    xiCloseDevice(hmv);
-    hmv = NULL;
-    return false;
 }
 
 /**********************************************************************************/
