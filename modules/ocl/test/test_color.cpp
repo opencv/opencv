@@ -47,6 +47,7 @@
 #ifdef HAVE_OPENCL
 
 using namespace testing;
+using namespace cv;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cvtColor
@@ -57,20 +58,20 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
     bool use_roi;
 
     // src mat
-    cv::Mat src1;
-    cv::Mat dst1;
+    Mat src;
+    Mat dst;
 
     // src mat with roi
-    cv::Mat src1_roi;
-    cv::Mat dst1_roi;
+    Mat src_roi;
+    Mat dst_roi;
 
     // ocl dst mat for testing
-    cv::ocl::oclMat gsrc1_whole;
-    cv::ocl::oclMat gdst1_whole;
+    ocl::oclMat gsrc_whole;
+    ocl::oclMat gdst_whole;
 
     // ocl mat with roi
-    cv::ocl::oclMat gsrc1_roi;
-    cv::ocl::oclMat gdst1_roi;
+    ocl::oclMat gsrc_roi;
+    ocl::oclMat gdst_roi;
 
     virtual void SetUp()
     {
@@ -85,19 +86,23 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, srcBorder, srcType, 2, 100);
+        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 2, 100);
 
-        Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(dst1, dst1_roi, roiSize, dst1Border, dstType, 5, 16);
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
 
-        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, srcBorder);
-        generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
+        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
+        generateOclMat(gdst_whole, gdst_roi, dst, roiSize, dstBorder);
     }
 
     void Near(double threshold = 1e-3)
     {
-        EXPECT_MAT_NEAR(dst1, gdst1_whole, threshold);
-        EXPECT_MAT_NEAR(dst1_roi, gdst1_roi, threshold);
+        Mat whole, roi;
+        gdst_whole.download(whole);
+        gdst_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 
     void doTest(int channelsIn, int channelsOut, int code)
@@ -106,15 +111,15 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
         {
             random_roi(channelsIn, channelsOut);
 
-            cv::cvtColor(src1_roi, dst1_roi, code, channelsOut);
-            cv::ocl::cvtColor(gsrc1_roi, gdst1_roi, code, channelsOut);
+            cvtColor(src_roi, dst_roi, code, channelsOut);
+            ocl::cvtColor(gsrc_roi, gdst_roi, code, channelsOut);
 
             Near();
         }
     }
 };
 
-#define CVTCODE(name) cv::COLOR_ ## name
+#define CVTCODE(name) COLOR_ ## name
 
 // RGB <-> Gray
 
@@ -224,6 +229,25 @@ OCL_TEST_P(CvtColor, YCrCb2BGRA)
     doTest(3, 4, CVTCODE(YCrCb2BGR));
 }
 
+// RGB <-> XYZ
+
+OCL_TEST_P(CvtColor, RGB2XYZ)
+{
+    doTest(3, 3, CVTCODE(RGB2XYZ));
+}
+OCL_TEST_P(CvtColor, BGR2XYZ)
+{
+    doTest(3, 3, CVTCODE(BGR2XYZ));
+}
+OCL_TEST_P(CvtColor, RGBA2XYZ)
+{
+    doTest(4, 3, CVTCODE(RGB2XYZ));
+}
+OCL_TEST_P(CvtColor, BGRA2XYZ)
+{
+    doTest(4, 3, CVTCODE(BGR2XYZ));
+}
+
 // YUV -> RGBA_NV12
 
 struct CvtColor_YUV420 :
@@ -238,13 +262,13 @@ struct CvtColor_YUV420 :
         roiSize.width *= 2;
         roiSize.height *= 3;
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, srcBorder, srcType, 2, 100);
+        randomSubMat(src, src_roi, roiSize, srcBorder, srcType, 2, 100);
 
-        Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(dst1, dst1_roi, roiSize, dst1Border, dstType, 5, 16);
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
 
-        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, srcBorder);
-        generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
+        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
+        generateOclMat(gdst_whole, gdst_roi, dst, roiSize, dstBorder);
     }
 };
 
