@@ -248,6 +248,23 @@ OCL_TEST_P(CvtColor, BGRA2XYZ)
     doTest(4, 3, CVTCODE(BGR2XYZ));
 }
 
+OCL_TEST_P(CvtColor, XYZ2RGB)
+{
+    doTest(3, 3, CVTCODE(XYZ2RGB));
+}
+OCL_TEST_P(CvtColor, XYZ2BGR)
+{
+    doTest(3, 3, CVTCODE(XYZ2BGR));
+}
+OCL_TEST_P(CvtColor, XYZ2RGBA)
+{
+    doTest(3, 4, CVTCODE(XYZ2RGB));
+}
+OCL_TEST_P(CvtColor, XYZ2BGRA)
+{
+    doTest(3, 4, CVTCODE(XYZ2BGR));
+}
+
 // YUV -> RGBA_NV12
 
 struct CvtColor_YUV420 :
