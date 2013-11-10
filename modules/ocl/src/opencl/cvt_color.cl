@@ -48,6 +48,7 @@
 
 #if defined (DEPTH_0)
 #define DATA_TYPE uchar
+#define COEFF_TYPE int
 #define MAX_NUM  255
 #define HALF_MAX 128
 #define SAT_CAST(num) convert_uchar_sat_rte(num)
@@ -55,6 +56,7 @@
 
 #if defined (DEPTH_2)
 #define DATA_TYPE ushort
+#define COEFF_TYPE int
 #define MAX_NUM  65535
 #define HALF_MAX 32768
 #define SAT_CAST(num) convert_ushort_sat_rte(num)
@@ -62,6 +64,7 @@
 
 #if defined (DEPTH_5)
 #define DATA_TYPE float
+#define COEFF_TYPE float
 #define MAX_NUM  1.0f
 #define HALF_MAX 0.5f
 #define SAT_CAST(num) (num)
@@ -329,5 +332,39 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step, int chan
         dst[dst_idx + bidx] = SAT_CAST(b);
         if (channels == 4)
             dst[dst_idx + 3] = MAX_NUM;
+    }
+}
+
+///////////////////////////////////// RGB <-> XYZ //////////////////////////////////////
+
+#pragma OPENCL EXTENSION cl_amd_printf:enable
+
+__kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
+                        int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
+                        int src_offset, int dst_offset, __global COEFF_TYPE * coeffs)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        DATA_TYPE r = src[src_idx], g = src[src_idx + 1], b = src[src_idx + 2];
+
+#ifdef DEPTH_5
+        DATA_TYPE x = r * coeffs[0] + g * coeffs[1] + b * coeffs[2];
+        DATA_TYPE y = r * coeffs[3] + g * coeffs[4] + b * coeffs[5];
+        DATA_TYPE z = r * coeffs[6] + g * coeffs[7] + b * coeffs[8];
+#else
+        DATA_TYPE x = CV_DESCALE(r * coeffs[0] + g * coeffs[1] + b * coeffs[2], xyz_shift);
+        DATA_TYPE y = CV_DESCALE(r * coeffs[3] + g * coeffs[4] + b * coeffs[5], xyz_shift);
+        DATA_TYPE z = CV_DESCALE(r * coeffs[6] + g * coeffs[7] + b * coeffs[8], xyz_shift);
+#endif
+        dst[dst_idx] = SAT_CAST(x);
+        dst[dst_idx + 1] = SAT_CAST(y);
+        dst[dst_idx + 2] = SAT_CAST(z);
     }
 }
