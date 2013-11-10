@@ -119,8 +119,8 @@ __kernel void Gray2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
         dst[dst_idx] = val;
         dst[dst_idx + 1] = val;
         dst[dst_idx + 2] = val;
-#if channels == 4
-            dst[dst_idx + 3] = MAX_NUM;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
 #endif
     }
 }
@@ -195,8 +195,8 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
         dst[dst_idx + bidx] = SAT_CAST( b );
         dst[dst_idx + 1]      = SAT_CAST( g );
         dst[dst_idx + (bidx^2)]   = SAT_CAST( r );
-#if channels == 4
-            dst[dst_idx + 3] = MAX_NUM;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
 #endif
     }
 }
@@ -332,8 +332,8 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
         dst[dst_idx + (bidx^2)] = SAT_CAST(r);
         dst[dst_idx + 1] = SAT_CAST(g);
         dst[dst_idx + bidx] = SAT_CAST(b);
-#if channels == 4
-            dst[dst_idx + 3] = MAX_NUM;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
 #endif
     }
 }
@@ -397,8 +397,43 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
         dst[dst_idx] = SAT_CAST(b);
         dst[dst_idx + 1] = SAT_CAST(g);
         dst[dst_idx + 2] = SAT_CAST(r);
-#if channels == 4
-            dst[dst_idx + 3] = MAX_NUM;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
+#endif
+    }
+}
+
+///////////////////////////////////// RGB[A] <-> BGR[A] //////////////////////////////////////
+
+__kernel void RGB(int cols, int rows, int src_step, int dst_step,
+                  __global const DATA_TYPE * src, __global DATA_TYPE * dst,
+                  int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+#ifdef REVERSE
+        dst[dst_idx] = src[src_idx + 2];
+        dst[dst_idx + 1] = src[src_idx + 1];
+        dst[dst_idx + 2] = src[src_idx];
+#elif defined ORDER
+        dst[dst_idx] = src[src_idx];
+        dst[dst_idx + 1] = src[src_idx + 1];
+        dst[dst_idx + 2] = src[src_idx + 2];
+#endif
+
+#if dcn == 4
+#if scn == 3
+        dst[dst_idx + 3] = MAX_NUM;
+#else
+        dst[dst_idx + 3] = src[src_idx + 3];
+#endif
 #endif
     }
 }
