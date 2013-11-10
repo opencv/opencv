@@ -79,7 +79,7 @@ static void fromRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::
 static void toRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::string & kernelName,
                          const oclMat & data = oclMat())
 {
-    std::string build_options = format("-D DEPTH_%d -D channels=%d", src.depth(), dst.channels());
+    std::string build_options = format("-D DEPTH_%d -D dcn=%d", src.depth(), dst.channels());
     int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
     int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
 
@@ -101,6 +101,27 @@ static void toRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::st
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
+static void RGB_caller(const oclMat &src, oclMat &dst, bool reverse)
+{
+    std::string build_options = format("-D DEPTH_%d -D dcn=%d -D scn=%d -D %s", src.depth(),
+                                       dst.channels(), src.channels(), reverse ? "REVERSE" : "ORDER");
+    int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
+    int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.rows));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_offset ));
+
+    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    openCLExecuteKernel(src.clCxt, &cvt_color, "RGB", gt, lt, args, -1, -1, build_options.c_str());
+}
+
 static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
 {
     Size sz = src.size();
@@ -110,18 +131,24 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
 
     switch (code)
     {
-        /*
-        case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
-        case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
-        case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
-        case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
-        case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
-        case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
-        */
-    case CV_RGB2GRAY:
-    case CV_BGR2GRAY:
-    case CV_RGBA2GRAY:
-    case CV_BGRA2GRAY:
+    case CV_BGR2BGRA: case CV_RGB2BGRA: case CV_BGRA2BGR:
+    case CV_RGBA2BGR: case CV_RGB2BGR: case CV_BGRA2RGBA:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        dcn = code == CV_BGR2BGRA || code == CV_RGB2BGRA || code == CV_BGRA2RGBA ? 4 : 3;
+        bool reverse = !(code == CV_BGR2BGRA || code == CV_BGRA2BGR);
+        dst.create(sz, CV_MAKE_TYPE(depth, dcn));
+        RGB_caller(src, dst, reverse);
+        break;
+    }
+    /*
+    case CV_BGR2BGR565: case CV_BGR2BGR555: case CV_RGB2BGR565: case CV_RGB2BGR555:
+    case CV_BGRA2BGR565: case CV_BGRA2BGR555: case CV_RGBA2BGR565: case CV_RGBA2BGR555:
+    case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
+    case CV_BGR5652BGRA: case CV_BGR5552BGRA: case CV_BGR5652RGBA: case CV_BGR5552RGBA:
+    */
+    case CV_RGB2GRAY: case CV_BGR2GRAY:
+    case CV_RGBA2GRAY: case CV_BGRA2GRAY:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
@@ -158,10 +185,8 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, "YUV2RGB");
         break;
     }
-    case CV_YUV2RGB_NV12:
-    case CV_YUV2BGR_NV12:
-    case CV_YUV2RGBA_NV12:
-    case CV_YUV2BGRA_NV12:
+    case CV_YUV2RGB_NV12: case CV_YUV2BGR_NV12:
+    case CV_YUV2RGBA_NV12: case CV_YUV2BGRA_NV12:
     {
         CV_Assert(scn == 1);
         CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
