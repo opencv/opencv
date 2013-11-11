@@ -10,6 +10,15 @@
 using namespace cv;
 using namespace std;
 
+void get_svm_detector(const SVM& svm, vector< float > & hog_detector );
+void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData );
+void load_images( const string & prefix, const string & filename, vector< Mat > & img_lst );
+void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, const Size & size );
+Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, const Size & size );
+void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size );
+void train_svm( const vector< Mat > & gradient_lst, const vector< int > & labels );
+void draw_locations( Mat & img, const vector< Rect > & locations, const Scalar & color );
+void test_it( const Size & size );
 
 void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
 {
@@ -20,7 +29,9 @@ void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
     // get the decision function
     const CvSVMDecisionFunc* decision_func = svm.get_decision_function();
     // get the support vectors
-    const float** sv = &(svm.get_support_vector(0)); 
+    const float** sv = new const float*[ sv_total ];
+    for( int i = 0 ; i < sv_total ; ++i )
+        sv[ i ] = svm.get_support_vector(i);
 
     CV_Assert( var_all > 0 &&
         sv_total > 0 &&
@@ -50,6 +61,8 @@ void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
         hog_detector.push_back( svi );
     }
     hog_detector.push_back( (float)-decision_func->rho );
+
+    delete[] sv;
 }
 
 
@@ -65,8 +78,8 @@ void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainD
     const int cols = (int)std::max( train_samples[0].cols, train_samples[0].rows );
     cv::Mat tmp(1, cols, CV_32FC1); //< used for transposition if needed
     trainData = cv::Mat(rows, cols, CV_32FC1 );
-    auto& itr = train_samples.begin();
-    auto& end = train_samples.end();
+    vector< Mat >::const_iterator itr = train_samples.begin();
+    vector< Mat >::const_iterator end = train_samples.end();
     for( int i = 0 ; itr != end ; ++itr, ++i )
     {
         CV_Assert( itr->cols == 1 ||
@@ -122,8 +135,8 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
 
     srand( time( NULL ) );
 
-    auto& img = full_neg_lst.begin();
-    auto& end = full_neg_lst.end();
+    vector< Mat >::const_iterator img = full_neg_lst.begin();
+    vector< Mat >::const_iterator end = full_neg_lst.end();
     for( ; img != end ; ++img )
     {
         box.x = rand() % (img->cols - size_x);
@@ -221,9 +234,9 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
 
 
     // compute average gradient strengths
-    for (int celly=0; celly<cells_in_y_dir; celly++)
+    for (celly=0; celly<cells_in_y_dir; celly++)
     {
-        for (int cellx=0; cellx<cells_in_x_dir; cellx++)
+        for (cellx=0; cellx<cells_in_x_dir; cellx++)
         {
 
             float NrUpdatesForThisCell = (float)cellUpdateCounter[celly][cellx];
@@ -237,9 +250,9 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
     }
 
     // draw cells
-    for (int celly=0; celly<cells_in_y_dir; celly++)
+    for (celly=0; celly<cells_in_y_dir; celly++)
     {
-        for (int cellx=0; cellx<cells_in_x_dir; cellx++)
+        for (cellx=0; cellx<cells_in_x_dir; cellx++)
         {
             int drawX = cellx * cellSize;
             int drawY = celly * cellSize;
@@ -305,8 +318,8 @@ void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, c
     vector< Point > location;
     vector< float > descriptors;
 
-    auto& img = img_lst.begin();
-    auto& end = img_lst.end();
+    vector< Mat >::const_iterator img = img_lst.begin();
+    vector< Mat >::const_iterator end = img_lst.end();
     for( ; img != end ; ++img )
     {
         cvtColor( *img, gray, COLOR_BGR2GRAY );
@@ -349,8 +362,8 @@ void draw_locations( Mat & img, const vector< Rect > & locations, const Scalar &
 {
     if( !locations.empty() )
     {
-        auto& loc = locations.begin();
-        auto& end = locations.end();
+        vector< Rect >::const_iterator loc = locations.begin();
+        vector< Rect >::const_iterator end = locations.end();
         for( ; loc != end ; ++loc )
         {
             rectangle( img, *loc, color, 2 );
@@ -364,7 +377,7 @@ void test_it( const Size & size )
     Scalar reference( 0, 255, 0 );
     Scalar trained( 0, 0, 255 );
     Mat img, draw;
-    MySVM svm;
+    SVM svm;
     HOGDescriptor hog;
     HOGDescriptor my_hog;
     my_hog.winSize = size;
