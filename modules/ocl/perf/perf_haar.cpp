@@ -50,7 +50,6 @@
 using namespace perf;
 
 ///////////// Haar ////////////////////////
-
 PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;

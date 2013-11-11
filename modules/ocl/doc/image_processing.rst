@@ -146,7 +146,7 @@ Returns void
 
 .. ocv:function:: void ocl::remap(const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int bordertype, const Scalar &value = Scalar())
 
-    :param src: Source image. Only CV_8UC1 and CV_32FC1 images are supported now.
+    :param src: Source image.
 
     :param dst: Destination image containing cornerness values. It has the same size as src and CV_32FC1 type.
 
@@ -156,11 +156,11 @@ Returns void
 
     :param interpolation: The interpolation method
 
-    :param bordertype: Pixel extrapolation method. Only BORDER_CONSTANT are supported now.
+    :param bordertype: Pixel extrapolation method.
 
     :param value: The border value if borderType==BORDER CONSTANT
 
-The function remap transforms the source image using the specified map: dst (x ,y) = src (map1(x , y) , map2(x , y)) where values of pixels with non-integer coordinates are computed using one of available interpolation methods. map1 and map2 can be encoded as separate floating-point maps in map1 and map2 respectively, or interleaved floating-point maps of (x,y) in map1. Supports CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 , CV_32FC3 and CV_32FC4 data types.
+The function remap transforms the source image using the specified map: dst (x ,y) = src (map1(x , y) , map2(x , y)) where values of pixels with non-integer coordinates are computed using one of available interpolation methods. map1 and map2 can be encoded as separate floating-point maps in map1 and map2 respectively, or interleaved floating-point maps of (x,y) in map1.
 
 ocl::resize
 ------------------
@@ -222,7 +222,7 @@ ocl::cvtColor
 ------------------
 Returns void
 
-.. ocv:function:: void ocl::cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0)
+.. ocv:function:: void ocl::cvtColor(const oclMat &src, oclMat &dst, int code, int dcn = 0)
 
     :param src: Source image.
 
@@ -250,7 +250,7 @@ Returns Threshold value
 
     :param type: Thresholding type
 
-The function applies fixed-level thresholding to a single-channel array. The function is typically used to get a bi-level (binary) image out of a grayscale image or for removing a noise, i.e. filtering out pixels with too small or too large values. There are several types of thresholding that the function supports that are determined by thresholdType. Supports only CV_32FC1 and CV_8UC1 data type.
+The function applies fixed-level thresholding to a single-channel array. The function is typically used to get a bi-level (binary) image out of a grayscale image or for removing a noise, i.e. filtering out pixels with too small or too large values. There are several types of thresholding that the function supports that are determined by thresholdType.
 
 ocl::buildWarpPlaneMaps
 -----------------------

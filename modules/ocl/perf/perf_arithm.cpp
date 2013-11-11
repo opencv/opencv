@@ -1051,3 +1051,40 @@ PERF_TEST_P(AbsFixture, Abs,
     else
         OCL_PERF_ELSE
 }
+
+///////////// Repeat ////////////////////////
+
+typedef Size_MatType RepeatFixture;
+
+PERF_TEST_P(RepeatFixture, Repeat,
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const int nx = 3, ny = 2;
+    const Size dstSize(srcSize.width * nx, srcSize.height * ny);
+
+    Mat src(srcSize, type), dst(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::repeat(oclSrc, ny, nx, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::repeat(src, ny, nx, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}

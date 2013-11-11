@@ -136,8 +136,6 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
     {
         int4 scaleinfo1;
         scaleinfo1 = info[scalei];
-        int width = (scaleinfo1.x & 0xffff0000) >> 16;
-        int height = scaleinfo1.x & 0xffff;
         int grpnumperline = (scaleinfo1.y & 0xffff0000) >> 16;
         int totalgrp = scaleinfo1.y & 0xffff;
         float factor = as_float(scaleinfo1.w);

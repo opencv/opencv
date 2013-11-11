@@ -1706,3 +1706,21 @@ void cv::ocl::setIdentity(oclMat& src, const Scalar & scalar)
     openCLExecuteKernel(src.clCxt, &arithm_setidentity, "setIdentity", global_threads, local_threads,
                         args, -1, -1, buildOptions.c_str());
 }
+
+//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// Repeat ////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+void cv::ocl::repeat(const oclMat & src, int ny, int nx, oclMat & dst)
+{
+    CV_Assert(nx > 0 && ny > 0);
+    dst.create(src.rows * ny, src.cols * nx, src.type());
+
+    for (int y = 0; y < ny; ++y)
+        for (int x = 0; x < nx; ++x)
+        {
+            Rect roi(x * src.cols, y * src.rows, src.cols, src.rows);
+            oclMat hdr = dst(roi);
+            src.copyTo(hdr);
+        }
+}
