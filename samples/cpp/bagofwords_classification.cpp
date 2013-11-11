@@ -5,6 +5,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/ml/ml.hpp"
 #ifdef HAVE_OPENCV_OCL
+#define _OCL_SVM_ 0 //select whether using ocl::svm method or not, default is not
 #include "opencv2/ocl/ocl.hpp"
 #endif
 
@@ -2381,7 +2382,7 @@ static void setSVMTrainAutoParams( CvParamGrid& c_grid, CvParamGrid& gamma_grid,
     degree_grid.step = 0;
 }
 
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
 static void trainSVMClassifier( cv::ocl::CvSVM_OCL& svm, const SVMTrainParamsExt& svmParamsExt, const string& objClassName, VocData& vocData,
                                Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                                const string& resPath )
@@ -2462,7 +2463,7 @@ static void trainSVMClassifier( CvSVM& svm, const SVMTrainParamsExt& svmParamsEx
     }
 }
 
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
 static void computeConfidences( cv::ocl::CvSVM_OCL& svm, const string& objClassName, VocData& vocData,
                                Ptr<BOWImgDescriptorExtractor>& bowExtractor, const Ptr<FeatureDetector>& fdetector,
                                const string& resPath )
@@ -2609,7 +2610,7 @@ int main(int argc, char** argv)
     for( size_t classIdx = 0; classIdx < objClasses.size(); ++classIdx )
     {
         // Train a classifier on train dataset
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
         cv::ocl::CvSVM_OCL svm;
 #else
         CvSVM svm;

@@ -3,6 +3,8 @@
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #ifdef HAVE_OPENCV_OCL
+#define _OCL_KNN_ 0 // select whether using ocl::KNN method or not, default is not
+#define _OCL_SVM_ 0 // select whether using ocl::svm method or not, default is not
 #include "opencv2/ocl/ocl.hpp"
 #endif
 
@@ -137,7 +139,7 @@ static void find_decision_boundary_KNN( int K )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
     cv::ocl::KNearestNeighbour knnClassifier;
     Mat temp, result;
     knnClassifier.train(trainSamples, trainClasses, temp, false, K);
@@ -153,7 +155,7 @@ static void find_decision_boundary_KNN( int K )
         {
             testSample.at<float>(0) = (float)x;
             testSample.at<float>(1) = (float)y;
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
             testSample_ocl.upload(testSample);
 
             knnClassifier.find_nearest(testSample_ocl, K, reslut_ocl);
@@ -180,7 +182,7 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
-#ifdef HAVE_OPENCV_OCL
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
     cv::ocl::CvSVM_OCL svmClassifier(trainSamples, trainClasses, Mat(), Mat(), params);
 #else
     CvSVM svmClassifier( trainSamples, trainClasses, Mat(), Mat(), params );
