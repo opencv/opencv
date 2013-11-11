@@ -210,8 +210,9 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
 
 OCL_TEST_P(Haar, FaceDetect)
 {
-    cascade.detectMultiScale(d_img, oclfaces, 1.1, 3,
-                             flags, Size(30, 30));
+    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3,
+                                flags,
+                                Size(30, 30), Size(0, 0));
 
     cpucascade.detectMultiScale(img, faces,  1.1, 3,
                                 flags,

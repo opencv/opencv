@@ -305,16 +305,13 @@ namespace cv
             void copyTo( oclMat &m, const oclMat &mask = oclMat()) const;
 
             //! converts oclMatrix to another datatype with optional scalng. See cvConvertScale.
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             void convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const;
 
             void assignTo( oclMat &m, int type = -1 ) const;
 
             //! sets every oclMatrix element to s
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& operator = (const Scalar &s);
             //! sets some of the oclMatrix elements to s, according to the mask
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& setTo(const Scalar &s, const oclMat &mask = oclMat());
             //! creates alternative oclMatrix header for the same data, with different
             // number of channels and/or different number of rows. see cvReshape.
@@ -555,11 +552,12 @@ namespace cv
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT);
 
         //! Applies an adaptive bilateral filter to the input image
-        //  This is not truly a bilateral filter. Instead of using user provided fixed parameters,
-        //  the function calculates a constant at each window based on local standard deviation,
-        //  and use this constant to do filtering.
+        //  Unlike the usual bilateral filter that uses fixed value for sigmaColor,
+        //  the adaptive version calculates the local variance in he ksize neighborhood
+        //  and use this as sigmaColor, for the value filtering. However, the local standard deviation is
+        //  clamped to the maxSigmaColor.
         //  supports 8UC1, 8UC3
-        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
+        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double maxSigmaColor=20.0, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
 
         //! computes exponent of each matrix element (dst = e**src)
         // supports only CV_32FC1, CV_64FC1 type
@@ -649,6 +647,9 @@ namespace cv
 
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
+
+        //! fills the output array with repeated copies of the input array
+        CV_EXPORTS void repeat(const oclMat & src, int ny, int nx, oclMat & dst);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 
@@ -898,7 +899,7 @@ namespace cv
         // supports NORM_L1 and NORM_L2 distType
         // if indices is provided, only the indexed rows will be calculated and their results are in the same
         // order of indices
-        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers, int distType = NORM_L2SQR, const oclMat &indices = oclMat());
+        CV_EXPORTS void distanceToCenters(const oclMat &src, const oclMat &centers, Mat &dists, Mat &labels, int distType = NORM_L2SQR);
 
         //!Does k-means procedure on GPU
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
@@ -913,8 +914,8 @@ namespace cv
         {
         public:
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
-                                  double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
-                                  Size minSize = Size(), Size maxSize = Size());
+                double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                Size minSize = Size(), Size maxSize = Size());
         };
 
         /////////////////////////////// Pyramid /////////////////////////////////////

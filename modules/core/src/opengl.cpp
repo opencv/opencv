@@ -105,11 +105,7 @@ namespace
     #endif
     }
 
-    #if defined(__GNUC__)
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, __func__)) )
-    #else
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__)) )
-    #endif
+    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 } // namespace
 
 #ifdef HAVE_OPENGL

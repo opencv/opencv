@@ -125,10 +125,12 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         int indexDx = (dx_startY+i)*(dx_step>>2)+(dx_startX+col);
         float dx_s = dx_con ? Dx[indexDx] : 0.0f;
         dx_data[i] = dx_s;
+
         bool dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
         int indexDy = (dy_startY+i)*(dy_step>>2)+(dy_startX+col);
-        float dy_s = dx_con ? Dy[indexDy] : 0.0f;
+        float dy_s = dy_con ? Dy[indexDy] : 0.0f;
         dy_data[i] = dy_s;
+
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
         data[2][i] = dy_data[i] * dy_data[i];
