@@ -67,88 +67,88 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 
     if(0 == numDevices)
     {
-      res = false;
+        res = false;
     }
     else if(XI_OK != (mvret = xiOpenDevice(wIndex, &hmv)))
     {
-      errMsg("Open XI_DEVICE failed", mvret);
-      res = false;
+        errMsg("Open XI_DEVICE failed", mvret);
+        res = false;
     }
     else
     {
-      int width   = 0;
-      int height  = 0;
-      int isColor = 0;
+        int width   = 0;
+        int height  = 0;
+        int isColor = 0;
 
-      // always use auto exposure/gain
-      if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AEAG, 1)))
-      {
-        res = false;
-      }
-      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_WIDTH, &width)))
-      {
-        res = false;
-      }
-      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_HEIGHT, &height)))
-      {
-        res = false;
-      }
-      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor)))
-      {
-        res = false;
-      }
-      else
-      {
-        if(isColor) // for color cameras
+        // always use auto exposure/gain
+        if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AEAG, 1)))
         {
-          // default image format RGB24
-          if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24)))
-          {
             res = false;
-          }
-          // always use auto white ballance for color cameras
-          else if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AUTO_WB, 1)))
-          {
-            res = false;
-          }
-          else
-          {
-            // allocate frame buffer for RGB24 image
-            frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
-          }
         }
-        else // for mono cameras
+        else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_WIDTH, &width)))
         {
-          // default image format MONO8
-          if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8)))
-          {
             res = false;
-          }
-          else
-          {
-            // allocate frame buffer for MONO8 image
-            frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
-          }
         }
-      }
+        else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_HEIGHT, &height)))
+        {
+            res = false;
+        }
+        else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor)))
+        {
+            res = false;
+        }
+        else
+        {
+            if(isColor) // for color cameras
+            {
+                // default image format RGB24
+                if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24)))
+                {
+                    res = false;
+                }
+                // always use auto white ballance for color cameras
+                else if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AUTO_WB, 1)))
+                {
+                    res = false;
+                }
+                else
+                {
+                    // allocate frame buffer for RGB24 image
+                    frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+                }
+            }
+            else // for mono cameras
+            {
+                // default image format MONO8
+                if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8)))
+                {
+                    res = false;
+                }
+                else
+                {
+                    // allocate frame buffer for MONO8 image
+                    frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+                }
+            }
+        }
 
-      if(true == res)
-      {
-        //default capture timeout 10s
-        timeout = 10000;
-
-        if(XI_OK != (mvret = xiStartAcquisition(hmv)))
+        if(true == res)
         {
-          errMsg("StartAcquisition XI_DEVICE failed", mvret);
-          res = false;
+            //default capture timeout 10s
+            timeout = 10000;
+
+            if(XI_OK != (mvret = xiStartAcquisition(hmv)))
+            {
+                errMsg("StartAcquisition XI_DEVICE failed", mvret);
+                res = false;
+            }
         }
-      }
-      else
-      {
-        errMsg("Open XI_DEVICE failed", mvret);
-        xiCloseDevice(hmv);
-        hmv = NULL;
-      }
+        else
+        {
+            errMsg("Open XI_DEVICE failed", mvret);
+            xiCloseDevice(hmv);
+            hmv = NULL;
+        }
     }
     return true;
 }
