@@ -90,7 +90,7 @@ public:
 
     int code; ///< error code @see CVStatus
     String err; ///< error description
-    String func; ///< function name. Available only when the compiler supports __func__ macro
+    String func; ///< function name. Available only when the compiler supports getting it
     String file; ///< source file name where the error has occured
     int line; ///< line number in the source file where the error has occured
 };

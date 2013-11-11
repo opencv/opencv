@@ -117,7 +117,6 @@ Computes a dense optical flow using the Gunnar Farneback's algorithm.
     :param frame1: Second 8-bit gray-scale input image
     :param flowx: Flow horizontal component
     :param flowy: Flow vertical component
-    :param s: Stream
 
 .. seealso:: :ocv:func:`calcOpticalFlowFarneback`
 
@@ -229,8 +228,6 @@ Interpolates frames (images) using provided optical flow (displacement field).
     :param newFrame: Output image.
 
     :param buf: Temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 oclMat: occlusion masks for first frame, occlusion masks for second, interpolated forward horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow, interpolated backward vertical flow.
-
-    :param stream: Stream for the asynchronous version.
 
 ocl::KalmanFilter
 --------------------
@@ -418,8 +415,6 @@ Updates the background model and returns the foreground mask.
 
     :param fgmask: The output foreground mask as an 8-bit binary image.
 
-    :param stream: Stream for the asynchronous version.
-
 
 ocl::MOG::getBackgroundImage
 --------------------------------
@@ -428,8 +423,6 @@ Computes a background image.
 .. ocv:function:: void ocl::MOG::getBackgroundImage(oclMat& backgroundImage) const
 
     :param backgroundImage: The output background image.
-
-    :param stream: Stream for the asynchronous version.
 
 
 ocl::MOG::release
@@ -443,7 +436,9 @@ ocl::MOG2
 -------------
 .. ocv:class:: ocl::MOG2 : public ocl::BackgroundSubtractor
 
-Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
+  Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
+
+  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_. ::
 
     class CV_EXPORTS MOG2: public cv::ocl::BackgroundSubtractor
     {
@@ -485,45 +480,42 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
         /* hidden */
     };
 
-  The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
+  .. ocv:member:: float backgroundRatio
 
-  Here are important members of the class that control the algorithm, which you can set after constructing the class instance:
+      Threshold defining whether the component is significant enough to be included into the background model. ``cf=0.1 => TB=0.9`` is default. For ``alpha=0.001``, it means that the mode should exist for approximately 105 frames before it is considered foreground.
 
-    .. ocv:member:: float backgroundRatio
+  .. ocv:member:: float varThreshold
 
-        Threshold defining whether the component is significant enough to be included into the background model. ``cf=0.1 => TB=0.9`` is default. For ``alpha=0.001``, it means that the mode should exist for approximately 105 frames before it is considered foreground.
+      Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg``). If it is not close to any component, a new component is generated. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
 
-    .. ocv:member:: float varThreshold
+  .. ocv:member:: float fVarInit
 
-        Threshold for the squared Mahalanobis distance that helps decide when a sample is close to the existing components (corresponds to ``Tg``). If it is not close to any component, a new component is generated. ``3 sigma => Tg=3*3=9`` is default. A smaller ``Tg`` value generates more components. A higher ``Tg`` value may result in a small number of components but they can grow too large.
+      Initial variance for the newly generated components. It affects the speed of adaptation. The parameter value is based on your estimate of the typical standard deviation from the images. OpenCV uses 15 as a reasonable value.
 
-    .. ocv:member:: float fVarInit
+  .. ocv:member:: float fVarMin
 
-        Initial variance for the newly generated components. It affects the speed of adaptation. The parameter value is based on your estimate of the typical standard deviation from the images. OpenCV uses 15 as a reasonable value.
+      Parameter used to further control the variance.
 
-    .. ocv:member:: float fVarMin
+  .. ocv:member:: float fVarMax
 
-        Parameter used to further control the variance.
+      Parameter used to further control the variance.
 
-    .. ocv:member:: float fVarMax
+  .. ocv:member:: float fCT
 
-        Parameter used to further control the variance.
+      Complexity reduction parameter. This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
 
-    .. ocv:member:: float fCT
+  .. ocv:member:: uchar nShadowDetection
 
-        Complexity reduction parameter. This parameter defines the number of samples needed to accept to prove the component exists. ``CT=0.05`` is a default value for all the samples. By setting ``CT=0`` you get an algorithm very similar to the standard Stauffer&Grimson algorithm.
+      The value for marking shadow pixels in the output foreground mask. Default value is 127.
 
-    .. ocv:member:: uchar nShadowDetection
+  .. ocv:member:: float fTau
 
-        The value for marking shadow pixels in the output foreground mask. Default value is 127.
+      Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See [ShadowDetect2003]_.
 
-    .. ocv:member:: float fTau
+  .. ocv:member:: bool bShadowDetection
 
-        Shadow threshold. The shadow is detected if the pixel is a darker version of the background. ``Tau`` is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See [ShadowDetect2003]_.
+      Parameter defining whether shadow detection should be enabled.
 
-    .. ocv:member:: bool bShadowDetection
-
-        Parameter defining whether shadow detection should be enabled.
 
 .. seealso:: :ocv:class:`BackgroundSubtractorMOG2`
 
@@ -549,8 +541,6 @@ Updates the background model and returns the foreground mask.
 
     :param fgmask: The output foreground mask as an 8-bit binary image.
 
-    :param stream: Stream for the asynchronous version.
-
 
 ocl::MOG2::getBackgroundImage
 ---------------------------------
@@ -560,11 +550,12 @@ Computes a background image.
 
     :param backgroundImage: The output background image.
 
-    :param stream: Stream for the asynchronous version.
-
 
 ocl::MOG2::release
 ----------------------
 Releases all inner buffer's memory.
 
 .. ocv:function:: void ocl::MOG2::release()
+
+
+.. [ShadowDetect2003] Prati, Mikic, Trivedi and Cucchiarra. *Detecting Moving Shadows...*. IEEE PAMI, 2003

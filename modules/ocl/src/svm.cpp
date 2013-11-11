@@ -686,9 +686,6 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
     }
 
 #else
-    // TODO fix it
-    CV_Error(Error::StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
-
     double degree1 = 0.0;
     if (params.kernel_type == CvSVM::POLY)
         degree1 = params.degree;
@@ -813,9 +810,6 @@ bool CvSVMSolver_ocl::solve_generic( CvSVMSolutionInfo& si )
     }
 
 #else
-    // TODO fix it
-    CV_Error(Error::StsNotImplemented, "This part of code contains mistakes. Install AMD BLAS in order to get a correct result or use CPU version of SVM");
-
     double degree1 = 0.0;
     if(params->kernel_type == CvSVM::POLY)
         degree1 = params->degree;
@@ -1000,13 +994,15 @@ void CvSVMKernel_ocl::calc( int vcount, const int row_idx, Qfloat* results, Mat&
     //int j;
     (this->*calc_func_ocl)( vcount, row_idx, results, src);
 
-// FIXIT #if defined HAVE_CLAMDBLAS
+#if !defined(HAVE_CLAMDBLAS)
+    // nothing
+#else
     const Qfloat max_val = (Qfloat)(FLT_MAX * 1e-3);
     int j;
     for( j = 0; j < vcount; j++ )
         if( results[j] > max_val )
             results[j] = max_val;
-// FIXIT #endif
+#endif
 }
 
 bool CvSVMKernel_ocl::create( const CvSVMParams* _params, Calc_ocl _calc_func, Calc _calc_func1 )
@@ -1078,12 +1074,13 @@ void CvSVMKernel_ocl::calc_poly( int vcount, const int row_idx, Qfloat* results,
 {
     calc_non_rbf_base( vcount, row_idx, results, src);
 
-//FIXIT #if defined HAVE_CLAMDBLAS
-
+#if !defined(HAVE_CLAMDBLAS)
+    // nothing
+#else
     CvMat R = cvMat( 1, vcount, QFLOAT_TYPE, results );
     if( vcount > 0 )
         cvPow( &R, &R, params->degree );
-//FIXIT #endif
+#endif
 }
 
 
@@ -1091,7 +1088,9 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
 {
     calc_non_rbf_base( vcount, row_idx, results, src);
     // TODO: speedup this
-//FIXIT #if defined HAVE_CLAMDBLAS
+#if !defined(HAVE_CLAMDBLAS)
+    // nothing
+#else
     for(int j = 0; j < vcount; j++ )
     {
         Qfloat t = results[j];
@@ -1101,7 +1100,7 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
         else
             results[j] = (Qfloat)((e - 1.) / (e + 1.));
     }
-//FIXIT #endif
+#endif
 }
 
 CvSVM_OCL::CvSVM_OCL()

@@ -142,18 +142,23 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
 
     void random_roi()
     {
+        border = randomBorder(0, MAX_VALUE << 2);
+        val = randomScalar(-MAX_VALUE, MAX_VALUE);
+
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, 5, 16);
+        dstBorder.top += border.top;
+        dstBorder.lef += border.lef;
+        dstBorder.rig += border.rig;
+        dstBorder.bot += border.bot;
+
+        randomSubMat(dst_whole, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
         generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
         generateOclMat(gdst_whole, gdst_roi, dst_whole, roiSize, dstBorder);
-
-        border = randomBorder(0, MAX_VALUE << 2);
-        val = randomScalar(-MAX_VALUE, MAX_VALUE);
     }
 
     void Near(double threshold = 0.0)
@@ -207,11 +212,19 @@ struct CornerTestBase :
         Mat image = readImageType("gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
 
+        bool isFP = CV_MAT_DEPTH(type) >= CV_32F;
+        float val = 255.0f;
+        if (isFP)
+        {
+            image.convertTo(image, -1, 1.0 / 255);
+            val /= 255.0f;
+        }
+
         Size roiSize = image.size();
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
 
         Size wholeSize = Size(roiSize.width + srcBorder.lef + srcBorder.rig, roiSize.height + srcBorder.top + srcBorder.bot);
-        src = randomMat(wholeSize, type, -255, 255, false);
+        src = randomMat(wholeSize, type, -val, val, false);
         src_roi = src(Rect(srcBorder.lef, srcBorder.top, roiSize.width, roiSize.height));
         image.copyTo(src_roi);
 
@@ -522,7 +535,7 @@ INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
-                            Values((MatType)CV_8UC1), // TODO does not work properly with CV_32FC1
+                            Values((MatType)CV_8UC1, CV_32FC1),
                             Values(3, 5),
                             Values( (int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
                             Bool()));
@@ -567,14 +580,11 @@ INSTANTIATE_TEST_CASE_P(Imgproc, ColumnSum, Combine(
                             Bool()));
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
-                            testing::Range((MatDepth)CV_8U, (MatDepth)CV_USRTYPE1),
-                            testing::Values((Channels)1, (Channels)4),
+                            testing::Values((MatDepth)CV_8U, (MatDepth)CV_16S, (MatDepth)CV_32S, (MatDepth)CV_32F),
+                            testing::Values(Channels(1), Channels(3), (Channels)4),
                             Bool(), // border isolated or not
-                            Values((Border)BORDER_CONSTANT,
-                                   (Border)BORDER_REPLICATE,
-                                   (Border)BORDER_REFLECT,
-                                   (Border)BORDER_WRAP,
-                                   (Border)BORDER_REFLECT_101),
+                            Values((Border)BORDER_REPLICATE, (Border)BORDER_REFLECT,
+                                   (Border)BORDER_WRAP, (Border)BORDER_REFLECT_101),
                             Bool()));
 
 #endif // HAVE_OPENCL

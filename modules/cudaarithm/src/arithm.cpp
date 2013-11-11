@@ -113,11 +113,7 @@ namespace
         }
     }
 
-    #if defined(__GNUC__)
-        #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, __func__)
-    #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, "")
-    #endif
+    #define cublasSafeCall(expr)  ___cublasSafeCall(expr, __FILE__, __LINE__, CV_Func)
 #endif // HAVE_CUBLAS
 
 #ifdef HAVE_CUFFT
@@ -151,11 +147,7 @@ namespace
         }
     }
 
-    #if defined(__GNUC__)
-        #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, __func__)
-    #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, "")
-    #endif
+    #define cufftSafeCall(expr)  ___cufftSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
 #endif
 
