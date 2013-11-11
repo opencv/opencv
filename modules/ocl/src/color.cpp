@@ -122,12 +122,12 @@ static void RGB_caller(const oclMat &src, oclMat &dst, bool reverse)
     openCLExecuteKernel(src.clCxt, &cvt_color, "RGB", gt, lt, args, -1, -1, build_options.c_str());
 }
 
-static void RGB5x52RGB_caller(const oclMat &src, oclMat &dst, int bidx, int greenbits)
+static void fromRGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int greenbits, const std::string & kernelName)
 {
     std::string build_options = format("-D DEPTH_%d -D greenbits=%d -D dcn=%d",
                                        src.depth(), greenbits, dst.channels());
     int src_offset = src.offset >> 1, src_step = src.step >> 1;
-    int dst_offset = (int)dst.offset, dst_step = (int)dst.step;
+    int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step / dst.elemSize1();
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols));
@@ -141,10 +141,10 @@ static void RGB5x52RGB_caller(const oclMat &src, oclMat &dst, int bidx, int gree
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
     size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
-    openCLExecuteKernel(src.clCxt, &cvt_color, "RGB5x52RGB", gt, lt, args, -1, -1, build_options.c_str());
+    openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
-static void RGB2RGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int greenbits)
+static void toRGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int greenbits, const std::string & kernelName)
 {
     std::string build_options = format("-D DEPTH_%d -D greenbits=%d -D scn=%d",
                                        src.depth(), greenbits, src.channels());
@@ -163,7 +163,7 @@ static void RGB2RGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int gree
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
     size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
-    openCLExecuteKernel(src.clCxt, &cvt_color, "RGB2RGB5x5", gt, lt, args, -1, -1, build_options.c_str());
+    openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
 static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
@@ -194,7 +194,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         int greenbits = code == CV_BGR2BGR565 || code == CV_RGB2BGR565 ||
             code == CV_BGRA2BGR565 || code == CV_RGBA2BGR565 ? 6 : 5;
         dst.create(sz, CV_8UC2);
-        RGB2RGB5x5_caller(src, dst, bidx, greenbits);
+        toRGB5x5_caller(src, dst, bidx, greenbits, "RGB2RGB5x5");
         break;
     }
     case CV_BGR5652BGR: case CV_BGR5552BGR: case CV_BGR5652RGB: case CV_BGR5552RGB:
@@ -207,7 +207,23 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         int greenbits = code == CV_BGR5652BGR || code == CV_BGR5652RGB ||
             code == CV_BGR5652BGRA || code == CV_BGR5652RGBA ? 6 : 5;
         dst.create(sz, CV_MAKETYPE(depth, dcn));
-        RGB5x52RGB_caller(src, dst, bidx, greenbits);
+        fromRGB5x5_caller(src, dst, bidx, greenbits, "RGB5x52RGB");
+        break;
+    }
+    case CV_BGR5652GRAY: case CV_BGR5552GRAY:
+    {
+        CV_Assert(scn == 2 && depth == CV_8U);
+        dst.create(sz, CV_8UC1);
+        int greenbits = code == CV_BGR5652GRAY ? 6 : 5;
+        fromRGB5x5_caller(src, dst, -1, greenbits, "BGR5x52Gray");
+        break;
+    }
+    case CV_GRAY2BGR565: case CV_GRAY2BGR555:
+    {
+        CV_Assert(scn == 1 && depth == CV_8U);
+        dst.create(sz, CV_8UC2);
+        int greenbits = code == CV_GRAY2BGR565 ? 6 : 5;
+        toRGB5x5_caller(src, dst, -1, greenbits, "Gray2BGR5x5");
         break;
     }
     case CV_RGB2GRAY: case CV_BGR2GRAY:
