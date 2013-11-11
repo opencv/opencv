@@ -33,11 +33,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 #define TYPE double
 #else
@@ -53,7 +54,6 @@
 #else
 #define POW(X,Y) X
 #endif
-#define FLT_MAX   3.402823466e+38F
 #define MAX_VAL   (FLT_MAX*1e-3)
 
 __kernel void svm_linear(__global float* src, int src_step, __global float* src2, int src2_step, __global TYPE* dst, int dst_step, int src_rows, int src2_cols,

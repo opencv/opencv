@@ -63,14 +63,6 @@
 #define DIST_TYPE 0
 #endif
 
-//http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-static int bit1Count(int v)
-{
-    v = v - ((v >> 1) & 0x55555555);                    // reuse input as temporary
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);     // temp
-    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
-}
-
 // dirty fix for non-template support
 #if   (DIST_TYPE == 0) // L1Dist
 #   ifdef T_FLOAT
@@ -89,6 +81,13 @@ typedef float value_type;
 typedef float result_type;
 #define DIST_RES(x) sqrt(x)
 #elif (DIST_TYPE == 2) // Hamming
+//http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+static int bit1Count(int v)
+{
+    v = v - ((v >> 1) & 0x55555555);                    // reuse input as temporary
+    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);     // temp
+    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24; // count
+}
 #define DIST(x, y) bit1Count( (x) ^ (y) )
 typedef int value_type;
 typedef int result_type;

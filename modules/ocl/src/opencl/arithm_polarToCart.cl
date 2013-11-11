@@ -44,14 +44,14 @@
 //M*/
 
 #ifdef DOUBLE_SUPPORT
-    #ifdef cl_amd_fp64
-        #pragma OPENCL EXTENSION cl_amd_fp64:enable
-    #elif defined (cl_khr_fp64)
-        #pragma OPENCL EXTENSION cl_khr_fp64:enable
-    #endif
-    #define CV_PI M_PI
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#define CV_PI M_PI
 #else
-    #define CV_PI M_PI_F
+#define CV_PI M_PI_F
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////

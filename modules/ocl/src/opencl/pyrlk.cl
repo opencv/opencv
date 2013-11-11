@@ -45,8 +45,6 @@
 //
 //M*/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
-
 #define	BUFFER	64
 #define	BUFFER2	BUFFER>>1
 #ifndef WAVE_SIZE
