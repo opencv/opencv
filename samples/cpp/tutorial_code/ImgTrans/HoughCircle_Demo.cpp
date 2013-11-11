@@ -6,6 +6,7 @@
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include <iostream>
 
 using namespace cv;
 
@@ -55,7 +56,11 @@ int main(int, char** argv)
     src = imread( argv[1], 1 );
 
    if( !src.data )
-     { return -1; }
+   {
+       std::cerr<<"Invalid input image\n";
+       std::cout<<"Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
+       return -1;
+   }
 
     // Convert it to gray
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
