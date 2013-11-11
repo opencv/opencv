@@ -355,6 +355,7 @@ INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                             Values(1, 2, 3, 4),
                             Values(pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    pair<MatType, MatType>((MatType)CV_32FC2, noType),
+                                   pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    pair<MatType, MatType>((MatType)CV_16SC2, noType)),
                             Values((Border)BORDER_CONSTANT,
                                    (Border)BORDER_REPLICATE,

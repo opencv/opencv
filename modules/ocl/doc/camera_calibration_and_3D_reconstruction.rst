@@ -86,8 +86,6 @@ Enables the stereo correspondence operator that finds the disparity for the spec
 
     :param disparity: Output disparity map. It is a  ``CV_8UC1``  image with the same size as the input images.
 
-    :param stream: Stream for the asynchronous version.
-
 
 ocl::StereoBM_OCL::checkIfGpuCallReasonable
 -----------------------------------------------
@@ -218,8 +216,6 @@ Enables the stereo correspondence operator that finds the disparity for the spec
 
     :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the type is retained.
 
-    :param stream: Stream for the asynchronous version.
-
 ocl::StereoConstantSpaceBP
 ------------------------------
 .. ocv:class:: ocl::StereoConstantSpaceBP
@@ -330,5 +326,3 @@ Enables the stereo correspondence operator that finds the disparity for the spec
     :param right: Right image with the same size and the same type as the left one.
 
     :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the output type is  ``disparity.type()`` .
-
-    :param stream: Stream for the asynchronous version.

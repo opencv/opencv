@@ -93,8 +93,8 @@ __kernel void threshold(__global const T * restrict src, int src_offset, int src
 #endif
         else
         {
-            T array[VECSIZE];
-            VSTOREN(vecValue, 0, array);
+            __attribute__(( aligned(sizeof(VT)) )) T array[VECSIZE];
+            *((VT*)array) = vecValue;
             #pragma unroll
             for (int i = 0; i < VECSIZE; ++i)
                 if (gx + i < max_index)

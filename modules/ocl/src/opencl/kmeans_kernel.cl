@@ -44,81 +44,64 @@
 //
 //M*/
 
-#ifdef L1_DIST
-#  define DISTANCE(A, B) fabs((A) - (B))
-#elif defined L2SQR_DIST
-#  define DISTANCE(A, B) ((A) - (B)) * ((A) - (B))
-#else
-#  define DISTANCE(A, B) ((A) - (B)) * ((A) - (B))
-#endif
-
-inline float dist(__global const float * center, __global const float * src, int feature_cols)
+static float distance_(__global const float * center, __global const float * src, int feature_length)
 {
     float res = 0;
-    float4 tmp4;
-    int i;
-    for(i = 0; i < feature_cols / 4; i += 4, center += 4, src += 4)
-    {
-        tmp4 = vload4(0, center) - vload4(0, src);
+    float4 v0, v1, v2;
+    int i = 0;
+
 #ifdef L1_DIST
-        tmp4 = fabs(tmp4);
-#else
-        tmp4 *= tmp4;
+    float4 sum = (float4)(0.0f);
 #endif
-        res += tmp4.x + tmp4.y + tmp4.z + tmp4.w;
+
+    for ( ; i <= feature_length - 4; i += 4)
+    {
+        v0 = vload4(0, center + i);
+        v1 = vload4(0, src + i);
+        v2 = v1 - v0;
+#ifdef L1_DIST
+        v0 = fabs(v2);
+        sum += v0;
+#else
+        res += dot(v2, v2);
+#endif
     }
 
-    for(; i < feature_cols; ++i, ++center, ++src)
+#ifdef L1_DIST
+    res = sum.x + sum.y + sum.z + sum.w;
+#endif
+
+    for ( ; i < feature_length; ++i)
     {
-        res += DISTANCE(*src, *center);
+        float t0 = src[i];
+        float t1 = center[i];
+#ifdef L1_DIST
+        res += fabs(t0 - t1);
+#else
+        float t2 = t0 - t1;
+        res += t2 * t2;
+#endif
     }
+
     return res;
 }
 
-// to be distinguished with distanceToCenters in kmeans_kernel.cl
-__kernel void distanceToCenters(
-    __global const float *src,
-    __global const float *centers,
-#ifdef USE_INDEX
-    __global const int   *indices,
-#endif
-    __global int   *labels,
-    __global float *dists,
-    int feature_cols,
-    int src_step,
-    int centers_step,
-    int label_step,
-    int input_size,
-    int K,
-    int offset_src,
-    int offset_centers
-)
+__kernel void distanceToCenters(__global const float * src, __global const float * centers,
+                                __global float * dists, int feature_length,
+                                int src_step, int centers_step,
+                                int features_count, int centers_count,
+                                int src_offset, int centers_offset)
 {
     int gid = get_global_id(0);
-    float euDist, minval;
-    int minCentroid;
-    if(gid >= input_size)
+
+    if (gid < (features_count * centers_count))
     {
-        return;
+        int feature_index = gid / centers_count;
+        int center_index = gid % centers_count;
+
+        int center_idx = mad24(center_index, centers_step, centers_offset);
+        int src_idx = mad24(feature_index, src_step, src_offset);
+
+        dists[gid] = distance_(centers + center_idx, src + src_idx, feature_length);
     }
-    src += offset_src;
-    centers += offset_centers;
-#ifdef USE_INDEX
-    src += indices[gid] * src_step;
-#else
-    src += gid * src_step;
-#endif
-    minval = dist(centers, src, feature_cols);
-    minCentroid = 0;
-    for(int i = 1 ; i < K; i++)
-    {
-        euDist = dist(centers + i * centers_step, src, feature_cols);
-        if(euDist < minval)
-        {
-            minval = euDist;
-            minCentroid = i;
-        }
-    }
-    labels[gid * label_step] = minCentroid;
-    dists[gid] = minval;
 }

@@ -222,15 +222,17 @@ enum {
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#ifdef __GNUC__
-#  define CV_Error( code, msg ) cv::error( code, msg, __func__, __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, __func__, __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, __func__, __FILE__, __LINE__ )
+#if defined __GNUC__
+#define CV_Func __func__
+#elif defined _MSC_VER
+#define CV_Func __FUNCTION__
 #else
-#  define CV_Error( code, msg ) cv::error( code, msg, "", __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, "", __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, "", __FILE__, __LINE__ )
+#define CV_Func ""
 #endif
+
+#define CV_Error( code, msg ) cv::error( code, msg, CV_Func, __FILE__, __LINE__ )
+#define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
 
 #ifdef _DEBUG
 #  define CV_DbgAssert(expr) CV_Assert(expr)
