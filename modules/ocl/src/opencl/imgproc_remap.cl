@@ -51,6 +51,13 @@
 #endif
 #endif
 
+enum
+{
+    INTER_BITS = 5,
+    INTER_TAB_SIZE = 1 << INTER_BITS,
+    INTER_TAB_SIZE2 = INTER_TAB_SIZE * INTER_TAB_SIZE
+};
+
 #ifdef INTER_NEAREST
 #define convertToWT
 #endif
@@ -204,6 +211,36 @@ __kernel void remap_16SC2(__global const T * restrict src, __global T * dst, __g
     }
 }
 
+__kernel void remap_16SC2_16UC1(__global const T * restrict src, __global T * dst, __global short2 * map1, __global ushort * map2,
+        int src_offset, int dst_offset, int map1_offset, int map2_offset,
+        int src_step, int dst_step, int map1_step, int map2_step,
+        int src_cols, int src_rows, int dst_cols, int dst_rows, T scalar)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < dst_cols && y < dst_rows)
+    {
+        int dstIdx = mad24(y, dst_step, x + dst_offset);
+        int map1Idx = mad24(y, map1_step, x + map1_offset);
+        int map2Idx = mad24(y, map2_step, x + map2_offset);
+
+        int map2Value = convert_int(map2[map2Idx]) & (INTER_TAB_SIZE2 - 1);
+        int dx = (map2Value & (INTER_TAB_SIZE - 1)) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
+        int dy = (map2Value >> INTER_BITS) < (INTER_TAB_SIZE >> 1) ? 1 : 0;
+        int2 gxy = convert_int2(map1[map1Idx]) + (int2)(dx, dy);
+        int gx = gxy.x, gy = gxy.y;
+
+        if (NEED_EXTRAPOLATION(gx, gy))
+            EXTRAPOLATE(gxy, dst[dstIdx])
+        else
+        {
+            int srcIdx = mad24(gy, src_step, gx + src_offset);
+            dst[dstIdx] = src[srcIdx];
+        }
+    }
+}
+
 #elif INTER_LINEAR
 
 __kernel void remap_2_32FC1(__global T const * restrict  src, __global T * dst,
@@ -229,7 +266,7 @@ __kernel void remap_2_32FC1(__global T const * restrict  src, __global T * dst,
         int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y +1);
 
         float2 _u = map_data - convert_float2(map_dataA);
-        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
+        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
         WT scalar = convertToWT(nVal);
         WT a = scalar, b = scalar, c = scalar, d = scalar;
 
@@ -282,7 +319,7 @@ __kernel void remap_32FC2(__global T const * restrict  src, __global T * dst,
         int2 map_dataD = (int2)(map_dataA.x + 1, map_dataA.y + 1);
 
         float2 _u = map_data - convert_float2(map_dataA);
-        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)32)) / (WT2)32;
+        WT2 u = convertToWT2(convert_int2_rte(convertToWT2(_u) * (WT2)INTER_TAB_SIZE)) / (WT2)INTER_TAB_SIZE;
         WT scalar = convertToWT(nVal);
         WT a = scalar, b = scalar, c = scalar, d = scalar;
 

@@ -338,8 +338,8 @@ OCL_TEST_P(AdaptiveBilateral, Mat)
     {
         random_roi();
 
-        adaptiveBilateralFilter(src_roi, dst_roi, kernelSize, 5, Point(-1, -1), borderType); // TODO anchor
-        ocl::adaptiveBilateralFilter(gsrc_roi, gdst_roi, kernelSize, 5, Point(-1, -1), borderType);
+        adaptiveBilateralFilter(src_roi, dst_roi, kernelSize, 5, 1, Point(-1, -1), borderType); // TODO anchor
+        ocl::adaptiveBilateralFilter(gsrc_roi, gdst_roi, kernelSize, 5, 1, Point(-1, -1), borderType);
 
         Near();
     }

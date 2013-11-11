@@ -65,11 +65,7 @@ namespace cv { namespace cuda {
 }}
 
 #ifndef cudaSafeCall
-    #if defined(__GNUC__)
-        #define cudaSafeCall(expr)  cv::cuda::checkCudaError(expr, __FILE__, __LINE__, __func__)
-    #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cudaSafeCall(expr)  cv::cuda::checkCudaError(expr, __FILE__, __LINE__, "")
-    #endif
+    #define cudaSafeCall(expr)  cv::cuda::checkCudaError(expr, __FILE__, __LINE__, CV_Func)
 #endif
 
 namespace cv { namespace cuda

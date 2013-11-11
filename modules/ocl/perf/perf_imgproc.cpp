@@ -872,58 +872,57 @@ PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
 
 //////////////////////////////distanceToCenters////////////////////////////////////////////////
 
-CV_ENUM(DistType, NORM_L1, NORM_L2SQR);
+CV_ENUM(DistType, NORM_L1, NORM_L2SQR)
+
 typedef tuple<Size, DistType> distanceToCentersParameters;
 typedef TestBaseWithParam<distanceToCentersParameters> distanceToCentersFixture;
 
 static void distanceToCentersPerfTest(Mat& src, Mat& centers, Mat& dists, Mat& labels, int distType)
 {
     Mat batch_dists;
-    cv::batchDistance(src,centers,batch_dists, CV_32FC1, noArray(), distType);
+    cv::batchDistance(src, centers, batch_dists, CV_32FC1, noArray(), distType);
+
     std::vector<float> dists_v;
     std::vector<int> labels_v;
-    for(int i = 0; i<batch_dists.rows; i++)
+
+    for (int i = 0; i < batch_dists.rows; i++)
     {
         Mat r = batch_dists.row(i);
         double mVal;
         Point mLoc;
+
         minMaxLoc(r, &mVal, NULL, &mLoc, NULL);
-        dists_v.push_back((float)mVal);
+        dists_v.push_back(static_cast<float>(mVal));
         labels_v.push_back(mLoc.x);
     }
-    Mat temp_dists(dists_v);
-    Mat temp_labels(labels_v);
-    temp_dists.reshape(1,1).copyTo(dists);
-    temp_labels.reshape(1,1).copyTo(labels);
+
+    Mat(dists_v).copyTo(dists);
+    Mat(labels_v).copyTo(labels);
 }
 
 PERF_TEST_P(distanceToCentersFixture, distanceToCenters, ::testing::Combine(::testing::Values(cv::Size(256,256), cv::Size(512,512)), DistType::all()) )
 {
     Size size = get<0>(GetParam());
     int distType = get<1>(GetParam());
-    Mat src(size, CV_32FC1);
-    Mat centers(size, CV_32FC1);
-    Mat dists(cv::Size(src.rows,1), CV_32FC1);
-    Mat labels(cv::Size(src.rows,1), CV_32SC1);
+
+    Mat src(size, CV_32FC1), centers(size, CV_32FC1);
+    Mat dists(src.rows, 1, CV_32FC1), labels(src.rows, 1, CV_32SC1);
+
     declare.in(src, centers, WARMUP_RNG).out(dists, labels);
+
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat ocl_src(src);
-        ocl::oclMat ocl_centers(centers);
-        ocl::oclMat ocl_dists(dists);
-        ocl::oclMat ocl_labels(labels);
+        ocl::oclMat ocl_src(src), ocl_centers(centers);
 
-        OCL_TEST_CYCLE() ocl::distanceToCenters(ocl_dists,ocl_labels,ocl_src, ocl_centers, distType);
-
-        ocl_dists.download(dists);
-        ocl_labels.download(labels);
+        OCL_TEST_CYCLE() ocl::distanceToCenters(ocl_src, ocl_centers, dists, labels, distType);
 
         SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
         SANITY_CHECK(labels);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() distanceToCentersPerfTest(src,centers,dists,labels,distType);
+        TEST_CYCLE() distanceToCentersPerfTest(src, centers, dists, labels, distType);
+
         SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
         SANITY_CHECK(labels);
     }

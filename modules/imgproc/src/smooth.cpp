@@ -2287,15 +2287,24 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
 namespace cv
 {
-#define CALCVAR 1
-#define FIXED_WEIGHT 0
+#ifndef ABF_CALCVAR
+#define ABF_CALCVAR 1
+#endif
+
+#ifndef ABF_FIXED_WEIGHT
+#define ABF_FIXED_WEIGHT 0
+#endif
+
+#ifndef ABF_GAUSSIAN
+#define ABF_GAUSSIAN 1
+#endif
 
 class adaptiveBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
 public:
-    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, double _sigma_space, Point _anchor) :
-        temp(&_temp), dest(&_dest), ksize(_ksize), sigma_space(_sigma_space), anchor(_anchor)
+    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, double _sigma_space, double _maxSigmaColor, Point _anchor) :
+        temp(&_temp), dest(&_dest), ksize(_ksize), sigma_space(_sigma_space), maxSigma_Color(_maxSigmaColor), anchor(_anchor)
     {
         if( sigma_space <= 0 )
             sigma_space = 1;
@@ -2308,7 +2317,11 @@ public:
         for(int y=-h; y<=h; y++)
             for(int x=-w; x<=w; x++)
         {
+#if ABF_GAUSSIAN
+            space_weight[idx++] = (float)exp ( -0.5*(x * x + y * y)/sigma2);
+#else
             space_weight[idx++] = (float)(sigma2 / (sigma2 + x * x + y * y));
+#endif
         }
     }
     virtual void operator()(const Range& range) const
@@ -2344,7 +2357,7 @@ public:
                     int startLMJ = 0;
                     int endLMJ  = ksize.width  - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width );
-#if CALCVAR
+#if ABF_CALCVAR
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
@@ -2356,8 +2369,14 @@ public:
                         }
                     }
                     var = ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
+
+                    if(var < 0.01)
+                        var = 0.01f;
+                    else if(var > (float)(maxSigma_Color*maxSigma_Color) )
+                        var =  (float)(maxSigma_Color*maxSigma_Color) ;
+
 #else
-                    var = 900.0;
+                    var = maxSigmaColor*maxSigmaColor;
 #endif
                     startLMJ = 0;
                     endLMJ = ksize.width;
@@ -2368,13 +2387,18 @@ public:
                         tptr = temp->ptr(startY + x) +j;
                         for(int y=-anX; y<=anX; y++)
                         {
-#if FIXED_WEIGHT
+#if ABF_FIXED_WEIGHT
                             weight = 1.0;
 #else
                             currVal = tptr[cn*(y+anX)];
                             currWRTCenter = currVal - currValCenter;
 
-                            weight = var / ( var + (currWRTCenter * currWRTCenter) ) * space_weight[x*ksize.width+y+anX];;
+#if ABF_GAUSSIAN
+                            weight = exp ( -0.5f * currWRTCenter * currWRTCenter/var ) * space_weight[x*ksize.width+y+anX];
+#else
+                            weight = var / ( var + (currWRTCenter * currWRTCenter) ) * space_weight[x*ksize.width+y+anX];
+#endif
+
 #endif
                             tmpSum += ((float)tptr[cn*(y+anX)] * weight);
                             totalWeight += weight;
@@ -2409,7 +2433,8 @@ public:
                     int startLMJ = 0;
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
-#if CALCVAR
+#if ABF_CALCVAR
+                    float max_var = (float)( maxSigma_Color*maxSigma_Color);
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
                         tptr = temp->ptr(startY + x) +j;
@@ -2424,11 +2449,27 @@ public:
                             sumValSqr_r += (currVal_r *currVal_r);
                         }
                     }
-                    var_b = ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
-                    var_g = ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
-                    var_r = ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
+                    var_b =  ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
+                    var_g =  ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
+                    var_r =  ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
+
+                    if(var_b < 0.01)
+                        var_b = 0.01f;
+                    else if(var_b > max_var )
+                        var_b =  (float)(max_var) ;
+
+                    if(var_g < 0.01)
+                        var_g = 0.01f;
+                    else if(var_g > max_var )
+                        var_g =  (float)(max_var) ;
+
+                    if(var_r < 0.01)
+                        var_r = 0.01f;
+                    else if(var_r > max_var )
+                        var_r =  (float)(max_var) ;
+
 #else
-                    var_b = 900.0; var_g = 900.0;var_r = 900.0;
+                    var_b = maxSigma_Color*maxSigma_Color; var_g = maxSigma_Color*maxSigma_Color; var_r = maxSigma_Color*maxSigma_Color;
 #endif
                     startLMJ = 0;
                     endLMJ = ksize.width;
@@ -2439,7 +2480,7 @@ public:
                         tptr = temp->ptr(startY + x) +j;
                         for(int y=-anX; y<=anX; y++)
                         {
-#if FIXED_WEIGHT
+#if ABF_FIXED_WEIGHT
                             weight_b = 1.0;
                             weight_g = 1.0;
                             weight_r = 1.0;
@@ -2450,9 +2491,16 @@ public:
                             currWRTCenter_r = currVal_r - currValCenter_r;
 
                             float cur_spw = space_weight[x*ksize.width+y+anX];
+
+#if ABF_GAUSSIAN
+                            weight_b = exp( -0.5f * currWRTCenter_b * currWRTCenter_b/ var_b ) * cur_spw;
+                            weight_g = exp( -0.5f * currWRTCenter_g * currWRTCenter_g/ var_g ) * cur_spw;
+                            weight_r = exp( -0.5f * currWRTCenter_r * currWRTCenter_r/ var_r ) * cur_spw;
+#else
                             weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) ) * cur_spw;
                             weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) ) * cur_spw;
                             weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) ) * cur_spw;
+#endif
 #endif
                             tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
                             tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
@@ -2476,10 +2524,11 @@ private:
     Mat *dest;
     Size ksize;
     double sigma_space;
+    double maxSigma_Color;
     Point anchor;
     std::vector<float> space_weight;
 };
-static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, double sigmaSpace, Point anchor, int borderType )
+static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, double sigmaSpace, double maxSigmaColor, Point anchor, int borderType )
 {
     Size size = src.size();
 
@@ -2489,12 +2538,12 @@ static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, do
     Mat temp;
     copyMakeBorder(src, temp, anchor.x, anchor.y, anchor.x, anchor.y, borderType);
 
-    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, anchor);
+    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, maxSigmaColor, anchor);
     parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
-                                  double sigmaSpace, Point anchor, int borderType )
+                                  double sigmaSpace, double maxSigmaColor, Point anchor, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
@@ -2504,7 +2553,7 @@ void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
 
     anchor = normalizeAnchor(anchor,ksize);
     if( src.depth() == CV_8U )
-        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, anchor, borderType );
+        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, maxSigmaColor, anchor, borderType );
     else
         CV_Error( CV_StsUnsupportedFormat,
         "Adaptive Bilateral filtering is only implemented for 8u images" );
