@@ -6,50 +6,89 @@
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include <iostream>
-#include <stdio.h>
 
 using namespace cv;
 
-/**
- * @function main
- */
+namespace
+{
+    // windows and trackbars name
+    const std::string windowName = "Hough Circle Detection Demo";
+    const std::string cannyThresholdTrackbarName = "Canny threshold";
+    const std::string accumulatorThresholdTrackbarName = "Accumulator Threshold";
+
+    // initial and max values of the parameters of interests.
+    const int cannyThresholdInitialValue = 200;
+    const int accumulatorThresholdInitialValue = 50;
+    const int maxAccumulatorThreshold = 200;
+    const int maxCannyThreshold = 255;
+
+    void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
+    {
+       // will hold the results of the detection
+       std::vector<Vec3f> circles;
+       // runs the actual detection
+       HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, cannyThreshold, accumulatorThreshold, 0, 0 );
+
+       // clone the colour, input image for displaying purposes
+       Mat display = src_display.clone();
+       for( size_t i = 0; i < circles.size(); i++ )
+       {
+            Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+            int radius = cvRound(circles[i][2]);
+            // circle center
+            circle( display, center, 3, Scalar(0,255,0), -1, 8, 0 );
+            // circle outline
+            circle( display, center, radius, Scalar(0,0,255), 3, 8, 0 );
+       }
+
+       // shows the results
+       imshow( windowName, display);
+    }
+}
+
+
 int main(int, char** argv)
 {
    Mat src, src_gray;
 
-   /// Read the image
-   src = imread( argv[1], 1 );
+    // Read the image
+    src = imread( argv[1], 1 );
 
    if( !src.data )
      { return -1; }
 
-   /// Convert it to gray
+    // Convert it to gray
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
 
-   /// Reduce the noise so we avoid false circle detection
+    // Reduce the noise so we avoid false circle detection
     GaussianBlur( src_gray, src_gray, Size(9, 9), 2, 2 );
 
-    vector<Vec3f> circles;
+    //declare and initialize both parameters that are subjects to change
+    int cannyThreshold = cannyThresholdInitialValue;
+    int accumulatorThreshold = accumulatorThresholdInitialValue;
 
-   /// Apply the Hough Transform to find the circles
-    HoughCircles( src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows/8, 200, 100, 0, 0 );
+    // create the main window, and attach the trackbars
+    namedWindow( windowName, WINDOW_AUTOSIZE );
+    createTrackbar(cannyThresholdTrackbarName, windowName, &cannyThreshold,maxCannyThreshold);
+    createTrackbar(accumulatorThresholdTrackbarName, windowName, &accumulatorThreshold, maxAccumulatorThreshold);
 
-   /// Draw the circles detected
-    for( size_t i = 0; i < circles.size(); i++ )
+    // inifinite loop to display
+    // and refresh the content of the output image
+    // unti the user presses q or Q
+    int key = 0;
+    while(key != 'q' && key != 'Q')
     {
-         Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-         int radius = cvRound(circles[i][2]);
-         // circle center
-         circle( src, center, 3, Scalar(0,255,0), -1, 8, 0 );
-         // circle outline
-         circle( src, center, radius, Scalar(0,0,255), 3, 8, 0 );
+        // those paramaters cannot be =0
+        // so we must check here
+        cannyThreshold = std::max(cannyThreshold, 1);
+        accumulatorThreshold = std::max(accumulatorThreshold, 1);
+
+        //runs the detection, and update the display
+        HoughDetection(src_gray, src, cannyThreshold, accumulatorThreshold);
+
+        // get user key
+        key = waitKey(10);
     }
 
-   /// Show your results
-    namedWindow( "Hough Circle Transform Demo", WINDOW_AUTOSIZE );
-    imshow( "Hough Circle Transform Demo", src );
-
-    waitKey(0);
     return 0;
 }
