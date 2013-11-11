@@ -70,11 +70,7 @@ __host__ __forceinline__ void checkCudaError(cudaError_t err, const char* file, 
         cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
 }
 
-#ifdef __GNUC__
-#   define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, __func__)
-#else
-#   define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, "")
-#endif
+#define CV_CUDEV_SAFE_CALL(expr) cv::cudev::checkCudaError((expr), __FILE__, __LINE__, CV_Func)
 
 // divUp
 
