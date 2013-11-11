@@ -556,3 +556,6 @@ ocl::MOG2::release
 Releases all inner buffer's memory.
 
 .. ocv:function:: void ocl::MOG2::release()
+
+
+.. [ShadowDetect2003] Prati, Mikic, Trivedi and Cucchiarra. *Detecting Moving Shadows...*. IEEE PAMI, 2003
