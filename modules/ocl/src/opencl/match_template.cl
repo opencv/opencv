@@ -43,14 +43,12 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-
 #define TYPE_IMAGE_SQSUM double
 #else
 #define TYPE_IMAGE_SQSUM float
