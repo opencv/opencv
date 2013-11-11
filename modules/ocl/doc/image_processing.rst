@@ -65,15 +65,15 @@ ocl::integral
 -----------------
 Computes an integral image.
 
-.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum, oclMat &sqsum, int sdepth=-1)
 
-.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum)
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum, int sdepth=-1)
 
     :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
 
-    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
+    :param sum: Integral image containing 32-bit unsigned integer or 32-bit floating-point .
 
-    :param sqsum: Sqsum values is ``CV_32FC1`` type.
+    :param sqsum: Sqsum values is ``CV_32FC1`` or ``CV_64FC1`` type.
 
 .. seealso:: :ocv:func:`integral`
 

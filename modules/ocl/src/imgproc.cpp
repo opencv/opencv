@@ -792,7 +792,6 @@ namespace cv
                 return;
             }
 
-            int depth = src.depth();
             if( sdepth <= 0 )
                 sdepth = CV_32S;
             sdepth = CV_MAT_DEPTH(sdepth);
