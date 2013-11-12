@@ -4,6 +4,5 @@
 .*.swp
 .DS_Store
 .sw[a-z]
-/modules/refman.rst
 tags
 tegra/
