@@ -5,7 +5,7 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/ml/ml.hpp"
 #ifdef HAVE_OPENCV_OCL
-#define _OCL_SVM_ 0 //select whether using ocl::svm method or not, default is not
+#define _OCL_SVM_ 1 //select whether using ocl::svm method or not, default is using
 #include "opencv2/ocl/ocl.hpp"
 #endif
 
