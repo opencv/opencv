@@ -203,7 +203,7 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
         for(at = name; *at && !isdigit(*at); at++)
             ;
 
-        if(!at)
+        if(!*at)
             return 0;
 
         sscanf(at, "%u", offset);
