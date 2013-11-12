@@ -63,6 +63,10 @@ PERF_TEST_P(ConvertToFixture, ConvertTo,
 
     Mat src(srcSize, type), dst;
     const int dstType = CV_MAKE_TYPE(CV_32F, src.channels());
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(srcSize, dstType);
+
     dst.create(srcSize, dstType);
     declare.in(src, WARMUP_RNG).out(dst);
 
