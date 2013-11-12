@@ -939,7 +939,7 @@ namespace cv
             Size m_maxSize;
             vector<CvSize> sizev;
             vector<float> scalev;
-            oclMat gimg1, gsum, gsqsum;
+            oclMat gimg1, gsum, gsqsum, gsqsum_t;
             void * buffers;
         };
 

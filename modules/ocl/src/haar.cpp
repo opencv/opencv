@@ -747,6 +747,15 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         oclMat gsum(totalheight + 4, gimg.cols + 1, CV_32SC1);
         oclMat gsqsum(totalheight + 4, gimg.cols + 1, CV_32FC1);
 
+        int sdepth = 0;
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            sdepth = CV_64FC1;
+        else
+            sdepth = CV_32FC1;
+        sdepth = CV_MAT_DEPTH(sdepth);
+        int type = CV_MAKE_TYPE(sdepth, 1);
+        oclMat gsqsum_t(totalheight + 4, gimg.cols + 1, type);
+
         cl_mem stagebuffer;
         cl_mem nodebuffer;
         cl_mem candidatebuffer;
@@ -754,15 +763,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         cv::Rect roi, roi2;
         cv::Mat imgroi, imgroisq;
         cv::ocl::oclMat resizeroi, gimgroi, gimgroisq;
-        int sdepth = 0;
-        if(gsqsum.clCxt->supportsFeature(ocl::FEATURE_CL_DOUBLE))
-            sdepth = CV_64FC1;
-        else
-            sdepth = CV_32FC1;
-        sdepth = CV_MAT_DEPTH(sdepth);
-        int type = CV_MAKE_TYPE(sdepth, 1);
 
-        cv::ocl::oclMat gsqsum_t(gsqsum.size(), type);
         int grp_per_CU = 12;
 
         size_t blocksize = 8;
@@ -799,7 +800,10 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
 
             indexy += sz.height;
         }
-        gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
 
         gcascade   = (GpuHidHaarClassifierCascade *)cascade->hid_cascade;
         stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
@@ -1007,7 +1011,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         int n_factors = 0;
         oclMat gsum;
         oclMat gsqsum;
-        cv::ocl::oclMat gsqsum_t;
+        oclMat gsqsum_t;
         cv::ocl::integral(gimg, gsum, gsqsum_t);
         gsqsum_t.convertTo(gsqsum, CV_32FC1);
         CvSize sz;
@@ -1277,14 +1281,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
 
         cv::Rect roi, roi2;
         cv::ocl::oclMat resizeroi, gimgroi, gimgroisq;
-        if(gsqsum.clCxt->supportsFeature(ocl::FEATURE_CL_DOUBLE))
-            sdepth = CV_64FC1;
-        else
-            sdepth = CV_32FC1;
-        sdepth = CV_MAT_DEPTH(sdepth);
-        int type = CV_MAKE_TYPE(sdepth, 1);
-
-        cv::ocl::oclMat gsqsum_t(gsqsum.size(), type);
 
         for( int i = 0; i < m_loopcount; i++ )
         {
@@ -1299,7 +1295,11 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
             cv::ocl::integral(resizeroi, gimgroi, gimgroisq);
             indexy += sz.height;
         }
-        gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
+
         gcascade   = (GpuHidHaarClassifierCascade *)(cascade->hid_cascade);
         stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
 
@@ -1360,9 +1360,11 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
     }
     else
     {
-        cv::ocl::oclMat gsqsum_t;
         cv::ocl::integral(gimg, gsum, gsqsum_t);
-        gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
 
         gcascade   = (GpuHidHaarClassifierCascade *)cascade->hid_cascade;
 
@@ -1588,6 +1590,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             gimg1.release();
             gsum.release();
             gsqsum.release();
+            gsqsum_t.release();
         }
         else if (!(m_flags & CV_HAAR_SCALE_IMAGE) && (flags & CV_HAAR_SCALE_IMAGE))
         {
@@ -1661,6 +1664,16 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
         gimg1.create(rows, cols, CV_8UC1);
         gsum.create(totalheight + 4, cols + 1, CV_32SC1);
         gsqsum.create(totalheight + 4, cols + 1, CV_32FC1);
+
+        int sdepth = 0;
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            sdepth = CV_64FC1;
+        else
+            sdepth = CV_32FC1;
+        sdepth = CV_MAT_DEPTH(sdepth);
+        int type = CV_MAKE_TYPE(sdepth, 1);
+
+        gsqsum_t.create(totalheight + 4, cols + 1, type);
 
         scaleinfo = (detect_piramid_info *)malloc(sizeof(detect_piramid_info) * loopcount);
         for( int i = 0; i < loopcount; i++ )
