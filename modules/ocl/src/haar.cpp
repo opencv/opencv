@@ -1276,7 +1276,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
     if( (flags & CV_HAAR_SCALE_IMAGE) )
     {
         int indexy = 0;
-        int sdepth = 0;
         CvSize sz;
 
         cv::Rect roi, roi2;
