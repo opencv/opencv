@@ -245,12 +245,12 @@ namespace cv
         void matchTemplate_CCORR_NORMED(
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
+            cv::ocl::oclMat temp;
             matchTemplate_CCORR(image, templ, result, buf);
             buf.image_sums.resize(1);
             buf.image_sqsums.resize(1);
-
-            integral(image.reshape(1), buf.image_sums[0], buf.image_sqsums[0]);
-
+            integral(image.reshape(1), buf.image_sums[0], temp);
+            temp.convertTo(buf.image_sqsums[0], CV_32FC1);
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
