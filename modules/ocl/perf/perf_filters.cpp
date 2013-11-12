@@ -366,8 +366,7 @@ PERF_TEST_P(BilateralFixture, Bilateral,
 typedef Size_MatType adaptiveBilateralFixture;
 
 PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000), OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -377,11 +376,6 @@ PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000)
-        declare.time(type == CV_8UC3 ? 46 : 28);
-    else if (srcSize == OCL_SIZE_2000)
-        declare.time(type == CV_8UC3 ? 11 : 7);
 
     if (RUN_OCL_IMPL)
     {
