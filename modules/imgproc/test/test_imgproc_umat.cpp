@@ -10,12 +10,9 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Jiang Liyuan, jlyuan001.good@163.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -30,7 +27,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -43,52 +40,42 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#endif
-#endif
+#include "test_precomp.hpp"
+#include <string>
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////bitwise_binary////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
+using namespace cv;
+using namespace std;
 
-__kernel void arithm_bitwise_binary_scalar_mask(__global uchar *src1, int src1_step, int src1_offset,
-        __global uchar *src2,
-        __global uchar *mask, int mask_step, int mask_offset,
-        __global uchar *dst,  int dst_step,  int dst_offset,
-        int cols, int rows)
+class CV_ImgprocUMatTest : public cvtest::BaseTest
 {
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < cols && y < rows)
+public:
+    CV_ImgprocUMatTest() {}
+    ~CV_ImgprocUMatTest() {}
+protected:
+    void run(int)
     {
-        int mask_index = mad24(y, mask_step, x + mask_offset);
+        string imgpath = string(ts->get_data_path()) + "shared/lena.png";
+        Mat img = imread(imgpath, 1), gray, smallimg, result;
+        UMat uimg = img.getUMat(ACCESS_READ), ugray, usmallimg, uresult;
 
-        if (mask[mask_index])
-        {
-#if elemSize > 1
-            x *= elemSize;
-#endif
-            int src1_index = mad24(y, src1_step, x + src1_offset);
-            int dst_index = mad24(y, dst_step, x + dst_offset);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
+        resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        equalizeHist(smallimg, result);
 
-#if elemSize > 1
-            #pragma unroll
-            for (int i = 0; i < elemSize; i += vlen)
-            {
-                ucharv t0 = vloadn(0, src1 + src1_index + i);
-                ucharv t1 = vloadn(0, src2 + i);
-                ucharv t2 = t0 Operation t1;
+        cvtColor(uimg, ugray, COLOR_BGR2GRAY);
+        resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        equalizeHist(usmallimg, uresult);
 
-                vstoren(t2, 0, dst + dst_index + i);
-            }
-#else
-            dst[dst_index] = src1[src1_index] Operation src2[0];
-#endif
-        }
+        imshow("orig", uimg);
+        imshow("small", usmallimg);
+        imshow("equalized gray", uresult);
+        waitKey();
+        destroyWindow("orig");
+        destroyWindow("small");
+        destroyWindow("equalized gray");
+
+        ts->set_failed_test_info(cvtest::TS::OK);
     }
-}
+};
+
+TEST(Imgproc_UMat, regression) { CV_ImgprocUMatTest test; test.safe_run(); }

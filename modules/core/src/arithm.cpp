@@ -936,11 +936,12 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : 1;
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s",
+    sprintf(opts, "-D %s%s -D %s -D dstT=%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"), oclop2str[oclop],
-            bitwise ? ocl::bitop_depth2str[srcdepth] : ocl::depth2str[srcdepth], ocl::cn2str[kercn]);
+            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
+            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)));
 
-    ocl::Kernel k("KF", ocl::arithm_src, opts);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if( k.empty() )
         return false;
 
@@ -980,7 +981,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 
     size_t globalsize[] = { src1.cols*(cn/kercn), src1.rows };
-    return k.run(2, 0, globalsize, 0, false);
+    return k.run(2, globalsize, 0, false);
 }
 
 
@@ -1294,7 +1295,6 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : 1;
 
-    const char* kercnstr = ocl::cn2str[kercn];
     if( (depth1 == depth2 || haveScalar) && ddepth == depth1 && wdepth == depth1 )
     {
         const char* oclopstr = oclop2str[oclop];
@@ -1304,24 +1304,24 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                        oclop == OCL_OP_SUB ? "OCL_OP_SUB_SAT" :
                        oclop == OCL_OP_RSUB ? "OCL_OP_RSUB_SAT" : oclopstr;
         }
-        sprintf(opts, "-D %s%s -D %s -D dstT=%s%s",
+        sprintf(opts, "-D %s%s -D %s -D dstT=%s",
                 (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
-                oclop2str[oclop], ocl::depth2str[ddepth], kercnstr);
+                oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)));
     }
     else
     {
         char cvtstr[3][32];
-        sprintf(opts, "-D %s%s -D %s -D srcT1=%s%s -D srcT2=%s%s "
-                "-D dstT=%s%s -D workT=%s%s -D convertToWT1=%s "
+        sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT2=%s "
+                "-D dstT=%s -D workT=%s -D convertToWT1=%s "
                 "-D convertToWT2=%s -D convertToDT=%s",
                 (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
-                oclop2str[oclop], ocl::depth2str[depth1], kercnstr,
-                ocl::depth2str[depth2], kercnstr,
-                ocl::depth2str[ddepth], kercnstr,
-                ocl::depth2str[wdepth], kercnstr,
-                ocl::convertstr(depth1, wdepth, kercn, cvtstr[0]),
-                ocl::convertstr(depth2, wdepth, kercn, cvtstr[1]),
-                ocl::convertstr(wdepth, ddepth, kercn, cvtstr[2]));
+                oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
+                ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
+                ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
+                ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
+                ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
+                ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
+                ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]));
     }
 
     const uchar* usrdata_p = (const uchar*)usrdata;
@@ -1337,7 +1337,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
 
-    ocl::Kernel k("KF", ocl::arithm_src, opts);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if( k.empty() )
         return false;
 
@@ -1392,7 +1392,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     }
 
     size_t globalsize[] = { src1.cols*(cn/kercn), src1.rows };
-    return k.run(2, 0, globalsize, 0, false);
+    return k.run(2, globalsize, 0, false);
 }
 
 

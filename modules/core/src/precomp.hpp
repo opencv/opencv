@@ -249,13 +249,6 @@ struct TLSData
 namespace ocl
 {
     MatAllocator* getOpenCLAllocator();
-    extern const char* bitop_depth2str[];
-    extern const char* depth2str[];
-    extern const char* cn2str[];
-    extern ProgramSource arithm_src;
-    extern ProgramSource copyset_src;
-
-    const char* convertstr(int sdepth, int ddepth, int cn, char* buf);
 }
 
 }

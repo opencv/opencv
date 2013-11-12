@@ -197,6 +197,7 @@ UMat Mat::getUMat(int accessFlags) const
     if(!u)
         return hdr;
     UMat::getStdAllocator()->allocate(u, accessFlags);
+    hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
     hdr.u = u;
@@ -637,7 +638,7 @@ void UMat::convertTo(OutputArray, int, double, double) const
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
-    int t = type(), d = CV_MAT_DEPTH(t), cn = CV_MAT_CN(t);
+    int t = type(), cn = CV_MAT_CN(t);
     if( dims <= 2 && cn <= 4 && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
@@ -646,9 +647,9 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
         convertAndUnrollScalar(value, t, (uchar*)buf, 1);
 
         char opts[1024];
-        sprintf(opts, "-D dstT=%s%s", ocl::bitop_depth2str[d], ocl::cn2str[cn]);
+        sprintf(opts, "-D dstT=%s", ocl::memopTypeToStr(t));
 
-        ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::copyset_src, opts);
+        ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
             ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(t));
@@ -669,7 +670,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             }
 
             size_t globalsize[] = { cols, rows };
-            if( setK.run(2, 0, globalsize, 0, false) )
+            if( setK.run(2, globalsize, 0, false) )
                 return *this;
         }
     }

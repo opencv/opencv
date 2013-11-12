@@ -515,25 +515,25 @@ bool VideoCapture::grab()
     return cvGrabFrame(cap) != 0;
 }
 
-bool VideoCapture::retrieve(Mat& image, int channel)
+bool VideoCapture::retrieve(OutputArray _image, int channel)
 {
     IplImage* _img = cvRetrieveFrame(cap, channel);
     if( !_img )
     {
-        image.release();
+        _image.release();
         return false;
     }
     if(_img->origin == IPL_ORIGIN_TL)
-        image = cv::cvarrToMat(_img);
+        cv::cvarrToMat(_img).copyTo(_image);
     else
     {
         Mat temp = cv::cvarrToMat(_img);
-        flip(temp, image, 0);
+        flip(temp, _image, 0);
     }
     return true;
 }
 
-bool VideoCapture::read(Mat& image)
+bool VideoCapture::read(OutputArray image)
 {
     if(grab())
         retrieve(image);
@@ -543,6 +543,12 @@ bool VideoCapture::read(Mat& image)
 }
 
 VideoCapture& VideoCapture::operator >> (Mat& image)
+{
+    read(image);
+    return *this;
+}
+
+VideoCapture& VideoCapture::operator >> (UMat& image)
 {
     read(image);
     return *this;

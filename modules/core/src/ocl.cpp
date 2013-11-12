@@ -592,9 +592,16 @@ static void* initOpenCLAndLoad(const char* funcname)
     {
         if(!initialized)
         {
-            handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL", RTLD_LAZY);
+            const char* oclpath = getenv("OPENCV_OPENCL_RUNTIME");
+            oclpath = oclpath && strlen(oclpath) > 0 ? oclpath :
+                "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
+            handle = dlopen(oclpath, RTLD_LAZY);
             initialized = true;
             g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
+            if( g_haveOpenCL )
+                fprintf(stderr, "Succesffuly loaded OpenCL v1.1+ runtime from %s\n", oclpath);
+            else
+                fprintf(stderr, "Failed to load OpenCL runtime\n");
         }
         if(!handle)
             return 0;
@@ -1309,7 +1316,7 @@ void setUseOpenCL(bool flag)
     }
 }
 
-void finish()
+void finish2()
 {
     Queue::getDefault().finish();
 }
@@ -1699,14 +1706,14 @@ size_t Device::profilingTimerResolution() const
 
 const Device& Device::getDefault()
 {
-    const Context& ctx = Context::getDefault();
+    const Context2& ctx = Context2::getDefault();
     int idx = TLSData::get()->device;
     return ctx.device(idx);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-struct Context::Impl
+struct Context2::Impl
 {
     Impl(int dtype0)
     {
@@ -1771,7 +1778,7 @@ struct Context::Impl
         devices.clear();
     }
 
-    Program getProg(const ProgramSource& src,
+    Program getProg(const ProgramSource2& src,
                     const String& buildflags, String& errmsg)
     {
         String prefix = Program::getPrefix(buildflags);
@@ -1792,7 +1799,7 @@ struct Context::Impl
     std::vector<Device> devices;
     bool initialized;
 
-    typedef ProgramSource::hash_t hash_t;
+    typedef ProgramSource2::hash_t hash_t;
 
     struct HashKey
     {
@@ -1807,18 +1814,18 @@ struct Context::Impl
 };
 
 
-Context::Context()
+Context2::Context2()
 {
     p = 0;
 }
 
-Context::Context(int dtype)
+Context2::Context2(int dtype)
 {
     p = 0;
     create(dtype);
 }
 
-bool Context::create(int dtype0)
+bool Context2::create(int dtype0)
 {
     if( !haveOpenCL() )
         return false;
@@ -1833,19 +1840,19 @@ bool Context::create(int dtype0)
     return p != 0;
 }
 
-Context::~Context()
+Context2::~Context2()
 {
     p->release();
 }
 
-Context::Context(const Context& c)
+Context2::Context2(const Context2& c)
 {
     p = (Impl*)c.p;
     if(p)
         p->addref();
 }
 
-Context& Context::operator = (const Context& c)
+Context2& Context2::operator = (const Context2& c)
 {
     Impl* newp = (Impl*)c.p;
     if(newp)
@@ -1856,30 +1863,30 @@ Context& Context::operator = (const Context& c)
     return *this;
 }
 
-void* Context::ptr() const
+void* Context2::ptr() const
 {
     return p->handle;
 }
 
-size_t Context::ndevices() const
+size_t Context2::ndevices() const
 {
     return p ? p->devices.size() : 0;
 }
 
-const Device& Context::device(size_t idx) const
+const Device& Context2::device(size_t idx) const
 {
     static Device dummy;
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context& Context::getDefault()
+Context2& Context2::getDefault()
 {
-    static Context ctx;
+    static Context2 ctx;
     if( !ctx.p && haveOpenCL() )
     {
-        // do not create new Context right away.
+        // do not create new Context2 right away.
         // First, try to retrieve existing context of the same type.
-        // In its turn, Platform::getContext() may call Context::create()
+        // In its turn, Platform::getContext() may call Context2::create()
         // if there is no such context.
         ctx.create(Device::TYPE_ACCELERATOR);
         if(!ctx.p)
@@ -1893,7 +1900,7 @@ Context& Context::getDefault()
     return ctx;
 }
 
-Program Context::getProg(const ProgramSource& prog,
+Program Context2::getProg(const ProgramSource2& prog,
                          const String& buildopts, String& errmsg)
 {
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
@@ -1901,14 +1908,14 @@ Program Context::getProg(const ProgramSource& prog,
 
 struct Queue::Impl
 {
-    Impl(const Context& c, const Device& d)
+    Impl(const Context2& c, const Device& d)
     {
         refcount = 1;
-        const Context* pc = &c;
+        const Context2* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
         {
-            pc = &Context::getDefault();
+            pc = &Context2::getDefault();
             ch = (cl_context)pc->ptr();
         }
         cl_device_id dh = (cl_device_id)d.ptr();
@@ -1938,7 +1945,7 @@ Queue::Queue()
     p = 0;
 }
 
-Queue::Queue(const Context& c, const Device& d)
+Queue::Queue(const Context2& c, const Device& d)
 {
     p = 0;
     create(c, d);
@@ -1968,7 +1975,7 @@ Queue::~Queue()
         p->release();
 }
 
-bool Queue::create(const Context& c, const Device& d)
+bool Queue::create(const Context2& c, const Device& d)
 {
     if(p)
         p->release();
@@ -1991,7 +1998,7 @@ Queue& Queue::getDefault()
 {
     Queue& q = TLSData::get()->oclQueue;
     if( !q.p )
-        q.create(Context::getDefault());
+        q.create(Context2::getDefault());
     return q;
 }
 
@@ -2099,7 +2106,7 @@ Kernel::Kernel(const char* kname, const Program& prog)
     create(kname, prog);
 }
 
-Kernel::Kernel(const char* kname, const ProgramSource& src,
+Kernel::Kernel(const char* kname, const ProgramSource2& src,
                const String& buildopts, String* errmsg)
 {
     p = 0;
@@ -2143,7 +2150,7 @@ bool Kernel::create(const char* kname, const Program& prog)
     return p != 0;
 }
 
-bool Kernel::create(const char* kname, const ProgramSource& src,
+bool Kernel::create(const char* kname, const ProgramSource2& src,
                     const String& buildopts, String* errmsg)
 {
     if(p)
@@ -2153,7 +2160,7 @@ bool Kernel::create(const char* kname, const ProgramSource& src,
     }
     String tempmsg;
     if( !errmsg ) errmsg = &tempmsg;
-    const Program& prog = Context::getDefault().getProg(src, buildopts, *errmsg);
+    const Program& prog = Context2::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
 
@@ -2236,12 +2243,13 @@ int Kernel::set(int i, const KernelArg& arg)
 }
 
 
-bool Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
+bool Kernel::run(int dims, size_t globalsize[], size_t localsize[],
                  bool sync, const Queue& q)
 {
     if(!p || !p->handle || p->e != 0)
         return false;
     cl_command_queue qq = getQueue(q);
+    size_t offset[CV_MAX_DIM] = {0};
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                                            offset, globalsize, localsize, 0, 0,
                                            sync ? 0 : &p->e);
@@ -2314,11 +2322,11 @@ size_t Kernel::localMemSize() const
 
 struct Program::Impl
 {
-    Impl(const ProgramSource& _src,
+    Impl(const ProgramSource2& _src,
          const String& _buildflags, String& errmsg)
     {
         refcount = 1;
-        const Context& ctx = Context::getDefault();
+        const Context2& ctx = Context2::getDefault();
         src = _src;
         buildflags = _buildflags;
         const String& srcstr = src.source();
@@ -2334,6 +2342,7 @@ struct Program::Impl
             void** deviceList = deviceListBuf;
             for( i = 0; i < n; i++ )
                 deviceList[i] = ctx.device(i).ptr();
+            printf("Building the OpenCL program ...\n");
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
@@ -2358,7 +2367,7 @@ struct Program::Impl
         if(_buf.empty())
             return;
         String prefix0 = Program::getPrefix(buildflags);
-        const Context& ctx = Context::getDefault();
+        const Context2& ctx = Context2::getDefault();
         const Device& dev = Device::getDefault();
         const char* pos0 = _buf.c_str();
         const char* pos1 = strchr(pos0, '\n');
@@ -2409,7 +2418,7 @@ struct Program::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
-    ProgramSource src;
+    ProgramSource2 src;
     String buildflags;
     cl_program handle;
 };
@@ -2417,7 +2426,7 @@ struct Program::Impl
 
 Program::Program() { p = 0; }
 
-Program::Program(const ProgramSource& src,
+Program::Program(const ProgramSource2& src,
         const String& buildflags, String& errmsg)
 {
     p = 0;
@@ -2448,7 +2457,7 @@ Program::~Program()
         p->release();
 }
 
-bool Program::create(const ProgramSource& src,
+bool Program::create(const ProgramSource2& src,
             const String& buildflags, String& errmsg)
 {
     if(p)
@@ -2462,9 +2471,9 @@ bool Program::create(const ProgramSource& src,
     return p != 0;
 }
 
-const ProgramSource& Program::source() const
+const ProgramSource2& Program::source() const
 {
-    static ProgramSource dummy;
+    static ProgramSource2 dummy;
     return p ? p->src : dummy;
 }
 
@@ -2498,7 +2507,7 @@ String Program::getPrefix() const
 
 String Program::getPrefix(const String& buildflags)
 {
-    const Context& ctx = Context::getDefault();
+    const Context2& ctx = Context2::getDefault();
     const Device& dev = ctx.device(0);
     return format("name=%s\ndriver=%s\nbuildflags=%s\n",
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
@@ -2506,7 +2515,7 @@ String Program::getPrefix(const String& buildflags)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-struct ProgramSource::Impl
+struct ProgramSource2::Impl
 {
     Impl(const char* _src)
     {
@@ -2525,39 +2534,39 @@ struct ProgramSource::Impl
 
     IMPLEMENT_REFCOUNTABLE();
     String src;
-    ProgramSource::hash_t h;
+    ProgramSource2::hash_t h;
 };
 
 
-ProgramSource::ProgramSource()
+ProgramSource2::ProgramSource2()
 {
     p = 0;
 }
 
-ProgramSource::ProgramSource(const char* prog)
+ProgramSource2::ProgramSource2(const char* prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource::ProgramSource(const String& prog)
+ProgramSource2::ProgramSource2(const String& prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource::~ProgramSource()
+ProgramSource2::~ProgramSource2()
 {
     if(p)
         p->release();
 }
 
-ProgramSource::ProgramSource(const ProgramSource& prog)
+ProgramSource2::ProgramSource2(const ProgramSource2& prog)
 {
     p = prog.p;
     if(p)
         p->addref();
 }
 
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+ProgramSource2& ProgramSource2::operator = (const ProgramSource2& prog)
 {
     Impl* newp = (Impl*)prog.p;
     if(newp)
@@ -2568,13 +2577,13 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
     return *this;
 }
 
-const String& ProgramSource::source() const
+const String& ProgramSource2::source() const
 {
     static String dummy;
     return p ? p->src : dummy;
 }
 
-ProgramSource::hash_t ProgramSource::hash() const
+ProgramSource2::hash_t ProgramSource2::hash() const
 {
     return p ? p->h : 0;
 }
@@ -2594,7 +2603,7 @@ public:
         return u;
     }
 
-    void getBestFlags(const Context& ctx, int& createFlags, int& flags0) const
+    void getBestFlags(const Context2& ctx, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = CL_MEM_READ_WRITE;
@@ -2617,7 +2626,7 @@ public:
             total *= sizes[i];
         }
 
-        Context& ctx = Context::getDefault();
+        Context2& ctx = Context2::getDefault();
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, createFlags, flags0);
 
@@ -2646,7 +2655,7 @@ public:
         if(u->handle == 0)
         {
             CV_Assert(u->origdata != 0);
-            Context& ctx = Context::getDefault();
+            Context2& ctx = Context2::getDefault();
             int createFlags = 0, flags0 = 0;
             getBestFlags(ctx, createFlags, flags0);
 
@@ -3015,34 +3024,61 @@ MatAllocator* getOpenCLAllocator()
     return &allocator;
 }
 
-const char* depth2str[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
-const char* bitop_depth2str[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "long" };
-const char* cn2str[] = { "?", "", "2", "3", "4", "?", "?", "?", "8" };
+const char* typeToStr(int t)
+{
+    static const char* tab[]=
+    {
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "char", "char2", "char3", "char4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "short", "short2", "short3", "short4",
+        "int", "int2", "int3", "int4",
+        "float", "float2", "float3", "float4",
+        "double", "double2", "double3", "double4",
+        "?", "?", "?", "?"
+    };
+    int cn = CV_MAT_CN(t);
+    return cn >= 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+}
 
-const char* convertstr(int sdepth, int ddepth, int cn, char* buf)
+const char* memopTypeToStr(int t)
+{
+    static const char* tab[]=
+    {
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "int", "int2", "int3", "int4",
+        "int", "int2", "int3", "int4",
+        "long", "long2", "long3", "long4",
+        "?", "?", "?", "?"
+    };
+    int cn = CV_MAT_CN(t);
+    return cn >= 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+}
+
+const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 {
     if( sdepth == ddepth )
         return "noconvert";
-    const char *ddepthstr = depth2str[ddepth], *cnstr = cn2str[cn];
+    const char *typestr = typeToStr(CV_MAKETYPE(ddepth, cn));
     if( ddepth >= CV_32F ||
         (ddepth == CV_32S && sdepth < CV_32S) ||
         (ddepth == CV_16S && sdepth <= CV_8S) ||
         (ddepth == CV_16U && sdepth == CV_8U))
     {
-        sprintf(buf, "convert_%s%s", ddepthstr, cnstr);
+        sprintf(buf, "convert_%s", typestr);
     }
     else if( sdepth >= CV_32F )
     {
-        sprintf(buf, "convert_%s%s%s_rte", ddepthstr, cnstr, (ddepth < CV_32S ? "_sat" : ""));
+        sprintf(buf, "convert_%s%s_rte", typestr, (ddepth < CV_32S ? "_sat" : ""));
     }
     else
     {
-        sprintf(buf, "convert_%s%s_sat", ddepthstr, cnstr);
+        sprintf(buf, "convert_%s_sat", typestr);
     }
     return buf;
 }
-
-ProgramSource arithm_src(core::arithm.programStr);
-ProgramSource copyset_src(core::copyset.programStr);
 
 }}

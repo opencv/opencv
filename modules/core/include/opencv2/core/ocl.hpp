@@ -49,13 +49,13 @@ namespace cv { namespace ocl {
 CV_EXPORTS bool haveOpenCL();
 CV_EXPORTS bool useOpenCL();
 CV_EXPORTS void setUseOpenCL(bool flag);
-CV_EXPORTS void finish();
+CV_EXPORTS void finish2();
 
-class CV_EXPORTS Context;
+class CV_EXPORTS Context2;
 class CV_EXPORTS Device;
 class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
-class CV_EXPORTS ProgramSource;
+class CV_EXPORTS ProgramSource2;
 class CV_EXPORTS Queue;
 
 class CV_EXPORTS Device
@@ -199,22 +199,22 @@ protected:
 };
 
 
-class CV_EXPORTS Context
+class CV_EXPORTS Context2
 {
 public:
-    Context();
-    explicit Context(int dtype);
-    ~Context();
-    Context(const Context& c);
-    Context& operator = (const Context& c);
+    Context2();
+    explicit Context2(int dtype);
+    ~Context2();
+    Context2(const Context2& c);
+    Context2& operator = (const Context2& c);
 
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
-    Program getProg(const ProgramSource& prog,
+    Program getProg(const ProgramSource2& prog,
                     const String& buildopt, String& errmsg);
 
-    static Context& getDefault();
+    static Context2& getDefault();
     void* ptr() const;
 protected:
     struct Impl;
@@ -226,12 +226,12 @@ class CV_EXPORTS Queue
 {
 public:
     Queue();
-    explicit Queue(const Context& c, const Device& d=Device());
+    explicit Queue(const Context2& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
 
-    bool create(const Context& c=Context(), const Device& d=Device());
+    bool create(const Context2& c=Context2(), const Device& d=Device());
     void finish();
     void* ptr() const;
     static Queue& getDefault();
@@ -279,7 +279,7 @@ class CV_EXPORTS Kernel
 public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
-    Kernel(const char* kname, const ProgramSource& prog,
+    Kernel(const char* kname, const ProgramSource2& prog,
            const String& buildopts, String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
@@ -287,7 +287,7 @@ public:
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
-    bool create(const char* kname, const ProgramSource& prog,
+    bool create(const char* kname, const ProgramSource2& prog,
                 const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
@@ -397,7 +397,7 @@ public:
         i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
     }
 
-    bool run(int dims, size_t offset[], size_t globalsize[],
+    bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
 
@@ -416,7 +416,7 @@ class CV_EXPORTS Program
 {
 public:
     Program();
-    Program(const ProgramSource& src,
+    Program(const ProgramSource2& src,
             const String& buildflags, String& errmsg);
     explicit Program(const String& buf);
     Program(const Program& prog);
@@ -424,12 +424,12 @@ public:
     Program& operator = (const Program& prog);
     ~Program();
 
-    bool create(const ProgramSource& src,
+    bool create(const ProgramSource2& src,
                 const String& buildflags, String& errmsg);
     bool read(const String& buf, const String& buildflags);
     bool write(String& buf) const;
 
-    const ProgramSource& source() const;
+    const ProgramSource2& source() const;
     void* ptr() const;
 
     String getPrefix() const;
@@ -441,17 +441,17 @@ protected:
 };
 
 
-class CV_EXPORTS ProgramSource
+class CV_EXPORTS ProgramSource2
 {
 public:
     typedef uint64 hash_t;
 
-    ProgramSource();
-    explicit ProgramSource(const String& prog);
-    explicit ProgramSource(const char* prog);
-    ~ProgramSource();
-    ProgramSource(const ProgramSource& prog);
-    ProgramSource& operator = (const ProgramSource& prog);
+    ProgramSource2();
+    explicit ProgramSource2(const String& prog);
+    explicit ProgramSource2(const char* prog);
+    ~ProgramSource2();
+    ProgramSource2(const ProgramSource2& prog);
+    ProgramSource2& operator = (const ProgramSource2& prog);
 
     const String& source() const;
     hash_t hash() const;
@@ -460,6 +460,10 @@ protected:
     struct Impl;
     Impl* p;
 };
+
+CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
+CV_EXPORTS const char* typeToStr(int t);
+CV_EXPORTS const char* memopTypeToStr(int t);
 
 }}
 
