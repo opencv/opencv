@@ -313,7 +313,12 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, pair<MatType, MatType>, Border, bool)
 
         Border map2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         if (map2Type != noType)
-            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, -mapMaxValue, mapMaxValue);
+        {
+            int mapMinValue = -mapMaxValue;
+            if (map2Type == CV_16UC1 || map2Type == CV_16SC1)
+                mapMinValue = 0, mapMaxValue = INTER_TAB_SIZE2;
+            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, mapMinValue, mapMaxValue);
+        }
 
         generateOclMat(gsrc, gsrc_roi, src, srcROISize, srcBorder);
         generateOclMat(gdst, gdst_roi, dst, dstROISize, dstBorder);
@@ -452,6 +457,7 @@ INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                             Values(1, 2, 3, 4),
                             Values(pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
+                                   pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    pair<MatType, MatType>((MatType)CV_32FC2, noType)),
                             Values((Border)BORDER_CONSTANT,
                                    (Border)BORDER_REPLICATE,
