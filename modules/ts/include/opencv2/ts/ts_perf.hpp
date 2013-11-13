@@ -243,6 +243,7 @@ typedef struct CV_EXPORTS performance_metrics
         TERM_TIME = 1,
         TERM_INTERRUPT = 2,
         TERM_EXCEPTION = 3,
+        TERM_SKIP_TEST = 4, // there are some limitations and test should be skipped
         TERM_UNKNOWN = -1
     };
 
@@ -278,6 +279,8 @@ public:
 
     static enum PERF_STRATEGY getPerformanceStrategy();
     static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
+
+    class PerfSkipTestException: public cv::Exception {};
 
 protected:
     virtual void PerfTestBody() = 0;
