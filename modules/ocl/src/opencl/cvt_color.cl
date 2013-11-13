@@ -46,6 +46,14 @@
 
 /**************************************PUBLICFUNC*************************************/
 
+#ifndef hscale
+#define hscale 0
+#endif
+
+#ifndef hrange
+#define hrange 0
+#endif
+
 #ifdef DEPTH_0
 #define DATA_TYPE uchar
 #define COEFF_TYPE int
@@ -548,6 +556,8 @@ __kernel void Gray2BGR5x5(int cols, int rows, int src_step, int dst_step, int bi
 
 ///////////////////////////////////// RGB <-> HSV //////////////////////////////////////
 
+__constant int sector_data[][3] = { {1, 3, 0}, { 1, 0, 2 }, { 3, 0, 1 }, { 0, 2, 1 }, { 0, 1, 3 }, { 2, 1, 0 } };
+
 #ifdef DEPTH_0
 
 __kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
@@ -587,6 +597,60 @@ __kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
         dst[dst_idx] = convert_uchar_sat_rte(h);
         dst[dst_idx + 1] = (uchar)s;
         dst[dst_idx + 2] = (uchar)v;
+    }
+}
+
+__kernel void HSV2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const uchar * src, __global uchar * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        float h = src[src_idx], s = src[src_idx + 1]*(1/255.f), v = src[src_idx + 2]*(1/255.f);
+        float b, g, r;
+
+        if (s != 0)
+        {
+            float tab[4];
+            int sector;
+            h *= hscale;
+            if( h < 0 )
+                do h += 6; while( h < 0 );
+            else if( h >= 6 )
+                do h -= 6; while( h >= 6 );
+            sector = convert_int_sat_rtn(h);
+            h -= sector;
+            if( (unsigned)sector >= 6u )
+            {
+                sector = 0;
+                h = 0.f;
+            }
+
+            tab[0] = v;
+            tab[1] = v*(1.f - s);
+            tab[2] = v*(1.f - s*h);
+            tab[3] = v*(1.f - s*(1.f - h));
+
+            b = tab[sector_data[sector][0]];
+            g = tab[sector_data[sector][1]];
+            r = tab[sector_data[sector][2]];
+        }
+        else
+            b = g = r = v;
+
+        dst[dst_idx + bidx] = convert_uchar_sat_rte(b*255.f);
+        dst[dst_idx + 1] = convert_uchar_sat_rte(g*255.f);
+        dst[dst_idx + (bidx^2)] = convert_uchar_sat_rte(r*255.f);
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
+#endif
     }
 }
 
@@ -631,6 +695,60 @@ __kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
         dst[dst_idx] = h*hscale;
         dst[dst_idx + 1] = s;
         dst[dst_idx + 2] = v;
+    }
+}
+
+__kernel void HSV2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const float * src, __global float * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        float h = src[src_idx], s = src[src_idx + 1], v = src[src_idx + 2];
+        float b, g, r;
+
+        if (s != 0)
+        {
+            float tab[4];
+            int sector;
+            h *= hscale;
+            if(h < 0)
+                do h += 6; while (h < 0);
+            else if (h >= 6)
+                do h -= 6; while (h >= 6);
+            sector = convert_int_sat_rtn(h);
+            h -= sector;
+            if ((unsigned)sector >= 6u)
+            {
+                sector = 0;
+                h = 0.f;
+            }
+
+            tab[0] = v;
+            tab[1] = v*(1.f - s);
+            tab[2] = v*(1.f - s*h);
+            tab[3] = v*(1.f - s*(1.f - h));
+
+            b = tab[sector_data[sector][0]];
+            g = tab[sector_data[sector][1]];
+            r = tab[sector_data[sector][2]];
+        }
+        else
+            b = g = r = v;
+
+        dst[dst_idx + bidx] = b;
+        dst[dst_idx + 1] = g;
+        dst[dst_idx + (bidx^2)] = r;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
+#endif
     }
 }
 

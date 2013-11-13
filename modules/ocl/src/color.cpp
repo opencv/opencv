@@ -82,9 +82,12 @@ static void fromRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::
 }
 
 static void toRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::string & kernelName,
-                         const oclMat & data = oclMat())
+                         const std::string & additionalOptions = std::string(), const oclMat & data = oclMat())
 {
     std::string build_options = format("-D DEPTH_%d -D dcn=%d", src.depth(), dst.channels());
+    if (!additionalOptions.empty())
+        build_options += additionalOptions;
+
     int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
     int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
 
@@ -391,7 +394,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         }
         oclMat oclCoeffs(1, 9, depth == CV_32F ? CV_32FC1 : CV_32SC1, pdata);
 
-        toRGB_caller(src, dst, bidx, "XYZ2RGB", oclCoeffs);
+        toRGB_caller(src, dst, bidx, "XYZ2RGB", "", oclCoeffs);
         break;
     }
     case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
@@ -440,17 +443,32 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 initialized = true;
             }
 
-            fromRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d -D hscale=0", hrange), sdiv_data, hrange == 256 ? hdiv_data256 : hdiv_data180);
+            fromRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d", hrange), sdiv_data, hrange == 256 ? hdiv_data256 : hdiv_data180);
             return;
         }
 
-        fromRGB_caller(src, dst, bidx, kernelName, format(" -D hscale=%f -D hrange=0", hrange*(1.f/360.f)));
+        fromRGB_caller(src, dst, bidx, kernelName, format(" -D hscale=%f", hrange*(1.f/360.f)));
         break;
     }
-    /*
     case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
     case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
-    */
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
+            code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
+            code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
+        bool is_hsv = code == CV_HSV2BGR || code == CV_HSV2RGB ||
+                code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL;
+
+        dst.create(sz, CV_MAKETYPE(depth, dcn));
+
+        std::string kernelName = std::string(is_hsv ? "HSV" : "HLS") + "2RGB";
+        toRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d -D hscale=%f", hrange, 6.f/hrange));
+        break;
+    }
     default:
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
