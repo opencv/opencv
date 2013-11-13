@@ -59,4 +59,6 @@
 #  include "opencv2/cudafilters.hpp"
 #endif
 
+#include <limits>
+
 #endif /* __OPENCV_PRECOMP_H__ */
