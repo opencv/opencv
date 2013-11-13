@@ -260,7 +260,6 @@ static float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
 {
     unsigned int cache = cols[0];
 
-#pragma unroll
     for(int i = 1; i <= winsz; i++)
         cache += cols[i];
 

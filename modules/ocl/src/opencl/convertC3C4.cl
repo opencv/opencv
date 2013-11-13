@@ -33,12 +33,17 @@
 //
 //
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+#endif
 
-__kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows,
-                    int dstStep_in_piexl,int pixel_end)
+__kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst,
+                         int cols, int rows,
+                         int dstStep_in_piexl, int pixel_end)
 {
     int id = get_global_id(0);
     int3 pixelid = (int3)(mul24(id,3),mad24(id,3,1),mad24(id,3,2));
@@ -88,13 +93,12 @@ __kernel void convertC3C4(__global const GENTYPE4 * restrict src, __global GENTY
         dst[addr.y] = outpix1;
     }
     else if(outx.x<cols && outy.x<rows)
-    {
         dst[addr.x] = outpix0;
-    }
 }
 
-__kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst, int cols, int rows,
-                    int srcStep_in_pixel,int pixel_end)
+__kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTYPE4 *dst,
+                          int cols, int rows,
+                          int srcStep_in_pixel, int pixel_end)
 {
     int id = get_global_id(0)<<2;
     int y = id / cols;
@@ -145,7 +149,5 @@ __kernel void convertC4C3(__global const GENTYPE4 * restrict src, __global GENTY
         dst[outaddr.y] = outpixel1;
     }
     else if(outaddr.x <= pixel_end)
-    {
         dst[outaddr.x] = pixel0;
-    }
 }
