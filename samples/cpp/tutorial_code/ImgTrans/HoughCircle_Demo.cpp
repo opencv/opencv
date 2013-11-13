@@ -77,9 +77,9 @@ int main(int, char** argv)
     createTrackbar(cannyThresholdTrackbarName, windowName, &cannyThreshold,maxCannyThreshold);
     createTrackbar(accumulatorThresholdTrackbarName, windowName, &accumulatorThreshold, maxAccumulatorThreshold);
 
-    // inifinite loop to display
+    // infinite loop to display
     // and refresh the content of the output image
-    // unti the user presses q or Q
+    // until the user presses q or Q
     int key = 0;
     while(key != 'q' && key != 'Q')
     {
