@@ -61,6 +61,8 @@ PERF_TEST_P(BlurFixture, Blur,
     const Size srcSize = get<0>(params), ksize(3, 3);
     const int type = get<1>(params), bordertype = BORDER_CONSTANT;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -98,6 +100,8 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 3;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -138,6 +142,8 @@ PERF_TEST_P(ErodeFixture, Erode,
     const int type = get<1>(params), ksize = 3;
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst).in(ker);
 
@@ -175,6 +181,8 @@ PERF_TEST_P(SobelFixture, Sobel,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), dx = 1, dy = 1;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type, sizeof(float) * 2);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -217,6 +225,8 @@ PERF_TEST_P(ScharrFixture, Scharr,
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), dx = 1, dy = 0;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type, sizeof(float) * 2);
+
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -258,6 +268,8 @@ PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 7;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -294,6 +306,8 @@ PERF_TEST_P(filter2DFixture, filter2D,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 3;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type), kernel(ksize, ksize, CV_32SC1);
     declare.in(src, WARMUP_RNG).in(kernel).out(dst);
@@ -335,6 +349,8 @@ PERF_TEST_P(BilateralFixture, Bilateral,
     const int type = get<1>(params), d = 7;
     const double sigmacolor = 50.0, sigmaspace = 50.0;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -373,6 +389,8 @@ PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
     const int type = get<1>(params);
     const double sigmaspace = 10.0;
     Size ksize(9, 9);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
