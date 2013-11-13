@@ -187,7 +187,36 @@
 #  define CV_NEON 0
 #endif
 
-/* primitive types */
+/****************************************************************************************\
+*                                  Alignment                                            *
+\****************************************************************************************/
+#if (1==CV_SSE) || (1==CV_SSE2) || (1==CV_SSE3) || (1==CV_SSSE3) || (1==CV_SSE4_1) || (1==CV_SSE4_2)
+/* SSE requires alignment on 16 byte boundaries                                                */
+#  define CV_MALLOC_ALIGN    16
+#elif (1==CV_AVX)
+/* With AVX, it seems that operations on 128 bit SIMD vectors may be unaligned, but operations */
+/* on 256 bit SIMD vectors needs to be aligned to 32 byte boundaries                           */
+#  define CV_MALLOC_ALIGN    32
+#elif (1==CV_NEON)
+/* NEON suggests to align SIMD vectors with n-bit elements to n-bit boundaries                 */
+#  define CV_MALLOC_ALIGN    16  /* FIXME: 16 or 32 depending on the size of the SIMD vectors  */
+#else
+/* The default alignment on this machine                                                       */
+#  define CV_MALLOC_ALIGN    sizeof(void*)
+#endif
+
+#ifdef __GNUC__
+#  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
+#elif defined _MSC_VER
+#  define CV_DECL_ALIGNED(x) __declspec(align(x))
+#else
+#  pragma message("WARNING: Unknown type alignment markup for this compiler")
+#  define CV_DECL_ALIGNED(x)
+#endif
+
+/****************************************************************************************\
+*                                  Primitive types                                      *
+\****************************************************************************************/
 /*
   schar  - signed 1 byte integer
   uchar  - unsigned 1 byte integer
