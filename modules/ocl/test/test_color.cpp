@@ -95,7 +95,7 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
         generateOclMat(gdst_whole, gdst_roi, dst, roiSize, dstBorder);
     }
 
-    void Near(double threshold = 1e-3)
+    void Near(double threshold)
     {
         Mat whole, roi;
         gdst_whole.download(whole);
@@ -105,7 +105,7 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
         EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 
-    void doTest(int channelsIn, int channelsOut, int code)
+    void doTest(int channelsIn, int channelsOut, int code, double threshold = 1e-3)
     {
         for (int j = 0; j < LOOP_TIMES; j++)
         {
@@ -114,7 +114,7 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
             cvtColor(src_roi, dst_roi, code, channelsOut);
             ocl::cvtColor(gsrc_roi, gdst_roi, code, channelsOut);
 
-            Near();
+            Near(threshold);
         }
     }
 };
@@ -194,6 +194,18 @@ OCL_TEST_P(CvtColor8u32f, RGB2HSV_FULL) { doTest(3, 3, CVTCODE(RGB2HSV_FULL)); }
 OCL_TEST_P(CvtColor8u32f, BGR2HSV_FULL) { doTest(3, 3, CVTCODE(BGR2HSV_FULL)); }
 OCL_TEST_P(CvtColor8u32f, RGBA2HSV_FULL) { doTest(4, 3, CVTCODE(RGB2HSV_FULL)); }
 OCL_TEST_P(CvtColor8u32f, BGRA2HSV_FULL) { doTest(4, 3, CVTCODE(BGR2HSV_FULL)); }
+
+// RGB <-> HLS
+
+OCL_TEST_P(CvtColor8u32f, RGB2HLS) { doTest(3, 3, CVTCODE(RGB2HLS), 1); }
+OCL_TEST_P(CvtColor8u32f, BGR2HLS) { doTest(3, 3, CVTCODE(BGR2HLS), 1); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HLS) { doTest(4, 3, CVTCODE(RGB2HLS), 1); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HLS) { doTest(4, 3, CVTCODE(BGR2HLS), 1); }
+
+OCL_TEST_P(CvtColor8u32f, RGB2HLS_FULL) { doTest(3, 3, CVTCODE(RGB2HLS_FULL), 1); }
+OCL_TEST_P(CvtColor8u32f, BGR2HLS_FULL) { doTest(3, 3, CVTCODE(BGR2HLS_FULL), 1); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HLS_FULL) { doTest(4, 3, CVTCODE(RGB2HLS_FULL), 1); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HLS_FULL) { doTest(4, 3, CVTCODE(BGR2HLS_FULL), 1); }
 
 // RGB5x5 <-> RGB
 

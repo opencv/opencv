@@ -636,35 +636,104 @@ __kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
 
 #endif
 
+///////////////////////////////////// RGB <-> HLS //////////////////////////////////////
 
+#ifdef DEPTH_0
 
+__kernel void RGB2HLS(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const uchar * src, __global uchar * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
 
+        float b = src[src_idx + bidx]*(1/255.f), g = src[src_idx + 1]*(1/255.f), r = src[src_idx + (bidx^2)]*(1/255.f);
+        float h = 0.f, s = 0.f, l;
+        float vmin, vmax, diff;
 
+        vmax = vmin = r;
+        if (vmax < g) vmax = g;
+        if (vmax < b) vmax = b;
+        if (vmin > g) vmin = g;
+        if (vmin > b) vmin = b;
 
+        diff = vmax - vmin;
+        l = (vmax + vmin)*0.5f;
 
+        if (diff > FLT_EPSILON)
+        {
+            s = l < 0.5f ? diff/(vmax + vmin) : diff/(2 - vmax - vmin);
+            diff = 60.f/diff;
 
+            if( vmax == r )
+                h = (g - b)*diff;
+            else if( vmax == g )
+                h = (b - r)*diff + 120.f;
+            else
+                h = (r - g)*diff + 240.f;
 
+            if( h < 0.f ) h += 360.f;
+        }
 
+        dst[dst_idx] = convert_uchar_sat_rte(h*hscale);
+        dst[dst_idx + 1] = convert_uchar_sat_rte(l*255.f);
+        dst[dst_idx + 2] = convert_uchar_sat_rte(s*255.f);
+    }
+}
 
+#elif defined DEPTH_5
 
+__kernel void RGB2HLS(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const float * src, __global float * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
 
+        float b = src[src_idx + bidx], g = src[src_idx + 1], r = src[src_idx + (bidx^2)];
+        float h = 0.f, s = 0.f, l;
+        float vmin, vmax, diff;
 
+        vmax = vmin = r;
+        if (vmax < g) vmax = g;
+        if (vmax < b) vmax = b;
+        if (vmin > g) vmin = g;
+        if (vmin > b) vmin = b;
 
+        diff = vmax - vmin;
+        l = (vmax + vmin)*0.5f;
 
+        if (diff > FLT_EPSILON)
+        {
+            s = l < 0.5f ? diff/(vmax + vmin) : diff/(2 - vmax - vmin);
+            diff = 60.f/diff;
 
+            if( vmax == r )
+                h = (g - b)*diff;
+            else if( vmax == g )
+                h = (b - r)*diff + 120.f;
+            else
+                h = (r - g)*diff + 240.f;
 
+            if( h < 0.f ) h += 360.f;
+        }
 
+        dst[dst_idx] = h*hscale;
+        dst[dst_idx + 1] = l;
+        dst[dst_idx + 2] = s;
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
+#endif
