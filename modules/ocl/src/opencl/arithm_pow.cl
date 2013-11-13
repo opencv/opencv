@@ -43,21 +43,22 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
-typedef double F;
-typedef double4 F4;
-#define convert_F4 convert_double4;
-#else
-typedef float F;
-typedef float4 F4;
-#define convert_F4 convert_float4;
 #endif
+#define F double
+#else
+#define F float
+#endif
+
 /************************************** pow **************************************/
+
 __kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offset,
                              __global float *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1,
-                             F p)
+                             int rows, int cols, int dst_step1, F p)
 {
 
     int x = get_global_id(0);
@@ -73,14 +74,13 @@ __kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offse
 
         *((__global float *)((__global char *)dst + dst_index)) = tmp;
     }
-
 }
 
 #if defined (DOUBLE_SUPPORT)
+
 __kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offset,
                              __global double *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1,
-                             F p)
+                             int rows, int cols, int dst_step1, F p)
 {
 
     int x = get_global_id(0);
@@ -95,6 +95,6 @@ __kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offs
         double tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data))));
         *((__global double *)((__global char *)dst + dst_index)) = tmp;
     }
-
 }
+
 #endif

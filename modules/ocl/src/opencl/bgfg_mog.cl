@@ -67,11 +67,14 @@ static float clamp1(float var, float learningRate, float diff, float minVar)
 {
     return fmax(var + learningRate * (diff * diff - var), minVar);
 }
+
 #else
+
 #define T_FRAME uchar4
 #define T_MEAN_VAR float4
 #define CONVERT_TYPE convert_uchar4_sat
 #define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
+
 inline float4 cvt(const uchar4 val)
 {
     float4 result;
@@ -93,6 +96,14 @@ inline float sum(const float4 val)
     return (val.x + val.y + val.z);
 }
 
+static void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
+{
+    float4 val = ptr[(k * rows + y) * ptr_step + x];
+    ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
+    ptr[((k + 1) * rows + y) * ptr_step + x] = val;
+}
+
+
 static float4 clamp1(const float4 var, float learningRate, const float4 diff, float minVar)
 {
     float4 result;
@@ -102,6 +113,7 @@ static float4 clamp1(const float4 var, float learningRate, const float4 diff, fl
     result.w = 0.0f;
     return result;
 }
+
 #endif
 
 typedef struct
@@ -114,18 +126,11 @@ typedef struct
     float c_varMax;
     float c_tau;
     uchar c_shadowVal;
-}con_srtuct_t;
+} con_srtuct_t;
 
 static void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
 {
     float val = ptr[(k * rows + y) * ptr_step + x];
-    ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
-    ptr[((k + 1) * rows + y) * ptr_step + x] = val;
-}
-
-static void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
-{
-    float4 val = ptr[(k * rows + y) * ptr_step + x];
     ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
     ptr[((k + 1) * rows + y) * ptr_step + x] = val;
 }
