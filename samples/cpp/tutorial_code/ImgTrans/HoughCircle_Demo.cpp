@@ -25,42 +25,42 @@ namespace
 
     void HoughDetection(const Mat& src_gray, const Mat& src_display, int cannyThreshold, int accumulatorThreshold)
     {
-       // will hold the results of the detection
-       std::vector<Vec3f> circles;
-       // runs the actual detection
-       HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, cannyThreshold, accumulatorThreshold, 0, 0 );
+        // will hold the results of the detection
+        std::vector<Vec3f> circles;
+        // runs the actual detection
+        HoughCircles( src_gray, circles, HOUGH_GRADIENT, 1, src_gray.rows/8, cannyThreshold, accumulatorThreshold, 0, 0 );
 
-       // clone the colour, input image for displaying purposes
-       Mat display = src_display.clone();
-       for( size_t i = 0; i < circles.size(); i++ )
-       {
+        // clone the colour, input image for displaying purposes
+        Mat display = src_display.clone();
+        for( size_t i = 0; i < circles.size(); i++ )
+        {
             Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
             int radius = cvRound(circles[i][2]);
             // circle center
             circle( display, center, 3, Scalar(0,255,0), -1, 8, 0 );
             // circle outline
             circle( display, center, radius, Scalar(0,0,255), 3, 8, 0 );
-       }
+        }
 
-       // shows the results
-       imshow( windowName, display);
+        // shows the results
+        imshow( windowName, display);
     }
 }
 
 
 int main(int, char** argv)
 {
-   Mat src, src_gray;
+    Mat src, src_gray;
 
     // Read the image
     src = imread( argv[1], 1 );
 
-   if( !src.data )
-   {
-       std::cerr<<"Invalid input image\n";
-       std::cout<<"Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
-       return -1;
-   }
+    if( !src.data )
+    {
+        std::cerr<<"Invalid input image\n";
+        std::cout<<"Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
+        return -1;
+    }
 
     // Convert it to gray
     cvtColor( src, src_gray, COLOR_BGR2GRAY );
