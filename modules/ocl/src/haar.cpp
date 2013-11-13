@@ -1013,7 +1013,10 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         oclMat gsqsum;
         oclMat gsqsum_t;
         cv::ocl::integral(gimg, gsum, gsqsum_t);
-        gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        if(gsqsum_t.depth() == CV_64F)
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
         CvSize sz;
         vector<CvSize> sizev;
         vector<float> scalev;
