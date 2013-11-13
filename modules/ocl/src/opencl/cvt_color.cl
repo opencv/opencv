@@ -805,6 +805,59 @@ __kernel void RGB2HLS(int cols, int rows, int src_step, int dst_step, int bidx,
     }
 }
 
+__kernel void HLS2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const uchar * src, __global uchar * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        float h = src[src_idx], l = src[src_idx + 1]*(1.f/255.f), s = src[src_idx + 2]*(1.f/255.f);
+        float b, g, r;
+
+        if (s != 0)
+        {
+            float tab[4];
+
+            float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
+            float p1 = 2*l - p2;
+
+            h *= hscale;
+            if( h < 0 )
+                do h += 6; while( h < 0 );
+            else if( h >= 6 )
+                do h -= 6; while( h >= 6 );
+
+            int sector = convert_int_sat_rtn(h);
+            h -= sector;
+
+            tab[0] = p2;
+            tab[1] = p1;
+            tab[2] = p1 + (p2 - p1)*(1-h);
+            tab[3] = p1 + (p2 - p1)*h;
+
+            b = tab[sector_data[sector][0]];
+            g = tab[sector_data[sector][1]];
+            r = tab[sector_data[sector][2]];
+        }
+        else
+            b = g = r = l;
+
+        dst[dst_idx + bidx] = convert_uchar_sat_rte(b*255.f);
+        dst[dst_idx + 1] = convert_uchar_sat_rte(g*255.f);
+        dst[dst_idx + (bidx^2)] = convert_uchar_sat_rte(r*255.f);
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
+#endif
+    }
+}
+
 #elif defined DEPTH_5
 
 __kernel void RGB2HLS(int cols, int rows, int src_step, int dst_step, int bidx,
@@ -851,6 +904,60 @@ __kernel void RGB2HLS(int cols, int rows, int src_step, int dst_step, int bidx,
         dst[dst_idx] = h*hscale;
         dst[dst_idx + 1] = l;
         dst[dst_idx + 2] = s;
+    }
+}
+
+__kernel void HLS2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const float * src, __global float * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        float h = src[src_idx], l = src[src_idx + 1], s = src[src_idx + 2];
+        float b, g, r;
+
+        if (s != 0)
+        {
+            float tab[4];
+            int sector;
+
+            float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
+            float p1 = 2*l - p2;
+
+            h *= hscale;
+            if( h < 0 )
+                do h += 6; while( h < 0 );
+            else if( h >= 6 )
+                do h -= 6; while( h >= 6 );
+
+            sector = convert_int_sat_rtn(h);
+            h -= sector;
+
+            tab[0] = p2;
+            tab[1] = p1;
+            tab[2] = p1 + (p2 - p1)*(1-h);
+            tab[3] = p1 + (p2 - p1)*h;
+
+            b = tab[sector_data[sector][0]];
+            g = tab[sector_data[sector][1]];
+            r = tab[sector_data[sector][2]];
+        }
+        else
+            b = g = r = l;
+
+        dst[dst_idx + bidx] = b;
+        dst[dst_idx + 1] = g;
+        dst[dst_idx + (bidx^2)] = r;
+#if dcn == 4
+        dst[dst_idx + 3] = MAX_NUM;
+#endif
     }
 }
 
