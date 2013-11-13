@@ -154,9 +154,12 @@ PERF_TEST_P(resizeFixture, resize,
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interType = get<2>(params);
     double scale = get<3>(params);
+    const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
 
     Mat src(srcSize, type), dst;
-    const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
     dst.create(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
     if (interType == INTER_LINEAR && type == CV_8UC4 && OCL_SIZE_4000 == srcSize)

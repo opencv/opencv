@@ -60,9 +60,12 @@ PERF_TEST_P(pyrDownFixture, pyrDown,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+    Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
 
     Mat src(srcSize, type), dst;
-    Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
     dst.create(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -97,9 +100,12 @@ PERF_TEST_P(pyrUpFixture, pyrUp,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+    Size dstSize(srcSize.height << 1, srcSize.width << 1);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
 
     Mat src(srcSize, type), dst;
-    Size dstSize(srcSize.height << 1, srcSize.width << 1);
     dst.create(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
