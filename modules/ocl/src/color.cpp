@@ -234,8 +234,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB5x5_caller(src, dst, -1, greenbits, "Gray2BGR5x5");
         break;
     }
-    case CV_RGB2GRAY: case CV_BGR2GRAY:
-    case CV_RGBA2GRAY: case CV_BGRA2GRAY:
+    case CV_RGB2GRAY: case CV_BGR2GRAY: case CV_RGBA2GRAY: case CV_BGRA2GRAY:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
@@ -243,8 +242,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2Gray");
         break;
     }
-    case CV_GRAY2BGR:
-    case CV_GRAY2BGRA:
+    case CV_GRAY2BGR: case CV_GRAY2BGRA:
     {
         CV_Assert(scn == 1);
         dcn  = code == CV_GRAY2BGRA ? 4 : 3;
@@ -252,8 +250,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, 0, "Gray2RGB");
         break;
     }
-    case CV_BGR2YUV:
-    case CV_RGB2YUV:
+    case CV_BGR2YUV: case CV_RGB2YUV:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2YUV ? 0 : 2;
@@ -261,8 +258,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2YUV");
         break;
     }
-    case CV_YUV2BGR:
-    case CV_YUV2RGB:
+    case CV_YUV2BGR: case CV_YUV2RGB:
     {
         if( dcn <= 0 )
             dcn = 3;
@@ -285,8 +281,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, "YUV2RGBA_NV12");
         break;
     }
-    case CV_BGR2YCrCb:
-    case CV_RGB2YCrCb:
+    case CV_BGR2YCrCb: case CV_RGB2YCrCb:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2YCrCb ? 0 : 2;
@@ -294,8 +289,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2YCrCb");
         break;
     }
-    case CV_YCrCb2BGR:
-    case CV_YCrCb2RGB:
+    case CV_YCrCb2BGR: case CV_YCrCb2RGB:
     {
         if( dcn <= 0 )
             dcn = 3;
@@ -305,8 +299,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, "YCrCb2RGB");
         break;
     }
-    case CV_BGR2XYZ:
-    case CV_RGB2XYZ:
+    case CV_BGR2XYZ: case CV_RGB2XYZ:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2XYZ ? 0 : 2;
@@ -350,8 +343,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2XYZ", "", oclCoeffs);
         break;
     }
-    case CV_XYZ2BGR:
-    case CV_XYZ2RGB:
+    case CV_XYZ2BGR: case CV_XYZ2RGB:
     {
         if (dcn <= 0)
             dcn = 3;
