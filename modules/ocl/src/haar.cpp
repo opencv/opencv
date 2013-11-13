@@ -800,7 +800,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
 
             indexy += sz.height;
         }
-        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+        if(gsqsum_t.depth() == CV_64F)
             gsqsum_t.convertTo(gsqsum, CV_32FC1);
         else
             gsqsum = gsqsum_t;
@@ -1294,7 +1294,7 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
             cv::ocl::integral(resizeroi, gimgroi, gimgroisq);
             indexy += sz.height;
         }
-        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+        if(gsqsum_t.depth() == CV_64F)
             gsqsum_t.convertTo(gsqsum, CV_32FC1);
         else
             gsqsum = gsqsum_t;
@@ -1360,7 +1360,7 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
     else
     {
         cv::ocl::integral(gimg, gsum, gsqsum_t);
-        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+        if(gsqsum_t.depth() == CV_64F)
             gsqsum_t.convertTo(gsqsum, CV_32FC1);
         else
             gsqsum = gsqsum_t;
