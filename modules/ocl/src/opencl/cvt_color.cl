@@ -76,6 +76,7 @@ enum
 {
     yuv_shift  = 14,
     xyz_shift  = 12,
+    hsv_shift = 12,
     R2Y        = 4899,
     G2Y        = 9617,
     B2Y        = 1868,
@@ -544,3 +545,126 @@ __kernel void Gray2BGR5x5(int cols, int rows, int src_step, int dst_step, int bi
 #endif
     }
 }
+
+///////////////////////////////////// RGB <-> HSV //////////////////////////////////////
+
+#ifdef DEPTH_0
+
+__kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const uchar * src, __global uchar * dst,
+                      int src_offset, int dst_offset,
+                      __constant int * sdiv_table, __constant int * hdiv_table)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        int b = src[src_idx + bidx], g = src[src_idx + 1], r = src[src_idx + (bidx^2)];
+        int h, s, v = b;
+        int vmin = b, diff;
+        int vr, vg;
+
+        v = max( v, g );
+        v = max( v, r );
+        vmin = min( vmin, g );
+        vmin = min( vmin, r );
+
+        diff = v - vmin;
+        vr = v == r ? -1 : 0;
+        vg = v == g ? -1 : 0;
+
+        s = (diff * sdiv_table[v] + (1 << (hsv_shift-1))) >> hsv_shift;
+        h = (vr & (g - b)) +
+            (~vr & ((vg & (b - r + 2 * diff)) + ((~vg) & (r - g + 4 * diff))));
+        h = (h * hdiv_table[diff] + (1 << (hsv_shift-1))) >> hsv_shift;
+        h += h < 0 ? hrange : 0;
+
+        dst[dst_idx] = convert_uchar_sat_rte(h);
+        dst[dst_idx + 1] = (uchar)s;
+        dst[dst_idx + 2] = (uchar)v;
+    }
+}
+
+#elif defined DEPTH_5
+
+__kernel void RGB2HSV(int cols, int rows, int src_step, int dst_step, int bidx,
+                      __global const float * src, __global float * dst,
+                      int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        float b = src[src_idx + bidx], g = src[src_idx + 1], r = src[src_idx + (bidx^2)];
+        float h, s, v;
+
+        float vmin, diff;
+
+        v = vmin = r;
+        if( v < g ) v = g;
+        if( v < b ) v = b;
+        if( vmin > g ) vmin = g;
+        if( vmin > b ) vmin = b;
+
+        diff = v - vmin;
+        s = diff/(float)(fabs(v) + FLT_EPSILON);
+        diff = (float)(60./(diff + FLT_EPSILON));
+        if( v == r )
+            h = (g - b)*diff;
+        else if( v == g )
+            h = (b - r)*diff + 120.f;
+        else
+            h = (r - g)*diff + 240.f;
+
+        if( h < 0 ) h += 360.f;
+
+        dst[dst_idx] = h*hscale;
+        dst[dst_idx + 1] = s;
+        dst[dst_idx + 2] = v;
+    }
+}
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
