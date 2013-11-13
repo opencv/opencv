@@ -154,7 +154,7 @@ public:
     {
         try
         {
-            string filename = ts->get_data_path() + "../cv/features2d/tsukuba.png";
+            string filename = ts->get_data_path() + "readwrite/ordinary.bmp";
             VideoCapture cap(filename);
             Mat img0 = imread(filename, 1);
             Mat img, img_next;
