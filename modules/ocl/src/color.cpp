@@ -440,11 +440,11 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 initialized = true;
             }
 
-            fromRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d", hrange), sdiv_data, hrange == 256 ? hdiv_data256 : hdiv_data180);
+            fromRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d -D hscale=0", hrange), sdiv_data, hrange == 256 ? hdiv_data256 : hdiv_data180);
             return;
         }
 
-        fromRGB_caller(src, dst, bidx, kernelName, format(" -D hscale=%f", hrange*(1.f/360.f)));
+        fromRGB_caller(src, dst, bidx, kernelName, format(" -D hscale=%f -D hrange=0", hrange*(1.f/360.f)));
         break;
     }
     /*
