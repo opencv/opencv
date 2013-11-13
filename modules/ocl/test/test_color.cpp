@@ -181,6 +181,20 @@ OCL_TEST_P(CvtColor, XYZ2BGR) { doTest(3, 3, CVTCODE(XYZ2BGR)); }
 OCL_TEST_P(CvtColor, XYZ2RGBA) { doTest(3, 4, CVTCODE(XYZ2RGB)); }
 OCL_TEST_P(CvtColor, XYZ2BGRA) { doTest(3, 4, CVTCODE(XYZ2BGR)); }
 
+// RGB <-> HSV
+
+typedef CvtColor CvtColor8u32f;
+
+OCL_TEST_P(CvtColor8u32f, RGB2HSV) { doTest(3, 3, CVTCODE(RGB2HSV)); }
+OCL_TEST_P(CvtColor8u32f, BGR2HSV) { doTest(3, 3, CVTCODE(BGR2HSV)); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HSV) { doTest(4, 3, CVTCODE(RGB2HSV)); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HSV) { doTest(4, 3, CVTCODE(BGR2HSV)); }
+
+OCL_TEST_P(CvtColor8u32f, RGB2HSV_FULL) { doTest(3, 3, CVTCODE(RGB2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, BGR2HSV_FULL) { doTest(3, 3, CVTCODE(BGR2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HSV_FULL) { doTest(4, 3, CVTCODE(RGB2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HSV_FULL) { doTest(4, 3, CVTCODE(BGR2HSV_FULL)); }
+
 // RGB5x5 <-> RGB
 
 typedef CvtColor CvtColor8u;
@@ -245,6 +259,9 @@ OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12) { doTest(1, 3, CV_YUV2BGR_NV12); }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor8u,
                             testing::Combine(testing::Values(MatDepth(CV_8U)), Bool()));
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor8u32f,
+                            testing::Combine(testing::Values(MatDepth(CV_8U), MatDepth(CV_32F)), Bool()));
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor,
                             testing::Combine(
