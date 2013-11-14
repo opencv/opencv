@@ -51,12 +51,15 @@ using namespace cv;
 using namespace cv::ocl;
 
 static void fromRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::string & kernelName,
-                           const oclMat & data = oclMat())
+                           const std::string & additionalOptions = std::string(),
+                           const oclMat & data1 = oclMat(), const oclMat & data2 = oclMat())
 {
     int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
     int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
 
     std::string build_options = format("-D DEPTH_%d", src.depth());
+    if (!additionalOptions.empty())
+        build_options += additionalOptions;
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.cols));
@@ -69,17 +72,22 @@ static void fromRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::
     args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
-    if (!data.empty())
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&data.data ));
+    if (!data1.empty())
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&data1.data ));
+    if (!data2.empty())
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&data2.data ));
 
     size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
 static void toRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::string & kernelName,
-                         const oclMat & data = oclMat())
+                         const std::string & additionalOptions = std::string(), const oclMat & data = oclMat())
 {
     std::string build_options = format("-D DEPTH_%d -D dcn=%d", src.depth(), dst.channels());
+    if (!additionalOptions.empty())
+        build_options += additionalOptions;
+
     int src_offset = src.offset / src.elemSize1(), src_step = src.step1();
     int dst_offset = dst.offset / dst.elemSize1(), dst_step = dst.step1();
 
@@ -226,8 +234,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB5x5_caller(src, dst, -1, greenbits, "Gray2BGR5x5");
         break;
     }
-    case CV_RGB2GRAY: case CV_BGR2GRAY:
-    case CV_RGBA2GRAY: case CV_BGRA2GRAY:
+    case CV_RGB2GRAY: case CV_BGR2GRAY: case CV_RGBA2GRAY: case CV_BGRA2GRAY:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
@@ -235,8 +242,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2Gray");
         break;
     }
-    case CV_GRAY2BGR:
-    case CV_GRAY2BGRA:
+    case CV_GRAY2BGR: case CV_GRAY2BGRA:
     {
         CV_Assert(scn == 1);
         dcn  = code == CV_GRAY2BGRA ? 4 : 3;
@@ -244,8 +250,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, 0, "Gray2RGB");
         break;
     }
-    case CV_BGR2YUV:
-    case CV_RGB2YUV:
+    case CV_BGR2YUV: case CV_RGB2YUV:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2YUV ? 0 : 2;
@@ -253,8 +258,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2YUV");
         break;
     }
-    case CV_YUV2BGR:
-    case CV_YUV2RGB:
+    case CV_YUV2BGR: case CV_YUV2RGB:
     {
         if( dcn <= 0 )
             dcn = 3;
@@ -277,8 +281,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, "YUV2RGBA_NV12");
         break;
     }
-    case CV_BGR2YCrCb:
-    case CV_RGB2YCrCb:
+    case CV_BGR2YCrCb: case CV_RGB2YCrCb:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2YCrCb ? 0 : 2;
@@ -286,8 +289,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         fromRGB_caller(src, dst, bidx, "RGB2YCrCb");
         break;
     }
-    case CV_YCrCb2BGR:
-    case CV_YCrCb2RGB:
+    case CV_YCrCb2BGR: case CV_YCrCb2RGB:
     {
         if( dcn <= 0 )
             dcn = 3;
@@ -297,12 +299,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, "YCrCb2RGB");
         break;
     }
-    /*
-    case CV_BGR5652GRAY: case CV_BGR5552GRAY:
-    case CV_GRAY2BGR565: case CV_GRAY2BGR555:
-    */
-    case CV_BGR2XYZ:
-    case CV_RGB2XYZ:
+    case CV_BGR2XYZ: case CV_RGB2XYZ:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == CV_BGR2XYZ ? 0 : 2;
@@ -343,11 +340,10 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         }
         oclMat oclCoeffs(1, 9, depth == CV_32F ? CV_32FC1 : CV_32SC1, pdata);
 
-        fromRGB_caller(src, dst, bidx, "RGB2XYZ", oclCoeffs);
+        fromRGB_caller(src, dst, bidx, "RGB2XYZ", "", oclCoeffs);
         break;
     }
-    case CV_XYZ2BGR:
-    case CV_XYZ2RGB:
+    case CV_XYZ2BGR: case CV_XYZ2RGB:
     {
         if (dcn <= 0)
             dcn = 3;
@@ -390,15 +386,81 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         }
         oclMat oclCoeffs(1, 9, depth == CV_32F ? CV_32FC1 : CV_32SC1, pdata);
 
-        toRGB_caller(src, dst, bidx, "XYZ2RGB", oclCoeffs);
+        toRGB_caller(src, dst, bidx, "XYZ2RGB", "", oclCoeffs);
         break;
     }
-    /*
     case CV_BGR2HSV: case CV_RGB2HSV: case CV_BGR2HSV_FULL: case CV_RGB2HSV_FULL:
     case CV_BGR2HLS: case CV_RGB2HLS: case CV_BGR2HLS_FULL: case CV_RGB2HLS_FULL:
+    {
+        CV_Assert((scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == CV_BGR2HSV || code == CV_BGR2HLS ||
+            code == CV_BGR2HSV_FULL || code == CV_BGR2HLS_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == CV_BGR2HSV || code == CV_RGB2HSV ||
+            code == CV_BGR2HLS || code == CV_RGB2HLS ? 180 : 256;
+        bool is_hsv = code == CV_BGR2HSV || code == CV_RGB2HSV || code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL;
+        dst.create(sz, CV_MAKETYPE(depth, 3));
+        std::string kernelName = std::string("RGB2") + (is_hsv ? "HSV" : "HLS");
+
+        if (is_hsv && depth == CV_8U)
+        {
+            static oclMat sdiv_data;
+            static oclMat hdiv_data180;
+            static oclMat hdiv_data256;
+            static int sdiv_table[256];
+            static int hdiv_table180[256];
+            static int hdiv_table256[256];
+            static volatile bool initialized180 = false, initialized256 = false;
+            volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+
+            if (!initialized)
+            {
+                int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
+                oclMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+                sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+
+                int v = 255 << hsv_shift;
+                if (!initialized180 && !initialized256)
+                {
+                    for(int i = 1; i < 256; i++ )
+                        sdiv_table[i] = saturate_cast<int>(v/(1.*i));
+                    sdiv_data.upload(Mat(1, 256, CV_32SC1, sdiv_table));
+                }
+
+                v = hrange << hsv_shift;
+                for (int i = 1; i < 256; i++ )
+                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+                hdiv_data.upload(Mat(1, 256, CV_32SC1, hdiv_table));
+                initialized = true;
+            }
+
+            fromRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d", hrange), sdiv_data, hrange == 256 ? hdiv_data256 : hdiv_data180);
+            return;
+        }
+
+        fromRGB_caller(src, dst, bidx, kernelName, format(" -D hscale=%f", hrange*(1.f/360.f)));
+        break;
+    }
     case CV_HSV2BGR: case CV_HSV2RGB: case CV_HSV2BGR_FULL: case CV_HSV2RGB_FULL:
     case CV_HLS2BGR: case CV_HLS2RGB: case CV_HLS2BGR_FULL: case CV_HLS2RGB_FULL:
-    */
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == CV_HSV2BGR || code == CV_HLS2BGR ||
+            code == CV_HSV2BGR_FULL || code == CV_HLS2BGR_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == CV_HSV2BGR || code == CV_HSV2RGB ||
+            code == CV_HLS2BGR || code == CV_HLS2RGB ? 180 : 255;
+        bool is_hsv = code == CV_HSV2BGR || code == CV_HSV2RGB ||
+                code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL;
+
+        dst.create(sz, CV_MAKETYPE(depth, dcn));
+
+        std::string kernelName = std::string(is_hsv ? "HSV" : "HLS") + "2RGB";
+        toRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d -D hscale=%f", hrange, 6.f/hrange));
+        break;
+    }
     default:
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
