@@ -1,5 +1,5 @@
 # platform-specific config file
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/cvconfig.h.cmake" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/cvconfig.h.in" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
 
 # ----------------------------------------------------------------------------
 #  opencv_modules.hpp based on actual modules list
