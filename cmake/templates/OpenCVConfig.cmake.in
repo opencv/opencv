@@ -16,7 +16,6 @@
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
 #    This file will define the following variables:
-#      - OpenCV_FOUND                    : Set to TRUE is OpenCV was find_packaged before
 #      - OpenCV_LIBS                     : The list of all imported targets for OpenCV modules.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
@@ -37,17 +36,14 @@
 #
 # ===================================================================================
 
-if(OpenCV_FOUND)
-  return()
-endif()
-set(OpenCV_FOUND TRUE)
-
 set(modules_file_suffix "")
 if(ANDROID)
   string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
 endif()
 
-include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+if(NOT TARGET opencv_core)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+endif()
 
 # TODO All things below should be reviewed. What is about of moving this code into related modules (special vars/hooks/files)
 
