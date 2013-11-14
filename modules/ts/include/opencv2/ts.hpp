@@ -86,7 +86,7 @@ CV_EXPORTS int randomType(RNG& rng, int typeMask, int minChannels, int maxChanne
 CV_EXPORTS Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
 CV_EXPORTS Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 CV_EXPORTS void add(const Mat& a, double alpha, const Mat& b, double beta,
-                      Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
+                      const Scalar& gamma, Mat& c, int ctype, bool calcAbs=false);
 CV_EXPORTS void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 CV_EXPORTS void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 

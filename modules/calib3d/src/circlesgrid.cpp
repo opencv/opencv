@@ -56,7 +56,7 @@
 using namespace cv;
 
 #ifdef DEBUG_CIRCLES
-void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 2,  Scalar color = Scalar::all(255), int thickness = -1)
+void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 2,  const Scalar& color = Scalar::all(255), int thickness = -1)
 {
   for(size_t i=0; i<points.size(); i++)
   {

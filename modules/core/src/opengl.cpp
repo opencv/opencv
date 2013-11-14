@@ -1486,7 +1486,7 @@ void cv::ogl::render(const ogl::Texture2D& tex, Rect_<double> wndRect, Rect_<dou
 #endif
 }
 
-void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
+void cv::ogl::render(const ogl::Arrays& arr, int mode, const Scalar& color)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -1505,7 +1505,7 @@ void cv::ogl::render(const ogl::Arrays& arr, int mode, Scalar color)
 #endif
 }
 
-void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scalar color)
+void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, const Scalar& color)
 {
 #ifndef HAVE_OPENGL
     (void) arr;

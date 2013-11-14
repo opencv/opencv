@@ -455,8 +455,8 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
 \****************************************************************************************/
 
 int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
-                  Point seedPoint, Scalar newVal, Rect* rect,
-                  Scalar loDiff, Scalar upDiff, int flags )
+                  Point seedPoint, const Scalar& newVal, Rect* rect,
+                  const Scalar& loDiff, const Scalar& upDiff, int flags )
 {
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
@@ -620,8 +620,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
 
 
 int cv::floodFill( InputOutputArray _image, Point seedPoint,
-                  Scalar newVal, Rect* rect,
-                  Scalar loDiff, Scalar upDiff, int flags )
+                  const Scalar& newVal, Rect* rect,
+                  const Scalar& loDiff, const Scalar& upDiff, int flags )
 {
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }

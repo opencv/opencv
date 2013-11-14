@@ -1392,14 +1392,14 @@ CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
 
 //! fills the semi-uniform image region starting from the specified seed point
 CV_EXPORTS int floodFill( InputOutputArray image,
-                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect = 0,
-                          Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
+                          Point seedPoint, const Scalar& newVal, CV_OUT Rect* rect = 0,
+                          const Scalar& loDiff = Scalar(), const Scalar& upDiff = Scalar(),
                           int flags = 4 );
 
 //! fills the semi-uniform image region and/or the mask starting from the specified seed point
 CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
-                            Point seedPoint, Scalar newVal, CV_OUT Rect* rect=0,
-                            Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
+                            Point seedPoint, const Scalar& newVal, CV_OUT Rect* rect=0,
+                            const Scalar& loDiff = Scalar(), const Scalar& upDiff = Scalar(),
                             int flags = 4 );
 
 //! converts image from one color space to another

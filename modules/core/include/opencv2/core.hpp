@@ -579,7 +579,7 @@ CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
 
 //! renders text string in the image
 CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
-                         int fontFace, double fontScale, Scalar color,
+                         int fontFace, double fontScale, const Scalar& color,
                          int thickness = 1, int lineType = LINE_8,
                          bool bottomLeftOrigin = false );
 

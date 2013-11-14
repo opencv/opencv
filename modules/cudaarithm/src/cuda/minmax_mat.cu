@@ -54,7 +54,7 @@ using namespace cv::cudev;
 
 void minMaxMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
 
-void minMaxScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
+void minMaxScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
 
 ///////////////////////////////////////////////////////////////////////
 /// minMaxMat
@@ -207,7 +207,7 @@ namespace
     }
 }
 
-void minMaxScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op)
+void minMaxScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op)
 {
     typedef void (*func_t)(const GpuMat& src, double value, GpuMat& dst, Stream& stream);
     static const func_t funcs[2][7] =

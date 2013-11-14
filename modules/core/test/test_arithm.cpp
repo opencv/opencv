@@ -96,7 +96,7 @@ struct BaseElemWiseOp
 
 struct BaseAddOp : public BaseElemWiseOp
 {
-    BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
+    BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, const Scalar& _gamma=Scalar::all(0))
     : BaseElemWiseOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
 
     void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)

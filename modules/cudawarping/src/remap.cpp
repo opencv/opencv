@@ -44,7 +44,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::cuda::remap(InputArray, OutputArray, InputArray, InputArray, int, int, Scalar, Stream&){ throw_no_cuda(); }
+void cv::cuda::remap(InputArray, OutputArray, InputArray, InputArray, int, int, const Scalar&, Stream&){ throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -58,7 +58,7 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-void cv::cuda::remap(InputArray _src, OutputArray _dst, InputArray _xmap, InputArray _ymap, int interpolation, int borderMode, Scalar borderValue, Stream& stream)
+void cv::cuda::remap(InputArray _src, OutputArray _dst, InputArray _xmap, InputArray _ymap, int interpolation, int borderMode, const Scalar& borderValue, Stream& stream)
 {
     using namespace cv::cuda::device::imgproc;
 

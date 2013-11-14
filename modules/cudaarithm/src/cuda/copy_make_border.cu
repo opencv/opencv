@@ -86,7 +86,7 @@ template <> struct PtrTraits<ShiftMapSz> : PtrTraitsBase<ShiftMapSz, ShiftMap>
 namespace
 {
     template <typename T, int cn>
-    void copyMakeBorderImpl(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, cv::Scalar borderValue, Stream& stream)
+    void copyMakeBorderImpl(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, const cv::Scalar& borderValue, Stream& stream)
     {
         typedef typename MakeVec<T, cn>::type src_type;
 
@@ -120,9 +120,9 @@ namespace
     }
 }
 
-void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, Scalar value, Stream& stream)
+void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, const Scalar& value, Stream& stream)
 {
-    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, cv::Scalar borderValue, Stream& stream);
+    typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int top, int left, int borderMode, const cv::Scalar& borderValue, Stream& stream);
     static const func_t funcs[6][4] =
     {
         {    copyMakeBorderImpl<uchar , 1>  ,     copyMakeBorderImpl<uchar , 2>  ,     copyMakeBorderImpl<uchar , 3>  ,     copyMakeBorderImpl<uchar , 4>  },

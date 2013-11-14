@@ -313,7 +313,7 @@ namespace
 
 namespace
 {
-    void morphology(const GpuMat& src, GpuMat& dst, GpuMat& filterBrd, int brd, Ptr<cuda::Filter>& filter, Scalar brdVal)
+    void morphology(const GpuMat& src, GpuMat& dst, GpuMat& filterBrd, int brd, Ptr<cuda::Filter>& filter, const Scalar& brdVal)
     {
         cuda::copyMakeBorder(src, filterBrd, brd, brd, brd, brd, BORDER_CONSTANT, brdVal);
         filter->apply(filterBrd(Rect(brd, brd, src.cols, src.rows)), dst);

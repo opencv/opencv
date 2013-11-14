@@ -56,7 +56,7 @@
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  ifdef ANDROID
-     template <typename Scalar> Scalar log2(Scalar v) { return std::log(v)/std::log(Scalar(2)); }
+     template <typename Scalar> Scalar log2(const Scalar& v) { return std::log(v)/std::log(Scalar(2)); }
 #  endif
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"

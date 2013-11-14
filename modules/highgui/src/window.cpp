@@ -371,7 +371,7 @@ CV_IMPL void cvUpdateWindow(const char*)
 
 #if defined (HAVE_QT)
 
-cv::QtFont cv::fontQt(const String& nameFont, int pointSize, Scalar color, int weight,  int style, int /*spacing*/)
+cv::QtFont cv::fontQt(const String& nameFont, int pointSize, const Scalar& color, int weight,  int style, int /*spacing*/)
 {
     CvFont f = cvFontQt(nameFont.c_str(), pointSize,color,weight, style);
     return *(cv::QtFont*)(&f);
@@ -420,7 +420,7 @@ int cv::createButton(const String& button_name, ButtonCallback on_change, void* 
 
 #else
 
-cv::QtFont cv::fontQt(const String&, int, Scalar, int,  int, int)
+cv::QtFont cv::fontQt(const String&, int, const Scalar&, int,  int, int)
 {
     CV_Error(CV_StsNotImplemented, "The library is compiled without QT support");
     return QtFont();

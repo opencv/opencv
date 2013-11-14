@@ -52,7 +52,7 @@
 
 using namespace cv::cudev;
 
-void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
+void absDiffScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
 
 namespace
 {
@@ -86,7 +86,7 @@ namespace
     }
 }
 
-void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
+void absDiffScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int)
 {
     typedef void (*func_t)(const GpuMat& src, double val, GpuMat& dst, Stream& stream);
     static const func_t funcs[] =

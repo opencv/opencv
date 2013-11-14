@@ -16,12 +16,12 @@ static void help()
            "hitting any key.\n";
 }
 
-static void draw_subdiv_point( Mat& img, Point2f fp, Scalar color )
+static void draw_subdiv_point( Mat& img, Point2f fp, const Scalar& color )
 {
     circle( img, fp, 3, color, FILLED, LINE_8, 0 );
 }
 
-static void draw_subdiv( Mat& img, Subdiv2D& subdiv, Scalar delaunay_color )
+static void draw_subdiv( Mat& img, Subdiv2D& subdiv, const Scalar& delaunay_color )
 {
 #if 1
     vector<Vec6f> triangleList;
@@ -51,7 +51,7 @@ static void draw_subdiv( Mat& img, Subdiv2D& subdiv, Scalar delaunay_color )
 #endif
 }
 
-static void locate_point( Mat& img, Subdiv2D& subdiv, Point2f fp, Scalar active_color )
+static void locate_point( Mat& img, Subdiv2D& subdiv, Point2f fp, const Scalar& active_color )
 {
     int e0=0, vertex=0;
 

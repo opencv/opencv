@@ -93,7 +93,7 @@ void cv::cuda::polarToCart(InputArray, InputArray, OutputArray, OutputArray, boo
 namespace
 {
     typedef void (*mat_mat_func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int op);
-    typedef void (*mat_scalar_func_t)(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int op);
+    typedef void (*mat_scalar_func_t)(const GpuMat& src, const Scalar& val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int op);
 
     void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst, InputArray _mask, double scale, int dtype, Stream& stream,
                    mat_mat_func_t mat_mat_func, mat_scalar_func_t mat_scalar_func, int op = 0)
@@ -164,7 +164,7 @@ namespace
 
 void addMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int);
 
-void addScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
+void addScalar(const GpuMat& src, const Scalar& val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
 
 void cv::cuda::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
@@ -176,7 +176,7 @@ void cv::cuda::add(InputArray src1, InputArray src2, OutputArray dst, InputArray
 
 void subMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int);
 
-void subScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
+void subScalar(const GpuMat& src, const Scalar& val, bool inv, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
 
 void cv::cuda::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
@@ -190,7 +190,7 @@ void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, 
 void mulMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 
-void mulScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
+void mulScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
 
 void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
@@ -231,7 +231,7 @@ void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, 
 void divMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 void divMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 
-void divScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
+void divScalar(const GpuMat& src, const cv::Scalar& val, bool inv, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
 
 void cv::cuda::divide(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
@@ -270,7 +270,7 @@ void cv::cuda::divide(InputArray _src1, InputArray _src2, OutputArray _dst, doub
 
 void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
 
-void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
+void absDiffScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int);
 
 void cv::cuda::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {
@@ -282,7 +282,7 @@ void cv::cuda::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream
 
 void cmpMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
 
-void cmpScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
+void cmpScalar(const GpuMat& src, const Scalar& val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
 
 void cv::cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream)
 {
@@ -304,7 +304,7 @@ namespace
 
 void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
-void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
+void bitScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
 void cv::cuda::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
@@ -437,7 +437,7 @@ namespace
 
 void minMaxMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
 
-void minMaxScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
+void minMaxScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat&, double, Stream& stream, int op);
 
 void cv::cuda::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {

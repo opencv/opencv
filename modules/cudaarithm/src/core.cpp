@@ -59,7 +59,7 @@ void cv::cuda::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
 
-void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 

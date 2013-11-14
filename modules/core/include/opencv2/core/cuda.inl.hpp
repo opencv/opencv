@@ -72,7 +72,7 @@ GpuMat::GpuMat(Size size_, int type_, Allocator* allocator_)
 }
 
 inline
-GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_, Allocator* allocator_)
+GpuMat::GpuMat(int rows_, int cols_, int type_, const Scalar& s_, Allocator* allocator_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (rows_ > 0 && cols_ > 0)
@@ -83,7 +83,7 @@ GpuMat::GpuMat(int rows_, int cols_, int type_, Scalar s_, Allocator* allocator_
 }
 
 inline
-GpuMat::GpuMat(Size size_, int type_, Scalar s_, Allocator* allocator_)
+GpuMat::GpuMat(Size size_, int type_, const Scalar& s_, Allocator* allocator_)
     : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), allocator(allocator_)
 {
     if (size_.height > 0 && size_.width > 0)
@@ -160,13 +160,13 @@ void GpuMat::copyTo(OutputArray dst, InputArray mask) const
 }
 
 inline
-GpuMat& GpuMat::setTo(Scalar s)
+GpuMat& GpuMat::setTo(const Scalar& s)
 {
     return setTo(s, Stream::Null());
 }
 
 inline
-GpuMat& GpuMat::setTo(Scalar s, InputArray mask)
+GpuMat& GpuMat::setTo(const Scalar& s, InputArray mask)
 {
     return setTo(s, mask, Stream::Null());
 }

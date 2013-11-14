@@ -191,7 +191,7 @@ CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
 
 //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
 CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
-                               Scalar value = Scalar(), Stream& stream = Stream::Null());
+                               const Scalar& value = Scalar(), Stream& stream = Stream::Null());
 
 //! computes norm of array
 //! supports NORM_INF, NORM_L1, NORM_L2

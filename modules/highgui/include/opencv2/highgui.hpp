@@ -175,7 +175,7 @@ struct QtFont
 };
 
 CV_EXPORTS QtFont fontQt(const String& nameFont, int pointSize = -1,
-                         Scalar color = Scalar::all(0), int weight = QT_FONT_NORMAL,
+                         const Scalar& color = Scalar::all(0), int weight = QT_FONT_NORMAL,
                          int style = QT_STYLE_NORMAL, int spacing = 0);
 
 CV_EXPORTS void addText( const Mat& img, const String& text, Point org, const QtFont& font);

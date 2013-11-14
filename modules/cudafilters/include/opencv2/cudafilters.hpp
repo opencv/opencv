@@ -64,7 +64,7 @@ public:
 //! creates a normalized 2D box filter
 //! supports CV_8UC1, CV_8UC4 types
 CV_EXPORTS Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1,-1),
-                                       int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                       int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
@@ -72,7 +72,7 @@ CV_EXPORTS Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Poi
 //! Creates a non-separable linear 2D filter
 //! supports 1 and 4 channel CV_8U, CV_16U and CV_32F input
 CV_EXPORTS Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1,-1),
-                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                          int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian Filter
@@ -80,7 +80,7 @@ CV_EXPORTS Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray k
 //! creates a Laplacian operator
 //! supports only ksize = 1 and ksize = 3
 CV_EXPORTS Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
-                                             int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                             int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
@@ -126,23 +126,23 @@ CV_EXPORTS Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray ke
 //! result pixel value is the maximum of pixel values under the rectangular mask region
 CV_EXPORTS Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
-                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                          int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 //! result pixel value is the maximum of pixel values under the rectangular mask region
 CV_EXPORTS Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
-                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                          int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // 1D Sum Filter
 
 //! creates a horizontal 1D box filter
 //! supports only CV_8UC1 source type and CV_32FC1 sum type
-CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 //! creates a vertical 1D box filter
 //! supports only CV_8UC1 sum type and CV_32FC1 dst type
-CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, const Scalar& borderVal = Scalar::all(0));
 
 }} // namespace cv { namespace cuda {
 

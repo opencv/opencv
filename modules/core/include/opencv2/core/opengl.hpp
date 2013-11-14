@@ -271,8 +271,8 @@ enum {
 };
 
 //! render OpenGL arrays
-CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scalar::all(255));
-CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
+CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, const Scalar& color = Scalar::all(255));
+CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, const Scalar& color = Scalar::all(255));
 
 }} // namespace cv::ogl
 
