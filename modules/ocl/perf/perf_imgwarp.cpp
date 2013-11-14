@@ -295,6 +295,7 @@ PERF_TEST_P(buildWarpPerspectiveMapsFixture, Inverse, OCL_TYPICAL_MAT_SIZES)
     };
     Mat M(3, 3, CV_64F, (void *)coeffs);
     const Size dsize = GetParam();
+    const double eps = 5e-4;
 
     Mat xmap(dsize, CV_32FC1), ymap(dsize, CV_32FC1);
     declare.in(M).out(xmap, ymap);
@@ -308,15 +309,15 @@ PERF_TEST_P(buildWarpPerspectiveMapsFixture, Inverse, OCL_TYPICAL_MAT_SIZES)
         oclXMap.download(xmap);
         oclYMap.download(ymap);
 
-        SANITY_CHECK(xmap);
-        SANITY_CHECK(ymap);
+        SANITY_CHECK(xmap, eps);
+        SANITY_CHECK(ymap, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() buildWarpPerspectiveMaps(M, true, dsize, xmap, ymap);
 
-        SANITY_CHECK(xmap);
-        SANITY_CHECK(ymap);
+        SANITY_CHECK(xmap, eps);
+        SANITY_CHECK(ymap, eps);
     }
     else
         OCL_PERF_ELSE
