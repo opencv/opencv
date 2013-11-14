@@ -461,6 +461,15 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         toRGB_caller(src, dst, bidx, kernelName, format(" -D hrange=%d -D hscale=%f", hrange, 6.f/hrange));
         break;
     }
+    case CV_RGBA2mRGBA: case CV_mRGBA2RGBA:
+        {
+            CV_Assert(scn == 4 && depth == CV_8U);
+            dst.create(sz, CV_MAKETYPE(depth, 4));
+            std::string kernelName = code == CV_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA";
+
+            fromRGB_caller(src, dst, 0, kernelName);
+            break;
+        }
     default:
         CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }
