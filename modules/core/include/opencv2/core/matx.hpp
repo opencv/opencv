@@ -182,7 +182,7 @@ public:
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
-    _Tp CV_DECL_ALIGNED(CV_MALLOC_ALIGN) val[m*n]; //< matrix elements
+    _Tp CV_DECL_ALIGNED_TEMPLATE(CV_MALLOC_ALIGN) val[m*n]; //< matrix elements
 };
 
 /*!
