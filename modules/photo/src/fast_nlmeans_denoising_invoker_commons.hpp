@@ -44,17 +44,17 @@
 
 using namespace cv;
 
-template <typename T> static inline int calcDist(const T a, const T b);
+template <typename T> static inline int calcDist(const T& a, const T& b);
 
 template <> inline int calcDist(const uchar a, const uchar b) {
     return (a-b) * (a-b);
 }
 
-template <> inline int calcDist(const Vec2b a, const Vec2b b) {
+template <> inline int calcDist(const Vec2b& a, const Vec2b& b) {
     return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]);
 }
 
-template <> inline int calcDist(const Vec3b a, const Vec3b b) {
+template <> inline int calcDist(const Vec3b& a, const Vec3b& b) {
     return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]);
 }
 
@@ -74,18 +74,18 @@ template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uch
     return (A-B)*(A+B);
 }
 
-template <typename T> static inline void incWithWeight(int* estimation, int weight, T p);
+template <typename T> static inline void incWithWeight(int* estimation, int weight, const T& p);
 
 template <> inline void incWithWeight(int* estimation, int weight, uchar p) {
     estimation[0] += weight * p;
 }
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec2b p) {
+template <> inline void incWithWeight(int* estimation, int weight, const Vec2b& p) {
     estimation[0] += weight * p[0];
     estimation[1] += weight * p[1];
 }
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec3b p) {
+template <> inline void incWithWeight(int* estimation, int weight, const Vec3b& p) {
     estimation[0] += weight * p[0];
     estimation[1] += weight * p[1];
     estimation[2] += weight * p[2];

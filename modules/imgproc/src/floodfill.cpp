@@ -230,7 +230,7 @@ struct Diff8uC1
 
 struct Diff8uC3
 {
-    Diff8uC3(Vec3b _lo, Vec3b _up)
+    Diff8uC3(const Vec3b& _lo, const Vec3b& _up)
     {
         for( int k = 0; k < 3; k++ )
             lo[k] = _lo[k], interval[k] = _lo[k] + _up[k];
@@ -259,7 +259,7 @@ struct DiffC1
 template<typename _Tp>
 struct DiffC3
 {
-    DiffC3(_Tp _lo, _Tp _up) : lo(-_lo), up(_up) {}
+    DiffC3(const _Tp& _lo, const _Tp& _up) : lo(-_lo), up(_up) {}
     bool operator()(const _Tp* a, const _Tp* b) const
     {
         _Tp d = *a - *b;

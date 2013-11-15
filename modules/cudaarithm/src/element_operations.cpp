@@ -67,8 +67,8 @@ void cv::cuda::bitwise_or(InputArray, InputArray, OutputArray, InputArray, Strea
 void cv::cuda::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 void cv::cuda::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::rshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::cuda::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::rshift(InputArray, const Scalar_<int>&, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::lshift(InputArray, const Scalar_<int>&, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::min(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 void cv::cuda::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
@@ -377,7 +377,7 @@ namespace
     };
 }
 
-void cv::cuda::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
+void cv::cuda::rshift(InputArray _src, const Scalar_<int>& val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
@@ -400,7 +400,7 @@ void cv::cuda::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Strea
     funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::cuda::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
+void cv::cuda::lshift(InputArray _src, const Scalar_<int>& val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =

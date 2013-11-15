@@ -60,12 +60,12 @@ public:
     static const int componentsCount = 5;
 
     GMM( Mat& _model );
-    double operator()( const Vec3d color ) const;
-    double operator()( int ci, const Vec3d color ) const;
-    int whichComponent( const Vec3d color ) const;
+    double operator()( const Vec3d& color ) const;
+    double operator()( int ci, const Vec3d& color ) const;
+    int whichComponent( const Vec3d& color ) const;
 
     void initLearning();
-    void addSample( int ci, const Vec3d color );
+    void addSample( int ci, const Vec3d& color );
     void endLearning();
 
 private:
@@ -106,7 +106,7 @@ GMM::GMM( Mat& _model )
              calcInverseCovAndDeterm( ci );
 }
 
-double GMM::operator()( const Vec3d color ) const
+double GMM::operator()( const Vec3d& color ) const
 {
     double res = 0;
     for( int ci = 0; ci < componentsCount; ci++ )
@@ -114,7 +114,7 @@ double GMM::operator()( const Vec3d color ) const
     return res;
 }
 
-double GMM::operator()( int ci, const Vec3d color ) const
+double GMM::operator()( int ci, const Vec3d& color ) const
 {
     double res = 0;
     if( coefs[ci] > 0 )
@@ -131,7 +131,7 @@ double GMM::operator()( int ci, const Vec3d color ) const
     return res;
 }
 
-int GMM::whichComponent( const Vec3d color ) const
+int GMM::whichComponent( const Vec3d& color ) const
 {
     int k = 0;
     double max = 0;
@@ -161,7 +161,7 @@ void GMM::initLearning()
     totalSampleCount = 0;
 }
 
-void GMM::addSample( int ci, const Vec3d color )
+void GMM::addSample( int ci, const Vec3d& color )
 {
     sums[ci][0] += color[0]; sums[ci][1] += color[1]; sums[ci][2] += color[2];
     prods[ci][0][0] += color[0]*color[0]; prods[ci][0][1] += color[0]*color[1]; prods[ci][0][2] += color[0]*color[2];

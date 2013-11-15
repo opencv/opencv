@@ -2710,7 +2710,7 @@ float extract_features(InputOutputArray src, vector<ERStat> &regions, vector<ERF
     return max_stroke;
 }
 
-static bool edge_comp (Vec4f i,Vec4f j)
+static bool edge_comp (const Vec4f& i, const Vec4f& j)
 {
     Point a = Point(cvRound(i[0]), cvRound(i[1]));
     Point b = Point(cvRound(i[2]), cvRound(i[3]));
