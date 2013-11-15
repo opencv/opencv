@@ -570,7 +570,7 @@ putText
 -----------
 Draws a text string.
 
-.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, Scalar color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
+.. ocv:function:: void putText( Mat& img, const String& text, Point org, int fontFace, double fontScale, const Scalar& color, int thickness=1, int lineType=LINE_8, bool bottomLeftOrigin=false )
 
 .. ocv:pyfunction:: cv2.putText(img, text, org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]]) -> None
 

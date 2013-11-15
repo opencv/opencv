@@ -501,9 +501,9 @@ Render OpenGL texture or primitives.
 
 .. ocv:function:: void ogl::render(const Texture2D& tex, Rect_<double> wndRect = Rect_<double>(0.0, 0.0, 1.0, 1.0), Rect_<double> texRect = Rect_<double>(0.0, 0.0, 1.0, 1.0))
 
-.. ocv:function:: void ogl::render(const Arrays& arr, int mode = POINTS, Scalar color = Scalar::all(255))
+.. ocv:function:: void ogl::render(const Arrays& arr, int mode = POINTS, const Scalar& color = Scalar::all(255))
 
-.. ocv:function:: void ogl::render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255))
+.. ocv:function:: void ogl::render(const Arrays& arr, InputArray indices, int mode = POINTS, const Scalar& color = Scalar::all(255))
 
     :param tex: Texture to draw.
 

@@ -486,9 +486,9 @@ floodFill
 ---------
 Fills a connected component with the given color.
 
-.. ocv:function:: int floodFill( InputOutputArray image, Point seedPoint, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
+.. ocv:function:: int floodFill( InputOutputArray image, Point seedPoint, const Scalar& newVal, Rect* rect=0, const Scalar& loDiff=Scalar(), const Scalar& upDiff=Scalar(), int flags=4 )
 
-.. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seedPoint, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
+.. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seedPoint, const Scalar& newVal, Rect* rect=0, const Scalar& loDiff=Scalar(), const Scalar& upDiff=Scalar(), int flags=4 )
 
 .. ocv:pyfunction:: cv2.floodFill(image, mask, seedPoint, newVal[, loDiff[, upDiff[, flags]]]) -> retval, image, mask, rect
 

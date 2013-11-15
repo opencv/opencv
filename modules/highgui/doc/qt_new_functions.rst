@@ -123,7 +123,7 @@ fontQt
 ----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: QtFont fontQt( const String& nameFont, int pointSize=-1, Scalar color=Scalar::all(0), int weight=QT_FONT_NORMAL, int style=QT_STYLE_NORMAL, int spacing=0 )
+.. ocv:function:: QtFont fontQt( const String& nameFont, int pointSize=-1, const Scalar& color=Scalar::all(0), int weight=QT_FONT_NORMAL, int style=QT_STYLE_NORMAL, int spacing=0 )
 
 .. ocv:cfunction:: CvFont cvFontQt(const char* nameFont, int pointSize=-1, CvScalar color=cvScalarAll(0), int weight=CV_FONT_NORMAL, int style=CV_STYLE_NORMAL, int spacing=0)
 
