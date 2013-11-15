@@ -962,3 +962,56 @@ __kernel void HLS2RGB(int cols, int rows, int src_step, int dst_step, int bidx,
 }
 
 #endif
+
+/////////////////////////// RGBA <-> mRGBA (alpha premultiplied) //////////////
+
+#ifdef DEPTH_0
+
+__kernel void RGBA2mRGBA(int cols, int rows, int src_step, int dst_step,
+                        int bidx, __global const uchar * src, __global uchar * dst,
+                        int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        uchar v0 = src[src_idx], v1 = src[src_idx + 1];
+        uchar v2 = src[src_idx + 2], v3 = src[src_idx + 3];
+
+        dst[dst_idx] = (v0 * v3 + HALF_MAX) / MAX_NUM;
+        dst[dst_idx + 1] = (v1 * v3 + HALF_MAX) / MAX_NUM;
+        dst[dst_idx + 2] = (v2 * v3 + HALF_MAX) / MAX_NUM;
+        dst[dst_idx + 3] = v3;
+    }
+}
+
+__kernel void mRGBA2RGBA(int cols, int rows, int src_step, int dst_step, int bidx,
+                        __global const uchar * src, __global uchar * dst,
+                        int src_offset, int dst_offset)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        x <<= 2;
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+
+        uchar v0 = src[src_idx], v1 = src[src_idx + 1];
+        uchar v2 = src[src_idx + 2], v3 = src[src_idx + 3];
+        uchar v3_half = v3 / 2;
+
+        dst[dst_idx] = v3 == 0 ? 0 : (v0 * MAX_NUM + v3_half) / v3;
+        dst[dst_idx + 1] = v3 == 0 ? 0 : (v1 * MAX_NUM + v3_half) / v3;
+        dst[dst_idx + 2] = v3 == 0 ? 0 : (v2 * MAX_NUM + v3_half) / v3;
+        dst[dst_idx + 3] = v3;
+    }
+}
+
+#endif
