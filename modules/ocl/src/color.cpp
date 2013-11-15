@@ -305,7 +305,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         bidx = code == CV_BGR2XYZ ? 0 : 2;
         dst.create(sz, CV_MAKE_TYPE(depth, 3));
 
-        void * pdata = NULL;
+        Mat c;
         if (depth == CV_32F)
         {
             float coeffs[] =
@@ -320,7 +320,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 std::swap(coeffs[3], coeffs[5]);
                 std::swap(coeffs[6], coeffs[8]);
             }
-            pdata = coeffs;
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
         }
         else
         {
@@ -336,9 +336,9 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 std::swap(coeffs[3], coeffs[5]);
                 std::swap(coeffs[6], coeffs[8]);
             }
-            pdata = coeffs;
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
         }
-        oclMat oclCoeffs(1, 9, depth == CV_32F ? CV_32FC1 : CV_32SC1, pdata);
+        oclMat oclCoeffs(c);
 
         fromRGB_caller(src, dst, bidx, "RGB2XYZ", "", oclCoeffs);
         break;
@@ -351,7 +351,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
         bidx = code == CV_XYZ2BGR ? 0 : 2;
         dst.create(sz, CV_MAKE_TYPE(depth, dcn));
 
-        void * pdata = NULL;
+        Mat c;
         if (depth == CV_32F)
         {
             float coeffs[] =
@@ -366,7 +366,7 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 std::swap(coeffs[1], coeffs[7]);
                 std::swap(coeffs[2], coeffs[8]);
             }
-            pdata = coeffs;
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
         }
         else
         {
@@ -382,9 +382,9 @@ static void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
                 std::swap(coeffs[1], coeffs[7]);
                 std::swap(coeffs[2], coeffs[8]);
             }
-            pdata = coeffs;
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
         }
-        oclMat oclCoeffs(1, 9, depth == CV_32F ? CV_32FC1 : CV_32SC1, pdata);
+        oclMat oclCoeffs(c);
 
         toRGB_caller(src, dst, bidx, "XYZ2RGB", "", oclCoeffs);
         break;
