@@ -282,96 +282,63 @@ namespace cv
 
         static void resize_gpu( const oclMat &src, oclMat &dst, double fx, double fy, int interpolation)
         {
-            CV_Assert( (src.channels() == dst.channels()) );
-            Context *clCxt = src.clCxt;
-            float ifx = 1. / fx;
-            float ify = 1. / fy;
-            double ifx_d = 1. / fx;
-            double ify_d = 1. / fy;
-            int srcStep_in_pixel = src.step1() / src.oclchannels();
-            int srcoffset_in_pixel = src.offset / src.elemSize();
-            int dstStep_in_pixel = dst.step1() / dst.oclchannels();
-            int dstoffset_in_pixel = dst.offset / dst.elemSize();
+            float ifx = 1.f / fx, ify = 1.f / fy;
+            int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
+            int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
+            int ocn = interpolation == INTER_LINEAR ? dst.oclchannels() : -1;
+            int depth = interpolation == INTER_LINEAR ? dst.depth() : -1;
 
-            string kernelName;
-            if (interpolation == INTER_LINEAR)
-                kernelName = "resizeLN";
-            else if (interpolation == INTER_NEAREST)
-                kernelName = "resizeNN";
+            const char * const interMap[] = { "NN", "LN", "CUBIC", "AREA", "LAN4" };
+            std::string kernelName = std::string("resize") + interMap[interpolation];
+
+            const char * const typeMap[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "double" };
+            const char * const channelMap[] = { "" , "", "2", "4", "4" };
+            std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[dst.depth()], channelMap[dst.oclchannels()]);
 
             //TODO: improve this kernel
             size_t blkSizeX = 16, blkSizeY = 16;
             size_t glbSizeX;
-            if (src.type() == CV_8UC1)
+            if (src.type() == CV_8UC1 && interpolation == INTER_LINEAR)
             {
                 size_t cols = (dst.cols + dst.offset % 4 + 3) / 4;
                 glbSizeX = cols % blkSizeX == 0 && cols != 0 ? cols : (cols / blkSizeX + 1) * blkSizeX;
             }
             else
-                glbSizeX = dst.cols % blkSizeX == 0 && dst.cols != 0 ? dst.cols : (dst.cols / blkSizeX + 1) * blkSizeX;
+                glbSizeX = dst.cols;
 
-            size_t glbSizeY = dst.rows % blkSizeY == 0 && dst.rows != 0 ? dst.rows : (dst.rows / blkSizeY + 1) * blkSizeY;
-            size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
-            size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
+            size_t globalThreads[3] = { glbSizeX, dst.rows, 1 };
+            size_t localThreads[3] = { blkSizeX, blkSizeY, 1 };
 
-            vector< pair<size_t, const void *> > args;
-            if (interpolation == INTER_NEAREST)
-            {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                if (src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
-                {
-                    args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
-                    args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
-                }
-                else
-                {
-                    args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-                    args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
-                }
-            }
-            else
-            {
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
-                args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcoffset_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dstStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&srcStep_in_pixel));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
-                args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-                args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
-            }
+            std::vector< std::pair<size_t, const void *> > args;
+            args.push_back( make_pair(sizeof(cl_mem), (void *)&dst.data));
+            args.push_back( make_pair(sizeof(cl_mem), (void *)&src.data));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&dst_offset));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&src_offset));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&dst_step));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&src_step));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&src.cols));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
+            args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
+            args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
+            args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
 
-            openCLExecuteKernel(clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
+            openCLExecuteKernel(src.clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args,
+                                ocn, depth, buildOption.c_str());
         }
 
-        void resize(const oclMat &src, oclMat &dst, Size dsize,
-                    double fx, double fy, int interpolation)
+        void resize(const oclMat &src, oclMat &dst, Size dsize, double fx, double fy, int interpolation)
         {
             CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3 || src.type() == CV_8UC4
                       || src.type() == CV_32FC1 || src.type() == CV_32FC3 || src.type() == CV_32FC4);
             CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST);
-            CV_Assert( src.size().area() > 0 );
-            CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
+            CV_Assert(dsize.area() > 0 || (fx > 0 && fy > 0));
 
-            if (!(dsize == Size()) && (fx > 0 && fy > 0))
-                if (dsize.width != (int)(src.cols * fx) || dsize.height != (int)(src.rows * fy))
-                    CV_Error(CV_StsUnmatchedSizes, "invalid dsize and fx, fy!");
-
-            if ( dsize == Size() )
+            if (dsize.area() == 0)
+            {
                 dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
+                CV_Assert(dsize.area() > 0);
+            }
             else
             {
                 fx = (double)dsize.width / src.cols;
@@ -380,13 +347,7 @@ namespace cv
 
             dst.create(dsize, src.type());
 
-            if ( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR )
-            {
-                resize_gpu( src, dst, fx, fy, interpolation);
-                return;
-            }
-
-            CV_Error(CV_StsUnsupportedFormat, "Non-supported interpolation method");
+            resize_gpu( src, dst, fx, fy, interpolation);
         }
 
         ////////////////////////////////////////////////////////////////////////
