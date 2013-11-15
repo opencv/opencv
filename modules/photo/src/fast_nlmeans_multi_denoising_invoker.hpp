@@ -264,7 +264,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const Range& range) const 
             int weights_sum = 0;
 
             int estimation[3];
-            for (size_t channel_num = 0; channel_num < channels_; channel_num++) {
+            for (int channel_num = 0; channel_num < channels_; channel_num++) {
                 estimation[channel_num] = 0;
             }
             for (int d = 0; d < temporal_window_size_; d++) {
@@ -287,7 +287,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const Range& range) const 
                 }
             }
 
-            for (size_t channel_num = 0; channel_num < channels_; channel_num++)
+            for (int channel_num = 0; channel_num < channels_; channel_num++)
                 estimation[channel_num] = ((unsigned)estimation[channel_num] + weights_sum / 2) / weights_sum;
 
             dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
