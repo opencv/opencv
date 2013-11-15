@@ -628,12 +628,11 @@ func_arg_fix = {
 
 def getLibVersion(version_hpp_path):
     version_file = open(version_hpp_path, "rt").read()
-    epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     status = re.search("^W*#\W*define\W+CV_VERSION_STATUS\W+\"(.*?)\"\W*$", version_file, re.MULTILINE).group(1)
-    return (epoch, major, minor, revision, status)
+    return (major, minor, revision, status)
 
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
@@ -800,16 +799,15 @@ public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
         if class_name == 'Core':
-            (epoch, major, minor, revision, status) = getLibVersion(
+            (major, minor, revision, status) = getLibVersion(
                 (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
-            version_str    = '.'.join( (epoch, major, minor, revision) ) + status
-            version_suffix =  ''.join( (epoch, major, minor) )
+            version_str    = '.'.join( (major, minor, revision) ) + status
+            version_suffix =  ''.join( (major, minor, revision) )
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
     // these constants are wrapped inside functions to prevent inlining
     private static String getVersion() { return "%(v)s"; }
     private static String getNativeLibraryName() { return "opencv_java%(vs)s"; }
-    private static int getVersionEpoch() { return %(ep)s; }
     private static int getVersionMajor() { return %(ma)s; }
     private static int getVersionMinor() { return %(mi)s; }
     private static int getVersionRevision() { return %(re)s; }
@@ -817,12 +815,11 @@ public class %(jc)s {
 
     public static final String VERSION = getVersion();
     public static final String NATIVE_LIBRARY_NAME = getNativeLibraryName();
-    public static final int VERSION_EPOCH = getVersionEpoch();
     public static final int VERSION_MAJOR = getVersionMajor();
     public static final int VERSION_MINOR = getVersionMinor();
     public static final int VERSION_REVISION = getVersionRevision();
     public static final String VERSION_STATUS = getVersionStatus();
-""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision, 'st': status } )
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ma' : major, 'mi' : minor, 're' : revision, 'st': status } )
 
 
     def add_class(self, decl):
