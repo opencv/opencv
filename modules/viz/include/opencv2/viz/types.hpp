@@ -57,7 +57,7 @@ namespace cv
 {
     namespace viz
     {
-        class CV_EXPORTS Color : public Scalar
+        class Color : public Scalar
         {
         public:
             Color();
@@ -169,8 +169,26 @@ namespace cv
             Vec2f principal_point_;
             Vec2f focal_;
         };
-
     } /* namespace viz */
 } /* namespace cv */
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::viz::Color
+
+inline cv::viz::Color::Color() : Scalar(0, 0, 0) {}
+inline cv::viz::Color::Color(double gray) : Scalar(gray, gray, gray) {}
+inline cv::viz::Color::Color(double blue, double green, double red) : Scalar(blue, green, red) {}
+inline cv::viz::Color::Color(const Scalar& color) : Scalar(color) {}
+
+inline cv::viz::Color cv::viz::Color::black()   { return Color(  0,   0, 0); }
+inline cv::viz::Color cv::viz::Color::green()   { return Color(  0, 255, 0); }
+inline cv::viz::Color cv::viz::Color::blue()    { return Color(255,   0, 0); }
+inline cv::viz::Color cv::viz::Color::cyan()    { return Color(255, 255, 0); }
+inline cv::viz::Color cv::viz::Color::red()     { return Color(  0,   0, 255); }
+inline cv::viz::Color cv::viz::Color::yellow()  { return Color(  0, 255, 255); }
+inline cv::viz::Color cv::viz::Color::magenta() { return Color(255,   0, 255); }
+inline cv::viz::Color cv::viz::Color::white()   { return Color(255, 255, 255); }
+inline cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
+
 
 #endif
