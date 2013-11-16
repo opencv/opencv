@@ -5,6 +5,7 @@
 #include "cascadeclassifier.h"
 
 using namespace std;
+using namespace cv;
 
 CvHaarFeatureParams::CvHaarFeatureParams() : mode(BASIC)
 {
