@@ -47,7 +47,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "viz3d_impl.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include <vtkRenderWindowInteractor.h>

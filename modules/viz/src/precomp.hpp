@@ -126,6 +126,8 @@
 #endif
 
 #include <opencv2/core.hpp>
+#include <opencv2/viz.hpp>
+#include <opencv2/viz/widget_accessor.hpp>
 
 namespace cv
 {
@@ -135,6 +137,7 @@ namespace cv
     }
 }
 
+#include "interactor_style.h"
 #include "viz3d_impl.hpp"
 
 namespace cv
@@ -146,8 +149,5 @@ namespace cv
     }
 }
 
-#include <opencv2/viz.hpp>
-#include <opencv2/viz/types.hpp>
-#include "opencv2/viz/widget_accessor.hpp"
 
 #endif

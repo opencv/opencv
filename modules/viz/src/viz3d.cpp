@@ -46,8 +46,7 @@
 //
 //M*/
 
-#include <opencv2/viz/viz3d.hpp>
-#include "viz3d_impl.hpp"
+#include "precomp.hpp"
 
 cv::viz::Viz3d::Viz3d(const String& window_name) : impl_(0) { create(window_name); }
 

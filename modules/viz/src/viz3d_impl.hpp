@@ -49,9 +49,6 @@
 #ifndef __OPENCV_VIZ_VIZ3D_IMPL_HPP__
 #define __OPENCV_VIZ_VIZ3D_IMPL_HPP__
 
-#include <opencv2/viz.hpp>
-#include "interactor_style.h"
-
 struct cv::viz::Viz3d::VizImpl
 {
 public:
