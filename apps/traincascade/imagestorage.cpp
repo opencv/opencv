@@ -8,6 +8,7 @@
 #include <fstream>
 
 using namespace std;
+using namespace cv;
 
 bool CvCascadeImageReader::create( const string _posFilename, const string _negFilename, Size _winSize )
 {
