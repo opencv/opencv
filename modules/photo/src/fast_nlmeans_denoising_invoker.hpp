@@ -44,7 +44,6 @@
 
 #include "precomp.hpp"
 #include <limits>
-#include <type_traits>
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
 #include "arrays.hpp"
@@ -111,9 +110,9 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
     const float h) : src_(src), dst_(dst)
 {
     //T is Vec1b or Vec2b or Vec3b
-    CV_Assert( (std::is_same<T, uchar>::value)     ||
-               (std::is_same<T, cv::Vec2b>::value) ||
-               (std::is_same<T, cv::Vec3b>::value) );
+    CV_Assert( (cv::is_same<T, uchar>::value)     ||
+               (cv::is_same<T, cv::Vec2b>::value) ||
+               (cv::is_same<T, cv::Vec3b>::value) );
 
     channels_ = src.channels();
 

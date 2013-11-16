@@ -51,6 +51,19 @@
 
 namespace cv
 {
+/* To avoid depending on C++11, we define our own typedef comparison function: */
+template<typename _Tp1, typename _Tp2>
+struct is_same
+{
+    static const bool value = false;
+};
+
+template<typename _Tp>
+struct is_same<_Tp, _Tp>
+{
+   static const bool value = true;
+};
+
 #ifndef OPENCV_NOSTL
 
 template<typename _Tp> class DataType< std::complex<_Tp> >
