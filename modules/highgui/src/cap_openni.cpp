@@ -172,6 +172,9 @@ public:
     xn::ImageGenerator &imageGenerator;
 
 private:
+    ApproximateSyncGrabber(const ApproximateSyncGrabber&);
+    ApproximateSyncGrabber& operator=(ApproximateSyncGrabber&);
+
     int maxBufferSize;
     bool isCircleBuffer;
     int maxTimeDuration;
@@ -215,7 +218,7 @@ private:
         virtual bool grab( xn::DepthMetaData& depthMetaData,
                            xn::ImageMetaData& imageMetaData )
         {
-            while(1)
+            for(;;)
             {
                 if( !isDepthFilled )
                     isDepthFilled = popDepthMetaData(depth);
@@ -971,7 +974,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         propValue = depthGenerator.GetAlternativeViewPointCap().IsViewPointAs(imageGenerator) ? 1.0 : 0.0;
         break;
     case CV_CAP_PROP_POS_MSEC :
-        propValue = depthGenerator.GetTimestamp();
+        propValue = (double)depthGenerator.GetTimestamp();
         break;
     case CV_CAP_PROP_POS_FRAMES :
         propValue = depthGenerator.GetFrameID();
@@ -1067,10 +1070,10 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
             propValue = mode.nFPS;
         break;
     case CV_CAP_PROP_POS_MSEC :
-        propValue = imageGenerator.GetTimestamp();
+        propValue = (double)imageGenerator.GetTimestamp();
         break;
     case CV_CAP_PROP_POS_FRAMES :
-        propValue = imageGenerator.GetFrameID();
+        propValue = (double)imageGenerator.GetFrameID();
         break;
     default :
     {
