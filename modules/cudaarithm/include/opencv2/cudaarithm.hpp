@@ -113,7 +113,7 @@ CV_EXPORTS void rshift(InputArray src, const Scalar_<int>& val, OutputArray dst,
 
 //! pixel by pixel left shift of an image by a constant value
 //! supports 1, 3 and 4 channels images with CV_8U, CV_16U or CV_32S depth
-CV_EXPORTS void lshift(InputArray src, cosnt Scalar_<int>& val, OutputArray dst, Stream& stream = Stream::Null());
+CV_EXPORTS void lshift(InputArray src, const Scalar_<int>& val, OutputArray dst, Stream& stream = Stream::Null());
 
 //! computes per-element minimum of two arrays (dst = min(src1, src2))
 CV_EXPORTS void min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null());
