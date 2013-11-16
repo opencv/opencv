@@ -47,7 +47,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "interactor_style.h"
+
 
 using namespace cv;
 
@@ -194,6 +194,11 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+bool cv::viz::InteractorStyle::getAltKey() { return Interactor->GetAltKey() != 0; }
+bool cv::viz::InteractorStyle::getShiftKey() { return Interactor->GetShiftKey()!= 0; }
+bool cv::viz::InteractorStyle::getControlKey() { return Interactor->GetControlKey()!= 0; }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 void
 cv::viz::InteractorStyle::OnKeyDown()
 {
@@ -216,9 +221,9 @@ cv::viz::InteractorStyle::OnKeyDown()
 
 
     // Get the status of special keys (Cltr+Alt+Shift)
-    bool shift = Interactor->GetShiftKey();
-    bool ctrl  = Interactor->GetControlKey();
-    bool alt   = Interactor->GetAltKey();
+    bool shift = getShiftKey();
+    bool ctrl  = getControlKey();
+    bool alt   = getAltKey();
 
     bool keymod = false;
     switch (modifier_)
@@ -538,7 +543,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     }
     }
 
-    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -550,7 +555,7 @@ cv::viz::InteractorStyle::OnKeyDown()
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnKeyUp()
 {
-    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -562,7 +567,7 @@ void cv::viz::InteractorStyle::OnKeyUp()
 void cv::viz::InteractorStyle::OnMouseMove()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMouseMove();
@@ -573,7 +578,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::LeftButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonDown();
@@ -583,7 +588,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 void cv::viz::InteractorStyle::OnLeftButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonUp();
@@ -595,7 +600,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::MiddleButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonDown();
@@ -605,7 +610,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
 void cv::viz::InteractorStyle::OnMiddleButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonUp();
@@ -617,7 +622,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::RightButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonDown();
@@ -627,7 +632,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
 void cv::viz::InteractorStyle::OnRightButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonUp();
@@ -637,7 +642,7 @@ void cv::viz::InteractorStyle::OnRightButtonUp()
 void cv::viz::InteractorStyle::OnMouseWheelForward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
@@ -669,7 +674,7 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 void cv::viz::InteractorStyle::OnMouseWheelBackward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);

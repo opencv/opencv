@@ -49,8 +49,6 @@
 #ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
 #define __OPENCV_VIZ_INTERACTOR_STYLE_H__
 
-#include "precomp.hpp"
-
 namespace cv
 {
     namespace viz
@@ -145,6 +143,10 @@ namespace cv
 
             void (*mouseCallback_)(const MouseEvent&, void*);
             void *mouse_callback_cookie_;
+
+            bool getAltKey();
+            bool getControlKey();
+            bool getShiftKey();
         };
     }
 }

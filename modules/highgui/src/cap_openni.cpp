@@ -105,7 +105,9 @@ public:
         context(_context), depthGenerator(_depthGenerator), imageGenerator(_imageGenerator),
         maxBufferSize(_maxBufferSize), isCircleBuffer(_isCircleBuffer), maxTimeDuration(_maxTimeDuration)
     {
+#ifdef HAVE_TBB
         task = 0;
+#endif
 
         CV_Assert( depthGenerator.IsValid() );
         CV_Assert( imageGenerator.IsValid() );
@@ -150,7 +152,7 @@ public:
         task = new( tbb::task::allocate_root() ) TBBApproximateSynchronizerTask( *this );
         tbb::task::enqueue(*task);
 #else
-        task = new ApproximateSynchronizer( *this );
+        task->reset( new ApproximateSynchronizer( *this ) );
 #endif
     }
 
