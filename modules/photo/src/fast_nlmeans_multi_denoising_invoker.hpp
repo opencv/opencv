@@ -44,6 +44,7 @@
 
 #include "precomp.hpp"
 #include <limits>
+#include <type_traits>
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
 #include "arrays.hpp"
@@ -111,9 +112,9 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
 {
     CV_Assert(srcImgs.size() > 0);
     CV_Assert(srcImgs[0].channels() <= 3);
-    CV_Assert( (sizeof(T) == sizeof(uchar))     ||
-               (sizeof(T) == sizeof(cv::Vec2b)) ||
-               (sizeof(T) == sizeof(cv::Vec3b)) );
+    CV_Assert( (std::is_same<T, uchar>::value)     ||
+               (std::is_same<T, cv::Vec2b>::value) ||
+               (std::is_same<T, cv::Vec3b>::value) );
 
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
