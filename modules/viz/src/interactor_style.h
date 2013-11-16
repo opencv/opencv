@@ -49,7 +49,7 @@
 #ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
 #define __OPENCV_VIZ_INTERACTOR_STYLE_H__
 
-#include <opencv2/viz/types.hpp>
+#include "precomp.hpp"
 
 namespace cv
 {
