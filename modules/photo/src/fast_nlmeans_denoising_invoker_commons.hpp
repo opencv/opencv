@@ -46,7 +46,7 @@ using namespace cv;
 
 template <typename T> static inline int calcDist(const T& a, const T& b);
 
-template <> inline int calcDist(const uchar a, const uchar b) {
+template <> inline int calcDist(const uchar& a, const uchar& b) {
     return (a-b) * (a-b);
 }
 
@@ -76,7 +76,7 @@ template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uch
 
 template <typename T> static inline void incWithWeight(int* estimation, int weight, const T& p);
 
-template <> inline void incWithWeight(int* estimation, int weight, uchar p) {
+template <> inline void incWithWeight(int* estimation, int weight, const uchar& p) {
     estimation[0] += weight * p;
 }
 
