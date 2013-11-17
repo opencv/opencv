@@ -22,13 +22,13 @@ Hough Circle Transform
 
      C : ( x_{center}, y_{center}, r )
 
-  where :math:`(x_{center}, y_{center})` define the center position (gree point) and :math:`r` is the radius, which allows us to completely define a circle, as it can be seen below:
+  where :math:`(x_{center}, y_{center})` define the center position (green point) and :math:`r` is the radius, which allows us to completely define a circle, as it can be seen below:
 
   .. image:: images/Hough_Circle_Tutorial_Theory_0.jpg
           :alt: Result of detecting circles with Hough Transform
           :align: center
 
-* For sake of efficiency, OpenCV implements a detection method slightly trickier than the standard Hough Transform: *The Hough gradient method*. For more details, please check the book *Learning OpenCV* or your favorite Computer Vision bibliography
+* For sake of efficiency, OpenCV implements a detection method slightly trickier than the standard Hough Transform: *The Hough gradient method*, which is made up of 2 main stages.The first stage involves edge detection and finding the possible circle centers and second stage finds the best radius for each candidate center. For more details, please check the book *Learning OpenCV* or your favorite Computer Vision bibliography
 
 Code
 ======
@@ -44,7 +44,7 @@ Code
    .. |TutorialHoughCirclesFancyDownload| replace:: here
    .. _TutorialHoughCirclesFancyDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp
 
-#. The sample code that we will explain can be downloaded from |TutorialHoughCirclesSimpleDownload|_. A slightly fancier version (which shows both Hough standard and probabilistic with trackbars for changing the threshold values) can be found |TutorialHoughCirclesFancyDownload|_.
+#. The sample code that we will explain can be downloaded from |TutorialHoughCirclesSimpleDownload|_. A slightly fancier version (which shows trackbars for changing the threshold values) can be found |TutorialHoughCirclesFancyDownload|_.
 
 .. code-block:: cpp
 
@@ -138,8 +138,8 @@ Explanation
    * *dp = 1*: The inverse ratio of resolution
    * *min_dist = src_gray.rows/8*: Minimum distance between detected centers
    * *param_1 = 200*: Upper threshold for the internal Canny edge detector
-   * *param_2* = 100*: Threshold for center detection.
-   * *min_radius = 0*: Minimum radio to be detected. If unknown, put zero as default.
+   * *param_2 = 100*: Threshold for center detection.
+   * *min_radius = 0*: Minimum radius to be detected. If unknown, put zero as default.
    * *max_radius = 0*: Maximum radius to be detected. If unknown, put zero as default
 
 #. Draw the detected circles:
