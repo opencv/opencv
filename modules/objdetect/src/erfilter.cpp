@@ -43,9 +43,13 @@
 #include "precomp.hpp"
 #include <fstream>
 
-#ifndef INT32_MAX
-#define __STDC_LIMIT_MACROS
-#include <stdint.h>
+#if defined _MSC_VER && _MSC_VER == 1500
+    typedef int int_fast32_t;
+#else
+    #ifndef INT32_MAX
+    #define __STDC_LIMIT_MACROS
+    #include <stdint.h>
+    #endif
 #endif
 
 using namespace std;
