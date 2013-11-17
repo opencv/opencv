@@ -4,7 +4,7 @@ if(IOS)
   ocv_module_disable(ts)
 endif()
 
-set(OPENCV_MODULE_TYPE STATIC)
+#set(OPENCV_MODULE_TYPE STATIC)
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 
 if(HAVE_CUDA)
