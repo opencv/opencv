@@ -206,26 +206,17 @@
 #endif
 
 #ifdef __GNUC__
-#  define CV_DECL_ALIGNED(x)            __attribute__ ((aligned (x)))
-#  define CV_DECL_ALIGNED_TEMPLATE(x)   CV_DECL_ALIGNED(x)
-#elif ( defined(_MSC_VER) && _MSC_VER <= 1600 )
-/* With Microsoft Visual C++ 2010 and older, if you want to be able to compile with aligned */
-/* templates, the "c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\vector"   */
-/* file (line 870) has to be patched:                                                       */
-/*    -void resize(size_type _Newsize, _Ty _Val)                                            */
-/*    +void resize(size_type _Newsize, const _Ty& _Val)                                     */
-/* So, by default, to avoid it, we disable template alignment.                              */
-#  define CV_DECL_ALIGNED(x)            __declspec(align(x))
-#  define CV_DECL_ALIGNED_TEMPLATE(x)
+#  define CV_DECL_ALIGNED(x)                     __attribute__ ((aligned (x)))
+#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)     __alignof__ (_Tp)
 #elif defined _MSC_VER
-/* On more recent versions of Microsoft Visual C++, the problem has been corrected          */
-#  define CV_DECL_ALIGNED(x)            __declspec(align(x))
-#  define CV_DECL_ALIGNED_TEMPLATE(x)   CV_DECL_ALIGNED(x)
+#  define CV_DECL_ALIGNED(x)                     __declspec(align(x))
+#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)     __alignof (_Tp)
 #else
 #  pragma message("WARNING: Unknown type alignment markup for this compiler")
 #  define CV_DECL_ALIGNED(x)
-#  define CV_DECL_ALIGNED_TEMPLATE(x)   CV_DECL_ALIGNED(x)
+#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)
 #endif
+
 
 /****************************************************************************************\
 *                                  Primitive types                                      *

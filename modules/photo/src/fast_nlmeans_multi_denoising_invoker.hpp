@@ -64,7 +64,6 @@ struct FastNlMeansMultiDenoisingInvoker : ParallelLoopBody {
 
         int rows_;
         int cols_;
-        int channels_;
 
         Mat& dst_;
 
@@ -110,14 +109,10 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     const float h) : dst_(dst), extended_srcs_(srcImgs.size())
 {
     CV_Assert(srcImgs.size() > 0);
-    CV_Assert(srcImgs[0].channels() <= 3);
-    CV_Assert( (cv::is_same<T, uchar>::value)     ||
-               (cv::is_same<T, cv::Vec2b>::value) ||
-               (cv::is_same<T, cv::Vec3b>::value) );
+    CV_Assert(srcImgs[0].channels() == sizeof(T));
 
     rows_ = srcImgs[0].rows;
     cols_ = srcImgs[0].cols;
-    channels_ = srcImgs[0].channels();
 
     template_window_half_size_ = template_window_size / 2;
     search_window_half_size_ = search_window_size / 2;
@@ -152,14 +147,14 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
     double almost_dist2actual_dist_multiplier =
         ((double) almost_template_window_size_sq) / template_window_size_sq;
 
-    int max_dist = 255 * 255 * channels_;
+    int max_dist = 255 * 255 * sizeof(T);
     int almost_max_dist = (int) (max_dist / almost_dist2actual_dist_multiplier + 1);
     almost_dist2weight.resize(almost_max_dist);
 
     const double WEIGHT_THRESHOLD = 0.001;
     for (int almost_dist = 0; almost_dist < almost_max_dist; almost_dist++) {
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
-        int weight = cvRound(fixed_point_mult_ * std::exp(-dist / (h * h * channels_)));
+        int weight = cvRound(fixed_point_mult_ * std::exp(-dist / (h * h * sizeof(T))));
 
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_) {
             weight = 0;
@@ -264,7 +259,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const Range& range) const 
             int weights_sum = 0;
 
             int estimation[3];
-            for (int channel_num = 0; channel_num < channels_; channel_num++) {
+            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++) {
                 estimation[channel_num] = 0;
             }
             for (int d = 0; d < temporal_window_size_; d++) {
@@ -287,7 +282,7 @@ void FastNlMeansMultiDenoisingInvoker<T>::operator() (const Range& range) const 
                 }
             }
 
-            for (int channel_num = 0; channel_num < channels_; channel_num++)
+            for (size_t channel_num = 0; channel_num < sizeof(T); channel_num++)
                 estimation[channel_num] = ((unsigned)estimation[channel_num] + weights_sum / 2) / weights_sum;
 
             dst_.at<T>(i,j) = saturateCastFromArray<T>(estimation);
