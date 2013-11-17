@@ -81,8 +81,6 @@ struct CV_EXPORTS Matx_DivOp {};
 struct CV_EXPORTS Matx_MatMulOp {};
 struct CV_EXPORTS Matx_TOp {};
 
-#define CV_DECL_ALIGNED_MATX(_Tp,m,n) \
-           CV_DECL_ALIGNED(((m)*(n) > 4) ? CV_MALLOC_ALIGN : CV_DEFAULT_COMPILER_ALIGNMENT(_Tp))
 template<typename _Tp, int m, int n> class Matx
 {
 public:
@@ -184,8 +182,7 @@ public:
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
-    /* Only matrix of more than 4 elements are aligned */
-    _Tp CV_DECL_ALIGNED_MATX(_Tp,m,n) val[m*n]; //< matrix elements
+    _Tp CV_DECL_ALIGNED_CONDITIONAL(_Tp,m*n) val[m*n]; //< matrix elements
 };
 
 /*!

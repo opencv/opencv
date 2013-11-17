@@ -207,14 +207,16 @@
 
 #ifdef __GNUC__
 #  define CV_DECL_ALIGNED(x)                     __attribute__ ((aligned (x)))
-#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)     __alignof__ (_Tp)
+#  define CV_DEFAULT_COMPILER_ALIGNMENT(x)       __alignof__ (x)
+#  define CV_DECL_ALIGNED_CONDITIONAL(x,nb) /* Only arrays of more than 4 elements are aligned */\
+                  CV_DECL_ALIGNED( (nb > 4) ? CV_MALLOC_ALIGN : CV_DEFAULT_COMPILER_ALIGNMENT(x))
 #elif defined _MSC_VER
 #  define CV_DECL_ALIGNED(x)                     __declspec(align(x))
-#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)     __alignof (_Tp)
+#  define CV_DECL_ALIGNED_CONDITIONAL(x,nb)
 #else
 #  pragma message("WARNING: Unknown type alignment markup for this compiler")
 #  define CV_DECL_ALIGNED(x)
-#  define CV_DEFAULT_COMPILER_ALIGNMENT(_Tp)
+#  define CV_DECL_ALIGNED_CONDITIONAL(x,nb)
 #endif
 
 
