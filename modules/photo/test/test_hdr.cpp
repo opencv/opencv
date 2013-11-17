@@ -40,9 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <string>
-#include <algorithm>
-#include <fstream>
 
 using namespace cv;
 using namespace std;
