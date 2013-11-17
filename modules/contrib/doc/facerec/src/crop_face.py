@@ -31,7 +31,8 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import sys, math, Image
+import sys, math
+from PIL import Image
 
 def Distance(p1,p2):
   dx = p2[0] - p1[0]
