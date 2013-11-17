@@ -40,13 +40,11 @@
  //
  //M*/
 #include "test_precomp.hpp"
-#include <opencv2/viz.hpp>
-#include <opencv2/highgui.hpp>
-#include <string>
+
 
 using namespace cv;
 
-cv::Mat cvcloud_load()
+static cv::Mat cvcloud_load()
 {
     cv::Mat cloud(1, 20000, CV_32FC3);
         std::ifstream ifs("/Users/nerei/cloud_dragon.ply");
@@ -90,7 +88,7 @@ void keyboard_callback(const viz::KeyboardEvent & event, void * cookie)
     }
 }
 
-TEST(Viz_viz3d, accuracy)
+TEST(Viz_viz3d, develop)
 {
     cv::viz::Viz3d viz("abc");
 
@@ -178,4 +176,6 @@ TEST(Viz_viz3d, accuracy)
         angle += 10;
         viz.spinOnce(42, true);
     }
+
+    volatile void* a = (void*)&cvcloud_load; (void)a; //fixing warnings
 }
