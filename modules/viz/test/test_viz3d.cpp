@@ -96,18 +96,18 @@ TEST(Viz_viz3d, develop)
     cv::viz::WMesh bunny_widget(bunny_mesh);
     bunny_widget.setColor(cv::viz::Color::cyan());
 
-    cam_1 = cv::viz::WCameraPosition(cv::Vec2f(0.6, 0.4), 0.2, cv::viz::Color::green());
+    cam_1 = cv::viz::WCameraPosition(cv::Vec2f(0.6f, 0.4f), 0.2, cv::viz::Color::green());
     cam_coordinates = cv::viz::WCameraPosition(0.2);
 
     viz.showWidget("bunny", bunny_widget);
-    viz.showWidget("cam_1", cam_1, viz::makeCameraPose(Point3f(1.0,0.0,0.0), Point3f(0.0,0.0,0.0), Point3f(0.0,1.0,0.0)));
-    viz.showWidget("cam_coordinate", cam_coordinates, viz::makeCameraPose(Point3f(1.0,0.0,0.0), Point3f(0.0,0.0,0.0), Point3f(0.0,1.0,0.0)));
+    viz.showWidget("cam_1", cam_1, viz::makeCameraPose(Point3f(1.f,0.f,0.f), Point3f(0.f,0.f,0.f), Point3f(0.f,1.f,0.f)));
+    viz.showWidget("cam_coordinate", cam_coordinates, viz::makeCameraPose(Point3f(1.f,0.f,0.f), Point3f(0.f,0.f,0.f), Point3f(0.f,1.f,0.f)));
 
     std::vector<Affine3f> cam_path;
 
     for (int i = 0, j = 0; i <= 360; ++i, j+=5)
     {
-        cam_path.push_back(viz::makeCameraPose(Vec3d(0.5*cos(double(i)*CV_PI/180.0), 0.5*sin(double(j)*CV_PI/180.0), 0.5*sin(double(i)*CV_PI/180.0)), Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 1.f, 0.f)));
+        cam_path.push_back(viz::makeCameraPose(Vec3d(0.5*cos(i*CV_PI/180.0), 0.5*sin(j*CV_PI/180.0), 0.5*sin(i*CV_PI/180.0)), Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 1.f, 0.f)));
     }
 
     int path_counter = 0;

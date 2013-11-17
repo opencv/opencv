@@ -128,6 +128,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
+#include <opencv2/core/utility.hpp>
 
 namespace cv
 {
