@@ -75,12 +75,12 @@ void tutorial3(bool camera_pov)
     myWindow.spin();
 }
 
-TEST(Viz_viz3d, tutorial3_global_view)
+TEST(Viz_viz3d, DISABLED_tutorial3_global_view)
 {
     tutorial3(false);
 }
 
-TEST(Viz_viz3d, tutorial3_camera_view)
+TEST(Viz_viz3d, DISABLED_tutorial3_camera_view)
 {
     tutorial3(true);
 }

@@ -50,18 +50,9 @@
 
 cv::Affine3f cv::viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin)
 {
-    Affine3f::Mat3 R;
-    R.val[0] = axis_x.val[0];
-    R.val[3] = axis_x.val[1];
-    R.val[6] = axis_x.val[2];
-
-    R.val[1] = axis_y.val[0];
-    R.val[4] = axis_y.val[1];
-    R.val[7] = axis_y.val[2];
-
-    R.val[2] = axis_z.val[0];
-    R.val[5] = axis_z.val[1];
-    R.val[8] = axis_z.val[2];
+    Affine3f::Mat3 R(axis_x[0], axis_y[0], axis_z[0],
+                     axis_x[1], axis_y[1], axis_z[1],
+                     axis_x[2], axis_y[2], axis_z[2]);
 
     return Affine3f(R, origin);
 }
@@ -73,22 +64,7 @@ cv::Affine3f cv::viz::makeCameraPose(const Vec3f& position, const Vec3f& focal_p
     Vec3f u = normalize(y_dir.cross(n));
     Vec3f v = n.cross(u);
 
-    Matx44f pose_mat = Matx44f::zeros();
-    pose_mat(0,0) = u[0];
-    pose_mat(0,1) = u[1];
-    pose_mat(0,2) = u[2];
-    pose_mat(1,0) = v[0];
-    pose_mat(1,1) = v[1];
-    pose_mat(1,2) = v[2];
-    pose_mat(2,0) = n[0];
-    pose_mat(2,1) = n[1];
-    pose_mat(2,2) = n[2];
-    pose_mat(3,0) = position[0];
-    pose_mat(3,1) = position[1];
-    pose_mat(3,2) = position[2];
-    pose_mat(3,3) = 1.0f;
-    pose_mat = pose_mat.t();
-    return pose_mat;
+    return makeTransformToGlobal(u, v, n, position);
 }
 
 vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix(const cv::Matx44f &m)
@@ -109,36 +85,31 @@ cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matr
     return m;
 }
 
-namespace cv
+namespace cv { namespace viz
 {
-    namespace viz
+    template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+
+    template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
     {
-        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-
-        template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
-        {
-            CV_Assert(points->GetDataType() == VTK_FLOAT);
-            vtkDataArray *data = points->GetData();
-            float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
-            return reinterpret_cast<Vec3f*>(pointer);
-        }
-
-        template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
-        {
-            CV_Assert(points->GetDataType() == VTK_DOUBLE);
-            vtkDataArray *data = points->GetData();
-            double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
-            return reinterpret_cast<Vec3d*>(pointer);
-        }
+        CV_Assert(points->GetDataType() == VTK_FLOAT);
+        vtkDataArray *data = points->GetData();
+        float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
+        return reinterpret_cast<Vec3f*>(pointer);
     }
-}
+
+    template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
+    {
+        CV_Assert(points->GetDataType() == VTK_DOUBLE);
+        vtkDataArray *data = points->GetData();
+        double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
+        return reinterpret_cast<Vec3d*>(pointer);
+    }
+}}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Viz accessor implementation
 
 cv::viz::VizAccessor * cv::viz::VizAccessor::instance_ = 0;
-bool cv::viz::VizAccessor::is_instantiated_ = false;
-cv::viz::VizAccessor::VizAccessorImpl * cv::viz::VizAccessor::impl_ = 0;
 
 struct cv::viz::VizAccessor::VizAccessorImpl
 {
@@ -146,33 +117,22 @@ struct cv::viz::VizAccessor::VizAccessorImpl
 };
 
 cv::viz::VizAccessor::VizAccessor() { impl_ = new cv::viz::VizAccessor::VizAccessorImpl;}
-
-cv::viz::VizAccessor::~VizAccessor()
-{
-    if(impl_)
-    {
-        delete impl_;
-        impl_ = 0;
-    }
-}
+cv::viz::VizAccessor::~VizAccessor() { delete impl_; }
 
 cv::viz::VizAccessor & cv::viz::VizAccessor::getInstance()
 {
-    if (!is_instantiated_)
-    {
+    if (!instance_)
         instance_ = new VizAccessor();
-        is_instantiated_ = true;
-    }
+
     return *instance_;
 }
 
 void cv::viz::VizAccessor::release()
 {
-    if (is_instantiated_)
+    if (instance_)
     {
         delete instance_;
         instance_ = 0;
-        is_instantiated_ = false;
     }
 }
 
@@ -183,18 +143,15 @@ cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
     generateWindowName(window_name, name);
 
     VizMap::iterator vm_itr = impl_->viz_map.find(name);
-    bool exists = vm_itr != impl_->viz_map.end();
-    if (exists) return vm_itr->second;
-    else return Viz3d(window_name);
+    return vm_itr != impl_->viz_map.end() ? vm_itr->second : Viz3d(window_name);
 }
 
 void cv::viz::VizAccessor::add(Viz3d window)
 {
     String window_name = window.getWindowName();
     VizMap::iterator vm_itr = impl_->viz_map.find(window_name);
-    bool exists = vm_itr != impl_->viz_map.end();
-    if (exists) return ;
-    impl_->viz_map.insert(VizPair(window_name, window));
+    if (vm_itr == impl_->viz_map.end())
+        impl_->viz_map.insert(VizPair(window_name, window));
 }
 
 void cv::viz::VizAccessor::remove(const String &window_name)
@@ -204,21 +161,24 @@ void cv::viz::VizAccessor::remove(const String &window_name)
     generateWindowName(window_name, name);
 
     VizMap::iterator vm_itr = impl_->viz_map.find(name);
-    bool exists = vm_itr != impl_->viz_map.end();
-    if (!exists) return ;
-    impl_->viz_map.erase(vm_itr);
+    if (vm_itr != impl_->viz_map.end())
+        impl_->viz_map.erase(vm_itr);
 }
 
 void cv::viz::VizAccessor::generateWindowName(const String &window_name, String &output)
 {
     output = "Viz";
     // Already is Viz
-    if (window_name == output) return;
+    if (window_name == output)
+        return;
 
     String prefixed = output + " - ";
-    if (window_name.substr(0, prefixed.length()) == prefixed) output = window_name; // Already has "Viz - "
-    else if (window_name.substr(0, output.length()) == output) output = prefixed + window_name; // Doesn't have prefix
-    else output = (window_name == "" ? output : prefixed + window_name);
+    if (window_name.substr(0, prefixed.length()) == prefixed)
+        output = window_name; // Already has "Viz - "
+    else if (window_name.substr(0, output.length()) == output)
+        output = prefixed + window_name; // Doesn't have prefix
+    else
+        output = (window_name == "" ? output : prefixed + window_name);
 }
 
 cv::viz::Viz3d cv::viz::get(const String &window_name)
