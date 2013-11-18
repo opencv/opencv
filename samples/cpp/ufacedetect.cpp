@@ -2,6 +2,7 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
+#include "opencv2/core/ocl.hpp"
 
 #include <cctype>
 #include <iostream>
@@ -230,7 +231,8 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
 
     double fps = getTickFrequency()/t;
 
-    putText(canvas, format("fps: %.1f", fps), Point(450, 50), FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 3);
+    putText(canvas, format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", fps), Point(250, 50),
+            FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 3);
     
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
