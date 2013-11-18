@@ -296,7 +296,7 @@ __kernel void resizeLN_C4_D5(__global float4 * dst, __global float4 * src,
 #elif defined NN
 
 __kernel void resizeNN(__global T * dst, __global T * src,
-                       int dst_offset, int src_offset,int dst_step, int src_step,
+                       int dst_offset, int src_offset, int dst_step, int src_step,
                        int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify)
 {
     int dx = get_global_id(0);
@@ -312,6 +312,54 @@ __kernel void resizeNN(__global T * dst, __global T * src,
         int src_index = mad24(sy, src_step, sx + src_offset);
 
         dst[dst_index] = src[src_index];
+    }
+}
+
+#elif AREA
+
+__kernel void resizeAREA(__global T * dst, __global T * src,
+                         int dst_offset, int src_offset, int dst_step, int src_step,
+                         int src_cols, int src_rows, int dst_cols, int dst_rows, WT ifx, WT ify,
+                         __global const int * ofs_tab, __global const int * map_tab,
+                         __global const float * alpha_tab)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+
+    if (dx < dst_cols && dy < dst_rows)
+    {
+        int dst_index = mad24(dy, dst_step, dst_offset + dx);
+
+        __global const int * xmap_tab = map_tab;
+        __global const int * ymap_tab = (__global const int *)(map_tab + (src_cols << 1));
+        __global const float * xalpha_tab = alpha_tab;
+        __global const float * yalpha_tab = (__global const float *)(alpha_tab + (src_cols << 1));
+        __global const int * xofs_tab = ofs_tab;
+        __global const int * yofs_tab = (__global const int *)(ofs_tab + dst_cols + 1);
+
+        int xk0 = xofs_tab[dx], xk1 = xofs_tab[dx + 1];
+        int yk0 = yofs_tab[dy], yk1 = yofs_tab[dy + 1];
+
+        int sy0 = ymap_tab[yk0], sy1 = ymap_tab[yk1 - 1];
+        int sx0 = xmap_tab[xk0], sx1 = xmap_tab[xk1 - 1];
+
+        WTV sum = (WTV)(0), buf;
+        int src_index = mad24(sy0, src_step, src_offset);
+
+        for (int sy = sy0, yk = yk0; sy <= sy1; ++sy, src_index += src_step, ++yk)
+        {
+            WTV beta = (WTV)(yalpha_tab[yk]);
+            buf = (WTV)(0);
+
+            for (int sx = sx0, xk = xk0; sx <= sx1; ++sx, ++xk)
+            {
+                WTV alpha = (WTV)(xalpha_tab[xk]);
+                buf += convertToWTV(src[src_index + sx]) * alpha;
+            }
+            sum += buf * beta;
+        }
+
+        dst[dst_index] = convertToT(sum);
     }
 }
 

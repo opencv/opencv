@@ -280,9 +280,47 @@ namespace cv
         ////////////////////////////////////////////////////////////////////////////////////////////
         // resize
 
-        static void resize_gpu( const oclMat &src, oclMat &dst, double fx, double fy, int interpolation)
+        static void computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
+                                          float * const alpha_tab, int * const ofs_tab)
         {
-            float ifx = 1.f / fx, ify = 1.f / fy;
+            int k = 0, dx = 0;
+            for ( ; dx < dsize; dx++)
+            {
+                ofs_tab[dx] = k;
+
+                double fsx1 = dx * scale;
+                double fsx2 = fsx1 + scale;
+                double cellWidth = std::min(scale, ssize - fsx1);
+
+                int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
+
+                sx2 = std::min(sx2, ssize - 1);
+                sx1 = std::min(sx1, sx2);
+
+                if (sx1 - fsx1 > 1e-3)
+                {
+                    map_tab[k] = sx1 - 1;
+                    alpha_tab[k++] = (float)((sx1 - fsx1) / cellWidth);
+                }
+
+                for (int sx = sx1; sx < sx2; sx++)
+                {
+                    map_tab[k] = sx;
+                    alpha_tab[k++] = float(1.0 / cellWidth);
+                }
+
+                if (fsx2 - sx2 > 1e-3)
+                {
+                    map_tab[k] = sx2;
+                    alpha_tab[k++] = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
+                }
+            }
+            ofs_tab[dx] = k;
+        }
+
+        static void resize_gpu( const oclMat &src, oclMat &dst, double ifx, double ify, int interpolation)
+        {
+            float ifxf = (float)ifx, ifyf = (float)ify;
             int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
             int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
             int ocn = interpolation == INTER_LINEAR ? dst.oclchannels() : -1;
@@ -291,11 +329,19 @@ namespace cv
             const char * const interMap[] = { "NN", "LN", "CUBIC", "AREA", "LAN4" };
             std::string kernelName = std::string("resize") + interMap[interpolation];
 
-            const char * const typeMap[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "double" };
+            const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
             const char * const channelMap[] = { "" , "", "2", "4", "4" };
             std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[dst.depth()], channelMap[dst.oclchannels()]);
 
-            //TODO: improve this kernel
+            int wdepth = std::max(src.depth(), CV_32F);
+            if (interpolation != INTER_NEAREST)
+            {
+                buildOption += format(" -D WT=%s -D WTV=%s%s -D convertToWTV=convert_%s%s -D convertToT=convert_%s%s%s",
+                                      typeMap[wdepth], typeMap[wdepth], channelMap[dst.oclchannels()],
+                                      typeMap[wdepth], channelMap[dst.oclchannels()],
+                                      typeMap[src.depth()], channelMap[dst.oclchannels()], src.depth() <= CV_32S ? "_sat_rte" : "");
+            }
+
             size_t blkSizeX = 16, blkSizeY = 16;
             size_t glbSizeX;
             if (src.type() == CV_8UC1 && interpolation == INTER_LINEAR)
@@ -305,6 +351,28 @@ namespace cv
             }
             else
                 glbSizeX = dst.cols;
+
+            static oclMat alphaOcl, mapOcl, tabofsOcl;
+            if (interpolation == INTER_AREA)
+            {
+                Size ssize = src.size(), dsize = dst.size();
+                int xytab_size = (ssize.width + ssize.height) << 1;
+                int tabofs_size = dsize.height + dsize.width + 2;
+
+                AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
+                AutoBuffer<float> _xyalpha_tab(xytab_size);
+                int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
+                float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
+                int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+
+                computeResizeAreaTabs(ssize.width, dsize.width, ifx, xmap_tab, xalpha_tab, xofs_tab);
+                computeResizeAreaTabs(ssize.height, dsize.height, ify, ymap_tab, yalpha_tab, yofs_tab);
+
+                // loading precomputed arrays to GPU
+                alphaOcl = oclMat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab);
+                mapOcl = oclMat(1, xytab_size, CV_32SC1, (void *)_xymap_tab);
+                tabofsOcl = oclMat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab);
+            }
 
             size_t globalThreads[3] = { glbSizeX, dst.rows, 1 };
             size_t localThreads[3] = { blkSizeX, blkSizeY, 1 };
@@ -320,8 +388,24 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( make_pair(sizeof(cl_float), (void *)&ifx));
-            args.push_back( make_pair(sizeof(cl_float), (void *)&ify));
+
+            if (wdepth == CV_64F)
+            {
+                args.push_back( make_pair(sizeof(cl_double), (void *)&ifx));
+                args.push_back( make_pair(sizeof(cl_double), (void *)&ify));
+            }
+            else
+            {
+                args.push_back( make_pair(sizeof(cl_float), (void *)&ifxf));
+                args.push_back( make_pair(sizeof(cl_float), (void *)&ifyf));
+            }
+
+            if (interpolation == INTER_AREA)
+            {
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&tabofsOcl.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&mapOcl.data));
+                args.push_back( make_pair(sizeof(cl_mem), (void *)&alphaOcl.data));
+            }
 
             openCLExecuteKernel(src.clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args,
                                 ocn, depth, buildOption.c_str());
@@ -329,9 +413,14 @@ namespace cv
 
         void resize(const oclMat &src, oclMat &dst, Size dsize, double fx, double fy, int interpolation)
         {
+            if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
+            {
+                CV_Error(CV_OpenCLDoubleNotSupported, "Selected device does not support double");
+                return;
+            }
+
             CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3 || src.type() == CV_8UC4
                       || src.type() == CV_32FC1 || src.type() == CV_32FC3 || src.type() == CV_32FC4);
-            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST);
             CV_Assert(dsize.area() > 0 || (fx > 0 && fy > 0));
 
             if (dsize.area() == 0)
@@ -345,9 +434,13 @@ namespace cv
                 fy = (double)dsize.height / src.rows;
             }
 
+            double inv_fy = 1 / fy, inv_fx = 1 / fx;
+            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST ||
+                      (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1));
+
             dst.create(dsize, src.type());
 
-            resize_gpu( src, dst, fx, fy, interpolation);
+            resize_gpu( src, dst, inv_fx, inv_fy, interpolation);
         }
 
         ////////////////////////////////////////////////////////////////////////
