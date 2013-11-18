@@ -64,6 +64,8 @@ using namespace cv::ocl;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
+static ProgramEntry superres_btvl1 = cv::ocl::superres::superres_btvl1;
+
 namespace cv
 {
     namespace ocl

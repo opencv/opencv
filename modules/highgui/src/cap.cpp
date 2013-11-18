@@ -515,7 +515,7 @@ bool VideoCapture::grab()
     return cvGrabFrame(cap) != 0;
 }
 
-bool VideoCapture::retrieve(Mat& image, int channel)
+bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     IplImage* _img = cvRetrieveFrame(cap, channel);
     if( !_img )
@@ -533,7 +533,7 @@ bool VideoCapture::retrieve(Mat& image, int channel)
     return true;
 }
 
-bool VideoCapture::read(Mat& image)
+bool VideoCapture::read(OutputArray image)
 {
     if(grab())
         retrieve(image);
@@ -543,6 +543,12 @@ bool VideoCapture::read(Mat& image)
 }
 
 VideoCapture& VideoCapture::operator >> (Mat& image)
+{
+    read(image);
+    return *this;
+}
+
+VideoCapture& VideoCapture::operator >> (UMat& image)
 {
     read(image);
     return *this;

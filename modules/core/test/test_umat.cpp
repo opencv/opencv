@@ -91,11 +91,11 @@ bool CV_UMatTest::TestUMat()
 {
     try
     {
-        Mat a(100, 100, CV_16S), b;
+        Mat a(100, 100, CV_16SC2), b, c;
         randu(a, Scalar::all(-100), Scalar::all(100));
-        Rect roi(1, 3, 10, 20);
-        Mat ra(a, roi), rb;
-        UMat ua, ura;
+        Rect roi(1, 3, 5, 4);
+        Mat ra(a, roi), rb, rc, rc0;
+        UMat ua, ura, ub, urb, uc, urc;
         a.copyTo(ua);
         ua.copyTo(b);
         CHECK_DIFF(a, b);
@@ -112,6 +112,71 @@ bool CV_UMatTest::TestUMat()
         }
         ra.copyTo(rb);
         CHECK_DIFF(ra, rb);
+
+        b = a.clone();
+        ra = a(roi);
+        rb = b(roi);
+        randu(b, Scalar::all(-100), Scalar::all(100));
+        b.copyTo(ub);
+        urb = ub(roi);
+
+        /*std::cout << "==============================================\nbefore op (CPU):\n";
+        std::cout << "ra: " << ra << std::endl;
+        std::cout << "rb: " << rb << std::endl;*/
+
+        ra.copyTo(ura);
+        rb.copyTo(urb);
+        ra.release();
+        rb.release();
+        ura.copyTo(ra);
+        urb.copyTo(rb);
+
+        /*std::cout << "==============================================\nbefore op (GPU):\n";
+        std::cout << "ra: " << ra << std::endl;
+        std::cout << "rb: " << rb << std::endl;*/
+
+        cv::max(ra, rb, rc);
+        cv::max(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        /*std::cout << "==============================================\nafter op:\n";
+        std::cout << "rc: " << rc << std::endl;
+        std::cout << "rc0: " << rc0 << std::endl;*/
+
+        CHECK_DIFF(rc0, rc);
+
+        {
+        UMat tmp = rc0.getUMat(ACCESS_WRITE);
+        cv::max(ura, urb, tmp);
+        }
+        CHECK_DIFF(rc0, rc);
+
+        ura.copyTo(urc);
+        cv::max(urc, urb, urc);
+        urc.copyTo(rc0);
+        CHECK_DIFF(rc0, rc);
+
+        rc = ra ^ rb;
+        cv::bitwise_xor(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        /*std::cout << "==============================================\nafter op:\n";
+        std::cout << "ra: " << rc0 << std::endl;
+        std::cout << "rc: " << rc << std::endl;*/
+
+        CHECK_DIFF(rc0, rc);
+
+        rc = ra + rb;
+        cv::add(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        CHECK_DIFF(rc0, rc);
+
+        cv::subtract(ra, Scalar::all(5), rc);
+        cv::subtract(ura, Scalar::all(5), urc);
+        urc.copyTo(rc0);
+
+        CHECK_DIFF(rc0, rc);
     }
     catch (const test_excep& e)
     {
