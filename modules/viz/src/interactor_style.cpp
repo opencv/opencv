@@ -47,9 +47,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "interactor_style.h"
-
-using namespace cv;
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::Initialize()
@@ -78,11 +75,11 @@ void cv::viz::InteractorStyle::Initialize()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::InteractorStyle::saveScreenshot(const std::string &file)
+void cv::viz::InteractorStyle::saveScreenshot(const String &file)
 {
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
     wif_->SetInput(Interactor->GetRenderWindow());
-    wif_->Modified();      // Update the WindowToImageFilter
+    wif_->Modified(); // Update the WindowToImageFilter
     snapshot_writer_->Modified();
     snapshot_writer_->SetFileName(file.c_str());
     snapshot_writer_->Write();
@@ -117,30 +114,19 @@ void cv::viz::InteractorStyle::OnChar()
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
     if (Interactor->GetKeyCode() >= '0' && Interactor->GetKeyCode() <= '9')
         return;
-    std::string key(Interactor->GetKeySym());
-    if (key.find("XF86ZoomIn") != std::string::npos)
+
+    String key(Interactor->GetKeySym());
+    if (key.find("XF86ZoomIn") != String::npos)
         zoomIn();
-    else if (key.find("XF86ZoomOut") != std::string::npos)
+    else if (key.find("XF86ZoomOut") != String::npos)
         zoomOut();
 
     int keymod = false;
     switch (modifier_)
     {
-    case KB_MOD_ALT:
-    {
-        keymod = Interactor->GetAltKey();
-        break;
-    }
-    case KB_MOD_CTRL:
-    {
-        keymod = Interactor->GetControlKey();
-        break;
-    }
-    case KB_MOD_SHIFT:
-    {
-        keymod = Interactor->GetShiftKey();
-        break;
-    }
+    case KB_MOD_ALT:   keymod = Interactor->GetAltKey(); break;
+    case KB_MOD_CTRL:  keymod = Interactor->GetControlKey(); break;
+    case KB_MOD_SHIFT: keymod = Interactor->GetShiftKey(); break;
     }
 
     switch (Interactor->GetKeyCode())
@@ -194,10 +180,14 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+bool cv::viz::InteractorStyle::getAltKey() { return Interactor->GetAltKey() != 0; }
+bool cv::viz::InteractorStyle::getShiftKey() { return Interactor->GetShiftKey()!= 0; }
+bool cv::viz::InteractorStyle::getControlKey() { return Interactor->GetControlKey()!= 0; }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 void
 cv::viz::InteractorStyle::OnKeyDown()
 {
-
     CV_Assert("Interactor style not initialized. Please call Initialize() before continuing" && init_);
     CV_Assert("No renderer given! Use SetRendererCollection() before continuing." && renderer_);
 
@@ -216,9 +206,9 @@ cv::viz::InteractorStyle::OnKeyDown()
 
 
     // Get the status of special keys (Cltr+Alt+Shift)
-    bool shift = Interactor->GetShiftKey();
-    bool ctrl  = Interactor->GetControlKey();
-    bool alt   = Interactor->GetAltKey();
+    bool shift = getShiftKey();
+    bool ctrl  = getControlKey();
+    bool alt   = getAltKey();
 
     bool keymod = false;
     switch (modifier_)
@@ -269,42 +259,40 @@ cv::viz::InteractorStyle::OnKeyDown()
         vtkSmartPointer<vtkActorCollection> ac = CurrentRenderer->GetActors();
         vtkCollectionSimpleIterator ait;
         for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
-        {
             for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
             {
                 vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
                 apart->GetProperty()->SetRepresentationToPoints();
             }
-        }
         break;
     }
         // Save a PNG snapshot with the current screen
     case 'j': case 'J':
     {
-        char cam_fn[80], snapshot_fn[80];
-        unsigned t = static_cast<unsigned>(time(0));
-        sprintf(snapshot_fn, "screenshot-%d.png" , t);
-        saveScreenshot(snapshot_fn);
+        unsigned int t = static_cast<unsigned int>(time(0));
+        String png_file = cv::format("screenshot-%d.png", t);
+        String cam_file = cv::format("screenshot-%d.cam", t);
 
-        sprintf(cam_fn, "screenshot-%d.cam", t);
-        ofstream ofs_cam;
-        ofs_cam.open(cam_fn);
         vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
-        double clip[2], focal[3], pos[3], view[3];
-        cam->GetClippingRange(clip);
-        cam->GetFocalPoint(focal);
-        cam->GetPosition(pos);
-        cam->GetViewUp(view);
+        Vec2d clip;
+        Vec3d focal, pos, view;
+        cam->GetClippingRange(clip.val);
+        cam->GetFocalPoint(focal.val);
+        cam->GetPosition(pos.val);
+        cam->GetViewUp(view.val);
+        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
+        Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
+        double angle = cam->GetViewAngle() / 180.0 * CV_PI;
 
-        int *win_pos = Interactor->GetRenderWindow()->GetPosition();
-        int *win_size = Interactor->GetRenderWindow()->GetSize();
-        ofs_cam << clip[0]  << "," << clip[1]  << "/" << focal[0] << "," << focal[1] << "," << focal[2] << "/" <<
-                               pos[0]   << "," << pos[1]   << "," << pos[2]   << "/" << view[0]  << "," << view[1]  << "," << view[2] << "/" <<
-                               cam->GetViewAngle() / 180.0 * CV_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
-                            << endl;
+        String data = cv::format("%f,%f/%f,%f,%f/%f,%f,%f/%f,%f,%f/%f/%d,%d/%d,%d", clip[0],clip[1], focal[0],focal[1],focal[2],
+                 pos[0],pos[1],pos[2], view[0],view[1], view[2], angle , win_size[0],win_size[1], win_pos[0], win_pos[1]);
+
+        saveScreenshot(png_file);
+        ofstream ofs_cam(cam_file.c_str());
+        ofs_cam << data.c_str() << endl;
         ofs_cam.close();
 
-        std::cout << "Screenshot (" << snapshot_fn << ") and camera information (" << cam_fn << ") successfully captured." << std::endl;
+        cout << "Screenshot (" << png_file.c_str() << ") and camera information (" << cam_file.c_str() << ") successfully captured." << endl;
         break;
     }
         // display current camera settings/parameters
@@ -349,7 +337,6 @@ cv::viz::InteractorStyle::OnKeyDown()
             vtkSmartPointer<vtkActorCollection> ac = CurrentRenderer->GetActors();
             vtkCollectionSimpleIterator ait;
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
-            {
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
                     vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
@@ -357,7 +344,6 @@ cv::viz::InteractorStyle::OnKeyDown()
                     if (psize < 63.0f)
                         apart->GetProperty()->SetPointSize(psize + 1.0f);
                 }
-            }
         }
         break;
     }
@@ -370,7 +356,6 @@ cv::viz::InteractorStyle::OnKeyDown()
             vtkSmartPointer<vtkActorCollection> ac = CurrentRenderer->GetActors();
             vtkCollectionSimpleIterator ait;
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
-            {
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
                     vtkActor* apart = static_cast<vtkActor*>(path->GetLastNode()->GetViewProp());
@@ -378,7 +363,6 @@ cv::viz::InteractorStyle::OnKeyDown()
                     if (psize > 1.0f)
                         apart->GetProperty()->SetPointSize(psize - 1.0f);
                 }
-            }
         }
         break;
     }
@@ -455,9 +439,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     case 'o': case 'O':
     {
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
-        int flag = cam->GetParallelProjection();
-        cam->SetParallelProjection(!flag);
-
+        cam->SetParallelProjection(!cam->GetParallelProjection());
         CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->Render();
         break;
@@ -494,18 +476,14 @@ cv::viz::InteractorStyle::OnKeyDown()
         // if a valid transformation was found, use it otherwise fall back to default view point.
         if (found_transformation)
         {
-            vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
-            cam->SetPosition(actor->GetUserMatrix()->GetElement(0, 3),
-                             actor->GetUserMatrix()->GetElement(1, 3),
-                             actor->GetUserMatrix()->GetElement(2, 3));
+            const vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
 
-            cam->SetFocalPoint(actor->GetUserMatrix()->GetElement(0, 3) - actor->GetUserMatrix()->GetElement(0, 2),
-                               actor->GetUserMatrix()->GetElement(1, 3) - actor->GetUserMatrix()->GetElement(1, 2),
-                               actor->GetUserMatrix()->GetElement(2, 3) - actor->GetUserMatrix()->GetElement(2, 2));
+            cam->SetFocalPoint(m->GetElement(0, 3) - m->GetElement(0, 2),
+                               m->GetElement(1, 3) - m->GetElement(1, 2),
+                               m->GetElement(2, 3) - m->GetElement(2, 2));
 
-            cam->SetViewUp(actor->GetUserMatrix()->GetElement(0, 1),
-                           actor->GetUserMatrix()->GetElement(1, 1),
-                           actor->GetUserMatrix()->GetElement(2, 1));
+            cam->SetViewUp  (m->GetElement(0, 1), m->GetElement(1, 1), m->GetElement(2, 1));
+            cam->SetPosition(m->GetElement(0, 3), m->GetElement(1, 3), m->GetElement(2, 3));
         }
         else
         {
@@ -538,7 +516,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     }
     }
 
-    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -550,7 +528,7 @@ cv::viz::InteractorStyle::OnKeyDown()
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnKeyUp()
 {
-    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -562,7 +540,7 @@ void cv::viz::InteractorStyle::OnKeyUp()
 void cv::viz::InteractorStyle::OnMouseMove()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMouseMove();
@@ -573,7 +551,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::LeftButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonDown();
@@ -583,7 +561,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 void cv::viz::InteractorStyle::OnLeftButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonUp();
@@ -595,7 +573,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::MiddleButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonDown();
@@ -605,7 +583,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
 void cv::viz::InteractorStyle::OnMiddleButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonUp();
@@ -617,7 +595,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::RightButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(type, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonDown();
@@ -627,7 +605,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
 void cv::viz::InteractorStyle::OnRightButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonUp();
@@ -637,7 +615,7 @@ void cv::viz::InteractorStyle::OnRightButtonUp()
 void cv::viz::InteractorStyle::OnMouseWheelForward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
@@ -669,7 +647,7 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 void cv::viz::InteractorStyle::OnMouseWheelBackward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, Interactor->GetAltKey(), Interactor->GetControlKey(), Interactor->GetShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
@@ -707,11 +685,8 @@ void cv::viz::InteractorStyle::OnTimer()
     Interactor->Render();
 }
 
-namespace cv
+namespace cv { namespace viz
 {
-    namespace viz
-    {
-        //Standard VTK macro for *New()
-        vtkStandardNewMacro(InteractorStyle)
-    }
-}
+    //Standard VTK macro for *New()
+    vtkStandardNewMacro(InteractorStyle)
+}}

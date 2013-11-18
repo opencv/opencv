@@ -47,10 +47,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "viz3d_impl.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include <vtkRenderWindowInteractor.h>
 
 #if 1 || !defined __APPLE__
 vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
@@ -61,9 +57,7 @@ vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
-    :  style_(vtkSmartPointer<cv::viz::InteractorStyle>::New())
-    , widget_actor_map_(new WidgetActorMap)
-    , s_lastDone_(0.0)
+    :  style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()) , widget_actor_map_(new WidgetActorMap), s_lastDone_(0.0)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
 
@@ -128,7 +122,8 @@ cv::viz::Viz3d::VizImpl::~VizImpl()
 {
     if (interactor_)
         interactor_->DestroyTimer(timer_id_);
-    if (renderer_) renderer_->Clear();
+    if (renderer_)
+        renderer_->Clear();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -395,7 +390,7 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
-    double aspect_ratio = static_cast<double>(window_size.width) / static_cast<double>(window_size.height);
+    double aspect_ratio = window_size.width / (double)window_size.height;
 
     Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
     Camera camera(proj_matrix, window_size);
