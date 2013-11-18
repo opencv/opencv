@@ -1638,8 +1638,9 @@ static void arithmetic_pow_run(const oclMat &src, double p, oclMat &dst, string 
     size_t localThreads[3]  = { 64, 4, 1 };
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
+    const char * const typeStr = depth == CV_32F ? "float" : "double";
     const char * const channelMap[] = { "", "", "2", "4", "4" };
-    std::string buildOptions = format("-D T=%s%s", depth == CV_32F ? "float" : "double", channelMap[channels]);
+    std::string buildOptions = format("-D VT=%s%s -D T=%s", typeStr, channelMap[channels], typeStr);
 
     int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
     int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
@@ -1655,7 +1656,7 @@ static void arithmetic_pow_run(const oclMat &src, double p, oclMat &dst, string 
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
 
     float pf = static_cast<float>(p);
-    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
+    if(src.depth() == CV_32F)
         args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
     else
         args.push_back( make_pair( sizeof(cl_double), (void *)&p ));
