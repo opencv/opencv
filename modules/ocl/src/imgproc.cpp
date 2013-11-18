@@ -318,28 +318,46 @@ namespace cv
             ofs_tab[dx] = k;
         }
 
+        static void computeResizeAreaFastTabs(int * dmap_tab, int * smap_tab, int scale, int dcols, int scol)
+        {
+            for (int i = 0; i < dcols; ++i)
+                dmap_tab[i] = scale * i;
+
+            for (int i = 0, size = dcols * scale; i < size; ++i)
+                smap_tab[i] = std::min(scol - 1, i);
+        }
+
         static void resize_gpu( const oclMat &src, oclMat &dst, double ifx, double ify, int interpolation)
         {
             float ifxf = (float)ifx, ifyf = (float)ify;
             int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
             int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
-            int ocn = interpolation == INTER_LINEAR ? dst.oclchannels() : -1;
-            int depth = interpolation == INTER_LINEAR ? dst.depth() : -1;
+            int ocn = dst.oclchannels(), depth = dst.depth();
 
             const char * const interMap[] = { "NN", "LN", "CUBIC", "AREA", "LAN4" };
             std::string kernelName = std::string("resize") + interMap[interpolation];
 
             const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
             const char * const channelMap[] = { "" , "", "2", "4", "4" };
-            std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[dst.depth()], channelMap[dst.oclchannels()]);
+            std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[depth], channelMap[ocn]);
 
             int wdepth = std::max(src.depth(), CV_32F);
+
+            // check if fx, fy is integer and then we have inter area fast mode
+            int iscale_x = saturate_cast<int>(ifx);
+            int iscale_y = saturate_cast<int>(ify);
+
+            bool is_area_fast = std::abs(ifx - iscale_x) < DBL_EPSILON &&
+                std::abs(ify - iscale_y) < DBL_EPSILON;
+            if (is_area_fast)
+                wdepth = std::max(src.depth(), CV_32S);
+
             if (interpolation != INTER_NEAREST)
             {
                 buildOption += format(" -D WT=%s -D WTV=%s%s -D convertToWTV=convert_%s%s -D convertToT=convert_%s%s%s",
-                                      typeMap[wdepth], typeMap[wdepth], channelMap[dst.oclchannels()],
-                                      typeMap[wdepth], channelMap[dst.oclchannels()],
-                                      typeMap[src.depth()], channelMap[dst.oclchannels()], src.depth() <= CV_32S ? "_sat_rte" : "");
+                                      typeMap[wdepth], typeMap[wdepth], channelMap[ocn],
+                                      typeMap[wdepth], channelMap[ocn],
+                                      typeMap[src.depth()], channelMap[ocn], src.depth() <= CV_32S ? "_sat_rte" : "");
             }
 
             size_t blkSizeX = 16, blkSizeY = 16;
@@ -352,26 +370,48 @@ namespace cv
             else
                 glbSizeX = dst.cols;
 
-            static oclMat alphaOcl, mapOcl, tabofsOcl;
+            oclMat alphaOcl, mapOcl, tabofsOcl;
             if (interpolation == INTER_AREA)
             {
-                Size ssize = src.size(), dsize = dst.size();
-                int xytab_size = (ssize.width + ssize.height) << 1;
-                int tabofs_size = dsize.height + dsize.width + 2;
+                if (is_area_fast)
+                {
+                    kernelName += "_FAST";
+                    int wdepth2 = std::max(CV_32F, src.depth());
+                    buildOption += format(" -D WT2V=%s%s -D convertToWT2V=convert_%s%s -D AREA_FAST -D XSCALE=%d -D YSCALE=%d -D SCALE=%f",
+                                          typeMap[wdepth2], channelMap[ocn], typeMap[wdepth2], channelMap[ocn],
+                                          iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
 
-                AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
-                AutoBuffer<float> _xyalpha_tab(xytab_size);
-                int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
-                float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
-                int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+                    int smap_tab_size = dst.cols * iscale_x + dst.rows * iscale_y;
+                    AutoBuffer<int> dmap_tab(dst.cols + dst.rows), smap_tab(smap_tab_size);
+                    int * dxmap_tab = dmap_tab, * dymap_tab = dxmap_tab + dst.cols;
+                    int * sxmap_tab = smap_tab, * symap_tab = smap_tab + dst.cols * iscale_y;
 
-                computeResizeAreaTabs(ssize.width, dsize.width, ifx, xmap_tab, xalpha_tab, xofs_tab);
-                computeResizeAreaTabs(ssize.height, dsize.height, ify, ymap_tab, yalpha_tab, yofs_tab);
+                    computeResizeAreaFastTabs(dxmap_tab, sxmap_tab, iscale_x, dst.cols, src.cols);
+                    computeResizeAreaFastTabs(dymap_tab, symap_tab, iscale_y, dst.rows, src.rows);
 
-                // loading precomputed arrays to GPU
-                alphaOcl = oclMat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab);
-                mapOcl = oclMat(1, xytab_size, CV_32SC1, (void *)_xymap_tab);
-                tabofsOcl = oclMat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab);
+                    tabofsOcl = oclMat(1, dst.cols + dst.rows, CV_32SC1, (void *)dmap_tab);
+                    mapOcl = oclMat(1, smap_tab_size, CV_32SC1, (void *)smap_tab);
+                }
+                else
+                {
+                    Size ssize = src.size(), dsize = dst.size();
+                    int xytab_size = (ssize.width + ssize.height) << 1;
+                    int tabofs_size = dsize.height + dsize.width + 2;
+
+                    AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
+                    AutoBuffer<float> _xyalpha_tab(xytab_size);
+                    int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
+                    float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
+                    int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+
+                    computeResizeAreaTabs(ssize.width, dsize.width, ifx, xmap_tab, xalpha_tab, xofs_tab);
+                    computeResizeAreaTabs(ssize.height, dsize.height, ify, ymap_tab, yalpha_tab, yofs_tab);
+
+                    // loading precomputed arrays to GPU
+                    alphaOcl = oclMat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab);
+                    mapOcl = oclMat(1, xytab_size, CV_32SC1, (void *)_xymap_tab);
+                    tabofsOcl = oclMat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab);
+                }
             }
 
             size_t globalThreads[3] = { glbSizeX, dst.rows, 1 };
@@ -400,12 +440,18 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_float), (void *)&ifyf));
             }
 
-            if (interpolation == INTER_AREA)
-            {
+            // precomputed tabs
+            if (!tabofsOcl.empty())
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&tabofsOcl.data));
+
+            if (!mapOcl.empty())
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&mapOcl.data));
+
+            if (!alphaOcl.empty())
                 args.push_back( make_pair(sizeof(cl_mem), (void *)&alphaOcl.data));
-            }
+
+            ocn = interpolation == INTER_LINEAR ? ocn : -1;
+            depth = interpolation == INTER_LINEAR ? depth : -1;
 
             openCLExecuteKernel(src.clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args,
                                 ocn, depth, buildOption.c_str());

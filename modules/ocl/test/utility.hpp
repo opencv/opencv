@@ -52,7 +52,7 @@ extern int LOOP_TIMES;
 
 namespace cvtest {
 
-void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
+void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
 
 cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi);
 cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi);

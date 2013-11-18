@@ -191,7 +191,7 @@ typedef TestBaseWithParam<resizeAreaParams> resizeAreaFixture;
 PERF_TEST_P(resizeAreaFixture, resize,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
                                OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
-                               ::testing::Values(0.6, 0.3)))
+                               ::testing::Values(0.3, 0.5, 0.6)))
 {
     const resizeAreaParams params = GetParam();
     const Size srcSize = get<0>(params);
