@@ -49,9 +49,6 @@
 #ifndef __OPENCV_VIZ_VIZ3D_IMPL_HPP__
 #define __OPENCV_VIZ_VIZ3D_IMPL_HPP__
 
-#include <opencv2/viz.hpp>
-#include "interactor_style.h"
-
 struct cv::viz::Viz3d::VizImpl
 {
 public:
@@ -127,10 +124,7 @@ private:
 
     struct ExitMainLoopTimerCallback : public vtkCommand
     {
-        static ExitMainLoopTimerCallback* New()
-        {
-            return new ExitMainLoopTimerCallback;
-        }
+        static ExitMainLoopTimerCallback* New() { return new ExitMainLoopTimerCallback; }
         virtual void Execute(vtkObject* vtkNotUsed(caller), unsigned long event_id, void* call_data)
         {
             if (event_id != vtkCommand::TimerEvent)
@@ -149,10 +143,7 @@ private:
 
     struct ExitCallback : public vtkCommand
     {
-        static ExitCallback* New()
-        {
-            return new ExitCallback;
-        }
+        static ExitCallback* New() { return new ExitCallback; }
         virtual void Execute(vtkObject*, unsigned long event_id, void*)
         {
             if (event_id == vtkCommand::ExitEvent)
@@ -191,21 +182,7 @@ private:
 
     bool removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor);
 
-    /** \brief Internal method. Creates a vtk actor from a vtk polydata object.
-          * \param[in] data the vtk polydata object to create an actor for
-          * \param[out] actor the resultant vtk actor object
-          * \param[in] use_scalars set scalar properties to the mapper if it exists in the data. Default: true.
-          */
     void createActorFromVTKDataSet(const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars = true);
-
-    /** \brief Updates a set of cells (vtkIdTypeArray) if the number of points in a cloud changes
-          * \param[out] cells the vtkIdTypeArray object (set of cells) to update
-          * \param[out] initcells a previously saved set of cells. If the number of points in the current cloud is
-          * higher than the number of cells in \a cells, and initcells contains enough data, then a copy from it
-          * will be made instead of regenerating the entire array.
-          * \param[in] nr_points the number of points in the new cloud. This dictates how many cells we need to
-          * generate
-          */
     void updateCells(vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
 };
 

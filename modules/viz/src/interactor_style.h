@@ -49,8 +49,6 @@
 #ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
 #define __OPENCV_VIZ_INTERACTOR_STYLE_H__
 
-#include <opencv2/viz/types.hpp>
-
 namespace cv
 {
     namespace viz
@@ -59,16 +57,9 @@ namespace cv
         {
         public:
 
-            enum KeyboardModifier
-            {
-                KB_MOD_ALT,
-                KB_MOD_CTRL,
-                KB_MOD_SHIFT
-            };
+            enum KeyboardModifier { KB_MOD_ALT, KB_MOD_CTRL, KB_MOD_SHIFT };
 
             static InteractorStyle *New();
-
-            InteractorStyle() {}
             virtual ~InteractorStyle() {}
 
             // this macro defines Superclass, the isA functionality and the safe downcast method
@@ -77,32 +68,24 @@ namespace cv
             /** \brief Initialization routine. Must be called before anything else. */
             virtual void Initialize();
 
-            inline void setWidgetActorMap(const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
+            void setWidgetActorMap(const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
             void setRenderer(vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
-            void saveScreenshot(const std::string &file);
+            void saveScreenshot(const String &file);
 
             /** \brief Change the default keyboard modified from ALT to a different special key.*/
             inline void setKeyboardModifier(const KeyboardModifier &modifier) { modifier_ = modifier; }
 
-        protected:
+        private:
             /** \brief Set to true after initialization is complete. */
             bool init_;
 
-            /** \brief Collection of vtkRenderers stored internally. */
             vtkSmartPointer<vtkRenderer> renderer_;
+            Ptr<WidgetActorMap> widget_actor_map_;
 
-            /** \brief Actor map stored internally. */
-            cv::Ptr<WidgetActorMap> widget_actor_map_;
-
-            /** \brief The current window width/height. */
             Vec2i win_size_;
-
-            /** \brief The current window position x/y. */
             Vec2i win_pos_;
-
-            /** \brief The maximum resizeable window width/height. */
             Vec2i max_win_size_;
 
             /** \brief A PNG writer for screenshot captures. */
@@ -145,6 +128,10 @@ namespace cv
 
             void (*mouseCallback_)(const MouseEvent&, void*);
             void *mouse_callback_cookie_;
+
+            bool getAltKey();
+            bool getControlKey();
+            bool getShiftKey();
         };
     }
 }

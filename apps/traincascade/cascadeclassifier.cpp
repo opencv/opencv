@@ -4,6 +4,7 @@
 #include <queue>
 
 using namespace std;
+using namespace cv;
 
 static const char* stageTypes[] = { CC_BOOST };
 static const char* featureTypes[] = { CC_HAAR, CC_LBP, CC_HOG };

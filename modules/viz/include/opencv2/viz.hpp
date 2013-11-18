@@ -108,10 +108,9 @@ namespace cv
             void remove(const String &window_name);
 
             static VizAccessor * instance_;
-            static bool is_instantiated_;
 
             struct VizAccessorImpl;
-            static VizAccessorImpl * impl_;
+            VizAccessorImpl * impl_;
 
             friend class Viz3d;
         };
