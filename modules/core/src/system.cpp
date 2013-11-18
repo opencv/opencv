@@ -58,7 +58,7 @@
 #endif
 #undef small
 #undef min
-#undef max
+#undef mxa
 #undef abs
 #include <tchar.h>
 #if defined _MSC_VER
@@ -87,10 +87,25 @@
 
 #ifdef HAVE_WINRT
 #include <wrl/client.h>
+#include <windows.storage.h>
+#pragma comment(lib, "runtimeobject.lib")
 
 std::wstring GetTempPathWinRT()
 {
-    return std::wstring(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path->Data());
+	  Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationDataStatics> appdataFactory;
+  	Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationData> appdataRef;
+  	Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageFolder> storagefolderRef;
+  	Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageItem> storageitemRef;
+	  HSTRING str;
+  	PCWSTR lpStr;
+  	if (FAILED(WindowsCreateString(RuntimeClass_Windows_Storage_ApplicationData, (UINT32)wcslen(RuntimeClass_Windows_Storage_ApplicationData), &str))) return std::wstring();
+  	if (FAILED(RoGetActivationFactory(str, IID_PPV_ARGS(appdataFactory.ReleaseAndGetAddressOf())))) return std::wstring();
+  	if (FAILED(WindowsDeleteString(str))) return std::wstring();
+	  if (FAILED(appdataFactory->get_Current(appdataRef.ReleaseAndGetAddressOf()))) return std::wstring();
+	  if (FAILED(appdataRef->get_TemporaryFolder(storagefolderRef.ReleaseAndGetAddressOf()))) return std::wstring();
+	  if (FAILED(storagefolderRef.As(&storageitemRef))) return std::wstring();
+	  if (FAILED(storageitemRef->get_Path(&str))) return std::wstring();
+  	return std::wstring((lpStr = WindowsGetStringRawBuffer(str, NULL), WindowsDeleteString(str), lpStr));
 }
 
 std::wstring GetTempFileNameWinRT(std::wstring prefix)
