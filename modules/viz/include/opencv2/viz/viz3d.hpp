@@ -64,7 +64,6 @@ namespace cv
         class CV_EXPORTS Viz3d
         {
         public:
-            typedef cv::Ptr<Viz3d> Ptr;
             typedef void (*KeyboardCallback)(const KeyboardEvent&, void*);
             typedef void (*MouseCallback)(const MouseEvent&, void*);
 
