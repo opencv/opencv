@@ -1075,7 +1075,9 @@ template<typename _Tp> template<int n> inline Mat_<_Tp>::operator Vec<typename D
 template<typename _Tp> template<int m, int n> inline Mat_<_Tp>::operator Matx<typename DataType<_Tp>::channel_type, m, n>() const
 {
     CV_Assert(n % DataType<_Tp>::channels == 0);
-    return this->Mat::operator Matx<typename DataType<_Tp>::channel_type, m, n>();
+
+    Matx<typename DataType<_Tp>::channel_type, m, n> res = this->Mat::operator Matx<typename DataType<_Tp>::channel_type, m, n>();
+    return res;
 }
 
 template<typename T1, typename T2, typename Op> inline void
