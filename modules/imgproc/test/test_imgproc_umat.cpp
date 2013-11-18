@@ -66,6 +66,7 @@ protected:
         resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR);
         equalizeHist(usmallimg, uresult);
 
+#if 0
         imshow("orig", uimg);
         imshow("small", usmallimg);
         imshow("equalized gray", uresult);
@@ -73,7 +74,7 @@ protected:
         destroyWindow("orig");
         destroyWindow("small");
         destroyWindow("equalized gray");
-
+#endif
         ts->set_failed_test_info(cvtest::TS::OK);
     }
 };
