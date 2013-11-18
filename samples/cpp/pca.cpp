@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 
     // init highgui window
     string winName = "Reconstruction | press 'q' to quit";
-    namedWindow(winName, CV_WINDOW_NORMAL);
+    namedWindow(winName, WINDOW_NORMAL);
 
     // params struct to pass to the trackbar handler
     params p;

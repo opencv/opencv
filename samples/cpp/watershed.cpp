@@ -58,8 +58,8 @@ int main( int argc, char** argv )
     namedWindow( "image", 1 );
 
     img0.copyTo(img);
-    cvtColor(img, markerMask, CV_BGR2GRAY);
-    cvtColor(markerMask, imgGray, CV_GRAY2BGR);
+    cvtColor(img, markerMask, COLOR_BGR2GRAY);
+    cvtColor(markerMask, imgGray, COLOR_GRAY2BGR);
     markerMask = Scalar::all(0);
     imshow( "image", img );
     setMouseCallback( "image", onMouse, 0 );

@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-const Scalar WHITE_COLOR = CV_RGB(255,255,255);
+const Scalar WHITE_COLOR = Scalar(255,255,255);
 const string winName = "points";
 const int testStep = 5;
 
@@ -69,15 +69,15 @@ static void on_mouse( int event, int x, int y, int /*flags*/, void* )
         // put the text
         stringstream text;
         text << "current class " << classColors.size()-1;
-        putText( img, text.str(), Point(10,25), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText( img, text.str(), Point(10,25), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         text.str("");
         text << "total classes " << classColors.size();
-        putText( img, text.str(), Point(10,50), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText( img, text.str(), Point(10,50), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         text.str("");
         text << "total points " << trainedPoints.size();
-        putText(img, text.str(), cvPoint(10,75), CV_FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
+        putText(img, text.str(), Point(10,75), FONT_HERSHEY_SIMPLEX, 0.8f, WHITE_COLOR, 2 );
 
         // draw points
         for( size_t i = 0; i < trainedPoints.size(); i++ )
@@ -178,7 +178,7 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     for( int i = 0; i < svmClassifier.get_support_vector_count(); i++ )
     {
         const float* supportVector = svmClassifier.get_support_vector(i);
-        circle( imgDst, Point(supportVector[0],supportVector[1]), 5, CV_RGB(255,255,255), -1 );
+        circle( imgDst, Point(supportVector[0],supportVector[1]), 5, Scalar(255,255,255), -1 );
     }
 
 }
@@ -526,7 +526,7 @@ int main()
         {
 #if _NBC_
             find_decision_boundary_NBC();
-            cvNamedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
+            namedWindow( "NormalBayesClassifier", WINDOW_AUTOSIZE );
             imshow( "NormalBayesClassifier", imgDst );
 #endif
 #if _KNN_
@@ -560,7 +560,7 @@ int main()
 
             params.C = 10;
             find_decision_boundary_SVM( params );
-            cvNamedWindow( "classificationSVM2", WINDOW_AUTOSIZE );
+            namedWindow( "classificationSVM2", WINDOW_AUTOSIZE );
             imshow( "classificationSVM2", imgDst );
 #endif
 
