@@ -49,16 +49,13 @@
 #elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-#define F double
-#else
-#define F float
 #endif
 
 /************************************** pow **************************************/
 
-__kernel void arithm_pow(__global T * src, int src_step, int src_offset,
-                         __global T * dst, int dst_step, int dst_offset,
-                         int rows, int cols, F p)
+__kernel void arithm_pow(__global VT * src, int src_step, int src_offset,
+                         __global VT * dst, int dst_step, int dst_offset,
+                         int rows, int cols, T p)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -68,8 +65,8 @@ __kernel void arithm_pow(__global T * src, int src_step, int src_offset,
         int src_index = mad24(y, src_step, x + src_offset);
         int dst_index = mad24(y, dst_step, x + dst_offset);
 
-        T src_data = src[src_index];
-        T tmp = src_data > 0 ? exp(p * log(src_data)) : (src_data == 0 ? 0 : exp(p * log(fabs(src_data))));
+        VT src_data = src[src_index];
+        VT tmp = src_data > 0 ? exp(p * log(src_data)) : (src_data == 0 ? 0 : exp(p * log(fabs(src_data))));
 
         dst[dst_index] = tmp;
     }
