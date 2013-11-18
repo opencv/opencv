@@ -271,7 +271,7 @@ int main( int argc, char** argv )
             {
                 vector<Point2f> ptvec;
                 imageSize = view.size();
-                cvtColor(view, viewGray, CV_BGR2GRAY);
+                cvtColor(view, viewGray, COLOR_BGR2GRAY);
                 bool found = findChessboardCorners( view, boardSize, ptvec, CV_CALIB_CB_ADAPTIVE_THRESH );
 
                 drawChessboardCorners( view, boardSize, Mat(ptvec), found );

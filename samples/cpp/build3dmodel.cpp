@@ -418,7 +418,7 @@ static void build3dmodel( const Ptr<FeatureDetector>& detector,
     for( size_t i = 0; i < nimages; i++ )
     {
         Mat img = imread(imageList[i], 1), gray;
-        cvtColor(img, gray, CV_BGR2GRAY);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
 
         vector<KeyPoint> keypoints;
         detector->detect(gray, keypoints);

@@ -113,7 +113,7 @@ int main( int argc, const char** argv )
 
         if( !paused )
         {
-            cvtColor(image, hsv, CV_BGR2HSV);
+            cvtColor(image, hsv, COLOR_BGR2HSV);
 
             if( trackObject )
             {
@@ -163,7 +163,7 @@ int main( int argc, const char** argv )
                 }
 
                 if( backprojMode )
-                    cvtColor( backproj, image, CV_GRAY2BGR );
+                    cvtColor( backproj, image, COLOR_GRAY2BGR );
                 ellipse( image, trackBox, Scalar(0,0,255), 3, CV_AA );
             }
         }

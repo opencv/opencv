@@ -118,7 +118,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
             {
                 cout << filename << endl;
                 Mat cimg, cimg1;
-                cvtColor(img, cimg, CV_GRAY2BGR);
+                cvtColor(img, cimg, COLOR_GRAY2BGR);
                 drawChessboardCorners(cimg, boardSize, corners, found);
                 double sf = 640./MAX(img.rows, img.cols);
                 resize(cimg, cimg1, Size(), sf, sf);
@@ -302,7 +302,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, bool useCalibrated=
         {
             Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
             remap(img, rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
-            cvtColor(rimg, cimg, CV_GRAY2BGR);
+            cvtColor(rimg, cimg, COLOR_GRAY2BGR);
             Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
             resize(cimg, canvasPart, canvasPart.size(), 0, 0, CV_INTER_AREA);
             if( useCalibrated )
