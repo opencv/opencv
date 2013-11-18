@@ -159,14 +159,14 @@ public:
     CV_WRAP virtual bool empty() const;
     CV_WRAP bool load( const String& filename );
     virtual bool read( const FileNode& node );
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    double scaleFactor = 1.1,
                                    int minNeighbors = 3, int flags = 0,
                                    Size minSize = Size(),
                                    Size maxSize = Size() );
 
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& numDetections,
                                    double scaleFactor=1.1,
@@ -174,7 +174,7 @@ public:
                                    Size minSize=Size(),
                                    Size maxSize=Size() );
 
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& rejectLevels,
                                    CV_OUT std::vector<double>& levelWeights,

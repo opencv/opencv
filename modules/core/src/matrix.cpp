@@ -1436,6 +1436,181 @@ Size _InputArray::size(int i) const
     }
 }
 
+
+int _InputArray::sizend(int* sz, int i) const
+{
+    int j, d=0, k = kind();
+
+    if( k == NONE )
+        ;
+    else if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        const Mat& m = *(const Mat*)obj;
+        d = m.dims;
+        if(sz)
+            for(j = 0; j < d; j++)
+                sz[j] = m.size.p[j];
+    }
+    else if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        const UMat& m = *(const UMat*)obj;
+        d = m.dims;
+        if(sz)
+            for(j = 0; j < d; j++)
+                sz[j] = m.size.p[j];
+    }
+    else if( k == STD_VECTOR_MAT && i >= 0 )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert( i < (int)vv.size() );
+        const Mat& m = vv[i];
+        d = m.dims;
+        if(sz)
+            for(j = 0; j < d; j++)
+                sz[j] = m.size.p[j];
+    }
+    else if( k == STD_VECTOR_UMAT && i >= 0 )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert( i < (int)vv.size() );
+        const UMat& m = vv[i];
+        d = m.dims;
+        if(sz)
+            for(j = 0; j < d; j++)
+                sz[j] = m.size.p[j];
+    }
+    else
+    {
+        Size sz2d = size(i);
+        d = 2;
+        if(sz)
+        {
+            sz[0] = sz2d.height;
+            sz[1] = sz2d.width;
+        }
+    }
+
+    return d;
+}
+
+
+bool _InputArray::sameSize(const _InputArray& arr) const
+{
+    int k1 = kind(), k2 = arr.kind();
+    Size sz1;
+
+    if( k1 == MAT )
+    {
+        const Mat* m = ((const Mat*)obj);
+        if( k2 == MAT )
+            return m->size == ((const Mat*)arr.obj)->size;
+        if( k2 == UMAT )
+            return m->size == ((const UMat*)arr.obj)->size;
+        if( m->dims > 2 )
+            return false;
+        sz1 = m->size();
+    }
+    else if( k1 == UMAT )
+    {
+        const UMat* m = ((const UMat*)obj);
+        if( k2 == MAT )
+            return m->size == ((const Mat*)arr.obj)->size;
+        if( k2 == UMAT )
+            return m->size == ((const UMat*)arr.obj)->size;
+        if( m->dims > 2 )
+            return false;
+        sz1 = m->size();
+    }
+    else
+        sz1 = size();
+    if( arr.dims() > 2 )
+        return false;
+    return sz1 == arr.size();
+}
+
+int _InputArray::dims(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const Mat*)obj)->dims;
+    }
+
+    if( k == EXPR )
+    {
+        CV_Assert( i < 0 );
+        return ((const MatExpr*)obj)->a.dims;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->dims;
+    }
+
+    if( k == MATX )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == STD_VECTOR )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == NONE )
+        return 0;
+
+    if( k == STD_VECTOR_VECTOR )
+    {
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+        return 2;
+    }
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+
+        return vv[i].dims;
+    }
+
+    if( k == OPENGL_BUFFER )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+    
+    if( k == OCL_MAT )
+    {
+        return 2;
+    }
+    
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+}
+
 size_t _InputArray::total(int i) const
 {
     int k = kind();
@@ -1570,6 +1745,61 @@ bool _InputArray::empty() const
         return ((const cuda::CudaMem*)obj)->empty();
 }
 
+bool _InputArray::isContinuous(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+        return i < 0 ? ((const Mat*)obj)->isContinuous() : true;
+
+    if( k == UMAT )
+        return i < 0 ? ((const UMat*)obj)->isContinuous() : true;
+
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+        return true;
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isContinuous();
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isContinuous();
+    }
+
+    CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    return false;
+}
+
+void _InputArray::copyTo(const _OutputArray& arr) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        arr.release();
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.copyTo(arr);
+    }
+    else if( k == EXPR )
+    {
+        const MatExpr& e = *((MatExpr*)obj);
+        if( arr.kind() == MAT )
+            arr.getMatRef() = e;
+        else
+            Mat(e).copyTo(arr);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->copyTo(arr);
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
 
 bool _OutputArray::fixedSize() const
 {
@@ -1899,6 +2129,12 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
+void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
+{
+    int sz[CV_MAX_DIM], d = arr.sizend(sz);
+    create(d, sz, mtype);
+}
+
 void _OutputArray::release() const
 {
     CV_Assert(!fixedSize());
@@ -2008,6 +2244,23 @@ cuda::CudaMem& _OutputArray::getCudaMemRef() const
     int k = kind();
     CV_Assert( k == CUDA_MEM );
     return *(cuda::CudaMem*)obj;
+}
+
+void _OutputArray::setTo(const _InputArray& arr) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        ;
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.setTo(arr);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->setTo(arr);
+    else
+        CV_Error(Error::StsNotImplemented, "");
 }
 
 static _InputOutputArray _none;

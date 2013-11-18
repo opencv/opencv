@@ -1154,13 +1154,14 @@ void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vecto
     }
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& rejectLevels,
                                           std::vector<double>& levelWeights,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
+    Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
     if( empty() )
@@ -1188,21 +1189,23 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
     }
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
+    Mat image = _image.getMat();
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
     detectMultiScale( image, objects, fakeLevels, fakeWeights, scaleFactor,
         minNeighbors, flags, minObjectSize, maxObjectSize );
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& numDetections, double scaleFactor,
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
 {
+    Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
     if( empty() )

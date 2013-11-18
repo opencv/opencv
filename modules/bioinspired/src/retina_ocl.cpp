@@ -56,6 +56,8 @@
 
 namespace cv
 {
+static ocl::ProgramEntry retina_kernel = ocl::bioinspired::retina_kernel;
+
 namespace bioinspired
 {
 namespace ocl
