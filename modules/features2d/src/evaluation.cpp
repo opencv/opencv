@@ -147,12 +147,12 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
     float  ac_b2 = (float) ((a*c) - (b*b)); // float is enough here!
     float x1,x2;
     solveQuadratic(1.f, -(float)(a+c), ac_b2, x1, x2);
-    ac_b2 = 1 / ac_b2;
+
     axes.width  = (float)(1/sqrt(x1)); // NAN possible
     axes.height = (float)(1/sqrt(x2));
-
-    boundingBox.width = (float)sqrt(ellipse[2]/ac_b2);
-    boundingBox.height = (float)sqrt(ellipse[0]/ac_b2);
+    ac_b2 = 1 / ac_b2;
+    boundingBox.width  = (float)sqrt(ellipse[2]*ac_b2);
+    boundingBox.height = (float)sqrt(ellipse[0]*ac_b2);
 }
 
 Mat_<double> EllipticKeyPoint::getSecondMomentsMatrix( const Scalar& _ellipse )
