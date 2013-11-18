@@ -157,14 +157,14 @@ int main()
             return 0;
     }
 
-    Size textsize = getTextSize("OpenCV forever!", CV_FONT_HERSHEY_COMPLEX, 3, 5, 0);
+    Size textsize = getTextSize("OpenCV forever!", FONT_HERSHEY_COMPLEX, 3, 5, 0);
     Point org((width - textsize.width)/2, (height - textsize.height)/2);
 
     Mat image2;
     for( i = 0; i < 255; i += 2 )
     {
         image2 = image - Scalar::all(i);
-        putText(image2, "OpenCV forever!", org, CV_FONT_HERSHEY_COMPLEX, 3,
+        putText(image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
                 Scalar(i, i, 255), 5, lineType);
 
         imshow(wndname, image2);

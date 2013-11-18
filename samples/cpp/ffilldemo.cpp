@@ -81,7 +81,7 @@ int main( int argc, char** argv )
     }
     help();
     image0.copyTo(image);
-    cvtColor(image0, gray, CV_BGR2GRAY);
+    cvtColor(image0, gray, COLOR_BGR2GRAY);
     mask.create(image0.rows+2, image0.cols+2, CV_8UC1);
 
     namedWindow( "image", 0 );
@@ -106,7 +106,7 @@ int main( int argc, char** argv )
             if( isColor )
             {
                 cout << "Grayscale mode is set\n";
-                cvtColor(image0, gray, CV_BGR2GRAY);
+                cvtColor(image0, gray, COLOR_BGR2GRAY);
                 mask = Scalar::all(0);
                 isColor = false;
             }
@@ -135,7 +135,7 @@ int main( int argc, char** argv )
         case 'r':
             cout << "Original image is restored\n";
             image0.copyTo(image);
-            cvtColor(image, gray, CV_BGR2GRAY);
+            cvtColor(image, gray, COLOR_BGR2GRAY);
             mask = Scalar::all(0);
             break;
         case 's':

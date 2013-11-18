@@ -37,19 +37,19 @@ int main( int, char** argv )
   src = imread( argv[1], 1 );
 
   /// Convert the image to Gray
-  cvtColor( src, src_gray, CV_RGB2GRAY );
+  cvtColor( src, src_gray, COLOR_RGB2GRAY );
 
   /// Create a window to display results
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Create Trackbar to choose type of Threshold
   createTrackbar( trackbar_type,
-          window_name, &threshold_type,
-          max_type, Threshold_Demo );
+                  window_name, &threshold_type,
+                  max_type, Threshold_Demo );
 
   createTrackbar( trackbar_value,
-          window_name, &threshold_value,
-          max_value, Threshold_Demo );
+                  window_name, &threshold_value,
+                  max_value, Threshold_Demo );
 
   /// Call the function to initialize
   Threshold_Demo( 0, 0 );

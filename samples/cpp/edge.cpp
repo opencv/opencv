@@ -49,7 +49,7 @@ int main( int argc, const char** argv )
         return -1;
     }
     cedge.create(image.size(), image.type());
-    cvtColor(image, gray, CV_BGR2GRAY);
+    cvtColor(image, gray, COLOR_BGR2GRAY);
 
     // Create a window
     namedWindow("Edge map", 1);

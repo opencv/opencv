@@ -45,10 +45,10 @@ int main(int argc, const char** argv)
         return -1;
     }
 
-    namedWindow("image", CV_WINDOW_NORMAL);
-    namedWindow("foreground mask", CV_WINDOW_NORMAL);
-    namedWindow("foreground image", CV_WINDOW_NORMAL);
-    namedWindow("mean background image", CV_WINDOW_NORMAL);
+    namedWindow("image", WINDOW_NORMAL);
+    namedWindow("foreground mask", WINDOW_NORMAL);
+    namedWindow("foreground image", WINDOW_NORMAL);
+    namedWindow("mean background image", WINDOW_NORMAL);
 
     BackgroundSubtractorMOG2 bg_model;//(100, 3, 0.3, 5);
 
