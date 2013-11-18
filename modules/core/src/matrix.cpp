@@ -1437,7 +1437,7 @@ Size _InputArray::size(int i) const
 }
 
 
-int _InputArray::sizend(int* sz, int i) const
+int _InputArray::sizend(int* arrsz, int i) const
 {
     int j, d=0, k = kind();
 
@@ -1448,18 +1448,18 @@ int _InputArray::sizend(int* sz, int i) const
         CV_Assert( i < 0 );
         const Mat& m = *(const Mat*)obj;
         d = m.dims;
-        if(sz)
+        if(arrsz)
             for(j = 0; j < d; j++)
-                sz[j] = m.size.p[j];
+                arrsz[j] = m.size.p[j];
     }
     else if( k == UMAT )
     {
         CV_Assert( i < 0 );
         const UMat& m = *(const UMat*)obj;
         d = m.dims;
-        if(sz)
+        if(arrsz)
             for(j = 0; j < d; j++)
-                sz[j] = m.size.p[j];
+                arrsz[j] = m.size.p[j];
     }
     else if( k == STD_VECTOR_MAT && i >= 0 )
     {
@@ -1467,9 +1467,9 @@ int _InputArray::sizend(int* sz, int i) const
         CV_Assert( i < (int)vv.size() );
         const Mat& m = vv[i];
         d = m.dims;
-        if(sz)
+        if(arrsz)
             for(j = 0; j < d; j++)
-                sz[j] = m.size.p[j];
+                arrsz[j] = m.size.p[j];
     }
     else if( k == STD_VECTOR_UMAT && i >= 0 )
     {
@@ -1477,18 +1477,18 @@ int _InputArray::sizend(int* sz, int i) const
         CV_Assert( i < (int)vv.size() );
         const UMat& m = vv[i];
         d = m.dims;
-        if(sz)
+        if(arrsz)
             for(j = 0; j < d; j++)
-                sz[j] = m.size.p[j];
+                arrsz[j] = m.size.p[j];
     }
     else
     {
         Size sz2d = size(i);
         d = 2;
-        if(sz)
+        if(arrsz)
         {
-            sz[0] = sz2d.height;
-            sz[1] = sz2d.width;
+            arrsz[0] = sz2d.height;
+            arrsz[1] = sz2d.width;
         }
     }
 
@@ -1597,12 +1597,12 @@ int _InputArray::dims(int i) const
         CV_Assert( i < 0 );
         return 2;
     }
-    
+
     if( k == OCL_MAT )
     {
         return 2;
     }
-    
+
     CV_Assert( k == CUDA_MEM );
     //if( k == CUDA_MEM )
     {
@@ -1895,7 +1895,7 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
+void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                           bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
@@ -1913,7 +1913,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
                 m.release();
             }
 
-            if( dims == 2 && m.dims == 2 && m.data &&
+            if( d == 2 && m.dims == 2 && m.data &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
@@ -1927,11 +1927,11 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == dims);
-            for(int j = 0; j < dims; ++j)
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
                 CV_Assert(m.size[j] == sizes[j]);
         }
-        m.create(dims, sizes, mtype);
+        m.create(d, sizes, mtype);
         return;
     }
 
@@ -1947,7 +1947,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
                 m.release();
             }
 
-            if( dims == 2 && m.dims == 2 && !m.empty() &&
+            if( d == 2 && m.dims == 2 && !m.empty() &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
@@ -1961,11 +1961,11 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == dims);
-            for(int j = 0; j < dims; ++j)
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
                 CV_Assert(m.size[j] == sizes[j]);
         }
-        m.create(dims, sizes, mtype);
+        m.create(d, sizes, mtype);
         return;
     }
 
@@ -1974,14 +1974,14 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
         CV_Assert( i < 0 );
         int type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
-        CV_Assert( dims == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
+        CV_Assert( d == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
                                  (allowTransposed && sizes[0] == sz.width && sizes[1] == sz.height)));
         return;
     }
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+        CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
@@ -2073,7 +2073,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
 
         if( i < 0 )
         {
-            CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+            CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
             size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0, len0 = v.size();
 
             CV_Assert(!fixedSize() || len == len0);
@@ -2103,7 +2103,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
                 m.release();
             }
 
-            if( dims == 2 && m.dims == 2 && m.data &&
+            if( d == 2 && m.dims == 2 && m.data &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
@@ -2117,12 +2117,12 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == dims);
-            for(int j = 0; j < dims; ++j)
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
                 CV_Assert(m.size[j] == sizes[j]);
         }
 
-        m.create(dims, sizes, mtype);
+        m.create(d, sizes, mtype);
         return;
     }
 
@@ -2131,8 +2131,8 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i,
 
 void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
 {
-    int sz[CV_MAX_DIM], d = arr.sizend(sz);
-    create(d, sz, mtype);
+    int arrsz[CV_MAX_DIM], d = arr.sizend(arrsz);
+    create(d, arrsz, mtype);
 }
 
 void _OutputArray::release() const

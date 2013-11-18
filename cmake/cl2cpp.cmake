@@ -10,7 +10,7 @@ if("${MODULE_NAME}" STREQUAL "ocl")
 else()
     set(new_mode ON)
     set(nested_namespace_start "namespace ${MODULE_NAME}\n{")
-    set(nested_namespace_end "}") 
+    set(nested_namespace_end "}")
 endif()
 
 set(STR_CPP "// This file is auto-generated. Do not edit!

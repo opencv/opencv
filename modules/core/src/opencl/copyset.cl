@@ -71,4 +71,3 @@ __kernel void set(__global uchar* dstptr, int dststep, int dstoffset,
         *(dstT*)(dstptr + dst_index) = value;
     }
 }
-

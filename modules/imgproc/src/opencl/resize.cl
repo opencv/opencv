@@ -149,4 +149,3 @@ __kernel void resizeNN(__global const uchar* srcptr, int srcstep, int srcoffset,
 }
 
 #endif
-

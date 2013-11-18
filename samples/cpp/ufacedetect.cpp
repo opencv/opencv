@@ -203,7 +203,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
     resize( gray, smallImg, Size(), scale0, scale0, INTER_LINEAR );
     cvtColor(smallImg, canvas, COLOR_GRAY2BGR);
     equalizeHist( smallImg, smallImg );
-    
+
     cascade.detectMultiScale( smallImg, faces,
         1.1, 2, 0
         //|CASCADE_FIND_BIGGEST_OBJECT
@@ -233,7 +233,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
 
     putText(canvas, format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", fps), Point(250, 50),
             FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 3);
-    
+
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
         vector<Rect> nestedObjects;
