@@ -174,8 +174,8 @@ static void updateContinuityFlag(UMat& m)
             break;
     }
 
-    uint64 t = (uint64)m.step[0]*m.size[0];
-    if( j <= i && t == (size_t)t )
+    uint64 total = (uint64)m.step[0]*m.size[0];
+    if( j <= i && total == (size_t)total )
         m.flags |= UMat::CONTINUOUS_FLAG;
     else
         m.flags &= ~UMat::CONTINUOUS_FLAG;
@@ -638,21 +638,21 @@ void UMat::convertTo(OutputArray, int, double, double) const
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
-    int t = type(), cn = CV_MAT_CN(t);
+    int tp = type(), cn = CV_MAT_CN(tp);
     if( dims <= 2 && cn <= 4 && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
         double buf[4];
-        convertAndUnrollScalar(value, t, (uchar*)buf, 1);
+        convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
 
         char opts[1024];
-        sprintf(opts, "-D dstT=%s", ocl::memopTypeToStr(t));
+        sprintf(opts, "-D dstT=%s", ocl::memopTypeToStr(tp));
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(t));
+            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(tp));
             UMat mask;
 
             if( haveMask )

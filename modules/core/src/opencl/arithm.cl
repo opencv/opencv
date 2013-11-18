@@ -301,7 +301,3 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 #error "Unknown operation type"
 
 #endif
-
-
-
-

@@ -46,12 +46,12 @@ static double getTime()
 
 static void detect( Mat& img, vector<Rect>& faces,
              ocl::OclCascadeClassifier& cascade,
-             double scale, bool calTime);
+             double scale);
 
 
 static void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
-                double scale, bool calTime);
+                double scale);
 
 static void Draw(Mat& img, vector<Rect>& faces, double scale);
 
@@ -190,7 +190,7 @@ int main( int argc, const char** argv )
 
 void detect( Mat& img, vector<Rect>& faces,
              ocl::OclCascadeClassifier& cascade,
-             double scale, bool calTime)
+             double scale)
 {
     ocl::oclMat image(img);
     ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
@@ -208,7 +208,7 @@ void detect( Mat& img, vector<Rect>& faces,
 
 void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
-                double scale, bool calTime)
+                double scale)
 {
     workBegin();
     Mat cpu_gray, cpu_smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
