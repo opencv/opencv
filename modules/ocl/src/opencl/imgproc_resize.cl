@@ -315,7 +315,44 @@ __kernel void resizeNN(__global T * dst, __global T * src,
     }
 }
 
-#elif AREA
+#elif defined AREA
+
+#ifdef AREA_FAST
+
+__kernel void resizeAREA_FAST(__global T * dst, __global T * src,
+                         int dst_offset, int src_offset, int dst_step, int src_step,
+                         int src_cols, int src_rows, int dst_cols, int dst_rows, WT ifx, WT ify,
+                         __global const int * dmap_tab, __global const int * smap_tab)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+
+    if (dx < dst_cols && dy < dst_rows)
+    {
+        int dst_index = mad24(dy, dst_step, dst_offset + dx);
+
+        __global const int * xmap_tab = dmap_tab;
+        __global const int * ymap_tab = dmap_tab + dst_cols;
+        __global const int * sxmap_tab = smap_tab;
+        __global const int * symap_tab = smap_tab + XSCALE * dst_cols;
+
+        int sx = xmap_tab[dx], sy = ymap_tab[dy];
+        WTV sum = (WTV)(0);
+
+        #pragma unroll
+        for (int y = 0; y < YSCALE; ++y)
+        {
+            int src_index = mad24(symap_tab[y + sy], src_step, src_offset);
+            #pragma unroll
+            for (int x = 0; x < XSCALE; ++x)
+                sum += convertToWTV(src[src_index + sxmap_tab[sx + x]]);
+        }
+
+        dst[dst_index] = convertToT(convertToWT2V(sum) * (WT2V)(SCALE));
+    }
+}
+
+#else
 
 __kernel void resizeAREA(__global T * dst, __global T * src,
                          int dst_offset, int src_offset, int dst_step, int src_step,
@@ -362,5 +399,7 @@ __kernel void resizeAREA(__global T * dst, __global T * src,
         dst[dst_index] = convertToT(sum);
     }
 }
+
+#endif
 
 #endif
