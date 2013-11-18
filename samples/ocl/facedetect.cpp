@@ -139,9 +139,9 @@ int main( int argc, const char** argv )
 
             work_end = 0;
             if(useCPU)
-                detectCPU(frameCopy, faces, cpu_cascade, 1, false);
+                detectCPU(frameCopy, faces, cpu_cascade, 1);
             else
-                detect(frameCopy, faces, cascade, 1, false);
+                detect(frameCopy, faces, cascade, 1);
 
             Draw(frameCopy, faces, 1);
             if( waitKey( 10 ) >= 0 )
@@ -155,18 +155,19 @@ int main( int argc, const char** argv )
         vector<Rect> faces;
         vector<Rect> ref_rst;
         double accuracy = 0.;
+        detectCPU(image, ref_rst, cpu_cascade, scale);
         work_end = 0;
+        
         for(int i = 0; i <= LOOP_NUM; i ++)
         {
             cout << "loop" << i << endl;
             if(useCPU)
-                detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
+                detectCPU(image, faces, cpu_cascade, scale);
             else
             {
-                detect(image, faces, cascade, scale, i==0?false:true);
+                detect(image, faces, cascade, scale);
                 if(i == 0)
                 {
-                    detectCPU(image, ref_rst, cpu_cascade, scale, false);
                     accuracy = checkRectSimilarity(image.size(), ref_rst, faces);
                 }
             }

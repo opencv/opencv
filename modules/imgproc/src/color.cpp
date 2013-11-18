@@ -2693,7 +2693,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     bool ok = true;
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
-    int scn = src.channels(), depth = src.depth(), bidx, dtype;
+    int scn = src.channels(), depth = src.depth(), bidx;
     size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
@@ -2717,7 +2717,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
-        dtype = depth;
+        dcn = 1;
         k.create("RGB2Gray", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=1 -D bidx=%d", depth, scn, bidx));
         break;
@@ -2727,7 +2727,6 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         CV_Assert(scn == 1);
         dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
-        dtype = CV_MAKETYPE(depth, dcn);
         k.create("Gray2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=1 -D dcn=%d", depth, dcn));
         break;
@@ -2737,6 +2736,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_RGB2YUV ? 0 : 2;
+        dcn = 3;
         k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
         break;
@@ -2773,6 +2773,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2YCrCb ? 0 : 2;
+        dcn = 3;
         k.create("RGB2YCrCb", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
         break;
@@ -2797,7 +2798,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
     if( !k.empty() )
     {
-        _dst.create(dstSz, dtype);
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getUMat();
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
         ok = k.run(2, globalsize, 0, false);
