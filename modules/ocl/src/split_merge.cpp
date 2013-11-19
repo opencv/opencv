@@ -249,7 +249,8 @@ namespace cv
                         && devInfo.deviceType == CVCL_DEVICE_TYPE_CPU
                         && devInfo.platform->platformVendor.find("Intel") != std::string::npos
                         && (devInfo.deviceVersion.find("Build 56860") != std::string::npos
-                            || devInfo.deviceVersion.find("Build 76921") != std::string::npos))
+                            || devInfo.deviceVersion.find("Build 76921") != std::string::npos
+                            || devInfo.deviceVersion.find("Build 78712") != std::string::npos))
                     build_options = build_options + " -D BYPASS_VSTORE=true";
 
                 size_t globalThreads[3] = { divUp(src.cols, VEC_SIZE), src.rows, 1 };

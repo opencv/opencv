@@ -44,11 +44,11 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 #endif
 
@@ -65,12 +65,16 @@ __kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_st
         int src1_index = mad24(y, src1_step, x + src1_offset);
         int src2_index = mad24(y, src2_step, x + src2_offset);
         int dst_index  = mad24(y, dst_step, x + dst_offset);
+#ifdef INTEL_DEVICE //workaround for intel compiler bug
+        if(src1_index >= 0 && src2_index >= 0)
+#endif
+        {
+            dstT t0 = convertToDstT(src1[src1_index]);
+            dstT t1 = convertToDstT(src2[src2_index]);
+            dstT t2 = t0 - t1;
 
-        dstT t0 = convertToDstT(src1[src1_index]);
-        dstT t1 = convertToDstT(src2[src2_index]);
-        dstT t2 = t0 - t1;
-
-        dst[dst_index] = t2 >= (dstT)(0) ? t2 : -t2;
+            dst[dst_index] = t2 >= (dstT)(0) ? t2 : -t2;
+        }
     }
 }
 
@@ -85,9 +89,13 @@ __kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int
     {
         int src1_index = mad24(y, src1_step, x + src1_offset);
         int dst_index  = mad24(y, dst_step, x + dst_offset);
+#ifdef INTEL_DEVICE //workaround for intel compiler bug
+        if(src1_index >= 0)
+#endif
+        {
+            dstT t0 = convertToDstT(src1[src1_index]);
 
-        dstT t0 = convertToDstT(src1[src1_index]);
-
-        dst[dst_index] = t0 >= (dstT)(0) ? t0 : -t0;
+            dst[dst_index] = t0 >= (dstT)(0) ? t0 : -t0;
+        }
     }
 }

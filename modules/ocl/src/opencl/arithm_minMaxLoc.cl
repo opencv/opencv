@@ -44,8 +44,13 @@
 //M*/
 
 /**************************************PUBLICFUNC*************************************/
-#if defined (DOUBLE_SUPPORT)
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
 #define RES_TYPE double4
 #define CONVERT_RES_TYPE convert_double4
 #else
@@ -222,8 +227,9 @@ __kernel void arithm_op_minMaxLoc(int cols, int invalid_cols, int offset, int el
     {
         localmem_min[lid] = min(minval,localmem_min[lid]);
         localmem_max[lid] = max(maxval,localmem_max[lid]);
-        localmem_minloc[lid] = CONDITION_FUNC(localmem_min[lid] == minval, minloc, localmem_minloc[lid]);
-        localmem_maxloc[lid] = CONDITION_FUNC(localmem_max[lid] == maxval, maxloc, localmem_maxloc[lid]);
+        VEC_TYPE minVal = localmem_min[lid], maxVal = localmem_max[lid];
+        localmem_minloc[lid] = CONDITION_FUNC(minVal == minval, minloc, localmem_minloc[lid]);
+        localmem_maxloc[lid] = CONDITION_FUNC(maxVal == maxval, maxloc, localmem_maxloc[lid]);
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -234,8 +240,10 @@ __kernel void arithm_op_minMaxLoc(int cols, int invalid_cols, int offset, int el
             int lid2 = lsize + lid;
             localmem_min[lid] = min(localmem_min[lid], localmem_min[lid2]);
             localmem_max[lid] = max(localmem_max[lid], localmem_max[lid2]);
-            localmem_minloc[lid] = CONDITION_FUNC(localmem_min[lid] == localmem_min[lid2], localmem_minloc[lid2], localmem_minloc[lid]);
-            localmem_maxloc[lid] = CONDITION_FUNC(localmem_max[lid] == localmem_max[lid2], localmem_maxloc[lid2], localmem_maxloc[lid]);
+            VEC_TYPE min1 = localmem_min[lid], min2 = localmem_min[lid2];
+            localmem_minloc[lid] = CONDITION_FUNC(min1 == min2, localmem_minloc[lid2], localmem_minloc[lid]);
+            VEC_TYPE max1 = localmem_max[lid], max2 = localmem_max[lid2];
+            localmem_maxloc[lid] = CONDITION_FUNC(max1 == max2, localmem_maxloc[lid2], localmem_maxloc[lid]);
        }
        barrier(CLK_LOCAL_MEM_FENCE);
     }

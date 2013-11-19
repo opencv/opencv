@@ -867,30 +867,32 @@ void cv::ocl::log(const oclMat &src, oclMat &dst)
 
 static void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String kernelName)
 {
-    int channels = dst.oclchannels();
     int depth = dst.depth();
 
-    size_t vector_length = 1;
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+
+    int src1_step = src1.step / src1.elemSize(), src1_offset = src1.offset / src1.elemSize();
+    int src2_step = src2.step / src2.elemSize(), src2_offset = src2.offset / src2.elemSize();
+    int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
 
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols ));
 
-    openCLExecuteKernel(src1.clCxt, &arithm_magnitude, kernelName, globalThreads, localThreads, args, -1, depth);
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    std::string buildOptions = format("-D T=%s%s", depth == CV_32F ? "float" : "double", channelMap[dst.channels()]);
+
+    openCLExecuteKernel(src1.clCxt, &arithm_magnitude, kernelName, globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::magnitude(const oclMat &src1, const oclMat &src2, oclMat &dst)
@@ -964,25 +966,29 @@ static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, o
     size_t localThreads[3]  = { 64, 4, 1 };
     size_t globalThreads[3] = { cols, src1.rows, 1 };
 
-    int tmp = angleInDegrees ? 1 : 0;
+    int src1_step = src1.step / src1.elemSize1(), src1_offset = src1.offset / src1.elemSize1();
+    int src2_step = src2.step / src2.elemSize1(), src2_offset = src2.offset / src2.elemSize1();
+    int dst_mag_step = dst_mag.step / dst_mag.elemSize1(), dst_mag_offset = dst_mag.offset / dst_mag.elemSize1();
+    int dst_cart_step = dst_cart.step / dst_cart.elemSize1(), dst_cart_offset = dst_cart.offset / dst_cart.elemSize1();
+
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst_mag.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_mag.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_mag.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_mag_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_mag_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst_cart.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_cart.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_cart.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_cart_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_cart_offset ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.rows ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tmp ));
 
-    openCLExecuteKernel(src1.clCxt, &arithm_cartToPolar, kernelName, globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(src1.clCxt, &arithm_cartToPolar, kernelName, globalThreads, localThreads, args,
+                        -1, depth, angleInDegrees ? "-D DEGREE" : "-D RADIAN");
 }
 
 void cv::ocl::cartToPolar(const oclMat &x, const oclMat &y, oclMat &mag, oclMat &angle, bool angleInDegrees)
@@ -1008,37 +1014,38 @@ void cv::ocl::cartToPolar(const oclMat &x, const oclMat &y, oclMat &mag, oclMat 
 static void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &dst1, oclMat &dst2, bool angleInDegrees,
                         String kernelName)
 {
-    int channels = src2.oclchannels();
-    int depth = src2.depth();
-
-    int cols = src2.cols * channels;
-    int rows = src2.rows;
+    int channels = src2.oclchannels(), depth = src2.depth();
+    int cols = src2.cols * channels, rows = src2.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
     size_t globalThreads[3] = { cols, rows, 1 };
 
-    int tmp = angleInDegrees ? 1 : 0;
+    int src1_step = src1.step / src1.elemSize1(), src1_offset = src1.offset / src1.elemSize1();
+    int src2_step = src2.step / src2.elemSize1(), src2_offset = src2.offset / src2.elemSize1();
+    int dst1_step = dst1.step / dst1.elemSize1(), dst1_offset = dst1.offset / dst1.elemSize1();
+    int dst2_step = dst2.step / dst2.elemSize1(), dst2_offset = dst2.offset / dst2.elemSize1();
+
     std::vector<std::pair<size_t , const void *> > args;
     if (src1.data)
     {
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
-        args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
-        args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_step ));
+        args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_offset ));
     }
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst1.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst1.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst1.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst1_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst1_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst2.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst2.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst2.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst2_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst2_offset ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&rows ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tmp ));
 
-    openCLExecuteKernel(src1.clCxt, &arithm_polarToCart, kernelName, globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(src1.clCxt, &arithm_polarToCart, kernelName, globalThreads, localThreads,
+                        args, -1, depth, angleInDegrees ? "-D DEGREE" : "-D RADIAN");
 }
 
 void cv::ocl::polarToCart(const oclMat &magnitude, const oclMat &angle, oclMat &x, oclMat &y, bool angleInDegrees)
@@ -1623,38 +1630,38 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
 /////////////////////////////////// Pow //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, String kernelName, const cv::ocl::ProgramEntry* source)
+static void arithmetic_pow_run(const oclMat &src, double p, oclMat &dst, String kernelName, const cv::ocl::ProgramEntry* source)
 {
     int channels = dst.oclchannels();
     int depth = dst.depth();
 
-    size_t vector_length = 1;
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-    int rows = dst.rows;
-
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, rows, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
-    int dst_step1 = dst.cols * dst.elemSize();
+    const char * const typeStr = depth == CV_32F ? "float" : "double";
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    std::string buildOptions = format("-D VT=%s%s -D T=%s", typeStr, channelMap[channels], typeStr);
+
+    int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
+    int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
+
     std::vector<std::pair<size_t , const void *> > args;
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset ));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols ));
 
     float pf = static_cast<float>(p);
-    if (!src1.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
+    if(src.depth() == CV_32F)
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&pf ));
     else
         args.push_back( std::make_pair( sizeof(cl_double), (void *)&p ));
 
-    openCLExecuteKernel(src1.clCxt, source, kernelName, globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(src.clCxt, source, kernelName, globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::pow(const oclMat &x, double p, oclMat &y)

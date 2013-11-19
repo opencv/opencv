@@ -45,8 +45,6 @@
 //
 //M*/
 
-// Enter your kernel in this window
-//#pragma OPENCL EXTENSION cl_amd_printf:enable
 #define CV_HAAR_FEATURE_MAX           3
 typedef int   sumtype;
 typedef float sqsumtype;
@@ -288,8 +286,8 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     int counter = get_global_id(0);
     int tr_x[3], tr_y[3], tr_h[3], tr_w[3], i = 0;
     GpuHidHaarTreeNode t1 = *(orinode + counter);
-#pragma unroll
 
+    #pragma unroll
     for (i = 0; i < 3; i++)
     {
         tr_x[i] = (int)(t1.p[i][0] * scale + 0.5f);
@@ -300,8 +298,8 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
 
     t1.weight[0] = -(t1.weight[1] * tr_h[1] * tr_w[1] + t1.weight[2] * tr_h[2] * tr_w[2]) / (tr_h[0] * tr_w[0]);
     counter += nodenum;
-#pragma unroll
 
+    #pragma unroll
     for (i = 0; i < 3; i++)
     {
         newnode[counter].p[i][0] = tr_x[i];
