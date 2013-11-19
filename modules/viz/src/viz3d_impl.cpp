@@ -568,7 +568,7 @@ void cv::viz::Viz3d::VizImpl::updateCells(vtkSmartPointer<vtkIdTypeArray> &cells
             cells->SetNumberOfTuples(nr_points);
             vtkIdType *cell = cells->GetPointer(0);
             // Fill it with 1s
-            std::fill_n(cell, nr_points * 2, 1);
+            std::fill(cell, cell + nr_points * 2, 1);
             cell++;
             for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
                 *cell = i;
