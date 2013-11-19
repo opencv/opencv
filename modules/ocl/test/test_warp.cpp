@@ -398,10 +398,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
 
         if (dstRoiSize.area() == 0)
-        {
-            random_roi();
-            return;
-        }
+            return random_roi();
 
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, srcRoiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
@@ -480,11 +477,18 @@ INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                                    (Border)BORDER_REFLECT_101),
                             Bool()));
 
-INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(0.5, 1.5, 2.0),
-                            Values(0.5, 1.5, 2.0),
+INSTANTIATE_TEST_CASE_P(ImgprocWarpResize, Resize, Combine(
+                            Values((MatType)CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values(0.7, 0.4, 2.0),
+                            Values(0.3, 0.6, 2.0),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
+                            Bool()));
+
+INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
+                            Values((MatType)CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values(0.7, 0.4, 0.5),
+                            Values(0.3, 0.6, 0.5),
+                            Values((Interpolation)INTER_AREA),
                             Bool()));
 
 #endif // HAVE_OPENCL
