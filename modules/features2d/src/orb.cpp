@@ -620,7 +620,8 @@ static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
 
     // fill the extractors and descriptors for the corresponding scales
     float factor = (float)(1.0 / scaleFactor);
-    float ndesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)std::pow((double)factor, (double)nlevels));
+        float factor2D=factor*factor;
+    float ndesiredFeaturesPerScale = nfeatures*(1 - factor2D)/(1 - (float)std::pow((double)factor2D, (double)nlevels));
 
     int sumFeatures = 0;
     for( int level = 0; level < nlevels-1; level++ )
