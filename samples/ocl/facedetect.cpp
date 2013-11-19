@@ -157,7 +157,7 @@ int main( int argc, const char** argv )
         double accuracy = 0.;
         detectCPU(image, ref_rst, cpu_cascade, scale);
         work_end = 0;
-        
+
         for(int i = 0; i <= LOOP_NUM; i ++)
         {
             cout << "loop" << i << endl;
