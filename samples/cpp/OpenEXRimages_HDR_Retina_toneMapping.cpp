@@ -1,10 +1,10 @@
 
 //============================================================================
-// Name        : HighDynamicRange_RetinaCompression.cpp
+// Name        : OpenEXRimages_HDR_Retina_toneMapping.cpp
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.1
 // Copyright   : Alexandre Benoit, LISTIC Lab, july 2011
-// Description : HighDynamicRange compression (tone mapping) with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Description : HighDynamicRange retina tone mapping with the help of the Gipsa/Listic's retina in C++, Ansi-style
 //============================================================================
 
 #include <iostream>
@@ -71,7 +71,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      {
          cv::Mat rgbIntImg;
          outputMat.convertTo(rgbIntImg, CV_8UC3);
-         cv::cvtColor(rgbIntImg, intGrayImage, cv::COLOR_BGR2GRAY);
+         cvtColor(rgbIntImg, intGrayImage, cv::COLOR_BGR2GRAY);
      }
 
      // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel errors cancellation

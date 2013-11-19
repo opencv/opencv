@@ -112,8 +112,30 @@ using namespace cv;
             CV_TEST_FAIL_NO_IMPL();
 #endif
 
-#define OCL_TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); ocl::finish(), stopTimer())
-#define OCL_TEST_CYCLE() for(; startTimer(), next(); ocl::finish(), stopTimer())
-#define OCL_TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ocl::finish(), ++r)
+#define OCL_TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); cv::ocl::finish(), stopTimer())
+#define OCL_TEST_CYCLE() for(; startTimer(), next(); cv::ocl::finish(), stopTimer())
+#define OCL_TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; cv::ocl::finish(), ++r)
+
+namespace cvtest {
+namespace ocl {
+inline void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1)
+{
+    assert(factor > 0);
+    if (!(IMPL_OCL == perf::TestBase::getSelectedImpl()))
+        return; // OpenCL devices are not used
+    int cn = CV_MAT_CN(type);
+    int cn_ocl = cn == 3 ? 4 : cn;
+    int type_ocl = CV_MAKE_TYPE(CV_MAT_DEPTH(type), cn_ocl);
+    size_t memSize = size.area() * CV_ELEM_SIZE(type_ocl);
+    const cv::ocl::DeviceInfo& devInfo = cv::ocl::Context::getContext()->getDeviceInfo();
+    if (memSize * factor >= devInfo.maxMemAllocSize)
+    {
+        throw perf::TestBase::PerfSkipTestException();
+    }
+}
+} // namespace cvtest::ocl
+} // namespace cvtest
+
+using namespace cvtest::ocl;
 
 #endif
