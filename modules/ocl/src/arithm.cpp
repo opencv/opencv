@@ -394,11 +394,15 @@ Scalar cv::ocl::sum(const oclMat &src)
 
 Scalar cv::ocl::absSum(const oclMat &src)
 {
-    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
+    int sdepth = src.depth();
+    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && sdepth == CV_64F)
     {
         CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return cv::Scalar::all(0);
     }
+
+    if (sdepth == CV_8U || sdepth == CV_16U)
+        return sum(src);
 
     static sumFunc functab[3] =
     {
@@ -407,7 +411,7 @@ Scalar cv::ocl::absSum(const oclMat &src)
         arithmetic_sum<double>
     };
 
-    int ddepth = std::max(src.depth(), CV_32S);
+    int ddepth = std::max(sdepth, CV_32S);
     sumFunc func = functab[ddepth - CV_32S];
     return func(src, ABS_SUM, ddepth);
 }
