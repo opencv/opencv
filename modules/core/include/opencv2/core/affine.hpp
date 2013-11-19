@@ -51,7 +51,7 @@
 namespace cv
 {
     template<typename T>
-    class CV_EXPORTS Affine3
+    class Affine3
     {
     public:
         typedef T float_type;
