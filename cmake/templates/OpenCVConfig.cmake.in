@@ -7,6 +7,7 @@
 #    In your CMakeLists.txt, add these lines:
 #
 #    find_package(OpenCV REQUIRED)
+#    include_directories(${OpenCV_INCLUDE_DIRS})
 #    target_link_libraries(MY_TARGET_NAME ${OpenCV_LIBS})
 #
 #    Or you can search for specific OpenCV modules:
