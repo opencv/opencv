@@ -40,62 +40,43 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
+#include <string>
 
-#include <vector>
-#include <limits>
+using namespace cv;
+using namespace std;
 
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/cuda.hpp"
-#include "opencv2/core/opengl.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/video/tracking.hpp"
-#include "opencv2/core/private.hpp"
+class CV_ImgprocUMatTest : public cvtest::BaseTest
+{
+public:
+    CV_ImgprocUMatTest() {}
+    ~CV_ImgprocUMatTest() {}
+protected:
+    void run(int)
+    {
+        string imgpath = string(ts->get_data_path()) + "shared/lena.png";
+        Mat img = imread(imgpath, 1), gray, smallimg, result;
+        UMat uimg = img.getUMat(ACCESS_READ), ugray, usmallimg, uresult;
 
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/core/ocl.hpp"
+        cvtColor(img, gray, COLOR_BGR2GRAY);
+        resize(gray, smallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        equalizeHist(smallimg, result);
 
-#ifdef HAVE_OPENCV_CUDAARITHM
-#  include "opencv2/cudaarithm.hpp"
+        cvtColor(uimg, ugray, COLOR_BGR2GRAY);
+        resize(ugray, usmallimg, Size(), 0.75, 0.75, INTER_LINEAR);
+        equalizeHist(usmallimg, uresult);
+
+#if 0
+        imshow("orig", uimg);
+        imshow("small", usmallimg);
+        imshow("equalized gray", uresult);
+        waitKey();
+        destroyWindow("orig");
+        destroyWindow("small");
+        destroyWindow("equalized gray");
 #endif
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
 
-#ifdef HAVE_OPENCV_CUDAWARPING
-#  include "opencv2/cudawarping.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAFILTERS
-#  include "opencv2/cudafilters.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAIMGPROC
-#  include "opencv2/cudaimgproc.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDAOPTFLOW
-#  include "opencv2/cudaoptflow.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_CUDACODEC
-#  include "opencv2/cudacodec.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_OCL
-    #include "opencv2/ocl/private/util.hpp"
-#endif
-
-#ifdef HAVE_OPENCV_HIGHGUI
-    #include "opencv2/highgui.hpp"
-#endif
-
-#include "opencv2/superres.hpp"
-#include "opencv2/superres/optical_flow.hpp"
-#include "input_array_utility.hpp"
-
-#include "ring_buffer.hpp"
-
-#include "opencv2/core/private.hpp"
-
-#endif /* __OPENCV_PRECOMP_H__ */
+TEST(Imgproc_UMat, regression) { CV_ImgprocUMatTest test; test.safe_run(); }

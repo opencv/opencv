@@ -511,9 +511,10 @@ public:
     CV_WRAP virtual void release();
 
     CV_WRAP virtual bool grab();
-    CV_WRAP virtual bool retrieve(CV_OUT Mat& image, int flag = 0);
+    CV_WRAP virtual bool retrieve(OutputArray image, int flag = 0);
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
-    CV_WRAP virtual bool read(CV_OUT Mat& image);
+    virtual VideoCapture& operator >> (CV_OUT UMat& image);
+    CV_WRAP virtual bool read(OutputArray image);
 
     CV_WRAP virtual bool set(int propId, double value);
     CV_WRAP virtual double get(int propId);
