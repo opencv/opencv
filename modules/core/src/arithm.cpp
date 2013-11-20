@@ -47,6 +47,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {

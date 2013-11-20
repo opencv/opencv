@@ -67,8 +67,6 @@
 #define GET_OPTIMIZED(func) (func)
 #endif
 
-#include "opencl_kernels.hpp"
-
 namespace cv
 {
 
