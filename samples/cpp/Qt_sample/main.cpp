@@ -4,7 +4,12 @@
 
 #include <iostream>
 #include <vector>
+
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/legacy/compat.hpp>
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -19,8 +24,6 @@
 #else
     #include <GL/gl.h>
 #endif
-
-#include <opencv2/core/core.hpp>
 
 using namespace std;
 using namespace cv;
@@ -193,7 +196,7 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints, const Mat& source
             ss.str("");
 
             //new coordinate system in the middle of the frame and reversed (camera coordinate system)
-            srcImagePoints->at(i) = cvPoint2D32f(srcImagePoints_temp.at(i).x-source->width/2,source->height/2-srcImagePoints_temp.at(i).y);
+            srcImagePoints->at(i) = cvPoint2D32f(srcImagePoints_temp.at(i).x-source.cols/2,source.rows/2-srcImagePoints_temp.at(i).y);
         }
     }
 
@@ -261,8 +264,8 @@ int main(void)
 
         imshow("POSIT",source);
 
-        if (VideoCapture::get(video,CV_CAP_PROP_POS_AVI_RATIO)>0.99)
-            VideoCapture::get(video,CV_CAP_PROP_POS_AVI_RATIO,0);
+        if (video.get(CV_CAP_PROP_POS_AVI_RATIO) > 0.99)
+            video.set(CV_CAP_PROP_POS_AVI_RATIO, 0);
     }
 
     destroyAllWindows();
