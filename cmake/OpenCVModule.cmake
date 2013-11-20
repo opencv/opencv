@@ -499,11 +499,12 @@ macro(ocv_glob_module_sources)
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 
   file(GLOB cl_kernels "src/opencl/*.cl")
-  if(HAVE_opencv_ocl AND cl_kernels)
+  if(cl_kernels)
     ocv_include_directories(${OPENCL_INCLUDE_DIRS})
+    string(REGEX REPLACE "opencv_" "" the_module_barename "${the_module}")
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
-      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+      COMMAND ${CMAKE_COMMAND} -DMODULE_NAME="${the_module_barename}" -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
       DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
     source_group("OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")

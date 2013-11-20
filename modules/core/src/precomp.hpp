@@ -205,13 +205,30 @@ enum { BLOCK_SIZE = 1024 };
 
 inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
 {
-    if( sc.dims > 2 || (sc.cols != 1 && sc.rows != 1) || !sc.isContinuous() )
+    if( sc.dims > 2 || !sc.isContinuous() )
+        return false;
+    Size sz = sc.size();
+    if(sz.width != 1 && sz.height != 1)
         return false;
     int cn = CV_MAT_CN(atype);
     if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
         return false;
-    return sc.size() == Size(1, 1) || sc.size() == Size(1, cn) || sc.size() == Size(cn, 1) ||
-           (sc.size() == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+}
+
+inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
+{
+    if( sc.dims() > 2 || !sc.isContinuous() )
+        return false;
+    Size sz = sc.size();
+    if(sz.width != 1 && sz.height != 1)
+        return false;
+    int cn = CV_MAT_CN(atype);
+    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
+        return false;
+    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
@@ -227,7 +244,10 @@ struct TLSData
     static TLSData* get();
 };
 
-namespace ocl { MatAllocator* getOpenCLAllocator(); }
+namespace ocl
+{
+    MatAllocator* getOpenCLAllocator();
+}
 
 }
 

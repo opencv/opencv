@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 
@@ -174,8 +175,8 @@ static void updateContinuityFlag(UMat& m)
             break;
     }
 
-    uint64 t = (uint64)m.step[0]*m.size[0];
-    if( j <= i && t == (size_t)t )
+    uint64 total = (uint64)m.step[0]*m.size[0];
+    if( j <= i && total == (size_t)total )
         m.flags |= UMat::CONTINUOUS_FLAG;
     else
         m.flags &= ~UMat::CONTINUOUS_FLAG;
@@ -197,6 +198,7 @@ UMat Mat::getUMat(int accessFlags) const
     if(!u)
         return hdr;
     UMat::getStdAllocator()->allocate(u, accessFlags);
+    hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
     hdr.u = u;
@@ -548,7 +550,8 @@ Mat UMat::getMat(int accessFlags) const
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.u = u;
-    hdr.datastart = hdr.data = u->data;
+    hdr.datastart = u->data;
+    hdr.data = hdr.datastart + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
     CV_XADD(&hdr.u->refcount, 1);
     return hdr;
@@ -617,7 +620,7 @@ void UMat::copyTo(OutputArray _dst) const
         void* dsthandle = dst.handle(ACCESS_WRITE);
         if( srchandle == dsthandle && dst.offset == offset )
             return;
-        ndoffset(dstofs);
+        dst.ndoffset(dstofs);
         CV_Assert(u->currAllocator == dst.u->currAllocator);
         u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
     }
@@ -631,6 +634,50 @@ void UMat::copyTo(OutputArray _dst) const
 void UMat::convertTo(OutputArray, int, double, double) const
 {
     CV_Error(Error::StsNotImplemented, "");
+}
+
+UMat& UMat::setTo(InputArray _value, InputArray _mask)
+{
+    bool haveMask = !_mask.empty();
+    int tp = type(), cn = CV_MAT_CN(tp);
+    if( dims <= 2 && cn <= 4 && ocl::useOpenCL() )
+    {
+        Mat value = _value.getMat();
+        CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
+        double buf[4];
+        convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
+
+        char opts[1024];
+        sprintf(opts, "-D dstT=%s", ocl::memopTypeToStr(tp));
+
+        ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
+        if( !setK.empty() )
+        {
+            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(tp));
+            UMat mask;
+
+            if( haveMask )
+            {
+                mask = _mask.getUMat();
+                CV_Assert( mask.size() == size() && mask.type() == CV_8U );
+                ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+                ocl::KernelArg dstarg = ocl::KernelArg::ReadWrite(*this);
+                setK.args(maskarg, dstarg, scalararg);
+            }
+            else
+            {
+                ocl::KernelArg dstarg = ocl::KernelArg::WriteOnly(*this);
+                setK.args(dstarg, scalararg);
+            }
+
+            size_t globalsize[] = { cols, rows };
+            if( setK.run(2, globalsize, 0, false) )
+                return *this;
+        }
+    }
+    Mat m = getMat(haveMask ? ACCESS_RW : ACCESS_WRITE);
+    m.setTo(_value, _mask);
+    return *this;
 }
 
 UMat& UMat::operator = (const Scalar&)

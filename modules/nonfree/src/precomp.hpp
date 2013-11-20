@@ -52,6 +52,8 @@
 #include "opencv2/nonfree/cuda.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
+#include "opencv2/core/ocl.hpp"
+
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_CUDAARITHM

@@ -114,8 +114,13 @@ typedef struct _cl_sampler *        cl_sampler;
 
 typedef int cl_int;
 typedef unsigned cl_uint;
-typedef long cl_long;
-typedef unsigned long cl_ulong;
+#if defined (_WIN32) && defined(_MSC_VER)
+    typedef __int64 cl_long;
+    typedef unsigned __int64 cl_ulong;
+#else
+    typedef long cl_long;
+    typedef unsigned long cl_ulong;
+#endif
 
 typedef cl_uint             cl_bool; /* WARNING!  Unlike cl_ types in cl_platform.h, cl_bool is not guaranteed to be the same size as the bool in kernels. */
 typedef cl_ulong            cl_bitfield;
@@ -592,9 +597,16 @@ static void* initOpenCLAndLoad(const char* funcname)
     {
         if(!initialized)
         {
-            handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL", RTLD_LAZY);
+            const char* oclpath = getenv("OPENCV_OPENCL_RUNTIME");
+            oclpath = oclpath && strlen(oclpath) > 0 ? oclpath :
+                "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
+            handle = dlopen(oclpath, RTLD_LAZY);
             initialized = true;
             g_haveOpenCL = handle != 0 && dlsym(handle, oclFuncToCheck) != 0;
+            if( g_haveOpenCL )
+                fprintf(stderr, "Succesffuly loaded OpenCL v1.1+ runtime from %s\n", oclpath);
+            else
+                fprintf(stderr, "Failed to load OpenCL runtime\n");
         }
         if(!handle)
             return 0;
@@ -1212,16 +1224,13 @@ namespace cv { namespace ocl {
 
 struct UMat2D
 {
-    UMat2D(const UMat& m, int accessFlags)
+    UMat2D(const UMat& m)
     {
-        CV_Assert(m.dims == 2);
-        data = (cl_mem)m.handle(accessFlags);
         offset = m.offset;
         step = m.step;
         rows = m.rows;
         cols = m.cols;
     }
-    cl_mem data;
     size_t offset;
     size_t step;
     int rows;
@@ -1230,10 +1239,8 @@ struct UMat2D
 
 struct UMat3D
 {
-    UMat3D(const UMat& m, int accessFlags)
+    UMat3D(const UMat& m)
     {
-        CV_Assert(m.dims == 3);
-        data = (cl_mem)m.handle(accessFlags);
         offset = m.offset;
         step = m.step.p[1];
         slicestep = m.step.p[0];
@@ -1241,7 +1248,6 @@ struct UMat3D
         rows = m.size.p[1];
         cols = m.size.p[2];
     }
-    cl_mem data;
     size_t offset;
     size_t slicestep;
     size_t step;
@@ -1315,7 +1321,7 @@ void setUseOpenCL(bool flag)
     }
 }
 
-void finish()
+void finish2()
 {
     Queue::getDefault().finish();
 }
@@ -1528,7 +1534,7 @@ String Device::OpenCLVersion() const
 { return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
 
 String Device::driverVersion() const
-{ return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
+{ return p ? p->getStrProp(CL_DRIVER_VERSION) : String(); }
 
 int Device::type() const
 { return p ? p->getProp<cl_device_type, int>(CL_DEVICE_TYPE) : 0; }
@@ -1705,14 +1711,14 @@ size_t Device::profilingTimerResolution() const
 
 const Device& Device::getDefault()
 {
-    const Context& ctx = Context::getDefault();
+    const Context2& ctx = Context2::getDefault();
     int idx = TLSData::get()->device;
     return ctx.device(idx);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-struct Context::Impl
+struct Context2::Impl
 {
     Impl(int dtype0)
     {
@@ -1777,7 +1783,7 @@ struct Context::Impl
         devices.clear();
     }
 
-    Program getProg(const ProgramSource& src,
+    Program getProg(const ProgramSource2& src,
                     const String& buildflags, String& errmsg)
     {
         String prefix = Program::getPrefix(buildflags);
@@ -1787,7 +1793,8 @@ struct Context::Impl
             return it->second;
         //String filename = format("%08x%08x_%08x%08x.clb2",
         Program prog(src, buildflags, errmsg);
-        phash.insert(std::pair<HashKey,Program>(k, prog));
+        if(prog.ptr())
+            phash.insert(std::pair<HashKey,Program>(k, prog));
         return prog;
     }
 
@@ -1797,7 +1804,7 @@ struct Context::Impl
     std::vector<Device> devices;
     bool initialized;
 
-    typedef ProgramSource::hash_t hash_t;
+    typedef ProgramSource2::hash_t hash_t;
 
     struct HashKey
     {
@@ -1812,18 +1819,18 @@ struct Context::Impl
 };
 
 
-Context::Context()
+Context2::Context2()
 {
     p = 0;
 }
 
-Context::Context(int dtype)
+Context2::Context2(int dtype)
 {
     p = 0;
     create(dtype);
 }
 
-bool Context::create(int dtype0)
+bool Context2::create(int dtype0)
 {
     if( !haveOpenCL() )
         return false;
@@ -1838,19 +1845,19 @@ bool Context::create(int dtype0)
     return p != 0;
 }
 
-Context::~Context()
+Context2::~Context2()
 {
     p->release();
 }
 
-Context::Context(const Context& c)
+Context2::Context2(const Context2& c)
 {
     p = (Impl*)c.p;
     if(p)
         p->addref();
 }
 
-Context& Context::operator = (const Context& c)
+Context2& Context2::operator = (const Context2& c)
 {
     Impl* newp = (Impl*)c.p;
     if(newp)
@@ -1861,30 +1868,30 @@ Context& Context::operator = (const Context& c)
     return *this;
 }
 
-void* Context::ptr() const
+void* Context2::ptr() const
 {
     return p->handle;
 }
 
-size_t Context::ndevices() const
+size_t Context2::ndevices() const
 {
     return p ? p->devices.size() : 0;
 }
 
-const Device& Context::device(size_t idx) const
+const Device& Context2::device(size_t idx) const
 {
     static Device dummy;
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context& Context::getDefault()
+Context2& Context2::getDefault()
 {
-    static Context ctx;
+    static Context2 ctx;
     if( !ctx.p && haveOpenCL() )
     {
-        // do not create new Context right away.
+        // do not create new Context2 right away.
         // First, try to retrieve existing context of the same type.
-        // In its turn, Platform::getContext() may call Context::create()
+        // In its turn, Platform::getContext() may call Context2::create()
         // if there is no such context.
         ctx.create(Device::TYPE_ACCELERATOR);
         if(!ctx.p)
@@ -1898,7 +1905,7 @@ Context& Context::getDefault()
     return ctx;
 }
 
-Program Context::getProg(const ProgramSource& prog,
+Program Context2::getProg(const ProgramSource2& prog,
                          const String& buildopts, String& errmsg)
 {
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
@@ -1906,14 +1913,14 @@ Program Context::getProg(const ProgramSource& prog,
 
 struct Queue::Impl
 {
-    Impl(const Context& c, const Device& d)
+    Impl(const Context2& c, const Device& d)
     {
         refcount = 1;
-        const Context* pc = &c;
+        const Context2* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
         {
-            pc = &Context::getDefault();
+            pc = &Context2::getDefault();
             ch = (cl_context)pc->ptr();
         }
         cl_device_id dh = (cl_device_id)d.ptr();
@@ -1943,7 +1950,7 @@ Queue::Queue()
     p = 0;
 }
 
-Queue::Queue(const Context& c, const Device& d)
+Queue::Queue(const Context2& c, const Device& d)
 {
     p = 0;
     create(c, d);
@@ -1973,7 +1980,7 @@ Queue::~Queue()
         p->release();
 }
 
-bool Queue::create(const Context& c, const Device& d)
+bool Queue::create(const Context2& c, const Device& d)
 {
     if(p)
         p->release();
@@ -1996,7 +2003,7 @@ Queue& Queue::getDefault()
 {
     Queue& q = TLSData::get()->oclQueue;
     if( !q.p )
-        q.create(Context::getDefault());
+        q.create(Context2::getDefault());
     return q;
 }
 
@@ -2008,15 +2015,20 @@ static cl_command_queue getQueue(const Queue& q)
     return qq;
 }
 
-KernelArg::KernelArg(int _flags, UMat* _m, void* _obj, size_t _sz)
-    : flags(_flags), m(_m), obj(_obj), sz(_sz)
+KernelArg::KernelArg()
+    : flags(0), m(0), obj(0), sz(0), wscale(1)
+{
+}
+
+KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, const void* _obj, size_t _sz)
+    : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale)
 {
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 1, m.data, m.total()*m.elemSize());
 }
 
 
@@ -2099,8 +2111,8 @@ Kernel::Kernel(const char* kname, const Program& prog)
     create(kname, prog);
 }
 
-Kernel::Kernel(const char* kname, const ProgramSource& src,
-               const String& buildopts, String& errmsg)
+Kernel::Kernel(const char* kname, const ProgramSource2& src,
+               const String& buildopts, String* errmsg)
 {
     p = 0;
     create(kname, src, buildopts, errmsg);
@@ -2143,15 +2155,17 @@ bool Kernel::create(const char* kname, const Program& prog)
     return p != 0;
 }
 
-bool Kernel::create(const char* kname, const ProgramSource& src,
-                    const String& buildopts, String& errmsg)
+bool Kernel::create(const char* kname, const ProgramSource2& src,
+                    const String& buildopts, String* errmsg)
 {
     if(p)
     {
         p->release();
         p = 0;
     }
-    const Program& prog = Context::getDefault().getProg(src, buildopts, errmsg);
+    String tempmsg;
+    if( !errmsg ) errmsg = &tempmsg;
+    const Program& prog = Context2::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
 
@@ -2160,55 +2174,91 @@ void* Kernel::ptr() const
     return p ? p->handle : 0;
 }
 
-void Kernel::set(int i, const void* value, size_t sz)
+bool Kernel::empty() const
 {
-    CV_Assert( p && clSetKernelArg(p->handle, (cl_uint)i, sz, value) >= 0 );
-    if( i == 0 )
-        p->cleanupUMats();
+    return ptr() == 0;
 }
 
-void Kernel::set(int i, const UMat& m)
+int Kernel::set(int i, const void* value, size_t sz)
 {
-    set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
-}
-
-void Kernel::set(int i, const KernelArg& arg)
-{
-    CV_Assert( p && p->handle );
+    CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
+    if( !p || !p->handle || clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+        return -1;
+    return i+1;
+}
+
+int Kernel::set(int i, const UMat& m)
+{
+    return set(i, KernelArg(KernelArg::READ_WRITE, (UMat*)&m, 0, 0));
+}
+
+int Kernel::set(int i, const KernelArg& arg)
+{
+    CV_Assert( i >= 0 );
+    if( i == 0 )
+        p->cleanupUMats();
+    if( !p || !p->handle )
+        return -1;
     if( arg.m )
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        cl_mem h = (cl_mem)arg.m->handle(accessFlags);
+
         if( arg.m->dims <= 2 )
         {
-            UMat2D u2d(*arg.m, accessFlags);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d), &u2d);
+            UMat2D u2d(*arg.m);
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
+            i += 3;
+
+            if( !(arg.flags & KernelArg::NO_SIZE) )
+            {
+                int cols = u2d.cols*arg.wscale;
+                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.cols), &cols);
+                i += 2;
+            }
         }
         else
         {
-            UMat3D u3d(*arg.m, accessFlags);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d), &u3d);
+            UMat3D u3d(*arg.m);
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
+            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep);
+            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step);
+            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset);
+            i += 4;
+            if( !(arg.flags & KernelArg::NO_SIZE) )
+            {
+                int cols = u3d.cols*arg.wscale;
+                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows);
+                clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols);
+                i += 3;
+            }
         }
         p->addUMat(*arg.m);
+        return i;
     }
-    else
-    {
-        clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
-    }
+    clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
+    return i+1;
 }
 
 
-void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsize[],
+bool Kernel::run(int dims, size_t globalsize[], size_t localsize[],
                  bool sync, const Queue& q)
 {
-    CV_Assert(p && p->handle && p->e == 0);
+    if(!p || !p->handle || p->e != 0)
+        return false;
     cl_command_queue qq = getQueue(q);
-    clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                           offset, globalsize, localsize, 0, 0,
-                           sync ? 0 : &p->e);
-    if( sync )
+    size_t offset[CV_MAX_DIM] = {0};
+    cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
+                                           offset, globalsize, localsize, 0, 0,
+                                           sync ? 0 : &p->e);
+    if( sync || retval < 0 )
     {
         clFinish(qq);
         p->cleanupUMats();
@@ -2218,14 +2268,17 @@ void Kernel::run(int dims, size_t offset[], size_t globalsize[], size_t localsiz
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
+    return retval >= 0;
 }
 
-void Kernel::runTask(bool sync, const Queue& q)
+bool Kernel::runTask(bool sync, const Queue& q)
 {
-    CV_Assert(p && p->handle && p->e == 0);
+    if(!p || !p->handle || p->e != 0)
+        return false;
+
     cl_command_queue qq = getQueue(q);
-    clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
-    if( sync )
+    cl_int retval = clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
+    if( sync || retval < 0 )
     {
         clFinish(qq);
         p->cleanupUMats();
@@ -2235,6 +2288,7 @@ void Kernel::runTask(bool sync, const Queue& q)
         p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
+    return retval >= 0;
 }
 
 
@@ -2273,11 +2327,11 @@ size_t Kernel::localMemSize() const
 
 struct Program::Impl
 {
-    Impl(const ProgramSource& _src,
+    Impl(const ProgramSource2& _src,
          const String& _buildflags, String& errmsg)
     {
         refcount = 1;
-        const Context& ctx = Context::getDefault();
+        const Context2& ctx = Context2::getDefault();
         src = _src;
         buildflags = _buildflags;
         const String& srcstr = src.source();
@@ -2293,17 +2347,20 @@ struct Program::Impl
             void** deviceList = deviceListBuf;
             for( i = 0; i < n; i++ )
                 deviceList[i] = ctx.device(i).ptr();
+            printf("Building the OpenCL program ...\n");
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
             if( retval == CL_BUILD_PROGRAM_FAILURE )
             {
-                char buf[1024];
+                char buf[1<<16];
                 size_t retsz = 0;
                 clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
                                       sizeof(buf)-16, buf, &retsz);
                 errmsg = String(buf);
+                CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
             }
+            CV_Assert(retval >= 0);
         }
     }
 
@@ -2315,7 +2372,7 @@ struct Program::Impl
         if(_buf.empty())
             return;
         String prefix0 = Program::getPrefix(buildflags);
-        const Context& ctx = Context::getDefault();
+        const Context2& ctx = Context2::getDefault();
         const Device& dev = Device::getDefault();
         const char* pos0 = _buf.c_str();
         const char* pos1 = strchr(pos0, '\n');
@@ -2366,7 +2423,7 @@ struct Program::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
-    ProgramSource src;
+    ProgramSource2 src;
     String buildflags;
     cl_program handle;
 };
@@ -2374,7 +2431,7 @@ struct Program::Impl
 
 Program::Program() { p = 0; }
 
-Program::Program(const ProgramSource& src,
+Program::Program(const ProgramSource2& src,
         const String& buildflags, String& errmsg)
 {
     p = 0;
@@ -2405,7 +2462,7 @@ Program::~Program()
         p->release();
 }
 
-bool Program::create(const ProgramSource& src,
+bool Program::create(const ProgramSource2& src,
             const String& buildflags, String& errmsg)
 {
     if(p)
@@ -2419,9 +2476,9 @@ bool Program::create(const ProgramSource& src,
     return p != 0;
 }
 
-const ProgramSource& Program::source() const
+const ProgramSource2& Program::source() const
 {
-    static ProgramSource dummy;
+    static ProgramSource2 dummy;
     return p ? p->src : dummy;
 }
 
@@ -2455,7 +2512,7 @@ String Program::getPrefix() const
 
 String Program::getPrefix(const String& buildflags)
 {
-    const Context& ctx = Context::getDefault();
+    const Context2& ctx = Context2::getDefault();
     const Device& dev = ctx.device(0);
     return format("name=%s\ndriver=%s\nbuildflags=%s\n",
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
@@ -2463,7 +2520,7 @@ String Program::getPrefix(const String& buildflags)
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-struct ProgramSource::Impl
+struct ProgramSource2::Impl
 {
     Impl(const char* _src)
     {
@@ -2482,39 +2539,39 @@ struct ProgramSource::Impl
 
     IMPLEMENT_REFCOUNTABLE();
     String src;
-    ProgramSource::hash_t h;
+    ProgramSource2::hash_t h;
 };
 
 
-ProgramSource::ProgramSource()
+ProgramSource2::ProgramSource2()
 {
     p = 0;
 }
 
-ProgramSource::ProgramSource(const char* prog)
+ProgramSource2::ProgramSource2(const char* prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource::ProgramSource(const String& prog)
+ProgramSource2::ProgramSource2(const String& prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource::~ProgramSource()
+ProgramSource2::~ProgramSource2()
 {
     if(p)
         p->release();
 }
 
-ProgramSource::ProgramSource(const ProgramSource& prog)
+ProgramSource2::ProgramSource2(const ProgramSource2& prog)
 {
     p = prog.p;
     if(p)
         p->addref();
 }
 
-ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
+ProgramSource2& ProgramSource2::operator = (const ProgramSource2& prog)
 {
     Impl* newp = (Impl*)prog.p;
     if(newp)
@@ -2525,13 +2582,13 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
     return *this;
 }
 
-const String& ProgramSource::source() const
+const String& ProgramSource2::source() const
 {
     static String dummy;
     return p ? p->src : dummy;
 }
 
-ProgramSource::hash_t ProgramSource::hash() const
+ProgramSource2::hash_t ProgramSource2::hash() const
 {
     return p ? p->h : 0;
 }
@@ -2551,7 +2608,7 @@ public:
         return u;
     }
 
-    void getBestFlags(const Context& ctx, int& createFlags, int& flags0) const
+    void getBestFlags(const Context2& ctx, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = CL_MEM_READ_WRITE;
@@ -2574,7 +2631,7 @@ public:
             total *= sizes[i];
         }
 
-        Context& ctx = Context::getDefault();
+        Context2& ctx = Context2::getDefault();
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, createFlags, flags0);
 
@@ -2603,7 +2660,7 @@ public:
         if(u->handle == 0)
         {
             CV_Assert(u->origdata != 0);
-            Context& ctx = Context::getDefault();
+            Context2& ctx = Context2::getDefault();
             int createFlags = 0, flags0 = 0;
             getBestFlags(ctx, createFlags, flags0);
 
@@ -2848,7 +2905,6 @@ public:
                             new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
                             new_dststep[0], new_dststep[1], dstptr, 0, 0, 0) >= 0 );
         }
-        clFinish(q);
     }
 
     void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
@@ -2890,6 +2946,9 @@ public:
 
         if( iscontinuous )
         {
+            int crc = 0;
+            for( size_t i = 0; i < total; i++ )
+                crc ^= ((uchar*)srcptr)[i];
             CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
                 CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) >= 0 );
         }
@@ -2949,10 +3008,11 @@ public:
         }
         else
         {
-            CV_Assert( clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
+            cl_int retval;
+            CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
                                                new_srcstep[0], new_srcstep[1], new_dststep[0], new_dststep[1],
-                                               0, 0, 0) >= 0 );
+                                               0, 0, 0)) >= 0 );
         }
 
         dst->markHostCopyObsolete(true);
@@ -2967,6 +3027,63 @@ MatAllocator* getOpenCLAllocator()
 {
     static OpenCLAllocator allocator;
     return &allocator;
+}
+
+const char* typeToStr(int t)
+{
+    static const char* tab[]=
+    {
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "char", "char2", "char3", "char4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "short", "short2", "short3", "short4",
+        "int", "int2", "int3", "int4",
+        "float", "float2", "float3", "float4",
+        "double", "double2", "double3", "double4",
+        "?", "?", "?", "?"
+    };
+    int cn = CV_MAT_CN(t);
+    return cn > 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+}
+
+const char* memopTypeToStr(int t)
+{
+    static const char* tab[]=
+    {
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "uchar", "uchar2", "uchar3", "uchar4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "ushort", "ushort2", "ushort3", "ushort4",
+        "int", "int2", "int3", "int4",
+        "int", "int2", "int3", "int4",
+        "long", "long2", "long3", "long4",
+        "?", "?", "?", "?"
+    };
+    int cn = CV_MAT_CN(t);
+    return cn > 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+}
+
+const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
+{
+    if( sdepth == ddepth )
+        return "noconvert";
+    const char *typestr = typeToStr(CV_MAKETYPE(ddepth, cn));
+    if( ddepth >= CV_32F ||
+        (ddepth == CV_32S && sdepth < CV_32S) ||
+        (ddepth == CV_16S && sdepth <= CV_8S) ||
+        (ddepth == CV_16U && sdepth == CV_8U))
+    {
+        sprintf(buf, "convert_%s", typestr);
+    }
+    else if( sdepth >= CV_32F )
+    {
+        sprintf(buf, "convert_%s%s_rte", typestr, (ddepth < CV_32S ? "_sat" : ""));
+    }
+    else
+    {
+        sprintf(buf, "convert_%s_sat", typestr);
+    }
+    return buf;
 }
 
 }}
