@@ -1066,6 +1066,9 @@ PERF_TEST_P(RepeatFixture, Repeat,
     const int nx = 3, ny = 2;
     const Size dstSize(srcSize.width * nx, srcSize.height * ny);
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
+
     Mat src(srcSize, type), dst(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 

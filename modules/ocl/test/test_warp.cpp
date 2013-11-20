@@ -156,6 +156,114 @@ OCL_TEST_P(WarpPerspective, Mat)
     }
 }
 
+// buildWarpPerspectiveMaps
+
+PARAM_TEST_CASE(BuildWarpPerspectiveMaps, bool, bool)
+{
+    bool useRoi, mapInverse;
+    Size dsize;
+
+    Mat xmap_whole, ymap_whole, xmap_roi, ymap_roi;
+    ocl::oclMat gxmap_whole, gymap_whole, gxmap_roi, gymap_roi;
+
+    void SetUp()
+    {
+        mapInverse = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
+    }
+
+    void random_roi()
+    {
+        dsize = randomSize(1, MAX_VALUE);
+
+        Border xmapBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(xmap_whole, xmap_roi, dsize, xmapBorder, CV_32FC1, -MAX_VALUE, MAX_VALUE);
+
+        Border ymapBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(ymap_whole, ymap_roi, dsize, ymapBorder, CV_32FC1, -MAX_VALUE, MAX_VALUE);
+
+        generateOclMat(gxmap_whole, gxmap_roi, xmap_whole, dsize, xmapBorder);
+        generateOclMat(gymap_whole, gymap_roi, ymap_whole, dsize, ymapBorder);
+    }
+
+    void Near(double threshold = 0.0)
+    {
+        Mat whole, roi;
+        gxmap_whole.download(whole);
+        gxmap_roi.download(roi);
+
+        EXPECT_MAT_NEAR(xmap_whole, whole, threshold);
+        EXPECT_MAT_NEAR(xmap_roi, roi, threshold);
+    }
+
+    void Near1(double threshold = 0.0)
+    {
+        Mat whole, roi;
+        gymap_whole.download(whole);
+        gymap_roi.download(roi);
+
+        EXPECT_MAT_NEAR(ymap_whole, whole, threshold);
+        EXPECT_MAT_NEAR(ymap_roi, roi, threshold);
+    }
+};
+
+static void buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, Mat &xmap, Mat &ymap)
+{
+    CV_Assert(M.rows == 3 && M.cols == 3);
+    CV_Assert(dsize.area() > 0);
+
+    xmap.create(dsize, CV_32FC1);
+    ymap.create(dsize, CV_32FC1);
+
+    float coeffs[3 * 3];
+    Mat coeffsMat(3, 3, CV_32F, (void *)coeffs);
+
+    if (inverse)
+        M.convertTo(coeffsMat, coeffsMat.type());
+    else
+    {
+        cv::Mat iM;
+        invert(M, iM);
+        iM.convertTo(coeffsMat, coeffsMat.type());
+    }
+
+    for (int y = 0; y < dsize.height; ++y)
+    {
+        float * const xmap_ptr = xmap.ptr<float>(y);
+        float * const ymap_ptr = ymap.ptr<float>(y);
+
+        for (int x = 0; x < dsize.width; ++x)
+        {
+            float coeff = 1.0f / (x * coeffs[6] + y * coeffs[7] + coeffs[8]);
+            xmap_ptr[x] = (x * coeffs[0] + y * coeffs[1] + coeffs[2]) * coeff;
+            ymap_ptr[x] = (x * coeffs[3] + y * coeffs[4] + coeffs[5]) * coeff;
+        }
+    }
+}
+
+OCL_TEST_P(BuildWarpPerspectiveMaps, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        float cols = static_cast<float>(MAX_VALUE), rows = static_cast<float>(MAX_VALUE);
+        float cols2 = cols / 2.0f, rows2 = rows / 2.0f;
+        Point2f sp[] = { Point2f(0.0f, 0.0f), Point2f(cols, 0.0f), Point2f(0.0f, rows), Point2f(cols, rows) };
+        Point2f dp[] = { Point2f(rng.uniform(0.0f, cols2), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(0.0f, cols2), rng.uniform(rows2, rows)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(rows2, rows)) };
+        Mat M = getPerspectiveTransform(sp, dp);
+
+        buildWarpPerspectiveMaps(M, mapInverse, dsize, xmap_roi, ymap_roi);
+        ocl::buildWarpPerspectiveMaps(M, mapInverse, dsize, gxmap_roi, gymap_roi);
+
+        Near(5e-3);
+        Near1(5e-3);
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 
@@ -205,7 +313,12 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, pair<MatType, MatType>, Border, bool)
 
         Border map2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         if (map2Type != noType)
-            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, -mapMaxValue, mapMaxValue);
+        {
+            int mapMinValue = -mapMaxValue;
+            if (map2Type == CV_16UC1 || map2Type == CV_16SC1)
+                mapMinValue = 0, mapMaxValue = INTER_TAB_SIZE2;
+            randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, mapMinValue, mapMaxValue);
+        }
 
         generateOclMat(gsrc, gsrc_roi, src, srcROISize, srcBorder);
         generateOclMat(gdst, gdst_roi, dst, dstROISize, dstBorder);
@@ -338,10 +451,13 @@ INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
                             Bool(),
                             Bool()));
 
+INSTANTIATE_TEST_CASE_P(ImgprocWarp, BuildWarpPerspectiveMaps, Combine(Bool(), Bool()));
+
 INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                             Values(1, 2, 3, 4),
                             Values(pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
+                                   pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    pair<MatType, MatType>((MatType)CV_32FC2, noType)),
                             Values((Border)BORDER_CONSTANT,
                                    (Border)BORDER_REPLICATE,

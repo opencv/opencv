@@ -43,7 +43,7 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
 #ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #elif defined (cl_khr_fp64)

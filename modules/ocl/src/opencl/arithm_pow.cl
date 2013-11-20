@@ -43,58 +43,31 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
-typedef double F;
-typedef double4 F4;
-#define convert_F4 convert_double4;
-#else
-typedef float F;
-typedef float4 F4;
-#define convert_F4 convert_float4;
 #endif
+#endif
+
 /************************************** pow **************************************/
-__kernel void arithm_pow_D5 (__global float *src1, int src1_step, int src1_offset,
-                             __global float *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1,
-                             F p)
-{
 
+__kernel void arithm_pow(__global VT * src, int src_step, int src_offset,
+                         __global VT * dst, int dst_step, int dst_offset,
+                         int rows, int cols, T p)
+{
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < cols && y < rows)
+    if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, (x << 2) + src1_offset);
-        int dst_index  = mad24(y, dst_step,  (x << 2) + dst_offset);
+        int src_index = mad24(y, src_step, x + src_offset);
+        int dst_index = mad24(y, dst_step, x + dst_offset);
 
-        float src1_data = *((__global float *)((__global char *)src1 + src1_index));
-        float tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data))));
+        VT src_data = src[src_index];
+        VT tmp = src_data > 0 ? exp(p * log(src_data)) : (src_data == 0 ? 0 : exp(p * log(fabs(src_data))));
 
-        *((__global float *)((__global char *)dst + dst_index)) = tmp;
+        dst[dst_index] = tmp;
     }
-
 }
-
-#if defined (DOUBLE_SUPPORT)
-__kernel void arithm_pow_D6 (__global double *src1, int src1_step, int src1_offset,
-                             __global double *dst,  int dst_step,  int dst_offset,
-                             int rows, int cols, int dst_step1,
-                             F p)
-{
-
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < cols && y < rows)
-    {
-        int src1_index = mad24(y, src1_step, (x << 3) + src1_offset);
-        int dst_index  = mad24(y, dst_step,  (x << 3) + dst_offset);
-
-        double src1_data = *((__global double *)((__global char *)src1 + src1_index));
-        double tmp = src1_data > 0 ? exp(p * log(src1_data)) : (src1_data == 0 ? 0 : exp(p * log(fabs(src1_data))));
-        *((__global double *)((__global char *)dst + dst_index)) = tmp;
-    }
-
-}
-#endif

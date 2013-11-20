@@ -1174,7 +1174,14 @@ void TestBase::reportMetrics(bool toJUnitXML)
 {
     performance_metrics& m = calcMetrics();
 
-    if (toJUnitXML)
+    if (m.terminationReason == performance_metrics::TERM_SKIP_TEST)
+    {
+        if (toJUnitXML)
+        {
+            RecordProperty("custom_status", "skipped");
+        }
+    }
+    else if (toJUnitXML)
     {
         RecordProperty("bytesIn", (int)m.bytesIn);
         RecordProperty("bytesOut", (int)m.bytesOut);
@@ -1266,21 +1273,30 @@ void TestBase::SetUp()
 
 void TestBase::TearDown()
 {
-    if (!HasFailure() && !verified)
-        ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
-
-    validateMetrics();
-    if (HasFailure())
-        reportMetrics(false);
+    if (metrics.terminationReason == performance_metrics::TERM_SKIP_TEST)
+    {
+        LOGI("\tTest was skipped");
+        GTEST_SUCCEED() << "Test was skipped";
+    }
     else
     {
-        const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
-        const char* type_param = test_info->type_param();
-        const char* value_param = test_info->value_param();
-        if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
-        if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
-        reportMetrics(true);
+        if (!HasFailure() && !verified)
+            ADD_FAILURE() << "The test has no sanity checks. There should be at least one check at the end of performance test.";
+
+        validateMetrics();
+        if (HasFailure())
+        {
+            reportMetrics(false);
+            return;
+        }
     }
+
+    const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+    const char* type_param = test_info->type_param();
+    const char* value_param = test_info->value_param();
+    if (value_param) printf("[ VALUE    ] \t%s\n", value_param), fflush(stdout);
+    if (type_param)  printf("[ TYPE     ] \t%s\n", type_param), fflush(stdout);
+    reportMetrics(true);
 }
 
 std::string TestBase::getDataPath(const std::string& relativePath)
@@ -1329,6 +1345,11 @@ void TestBase::RunPerfTestBody()
     try
     {
         this->PerfTestBody();
+    }
+    catch(PerfSkipTestException&)
+    {
+        metrics.terminationReason = performance_metrics::TERM_SKIP_TEST;
+        return;
     }
     catch(PerfEarlyExitException&)
     {
