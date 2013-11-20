@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_option("", "--no-relatives", action="store_false", dest="calc_relatives", default=True, help="do not output relative values")
     parser.add_option("", "--with-cycles-reduction", action="store_true", dest="calc_cr", default=False, help="output cycle reduction percentages")
     parser.add_option("", "--with-score", action="store_true", dest="calc_score", default=False, help="output automatic classification of speedups")
+    parser.add_option("", "--progress", action="store_true", dest="progress_mode", default=False, help="enable progress mode")
     parser.add_option("", "--show-all", action="store_true", dest="showall", default=False, help="also include empty and \"notrun\" lines")
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
@@ -108,11 +109,9 @@ if __name__ == "__main__":
 
     # build table
     getter = metrix_table[options.metric][1]
-    getter_score = metrix_table["score"][1]
-    if options.calc_relatives:
-        getter_p = metrix_table[options.metric + "%"][1]
-    if options.calc_cr:
-        getter_cr = metrix_table[options.metric + "$"][1]
+    getter_score = metrix_table["score"][1] if options.calc_score else None
+    getter_p = metrix_table[options.metric + "%"][1] if options.calc_relatives else None
+    getter_cr = metrix_table[options.metric + "$"][1] if options.calc_cr else None
     tbl = table(metrix_table[options.metric][0])
 
     # header
@@ -125,17 +124,20 @@ if __name__ == "__main__":
     if options.calc_cr:
         i = 1
         for set in metric_sets:
-            tbl.newColumn(str(i) + "$", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(cycles reduction)", align = "center", cssclass = "col_cr")
+            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
+            tbl.newColumn(str(i) + "$", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(cycles reduction)", align = "center", cssclass = "col_cr")
             i += 1
     if options.calc_relatives:
         i = 1
         for set in metric_sets:
-            tbl.newColumn(str(i) + "%", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(x-factor)", align = "center", cssclass = "col_rel")
+            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
+            tbl.newColumn(str(i) + "%", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(x-factor)", align = "center", cssclass = "col_rel")
             i += 1
     if options.calc_score:
         i = 1
         for set in metric_sets:
-            tbl.newColumn(str(i) + "S", getSetName(set, i, options.columns) + "\nvs\n" + getSetName(test_sets[0], 0, options.columns) + "\n(score)", align = "center", cssclass = "col_name")
+            reference = getSetName(test_sets[0], 0, options.columns) if not options.progress_mode else 'previous'
+            tbl.newColumn(str(i) + "S", getSetName(set, i, options.columns) + "\nvs\n" + reference + "\n(score)", align = "center", cssclass = "col_name")
             i += 1
 
     # rows
@@ -181,18 +183,16 @@ if __name__ == "__main__":
                         tbl.newCell(str(i) + "S", "-", color = "red")
                 else:
                     val = getter(case, cases[0], options.units)
-                    if options.calc_relatives and i > 0 and val:
-                        valp = getter_p(case, cases[0], options.units)
-                    else:
-                        valp = None
-                    if options.calc_cr and i > 0 and val:
-                        valcr = getter_cr(case, cases[0], options.units)
-                    else:
-                        valcr = None
-                    if options.calc_score and i > 0 and val:
-                        val_score = getter_score(case, cases[0], options.units)
-                    else:
-                        val_score = None
+                    def getter_fn(fn):
+                        if fn and i > 0 and val:
+                            for j in reversed(range(i)) if options.progress_mode else [0]:
+                                r = cases[j]
+                                if r is not None and r.get("status") == 'run':
+                                    return fn(case, r, options.units)
+                        return None
+                    valp = getter_fn(getter_p) if options.calc_relatives or options.progress_mode else None
+                    valcr = getter_fn(getter_cr) if options.calc_cr else None
+                    val_score = getter_fn(getter_score) if options.calc_score else None
                     if not valp or i == 0:
                         color = None
                     elif valp > 1.05:
