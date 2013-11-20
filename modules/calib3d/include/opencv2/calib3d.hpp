@@ -85,6 +85,8 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001,
        CALIB_RATIONAL_MODEL      = 0x04000,
        CALIB_THIN_PRISM_MODEL    = 0x08000,
        CALIB_FIX_S1_S2_S3_S4     = 0x10000,
+       CALIB_EXT_RATIONAL_MODEL  = 0x20000,
+       CALIB_FIX_P3_P4           = 0x40000,
        // only for stereo
        CALIB_FIX_INTRINSIC       = 0x00100,
        CALIB_SAME_FOCAL_LENGTH   = 0x00200,
