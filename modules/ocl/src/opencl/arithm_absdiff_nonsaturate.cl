@@ -52,6 +52,8 @@
 #endif
 #endif
 
+#ifdef BINARY
+
 __kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_step, int src1_offset,
                          __global srcT *src2, int src2_step, int src2_offset,
                          __global dstT *dst, int dst_step, int dst_offset,
@@ -78,6 +80,8 @@ __kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_st
     }
 }
 
+#else
+
 __kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int src1_offset,
                          __global dstT *dst, int dst_step, int dst_offset,
                          int cols, int rows)
@@ -99,3 +103,5 @@ __kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int
         }
     }
 }
+
+#endif
