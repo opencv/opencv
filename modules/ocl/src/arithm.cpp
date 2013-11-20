@@ -603,6 +603,12 @@ static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & s
     }
     CV_Assert(src1.step % src1.elemSize() == 0 && (src2.empty() || src2.step % src2.elemSize() == 0));
 
+    if (src2.empty() && (src1.depth() == CV_8U || src1.depth() == CV_16U))
+    {
+        src1.convertTo(diff, CV_32S);
+        return;
+    }
+
     int ddepth = std::max(src1.depth(), CV_32S);
     if (ntype == NORM_L2)
         ddepth = std::max<int>(CV_32F, ddepth);
@@ -639,6 +645,7 @@ static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & s
         args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
 
         kernelName += "_binary";
+        buildOptions += " -D BINARY";
     }
 
     args.push_back( make_pair( sizeof(cl_mem), (void *)&diff.data ));
