@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 ///////////////////////////////// UMat implementation ///////////////////////////////
 

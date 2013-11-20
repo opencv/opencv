@@ -3038,7 +3038,7 @@ const char* typeToStr(int t)
         "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(t);
-    return cn >= 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+    return cn > 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
 }
 
 const char* memopTypeToStr(int t)
@@ -3055,7 +3055,7 @@ const char* memopTypeToStr(int t)
         "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(t);
-    return cn >= 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
+    return cn > 4 ? "?" : tab[CV_MAT_DEPTH(t)*4 + cn-1];
 }
 
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
