@@ -114,8 +114,13 @@ typedef struct _cl_sampler *        cl_sampler;
 
 typedef int cl_int;
 typedef unsigned cl_uint;
-typedef long cl_long;
-typedef unsigned long cl_ulong;
+#if defined (_WIN32) && defined(_MSC_VER)
+    typedef __int64 cl_long;
+    typedef unsigned __int64 cl_ulong;
+#else
+    typedef long cl_long;
+    typedef unsigned long cl_ulong;
+#endif
 
 typedef cl_uint             cl_bool; /* WARNING!  Unlike cl_ types in cl_platform.h, cl_bool is not guaranteed to be the same size as the bool in kernels. */
 typedef cl_ulong            cl_bitfield;
