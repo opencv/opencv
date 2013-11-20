@@ -50,11 +50,11 @@ void loadImage(string path, Mat &img)
     ASSERT_FALSE(img.empty()) << "Could not load input image " << path;
 }
 
-void checkEqual(Mat img0, Mat img1, double threshold)
+void checkEqual(Mat img0, Mat img1, double threshold, const string& name)
 {
     double max = 1.0;
     minMaxLoc(abs(img0 - img1), NULL, &max);
-    ASSERT_FALSE(max > threshold) << max;
+    ASSERT_FALSE(max > threshold) << "max=" << max << " threshold=" << threshold << " method=" << name;
 }
 
 static vector<float> DEFAULT_VECTOR;
@@ -98,31 +98,31 @@ TEST(Photo_Tonemap, regression)
     linear->process(img, result);
     loadImage(test_path + "linear.png", expected);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3);
+    checkEqual(result, expected, 3, "Simple");
 
     Ptr<TonemapDrago> drago = createTonemapDrago(gamma);
     drago->process(img, result);
     loadImage(test_path + "drago.png", expected);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3);
+    checkEqual(result, expected, 3, "Drago");
 
     Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
     durand->process(img, result);
     loadImage(test_path + "durand.png", expected);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3);
+    checkEqual(result, expected, 3, "Durand");
 
     Ptr<TonemapReinhard> reinhard = createTonemapReinhard(gamma);
     reinhard->process(img, result);
     loadImage(test_path + "reinhard.png", expected);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3);
+    checkEqual(result, expected, 3, "Reinhard");
 
     Ptr<TonemapMantiuk> mantiuk = createTonemapMantiuk(gamma);
     mantiuk->process(img, result);
     loadImage(test_path + "mantiuk.png", expected);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(result, expected, 3);
+    checkEqual(result, expected, 3, "Mantiuk");
 }
 
 TEST(Photo_AlignMTB, regression)
@@ -165,7 +165,7 @@ TEST(Photo_MergeMertens, regression)
     loadImage(test_path + "merge/mertens.png", expected);
     merge->process(images, result);
     result.convertTo(result, CV_8UC3, 255);
-    checkEqual(expected, result, 3);
+    checkEqual(expected, result, 3, "Mertens");
 }
 
 TEST(Photo_MergeDebevec, regression)
@@ -188,7 +188,7 @@ TEST(Photo_MergeDebevec, regression)
     map->process(result, result);
     map->process(expected, expected);
 
-    checkEqual(expected, result, 1e-2f);
+    checkEqual(expected, result, 1e-2f, "Debevec");
 }
 
 TEST(Photo_MergeRobertson, regression)
@@ -208,7 +208,7 @@ TEST(Photo_MergeRobertson, regression)
     map->process(result, result);
     map->process(expected, expected);
 
-    checkEqual(expected, result, 1e-2f);
+    checkEqual(expected, result, 1e-2f, "MergeRobertson");
 }
 
 TEST(Photo_CalibrateDebevec, regression)
@@ -242,5 +242,5 @@ TEST(Photo_CalibrateRobertson, regression)
 
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
     calibrate->process(images, response, times);
-    checkEqual(expected, response, 1e-3f);
+    checkEqual(expected, response, 1e-3f, "CalibrateRobertson");
 }

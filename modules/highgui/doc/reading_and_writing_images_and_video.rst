@@ -320,7 +320,7 @@ VideoCapture::retrieve
 ----------------------
 Decodes and returns the grabbed video frame.
 
-.. ocv:function:: bool VideoCapture::retrieve( Mat& image, int flag=0 )
+.. ocv:function:: bool VideoCapture::retrieve( OutputArray image, int flag=0 )
 
 .. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, flag]]) -> retval, image
 
@@ -337,7 +337,9 @@ Grabs, decodes and returns the next video frame.
 
 .. ocv:function:: VideoCapture& VideoCapture::operator >> (Mat& image)
 
-.. ocv:function:: bool VideoCapture::read(Mat& image)
+.. ocv:function:: VideoCapture& VideoCapture::operator >> (UMat& image)
+
+.. ocv:function:: bool VideoCapture::read(OutputArray image)
 
 .. ocv:pyfunction:: cv2.VideoCapture.read([image]) -> retval, image
 

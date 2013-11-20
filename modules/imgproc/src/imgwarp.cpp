@@ -47,6 +47,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <iostream>
 #include <vector>
 
@@ -1901,8 +1902,45 @@ private:
 };
 #endif
 
+static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
+                        double fx, double fy, int interpolation)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    if( !(cn <= 4 &&
+           (interpolation == INTER_NEAREST ||
+           (interpolation == INTER_LINEAR && (depth == CV_8U || depth == CV_32F)))) )
+        return false;
+    UMat src = _src.getUMat();
+    _dst.create(dsize, type);
+    UMat dst = _dst.getUMat();
+    ocl::Kernel k;
+
+    if (interpolation == INTER_LINEAR)
+    {
+        int wdepth = depth == CV_8U ? CV_32S : CV_32F;
+        int wtype = CV_MAKETYPE(wdepth, cn);
+        char buf[2][32];
+        k.create("resizeLN", ocl::imgproc::resize_oclsrc,
+                 format("-D INTER_LINEAR -D depth=%s -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(wtype),
+                        ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1])));
+    }
+    else if (interpolation == INTER_NEAREST)
+    {
+        k.create("resizeNN", ocl::imgproc::resize_oclsrc,
+                 format("-D INTER_NEAREST -D PIXTYPE=%s", ocl::memopTypeToStr(type) ));
+    }
+
+    if( k.empty() )
+        return false;
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+           (float)(1./fx), (float)(1./fy));
+    size_t globalsize[] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, 0, false);
 }
 
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2013,25 +2051,29 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeArea_<double, double>, 0
     };
 
-    Mat src = _src.getMat();
-    Size ssize = src.size();
+    Size ssize = _src.size();
 
     CV_Assert( ssize.area() > 0 );
-    CV_Assert( dsize.area() || (inv_scale_x > 0 && inv_scale_y > 0) );
-    if( !dsize.area() )
+    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
+    if( dsize.area() == 0 )
     {
-        dsize = Size(saturate_cast<int>(src.cols*inv_scale_x),
-            saturate_cast<int>(src.rows*inv_scale_y));
-        CV_Assert( dsize.area() );
+        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
+                     saturate_cast<int>(ssize.height*inv_scale_y));
+        CV_Assert( dsize.area() > 0 );
     }
     else
     {
-        inv_scale_x = (double)dsize.width/src.cols;
-        inv_scale_y = (double)dsize.height/src.rows;
+        inv_scale_x = (double)dsize.width/ssize.width;
+        inv_scale_y = (double)dsize.height/ssize.height;
     }
+
+    if( ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT &&
+        ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation) )
+        return;
+
+    Mat src = _src.getMat();
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
-
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
