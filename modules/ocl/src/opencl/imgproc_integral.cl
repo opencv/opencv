@@ -43,13 +43,17 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+#define CONVERT(step) ((step)>>1)
+#else
+#define CONVERT(step) ((step))
 #endif
+
 #define LSIZE 256
 #define LSIZE_1 255
 #define LSIZE_2 254
@@ -60,17 +64,17 @@
 #define GET_CONFLICT_OFFSET(lid) ((lid) >> LOG_NUM_BANKS)
 
 
-kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global float *sqsum,
-                          int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
+kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global TYPE *sqsum,
+                          int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step,int dst1_step)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
-    float4 sqsum_t[2];
+    TYPE4 sqsum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float4 lm_sqsum[2][LSIZE + LOG_LSIZE];
+    __local TYPE4 lm_sqsum[2][LSIZE + LOG_LSIZE];
     __local int* sum_p;
-    __local float* sqsum_p;
+    __local TYPE* sqsum_p;
     src_step = src_step >> 2;
     gid = gid << 1;
     for(int i = 0; i < rows; i =i + LSIZE_1)
@@ -79,17 +83,17 @@ kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global fl
         src_t[1] = (i + lid < rows ? convert_int4(src[src_offset + (lid+i) * src_step + min(gid + 1, cols - 1)]) : 0);
 
         sum_t[0] = (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[0] = (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[0] = (i == 0 ? (TYPE4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[1] =  (i == 0 ? (float4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[1] =  (i == 0 ? (TYPE4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
 
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
         lm_sum[0][bf_loc] = src_t[0];
-        lm_sqsum[0][bf_loc] = convert_float4(src_t[0] * src_t[0]);
+        lm_sqsum[0][bf_loc] = convert_TYPE4(src_t[0] * src_t[0]);
 
         lm_sum[1][bf_loc] = src_t[1];
-        lm_sqsum[1][bf_loc] = convert_float4(src_t[1] * src_t[1]);
+        lm_sqsum[1][bf_loc] = convert_TYPE4(src_t[1] * src_t[1]);
 
         int offset = 1;
         for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
@@ -130,7 +134,8 @@ kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global fl
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-        int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
+        int loc_s0 = gid * dst_step  + i + lid - 1 - pre_invalid * dst_step /4, loc_s1 = loc_s0 + dst_step ;
+        int loc_sq0 = gid * CONVERT(dst1_step) + i + lid - 1 - pre_invalid * dst1_step / sizeof(TYPE),loc_sq1 = loc_sq0 + CONVERT(dst1_step);
         if(lid > 0 && (i+lid) <= rows)
         {
             lm_sum[0][bf_loc] += sum_t[0];
@@ -138,20 +143,20 @@ kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global fl
             lm_sqsum[0][bf_loc] += sqsum_t[0];
             lm_sqsum[1][bf_loc] += sqsum_t[1];
             sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[0][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
                 sum[loc_s0 + k * dst_step / 4] = sum_p[k];
-                sqsum[loc_s0 + k * dst_step / 4] = sqsum_p[k];
+                sqsum[loc_sq0 + k * dst1_step / sizeof(TYPE)] = sqsum_p[k];
             }
             sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[1][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k + 4 >= cols + pre_invalid) break;
                 sum[loc_s1 + k * dst_step / 4] = sum_p[k];
-                sqsum[loc_s1 + k * dst_step / 4] = sqsum_p[k];
+                sqsum[loc_sq1 + k * dst1_step / sizeof(TYPE)] = sqsum_p[k];
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -159,30 +164,32 @@ kernel void integral_cols_D4(__global uchar4 *src,__global int *sum ,__global fl
 }
 
 
-kernel void integral_rows_D4(__global int4 *srcsum,__global float4 * srcsqsum,__global int *sum ,
-                          __global float *sqsum,int rows,int cols,int src_step,int sum_step,
+kernel void integral_rows_D4(__global int4 *srcsum,__global TYPE4 * srcsqsum,__global int *sum ,
+                          __global TYPE *sqsum,int rows,int cols,int src_step,int src1_step,int sum_step,
                           int sqsum_step,int sum_offset,int sqsum_offset)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     int4 src_t[2], sum_t[2];
-    float4 sqsrc_t[2],sqsum_t[2];
+    TYPE4 sqsrc_t[2],sqsum_t[2];
     __local int4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float4 lm_sqsum[2][LSIZE + LOG_LSIZE];
+    __local TYPE4 lm_sqsum[2][LSIZE + LOG_LSIZE];
     __local int *sum_p;
-    __local float *sqsum_p;
+    __local TYPE *sqsum_p;
     src_step = src_step >> 4;
+    src1_step = (src1_step / sizeof(TYPE)) >> 2 ;
+    gid <<= 1;
     for(int i = 0; i < rows; i =i + LSIZE_1)
     {
-        src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2] : (int4)0;
-        sqsrc_t[0] = i + lid < rows ? srcsqsum[(lid+i) * src_step + gid * 2] : (float4)0;
-        src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2 + 1] : (int4)0;
-        sqsrc_t[1] = i + lid < rows ? srcsqsum[(lid+i) * src_step + gid * 2 + 1] : (float4)0;
+        src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid ] : (int4)0;
+        sqsrc_t[0] = i + lid < rows ? srcsqsum[(lid+i) * src1_step + gid ] : (TYPE4)0;
+        src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid  + 1] : (int4)0;
+        sqsrc_t[1] = i + lid < rows ? srcsqsum[(lid+i) * src1_step + gid  + 1] : (TYPE4)0;
 
         sum_t[0] =  (i == 0 ? 0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[0] =  (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[0] =  (i == 0 ? (TYPE4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? 0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[1] =  (i == 0 ? (float4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[1] =  (i == 0 ? (TYPE4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
 
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
@@ -238,17 +245,18 @@ kernel void integral_rows_D4(__global int4 *srcsum,__global float4 * srcsqsum,__
         }
         if(i + lid == 0)
         {
-            int loc0 = gid * 2 * sum_step;
-            int loc1 = gid * 2 * sqsum_step;
+            int loc0 = gid  * sum_step;
+            int loc1 = gid  * CONVERT(sqsum_step);
             for(int k = 1; k <= 8; k++)
             {
-                if(gid * 8 + k > cols) break;
+                if(gid * 4 + k > cols) break;
                 sum[sum_offset + loc0 + k * sum_step / 4] = 0;
-                sqsum[sqsum_offset + loc1 + k * sqsum_step / 4] = 0;
+                sqsum[sqsum_offset + loc1 + k * sqsum_step / sizeof(TYPE)] = 0;
             }
         }
-        int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
-        int loc_sq0 = sqsum_offset + gid * 2 * sqsum_step + sqsum_step / 4 + i + lid, loc_sq1 = loc_sq0 + sqsum_step ;
+        int loc_s0 = sum_offset + gid  * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
+        int loc_sq0 = sqsum_offset + gid  * CONVERT(sqsum_step) + sqsum_step / sizeof(TYPE) + i + lid, loc_sq1 = loc_sq0 + CONVERT(sqsum_step) ;
+
         if(lid > 0 && (i+lid) <= rows)
         {
             lm_sum[0][bf_loc] += sum_t[0];
@@ -256,37 +264,37 @@ kernel void integral_rows_D4(__global int4 *srcsum,__global float4 * srcsqsum,__
             lm_sqsum[0][bf_loc] += sqsum_t[0];
             lm_sqsum[1][bf_loc] += sqsum_t[1];
             sum_p = (__local int*)(&(lm_sum[0][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[0][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 8 + k >= cols) break;
+                if(gid * 4 + k >= cols) break;
                 sum[loc_s0 + k * sum_step / 4] = sum_p[k];
-                sqsum[loc_sq0 + k * sqsum_step / 4] = sqsum_p[k];
+                sqsum[loc_sq0 + k * sqsum_step / sizeof(TYPE)] = sqsum_p[k];
             }
             sum_p = (__local int*)(&(lm_sum[1][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[1][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
-                if(gid * 8 + 4 + k >= cols) break;
+                if(gid * 4 + 4 + k >= cols) break;
                 sum[loc_s1 + k * sum_step / 4] = sum_p[k];
-                sqsum[loc_sq1 + k * sqsum_step / 4] = sqsum_p[k];
+                sqsum[loc_sq1 + k * sqsum_step / sizeof(TYPE)] = sqsum_p[k];
             }
-        }
+          }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
 
-kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global float *sqsum,
-                          int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step)
+kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global TYPE *sqsum,
+                          int src_offset,int pre_invalid,int rows,int cols,int src_step,int dst_step, int dst1_step)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
-    float4 sqsum_t[2];
+    TYPE4 sqsum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float4 lm_sqsum[2][LSIZE + LOG_LSIZE];
+    __local TYPE4 lm_sqsum[2][LSIZE + LOG_LSIZE];
     __local float* sum_p;
-    __local float* sqsum_p;
+    __local TYPE* sqsum_p;
     src_step = src_step >> 2;
     gid = gid << 1;
     for(int i = 0; i < rows; i =i + LSIZE_1)
@@ -295,17 +303,17 @@ kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global 
         src_t[1] = (i + lid < rows ? convert_float4(src[src_offset + (lid+i) * src_step + min(gid + 1, cols - 1)]) : (float4)0);
 
         sum_t[0] = (i == 0 ? (float4)0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[0] = (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[0] = (i == 0 ? (TYPE4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? (float4)0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[1] =  (i == 0 ? (float4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[1] =  (i == 0 ? (TYPE4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
 
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
         lm_sum[0][bf_loc] = src_t[0];
-        lm_sqsum[0][bf_loc] = convert_float4(src_t[0] * src_t[0]);
+        lm_sqsum[0][bf_loc] = convert_TYPE4(src_t[0] * src_t[0]);
 
         lm_sum[1][bf_loc] = src_t[1];
-        lm_sqsum[1][bf_loc] = convert_float4(src_t[1] * src_t[1]);
+        lm_sqsum[1][bf_loc] = convert_TYPE4(src_t[1] * src_t[1]);
 
         int offset = 1;
         for(int d = LSIZE >> 1 ;  d > 0; d>>=1)
@@ -347,6 +355,7 @@ kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global 
         }
         barrier(CLK_LOCAL_MEM_FENCE);
         int loc_s0 = gid * dst_step + i + lid - 1 - pre_invalid * dst_step / 4, loc_s1 = loc_s0 + dst_step ;
+        int loc_sq0 = gid * CONVERT(dst1_step) + i + lid - 1 - pre_invalid * dst1_step / sizeof(TYPE), loc_sq1 = loc_sq0 + CONVERT(dst1_step);
         if(lid > 0 && (i+lid) <= rows)
         {
             lm_sum[0][bf_loc] += sum_t[0];
@@ -354,20 +363,20 @@ kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global 
             lm_sqsum[0][bf_loc] += sqsum_t[0];
             lm_sqsum[1][bf_loc] += sqsum_t[1];
             sum_p = (__local float*)(&(lm_sum[0][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[0][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k >= cols + pre_invalid || gid * 4 + k < pre_invalid) continue;
                 sum[loc_s0 + k * dst_step / 4] = sum_p[k];
-                sqsum[loc_s0 + k * dst_step / 4] = sqsum_p[k];
+                sqsum[loc_sq0 + k * dst1_step / sizeof(TYPE)] = sqsum_p[k];
             }
             sum_p = (__local float*)(&(lm_sum[1][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[1][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 4 + k + 4 >= cols + pre_invalid) break;
                 sum[loc_s1 + k * dst_step / 4] = sum_p[k];
-                sqsum[loc_s1 + k * dst_step / 4] = sqsum_p[k];
+                sqsum[loc_sq1 + k * dst1_step / sizeof(TYPE)] = sqsum_p[k];
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -375,30 +384,31 @@ kernel void integral_cols_D5(__global uchar4 *src,__global float *sum ,__global 
 }
 
 
-kernel void integral_rows_D5(__global float4 *srcsum,__global float4 * srcsqsum,__global float *sum ,
-                          __global float *sqsum,int rows,int cols,int src_step,int sum_step,
+kernel void integral_rows_D5(__global float4 *srcsum,__global TYPE4 * srcsqsum,__global float *sum ,
+                          __global TYPE *sqsum,int rows,int cols,int src_step,int src1_step, int sum_step,
                           int sqsum_step,int sum_offset,int sqsum_offset)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     float4 src_t[2], sum_t[2];
-    float4 sqsrc_t[2],sqsum_t[2];
+    TYPE4 sqsrc_t[2],sqsum_t[2];
     __local float4 lm_sum[2][LSIZE + LOG_LSIZE];
-    __local float4 lm_sqsum[2][LSIZE + LOG_LSIZE];
+    __local TYPE4 lm_sqsum[2][LSIZE + LOG_LSIZE];
     __local float *sum_p;
-    __local float *sqsum_p;
+    __local TYPE *sqsum_p;
     src_step = src_step >> 4;
+    src1_step = (src1_step / sizeof(TYPE)) >> 2;
     for(int i = 0; i < rows; i =i + LSIZE_1)
     {
         src_t[0] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2] : (float4)0;
-        sqsrc_t[0] = i + lid < rows ? srcsqsum[(lid+i) * src_step + gid * 2] : (float4)0;
+        sqsrc_t[0] = i + lid < rows ? srcsqsum[(lid+i) * src1_step + gid * 2] : (TYPE4)0;
         src_t[1] = i + lid < rows ? srcsum[(lid+i) * src_step + gid * 2 + 1] : (float4)0;
-        sqsrc_t[1] = i + lid < rows ? srcsqsum[(lid+i) * src_step + gid * 2 + 1] : (float4)0;
+        sqsrc_t[1] = i + lid < rows ? srcsqsum[(lid+i) * src1_step + gid * 2 + 1] : (TYPE4)0;
 
         sum_t[0] =  (i == 0 ? (float4)0 : lm_sum[0][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[0] =  (i == 0 ? (float4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[0] =  (i == 0 ? (TYPE4)0 : lm_sqsum[0][LSIZE_2 + LOG_LSIZE]);
         sum_t[1] =  (i == 0 ? (float4)0 : lm_sum[1][LSIZE_2 + LOG_LSIZE]);
-        sqsum_t[1] =  (i == 0 ? (float4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
+        sqsum_t[1] =  (i == 0 ? (TYPE4)0 : lm_sqsum[1][LSIZE_2 + LOG_LSIZE]);
         barrier(CLK_LOCAL_MEM_FENCE);
 
         int bf_loc = lid + GET_CONFLICT_OFFSET(lid);
@@ -455,16 +465,16 @@ kernel void integral_rows_D5(__global float4 *srcsum,__global float4 * srcsqsum,
         if(i + lid == 0)
         {
             int loc0 = gid * 2 * sum_step;
-            int loc1 = gid * 2 * sqsum_step;
+            int loc1 = gid * 2 * CONVERT(sqsum_step);
             for(int k = 1; k <= 8; k++)
             {
                 if(gid * 8 + k > cols) break;
                 sum[sum_offset + loc0 + k * sum_step / 4] = 0;
-                sqsum[sqsum_offset + loc1 + k * sqsum_step / 4] = 0;
+                sqsum[sqsum_offset + loc1 + k * sqsum_step / sizeof(TYPE)] = 0;
             }
         }
         int loc_s0 = sum_offset + gid * 2 * sum_step + sum_step / 4 + i + lid, loc_s1 = loc_s0 + sum_step ;
-        int loc_sq0 = sqsum_offset + gid * 2 * sqsum_step + sqsum_step / 4 + i + lid, loc_sq1 = loc_sq0 + sqsum_step ;
+        int loc_sq0 = sqsum_offset + gid * 2 * CONVERT(sqsum_step) + sqsum_step / sizeof(TYPE) + i + lid, loc_sq1 = loc_sq0 + CONVERT(sqsum_step) ;
         if(lid > 0 && (i+lid) <= rows)
         {
             lm_sum[0][bf_loc] += sum_t[0];
@@ -472,20 +482,20 @@ kernel void integral_rows_D5(__global float4 *srcsum,__global float4 * srcsqsum,
             lm_sqsum[0][bf_loc] += sqsum_t[0];
             lm_sqsum[1][bf_loc] += sqsum_t[1];
             sum_p = (__local float*)(&(lm_sum[0][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[0][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[0][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 8 + k >= cols) break;
                 sum[loc_s0 + k * sum_step / 4] = sum_p[k];
-                sqsum[loc_sq0 + k * sqsum_step / 4] = sqsum_p[k];
+                sqsum[loc_sq0 + k * sqsum_step / sizeof(TYPE)] = sqsum_p[k];
             }
             sum_p = (__local float*)(&(lm_sum[1][bf_loc]));
-            sqsum_p = (__local float*)(&(lm_sqsum[1][bf_loc]));
+            sqsum_p = (__local TYPE*)(&(lm_sqsum[1][bf_loc]));
             for(int k = 0; k < 4; k++)
             {
                 if(gid * 8 + 4 + k >= cols) break;
                 sum[loc_s1 + k * sum_step / 4] = sum_p[k];
-                sqsum[loc_sq1 + k * sqsum_step / 4] = sqsum_p[k];
+                sqsum[loc_sq1 + k * sqsum_step / sizeof(TYPE)] = sqsum_p[k];
             }
         }
         barrier(CLK_LOCAL_MEM_FENCE);

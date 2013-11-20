@@ -43,10 +43,12 @@
 //
 //M*/
 
-#if defined (__ATI__)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (__NVIDIA__)
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
 #endif
 
 /************************************** convolve **************************************/

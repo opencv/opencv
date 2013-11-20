@@ -43,31 +43,25 @@
 //
 //M*/
 
-__kernel
-    void buildWarpPlaneMaps
-    (
-    __global float * map_x,
-    __global float * map_y,
-    __constant float * KRT,
-    int tl_u,
-    int tl_v,
-    int cols,
-    int rows,
-    int step_x,
-    int step_y,
-    float scale
-    )
+__kernel void buildWarpPlaneMaps(__global float * xmap, __global float * ymap,
+                                 __constant float * KRT,
+                                 int tl_u, int tl_v,
+                                 int cols, int rows,
+                                 int xmap_step, int ymap_step,
+                                 int xmap_offset, int ymap_offset,
+                                 float scale)
 {
     int du = get_global_id(0);
     int dv = get_global_id(1);
-    step_x /= sizeof(float);
-    step_y /= sizeof(float);
 
     __constant float * ck_rinv = KRT;
     __constant float * ct      = KRT + 9;
 
     if (du < cols && dv < rows)
     {
+        int xmap_index = mad24(dv, xmap_step, xmap_offset + du);
+        int ymap_index = mad24(dv, ymap_step, ymap_offset + du);
+
         float u = tl_u + du;
         float v = tl_v + dv;
         float x, y;
@@ -83,33 +77,27 @@ __kernel
         x /= z;
         y /= z;
 
-        map_x[dv * step_x + du] = x;
-        map_y[dv * step_y + du] = y;
+        xmap[xmap_index] = x;
+        ymap[ymap_index] = y;
     }
 }
 
-__kernel
-    void buildWarpCylindricalMaps
-    (
-    __global float * map_x,
-    __global float * map_y,
-    __constant float * ck_rinv,
-    int tl_u,
-    int tl_v,
-    int cols,
-    int rows,
-    int step_x,
-    int step_y,
-    float scale
-    )
+__kernel void buildWarpCylindricalMaps(__global float * xmap, __global float * ymap,
+                                       __constant float * ck_rinv,
+                                       int tl_u, int tl_v,
+                                       int cols, int rows,
+                                       int xmap_step, int ymap_step,
+                                       int xmap_offset, int ymap_offset,
+                                       float scale)
 {
     int du = get_global_id(0);
     int dv = get_global_id(1);
-    step_x /= sizeof(float);
-    step_y /= sizeof(float);
 
     if (du < cols && dv < rows)
     {
+        int xmap_index = mad24(dv, xmap_step, xmap_offset + du);
+        int ymap_index = mad24(dv, ymap_step, ymap_offset + du);
+
         float u = tl_u + du;
         float v = tl_v + dv;
         float x, y;
@@ -127,33 +115,27 @@ __kernel
         if (z > 0) { x /= z; y /= z; }
         else x = y = -1;
 
-        map_x[dv * step_x + du] = x;
-        map_y[dv * step_y + du] = y;
+        xmap[xmap_index] = x;
+        ymap[ymap_index] = y;
     }
 }
 
-__kernel
-    void buildWarpSphericalMaps
-    (
-    __global float * map_x,
-    __global float * map_y,
-    __constant float * ck_rinv,
-    int tl_u,
-    int tl_v,
-    int cols,
-    int rows,
-    int step_x,
-    int step_y,
-    float scale
-    )
+__kernel void buildWarpSphericalMaps(__global float * xmap, __global float * ymap,
+                                     __constant float * ck_rinv,
+                                     int tl_u, int tl_v,
+                                     int cols, int rows,
+                                     int xmap_step, int ymap_step,
+                                     int xmap_offset, int ymap_offset,
+                                     float scale)
 {
     int du = get_global_id(0);
     int dv = get_global_id(1);
-    step_x /= sizeof(float);
-    step_y /= sizeof(float);
 
     if (du < cols && dv < rows)
     {
+        int xmap_index = mad24(dv, xmap_step, xmap_offset + du);
+        int ymap_index = mad24(dv, ymap_step, ymap_offset + du);
+
         float u = tl_u + du;
         float v = tl_v + dv;
         float x, y;
@@ -174,63 +156,52 @@ __kernel
         if (z > 0) { x /= z; y /= z; }
         else x = y = -1;
 
-        map_x[dv * step_x + du] = x;
-        map_y[dv * step_y + du] = y;
+        xmap[xmap_index] = x;
+        ymap[ymap_index] = y;
     }
 }
 
-__kernel
-    void buildWarpAffineMaps
-    (
-    __global float * xmap,
-    __global float * ymap,
-    __constant float * c_warpMat,
-    int cols,
-    int rows,
-    int step_x,
-    int step_y
-    )
+__kernel void buildWarpAffineMaps(__global float * xmap, __global float * ymap,
+                                  __constant float * c_warpMat,
+                                  int cols, int rows,
+                                  int xmap_step, int ymap_step,
+                                  int xmap_offset, int ymap_offset)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-    step_x /= sizeof(float);
-    step_y /= sizeof(float);
 
     if (x < cols && y < rows)
     {
-        const float xcoo = c_warpMat[0] * x + c_warpMat[1] * y + c_warpMat[2];
-        const float ycoo = c_warpMat[3] * x + c_warpMat[4] * y + c_warpMat[5];
+        int xmap_index = mad24(y, xmap_step, x + xmap_offset);
+        int ymap_index = mad24(y, ymap_step, x + ymap_offset);
 
-        map_x[y * step_x + x] = xcoo;
-        map_y[y * step_y + x] = ycoo;
+        float xcoo = c_warpMat[0] * x + c_warpMat[1] * y + c_warpMat[2];
+        float ycoo = c_warpMat[3] * x + c_warpMat[4] * y + c_warpMat[5];
+
+        xmap[xmap_index] = xcoo;
+        ymap[ymap_index] = ycoo;
     }
 }
 
-__kernel
-    void buildWarpPerspectiveMaps
-    (
-    __global float * xmap,
-    __global float * ymap,
-    __constant float * c_warpMat,
-    int cols,
-    int rows,
-    int step_x,
-    int step_y
-    )
+__kernel void buildWarpPerspectiveMaps(__global float * xmap, __global float * ymap,
+                                       __constant float * c_warpMat,
+                                       int cols, int rows,
+                                       int xmap_step, int ymap_step,
+                                       int xmap_offset, int ymap_offset)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-    step_x /= sizeof(float);
-    step_y /= sizeof(float);
 
     if (x < cols && y < rows)
     {
-        const float coeff = 1.0f / (c_warpMat[6] * x + c_warpMat[7] * y + c_warpMat[8]);
+        int xmap_index = mad24(y, xmap_step, x + xmap_offset);
+        int ymap_index = mad24(y, ymap_step, x + ymap_offset);
 
-        const float xcoo = coeff * (c_warpMat[0] * x + c_warpMat[1] * y + c_warpMat[2]);
-        const float ycoo = coeff * (c_warpMat[3] * x + c_warpMat[4] * y + c_warpMat[5]);
+        float coeff = 1.0f / (c_warpMat[6] * x + c_warpMat[7] * y + c_warpMat[8]);
+        float xcoo = coeff * (c_warpMat[0] * x + c_warpMat[1] * y + c_warpMat[2]);
+        float ycoo = coeff * (c_warpMat[3] * x + c_warpMat[4] * y + c_warpMat[5]);
 
-        map_x[y * step_x + x] = xcoo;
-        map_y[y * step_y + x] = ycoo;
+        xmap[xmap_index] = xcoo;
+        ymap[ymap_index] = ycoo;
     }
 }

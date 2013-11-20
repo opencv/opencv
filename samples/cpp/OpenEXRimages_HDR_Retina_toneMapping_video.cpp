@@ -4,7 +4,7 @@
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.2
 // Copyright   : Alexandre Benoit, LISTIC Lab, december 2011
-// Description : HighDynamicRange compression (tone mapping) for image sequences with the help of the Gipsa/Listic's retina in C++, Ansi-style
+// Description : HighDynamicRange retina tone mapping for image sequences with the help of the Gipsa/Listic's retina in C++, Ansi-style
 // Known issues: the input OpenEXR sequences can have bad computed pixels that should be removed
 //               => a simple method consists of cutting histogram edges (a slider for this on the UI is provided)
 //               => however, in image sequences, this histogramm cut must be done in an elegant way from frame to frame... still not done...
@@ -94,7 +94,7 @@ static void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, con
      {
          cv::Mat rgbIntImg;
          normalisedImage.convertTo(rgbIntImg, CV_8UC3);
-         cv::cvtColor(rgbIntImg, intGrayImage, cv::COLOR_BGR2GRAY);
+         cvtColor(rgbIntImg, intGrayImage, cv::COLOR_BGR2GRAY);
      }
 
      // get histogram density probability in order to cut values under above edges limits (here 5-95%)... usefull for HDR pixel errors cancellation

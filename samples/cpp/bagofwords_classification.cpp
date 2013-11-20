@@ -54,10 +54,6 @@ static void help(char** argv)
     << "\n";
 }
 
-
-
-
-
 static void makeDir( const string& dir )
 {
 #if defined WIN32 || defined _WIN32

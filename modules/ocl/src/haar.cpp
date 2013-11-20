@@ -747,6 +747,15 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         oclMat gsum(totalheight + 4, gimg.cols + 1, CV_32SC1);
         oclMat gsqsum(totalheight + 4, gimg.cols + 1, CV_32FC1);
 
+        int sdepth = 0;
+        if(Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
+            sdepth = CV_64FC1;
+        else
+            sdepth = CV_32FC1;
+        sdepth = CV_MAT_DEPTH(sdepth);
+        int type = CV_MAKE_TYPE(sdepth, 1);
+        oclMat gsqsum_t(totalheight + 4, gimg.cols + 1, type);
+
         cl_mem stagebuffer;
         cl_mem nodebuffer;
         cl_mem candidatebuffer;
@@ -754,6 +763,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         cv::Rect roi, roi2;
         cv::Mat imgroi, imgroisq;
         cv::ocl::oclMat resizeroi, gimgroi, gimgroisq;
+
         int grp_per_CU = 12;
 
         size_t blocksize = 8;
@@ -773,7 +783,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
             roi2 = Rect(0, 0, sz.width - 1, sz.height - 1);
             resizeroi = gimg1(roi2);
             gimgroi = gsum(roi);
-            gimgroisq = gsqsum(roi);
+            gimgroisq = gsqsum_t(roi);
             int width = gimgroi.cols - 1 - cascade->orig_window_size.width;
             int height = gimgroi.rows - 1 - cascade->orig_window_size.height;
             scaleinfo[i].width_height = (width << 16) | height;
@@ -787,8 +797,13 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
             scaleinfo[i].factor = factor;
             cv::ocl::resize(gimg, resizeroi, Size(sz.width - 1, sz.height - 1), 0, 0, INTER_LINEAR);
             cv::ocl::integral(resizeroi, gimgroi, gimgroisq);
+
             indexy += sz.height;
         }
+        if(gsqsum_t.depth() == CV_64F)
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
 
         gcascade   = (GpuHidHaarClassifierCascade *)cascade->hid_cascade;
         stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
@@ -996,7 +1011,12 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         int n_factors = 0;
         oclMat gsum;
         oclMat gsqsum;
-        cv::ocl::integral(gimg, gsum, gsqsum);
+        oclMat gsqsum_t;
+        cv::ocl::integral(gimg, gsum, gsqsum_t);
+        if(gsqsum_t.depth() == CV_64F)
+            gsqsum_t.convertTo(gsqsum, CV_32FC1);
+        else
+            gsqsum = gsqsum_t;
         CvSize sz;
         std::vector<CvSize> sizev;
         std::vector<float> scalev;

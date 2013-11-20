@@ -76,8 +76,8 @@ int main(int argc, char *argv[])
     // Windows
             namedWindow(WIN_RF, WINDOW_AUTOSIZE );
             namedWindow(WIN_UT, WINDOW_AUTOSIZE );
-            moveWindow(WIN_RF, 400       ,            0); //750,  2 (bernat =0)
-            moveWindow(WIN_UT, refS.width,            0); //1500, 2
+            moveWindow(WIN_RF, 400       ,            0);		 //750,  2 (bernat =0)
+            moveWindow(WIN_UT, refS.width,            0);		 //1500, 2
 
     cout << "Frame resolution: Width=" << refS.width << "  Height=" << refS.height
          << " of nr#: " << captRefrnc.get(CAP_PROP_FRAME_COUNT) << endl;

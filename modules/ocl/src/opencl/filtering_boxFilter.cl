@@ -146,7 +146,11 @@
 #endif
 
 #if USE_DOUBLE
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
 #define FPTYPE double
 #define CONVERT_TO_FPTYPE CAT(convert_double, VEC_SIZE)
 #else
