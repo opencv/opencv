@@ -67,7 +67,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
         _offset.x = min( (int)round % winSize.width, src.cols - winSize.width );
         _offset.y = min( (int)round / winSize.width, src.rows - winSize.height );
         if( !src.empty() && src.type() == CV_8UC1
-                && offset.x >= 0 && offset.y >= 0 )
+                && _offset.x >= 0 && _offset.y >= 0 )
             break;
     }
 
