@@ -23,7 +23,7 @@ if(WIN32)
   if(EXISTS ${XIMEA_PATH})
     set(XIMEA_FOUND 1)
     # set LIB folders
-    if(CMAKE_CL_64)
+    if(X86_64)
       set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x64")
     else()
       set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x86")
