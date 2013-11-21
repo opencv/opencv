@@ -53,8 +53,8 @@ __kernel void setMask(__global const uchar* mask, int maskstep, int maskoffset,
         int mask_index = mad24(y, maskstep, x + maskoffset);
         if( mask[mask_index] )
         {
-            int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
-            *(dstT*)(dstptr + dst_index) = value;
+            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+            *(__global dstT*)(dstptr + dst_index) = value;
         }
     }
 }
@@ -67,7 +67,7 @@ __kernel void set(__global uchar* dstptr, int dststep, int dstoffset,
 
     if (x < cols && y < rows)
     {
-        int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
-        *(dstT*)(dstptr + dst_index) = value;
+        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        *(__global dstT*)(dstptr + dst_index) = value;
     }
 }
