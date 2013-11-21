@@ -68,7 +68,7 @@
 #define CV_32S 4
 #define CV_32F 5
 
-#define dstelem *(dstT*)(dstptr + dst_index)
+#define dstelem *(__global dstT*)(dstptr + dst_index)
 #define noconvert(x) x
 
 #ifndef workT
@@ -76,14 +76,14 @@
     #define srcT1 dstT
     #define srcT2 dstT
     #define workT dstT
-    #define srcelem1 *(dstT*)(srcptr1 + src1_index)
-    #define srcelem2 *(dstT*)(srcptr2 + src2_index)
+    #define srcelem1 *(__global dstT*)(srcptr1 + src1_index)
+    #define srcelem2 *(__global dstT*)(srcptr2 + src2_index)
     #define convertToDT noconvert
 
 #else
 
-    #define srcelem1 convertToWT1(*(srcT1*)(srcptr1 + src1_index))
-    #define srcelem2 convertToWT2(*(srcT2*)(srcptr2 + src2_index))
+    #define srcelem1 convertToWT1(*(__global srcT1*)(srcptr1 + src1_index))
+    #define srcelem2 convertToWT2(*(__global srcT2*)(srcptr2 + src2_index))
 
 #endif
 
@@ -221,9 +221,9 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
-        int src2_index = mad24(y, srcstep2, x*sizeof(srcT2) + srcoffset2);
-        int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+        int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
+        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
 
         PROCESS_ELEM;
         //printf("(x=%d, y=%d). %d, %d, %d\n", x, y, (int)srcelem1, (int)srcelem2, (int)dstelem);
@@ -246,9 +246,9 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int mask_index = mad24(y, maskstep, x + maskoffset);
         if( mask[mask_index] )
         {
-            int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
-            int src2_index = mad24(y, srcstep2, x*sizeof(srcT2) + srcoffset2);
-            int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+            int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
+            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
 
             PROCESS_ELEM;
         }
@@ -266,8 +266,8 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
-        int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
 
         PROCESS_ELEM;
     }
@@ -288,8 +288,8 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int mask_index = mad24(y, maskstep, x + maskoffset);
         if( mask[mask_index] )
         {
-            int src1_index = mad24(y, srcstep1, x*sizeof(srcT1) + srcoffset1);
-            int dst_index  = mad24(y, dststep, x*sizeof(dstT) + dstoffset);
+            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
 
             PROCESS_ELEM;
         }
