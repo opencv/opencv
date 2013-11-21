@@ -60,6 +60,31 @@ namespace ocl {
 using namespace cv;
 using namespace testing;
 
+namespace traits {
+
+template <typename T>
+struct GetMatForRead
+{
+};
+template <>
+struct GetMatForRead<Mat>
+{
+    static const Mat get(const Mat& m) { return m; }
+};
+template <>
+struct GetMatForRead<UMat>
+{
+    static const Mat get(const UMat& m) { return m.getMat(ACCESS_READ); }
+};
+
+} // namespace traits
+
+template <typename T>
+const Mat getMatForRead(const T& mat)
+{
+    return traits::GetMatForRead<T>::get(mat);
+}
+
 extern int test_loop_times;
 
 #define MAX_VALUE 357
@@ -203,32 +228,32 @@ struct TestUtils
     template <typename T1>
     static double checkNorm(const T1& m)
     {
-        return checkNorm(cv::getMatForRead(m));
+        return checkNorm(getMatForRead(m));
     }
     template <typename T1, typename T2>
     static double checkNorm(const T1& m1, const T2& m2)
     {
-        return checkNorm(cv::getMatForRead(m1), cv::getMatForRead(m2));
+        return checkNorm(getMatForRead(m1), getMatForRead(m2));
     }
     template <typename T1, typename T2>
     static double checkSimilarity(const T1& m1, const T2& m2)
     {
-        return checkSimilarity(cv::getMatForRead(m1), cv::getMatForRead(m2));
+        return checkSimilarity(getMatForRead(m1), getMatForRead(m2));
     }
     template <typename T1, typename T2>
     static inline double checkNormRelative(const T1& m1, const T2& m2)
     {
-        const Mat _m1 = cv::getMatForRead(m1);
-        const Mat _m2 = cv::getMatForRead(m2);
+        const Mat _m1 = getMatForRead(m1);
+        const Mat _m2 = getMatForRead(m2);
         return checkNormRelative(_m1, _m2);
     }
 
     template <typename T1, typename T2, typename T3>
     static void showDiff(const T1& src, const T2& gold, const T3& actual, double eps, bool alwaysShow = false)
     {
-        const Mat _src = cv::getMatForRead(src);
-        const Mat _gold = cv::getMatForRead(gold);
-        const Mat _actual = cv::getMatForRead(actual);
+        const Mat _src = getMatForRead(src);
+        const Mat _gold = getMatForRead(gold);
+        const Mat _actual = getMatForRead(actual);
         showDiff(_src, _gold, _actual, eps, alwaysShow);
     }
 };
@@ -277,7 +302,7 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_OFF(fn) cv::ocl::setUseOpenCL(false); fn
 #define OCL_ON(fn) cv::ocl::setUseOpenCL(true); fn
 
-#define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
+#define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
 #define OCL_INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
