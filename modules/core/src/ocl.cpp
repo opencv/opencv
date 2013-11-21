@@ -2342,7 +2342,7 @@ struct Program::Impl
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
         if( handle && retval >= 0 )
         {
-            int i, n = ctx.ndevices();
+            int i, n = (int)ctx.ndevices();
             AutoBuffer<void*> deviceListBuf(n+1);
             void** deviceList = deviceListBuf;
             for( i = 0; i < n; i++ )
