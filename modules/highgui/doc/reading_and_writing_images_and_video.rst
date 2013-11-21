@@ -250,7 +250,7 @@ VideoCapture constructors.
 .. ocv:cfunction:: CvCapture* cvCaptureFromCAM( int device )
 .. ocv:cfunction:: CvCapture* cvCaptureFromFile( const char* filename )
 
-    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     :param device: id of the opened video capturing device (i.e. a camera index). If there is a single camera connected, just pass 0.
 
@@ -267,7 +267,7 @@ Open video file or a capturing device for video capturing
 .. ocv:pyfunction:: cv2.VideoCapture.open(filename) -> retval
 .. ocv:pyfunction:: cv2.VideoCapture.open(device) -> retval
 
-    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     :param device: id of the opened video capturing device (i.e. a camera index).
 
