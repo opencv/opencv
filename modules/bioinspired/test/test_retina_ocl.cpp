@@ -130,13 +130,15 @@ TEST_P(Retina_OCL, Accuracy)
         ocl_retina->getParvo(ocl_parvo);
         ocl_retina->getMagno(ocl_magno);
 
-        EXPECT_LE(checkNear(gold_parvo, (Mat)ocl_parvo), 1.0);
-        EXPECT_LE(checkNear(gold_magno, (Mat)ocl_magno), 1.0);
+        int eps = colorMode ? 2 : 1;
+
+        EXPECT_LE(checkNear(gold_parvo, (Mat)ocl_parvo), eps);
+        EXPECT_LE(checkNear(gold_magno, (Mat)ocl_magno), eps);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(Contrib, Retina_OCL, testing::Combine(
-                            testing::Values(false, true),
+                            testing::Bool(),
                             testing::Values((int)cv::bioinspired::RETINA_COLOR_BAYER),
                             testing::Values(false/*,true*/),
                             testing::Values(1.0, 0.5),
