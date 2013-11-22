@@ -1908,7 +1908,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST ||
-           (interpolation == INTER_LINEAR && (depth == CV_8U || depth == CV_32F)))) )
+           (interpolation == INTER_LINEAR))) )
         return false;
     UMat src = _src.getUMat();
     _dst.create(dsize, type);
@@ -1917,11 +1917,11 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     if (interpolation == INTER_LINEAR)
     {
-        int wdepth = depth == CV_8U ? CV_32S : CV_32F;
+        int wdepth = std::max(depth, CV_32S);
         int wtype = CV_MAKETYPE(wdepth, cn);
         char buf[2][32];
         k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_LINEAR -D depth=%s -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
+                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
                         depth, ocl::typeToStr(type), ocl::typeToStr(wtype),
                         ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
                         ocl::convertTypeStr(wdepth, depth, cn, buf[1])));
@@ -1937,6 +1937,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
            (float)(1./fx), (float)(1./fy));
     size_t globalsize[] = { dst.cols, dst.rows };
+
     return k.run(2, globalsize, 0, false);
 }
 
