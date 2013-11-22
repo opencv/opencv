@@ -111,9 +111,13 @@ public class ManagerActivity extends Activity
             {
                 HardwarePlatformView.setText("Tegra 4i");
             }
-            else
+            else if (HardwareDetector.PLATFORM_TEGRA4 == Platfrom)
             {
                 HardwarePlatformView.setText("Tegra 4");
+            }
+            else
+            {
+                HardwarePlatformView.setText("Tegra 5");
             }
         }
         else
@@ -478,7 +482,14 @@ public class ManagerActivity extends Activity
         // TODO: update if package will be published
         if ((features & HardwareDetector.FEATURES_HAS_NEON) == HardwareDetector.FEATURES_HAS_NEON)
         {
-            return "with Neon";
+            if ((features & HardwareDetector.FEATURES_HAS_VFPv4) == HardwareDetector.FEATURES_HAS_VFPv4)
+            {
+                return "with Neon and VFPv4";
+            }
+            else
+            {
+                return "with Neon";
+            }
         }
         else if ((features & HardwareDetector.FEATURES_HAS_VFPv3) == HardwareDetector.FEATURES_HAS_VFPv3)
         {
