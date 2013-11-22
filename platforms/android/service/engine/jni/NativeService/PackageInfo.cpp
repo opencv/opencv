@@ -19,6 +19,8 @@ map<int, string> PackageInfo::InitPlatformNameMap()
     result[PLATFORM_TEGRA2] = PLATFORM_TEGRA2_NAME;
     result[PLATFORM_TEGRA3] = PLATFORM_TEGRA3_NAME;
     result[PLATFORM_TEGRA4] = PLATFORM_TEGRA4_NAME;
+    result[PLATFORM_TEGRA4i] = PLATFORM_TEGRA4_NAME;
+    result[PLATFORM_TEGRA5] = PLATFORM_TEGRA5_NAME;
 
     return result;
 }
