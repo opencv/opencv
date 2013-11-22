@@ -9,6 +9,118 @@ using namespace std;
 using namespace cv;
 #define LOOP_NUM 10
 
+///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
+#define MAX_THREADS 8
+
+#if defined _WIN32|| defined _WIN64
+    #include <process.h>
+    #include <windows.h>
+    HANDLE handleThreads[MAX_THREADS];
+#endif
+
+#if defined __linux__ || defined __APPLE__
+    #include <pthread.h>
+    #include <vector>
+#endif
+
+using namespace cv;
+
+#if defined _WIN32|| defined _WIN64
+    void detectFaces(void* str)
+#elif defined __linux__ || defined __APPLE__
+    void* detectFaces(void* str)
+#endif
+{
+    std::string fileName = *(std::string*)str;
+    ocl::OclCascadeClassifier cascade;
+    cascade.load("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml" );//path to haarcascade_frontalface_alt.xml
+    Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
+    if (img.empty())
+    {
+        std::cout << "cann't open file " + fileName <<std::endl;
+        return;
+    }
+
+    ocl::oclMat d_img;
+    d_img.upload(img);
+
+    std::vector<Rect> oclfaces;
+    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+
+    for(int i = 0; i<oclfaces.size(); i++)
+        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), Scalar( 0, 255, 255 ), 3);
+
+    imwrite("path to result-images location/filename", img);
+
+}
+
+class Thread
+{
+private:
+    Thread* thread;
+public:
+    Thread(int _idx, std::string _fileName);
+    virtual ~Thread()
+    {
+        delete(thread);
+    }
+     virtual void run()
+     {
+         thread->run();
+     }
+     int idx;
+     std::string fileName;
+protected:
+    Thread():thread(NULL){}
+};
+
+class Thread_Win : public Thread
+{
+private:
+    friend class Thread;
+    Thread_Win(){}
+public:
+    ~Thread_Win(){};
+    void run()
+    {
+#if defined _WIN32|| defined _WIN64
+        handleThreads[idx] = (HANDLE)_beginthread(detectFaces, 0, (void*)&fileName);
+        WaitForMultipleObjects(MAX_THREADS, handleThreads, TRUE, INFINITE);
+#endif
+    }
+};
+
+class Thread_Lin : public Thread
+{
+ private:
+    friend class Thread;
+    Thread_Lin(){}
+public:
+    ~Thread_Lin(){};
+    void run()
+    {
+#if defined __linux__ || defined __APPLE__
+        pthread_t thread;
+        pthread_create(&thread, NULL, detectFaces, (void*)&fileName);
+        pthread_join  (thread, NULL);
+#endif
+    }
+};
+
+Thread::Thread(int _idx, std::string _fileName)
+{
+#if defined _WIN32|| defined _WIN64
+    thread = new Thread_Win();
+#endif
+#if defined __linux__ || defined __APPLE__
+    thread = new Thread_Lin();
+#endif
+    thread->idx = _idx;
+    thread->fileName = _fileName;
+}
+
+///////////////////////////simple-threading faces detecting///////////////////////////////
+
 const static Scalar colors[] =  { CV_RGB(0,0,255),
                                   CV_RGB(0,128,255),
                                   CV_RGB(0,255,255),
@@ -58,7 +170,7 @@ static void Draw(Mat& img, vector<Rect>& faces, double scale);
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
 
-int main( int argc, const char** argv )
+int facedetect_one_thread(int argc, const char** argv )
 {
     const char* keys =
         "{ h | help       | false       | print help message }"
@@ -176,7 +288,32 @@ int main( int argc, const char** argv )
     }
 
     cvDestroyWindow("result");
+    std::cout<< "simple-threading sample was finished" <<std::endl;
     return 0;
+}
+
+void facedetect_multithreading()
+{
+    std::vector<Thread*> threads;
+    for(int i = 0; i<MAX_THREADS; i++)
+        threads.push_back(new Thread(i, "cv/cascadeandhog/images/audrybt1.png") );//path to source picture
+    for(int i = 0; i<MAX_THREADS; i++)
+    {
+        threads[i]->run();
+    }
+    for(int i = 0; i<MAX_THREADS; i++)
+    {
+        delete(threads[i]);
+    }
+}
+
+int main( int argc, const char** argv )
+{
+    std::cout<<"multi-threading sample was running" <<std::endl;
+    facedetect_multithreading();
+    std::cout<<"multi-threading sample was finished" <<std::endl;
+    std::cout<<"simple-threading sample was running" <<std::endl;
+    return facedetect_one_thread(argc,argv);
 }
 
 void detect( Mat& img, vector<Rect>& faces,
