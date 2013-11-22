@@ -790,7 +790,7 @@ int loadModel(
               float *scoreThreshold){
     int last;
     int max;
-    int *comp;
+    int *comp = NULL;
     int count;
     int i;
     int err;
