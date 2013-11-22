@@ -489,11 +489,11 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
 
     String all_build_options;
     if (!ctx->getDeviceInfo().compilationExtraOptions.empty())
-        all_build_options = all_build_options + ctx->getDeviceInfo().compilationExtraOptions;
+        all_build_options += ctx->getDeviceInfo().compilationExtraOptions;
     if (build_options != NULL)
     {
-        all_build_options = all_build_options + " ";
-        all_build_options = all_build_options + build_options;
+        all_build_options += " ";
+        all_build_options += build_options;
     }
     const DeviceInfo& devInfo = ctx->getDeviceInfo();
     String filename = binpath + (source->name ? source->name : "NULL") + "_" + devInfo.platform->platformName + "_" + devInfo.deviceName + ".clb";
