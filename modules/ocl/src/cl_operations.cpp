@@ -379,7 +379,7 @@ cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* s
         idxStr << "_C" << channels;
     if(depth != -1)
         idxStr << "_D" << depth;
-    kernelName = kernelName + idxStr.str();
+    kernelName += idxStr.str();
 
     std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
     cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
@@ -497,7 +497,7 @@ void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& sour
         idxStr << "_C" << channels;
     if(depth != -1)
         idxStr << "_D" << depth;
-    kernelName = kernelName + idxStr.str();
+    kernelName += idxStr.str();
 
     std::string name = std::string("custom_") + source.name;
     ProgramEntry program = { name.c_str(), source.programStr, source.programHash };
