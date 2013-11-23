@@ -1226,13 +1226,13 @@ struct UMat2D
 {
     UMat2D(const UMat& m)
     {
-        offset = m.offset;
-        step = m.step;
+        offset = (int)m.offset;
+        step = (int)m.step;
         rows = m.rows;
         cols = m.cols;
     }
-    size_t offset;
-    size_t step;
+    int offset;
+    int step;
     int rows;
     int cols;
 };
@@ -1241,16 +1241,16 @@ struct UMat3D
 {
     UMat3D(const UMat& m)
     {
-        offset = m.offset;
-        step = m.step.p[1];
-        slicestep = m.step.p[0];
-        slices = m.size.p[0];
+        offset = (int)m.offset;
+        step = (int)m.step.p[1];
+        slicestep = (int)m.step.p[0];
+        slices = (int)m.size.p[0];
         rows = m.size.p[1];
         cols = m.size.p[2];
     }
-    size_t offset;
-    size_t slicestep;
-    size_t step;
+    int offset;
+    int slicestep;
+    int step;
     int slices;
     int rows;
     int cols;
