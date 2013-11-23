@@ -2340,6 +2340,31 @@ CV_EXPORTS MatExpr max(double s, const Mat& a);
 CV_EXPORTS MatExpr abs(const Mat& m);
 CV_EXPORTS MatExpr abs(const MatExpr& e);
 
+namespace traits {
+
+template <typename T>
+struct GetMatForRead
+{
+};
+template <>
+struct GetMatForRead<Mat>
+{
+    static const Mat get(const Mat& m) { return m; }
+};
+template <>
+struct GetMatForRead<UMat>
+{
+    static const Mat get(const UMat& m) { return m.getMat(ACCESS_READ); }
+};
+
+} // namespace traits
+
+template <typename T>
+const Mat getMatForRead(const T& mat)
+{
+    return traits::GetMatForRead<T>::get(mat);
+}
+
 } // cv
 
 #include "opencv2/core/mat.inl.hpp"
