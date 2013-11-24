@@ -38,7 +38,7 @@ void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
         decision_func != 0 &&
         decision_func->alpha != 0 &&
         decision_func->sv_count == sv_total );
-    
+ 
     float svi = 0.f;
 
     hog_detector.clear(); //clear stuff in vector.
@@ -108,11 +108,15 @@ void load_images( const string & prefix, const string & filename, vector< Mat > 
         exit( -1 );
     }
 
-    while( 1 )
+    bool end_of_parsing = false;
+    while( !end_of_parsing )
     {
         getline( file, line );
         if( line == "" ) // no more file to read
+        {
+            end_of_parsing = true;
             break;
+        }
         Mat img = imread( (prefix+line).c_str() ); // load the image
         if( !img.data ) // invalid image, just skip it.
             continue;
@@ -133,7 +137,7 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
     const int size_x = box.width;
     const int size_y = box.height;
 
-    srand( time( NULL ) );
+    srand( (unsigned int)time( NULL ) );
 
     vector< Mat >::const_iterator img = full_neg_lst.begin();
     vector< Mat >::const_iterator end = full_neg_lst.end();
@@ -152,16 +156,16 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
 
 // From http://www.juergenwiki.de/work/wiki/doku.php?id=public:hog_descriptor_computation_and_visualization
 Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, const Size & size )
-{   
+{
     const int DIMX = size.width;
     const int DIMY = size.height;
     float zoomFac = 3;
     Mat visu;
-    resize(color_origImg, visu, Size(color_origImg.cols*zoomFac, color_origImg.rows*zoomFac));
+    resize(color_origImg, visu, Size( (int)(color_origImg.cols*zoomFac), (int)(color_origImg.rows*zoomFac) ) );
 
     int cellSize        = 8;
     int gradientBinSize = 9;
-    float radRangeForOneBin = CV_PI/(float)gradientBinSize; // dividing 180° into 9 bins, how large (in rad) is one bin?
+    float radRangeForOneBin = (float)(CV_PI/(float)gradientBinSize); // dividing 180° into 9 bins, how large (in rad) is one bin?
 
     // prepare data structure: 9 orientation / gradient strenghts for each cell
     int cells_in_x_dir = DIMX / cellSize;
@@ -194,7 +198,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
 
     for (int blockx=0; blockx<blocks_in_x_dir; blockx++)
     {
-        for (int blocky=0; blocky<blocks_in_y_dir; blocky++)            
+        for (int blocky=0; blocky<blocks_in_y_dir; blocky++)
         {
             // 4 cells per block ...
             for (int cellNr=0; cellNr<4; cellNr++)
@@ -259,7 +263,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
             int mx = drawX + cellSize/2;
             int my = drawY + cellSize/2;
 
-            rectangle(visu, Point(drawX*zoomFac,drawY*zoomFac), Point((drawX+cellSize)*zoomFac,(drawY+cellSize)*zoomFac), CV_RGB(100,100,100), 1);
+            rectangle(visu, Point((int)(drawX*zoomFac), (int)(drawY*zoomFac)), Point((int)((drawX+cellSize)*zoomFac), (int)((drawY+cellSize)*zoomFac)), CV_RGB(100,100,100), 1);
 
             // draw in each cell all 9 gradient strengths
             for (int bin=0; bin<gradientBinSize; bin++)
@@ -274,7 +278,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
 
                 float dirVecX = cos( currRad );
                 float dirVecY = sin( currRad );
-                float maxVecLen = cellSize/2;
+                float maxVecLen = (float)(cellSize/2.f);
                 float scale = 2.5; // just a visualization scale, to see the lines better
 
                 // compute line coordinates
@@ -284,7 +288,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
                 float y2 = my + dirVecY * currentGradStrength * maxVecLen * scale;
 
                 // draw gradient visualization
-                line(visu, Point(x1*zoomFac,y1*zoomFac), Point(x2*zoomFac,y2*zoomFac), CV_RGB(0,255,0), 1);
+                line(visu, Point((int)(x1*zoomFac),(int)(y1*zoomFac)), Point((int)(x2*zoomFac),(int)(y2*zoomFac)), CV_RGB(0,255,0), 1);
 
             } // for (all bins)
 
@@ -297,7 +301,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
     {
         for (int x=0; x<cells_in_x_dir; x++)
         {
-            delete[] gradientStrengths[y][x];            
+            delete[] gradientStrengths[y][x];
         }
         delete[] gradientStrengths[y];
         delete[] cellUpdateCounter[y];
@@ -399,7 +403,8 @@ void test_it( const Size & size )
         exit( -1 );
     }
 
-    while( true )
+    bool end_of_process = false;
+    while( !end_of_process )
     {
         video >> img;
         if( !img.data )
@@ -416,9 +421,9 @@ void test_it( const Size & size )
         draw_locations( draw, locations, trained );
 
         imshow( "Video", draw );
-        key = waitKey( 10 );
+        key = (char)waitKey( 10 );
         if( 27 == key )
-            break;
+            end_of_process = true;
     }
 }
 
@@ -439,7 +444,7 @@ int main( int argc, char** argv )
 
     load_images( argv[1], argv[2], pos_lst );
     labels.assign( pos_lst.size(), +1 );
-    const unsigned int old = labels.size();
+    const unsigned int old = (unsigned int)labels.size();
     load_images( argv[3], argv[4], full_neg_lst );
     sample_neg( full_neg_lst, neg_lst, Size( 96,160 ) );
     labels.insert( labels.end(), neg_lst.size(), -1 );
