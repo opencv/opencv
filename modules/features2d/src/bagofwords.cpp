@@ -170,7 +170,7 @@ int BOWImgDescriptorExtractor::descriptorType() const
     return CV_32FC1;
 }
 
-void BOWImgDescriptorExtractor::compute( const Mat& descriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
+void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
     CV_Assert( vocabulary.empty() != false );
 
