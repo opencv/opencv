@@ -47,6 +47,7 @@
 #include "grfmts.hpp"
 #undef min
 #undef max
+#include <iostream>
 
 /****************************************************************************************\
 *                                      Image Codecs                                      *
@@ -58,35 +59,37 @@ struct ImageCodecInitializer
 {
     ImageCodecInitializer()
     {
-        decoders.push_back( new BmpDecoder );
-        encoders.push_back( new BmpEncoder );
+        decoders.push_back( makePtr<BmpDecoder>() );
+        encoders.push_back( makePtr<BmpEncoder>() );
+        decoders.push_back( makePtr<HdrDecoder>() );
+        encoders.push_back( makePtr<HdrEncoder>() );
     #ifdef HAVE_JPEG
-        decoders.push_back( new JpegDecoder );
-        encoders.push_back( new JpegEncoder );
+        decoders.push_back( makePtr<JpegDecoder>() );
+        encoders.push_back( makePtr<JpegEncoder>() );
     #endif
     #ifdef HAVE_WEBP
-        decoders.push_back( new WebPDecoder );
-        encoders.push_back( new WebPEncoder );
+        decoders.push_back( makePtr<WebPDecoder>() );
+        encoders.push_back( makePtr<WebPEncoder>() );
     #endif
-        decoders.push_back( new SunRasterDecoder );
-        encoders.push_back( new SunRasterEncoder );
-        decoders.push_back( new PxMDecoder );
-        encoders.push_back( new PxMEncoder );
+        decoders.push_back( makePtr<SunRasterDecoder>() );
+        encoders.push_back( makePtr<SunRasterEncoder>() );
+        decoders.push_back( makePtr<PxMDecoder>() );
+        encoders.push_back( makePtr<PxMEncoder>() );
     #ifdef HAVE_TIFF
-        decoders.push_back( new TiffDecoder );
+        decoders.push_back( makePtr<TiffDecoder>() );
     #endif
-        encoders.push_back( new TiffEncoder );
+        encoders.push_back( makePtr<TiffEncoder>() );
     #ifdef HAVE_PNG
-        decoders.push_back( new PngDecoder );
-        encoders.push_back( new PngEncoder );
+        decoders.push_back( makePtr<PngDecoder>() );
+        encoders.push_back( makePtr<PngEncoder>() );
     #endif
     #ifdef HAVE_JASPER
-        decoders.push_back( new Jpeg2KDecoder );
-        encoders.push_back( new Jpeg2KEncoder );
+        decoders.push_back( makePtr<Jpeg2KDecoder>() );
+        encoders.push_back( makePtr<Jpeg2KEncoder>() );
     #endif
     #ifdef HAVE_OPENEXR
-        decoders.push_back( new ExrDecoder );
-        encoders.push_back( new ExrEncoder );
+        decoders.push_back( makePtr<ExrDecoder>() );
+        encoders.push_back( makePtr<ExrEncoder>() );
     #endif
     }
 
@@ -198,12 +201,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
 
     ImageDecoder decoder = findDecoder(filename);
-    if( decoder.empty() )
+    if( !decoder )
         return 0;
     decoder->setSource(filename);
     if( !decoder->readHeader() )
         return 0;
-
     CvSize size;
     size.width = decoder->width();
     size.height = decoder->height();
@@ -269,9 +271,8 @@ static bool imwrite_( const String& filename, const Mat& image,
     CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
     ImageEncoder encoder = findEncoder( filename );
-    if( encoder.empty() )
+    if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
-
     if( !encoder->isFormatSupported(image.depth()) )
     {
         CV_Assert( encoder->isFormatSupported(CV_8U) );
@@ -309,7 +310,7 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     String filename;
 
     ImageDecoder decoder = findDecoder(buf);
-    if( decoder.empty() )
+    if( !decoder )
         return 0;
 
     if( !decoder->setSource(buf) )
@@ -409,7 +410,7 @@ bool imencode( const String& ext, InputArray _image,
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
     ImageEncoder encoder = findEncoder( ext );
-    if( encoder.empty() )
+    if( !encoder )
         CV_Error( CV_StsError, "could not find encoder for the specified extension" );
 
     if( !encoder->isFormatSupported(image.depth()) )

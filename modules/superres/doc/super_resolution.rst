@@ -51,7 +51,7 @@ Create Bilateral TV-L1 Super Resolution.
 
 .. ocv:function:: Ptr<SuperResolution> superres::createSuperResolution_BTVL1()
 
-.. ocv:function:: Ptr<SuperResolution> superres::createSuperResolution_BTVL1_GPU()
+.. ocv:function:: Ptr<SuperResolution> superres::createSuperResolution_BTVL1_CUDA()
 
 This class implements Super Resolution algorithm described in the papers [Farsiu03]_ and [Mitzel09]_ .
 

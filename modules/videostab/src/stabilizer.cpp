@@ -54,11 +54,11 @@ namespace videostab
 
 StabilizerBase::StabilizerBase()
 {
-    setLog(new LogToStdout());
-    setFrameSource(new NullFrameSource());
-    setMotionEstimator(new KeypointBasedMotionEstimator(new MotionEstimatorRansacL2()));
-    setDeblurer(new NullDeblurer());
-    setInpainter(new NullInpainter());
+    setLog(makePtr<LogToStdout>());
+    setFrameSource(makePtr<NullFrameSource>());
+    setMotionEstimator(makePtr<KeypointBasedMotionEstimator>(makePtr<MotionEstimatorRansacL2>()));
+    setDeblurer(makePtr<NullDeblurer>());
+    setInpainter(makePtr<NullInpainter>());
     setRadius(15);
     setTrimRatio(0);
     setCorrectionForInclusion(false);
@@ -156,7 +156,7 @@ bool StabilizerBase::doOneIteration()
 
 void StabilizerBase::setUp(const Mat &firstFrame)
 {
-    InpainterBase *inpaint = static_cast<InpainterBase*>(inpainter_);
+    InpainterBase *inpaint = inpainter_.get();
     doInpainting_ = dynamic_cast<NullInpainter*>(inpaint) == 0;
     if (doInpainting_)
     {
@@ -167,7 +167,7 @@ void StabilizerBase::setUp(const Mat &firstFrame)
         inpainter_->setStabilizationMotions(stabilizationMotions_);
     }
 
-    DeblurerBase *deblurer = static_cast<DeblurerBase*>(deblurer_);
+    DeblurerBase *deblurer = deblurer_.get();
     doDeblurring_ = dynamic_cast<NullDeblurer*>(deblurer) == 0;
     if (doDeblurring_)
     {
@@ -252,7 +252,7 @@ void StabilizerBase::logProcessingTime()
 
 OnePassStabilizer::OnePassStabilizer()
 {
-    setMotionFilter(new GaussianMotionFilter());
+    setMotionFilter(makePtr<GaussianMotionFilter>());
     reset();
 }
 
@@ -308,8 +308,8 @@ Mat OnePassStabilizer::postProcessFrame(const Mat &frame)
 
 TwoPassStabilizer::TwoPassStabilizer()
 {
-    setMotionStabilizer(new GaussianMotionFilter());
-    setWobbleSuppressor(new NullWobbleSuppressor());
+    setMotionStabilizer(makePtr<GaussianMotionFilter>());
+    setWobbleSuppressor(makePtr<NullWobbleSuppressor>());
     setEstimateTrimRatio(false);
     reset();
 }
@@ -371,7 +371,7 @@ void TwoPassStabilizer::runPrePassIfNecessary()
     {
         // check if we must do wobble suppression
 
-        WobbleSuppressorBase *wobble = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+        WobbleSuppressorBase *wobble = wobbleSuppressor_.get();
         doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobble) == 0;
 
         // estimate motions
@@ -469,7 +469,7 @@ void TwoPassStabilizer::setUp(const Mat &firstFrame)
     for (int i = -radius_; i <= 0; ++i)
         at(i, frames_) = firstFrame;
 
-    WobbleSuppressorBase *wobble = static_cast<WobbleSuppressorBase*>(wobbleSuppressor_);
+    WobbleSuppressorBase *wobble = wobbleSuppressor_.get();
     doWobbleSuppression_ = dynamic_cast<NullWobbleSuppressor*>(wobble) == 0;
     if (doWobbleSuppression_)
     {

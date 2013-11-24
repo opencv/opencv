@@ -54,10 +54,6 @@ static void help(char** argv)
     << "\n";
 }
 
-
-
-
-
 static void makeDir( const string& dir )
 {
 #if defined WIN32 || defined _WIN32
@@ -2563,19 +2559,19 @@ int main(int argc, char** argv)
     Ptr<FeatureDetector> featureDetector = FeatureDetector::create( ddmParams.detectorType );
     Ptr<DescriptorExtractor> descExtractor = DescriptorExtractor::create( ddmParams.descriptorType );
     Ptr<BOWImgDescriptorExtractor> bowExtractor;
-    if( featureDetector.empty() || descExtractor.empty() )
+    if( !featureDetector || !descExtractor )
     {
         cout << "featureDetector or descExtractor was not created" << endl;
         return -1;
     }
     {
         Ptr<DescriptorMatcher> descMatcher = DescriptorMatcher::create( ddmParams.matcherType );
-        if( featureDetector.empty() || descExtractor.empty() || descMatcher.empty() )
+        if( !featureDetector || !descExtractor || !descMatcher )
         {
             cout << "descMatcher was not created" << endl;
             return -1;
         }
-        bowExtractor = new BOWImgDescriptorExtractor( descExtractor, descMatcher );
+        bowExtractor = makePtr<BOWImgDescriptorExtractor>( descExtractor, descMatcher );
     }
 
     // Print configuration to screen

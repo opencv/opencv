@@ -105,4 +105,3 @@ void CV_ConnectedComponentsTest::run( int /* start_from */)
 }
 
 TEST(Imgproc_ConnectedComponents, regression) { CV_ConnectedComponentsTest test; test.safe_run(); }
-

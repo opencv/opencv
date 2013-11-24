@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,38 +43,28 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_amd_printf : enable
-#if defined (__ATI__)
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-
-#elif defined (__NVIDIA__)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
-
 ////////////////////////////////////////////////////////////////////
 ///////////////////////// columnSum ////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-/// CV_32FC1
-__kernel void columnSum_C1_D5(__global float* src,__global float* dst,int srcCols,int srcRows,int srcStep,int dstStep)
+
+__kernel void columnSum_C1_D5(__global float * src, __global float * dst,
+    int cols, int rows, int src_step, int dst_step, int src_offset, int dst_offset)
 {
     const int x = get_global_id(0);
 
-    srcStep >>= 2;
-    dstStep >>= 2;
-
-    if (x < srcCols)
+    if (x < cols)
     {
-        int srcIdx = x ;
-        int dstIdx = x ;
+        int srcIdx = x + src_offset;
+        int dstIdx = x + dst_offset;
 
         float sum = 0;
 
-        for (int y = 0; y < srcRows; ++y)
+        for (int y = 0; y < rows; ++y)
         {
             sum += src[srcIdx];
             dst[dstIdx] = sum;
-            srcIdx += srcStep;
-            dstIdx += dstStep;
+            srcIdx += src_step;
+            dstIdx += dst_step;
         }
     }
 }

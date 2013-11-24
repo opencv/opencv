@@ -25,8 +25,3 @@ the CMake gui with:
  $ cmake-gui <OPENCV_SRC_PATH>/samples/c/example_cmake/
 
 And pick the correct value for OpenCV_DIR.
-
-
-
-
-

@@ -43,8 +43,12 @@ typedef unsigned __int64 uint64_t;
 
 #include "defines.h"
 
+#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+# include <Intrin.h>
+#endif
+
 #ifdef __ARM_NEON__
-#include "arm_neon.h"
+# include "arm_neon.h"
 #endif
 
 namespace cvflann

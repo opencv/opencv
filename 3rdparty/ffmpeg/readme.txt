@@ -40,5 +40,3 @@ How to update opencv_ffmpeg.dll and opencv_ffmpeg_64.dll when a new version of F
 
 8. Then, go to <opencv>\3rdparty\ffmpeg, edit make.bat
    (change paths to the actual paths to your msys32 and msys64 distributions) and then run make.bat
-
-

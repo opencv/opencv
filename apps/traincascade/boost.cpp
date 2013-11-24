@@ -1,4 +1,18 @@
 #include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+
+using cv::Size;
+using cv::Mat;
+using cv::Point;
+using cv::FileStorage;
+using cv::Rect;
+using cv::Ptr;
+using cv::FileNode;
+using cv::Mat_;
+using cv::Range;
+using cv::FileNodeIterator;
+using cv::ParallelLoopBody;
+
 
 #include "boost.h"
 #include "cascadeclassifier.h"
@@ -957,7 +971,7 @@ void CvCascadeBoostTree::write( FileStorage &fs, const Mat& featureMap )
     int subsetN = (maxCatCount + 31)/32;
     queue<CvDTreeNode*> internalNodesQueue;
     int size = (int)pow( 2.f, (float)ensemble->get_params().max_depth);
-    Ptr<float> leafVals = new float[size];
+    std::vector<float> leafVals(size);
     int leafValIdx = 0;
     int internalNodeIdx = 1;
     CvDTreeNode* tempNode;

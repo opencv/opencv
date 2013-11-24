@@ -134,9 +134,10 @@ endforeach()
 set(step2_depends ${step1_depends} ${scripts_gen_javadoc} ${scripts_rst_parser} ${javadoc_rst_sources} ${generated_java_sources} ${handwrittren_java_sources})
 string(REPLACE ";" "," OPENCV_JAVA_MODULES_STR "${OPENCV_JAVA_MODULES}")
 add_custom_command(OUTPUT ${documented_java_files}
-                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
+                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2> "${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS ${step2_depends}
+                   VERBATIM
                   )
 
 # step 3: copy files to destination
@@ -193,7 +194,7 @@ if(ANDROID AND ANDROID_EXECUTABLE)
   set(lib_target_files ${ANDROID_LIB_PROJECT_FILES})
   ocv_list_add_prefix(lib_target_files "${OpenCV_BINARY_DIR}/")
 
-  android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 11)
+  android_get_compatible_target(lib_target_sdk_target ${ANDROID_NATIVE_API_LEVEL} ${ANDROID_SDK_TARGET} 14)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/android_lib/${ANDROID_MANIFEST_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${ANDROID_MANIFEST_FILE}" @ONLY)
 
   add_custom_command(OUTPUT ${lib_target_files} "${OpenCV_BINARY_DIR}/${ANDROID_MANIFEST_FILE}"
@@ -280,7 +281,12 @@ set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
-  list(REMOVE_ITEM __deps ${the_module} opencv_ts)
+  foreach(m ${OPENCV_MODULES_BUILD}) # filterout INTERNAL (like opencv_ts) and BINDINGS (like opencv_python) modules
+    ocv_assert(DEFINED OPENCV_MODULE_${m}_CLASS)
+    if(NOT OPENCV_MODULE_${m}_CLASS STREQUAL "PUBLIC")
+      list(REMOVE_ITEM __deps ${m})
+    endif()
+  endforeach()
   ocv_list_unique(__deps)
   set(__extradeps ${__deps})
   ocv_list_filterout(__extradeps "^opencv_")
@@ -330,13 +336,19 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(ANDROID)
-  install(TARGETS ${the_module}
+  ocv_install_target(${the_module} EXPORT OpenCVModules
           LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
           ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main)
 else()
-  install(TARGETS ${the_module}
-          RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
-          LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  if(NOT INSTALL_CREATE_DISTRIB)
+    ocv_install_target(${the_module} EXPORT OpenCVModules
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR} COMPONENT main
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR} COMPONENT main)
+  else()
+    ocv_install_target(${the_module} EXPORT OpenCVModules
+            RUNTIME DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main
+            LIBRARY DESTINATION ${JAR_INSTALL_DIR}/${OpenCV_ARCH} COMPONENT main)
+  endif()
 endif()
 
 ######################################################################################################################################

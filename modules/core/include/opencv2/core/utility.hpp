@@ -80,7 +80,7 @@ namespace cv
  }
  \endcode
 */
-template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer
+template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 {
 public:
     typedef _Tp value_type;
@@ -116,8 +116,8 @@ protected:
     _Tp* ptr;
     //! size of the real buffer
     size_t sz;
-    //! pre-allocated buffer
-    _Tp buf[fixed_size];
+    //! pre-allocated buffer. At least 1 element to confirm C++ standard reqirements
+    _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
 //! Sets/resets the break-on-error mode.
@@ -190,20 +190,25 @@ CV_EXPORTS_W double getTickFrequency();
 */
 CV_EXPORTS_W int64 getCPUTickCount();
 
+//! Available CPU features. Currently, the following features are recognized:
+enum {
+      CPU_MMX       = 1,
+      CPU_SSE       = 2,
+      CPU_SSE2      = 3,
+      CPU_SSE3      = 4,
+      CPU_SSSE3     = 5,
+      CPU_SSE4_1    = 6,
+      CPU_SSE4_2    = 7,
+      CPU_POPCNT    = 8,
+      CPU_AVX       = 10,
+      CPU_NEON      = 11
+     };
+// remember to keep this list identical to the one in cvdef.h
+
 /*!
   Returns SSE etc. support status
 
   The function returns true if certain hardware features are available.
-  Currently, the following features are recognized:
-  - CV_CPU_MMX - MMX
-  - CV_CPU_SSE - SSE
-  - CV_CPU_SSE2 - SSE 2
-  - CV_CPU_SSE3 - SSE 3
-  - CV_CPU_SSSE3 - SSSE 3
-  - CV_CPU_SSE4_1 - SSE 4.1
-  - CV_CPU_SSE4_2 - SSE 4.2
-  - CV_CPU_POPCNT - POPCOUNT
-  - CV_CPU_AVX - AVX
 
   \note {Note that the function output is not static. Once you called cv::useOptimized(false),
   most of the hardware acceleration is disabled and thus the function will returns false,
@@ -233,6 +238,7 @@ template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_
 */
 static inline size_t alignSize(size_t sz, int n)
 {
+    CV_DbgAssert((n & (n - 1)) == 0); // n is a power of 2
     return (sz + n-1) & -n;
 }
 

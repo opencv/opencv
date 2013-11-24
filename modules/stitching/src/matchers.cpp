@@ -44,7 +44,7 @@
 
 using namespace cv;
 using namespace cv::detail;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree.hpp"
@@ -125,7 +125,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -155,8 +155,8 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     matches_info.matches.clear();
 
-    Ptr<flann::IndexParams> indexParams = new flann::KDTreeIndexParams();
-    Ptr<flann::SearchParams> searchParams = new flann::SearchParams();
+    Ptr<flann::IndexParams> indexParams = makePtr<flann::KDTreeIndexParams>();
+    Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>();
 
     if (features2.descriptors.depth() == CV_8U)
     {
@@ -200,7 +200,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -211,7 +211,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BFMatcher_GPU matcher(NORM_L2);
+    BFMatcher_CUDA matcher(NORM_L2);
     MatchesSet matches;
 
     // Find 1->2 matches
@@ -314,7 +314,7 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
     if (num_octaves_descr == num_octaves && num_layers_descr == num_layers)
     {
         surf = Algorithm::create<Feature2D>("Feature2D.SURF");
-        if( surf.empty() )
+        if( !surf )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
         surf->set("hessianThreshold", hess_thresh);
         surf->set("nOctaves", num_octaves);
@@ -325,7 +325,7 @@ SurfFeaturesFinder::SurfFeaturesFinder(double hess_thresh, int num_octaves, int 
         detector_ = Algorithm::create<FeatureDetector>("Feature2D.SURF");
         extractor_ = Algorithm::create<DescriptorExtractor>("Feature2D.SURF");
 
-        if( detector_.empty() || extractor_.empty() )
+        if( !detector_ || !extractor_ )
             CV_Error( Error::StsNotImplemented, "OpenCV was built without SURF support" );
 
         detector_->set("hessianThreshold", hess_thresh);
@@ -349,7 +349,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     {
         gray_image = image;
     }
-    if (surf.empty())
+    if (!surf)
     {
         detector_->detect(gray_image, features.keypoints);
         extractor_->compute(gray_image, features.keypoints, features.descriptors);
@@ -365,7 +365,7 @@ void SurfFeaturesFinder::find(const Mat &image, ImageFeatures &features)
 OrbFeaturesFinder::OrbFeaturesFinder(Size _grid_size, int n_features, float scaleFactor, int nlevels)
 {
     grid_size = _grid_size;
-    orb = new ORB(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
+    orb = makePtr<ORB>(n_features * (99 + grid_size.area())/100/grid_size.area(), scaleFactor, nlevels);
 }
 
 void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
@@ -531,15 +531,15 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 {
     (void)try_use_gpu;
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
     {
-        impl_ = new GpuMatcher(match_conf);
+        impl_ = makePtr<GpuMatcher>(match_conf);
     }
     else
 #endif
     {
-        impl_ = new CpuMatcher(match_conf);
+        impl_ = makePtr<CpuMatcher>(match_conf);
     }
 
     is_thread_safe_ = impl_->isThreadSafe();

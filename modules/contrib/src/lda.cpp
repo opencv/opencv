@@ -1106,4 +1106,3 @@ Mat LDA::reconstruct(InputArray src) {
 }
 
 }
-

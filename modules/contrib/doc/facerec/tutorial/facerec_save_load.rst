@@ -44,4 +44,3 @@ And here is the Reconstruction, which is the same as the original:
 
 .. image:: ../img/eigenface_reconstruction_opencv.png
     :align: center
-

@@ -318,4 +318,3 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
-

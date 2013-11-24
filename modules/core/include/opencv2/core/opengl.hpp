@@ -99,12 +99,12 @@ public:
     //! copy from host/device memory (blocking)
     void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
     //! copy from device memory (non blocking)
-    void copyFrom(InputArray arr, gpu::Stream& stream, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    void copyFrom(InputArray arr, cuda::Stream& stream, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! copy to host/device memory (blocking)
     void copyTo(OutputArray arr) const;
     //! copy to device memory (non blocking)
-    void copyTo(OutputArray arr, gpu::Stream& stream) const;
+    void copyTo(OutputArray arr, cuda::Stream& stream) const;
 
     //! create copy of current buffer
     Buffer clone(Target target = ARRAY_BUFFER, bool autoRelease = false) const;
@@ -120,12 +120,12 @@ public:
     void unmapHost();
 
     //! map to device memory (blocking)
-    gpu::GpuMat mapDevice();
+    cuda::GpuMat mapDevice();
     void unmapDevice();
 
     //! map to device memory (non blocking)
-    gpu::GpuMat mapDevice(gpu::Stream& stream);
-    void unmapDevice(gpu::Stream& stream);
+    cuda::GpuMat mapDevice(cuda::Stream& stream);
+    void unmapDevice(cuda::Stream& stream);
 
     int rows() const;
     int cols() const;
@@ -276,19 +276,13 @@ CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS,
 
 }} // namespace cv::ogl
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //! set a CUDA device to use OpenGL interoperability
 CV_EXPORTS void setGlDevice(int device = 0);
 
 }}
 
-namespace cv {
-
-template <> CV_EXPORTS void Ptr<cv::ogl::Buffer::Impl>::delete_obj();
-template <> CV_EXPORTS void Ptr<cv::ogl::Texture2D::Impl>::delete_obj();
-
-}
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

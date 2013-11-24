@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -58,7 +58,7 @@ PARAM_TEST_CASE(HoughCircles, cv::Size)
     }
 };
 
-TEST_P(HoughCircles, Accuracy)
+OCL_TEST_P(HoughCircles, Accuracy)
 {
     const cv::Size size = GET_PARAM(0);
 

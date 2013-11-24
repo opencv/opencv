@@ -208,7 +208,7 @@ void  JpegDecoder::close()
 
 ImageDecoder JpegDecoder::newDecoder() const
 {
-    return new JpegDecoder;
+    return makePtr<JpegDecoder>();
 }
 
 bool  JpegDecoder::readHeader()
@@ -539,7 +539,7 @@ JpegEncoder::~JpegEncoder()
 
 ImageEncoder JpegEncoder::newEncoder() const
 {
-    return new JpegEncoder;
+    return makePtr<JpegEncoder>();
 }
 
 bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )

@@ -353,5 +353,3 @@ void CV_OptFlowTest::run( int /* start_from */)
 
 
 TEST(Legacy_OpticalFlow, accuracy) { CV_OptFlowTest test; test.safe_run(); }
-
-

@@ -9,3 +9,4 @@ photo. Computational Photography
 
     inpainting
     denoising
+    hdr_imaging

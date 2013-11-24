@@ -24,7 +24,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,12 +42,13 @@
 //
 //M*/
 
+#include "test_precomp.hpp"
 
-#include "precomp.hpp"
 using namespace std;
-#ifdef HAVE_CLAMDBLAS
+
 ////////////////////////////////////////////////////////////////////////////
 // GEMM
+
 PARAM_TEST_CASE(Gemm, int, cv::Size, int)
 {
     int      type;
@@ -62,7 +63,7 @@ PARAM_TEST_CASE(Gemm, int, cv::Size, int)
     }
 };
 
-TEST_P(Gemm, Accuracy)
+OCL_TEST_P(Gemm, Accuracy)
 {
     cv::Mat a = randomMat(mat_size, type, 0.0, 10.0);
     cv::Mat b = randomMat(mat_size, type, 0.0, 10.0);
@@ -81,4 +82,3 @@ INSTANTIATE_TEST_CASE_P(ocl_gemm, Gemm, testing::Combine(
                             testing::Values(CV_32FC1, CV_32FC2/*, CV_64FC1, CV_64FC2*/),
                             testing::Values(cv::Size(20, 20), cv::Size(300, 300)),
                             testing::Values(0, (int)cv::GEMM_1_T, (int)cv::GEMM_2_T, (int)(cv::GEMM_1_T + cv::GEMM_2_T))));
-#endif

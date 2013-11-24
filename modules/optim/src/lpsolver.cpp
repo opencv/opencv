@@ -1,39 +1,73 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
+#include <debug.hpp>
 
 namespace cv{namespace optim{
 using std::vector;
 
 #ifdef ALEX_DEBUG
-#define dprintf(x) printf x
-static void print_matrix(const Mat& x){
-    print(x);
-    printf("\n");
-}
 static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
     printf("\tprint simplex state\n");
-    
+
     printf("v=%g\n",v);
-    
+
     printf("here c goes\n");
     print_matrix(c);
-    
+
     printf("non-basic: ");
     print(Mat(N));
     printf("\n");
-    
+
     printf("here b goes\n");
     print_matrix(b);
     printf("basic: ");
-    
+
     print(Mat(B));
     printf("\n");
 }
 #else
-#define dprintf(x)
-#define print_matrix(x)
 #define print_simplex_state(c,b,v,N,B)
 #endif
 
@@ -90,11 +124,12 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     //return the optimal solution
     z.create(c.cols,1,CV_64FC1);
     MatIterator_<double> it=z.begin<double>();
+    unsigned int nsize = (unsigned int)N.size();
     for(int i=1;i<=c.cols;i++,it++){
-        if(indexToRow[i]<N.size()){
+        if(indexToRow[i]<nsize){
             *it=0;
         }else{
-            *it=b.at<double>(indexToRow[i]-N.size(),b.cols-1);
+            *it=b.at<double>(indexToRow[i]-nsize,b.cols-1);
         }
     }
 
@@ -108,7 +143,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         *it=it[-1]+1;
     }
     B.resize(b.rows);
-    B[0]=N.size();
+    B[0]=(int)N.size();
     for (std::vector<int>::iterator it = B.begin()+1 ; it != B.end(); ++it){
         *it=it[-1]+1;
     }
@@ -157,8 +192,9 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     dprintf(("\tAFTER INNER_SIMPLEX\n"));
     print_simplex_state(c,b,v,N,B);
 
-    if(indexToRow[0]>=N.size()){
-        int iterator_offset=indexToRow[0]-N.size();
+    unsigned int nsize = (unsigned int)N.size();
+    if(indexToRow[0]>=nsize){
+        int iterator_offset=indexToRow[0]-nsize;
         if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
@@ -182,14 +218,14 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     c=0;
     v=0;
     for(int I=1;I<old_c.cols;I++){
-        if(indexToRow[I]<N.size()){
+        if(indexToRow[I]<nsize){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
-            c(0,iterator_offset)+=old_c(0,I);     
+            c(0,iterator_offset)+=old_c(0,I);
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
-            int iterator_offset=indexToRow[I]-N.size();
+            int iterator_offset=indexToRow[I]-nsize;
             c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
             v+=old_c(0,I)*b(iterator_offset,b.cols-1);
             print_matrix(c);
@@ -272,7 +308,7 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
     }
 }
 
-static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, 
+static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,
         int leaving_index,int entering_index,vector<unsigned int>& indexToRow){
     double Coef=b(leaving_index,entering_index);
     for(int i=0;i<b.cols;i++){
@@ -307,7 +343,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
     }
     dprintf(("v was %g\n",v));
     v+=Coef*b(leaving_index,b.cols-1);
-    
+
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
 }

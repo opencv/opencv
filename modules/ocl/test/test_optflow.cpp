@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
@@ -53,9 +53,6 @@ using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
 using namespace std;
-
-extern string workdir;
-
 
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
@@ -73,7 +70,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
     }
 };
 
-TEST_P(GoodFeaturesToTrack, Accuracy)
+OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
 {
     cv::Mat frame = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame.empty());
@@ -89,7 +86,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_FALSE(d_pts.empty());
 
     std::vector<cv::Point2f> pts(d_pts.cols);
-    
+
     detector.downloadPoints(d_pts, pts);
 
     std::vector<cv::Point2f> pts_gold;
@@ -114,7 +111,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-TEST_P(GoodFeaturesToTrack, EmptyCorners)
+OCL_TEST_P(GoodFeaturesToTrack, EmptyCorners)
 {
     int maxCorners = 1000;
     double qualityLevel = 0.01;
@@ -129,7 +126,7 @@ TEST_P(GoodFeaturesToTrack, EmptyCorners)
     ASSERT_TRUE(corners.empty());
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack, 
+INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack,
     testing::Values(MinDistance(0.0), MinDistance(3.0)));
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,7 +141,7 @@ PARAM_TEST_CASE(TVL1, bool)
 
 };
 
-TEST_P(TVL1, Accuracy)
+OCL_TEST_P(TVL1, DISABLED_Accuracy) // TODO implementations of TV1 in video module are different in 2.4 and master branches
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -153,9 +150,8 @@ TEST_P(TVL1, Accuracy)
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
-    cv::RNG &rng = TS::ptr()->get_rng();
-    cv::Mat flowx = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
-    cv::Mat flowy = randomMat(rng, frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowx = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
+    cv::Mat flowy = randomMat(frame0.size(), CV_32FC1, 0, 0, useRoi);
     cv::ocl::oclMat d_flowx(flowx), d_flowy(flowy);
     d_alg(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
 
@@ -168,7 +164,7 @@ TEST_P(TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
 }
-INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(true, false));
+INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(false, true));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -186,7 +182,7 @@ PARAM_TEST_CASE(Sparse, bool, bool)
     }
 };
 
-TEST_P(Sparse, Mat)
+OCL_TEST_P(Sparse, Mat)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
@@ -255,7 +251,6 @@ TEST_P(Sparse, Mat)
             cv::Point2i b = nextPts_gold[i];
 
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
-            //float errdiff = std::abs(err[i] - err_gold[i]);
             float errdiff = 0.0f;
 
             if (!eq || errdiff > 1e-1)
@@ -266,12 +261,10 @@ TEST_P(Sparse, Mat)
     double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
 
     ASSERT_LE(bad_ratio, 0.02f);
-
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(
-    Values(false, true),
-    Values(false, true)));
+INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(Bool(), Bool()));
+
 //////////////////////////////////////////////////////
 // FarnebackOpticalFlow
 
@@ -299,7 +292,7 @@ PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
     }
 };
 
-TEST_P(Farneback, Accuracy)
+OCL_TEST_P(Farneback, Accuracy)
 {
     cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -346,4 +339,3 @@ INSTANTIATE_TEST_CASE_P(OCL_Video, Farneback, testing::Combine(
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
 #endif // HAVE_OPENCL
-

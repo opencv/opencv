@@ -157,5 +157,3 @@ template <class T> struct Array4d {
 };
 
 #endif
-
-

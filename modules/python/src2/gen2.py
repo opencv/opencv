@@ -13,20 +13,24 @@ ignored_arg_types = ["RNG*"]
 
 gen_template_check_self = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
-    $cname* _self_ = ${amp}((pyopencv_${name}_t*)self)->v;
+    $cname* _self_ = ${amp}((pyopencv_${name}_t*)self)->v${get};
 """)
 
 gen_template_check_self_algo = Template("""    if(!PyObject_TypeCheck(self, &pyopencv_${name}_Type))
         return failmsgp("Incorrect type of self (must be '${name}' or its derivative)");
-    $cname* _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.obj);
+    $cname* _self_ = dynamic_cast<$cname*>(${amp}((pyopencv_${name}_t*)self)->v.get());
 """)
 
-gen_template_call_constructor = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+gen_template_call_constructor_prelude = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
         new (&(self->v)) Ptr<$cname>(); // init Ptr with placement new
-        if(self) ERRWRAP2(self->v = new $cname""")
+        if(self) """)
 
-gen_template_simple_call_constructor = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
-        if(self) ERRWRAP2(self->v = $cname""")
+gen_template_call_constructor = Template("""self->v.reset(new ${cname}${args})""")
+
+gen_template_simple_call_constructor_prelude = Template("""self = PyObject_NEW(pyopencv_${name}_t, &pyopencv_${name}_Type);
+        if(self) """)
+
+gen_template_simple_call_constructor = Template("""self->v = ${cname}${args}""")
 
 gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL };
     if( PyArg_ParseTupleAndKeywords(args, kw, "$fmtspec", (char**)keywords, $parse_arglist)$code_cvt )""")
@@ -34,7 +38,7 @@ gen_template_parse_args = Template("""const char* keywords[] = { $kw_list, NULL 
 gen_template_func_body = Template("""$code_decl
     $code_parse
     {
-        $code_fcall;
+        ${code_prelude}ERRWRAP2($code_fcall);
         $code_ret;
     }
 """)
@@ -124,7 +128,7 @@ template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
         failmsg("Expected ${cname} for argument '%%s'", name);
         return false;
     }
-    dst = ((pyopencv_${name}_t*)src)->v;
+    dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
     return true;
 }
 
@@ -187,7 +191,7 @@ static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *clo
 gen_template_get_prop_algo = Template("""
 static PyObject* pyopencv_${name}_get_${member}(pyopencv_${name}_t* p, void *closure)
 {
-    return pyopencv_from(dynamic_cast<$cname*>(p->v.obj)${access}${member});
+    return pyopencv_from(dynamic_cast<$cname*>(p->v.get())${access}${member});
 }
 """)
 
@@ -211,7 +215,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.obj)${access}${member}) ? 0 : -1;
+    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
 }
 """)
 
@@ -559,39 +563,22 @@ class FuncInfo(object):
         if self.classname:
             selfinfo = all_classes[self.classname]
             if not self.isconstructor:
-                amp = ""
-                if selfinfo.issimple:
-                    amp = "&"
+                amp = "&" if selfinfo.issimple else ""
                 if selfinfo.isalgorithm:
                     code += gen_template_check_self_algo.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
                 else:
-                    code += gen_template_check_self.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp)
+                    get = "" if selfinfo.issimple else ".get()"
+                    code += gen_template_check_self.substitute(name=selfinfo.name, cname=selfinfo.cname, amp=amp, get=get)
                 fullname = selfinfo.wname + "." + fullname
 
         all_code_variants = []
         declno = -1
         for v in self.variants:
             code_decl = ""
-            code_fcall = ""
             code_ret = ""
             code_cvt_list = []
 
-            if self.isconstructor:
-                code_decl += "    pyopencv_%s_t* self = 0;\n" % selfinfo.name
-                templ = gen_template_call_constructor
-                if selfinfo.issimple:
-                    templ = gen_template_simple_call_constructor
-                code_fcall = templ.substitute(name=selfinfo.name, cname=selfinfo.cname)
-            else:
-                code_fcall = "ERRWRAP2( "
-                if v.rettype:
-                    code_decl += "    " + v.rettype + " retval;\n"
-                    code_fcall += "retval = "
-                if ismethod:
-                    code_fcall += "_self_->" + self.cname
-                else:
-                    code_fcall += self.cname
-            code_fcall += "("
+            code_args = "("
             all_cargs = []
             parse_arglist = []
 
@@ -605,9 +592,9 @@ class FuncInfo(object):
                     if not defval and a.tp.endswith("*"):
                         defval = 0
                     assert defval
-                    if not code_fcall.endswith("("):
-                        code_fcall += ", "
-                    code_fcall += defval
+                    if not code_args.endswith("("):
+                        code_args += ", "
+                    code_args += defval
                     all_cargs.append([[None, ""], ""])
                     continue
                 tp1 = tp = a.tp
@@ -649,11 +636,34 @@ class FuncInfo(object):
                 else:
                     code_decl += "    %s %s;\n" % (amapping[0], a.name)
 
-                if not code_fcall.endswith("("):
-                    code_fcall += ", "
-                code_fcall += amp + a.name
+                if not code_args.endswith("("):
+                    code_args += ", "
+                code_args += amp + a.name
 
-            code_fcall += "))"
+            code_args += ")"
+
+            if self.isconstructor:
+                code_decl += "    pyopencv_%s_t* self = 0;\n" % selfinfo.name
+                if selfinfo.issimple:
+                    templ_prelude = gen_template_simple_call_constructor_prelude
+                    templ = gen_template_simple_call_constructor
+                else:
+                    templ_prelude = gen_template_call_constructor_prelude
+                    templ = gen_template_call_constructor
+
+                code_prelude = templ_prelude.substitute(name=selfinfo.name, cname=selfinfo.cname)
+                code_fcall = templ.substitute(name=selfinfo.name, cname=selfinfo.cname, args=code_args)
+            else:
+                code_prelude = ""
+                code_fcall = ""
+                if v.rettype:
+                    code_decl += "    " + v.rettype + " retval;\n"
+                    code_fcall += "retval = "
+                if ismethod:
+                    code_fcall += "_self_->" + self.cname
+                else:
+                    code_fcall += self.cname
+                code_fcall += code_args
 
             if code_cvt_list:
                 code_cvt_list = [""] + code_cvt_list
@@ -706,7 +716,7 @@ class FuncInfo(object):
                     (fmtspec, ", ".join(["pyopencv_from(" + aname + ")" for aname, argno in v.py_outlist]))
 
             all_code_variants.append(gen_template_func_body.substitute(code_decl=code_decl,
-                code_parse=code_parse, code_fcall=code_fcall, code_ret=code_ret))
+                code_parse=code_parse, code_prelude=code_prelude, code_fcall=code_fcall, code_ret=code_ret))
 
         if len(all_code_variants)==1:
             # if the function/method has only 1 signature, then just put it

@@ -13,12 +13,12 @@ using std::tr1::get;
     };\
     TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
-    void fixture##_##name::PerfTestBody() { if (PERF_RUN_GPU()) __gpu(); else __cpu(); }
+    void fixture##_##name::PerfTestBody() { if (PERF_RUN_CUDA()) __gpu(); else __cpu(); }
 
 #define RUN_CPU(fixture, name)\
     void fixture##_##name::__cpu()
 
-#define RUN_GPU(fixture, name)\
+#define RUN_CUDA(fixture, name)\
     void fixture##_##name::__gpu()
 
 #define NO_CPU(fixture, name)\
@@ -37,7 +37,7 @@ namespace {
         }
     };
 
-    cv::Mat sortDetections(cv::gpu::GpuMat& objects)
+    cv::Mat sortDetections(cv::cuda::GpuMat& objects)
     {
         cv::Mat detections(objects);
 
@@ -60,11 +60,11 @@ SC_PERF_TEST_P(SCascadeTest, detect,
                         std::string("cv/cascadeandhog/cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 
-RUN_GPU(SCascadeTest, detect)
+RUN_CUDA(SCascadeTest, detect)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));;
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -73,7 +73,7 @@ RUN_GPU(SCascadeTest, detect)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -118,11 +118,11 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png")),
         testing::Range(0, 5)))
 
-RUN_GPU(SCascadeTestRoi, detectInRoi)
+RUN_CUDA(SCascadeTestRoi, detectInRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -131,7 +131,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int nroi = get<2>(GetParam());
@@ -139,7 +139,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
     for (int i = 0; i < nroi; ++i)
     {
         cv::Rect r = getFromTable(rng(10));
-        cv::gpu::GpuMat sub(rois, r);
+        cv::cuda::GpuMat sub(rois, r);
         sub.setTo(1);
     }
 
@@ -163,11 +163,11 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png")),
         testing::Range(0, 10)))
 
-RUN_GPU(SCascadeTestRoi, detectEachRoi)
+RUN_CUDA(SCascadeTestRoi, detectEachRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -176,12 +176,12 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int idx = get<2>(GetParam());
     cv::Rect r = getFromTable(idx);
-    cv::gpu::GpuMat sub(rois, r);
+    cv::cuda::GpuMat sub(rois, r);
     sub.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -202,11 +202,11 @@ SC_PERF_TEST_P(SCascadeTest, detectStream,
                         std::string("cv/cascadeandhog/cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 
-RUN_GPU(SCascadeTest, detectStream)
+RUN_CUDA(SCascadeTest, detectStream)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -215,10 +215,10 @@ RUN_GPU(SCascadeTest, detectStream)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
-    cv::gpu::Stream s;
+    cv::cuda::Stream s;
 
     cascade.detect(colored, rois, objectBoxes, s);
 

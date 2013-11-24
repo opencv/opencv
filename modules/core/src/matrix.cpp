@@ -48,6 +48,156 @@
 
 namespace cv {
 
+class StdMatAllocator : public MatAllocator
+{
+public:
+    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
+    {
+        size_t total = CV_ELEM_SIZE(type);
+        for( int i = dims-1; i >= 0; i-- )
+        {
+            if( step )
+                step[i] = total;
+            total *= sizes[i];
+        }
+        uchar* data = (uchar*)fastMalloc(total);
+        UMatData* u = new UMatData(this);
+        u->data = u->origdata = data;
+        u->size = total;
+        u->refcount = 1;
+
+        return u;
+    }
+
+    bool allocate(UMatData* u, int accessFlags) const
+    {
+        if(!u) return false;
+        if(u->handle != 0)
+            return true;
+        return UMat::getStdAllocator()->allocate(u, accessFlags);
+    }
+
+    void deallocate(UMatData* u) const
+    {
+        if(u)
+        {
+            fastFree(u->origdata);
+            delete u;
+        }
+    }
+
+    void map(UMatData*, int) const
+    {
+    }
+
+    void unmap(UMatData* u) const
+    {
+        if(u->urefcount == 0)
+            deallocate(u);
+    }
+
+    void download(UMatData* u, void* dstptr,
+                  int dims, const size_t sz[],
+                  const size_t srcofs[], const size_t srcstep[],
+                  const size_t dststep[]) const
+    {
+        if(!u)
+            return;
+        int isz[CV_MAX_DIM];
+        uchar* srcptr = u->data;
+        for( int i = 0; i < dims; i++ )
+        {
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
+            if( sz[i] == 0 )
+                return;
+            if( srcofs )
+                srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            isz[i] = (int)sz[i];
+        }
+
+        Mat src(dims, isz, CV_8U, srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
+    }
+
+    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
+                const size_t dstofs[], const size_t dststep[],
+                const size_t srcstep[]) const
+    {
+        if(!u)
+            return;
+        int isz[CV_MAX_DIM];
+        uchar* dstptr = u->data;
+        for( int i = 0; i < dims; i++ )
+        {
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
+            if( sz[i] == 0 )
+                return;
+            if( dstofs )
+                dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            isz[i] = (int)sz[i];
+        }
+
+        Mat src(dims, isz, CV_8U, (void*)srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
+    }
+
+    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
+              const size_t srcofs[], const size_t srcstep[],
+              const size_t dstofs[], const size_t dststep[], bool) const
+    {
+        if(!usrc || !udst)
+            return;
+        int isz[CV_MAX_DIM];
+        uchar* srcptr = usrc->data;
+        uchar* dstptr = udst->data;
+        for( int i = 0; i < dims; i++ )
+        {
+            CV_Assert( sz[i] <= (size_t)INT_MAX );
+            if( sz[i] == 0 )
+                return;
+            if( srcofs )
+                srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            if( dstofs )
+                dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            isz[i] = (int)sz[i];
+        }
+
+        Mat src(dims, isz, CV_8U, srcptr, srcstep);
+        Mat dst(dims, isz, CV_8U, dstptr, dststep);
+
+        const Mat* arrays[] = { &src, &dst };
+        uchar* ptrs[2];
+        NAryMatIterator it(arrays, ptrs, 2);
+        size_t j, planesz = it.size;
+
+        for( j = 0; j < it.nplanes; j++, ++it )
+            memcpy(ptrs[1], ptrs[0], planesz);
+    }
+};
+
+
+MatAllocator* Mat::getStdAllocator()
+{
+    static StdMatAllocator allocator;
+    return &allocator;
+}
+
 void swap( Mat& a, Mat& b )
 {
     std::swap(a.flags, b.flags);
@@ -55,11 +205,11 @@ void swap( Mat& a, Mat& b )
     std::swap(a.rows, b.rows);
     std::swap(a.cols, b.cols);
     std::swap(a.data, b.data);
-    std::swap(a.refcount, b.refcount);
     std::swap(a.datastart, b.datastart);
     std::swap(a.dataend, b.dataend);
     std::swap(a.datalimit, b.datalimit);
     std::swap(a.allocator, b.allocator);
+    std::swap(a.u, b.u);
 
     std::swap(a.size.p, b.size.p);
     std::swap(a.step.p, b.step.p);
@@ -161,6 +311,8 @@ static void finalizeHdr(Mat& m)
     int d = m.dims;
     if( d > 2 )
         m.rows = m.cols = -1;
+    if(m.u)
+        m.data = m.datastart = m.u->data;
     if( m.data )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
@@ -203,36 +355,25 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( total() > 0 )
     {
+        MatAllocator *a = allocator, *a0 = getStdAllocator();
 #ifdef HAVE_TGPU
-        if( !allocator || allocator == tegra::getAllocator() ) allocator = tegra::getAllocator(d, _sizes, _type);
+        if( !a || a == tegra::getAllocator() )
+            a = tegra::getAllocator(d, _sizes, _type);
 #endif
-        if( !allocator )
+        if(!a)
+            a = a0;
+        try
         {
-            size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-            data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*refcount));
-            refcount = (int*)(data + totalsize);
-            *refcount = 1;
+            u = a->allocate(dims, size, _type, step.p);
+            CV_Assert(u != 0);
         }
-        else
+        catch(...)
         {
-#ifdef HAVE_TGPU
-           try
-            {
-                allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
-                CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
-            }catch(...)
-            {
-                allocator = 0;
-                size_t totalSize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-                data = datastart = (uchar*)fastMalloc(totalSize + (int)sizeof(*refcount));
-                refcount = (int*)(data + totalSize);
-                *refcount = 1;
-            }
-#else
-            allocator->allocate(dims, size, _type, refcount, datastart, data, step.p);
-            CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
-#endif
+            if(a != a0)
+                u = a0->allocate(dims, size, _type, step.p);
+            CV_Assert(u != 0);
         }
+        CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
 
     finalizeHdr(*this);
@@ -250,19 +391,13 @@ void Mat::copySize(const Mat& m)
 
 void Mat::deallocate()
 {
-    if( allocator )
-        allocator->deallocate(refcount, datastart, data);
-    else
-    {
-        CV_DbgAssert(refcount != 0);
-        fastFree(datastart);
-    }
+    if(u)
+        (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
 }
 
-
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
@@ -307,9 +442,9 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
 
 Mat::Mat(const Mat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
-    data(m.data + roi.y*m.step[0]), refcount(m.refcount),
+    data(m.data + roi.y*m.step[0]),
     datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit),
-    allocator(m.allocator), size(&rows)
+    allocator(m.allocator), u(m.u), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
     flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
@@ -319,8 +454,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
     data += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( refcount )
-        CV_XADD(refcount, 1);
+    if( u )
+        CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
@@ -335,8 +470,8 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
 
 Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     flags |= CV_MAT_TYPE(_type);
     data = datastart = (uchar*)_data;
@@ -346,8 +481,8 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 
 
 Mat::Mat(const Mat& m, const Range* ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
 {
     int i, d = m.dims;
 
@@ -938,20 +1073,10 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
                                         Input/Output Array
 \*************************************************************************************************/
 
-_InputArray::_InputArray() : flags(0), obj(0) {}
-_InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
-_InputArray::_InputArray(const std::vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
-_InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
-_InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
-_InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
-_InputArray::_InputArray(const ogl::Buffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const gpu::CudaMem& cuda_mem) : flags(CUDA_MEM), obj((void*)&cuda_mem) {}
-
-_InputArray::~_InputArray() {}
-
 Mat _InputArray::getMat(int i) const
 {
     int k = kind();
+    int accessFlags = flags & ACCESS_MASK;
 
     if( k == MAT )
     {
@@ -959,6 +1084,14 @@ Mat _InputArray::getMat(int i) const
         if( i < 0 )
             return *m;
         return m->row(i);
+    }
+
+    if( k == UMAT )
+    {
+        const UMat* m = (const UMat*)obj;
+        if( i < 0 )
+            return m->getMat(accessFlags);
+        return m->getMat(accessFlags).row(i);
     }
 
     if( k == EXPR )
@@ -995,17 +1128,20 @@ Mat _InputArray::getMat(int i) const
         return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
     }
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
         CV_Assert( 0 <= i && i < (int)v.size() );
 
         return v[i];
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
+        CV_Assert( 0 <= i && i < (int)v.size() );
+
+        return v[i].getMat(accessFlags);
     }
 
     if( k == OPENGL_BUFFER )
@@ -1018,25 +1154,61 @@ Mat _InputArray::getMat(int i) const
     if( k == GPU_MAT )
     {
         CV_Assert( i < 0 );
-        CV_Error(cv::Error::StsNotImplemented, "You should explicitly call download method for gpu::GpuMat object");
+        CV_Error(cv::Error::StsNotImplemented, "You should explicitly call download method for cuda::GpuMat object");
         return Mat();
     }
 
-    CV_Assert( k == CUDA_MEM );
-    //if( k == CUDA_MEM )
+    if( k == CUDA_MEM )
     {
         CV_Assert( i < 0 );
 
-        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
 
         return cuda_mem->createMatHeader();
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    return Mat();
+}
+
+
+UMat _InputArray::getUMat(int i) const
+{
+    int k = kind();
+    int accessFlags = flags & ACCESS_MASK;
+
+    if( k == UMAT )
+    {
+        const UMat* m = (const UMat*)obj;
+        if( i < 0 )
+            return *m;
+        return m->row(i);
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
+        CV_Assert( 0 <= i && i < (int)v.size() );
+
+        return v[i];
+    }
+
+    if( k == MAT )
+    {
+        const Mat* m = (const Mat*)obj;
+        if( i < 0 )
+            return m->getUMat(accessFlags);
+        return m->row(i).getUMat(accessFlags);
+    }
+
+    return getMat(i).getUMat(accessFlags);
 }
 
 
 void _InputArray::getMatVector(std::vector<Mat>& mv) const
 {
     int k = kind();
+    int accessFlags = flags & ACCESS_MASK;
 
     if( k == MAT )
     {
@@ -1105,48 +1277,58 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        mv.resize(v.size());
-        std::copy(v.begin(), v.end(), mv.begin());
+        size_t i, n = v.size();
+        mv.resize(n);
+
+        for( i = 0; i < n; i++ )
+            mv[i] = v[i];
         return;
     }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
+        size_t i, n = v.size();
+        mv.resize(n);
+
+        for( i = 0; i < n; i++ )
+            mv[i] = v[i].getMat(accessFlags);
+        return;
+    }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
-gpu::GpuMat _InputArray::getGpuMat() const
+cuda::GpuMat _InputArray::getGpuMat() const
 {
     int k = kind();
 
     if (k == GPU_MAT)
     {
-        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+        const cuda::GpuMat* d_mat = (const cuda::GpuMat*)obj;
         return *d_mat;
     }
 
     if (k == CUDA_MEM)
     {
-        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
         return cuda_mem->createGpuMatHeader();
     }
 
     if (k == OPENGL_BUFFER)
     {
         CV_Error(cv::Error::StsNotImplemented, "You should explicitly call mapDevice/unmapDevice methods for ogl::Buffer object");
-        return gpu::GpuMat();
+        return cuda::GpuMat();
     }
 
     if (k == NONE)
-        return gpu::GpuMat();
+        return cuda::GpuMat();
 
-    CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for gpu::GpuMat and gpu::CudaMem");
-    return gpu::GpuMat();
+    CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::CudaMem");
+    return cuda::GpuMat();
 }
 
 ogl::Buffer _InputArray::getOGlBuffer() const
@@ -1178,6 +1360,12 @@ Size _InputArray::size(int i) const
     {
         CV_Assert( i < 0 );
         return ((const MatExpr*)obj)->size();
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->size();
     }
 
     if( k == MATX )
@@ -1230,7 +1418,7 @@ Size _InputArray::size(int i) const
     if( k == GPU_MAT )
     {
         CV_Assert( i < 0 );
-        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+        const cuda::GpuMat* d_mat = (const cuda::GpuMat*)obj;
         return d_mat->size();
     }
 
@@ -1243,8 +1431,183 @@ Size _InputArray::size(int i) const
     //if( k == CUDA_MEM )
     {
         CV_Assert( i < 0 );
-        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+        const cuda::CudaMem* cuda_mem = (const cuda::CudaMem*)obj;
         return cuda_mem->size();
+    }
+}
+
+
+int _InputArray::sizend(int* arrsz, int i) const
+{
+    int j, d=0, k = kind();
+
+    if( k == NONE )
+        ;
+    else if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        const Mat& m = *(const Mat*)obj;
+        d = m.dims;
+        if(arrsz)
+            for(j = 0; j < d; j++)
+                arrsz[j] = m.size.p[j];
+    }
+    else if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        const UMat& m = *(const UMat*)obj;
+        d = m.dims;
+        if(arrsz)
+            for(j = 0; j < d; j++)
+                arrsz[j] = m.size.p[j];
+    }
+    else if( k == STD_VECTOR_MAT && i >= 0 )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert( i < (int)vv.size() );
+        const Mat& m = vv[i];
+        d = m.dims;
+        if(arrsz)
+            for(j = 0; j < d; j++)
+                arrsz[j] = m.size.p[j];
+    }
+    else if( k == STD_VECTOR_UMAT && i >= 0 )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert( i < (int)vv.size() );
+        const UMat& m = vv[i];
+        d = m.dims;
+        if(arrsz)
+            for(j = 0; j < d; j++)
+                arrsz[j] = m.size.p[j];
+    }
+    else
+    {
+        Size sz2d = size(i);
+        d = 2;
+        if(arrsz)
+        {
+            arrsz[0] = sz2d.height;
+            arrsz[1] = sz2d.width;
+        }
+    }
+
+    return d;
+}
+
+
+bool _InputArray::sameSize(const _InputArray& arr) const
+{
+    int k1 = kind(), k2 = arr.kind();
+    Size sz1;
+
+    if( k1 == MAT )
+    {
+        const Mat* m = ((const Mat*)obj);
+        if( k2 == MAT )
+            return m->size == ((const Mat*)arr.obj)->size;
+        if( k2 == UMAT )
+            return m->size == ((const UMat*)arr.obj)->size;
+        if( m->dims > 2 )
+            return false;
+        sz1 = m->size();
+    }
+    else if( k1 == UMAT )
+    {
+        const UMat* m = ((const UMat*)obj);
+        if( k2 == MAT )
+            return m->size == ((const Mat*)arr.obj)->size;
+        if( k2 == UMAT )
+            return m->size == ((const UMat*)arr.obj)->size;
+        if( m->dims > 2 )
+            return false;
+        sz1 = m->size();
+    }
+    else
+        sz1 = size();
+    if( arr.dims() > 2 )
+        return false;
+    return sz1 == arr.size();
+}
+
+int _InputArray::dims(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const Mat*)obj)->dims;
+    }
+
+    if( k == EXPR )
+    {
+        CV_Assert( i < 0 );
+        return ((const MatExpr*)obj)->a.dims;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->dims;
+    }
+
+    if( k == MATX )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == STD_VECTOR )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == NONE )
+        return 0;
+
+    if( k == STD_VECTOR_VECTOR )
+    {
+        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+        return 2;
+    }
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+
+        return vv[i].dims;
+    }
+
+    if( k == OPENGL_BUFFER )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        return 2;
+    }
+
+    if( k == OCL_MAT )
+    {
+        return 2;
+    }
+
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+    {
+        CV_Assert( i < 0 );
+        return 2;
     }
 }
 
@@ -1256,6 +1619,12 @@ size_t _InputArray::total(int i) const
     {
         CV_Assert( i < 0 );
         return ((const Mat*)obj)->total();
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->total();
     }
 
     if( k == STD_VECTOR_MAT )
@@ -1278,6 +1647,9 @@ int _InputArray::type(int i) const
     if( k == MAT )
         return ((const Mat*)obj)->type();
 
+    if( k == UMAT )
+        return ((const UMat*)obj)->type();
+
     if( k == EXPR )
         return ((const MatExpr*)obj)->type();
 
@@ -1290,8 +1662,12 @@ int _InputArray::type(int i) const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( vv.empty() )
+        {
+            CV_Assert((flags & FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
         CV_Assert( i < (int)vv.size() );
-
         return vv[i >= 0 ? i : 0].type();
     }
 
@@ -1299,11 +1675,11 @@ int _InputArray::type(int i) const
         return ((const ogl::Buffer*)obj)->type();
 
     if( k == GPU_MAT )
-        return ((const gpu::GpuMat*)obj)->type();
+        return ((const cuda::GpuMat*)obj)->type();
 
     CV_Assert( k == CUDA_MEM );
     //if( k == CUDA_MEM )
-        return ((const gpu::CudaMem*)obj)->type();
+        return ((const cuda::CudaMem*)obj)->type();
 }
 
 int _InputArray::depth(int i) const
@@ -1322,6 +1698,9 @@ bool _InputArray::empty() const
 
     if( k == MAT )
         return ((const Mat*)obj)->empty();
+
+    if( k == UMAT )
+        return ((const UMat*)obj)->empty();
 
     if( k == EXPR )
         return false;
@@ -1359,28 +1738,68 @@ bool _InputArray::empty() const
     }
 
     if( k == GPU_MAT )
-        return ((const gpu::GpuMat*)obj)->empty();
+        return ((const cuda::GpuMat*)obj)->empty();
 
     CV_Assert( k == CUDA_MEM );
     //if( k == CUDA_MEM )
-        return ((const gpu::CudaMem*)obj)->empty();
+        return ((const cuda::CudaMem*)obj)->empty();
 }
 
+bool _InputArray::isContinuous(int i) const
+{
+    int k = kind();
 
-_OutputArray::_OutputArray() {}
-_OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
-_OutputArray::_OutputArray(std::vector<Mat>& vec) : _InputArray(vec) {}
-_OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
-_OutputArray::_OutputArray(ogl::Buffer& buf) : _InputArray(buf) {}
-_OutputArray::_OutputArray(gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {}
+    if( k == MAT )
+        return i < 0 ? ((const Mat*)obj)->isContinuous() : true;
 
-_OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const std::vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
-_OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const ogl::Buffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {flags |= FIXED_SIZE|FIXED_TYPE;}
+    if( k == UMAT )
+        return i < 0 ? ((const UMat*)obj)->isContinuous() : true;
 
-_OutputArray::~_OutputArray() {}
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+        return true;
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isContinuous();
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isContinuous();
+    }
+
+    CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    return false;
+}
+
+void _InputArray::copyTo(const _OutputArray& arr) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        arr.release();
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.copyTo(arr);
+    }
+    else if( k == EXPR )
+    {
+        const MatExpr& e = *((MatExpr*)obj);
+        if( arr.kind() == MAT )
+            arr.getMatRef() = e;
+        else
+            Mat(e).copyTo(arr);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->copyTo(arr);
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
 
 bool _OutputArray::fixedSize() const
 {
@@ -1402,11 +1821,18 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((Mat*)obj)->create(_sz, mtype);
         return;
     }
+    if( k == UMAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((UMat*)obj)->size.operator()() == _sz);
+        CV_Assert(!fixedType() || ((UMat*)obj)->type() == mtype);
+        ((UMat*)obj)->create(_sz, mtype);
+        return;
+    }
     if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == _sz);
-        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
-        ((gpu::GpuMat*)obj)->create(_sz, mtype);
+        CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
+        ((cuda::GpuMat*)obj)->create(_sz, mtype);
         return;
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1418,9 +1844,9 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
     }
     if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((gpu::CudaMem*)obj)->size() == _sz);
-        CV_Assert(!fixedType() || ((gpu::CudaMem*)obj)->type() == mtype);
-        ((gpu::CudaMem*)obj)->create(_sz, mtype);
+        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((cuda::CudaMem*)obj)->type() == mtype);
+        ((cuda::CudaMem*)obj)->create(_sz, mtype);
         return;
     }
     int sizes[] = {_sz.height, _sz.width};
@@ -1437,11 +1863,18 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
         ((Mat*)obj)->create(rows, cols, mtype);
         return;
     }
+    if( k == UMAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((UMat*)obj)->size.operator()() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((UMat*)obj)->type() == mtype);
+        ((UMat*)obj)->create(rows, cols, mtype);
+        return;
+    }
     if( k == GPU_MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((gpu::GpuMat*)obj)->size() == Size(cols, rows));
-        CV_Assert(!fixedType() || ((gpu::GpuMat*)obj)->type() == mtype);
-        ((gpu::GpuMat*)obj)->create(rows, cols, mtype);
+        CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
+        ((cuda::GpuMat*)obj)->create(rows, cols, mtype);
         return;
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
@@ -1453,16 +1886,17 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
     }
     if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
-        CV_Assert(!fixedSize() || ((gpu::CudaMem*)obj)->size() == Size(cols, rows));
-        CV_Assert(!fixedType() || ((gpu::CudaMem*)obj)->type() == mtype);
-        ((gpu::CudaMem*)obj)->create(rows, cols, mtype);
+        CV_Assert(!fixedSize() || ((cuda::CudaMem*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((cuda::CudaMem*)obj)->type() == mtype);
+        ((cuda::CudaMem*)obj)->create(rows, cols, mtype);
         return;
     }
     int sizes[] = {rows, cols};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
 
-void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool allowTransposed, int fixedDepthMask) const
+void _OutputArray::create(int d, const int* sizes, int mtype, int i,
+                          bool allowTransposed, int fixedDepthMask) const
 {
     int k = kind();
     mtype = CV_MAT_TYPE(mtype);
@@ -1479,7 +1913,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
                 m.release();
             }
 
-            if( dims == 2 && m.dims == 2 && m.data &&
+            if( d == 2 && m.dims == 2 && m.data &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
@@ -1493,11 +1927,45 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == dims);
-            for(int j = 0; j < dims; ++j)
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
                 CV_Assert(m.size[j] == sizes[j]);
         }
-        m.create(dims, sizes, mtype);
+        m.create(d, sizes, mtype);
+        return;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        UMat& m = *(UMat*)obj;
+        if( allowTransposed )
+        {
+            if( !m.isContinuous() )
+            {
+                CV_Assert(!fixedType() && !fixedSize());
+                m.release();
+            }
+
+            if( d == 2 && m.dims == 2 && !m.empty() &&
+                m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
+                return;
+        }
+
+        if(fixedType())
+        {
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+                mtype = m.type();
+            else
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+        }
+        if(fixedSize())
+        {
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
+                CV_Assert(m.size[j] == sizes[j]);
+        }
+        m.create(d, sizes, mtype);
         return;
     }
 
@@ -1506,14 +1974,14 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         CV_Assert( i < 0 );
         int type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == 1 && ((1 << type0) & fixedDepthMask) != 0) );
-        CV_Assert( dims == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
+        CV_Assert( d == 2 && ((sizes[0] == sz.height && sizes[1] == sz.width) ||
                                  (allowTransposed && sizes[0] == sz.width && sizes[1] == sz.height)));
         return;
     }
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+        CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
         std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
@@ -1593,25 +2061,19 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         return;
     }
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
     if( k == NONE )
     {
         CV_Error(CV_StsNullPtr, "create() called for the missing output array" );
         return;
     }
 
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         std::vector<Mat>& v = *(std::vector<Mat>*)obj;
 
         if( i < 0 )
         {
-            CV_Assert( dims == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
+            CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
             size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0, len0 = v.size();
 
             CV_Assert(!fixedSize() || len == len0);
@@ -1641,7 +2103,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
                 m.release();
             }
 
-            if( dims == 2 && m.dims == 2 && m.data &&
+            if( d == 2 && m.dims == 2 && m.data &&
                 m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] )
                 return;
         }
@@ -1655,13 +2117,22 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         }
         if(fixedSize())
         {
-            CV_Assert(m.dims == dims);
-            for(int j = 0; j < dims; ++j)
+            CV_Assert(m.dims == d);
+            for(int j = 0; j < d; ++j)
                 CV_Assert(m.size[j] == sizes[j]);
         }
 
-        m.create(dims, sizes, mtype);
+        m.create(d, sizes, mtype);
+        return;
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+}
+
+void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
+{
+    int arrsz[CV_MAX_DIM], d = arr.sizend(arrsz);
+    create(d, arrsz, mtype);
 }
 
 void _OutputArray::release() const
@@ -1678,13 +2149,13 @@ void _OutputArray::release() const
 
     if( k == GPU_MAT )
     {
-        ((gpu::GpuMat*)obj)->release();
+        ((cuda::GpuMat*)obj)->release();
         return;
     }
 
     if( k == CUDA_MEM )
     {
-        ((gpu::CudaMem*)obj)->release();
+        ((cuda::CudaMem*)obj)->release();
         return;
     }
 
@@ -1709,16 +2180,13 @@ void _OutputArray::release() const
         return;
     }
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT )
     {
         ((std::vector<Mat>*)obj)->clear();
+        return;
     }
+
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 void _OutputArray::clear() const
@@ -1757,11 +2225,11 @@ Mat& _OutputArray::getMatRef(int i) const
     }
 }
 
-gpu::GpuMat& _OutputArray::getGpuMatRef() const
+cuda::GpuMat& _OutputArray::getGpuMatRef() const
 {
     int k = kind();
     CV_Assert( k == GPU_MAT );
-    return *(gpu::GpuMat*)obj;
+    return *(cuda::GpuMat*)obj;
 }
 
 ogl::Buffer& _OutputArray::getOGlBufferRef() const
@@ -1771,15 +2239,32 @@ ogl::Buffer& _OutputArray::getOGlBufferRef() const
     return *(ogl::Buffer*)obj;
 }
 
-gpu::CudaMem& _OutputArray::getCudaMemRef() const
+cuda::CudaMem& _OutputArray::getCudaMemRef() const
 {
     int k = kind();
     CV_Assert( k == CUDA_MEM );
-    return *(gpu::CudaMem*)obj;
+    return *(cuda::CudaMem*)obj;
 }
 
-static _OutputArray _none;
-OutputArray noArray() { return _none; }
+void _OutputArray::setTo(const _InputArray& arr) const
+{
+    int k = kind();
+
+    if( k == NONE )
+        ;
+    else if( k == MAT || k == MATX || k == STD_VECTOR )
+    {
+        Mat m = getMat();
+        m.setTo(arr);
+    }
+    else if( k == UMAT )
+        ((UMat*)obj)->setTo(arr);
+    else
+        CV_Error(Error::StsNotImplemented, "");
+}
+
+static _InputOutputArray _none;
+InputOutputArray noArray() { return _none; }
 
 }
 

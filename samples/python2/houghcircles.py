@@ -2,7 +2,7 @@
 
 '''
 This example illustrates how to use cv2.HoughCircles() function.
-Usage: ./houghcircles.py [<image_name>] 
+Usage: ./houghcircles.py [<image_name>]
 image argument defaults to ../cpp/board.jpg
 '''
 
@@ -13,9 +13,9 @@ import sys
 
 print __doc__
 try:
-	fn = sys.argv[1]
+    fn = sys.argv[1]
 except:
-	fn = "../cpp/board.jpg"
+    fn = "../cpp/board.jpg"
 
 src = cv2.imread(fn, 1)
 img = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)

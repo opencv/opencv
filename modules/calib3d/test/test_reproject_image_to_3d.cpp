@@ -173,4 +173,3 @@ protected:
 };
 
 TEST(Calib3d_ReprojectImageTo3D, accuracy) { CV_ReprojectImageTo3DTest test; test.safe_run(); }
-

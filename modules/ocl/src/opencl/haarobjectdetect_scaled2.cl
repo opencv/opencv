@@ -18,6 +18,7 @@
 //    Wu Xinglong, wxl370@126.com
 //    Sen Liu, swjtuls1987@126.com
 //    Peng Xiao, pengxiao@outlook.com
+//    Erping Pang, erping@multicorewareinc.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -26,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,8 +45,6 @@
 //
 //M*/
 
-// Enter your kernel in this window
-//#pragma OPENCL EXTENSION cl_amd_printf:enable
 #define CV_HAAR_FEATURE_MAX           3
 typedef int   sumtype;
 typedef float sqsumtype;
@@ -120,7 +119,6 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
     int grpidx = get_group_id(0);
     int lclidx = get_local_id(0);
     int lclidy = get_local_id(1);
-    int lcl_sz = mul24(grpszx, grpszy);
     int lcl_id = mad24(lclidy, grpszx, lclidx);
     __local int glboutindex[1];
     __local int lclcount[1];
@@ -136,13 +134,11 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
     {
         int4 scaleinfo1;
         scaleinfo1 = info[scalei];
-        int width = (scaleinfo1.x & 0xffff0000) >> 16;
-        int height = scaleinfo1.x & 0xffff;
         int grpnumperline = (scaleinfo1.y & 0xffff0000) >> 16;
         int totalgrp = scaleinfo1.y & 0xffff;
         float factor = as_float(scaleinfo1.w);
         float correction_t = correction[scalei];
-        int ystep = (int)(max(2.0f, factor) + 0.5f);
+        float ystep = max(2.0f, factor);
 
         for (int grploop = get_group_id(0); grploop < totalgrp; grploop += grpnumx)
         {
@@ -151,8 +147,8 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
             int grpidx = grploop - mul24(grpidy, grpnumperline);
             int ix = mad24(grpidx, grpszx, lclidx);
             int iy = mad24(grpidy, grpszy, lclidy);
-            int x = ix * ystep;
-            int y = iy * ystep;
+            int x = round(ix * ystep);
+            int y = round(iy * ystep);
             lcloutindex[lcl_id] = 0;
             lclcount[0] = 0;
             int nodecounter;
@@ -207,7 +203,7 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                         - sum[clamp(mad24(info3.y, step, info3.z), 0, max_idx)] -
                                      sum[clamp(mad24(info3.w, step, info3.x), 0, max_idx)]
                         + sum[clamp(mad24(info3.w, step, info3.z), 0, max_idx)]) * w.z;
-                        
+
                         bool passThres = classsum >= nodethreshold;
 
 #if STUMP_BASED
@@ -243,7 +239,7 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
 
                 barrier(CLK_LOCAL_MEM_FENCE);
 
-                if (result && (ix < width) && (iy < height))
+                if (result)
                 {
                     int queueindex = atomic_inc(lclcount);
                     lcloutindex[queueindex] = (y << 16) | x;
@@ -258,10 +254,26 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                     int y = (temp & (int)0xffff0000) >> 16;
                     temp = atomic_inc(glboutindex);
                     int4 candidate_result;
-                    candidate_result.zw = (int2)convert_int_rtn(factor * 20.f);
+                    candidate_result.zw = (int2)convert_int_rte(factor * 20.f);
                     candidate_result.x = x;
                     candidate_result.y = y;
-                    candidate[outputoff + temp + lcl_id] = candidate_result;
+
+                    int i = outputoff+temp+lcl_id;
+                    if(candidate[i].z == 0)
+                    {
+                        candidate[i] = candidate_result;
+                    }
+                    else
+                    {
+                        for(i=i+1;;i++)
+                        {
+                            if(candidate[i].z == 0)
+                            {
+                                candidate[i] = candidate_result;
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 barrier(CLK_LOCAL_MEM_FENCE);
@@ -274,8 +286,8 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     int counter = get_global_id(0);
     int tr_x[3], tr_y[3], tr_h[3], tr_w[3], i = 0;
     GpuHidHaarTreeNode t1 = *(orinode + counter);
-#pragma unroll
 
+    #pragma unroll
     for (i = 0; i < 3; i++)
     {
         tr_x[i] = (int)(t1.p[i][0] * scale + 0.5f);
@@ -284,10 +296,10 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
         tr_h[i] = (int)(t1.p[i][3] * scale + 0.5f);
     }
 
-    t1.weight[0] = t1.p[2][0] ? -(t1.weight[1] * tr_h[1] * tr_w[1] + t1.weight[2] * tr_h[2] * tr_w[2]) / (tr_h[0] * tr_w[0]) : -t1.weight[1] * tr_h[1] * tr_w[1] / (tr_h[0] * tr_w[0]);
+    t1.weight[0] = -(t1.weight[1] * tr_h[1] * tr_w[1] + t1.weight[2] * tr_h[2] * tr_w[2]) / (tr_h[0] * tr_w[0]);
     counter += nodenum;
-#pragma unroll
 
+    #pragma unroll
     for (i = 0; i < 3; i++)
     {
         newnode[counter].p[i][0] = tr_x[i];
@@ -304,4 +316,3 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     newnode[counter].alpha[1] = t1.alpha[1];
     newnode[counter].alpha[2] = t1.alpha[2];
 }
-

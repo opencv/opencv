@@ -73,4 +73,3 @@
 #endif //CV_IMPL
 
 #endif // __OPENCV_OLD_CV_H_
-

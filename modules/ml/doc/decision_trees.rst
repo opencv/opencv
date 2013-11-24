@@ -318,4 +318,3 @@ decision tree.
 
 
 .. [Breiman84] Breiman, L., Friedman, J. Olshen, R. and Stone, C. (1984), *Classification and Regression Trees*, Wadsworth.
-

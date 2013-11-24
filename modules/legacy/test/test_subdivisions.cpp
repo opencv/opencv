@@ -338,4 +338,3 @@ _exit_:
 TEST(Legacy_Subdiv, correctness) { CV_SubdivTest test; test.safe_run(); }
 
 /* End of file. */
-

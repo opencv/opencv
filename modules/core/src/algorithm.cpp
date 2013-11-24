@@ -163,7 +163,7 @@ Ptr<Algorithm> Algorithm::_create(const String& name)
     Algorithm::Constructor c = 0;
     if( !alglist().find(name, c) )
         return Ptr<Algorithm>();
-    return c();
+    return Ptr<Algorithm>(c());
 }
 
 Algorithm::Algorithm()
@@ -490,7 +490,7 @@ void AlgorithmInfo::read(Algorithm* algo, const FileNode& fn) const
         else if( p.type == Param::ALGORITHM )
         {
             Ptr<Algorithm> nestedAlgo = Algorithm::_create((String)n["name"]);
-            CV_Assert( !nestedAlgo.empty() );
+            CV_Assert( nestedAlgo );
             nestedAlgo->read(n);
             info->set(algo, pname.c_str(), p.type, &nestedAlgo, true);
         }

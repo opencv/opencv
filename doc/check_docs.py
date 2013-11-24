@@ -184,5 +184,3 @@ p = RSTParser()
 for m in opencv_module_list:
     print "\n\n*************************** " + m + " *************************\n"
     p.check_module_docs(m)
-
-

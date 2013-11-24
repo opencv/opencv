@@ -196,7 +196,7 @@ public:
         minKeyPointMatchesRatio(_minKeyPointMatchesRatio),
         minAngleInliersRatio(_minAngleInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
+        CV_Assert(featureDetector);
     }
 
 protected:
@@ -307,8 +307,8 @@ public:
         normType(_normType),
         minDescInliersRatio(_minDescInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
-        CV_Assert(!descriptorExtractor.empty());
+        CV_Assert(featureDetector);
+        CV_Assert(descriptorExtractor);
     }
 
 protected:
@@ -392,7 +392,7 @@ public:
         minKeyPointMatchesRatio(_minKeyPointMatchesRatio),
         minScaleInliersRatio(_minScaleInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
+        CV_Assert(featureDetector);
     }
 
 protected:
@@ -510,8 +510,8 @@ public:
         normType(_normType),
         minDescInliersRatio(_minDescInliersRatio)
     {
-        CV_Assert(!featureDetector.empty());
-        CV_Assert(!descriptorExtractor.empty());
+        CV_Assert(featureDetector);
+        CV_Assert(descriptorExtractor);
     }
 
 protected:

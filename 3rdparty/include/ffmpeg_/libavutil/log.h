@@ -25,6 +25,23 @@
 #include "avutil.h"
 #include "attributes.h"
 
+typedef enum {
+    AV_CLASS_CATEGORY_NA = 0,
+    AV_CLASS_CATEGORY_INPUT,
+    AV_CLASS_CATEGORY_OUTPUT,
+    AV_CLASS_CATEGORY_MUXER,
+    AV_CLASS_CATEGORY_DEMUXER,
+    AV_CLASS_CATEGORY_ENCODER,
+    AV_CLASS_CATEGORY_DECODER,
+    AV_CLASS_CATEGORY_FILTER,
+    AV_CLASS_CATEGORY_BITSTREAM_FILTER,
+    AV_CLASS_CATEGORY_SWSCALER,
+    AV_CLASS_CATEGORY_SWRESAMPLER,
+    AV_CLASS_CATEGORY_NB, ///< not part of ABI/API
+}AVClassCategory;
+
+struct AVOptionRanges;
+
 /**
  * Describe the class of an AVClass context structure. That is an
  * arbitrary struct of which the first field is a pointer to an
@@ -65,10 +82,11 @@ typedef struct AVClass {
     int log_level_offset_offset;
 
     /**
-     * Offset in the structure where a pointer to the parent context for loging is stored.
-     * for example a decoder that uses eval.c could pass its AVCodecContext to eval as such
-     * parent context. And a av_log() implementation could then display the parent context
-     * can be NULL of course
+     * Offset in the structure where a pointer to the parent context for
+     * logging is stored. For example a decoder could pass its AVCodecContext
+     * to eval as such a parent context, which an av_log() implementation
+     * could then leverage to display the parent context.
+     * The offset can be NULL.
      */
     int parent_log_context_offset;
 
@@ -78,7 +96,7 @@ typedef struct AVClass {
     void* (*child_next)(void *obj, void *prev);
 
     /**
-     * Return an AVClass corresponding to next potential
+     * Return an AVClass corresponding to the next potential
      * AVOptions-enabled child.
      *
      * The difference between child_next and this is that
@@ -86,6 +104,25 @@ typedef struct AVClass {
      * child_class_next iterates over _all possible_ children.
      */
     const struct AVClass* (*child_class_next)(const struct AVClass *prev);
+
+    /**
+     * Category used for visualization (like color)
+     * This is only set if the category is equal for all objects using this class.
+     * available since version (51 << 16 | 56 << 8 | 100)
+     */
+    AVClassCategory category;
+
+    /**
+     * Callback to return the category.
+     * available since version (51 << 16 | 59 << 8 | 100)
+     */
+    AVClassCategory (*get_category)(void* ctx);
+
+    /**
+     * Callback to return the supported/allowed ranges.
+     * available since version (52.12)
+     */
+    int (*query_ranges)(struct AVOptionRanges **, void *obj, const char *key, int flags);
 } AVClass;
 
 /* av_log API */
@@ -124,6 +161,8 @@ typedef struct AVClass {
  */
 #define AV_LOG_DEBUG    48
 
+#define AV_LOG_MAX_OFFSET (AV_LOG_DEBUG - AV_LOG_QUIET)
+
 /**
  * Send the specified message to the log if the level is less than or equal
  * to the current av_log_level. By default, all logging messages are sent to
@@ -146,6 +185,7 @@ void av_log_set_level(int);
 void av_log_set_callback(void (*)(void*, int, const char*, va_list));
 void av_log_default_callback(void* ptr, int level, const char* fmt, va_list vl);
 const char* av_default_item_name(void* ctx);
+AVClassCategory av_default_get_category(void *ptr);
 
 /**
  * Format a line of log the same way as the default callback.

@@ -200,10 +200,20 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
     }
     else // no pattern filename was given - extract the pattern
     {
-        for(at = name; *at && !isdigit(*at); at++)
-            ;
+        at = name;
 
-        if(!at)
+        // ignore directory names
+        char *slash = strrchr(at, '/');
+        if (slash) at = slash + 1;
+
+#ifdef _WIN32
+        slash = strrchr(at, '\\');
+        if (slash) at = slash + 1;
+#endif
+
+        while (*at && !isdigit(*at)) at++;
+
+        if(!*at)
             return 0;
 
         sscanf(at, "%u", offset);

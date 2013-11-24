@@ -223,6 +223,15 @@ The class provides C++ API for capturing video from cameras or for reading video
 
 .. note:: In C API the black-box structure ``CvCapture`` is used instead of ``VideoCapture``.
 
+.. note::
+
+   * A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/cpp/starter_video.cpp
+   * Another basic video processing sample can be found at opencv_source_code/samples/cpp/video_dmtx.cpp
+
+   * (Python) A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/python2/video.py
+   * (Python) Another basic video processing sample can be found at opencv_source_code/samples/python2/video_dmtx.py
+   * (Python) A multi threaded video processing sample can be found at opencv_source_code/samples/python2/video_threaded.py
+
 
 VideoCapture::VideoCapture
 ------------------------------
@@ -311,7 +320,7 @@ VideoCapture::retrieve
 ----------------------
 Decodes and returns the grabbed video frame.
 
-.. ocv:function:: bool VideoCapture::retrieve( Mat& image, int flag=0 )
+.. ocv:function:: bool VideoCapture::retrieve( OutputArray image, int flag=0 )
 
 .. ocv:pyfunction:: cv2.VideoCapture.retrieve([image[, flag]]) -> retval, image
 
@@ -328,7 +337,9 @@ Grabs, decodes and returns the next video frame.
 
 .. ocv:function:: VideoCapture& VideoCapture::operator >> (Mat& image)
 
-.. ocv:function:: bool VideoCapture::read(Mat& image)
+.. ocv:function:: VideoCapture& VideoCapture::operator >> (UMat& image)
+
+.. ocv:function:: bool VideoCapture::read(OutputArray image)
 
 .. ocv:pyfunction:: cv2.VideoCapture.read([image]) -> retval, image
 
@@ -530,4 +541,3 @@ Writes the next video frame
     :param image: The written frame
 
 The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
-

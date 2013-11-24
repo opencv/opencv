@@ -3667,4 +3667,3 @@ class YErrorBars:
             output.append(LineAxis(x, start, x, end, start, end, bars, False, False, **self.attr).SVG(trans))
 
         return output
-

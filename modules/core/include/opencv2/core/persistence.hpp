@@ -186,7 +186,7 @@ public:
     //! the full constructor that opens file storage for reading or writing
     CV_WRAP FileStorage(const String& source, int flags, const String& encoding=String());
     //! the constructor that takes pointer to the C FileStorage structure
-    FileStorage(CvFileStorage* fs);
+    FileStorage(CvFileStorage* fs, bool owning=true);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
@@ -209,9 +209,9 @@ public:
     CV_WRAP FileNode operator[](const char* nodename) const;
 
     //! returns pointer to the underlying C FileStorage structure
-    CvFileStorage* operator *() { return fs; }
+    CvFileStorage* operator *() { return fs.get(); }
     //! returns pointer to the underlying C FileStorage structure
-    const CvFileStorage* operator *() const { return fs; }
+    const CvFileStorage* operator *() const { return fs.get(); }
     //! writes one or more numbers of the specified format to the currently written structure
     void writeRaw( const String& fmt, const uchar* vec, size_t len );
     //! writes the registered C structure (CvMat, CvMatND, CvSeq). See cvWrite()
@@ -226,7 +226,7 @@ public:
     int state; //!< the writer state
 };
 
-template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const;
 
 /*!
  File Storage Node class
@@ -405,6 +405,59 @@ CV_EXPORTS void read(const FileNode& node, String& value, const String& default_
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
 CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
+
+template<typename _Tp> static inline void read(const FileNode& node, Point_<_Tp>& value, const Point_<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 2 ? default_value : Point_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
+}
+
+template<typename _Tp> static inline void read(const FileNode& node, Point3_<_Tp>& value, const Point3_<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 3 ? default_value : Point3_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
+                                                            saturate_cast<_Tp>(temp[2]));
+}
+
+template<typename _Tp> static inline void read(const FileNode& node, Size_<_Tp>& value, const Size_<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 2 ? default_value : Size_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
+}
+
+template<typename _Tp> static inline void read(const FileNode& node, Complex<_Tp>& value, const Complex<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 2 ? default_value : Complex<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
+}
+
+template<typename _Tp> static inline void read(const FileNode& node, Rect_<_Tp>& value, const Rect_<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 4 ? default_value : Rect_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
+                                                          saturate_cast<_Tp>(temp[2]), saturate_cast<_Tp>(temp[3]));
+}
+
+template<typename _Tp, int cn> static inline void read(const FileNode& node, Vec<_Tp, cn>& value, const Vec<_Tp, cn>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != cn ? default_value : Vec<_Tp, cn>(&temp[0]);
+}
+
+template<typename _Tp> static inline void read(const FileNode& node, Scalar_<_Tp>& value, const Scalar_<_Tp>& default_value)
+{
+    std::vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
+    value = temp.size() != 4 ? default_value : Scalar_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]),
+                                                            saturate_cast<_Tp>(temp[2]), saturate_cast<_Tp>(temp[3]));
+}
+
+static inline void read(const FileNode& node, Range& value, const Range& default_value)
+{
+    Point2i temp(value.start, value.end); const Point2i default_temp = Point2i(default_value.start, default_value.end);
+    read(node, temp, default_temp);
+    value.start = temp.x; value.end = temp.y;
+}
+
 
 CV_EXPORTS FileStorage& operator << (FileStorage& fs, const String& str);
 
@@ -808,8 +861,8 @@ inline FileNode::operator String() const { String value; read(*this, value, valu
 inline FileNodeIterator FileNode::begin() const { return FileNodeIterator(fs, node); }
 inline FileNodeIterator FileNode::end() const   { return FileNodeIterator(fs, node, size()); }
 inline void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const { begin().readRaw( fmt, vec, len ); }
-inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)reader.ptr); }
-inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)reader.ptr); }
+inline FileNode FileNodeIterator::operator *() const  { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
+inline FileNode FileNodeIterator::operator ->() const { return FileNode(fs, (const CvFileNode*)(const void*)reader.ptr); }
 inline String::String(const FileNode& fn): cstr_(0), len_(0) { read(fn, *this, *this); }
 
 } // cv

@@ -172,7 +172,7 @@ public:
       CV_Error(CV_StsUnsupportedFormat, "dist must be CV_64FC1");
 
     if (CV_MAT_TYPE(type()) != CV_MAT_TYPE(desc->type)) {
-      tmp_desc = cvCreateMat(desc->rows, desc->cols, type());
+      tmp_desc.reset(cvCreateMat(desc->rows, desc->cols, type()));
       cvConvert(desc, tmp_desc);
       desc = tmp_desc;
     }

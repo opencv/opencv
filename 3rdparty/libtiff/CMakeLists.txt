@@ -17,14 +17,14 @@ check_include_file(string.h HAVE_STRING_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 
-if(WIN32)
+if(WIN32 AND NOT HAVE_WINRT)
   set(USE_WIN32_FILEIO 1)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tif_config.h.cmakein"
                "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h" @ONLY)
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIR})
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS})
 
 set(lib_srcs
     tif_aux.c
@@ -79,13 +79,11 @@ set(lib_srcs
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
     )
 
-if(UNIX)
+if(WIN32 AND NOT HAVE_WINRT)
+  list(APPEND lib_srcs tif_win32.c)
+else()
   list(APPEND lib_srcs tif_unix.c)
 endif()
-
-if(WIN32)
-  list(APPEND lib_srcs tif_win32.c)
-endif(WIN32)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
@@ -117,5 +115,5 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  install(TARGETS ${TIFF_LIBRARY} ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
 endif()

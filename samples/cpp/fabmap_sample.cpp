@@ -131,11 +131,11 @@ int main(int argc, char * argv[]) {
     //generate test data
     cout << "Extracting Test Data from images" << endl <<
         endl;
-    Ptr<FeatureDetector> detector =
+    Ptr<FeatureDetector> detector(
         new DynamicAdaptedFeatureDetector(
-        AdjusterAdapter::create("STAR"), 130, 150, 5);
-    Ptr<DescriptorExtractor> extractor =
-        new SurfDescriptorExtractor(1000, 4, 2, false, true);
+            AdjusterAdapter::create("STAR"), 130, 150, 5));
+    Ptr<DescriptorExtractor> extractor(
+        new SurfDescriptorExtractor(1000, 4, 2, false, true));
     Ptr<DescriptorMatcher> matcher =
         DescriptorMatcher::create("FlannBased");
 
@@ -183,8 +183,8 @@ int main(int argc, char * argv[]) {
         endl;
     Ptr<of2::FabMap> fabmap;
 
-    fabmap = new of2::FabMap2(tree, 0.39, 0, of2::FabMap::SAMPLED |
-        of2::FabMap::CHOW_LIU);
+    fabmap.reset(new of2::FabMap2(tree, 0.39, 0, of2::FabMap::SAMPLED |
+        of2::FabMap::CHOW_LIU));
     fabmap->addTraining(trainData);
 
     vector<of2::IMatch> matches;

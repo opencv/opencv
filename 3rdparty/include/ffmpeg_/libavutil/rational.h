@@ -115,6 +115,17 @@ AVRational av_add_q(AVRational b, AVRational c) av_const;
 AVRational av_sub_q(AVRational b, AVRational c) av_const;
 
 /**
+ * Invert a rational.
+ * @param q value
+ * @return 1 / q
+ */
+static av_always_inline AVRational av_inv_q(AVRational q)
+{
+    AVRational r = { q.den, q.num };
+    return r;
+}
+
+/**
  * Convert a double precision floating point number to a rational.
  * inf is expressed as {1,0} or {-1,0} depending on the sign.
  *

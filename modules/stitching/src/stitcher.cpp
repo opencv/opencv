@@ -53,34 +53,34 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
-    stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
+    stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
+    stitcher.setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
-#ifdef HAVE_OPENCV_GPU
-    if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+#ifdef HAVE_OPENCV_CUDA
+    if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
 #ifdef HAVE_OPENCV_NONFREE
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
+        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinderGpu>());
 #else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
 #endif
-        stitcher.setWarper(new SphericalWarperGpu());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
+        stitcher.setWarper(makePtr<SphericalWarperGpu>());
+        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
     }
     else
 #endif
     {
 #ifdef HAVE_OPENCV_NONFREE
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
 #else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
 #endif
-        stitcher.setWarper(new SphericalWarper());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
+        stitcher.setWarper(makePtr<SphericalWarper>());
+        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
 
-    stitcher.setExposureCompensator(new detail::BlocksGainCompensator());
-    stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
+    stitcher.setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
+    stitcher.setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
 
     return stitcher;
 }
@@ -102,7 +102,8 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vecto
     if ((status = matchImages()) != OK)
         return status;
 
-    estimateCameraParams();
+    if ((status = estimateCameraParams()) != OK)
+        return status;
 
     return OK;
 }
@@ -442,10 +443,11 @@ Stitcher::Status Stitcher::matchImages()
 }
 
 
-void Stitcher::estimateCameraParams()
+Stitcher::Status Stitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
-    estimator(features_, pairwise_matches_, cameras_);
+    if (!estimator(features_, pairwise_matches_, cameras_))
+        return ERR_HOMOGRAPHY_EST_FAIL;
 
     for (size_t i = 0; i < cameras_.size(); ++i)
     {
@@ -456,7 +458,8 @@ void Stitcher::estimateCameraParams()
     }
 
     bundle_adjuster_->setConfThresh(conf_thresh_);
-    (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
+    if (!(*bundle_adjuster_)(features_, pairwise_matches_, cameras_))
+        return ERR_CAMERA_PARAMS_ADJUST_FAIL;
 
     // Find median focal length and use it as final image scale
     std::vector<double> focals;
@@ -481,6 +484,8 @@ void Stitcher::estimateCameraParams()
         for (size_t i = 0; i < cameras_.size(); ++i)
             cameras_[i].R = rmats[i];
     }
+
+    return OK;
 }
 
 } // namespace cv

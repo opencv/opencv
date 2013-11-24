@@ -836,6 +836,9 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   Mat H = findHomography(Mat(centers), Mat(dstPoints), RANSAC);
   //Mat H = findHomography( Mat( corners ), Mat( dstPoints ) );
 
+  if (H.empty())
+      H = Mat::zeros(3, 3, CV_64FC1);
+
   std::vector<Point2f> srcKeypoints;
   for (size_t i = 0; i < keypoints.size(); i++)
   {

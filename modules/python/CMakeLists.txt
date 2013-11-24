@@ -6,7 +6,7 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
   ocv_module_disable(python)
 endif()
 
-if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIR)
+if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
   ocv_module_disable(python)
 endif()
 
@@ -15,7 +15,7 @@ ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_vi
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
-    "${PYTHON_NUMPY_INCLUDE_DIR}"
+    ${PYTHON_NUMPY_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
@@ -106,9 +106,28 @@ else()
   set(PYTHON_INSTALL_CONFIGURATIONS "")
 endif()
 
-install(TARGETS ${the_module}
-        ${PYTHON_INSTALL_CONFIGURATIONS}
-        RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
-        )
+if(WIN32)
+  set(PYTHON_INSTALL_ARCHIVE "")
+else()
+  set(PYTHON_INSTALL_ARCHIVE ARCHIVE DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main)
+endif()
+
+if(NOT INSTALL_CREATE_DISTRIB)
+  install(TARGETS ${the_module}
+          ${PYTHON_INSTALL_CONFIGURATIONS}
+          RUNTIME DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
+          LIBRARY DESTINATION ${PYTHON_PACKAGES_PATH} COMPONENT main
+          ${PYTHON_INSTALL_ARCHIVE}
+          )
+else()
+  if(DEFINED PYTHON_VERSION_MAJOR)
+    set(__ver "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+  else()
+    set(__ver "unknown")
+  endif()
+  install(TARGETS ${the_module}
+          CONFIGURATIONS Release
+          RUNTIME DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT main
+          LIBRARY DESTINATION python/${__ver}/${OpenCV_ARCH} COMPONENT main
+          )
+endif()

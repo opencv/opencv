@@ -1677,4 +1677,3 @@ For example, `NumPy <http://numpy.scipy.org/>`_ arrays support the array interfa
     (480, 640, 3) 1
 
 .. note:: In the new Python wrappers (**cv2** module) the function is not needed, since cv2 can process  Numpy arrays (and this is the only supported array type).
-

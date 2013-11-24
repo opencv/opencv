@@ -33,7 +33,7 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-"gpu::PtrStepSz", "gpu::PtrStep", "gpu::PtrElemStep_",
+"cuda::PtrStepSz", "cuda::PtrStep", "cuda::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
 # other
@@ -200,10 +200,10 @@ def process_module(module, path):
         for filename in fnmatch.filter(files, "*.h*"):
             hdrlist.append(os.path.join(root, filename))
 
-    if module == "gpu":
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu_types.hpp"))
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu.hpp"))
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu_stream_accessor.hpp"))
+    if module == "cuda":
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_types.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_stream_accessor.hpp"))
 
     decls = []
     for hname in hdrlist:
@@ -212,7 +212,7 @@ def process_module(module, path):
 
     funcs = []
     # not really needed to hardcode all the namespaces. Normally all they are collected automatically
-    namespaces = ['cv', 'cv.gpu', 'cvflann', 'cvflann.anyimpl', 'cvflann.lsh', 'cv.flann', 'cv.linemod', 'cv.detail', 'cvtest', 'perf', 'cv.videostab']
+    namespaces = ['cv', 'cv.cuda', 'cvflann', 'cvflann.anyimpl', 'cvflann.lsh', 'cv.flann', 'cv.linemod', 'cv.detail', 'cvtest', 'perf', 'cv.videostab']
     classes = []
     structs = []
 
