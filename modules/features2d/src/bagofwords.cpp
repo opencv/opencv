@@ -201,7 +201,7 @@ void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& im
     }
 
     // Normalize image descriptor.
-    imgDescriptor /= descriptors.rows;
+    imgDescriptor /= keypointDescriptors.rows;
 }
 
 }
