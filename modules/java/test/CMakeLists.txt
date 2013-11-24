@@ -10,6 +10,9 @@ set(opencv_test_java_bin_dir "${CMAKE_CURRENT_BINARY_DIR}/.build")
 set(android_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/../android_test")
 set(java_source_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
+# make sure the build directory exists
+file(MAKE_DIRECTORY "${opencv_test_java_bin_dir}")
+
 # get project sources
 file(GLOB_RECURSE opencv_test_java_files RELATIVE "${android_source_dir}" "${android_source_dir}/res/*" "${android_source_dir}/src/*.java")
 # These are the files that need to be updated for pure Java.
@@ -58,14 +61,6 @@ add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/build.xml"
                    COMMENT "Copying build.xml"
                   )
 
-# Create a script for running the Java tests and place it in build/bin.
-#if(WIN32)
-  #file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.cmd"   "cd ${opencv_test_java_bin_dir}\nset PATH=${EXECUTABLE_OUTPUT_PATH}/Release;%PATH%\nant -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Release buildAndTest")
-  #file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java_D.cmd" "cd ${opencv_test_java_bin_dir}\nset PATH=${EXECUTABLE_OUTPUT_PATH}/Debug;%PATH%\nant   -DjavaLibraryPath=${EXECUTABLE_OUTPUT_PATH}/Debug   buildAndTest")
-#else()
-  #file(WRITE "${CMAKE_BINARY_DIR}/bin/opencv_test_java.sh" "cd ${opencv_test_java_bin_dir};\nant -DjavaLibraryPath=${LIBRARY_OUTPUT_PATH} buildAndTest;\ncd -")
-#endif()
-
 add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar"
                    COMMAND "${ANT_EXECUTABLE}" build
                    WORKING_DIRECTORY "${opencv_test_java_bin_dir}"
@@ -73,8 +68,19 @@ add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar
                    COMMENT "Build Java tests"
                   )
 
-add_custom_target(${PROJECT_NAME} ALL SOURCES "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar")
-add_dependencies(${PROJECT_NAME} ${the_module})
+# Not add_custom_command because generator expressions aren't supported in
+# OUTPUT file names, and we need to generate different files for different
+# configurations.
+add_custom_target(${PROJECT_NAME}_properties
+                  COMMAND "${CMAKE_COMMAND}" -E echo "opencv.lib.path = $<TARGET_FILE_DIR:${the_module}>"
+                    > "${opencv_test_java_bin_dir}/ant-$<CONFIGURATION>.properties"
+                  VERBATIM
+                 )
+
+add_custom_target(${PROJECT_NAME} ALL
+                  DEPENDS ${the_module} ${PROJECT_NAME}_properties
+                  SOURCES "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar"
+                 )
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tests accuracy")

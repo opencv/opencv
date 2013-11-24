@@ -40,12 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_VEC_TRAITS_HPP__
-#define __OPENCV_GPU_VEC_TRAITS_HPP__
+#ifndef __OPENCV_CUDA_VEC_TRAITS_HPP__
+#define __OPENCV_CUDA_VEC_TRAITS_HPP__
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template<typename T, int N> struct TypeVec;
 
@@ -122,7 +122,7 @@ namespace cv { namespace gpu { namespace cudev
         return val;
     }
 
-#define OPENCV_GPU_IMPLEMENT_TYPE_VEC(type) \
+#define OPENCV_CUDA_IMPLEMENT_TYPE_VEC(type) \
     template<> struct TypeVec<type, 1> { typedef type vec_type; }; \
     template<> struct TypeVec<type ## 1, 1> { typedef type ## 1 vec_type; }; \
     template<> struct TypeVec<type, 2> { typedef type ## 2 vec_type; }; \
@@ -134,16 +134,16 @@ namespace cv { namespace gpu { namespace cudev
     template<> struct TypeVec<type, 8> { typedef type ## 8 vec_type; }; \
     template<> struct TypeVec<type ## 8, 8> { typedef type ## 8 vec_type; };
 
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(uchar)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(char)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(ushort)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(short)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(int)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(uint)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(float)
-    OPENCV_GPU_IMPLEMENT_TYPE_VEC(double)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(uchar)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(char)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(ushort)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(short)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(int)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(uint)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(float)
+    OPENCV_CUDA_IMPLEMENT_TYPE_VEC(double)
 
-    #undef OPENCV_GPU_IMPLEMENT_TYPE_VEC
+    #undef OPENCV_CUDA_IMPLEMENT_TYPE_VEC
 
     template<> struct TypeVec<schar, 1> { typedef schar vec_type; };
     template<> struct TypeVec<schar, 2> { typedef char2 vec_type; };
@@ -159,7 +159,7 @@ namespace cv { namespace gpu { namespace cudev
 
     template<typename T> struct VecTraits;
 
-#define OPENCV_GPU_IMPLEMENT_VEC_TRAITS(type) \
+#define OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(type) \
     template<> struct VecTraits<type> \
     { \
         typedef type elem_type; \
@@ -209,15 +209,15 @@ namespace cv { namespace gpu { namespace cudev
         static __device__ __host__ __forceinline__ type ## 8 make(const type* v) {return make_ ## type ## 8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);} \
     };
 
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(uchar)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(ushort)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(short)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(int)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(uint)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(float)
-    OPENCV_GPU_IMPLEMENT_VEC_TRAITS(double)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(uchar)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(ushort)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(short)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(int)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(uint)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(float)
+    OPENCV_CUDA_IMPLEMENT_VEC_TRAITS(double)
 
-    #undef OPENCV_GPU_IMPLEMENT_VEC_TRAITS
+    #undef OPENCV_CUDA_IMPLEMENT_VEC_TRAITS
 
     template<> struct VecTraits<char>
     {
@@ -275,6 +275,6 @@ namespace cv { namespace gpu { namespace cudev
         static __device__ __host__ __forceinline__ char8 make(schar a0, schar a1, schar a2, schar a3, schar a4, schar a5, schar a6, schar a7) {return make_char8(a0, a1, a2, a3, a4, a5, a6, a7);}
         static __device__ __host__ __forceinline__ char8 make(const schar* v) {return make_char8(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);}
     };
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_GPU_VEC_TRAITS_HPP__
+#endif // __OPENCV_CUDA_VEC_TRAITS_HPP__

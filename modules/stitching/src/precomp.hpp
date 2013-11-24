@@ -68,24 +68,24 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/calib3d.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUWARPING
-#  include "opencv2/gpuwarping.hpp"
+#ifdef HAVE_OPENCV_CUDAWARPING
+#  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
-#  include "opencv2/gpufeatures2d.hpp"
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#  include "opencv2/cudafeatures2d.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_CUDA
+#  include "opencv2/cuda.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"

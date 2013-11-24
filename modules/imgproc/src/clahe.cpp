@@ -330,5 +330,5 @@ namespace
 
 cv::Ptr<cv::CLAHE> cv::createCLAHE(double clipLimit, cv::Size tileGridSize)
 {
-    return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
+    return makePtr<CLAHE_Impl>(clipLimit, tileGridSize.width, tileGridSize.height);
 }

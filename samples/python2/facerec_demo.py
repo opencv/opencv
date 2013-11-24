@@ -31,6 +31,11 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# ------------------------------------------------------------------------------------------------
+# Note:
+# When using the FaceRecognizer interface in combination with Python, please stick to Python 2.
+# Some underlying scripts like create_csv will not work in other versions, like Python 3.
+# ------------------------------------------------------------------------------------------------
 
 import os
 import sys

@@ -91,14 +91,15 @@ class Sketcher:
         pt = (x, y)
         if event == cv2.EVENT_LBUTTONDOWN:
             self.prev_pt = pt
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.prev_pt = None
+
         if self.prev_pt and flags & cv2.EVENT_FLAG_LBUTTON:
             for dst, color in zip(self.dests, self.colors_func()):
                 cv2.line(dst, self.prev_pt, pt, color, 5)
             self.dirty = True
             self.prev_pt = pt
             self.show()
-        else:
-            self.prev_pt = None
 
 
 # palette data from matplotlib/_cm.py
@@ -217,4 +218,3 @@ def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
     for kp in keypoints:
             x, y = kp.pt
             cv2.circle(vis, (int(x), int(y)), 2, color)
-

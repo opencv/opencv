@@ -56,6 +56,7 @@ cv::Ptr<cv::superres::SuperResolution> cv::superres::createSuperResolution_BTVL1
 }
 
 #else
+#include "opencl_kernels.hpp"
 
 using namespace std;
 using namespace cv;
@@ -63,14 +64,15 @@ using namespace cv::ocl;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
+static ProgramEntry superres_btvl1 = cv::ocl::superres::superres_btvl1;
+
 namespace cv
 {
     namespace ocl
     {
-        extern const char* superres_btvl1;
-
         float* btvWeights_ = NULL;
         size_t btvWeights_size = 0;
+        oclMat c_btvRegWeights;
     }
 }
 
@@ -82,10 +84,6 @@ namespace btv_l1_device_ocl
         oclMat& backwardMapX, oclMat& backwardMapY);
 
     void upscale(const oclMat& src, oclMat& dst, int scale);
-
-    float diffSign(float a, float b);
-
-    Point3f diffSign(Point3f a, Point3f b);
 
     void diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst);
 
@@ -160,24 +158,10 @@ void btv_l1_device_ocl::upscale(const oclMat& src, oclMat& dst, int scale)
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.rows));
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.cols));
     args.push_back(make_pair(sizeof(cl_int), (void*)&scale));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&cn));    
+    args.push_back(make_pair(sizeof(cl_int), (void*)&cn));
 
     openCLExecuteKernel(clCxt, &superres_btvl1, kernel_name, global_thread, local_thread, args, -1, -1);
 
-}
-
-float btv_l1_device_ocl::diffSign(float a, float b)
-{
-    return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
-}
-
-Point3f btv_l1_device_ocl::diffSign(Point3f a, Point3f b)
-{
-    return Point3f(
-        a.x > b.x ? 1.0f : a.x < b.x ? -1.0f : 0.0f,
-        a.y > b.y ? 1.0f : a.y < b.y ? -1.0f : 0.0f,
-        a.z > b.z ? 1.0f : a.z < b.z ? -1.0f : 0.0f
-        );
 }
 
 void btv_l1_device_ocl::diffSign(const oclMat& src1, const oclMat& src2, oclMat& dst)
@@ -229,12 +213,6 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
 
     int cn = src.oclchannels();
 
-    cl_mem c_btvRegWeights;
-    size_t count = btvWeights_size * sizeof(float);
-    c_btvRegWeights = openCLCreateBuffer(clCxt, CL_MEM_READ_ONLY, count);
-    int cl_safe_check = clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), c_btvRegWeights, 1, 0, count, btvWeights_, 0, NULL, NULL);
-    CV_Assert(cl_safe_check == CL_SUCCESS);
-
     args.push_back(make_pair(sizeof(cl_mem), (void*)&src_.data));
     args.push_back(make_pair(sizeof(cl_mem), (void*)&dst_.data));
     args.push_back(make_pair(sizeof(cl_int), (void*)&src_step));
@@ -243,11 +221,9 @@ void btv_l1_device_ocl::calcBtvRegularization(const oclMat& src, oclMat& dst, in
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.cols));
     args.push_back(make_pair(sizeof(cl_int), (void*)&ksize));
     args.push_back(make_pair(sizeof(cl_int), (void*)&cn));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&c_btvRegWeights));
+    args.push_back(make_pair(sizeof(cl_mem), (void*)&c_btvRegWeights.data));
 
     openCLExecuteKernel(clCxt, &superres_btvl1, kernel_name, global_thread, local_thread, args, -1, -1);
-    cl_safe_check = clReleaseMemObject(c_btvRegWeights);
-    CV_Assert(cl_safe_check == CL_SUCCESS);
 }
 
 namespace
@@ -322,9 +298,6 @@ namespace
     {
         CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
 
-        dst.create(src.rows * scale, src.cols * scale, src.type());
-        dst.setTo(Scalar::all(0));
-
         btv_l1_device_ocl::upscale(src, dst, scale);
     }
 
@@ -352,12 +325,13 @@ namespace
 
         btvWeights_ = &btvWeights[0];
         btvWeights_size = size;
+        Mat btvWeights_mheader(1, static_cast<int>(size), CV_32FC1, btvWeights_);
+        c_btvRegWeights = btvWeights_mheader;
     }
 
     void calcBtvRegularization(const oclMat& src, oclMat& dst, int btvKernelSize)
     {
         dst.create(src.size(), src.type());
-        dst.setTo(Scalar::all(0));
 
         const int ksize = (btvKernelSize - 1) / 2;
 
@@ -408,7 +382,7 @@ namespace
         oclMat highRes_;
 
         vector<oclMat> diffTerms_;
-        vector<oclMat> a_, b_, c_;
+        oclMat a_, b_, c_, d_;
         oclMat regTerm_;
     };
 
@@ -422,7 +396,7 @@ namespace
         btvKernelSize_ = 7;
         blurKernelSize_ = 5;
         blurSigma_ = 0.0;
-        opticalFlow_ = createOptFlow_DualTVL1_OCL();
+        opticalFlow_ = createOptFlow_Farneback_OCL();
 
         curBlurKernelSize_ = -1;
         curBlurSigma_ = -1.0;
@@ -465,8 +439,8 @@ namespace
 
         // calc motions between input frames
 
-        calcRelativeMotions(forwardMotions, backwardMotions, 
-            lowResForwardMotions_, lowResBackwardMotions_, 
+        calcRelativeMotions(forwardMotions, backwardMotions,
+            lowResForwardMotions_, lowResBackwardMotions_,
             baseIdx, src[0].size());
 
         upscaleMotions(lowResForwardMotions_, highResForwardMotions_, scale_);
@@ -488,34 +462,36 @@ namespace
         // iterations
 
         diffTerms_.resize(src.size());
-        a_.resize(src.size());
-        b_.resize(src.size());
-        c_.resize(src.size());
-
+        bool d_inited = false;
+        a_.create(highRes_.size(), highRes_.type());
+        b_.create(highRes_.size(), highRes_.type());
+        c_.create(lowResSize, highRes_.type());
+        d_.create(highRes_.rows, highRes_.cols, highRes_.type());
         for (int i = 0; i < iterations_; ++i)
         {
+            if(!d_inited)
+            {
+                d_.setTo(0);
+                d_inited = true;
+            }
             for (size_t k = 0; k < src.size(); ++k)
             {
                 diffTerms_[k].create(highRes_.size(), highRes_.type());
-                a_[k].create(highRes_.size(), highRes_.type());
-                b_[k].create(highRes_.size(), highRes_.type());
-                c_[k].create(lowResSize, highRes_.type());
-
                 // a = M * Ih
-                ocl::remap(highRes_, a_[k], backwardMaps_[k].first, backwardMaps_[k].second, INTER_NEAREST, BORDER_CONSTANT, Scalar());
+                ocl::remap(highRes_, a_, backwardMaps_[k].first, backwardMaps_[k].second, INTER_NEAREST, BORDER_CONSTANT, Scalar());
                 // b = HM * Ih
-                filters_[k]->apply(a_[k], b_[k], Rect(0,0,-1,-1));
+                filters_[k]->apply(a_, b_, Rect(0,0,-1,-1));
                 // c = DHF * Ih
-                ocl::resize(b_[k], c_[k], lowResSize, 0, 0, INTER_NEAREST);
+                ocl::resize(b_, c_, lowResSize, 0, 0, INTER_NEAREST);
 
-                diffSign(src[k], c_[k], c_[k]);
+                diffSign(src[k], c_, c_);
 
                 // a = Dt * diff
-                upscale(c_[k], a_[k], scale_);
+                upscale(c_, d_, scale_);
                 // b = HtDt * diff
-                filters_[k]->apply(a_[k], b_[k], Rect(0,0,-1,-1));
+                filters_[k]->apply(d_, b_, Rect(0,0,-1,-1));
                 // diffTerm = MtHtDt * diff
-                ocl::remap(b_[k], diffTerms_[k], forwardMaps_[k].first, forwardMaps_[k].second, INTER_NEAREST, BORDER_CONSTANT, Scalar());
+                ocl::remap(b_, diffTerms_[k], forwardMaps_[k].first, forwardMaps_[k].second, INTER_NEAREST, BORDER_CONSTANT, Scalar());
             }
 
             if (lambda_ > 0)
@@ -550,10 +526,11 @@ namespace
         highRes_.release();
 
         diffTerms_.clear();
-        a_.clear();
-        b_.clear();
-        c_.clear();
+        a_.release();
+        b_.release();
+        c_.release();
         regTerm_.release();
+        c_btvRegWeights.release();
     }
 
     ////////////////////////////////////////////////////////////
@@ -743,6 +720,6 @@ namespace
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_OCL()
 {
-    return new BTVL1_OCL;
+    return makePtr<BTVL1_OCL>();
 }
 #endif

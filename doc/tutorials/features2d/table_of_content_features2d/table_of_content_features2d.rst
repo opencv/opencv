@@ -201,4 +201,3 @@ Learn about how to use the feature points  detectors, descriptors and matching f
    ../feature_flann_matcher/feature_flann_matcher
    ../feature_homography/feature_homography
    ../detection_of_planar_objects/detection_of_planar_objects
-

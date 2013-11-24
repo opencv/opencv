@@ -125,4 +125,3 @@ if __name__ == '__main__':
         if ch == ord(' '):
             defocus = not defocus
             update(None)
-

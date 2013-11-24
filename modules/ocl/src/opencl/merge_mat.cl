@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,15 +43,19 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////optimized code using vector roi//////////////////////////
 ////////////vector fuction name format: merge_vector_C(channels number)D_(data type depth)//////
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void merge_vector_C2_D0(__global uchar *mat_dst,  int dst_step,  int dst_offset,
                                  __global uchar *mat_src0, int src0_step, int src0_offset,
                                  __global uchar *mat_src1, int src1_step, int src1_offset,
@@ -204,7 +208,7 @@ __kernel void merge_vector_C2_D4(__global int *mat_dst,  int dst_step,  int dst_
         int src0 = *((__global int *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
         int src1 = *((__global int *)((__global uchar *)mat_src1 + src1_index + (x << 2)));
 
-        *((__global int2 *)((__global uchar *)mat_dst  + dst_index + (x << 4))) = (int2)(src0, src1);
+        *((__global int2 *)((__global uchar *)mat_dst  + dst_index + (x << 3))) = (int2)(src0, src1);
     }
 }
 __kernel void merge_vector_C2_D5(__global float *mat_dst,  int dst_step,  int dst_offset,
@@ -224,7 +228,7 @@ __kernel void merge_vector_C2_D5(__global float *mat_dst,  int dst_step,  int ds
         float src0 = *((__global float *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
         float src1 = *((__global float *)((__global uchar *)mat_src1 + src1_index + (x << 2)));
 
-        *((__global float2 *)((__global uchar *)mat_dst  + dst_index + (x << 4))) = (float2)(src0, src1);
+        *((__global float2 *)((__global uchar *)mat_dst  + dst_index + (x << 3))) = (float2)(src0, src1);
     }
 }
 

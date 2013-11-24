@@ -1,0 +1,22 @@
+diff --git a/3rdparty/libpng/pngpriv.h b/3rdparty/libpng/pngpriv.h
+index 07b2b0b..e7824b8 100644
+--- a/3rdparty/libpng/pngpriv.h
++++ b/3rdparty/libpng/pngpriv.h
+@@ -360,7 +360,7 @@ typedef PNG_CONST png_uint_16p FAR * png_const_uint_16pp;
+ 
+ /* Memory model/platform independent fns */
+ #ifndef PNG_ABORT
+-#  ifdef _WINDOWS_
++#  if defined(_WINDOWS_) && !defined(HAVE_WINRT)
+ #    define PNG_ABORT() ExitProcess(0)
+ #  else
+ #    define PNG_ABORT() abort()
+@@ -378,7 +378,7 @@ typedef PNG_CONST png_uint_16p FAR * png_const_uint_16pp;
+ #  define png_memcpy  _fmemcpy
+ #  define png_memset  _fmemset
+ #else
+-#  ifdef _WINDOWS_  /* Favor Windows over C runtime fns */
++#  if defined(_WINDOWS_) && !defined(HAVE_WINRT)  /* Favor Windows over C runtime fns */
+ #    define CVT_PTR(ptr)         (ptr)
+ #    define CVT_PTR_NOCHECK(ptr) (ptr)
+ #    define png_strlen  lstrlenA

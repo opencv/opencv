@@ -11,7 +11,7 @@
 
 using namespace std;
 using namespace cv;
-#define LOOP_NUM 10
+#define LOOP_NUM 1
 
 const static Scalar colors[] =  { CV_RGB(0,0,255),
                                   CV_RGB(0,128,255),
@@ -32,6 +32,7 @@ static void workBegin()
 {
     work_begin = getTickCount();
 }
+
 static void workEnd()
 {
     work_end += (getTickCount() - work_begin);
@@ -42,23 +43,23 @@ static double getTime()
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
-void detect( Mat& img, vector<Rect>& faces,
+
+static void detect( Mat& img, vector<Rect>& faces,
              ocl::OclCascadeClassifier& cascade,
-             double scale, bool calTime);
+             double scale);
 
 
-void detectCPU( Mat& img, vector<Rect>& faces,
+static void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
-                double scale, bool calTime);
+                double scale);
 
-void Draw(Mat& img, vector<Rect>& faces, double scale);
+static void Draw(Mat& img, vector<Rect>& faces, double scale);
 
 
 // This function test if gpu_rst matches cpu_rst.
 // If the two vectors are not equal, it will return the difference in vector size
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
-
 
 int main( int argc, const char** argv )
 {
@@ -75,11 +76,14 @@ int main( int argc, const char** argv )
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        cout << "Avaible options:" << endl;
-        return 0;
+        cout << "Usage : facedetect [options]" << endl;
+        cout << "Available options:" << endl;
+        cmd.printMessage();
+        return EXIT_SUCCESS;
     }
+
     CvCapture* capture = 0;
-    Mat frame, frameCopy, image;
+    Mat frame, frameCopy0, frameCopy, image;
 
     bool useCPU = cmd.get<bool>("s");
     string inputName = cmd.get<string>("i");
@@ -91,8 +95,8 @@ int main( int argc, const char** argv )
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
     {
-        cerr << "ERROR: Could not load classifier cascade" << endl;
-        return -1;
+        cout << "ERROR: Could not load classifier cascade" << endl;
+        return EXIT_FAILURE;
     }
 
     if( inputName.empty() )
@@ -101,37 +105,19 @@ int main( int argc, const char** argv )
         if(!capture)
             cout << "Capture from CAM 0 didn't work" << endl;
     }
-    else if( inputName.size() )
+    else
     {
-        image = imread( inputName, 1 );
+        image = imread( inputName, CV_LOAD_IMAGE_COLOR );
         if( image.empty() )
         {
             capture = cvCaptureFromAVI( inputName.c_str() );
             if(!capture)
                 cout << "Capture from AVI didn't work" << endl;
-            return -1;
+            return EXIT_FAILURE;
         }
     }
-    else
-    {
-        image = imread( "lena.jpg", 1 );
-        if(image.empty())
-            cout << "Couldn't read lena.jpg" << endl;
-        return -1;
-    }
-
 
     cvNamedWindow( "result", 1 );
-    vector<ocl::Info> oclinfo;
-    int devnums = ocl::getDevice(oclinfo);
-    if( devnums < 1 )
-    {
-        std::cout << "no device found\n";
-        return -1;
-    }
-    //if you want to use undefault device, set it here
-    //setDevice(oclinfo[0]);
-    ocl::setBinpath("./");
     if( capture )
     {
         cout << "In capture ..." << endl;
@@ -143,27 +129,24 @@ int main( int argc, const char** argv )
             if( frame.empty() )
                 break;
             if( iplImg->origin == IPL_ORIGIN_TL )
-                frame.copyTo( frameCopy );
+                frame.copyTo( frameCopy0 );
             else
-                flip( frame, frameCopy, 0 );
+                flip( frame, frameCopy0, 0 );
+            if( scale == 1)
+                frameCopy0.copyTo(frameCopy);
+            else
+                resize(frameCopy0, frameCopy, Size(), 1./scale, 1./scale, INTER_LINEAR);
+
+            work_end = 0;
             if(useCPU)
-            {
-                detectCPU(frameCopy, faces, cpu_cascade, scale, false);
-            }
+                detectCPU(frameCopy, faces, cpu_cascade, 1);
             else
-            {
-                detect(frameCopy, faces, cascade, scale, false);
-            }
-            Draw(frameCopy, faces, scale);
+                detect(frameCopy, faces, cascade, 1);
+
+            Draw(frameCopy, faces, 1);
             if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+                break;
         }
-
-
-        waitKey(0);
-
-
-_cleanup_:
         cvReleaseCapture( &capture );
     }
     else
@@ -172,19 +155,19 @@ _cleanup_:
         vector<Rect> faces;
         vector<Rect> ref_rst;
         double accuracy = 0.;
+        detectCPU(image, ref_rst, cpu_cascade, scale);
+        work_end = 0;
+
         for(int i = 0; i <= LOOP_NUM; i ++)
         {
             cout << "loop" << i << endl;
             if(useCPU)
-            {
-                detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
-            }
+                detectCPU(image, faces, cpu_cascade, scale);
             else
             {
-                detect(image, faces, cascade, scale, i==0?false:true);
+                detect(image, faces, cascade, scale);
                 if(i == 0)
                 {
-                    detectCPU(image, ref_rst, cpu_cascade, scale, false);
                     accuracy = checkRectSimilarity(image.size(), ref_rst, faces);
                 }
             }
@@ -208,11 +191,11 @@ _cleanup_:
 
 void detect( Mat& img, vector<Rect>& faces,
              ocl::OclCascadeClassifier& cascade,
-             double scale, bool calTime)
+             double scale)
 {
     ocl::oclMat image(img);
     ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
-    if(calTime) workBegin();
+    workBegin();
     ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
     ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     ocl::equalizeHist( smallImg, smallImg );
@@ -221,14 +204,14 @@ void detect( Mat& img, vector<Rect>& faces,
                               3, 0
                               |CASCADE_SCALE_IMAGE
                               , Size(30,30), Size(0, 0) );
-    if(calTime) workEnd();
+    workEnd();
 }
 
 void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
-                double scale, bool calTime)
+                double scale)
 {
-    if(calTime) workBegin();
+    workBegin();
     Mat cpu_gray, cpu_smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
     cvtColor(img, cpu_gray, COLOR_BGR2GRAY);
     resize(cpu_gray, cpu_smallImg, cpu_smallImg.size(), 0, 0, INTER_LINEAR);
@@ -236,13 +219,15 @@ void detectCPU( Mat& img, vector<Rect>& faces,
     cascade.detectMultiScale(cpu_smallImg, faces, 1.1,
                              3, 0 | CASCADE_SCALE_IMAGE,
                              Size(30, 30), Size(0, 0));
-    if(calTime) workEnd();
+    workEnd();
 }
 
 
 void Draw(Mat& img, vector<Rect>& faces, double scale)
 {
     int i = 0;
+    putText(img, format("fps: %.1f", 1000./getTime()), Point(450, 50),
+            FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 3);
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
         Point center;
@@ -253,13 +238,13 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
         radius = cvRound((r->width + r->height)*0.25*scale);
         circle( img, center, radius, color, 3, 8, 0 );
     }
-    imwrite( outputName, img );
+    //imwrite( outputName, img );
     if(abs(scale-1.0)>.001)
     {
         resize(img, img, Size((int)(img.cols/scale), (int)(img.rows/scale)));
     }
     imshow( "result", img );
-    
+
 }
 
 

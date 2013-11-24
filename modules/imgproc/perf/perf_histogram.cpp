@@ -9,7 +9,7 @@ using std::tr1::get;
 
 typedef tr1::tuple<Size, MatType> Size_Source_t;
 typedef TestBaseWithParam<Size_Source_t> Size_Source;
-typedef TestBaseWithParam<Size> MatSize;
+typedef TestBaseWithParam<Size> TestMatSize;
 
 static const float rangeHight = 256.0f;
 static const float rangeLow = 0.0f;
@@ -28,14 +28,14 @@ PERF_TEST_P(Size_Source, calcHist1d,
     int dims = 1;
     int numberOfImages = 1;
 
-    const float r[] = {rangeLow, rangeHight};
-    const float* ranges[] = {r};
+    const float range[] = {rangeLow, rangeHight};
+    const float* ranges[] = {range};
 
     randu(source, rangeLow, rangeHight);
 
     declare.in(source);
 
-    TEST_CYCLE()
+    TEST_CYCLE_MULTIRUN(3)
     {
         calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges);
     }
@@ -99,6 +99,7 @@ PERF_TEST_P(Size_Source, calcHist3d,
     SANITY_CHECK(hist);
 }
 
+#define MatSize TestMatSize
 PERF_TEST_P(MatSize, equalizeHist,
             testing::Values(TYPICAL_MAT_SIZES)
             )
@@ -115,6 +116,7 @@ PERF_TEST_P(MatSize, equalizeHist,
 
     SANITY_CHECK(destination);
 }
+#undef MatSize
 
 typedef tr1::tuple<Size, double> Sz_ClipLimit_t;
 typedef TestBaseWithParam<Sz_ClipLimit_t> Sz_ClipLimit;

@@ -205,4 +205,3 @@ void CV_MserTest::run(int)
 }
 
 TEST(Features2d_MSER, DISABLED_regression) { CV_MserTest test; test.safe_run(); }
-

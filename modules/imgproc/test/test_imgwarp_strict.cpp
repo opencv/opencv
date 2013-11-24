@@ -678,8 +678,8 @@ void CV_Remap_Test::generate_test_data()
             MatIterator_<Vec2s> begin_x = mapx.begin<Vec2s>(), end_x = mapx.end<Vec2s>();
             for ( ; begin_x != end_x; ++begin_x)
             {
-                begin_x[0] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0)));
-                begin_x[1] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0)));
+                (*begin_x)[0] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0)));
+                (*begin_x)[1] = static_cast<short>(rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0)));
             }
 
             if (interpolation != INTER_NEAREST)

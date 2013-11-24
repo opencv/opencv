@@ -111,6 +111,7 @@
 #define CV_CPU_POPCNT  8
 #define CV_CPU_AVX    10
 #define CV_CPU_NEON   11
+// when adding to this list remember to update the enum in core/utility.cpp
 #define CV_HARDWARE_MAX_FEATURE 255
 
 // do not include SSE/AVX/NEON headers for NVCC compiler
@@ -149,7 +150,12 @@
 #  endif
 #endif
 
-#ifdef __ARM_NEON__
+#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+# include <Intrin.h>
+# include "arm_neon.h"
+# define CV_NEON 1
+# define CPU_HAS_NEON_FEATURE (true)
+#elif defined(__ARM_NEON__)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
@@ -196,8 +202,10 @@
 #if !defined _MSC_VER && !defined __BORLANDC__
 #  if defined __cplusplus && __cplusplus >= 201103L
 #    include <cstdint>
+     typedef std::uint32_t uint;
 #  else
 #    include <stdint.h>
+     typedef uint32_t uint;
 #  endif
 #else
    typedef unsigned uint;
@@ -364,7 +372,7 @@ CV_INLINE int cvRound( double value )
     return t;
 #elif defined _MSC_VER && defined _M_ARM && defined HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
-#elif defined HAVE_LRINT || defined CV_ICC || defined __GNUC__
+#elif defined CV_ICC || defined __GNUC__
 #  ifdef HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
 #  else

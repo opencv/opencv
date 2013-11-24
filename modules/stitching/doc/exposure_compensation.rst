@@ -108,4 +108,3 @@ Exposure compensator which tries to remove exposure related artifacts by adjusti
     };
 
 .. seealso:: :ocv:class:`detail::ExposureCompensator`
-

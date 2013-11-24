@@ -144,9 +144,9 @@ namespace
         {
             cv::Range r;
             r.start = (int)(wholeRange.start +
-                            ((size_t)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+                            ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
-                            ((size_t)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+                            ((uint64)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             (*body)(r);
         }
         cv::Range stripeRange() const { return cv::Range(0, nstripes); }
@@ -453,7 +453,11 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined WIN32 || defined _WIN32
     SYSTEM_INFO sysinfo;
+#if defined(_M_ARM) || defined(_M_X64) || defined(HAVE_WINRT)
+    GetNativeSystemInfo( &sysinfo );
+#else
     GetSystemInfo( &sysinfo );
+#endif
 
     return (int)sysinfo.dwNumberOfProcessors;
 #elif defined ANDROID

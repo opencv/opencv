@@ -312,4 +312,3 @@ Inserts a single point into a Delaunay triangulation.
     :param pt: Inserted point.
 
 The function inserts a single point into a subdivision and modifies the subdivision topology appropriately. If a point with the same coordinates exists already, no new point is added. The function returns a pointer to the allocated point. No virtual point coordinates are calculated at this stage.
-

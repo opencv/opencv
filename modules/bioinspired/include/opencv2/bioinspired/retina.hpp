@@ -304,7 +304,8 @@ public:
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize);
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
-
+CV_EXPORTS Ptr<Retina> createRetina_OCL(Size inputSize);
+CV_EXPORTS Ptr<Retina> createRetina_OCL(Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 }
 }
 #endif /* __OPENCV_BIOINSPIRED_RETINA_HPP__ */

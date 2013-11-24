@@ -51,10 +51,11 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-# include "opencv2/ts.hpp"
-# include "opencv2/softcascade.hpp"
-# include "opencv2/imgproc.hpp"
-# include "opencv2/highgui.hpp"
-# include "utility.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/softcascade.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "cvconfig.h"
+#include "utility.hpp"
 
 #endif

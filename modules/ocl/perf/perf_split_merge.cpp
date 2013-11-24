@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,112 +43,104 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
+
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
 
 ///////////// Merge////////////////////////
-PERFTEST(Merge)
+
+typedef Size_MatType MergeFixture;
+
+PERF_TEST_P(MergeFixture, Merge,
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+                               OCL_PERF_ENUM(CV_8U, CV_32F)))
 {
-    Mat dst, ocl_dst;
-    ocl::oclMat d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), channels = 3;
+    const int dstType = CV_MAKE_TYPE(depth, channels);
 
-    int channels = 4;
-    int all_type[] = {CV_8UC1, CV_32FC1};
-    std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
+    checkDeviceMaxMemoryAllocSize(srcSize, dstType);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat dst(srcSize, dstType);
+    vector<Mat> src(channels);
+    for (vector<Mat>::iterator i = src.begin(), end = src.end(); i != end; ++i)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
-            Size size1 = Size(size, size);
-            std::vector<Mat> src(channels);
-
-            for (int i = 0; i < channels; ++i)
-            {
-                src[i] = Mat(size1, all_type[j], cv::Scalar::all(i));
-            }
-
-            merge(src, dst);
-
-            CPU_ON;
-            merge(src, dst);
-            CPU_OFF;
-
-            std::vector<ocl::oclMat> d_src(channels);
-
-            for (int i = 0; i < channels; ++i)
-            {
-                d_src[i] = ocl::oclMat(size1, all_type[j], cv::Scalar::all(i));
-            }
-
-            WARMUP_ON;
-            ocl::merge(d_src, d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::merge(d_src, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            for (int i = 0; i < channels; ++i)
-            {
-                d_src[i] = ocl::oclMat(size1, all_type[j], cv::Scalar::all(i));
-            }
-            ocl::merge(d_src, d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
-        }
-
+        i->create(srcSize, CV_MAKE_TYPE(depth, 1));
+        declare.in(*i, WARMUP_RNG);
     }
+    declare.out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclDst(srcSize, dstType);
+        vector<ocl::oclMat> oclSrc(src.size());
+        for (vector<ocl::oclMat>::size_type i = 0, end = src.size(); i < end; ++i)
+            oclSrc[i] = src[i];
+
+        OCL_TEST_CYCLE() cv::ocl::merge(oclSrc, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::merge(src, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// Split////////////////////////
-PERFTEST(Split)
+
+typedef Size_MatType SplitFixture;
+
+PERF_TEST_P(SplitFixture, Split,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8U, CV_32F)))
 {
-    //int channels = 4;
-    int all_type[] = {CV_8UC1, CV_32FC1};
-    std::string type_name[] = {"CV_8UC1", "CV_32FC1"};
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), channels = 3;
+    const int type = CV_MAKE_TYPE(depth, channels);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    Mat src(srcSize, type);
+    declare.in(src, WARMUP_RNG);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j];
-            Size size1 = Size(size, size);
+        ocl::oclMat oclSrc(src);
+        vector<ocl::oclMat> oclDst(channels, ocl::oclMat(srcSize, CV_MAKE_TYPE(depth, 1)));
 
-            Mat src(size1, CV_MAKE_TYPE(all_type[j], 4), cv::Scalar(1, 2, 3, 4));
+        OCL_TEST_CYCLE() cv::ocl::split(oclSrc, oclDst);
 
-            std::vector<cv::Mat> dst, ocl_dst(4);
-
-            split(src, dst);
-
-            CPU_ON;
-            split(src, dst);
-            CPU_OFF;
-
-            ocl::oclMat d_src(size1, CV_MAKE_TYPE(all_type[j], 4), cv::Scalar(1, 2, 3, 4));
-            std::vector<cv::ocl::oclMat> d_dst;
-
-            WARMUP_ON;
-            ocl::split(d_src, d_dst);
-            WARMUP_OFF;         
-
-            GPU_ON;
-            ocl::split(d_src, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::split(d_src, d_dst);
-            for(size_t i = 0; i < dst.size(); i++)
-                d_dst[i].download(ocl_dst[i]);
-            GPU_FULL_OFF;
-
-            vector<double> eps(4, 0.);
-            TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);
-        }
-
+        ASSERT_EQ(3, channels);
+        Mat dst0, dst1, dst2;
+        oclDst[0].download(dst0);
+        oclDst[1].download(dst1);
+        oclDst[2].download(dst2);
+        SANITY_CHECK(dst0);
+        SANITY_CHECK(dst1);
+        SANITY_CHECK(dst2);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        vector<Mat> dst(channels, Mat(srcSize, CV_MAKE_TYPE(depth, 1)));
+        TEST_CYCLE() cv::split(src, dst);
+
+        ASSERT_EQ(3, channels);
+        Mat & dst0 = dst[0], & dst1 = dst[1], & dst2 = dst[2];
+        SANITY_CHECK(dst0);
+        SANITY_CHECK(dst1);
+        SANITY_CHECK(dst2);
+    }
+    else
+        OCL_PERF_ELSE
 }

@@ -40,14 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_LIMITS_GPU_HPP__
-#define __OPENCV_GPU_LIMITS_GPU_HPP__
+#ifndef __OPENCV_CUDA_LIMITS_HPP__
+#define __OPENCV_CUDA_LIMITS_HPP__
 
 #include <limits.h>
 #include <float.h>
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
 
 template <class T> struct numeric_limits;
@@ -117,6 +117,6 @@ template <> struct numeric_limits<double>
     static const bool is_signed = true;
 };
 
-}}} // namespace cv { namespace gpu { namespace cudev {
+}}} // namespace cv { namespace cuda { namespace cudev {
 
-#endif // __OPENCV_GPU_LIMITS_GPU_HPP__
+#endif // __OPENCV_CUDA_LIMITS_HPP__

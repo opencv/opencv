@@ -389,4 +389,3 @@ cvMorphEpilinesMulti( int lines,        /* number of lines             */
                                           second_corr   /* correspond information for the 2nd seq     */
                 ));
 }
-

@@ -22,6 +22,10 @@ OpenCV enables you to specify the extrapolation method. For details, see the fun
     * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
     */
 
+.. note::
+
+   * (Python) A complete example illustrating different morphological operations like erode/dilate, open/close, blackhat/tophat ... can be found at opencv_source_code/samples/python2/morphology.py
+
 BaseColumnFilter
 ----------------
 .. ocv:class:: BaseColumnFilter
@@ -408,6 +412,27 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.ht
 This filter does not work inplace.
 
 
+adaptiveBilateralFilter
+-----------------------
+Applies the adaptive bilateral filter to an image.
+
+.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
+
+.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize, sigmaSpace[, dst[, anchor[, borderType]]]) -> dst
+
+    :param src: The source image
+
+    :param dst: The destination image; will have the same size and the same type as src
+
+    :param ksize: The kernel size. This is the neighborhood where the local variance will be calculated, and where pixels will contribute (in a weighted manner).
+
+    :param sigmaSpace: Filter sigma in the coordinate space. Larger value of the parameter means that farther pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
+
+    :param maxSigmaColor: Maximum allowed sigma color (will clamp the value calculated in the ksize neighborhood. Larger value of the parameter means that more dissimilar pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
+
+    :param borderType: Pixel extrapolation method.
+
+A main part of our strategy will be to load each raw pixel once, and reuse it to calculate all pixels in the output (filtered) image that need this pixel value. The math of the filter is that of the usual bilateral filter, except that the sigma color is calculated in the neighborhood, and clamped by the optional input value.
 
 
 blur
@@ -755,7 +780,7 @@ Dilates an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
+    :param kernel: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`
 
     :param anchor: position of the anchor within the element; default value ``(-1, -1)`` means that the anchor is at the element center.
 
@@ -778,6 +803,14 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
     :ocv:func:`erode`,
     :ocv:func:`morphologyEx`,
     :ocv:func:`createMorphologyFilter`
+    :ocv:func:`getStructuringElement`
+
+
+.. note::
+
+   * An example using the morphological dilate operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
+
+
 
 
 erode
@@ -794,7 +827,7 @@ Erodes an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
+    :param kernel: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`.
 
     :param anchor: position of the anchor within the element; default value  ``(-1, -1)``  means that the anchor is at the element center.
 
@@ -816,9 +849,12 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
 
     :ocv:func:`dilate`,
     :ocv:func:`morphologyEx`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
+.. note::
 
+   * An example using the morphological erode operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
 filter2D
 --------
@@ -947,7 +983,7 @@ Returns Gaussian filter coefficients.
     :param ksize: Aperture size. It should be odd ( :math:`\texttt{ksize} \mod 2 = 1` ) and positive.
 
     :param sigma: Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`` .
-    :param ktype: Type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F`` .
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
 
 The function computes and returns the
 :math:`\texttt{ksize} \times 1` matrix of Gaussian filter coefficients:
@@ -973,6 +1009,32 @@ Two of such generated kernels can be passed to
    :ocv:func:`getDerivKernels`,
    :ocv:func:`getStructuringElement`,
    :ocv:func:`GaussianBlur`
+
+
+
+getGaborKernel
+-----------------
+Returns Gabor filter coefficients.
+
+.. ocv:function:: Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd, double gamma, double psi = CV_PI*0.5, int ktype = CV_64F )
+
+.. ocv:pyfunction:: cv2.getGaborKernel(ksize, sigma, theta, lambd, gamma[, psi[, ktype]]) -> retval
+
+    :param ksize: Size of the filter returned.
+
+    :param sigma: Standard deviation of the gaussian envelope.
+
+    :param theta: Orientation of the normal to the parallel stripes of a Gabor function.
+
+    :param lambd: Wavelength of the sinusoidal factor.
+
+    :param gamma: Spatial aspect ratio.
+
+    :param psi: Phase offset.
+
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
+
+For more details about gabor filter equations and parameters, see: `Gabor Filter <http://en.wikipedia.org/wiki/Gabor_filter>`_.
 
 
 
@@ -1090,7 +1152,9 @@ Performs advanced morphological transformations.
 
     :param dst: Destination image of the same size and type as  ``src`` .
 
-    :param element: Structuring element.
+    :param kernel: Structuring element. It can be created using :ocv:func:`getStructuringElement`.
+
+    :param anchor: Anchor position with the kernel. Negative values mean that the anchor is at the kernel center.
 
     :param op: Type of a morphological operation that can be one of the following:
 
@@ -1148,8 +1212,12 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 
     :ocv:func:`dilate`,
     :ocv:func:`erode`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
+.. note::
+
+   * An example using the morphologyEx function for the morphological opening and closing operations can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
 Laplacian
 ---------
@@ -1193,7 +1261,9 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
     :ocv:func:`Sobel`,
     :ocv:func:`Scharr`
 
+.. note::
 
+   * An example using the Laplace transformation for edge detection can be found at opencv_source_code/samples/cpp/laplace.cpp
 
 pyrDown
 -------
@@ -1250,6 +1320,10 @@ Upsamples an image and then blurs it.
 The function performs the upsampling step of the Gaussian pyramid construction, though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
 :ocv:func:`pyrDown`  multiplied by 4.
 
+.. note::
+
+   * (Python) An example of Laplacian Pyramid construction and merging can be found at opencv_source_code/samples/python2/lappyr.py
+
 
 pyrMeanShiftFiltering
 ---------------------
@@ -1297,6 +1371,9 @@ After the iterations over, the color components of the initial pixel (that is, t
 
 When ``maxLevel > 0``, the gaussian pyramid of ``maxLevel+1`` levels is built, and the above procedure is run on the smallest layer first. After that, the results are propagated to the larger layer and the iterations are run again only on those pixels where the layer colors differ by more than ``sr`` from the lower-resolution layer of the pyramid. That makes boundaries of color regions sharper. Note that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when ``maxLevel==0``).
 
+.. note::
+
+   * An example using mean-shift image segmentation can be found at opencv_source_code/samples/cpp/meanshift_segmentation.cpp
 
 sepFilter2D
 -----------
@@ -1322,7 +1399,7 @@ Applies a separable linear filter to an image.
 
     :param kernelY: Coefficients for filtering each column.
 
-    :param anchor: Anchor position within the kernel. The default value  :math:`(-1, 1)`  means that the anchor is at the kernel center.
+    :param anchor: Anchor position within the kernel. The default value  :math:`(-1,-1)`  means that the anchor is at the kernel center.
 
     :param delta: Value added to the filtered results before storing them.
 
@@ -1514,4 +1591,3 @@ is equivalent to
 .. seealso::
 
     :ocv:func:`cartToPolar`
-

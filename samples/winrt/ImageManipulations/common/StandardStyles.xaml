@@ -15,7 +15,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Non-brush values that vary across themes -->
-    
+
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Default">
             <x:String x:Key="BackButtonGlyph">&#xE071;</x:String>
@@ -399,7 +399,7 @@
     </Style>
 
     <!-- Standard App Bar buttons -->
-  
+
     <Style x:Key="SkipBackAppBarButtonStyle" TargetType="Button" BasedOn="{StaticResource AppBarButtonStyle}">
         <Setter Property="AutomationProperties.AutomationId" Value="SkipBackAppBarButton"/>
         <Setter Property="AutomationProperties.Name" Value="Skip Back"/>
@@ -690,7 +690,7 @@
     <!--
         SnappedBackButtonStyle is used to style a Button for use in the title area of a snapped page.  Margins appropriate
         for the conventional page layout are included as part of the style.
-        
+
         The obvious duplication here is necessary as the glyphs used in snapped are not merely smaller versions of the same
         glyph but are actually distinct.
     -->
@@ -934,7 +934,7 @@
                         <TextBlock Text="{Binding Title}" TextWrapping="NoWrap" Style="{StaticResource BodyTextStyle}"/>
                         <TextBlock Text="{Binding Description}" MaxHeight="140" Foreground="{StaticResource ApplicationSecondaryForegroundThemeBrush}" Style="{StaticResource BodyTextStyle}"/>
                     </StackPanel>
-                </Grid>                    
+                </Grid>
             </ToolTipService.ToolTip>
         </Grid>
     </DataTemplate>

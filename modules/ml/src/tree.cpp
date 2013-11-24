@@ -1594,9 +1594,14 @@ bool CvDTree::train( const Mat& _train_data, int _tflag,
                     const Mat& _sample_idx, const Mat& _var_type,
                     const Mat& _missing_mask, CvDTreeParams _params )
 {
-    CvMat tdata = _train_data, responses = _responses, vidx=_var_idx,
-        sidx=_sample_idx, vtype=_var_type, mmask=_missing_mask;
-    return train(&tdata, _tflag, &responses, vidx.data.ptr ? &vidx : 0, sidx.data.ptr ? &sidx : 0,
+    train_data_hdr = _train_data;
+    train_data_mat = _train_data;
+    responses_hdr = _responses;
+    responses_mat = _responses;
+
+    CvMat vidx=_var_idx, sidx=_sample_idx, vtype=_var_type, mmask=_missing_mask;
+
+    return train(&train_data_hdr, _tflag, &responses_hdr, vidx.data.ptr ? &vidx : 0, sidx.data.ptr ? &sidx : 0,
                  vtype.data.ptr ? &vtype : 0, mmask.data.ptr ? &mmask : 0, _params);
 }
 
@@ -1877,7 +1882,7 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
-template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj()
+template<> CV_EXPORTS void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
 {
     fastFree(obj);
 }
@@ -1888,12 +1893,12 @@ DTreeBestSplitFinder::DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node)
     node = _node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)bestSplit, 0, splitSize);
+    bestSplit.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(bestSplit.get(), 0, splitSize);
     bestSplit->quality = -1;
     bestSplit->condensed_idx = INT_MIN;
-    split = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)split, 0, splitSize);
+    split.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(split.get(), 0, splitSize);
     //haveSplit = false;
 }
 
@@ -1903,10 +1908,10 @@ DTreeBestSplitFinder::DTreeBestSplitFinder( const DTreeBestSplitFinder& finder, 
     node = finder.node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
-    memcpy((CvDTreeSplit*)(bestSplit), (const CvDTreeSplit*)finder.bestSplit, splitSize);
-    split = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)split, 0, splitSize);
+    bestSplit.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memcpy(bestSplit.get(), finder.bestSplit.get(), splitSize);
+    split.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(split.get(), 0, splitSize);
 }
 
 void DTreeBestSplitFinder::operator()(const BlockedRange& range)
@@ -1939,14 +1944,14 @@ void DTreeBestSplitFinder::operator()(const BlockedRange& range)
         }
 
         if( res && bestSplit->quality < split->quality )
-                memcpy( (CvDTreeSplit*)bestSplit, (CvDTreeSplit*)split, splitSize );
+                memcpy( bestSplit.get(), split.get(), splitSize );
     }
 }
 
 void DTreeBestSplitFinder::join( DTreeBestSplitFinder& rhs )
 {
     if( bestSplit->quality < rhs.bestSplit->quality )
-        memcpy( (CvDTreeSplit*)bestSplit, (CvDTreeSplit*)rhs.bestSplit, splitSize );
+        memcpy( bestSplit.get(), rhs.bestSplit.get(), splitSize );
 }
 }
 

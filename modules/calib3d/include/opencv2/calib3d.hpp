@@ -180,7 +180,7 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
 //! finds circles' grid pattern of the specified size in the image
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
-                                   const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector());
+                                   const Ptr<FeatureDetector> &blobDetector = makePtr<SimpleBlobDetector>());
 
 //! finds intrinsic and extrinsic camera parameters from several fews of a known calibration pattern.
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
@@ -262,16 +262,16 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
                                    double param1 = 3., double param2 = 0.99 );
 
 //! finds essential matrix from a set of corresponding 2D points using five-point algorithm
-CV_EXPORTS Mat findEssentialMat( InputArray points1, InputArray points2,
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
                                  int method = RANSAC, double prob = 0.999,
                                  double threshold = 1.0, OutputArray mask = noArray() );
 
 //! decompose essential matrix to possible rotation matrix and one translation vector
-CV_EXPORTS void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
+CV_EXPORTS_W void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
 
 //! recover relative camera pose from a set of corresponding 2D points
-CV_EXPORTS int recoverPose( InputArray E, InputArray points1, InputArray points2,
+CV_EXPORTS_W int recoverPose( InputArray E, InputArray points1, InputArray points2,
                             OutputArray R, OutputArray t,
                             double focal = 1.0, Point2d pp = Point2d(0, 0),
                             InputOutputArray mask = noArray() );

@@ -1240,7 +1240,7 @@ FernDescriptorMatcher::FernDescriptorMatcher( const Params& _params )
     params = _params;
     if( !params.filename.empty() )
     {
-        classifier = new FernClassifier;
+        classifier = makePtr<FernClassifier>();
         FileStorage fs(params.filename, FileStorage::READ);
         if( fs.isOpened() )
             classifier->read( fs.getFirstTopLevelNode() );
@@ -1260,7 +1260,7 @@ void FernDescriptorMatcher::clear()
 
 void FernDescriptorMatcher::train()
 {
-    if( classifier.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
+    if( !classifier || prevTrainCount < (int)trainPointCollection.keypointCount() )
     {
         assert( params.filename.empty() );
 
@@ -1268,9 +1268,10 @@ void FernDescriptorMatcher::train()
         for( size_t imgIdx = 0; imgIdx < trainPointCollection.imageCount(); imgIdx++ )
             KeyPoint::convert( trainPointCollection.getKeypoints((int)imgIdx), points[imgIdx] );
 
-        classifier = new FernClassifier( points, trainPointCollection.getImages(), std::vector<std::vector<int> >(), 0, // each points is a class
-                                        params.patchSize, params.signatureSize, params.nstructs, params.structSize,
-                                        params.nviews, params.compressionMethod, params.patchGenerator );
+        classifier.reset(
+            new FernClassifier( points, trainPointCollection.getImages(), std::vector<std::vector<int> >(), 0, // each points is a class
+                                params.patchSize, params.signatureSize, params.nstructs, params.structSize,
+                                params.nviews, params.compressionMethod, params.patchGenerator ));
     }
 }
 
@@ -1384,12 +1385,12 @@ void FernDescriptorMatcher::write( FileStorage& fs ) const
 
 bool FernDescriptorMatcher::empty() const
 {
-    return classifier.empty() || classifier->empty();
+    return !classifier || classifier->empty();
 }
 
 Ptr<GenericDescriptorMatcher> FernDescriptorMatcher::clone( bool emptyTrainData ) const
 {
-    FernDescriptorMatcher* matcher = new FernDescriptorMatcher( params );
+    Ptr<FernDescriptorMatcher> matcher = makePtr<FernDescriptorMatcher>( params );
     if( !emptyTrainData )
     {
         CV_Error( CV_StsNotImplemented, "deep clone dunctionality is not implemented, because "

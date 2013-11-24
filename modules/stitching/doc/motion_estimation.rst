@@ -18,12 +18,11 @@ Rotation estimator base class. It takes features of all images, pairwise matches
     public:
         virtual ~Estimator() {}
 
-        void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
-                         std::vector<CameraParams> &cameras)
-            { estimate(features, pairwise_matches, cameras); }
+        bool operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+                         std::vector<CameraParams> &cameras);
 
     protected:
-        virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+        virtual bool estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                               std::vector<CameraParams> &cameras) = 0;
     };
 
@@ -32,26 +31,30 @@ detail::Estimator::operator()
 
 Estimates camera parameters.
 
-.. ocv:function:: detail::Estimator::operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+.. ocv:function:: bool detail::Estimator::operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
 
     :param features: Features of images
 
     :param pairwise_matches: Pairwise matches of images
 
     :param cameras: Estimated camera parameters
+
+    :return: True in case of success, false otherwise
 
 detail::Estimator::estimate
 ---------------------------
 
 This method must implement camera parameters estimation logic in order to make the wrapper `detail::Estimator::operator()`_ work.
 
-.. ocv:function:: void detail::Estimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+.. ocv:function:: bool detail::Estimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
 
     :param features: Features of images
 
     :param pairwise_matches: Pairwise matches of images
 
     :param cameras: Estimated camera parameters
+
+    :return: True in case of success, false otherwise
 
 detail::HomographyBasedEstimator
 --------------------------------

@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -46,21 +46,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-namespace cv
-{
-namespace ocl
-{
-
-///////////////////////////OpenCL kernel strings///////////////////////////
-extern const char *stereobm;
-
-}
-}
 namespace cv
 {
 namespace ocl
@@ -94,10 +83,7 @@ static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterC
 #define N_DISPARITIES 8
 #define ROWSperTHREAD 21
 #define BLOCK_W 128
-static inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
+
 ////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////stereoBM_GPU////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -115,11 +101,10 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
     size_t local_mem_size = (N_DISPARITIES * (BLOCK_W + 2 * winsz2)) *
                             sizeof(cl_uint);
     //size_t blockSize = 1;
-    size_t localThreads[]  = { BLOCK_W, 1,1};
-    size_t globalThreads[] = { divUp(left.cols - maxdisp - 2 * winsz2, BLOCK_W) *BLOCK_W,
+    size_t localThreads[]  = { BLOCK_W, 1, 1 };
+    size_t globalThreads[] = { left.cols - maxdisp - 2 * winsz2,
                                divUp(left.rows - 2 * winsz2, ROWSperTHREAD),
-                               1
-                             };
+                               1 };
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&left.data));
@@ -149,10 +134,9 @@ static void postfilter_textureness(oclMat &left, int winSize,
 
     size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, blockSize ,1};
-    size_t globalThreads[] = { divUp(left.cols, BLOCK_W) *BLOCK_W,
+    size_t globalThreads[] = { left.cols,
                                divUp(left.rows, 2 * ROWSperTHREAD),
-                               1
-                             };
+                               1 };
 
     size_t local_mem_size = (localThreads[0] + localThreads[0] + (winSize / 2) * 2) * sizeof(float);
 

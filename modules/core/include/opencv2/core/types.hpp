@@ -68,7 +68,7 @@ namespace cv
   more convenient access to the real and imaginary parts using through the simple field access, as opposite
   to std::complex::real() and std::complex::imag().
 */
-template<typename _Tp> class CV_EXPORTS Complex
+template<typename _Tp> class Complex
 {
 public:
 
@@ -120,7 +120,7 @@ public:
   as a template parameter. There are a few shorter aliases available for user convenience.
   See cv::Point, cv::Point2i, cv::Point2f and cv::Point2d.
 */
-template<typename _Tp> class CV_EXPORTS Point_
+template<typename _Tp> class Point_
 {
 public:
     typedef _Tp value_type;
@@ -191,7 +191,7 @@ public:
 
   \see cv::Point3i, cv::Point3f and cv::Point3d
 */
-template<typename _Tp> class CV_EXPORTS Point3_
+template<typename _Tp> class Point3_
 {
 public:
     typedef _Tp value_type;
@@ -256,7 +256,7 @@ public:
   The class represents the size of a 2D rectangle, image size, matrix size etc.
   Normally, cv::Size ~ cv::Size_<int> is used.
 */
-template<typename _Tp> class CV_EXPORTS Size_
+template<typename _Tp> class Size_
 {
 public:
     typedef _Tp value_type;
@@ -282,6 +282,7 @@ public:
 */
 typedef Size_<int> Size2i;
 typedef Size_<float> Size2f;
+typedef Size_<double> Size2d;
 typedef Size2i Size;
 
 /*!
@@ -314,7 +315,7 @@ public:
   The class represents a 2D rectangle with coordinates of the specified data type.
   Normally, cv::Rect ~ cv::Rect_<int> is used.
 */
-template<typename _Tp> class CV_EXPORTS Rect_
+template<typename _Tp> class Rect_
 {
 public:
     typedef _Tp value_type;
@@ -349,7 +350,10 @@ public:
 /*!
   \typedef
 */
-typedef Rect_<int> Rect;
+typedef Rect_<int> Rect2i;
+typedef Rect_<float> Rect2f;
+typedef Rect_<double> Rect2d;
+typedef Rect2i Rect;
 
 /*!
   traits
@@ -470,7 +474,7 @@ public:
    This is partially specialized cv::Vec class with the number of elements = 4, i.e. a short vector of four elements.
    Normally, cv::Scalar ~ cv::Scalar_<double> is used.
 */
-template<typename _Tp> class CV_EXPORTS Scalar_ : public Vec<_Tp, 4>
+template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
 {
 public:
     //! various constructors
@@ -551,18 +555,18 @@ public:
     size_t hash() const;
 
     //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& keypoints,
-                        CV_OUT std::vector<Point2f>& points2f,
-                        const std::vector<int>& keypointIndexes=std::vector<int>());
+    CV_WRAP static void convert(const std::vector<KeyPoint>& keypoints,
+                                CV_OUT std::vector<Point2f>& points2f,
+                                const std::vector<int>& keypointIndexes=std::vector<int>());
     //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& points2f,
-                        CV_OUT std::vector<KeyPoint>& keypoints,
-                        float size=1, float response=1, int octave=0, int class_id=-1);
+    CV_WRAP static void convert(const std::vector<Point2f>& points2f,
+                                CV_OUT std::vector<KeyPoint>& keypoints,
+                                float size=1, float response=1, int octave=0, int class_id=-1);
 
     //! computes overlap for pair of keypoints;
     //! overlap is a ratio between area of keypoint regions intersection and
     //! area of keypoint regions union (now keypoint region is circle)
-    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
+    CV_WRAP static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
     CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
     CV_PROP_RW float size; //!< diameter of the meaningful keypoint neighborhood

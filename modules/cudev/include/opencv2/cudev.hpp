@@ -73,7 +73,7 @@
 #include "cudev/block/vec_distance.hpp"
 
 #include "cudev/grid/copy.hpp"
-#include "cudev/grid/glob_reduce.hpp"
+#include "cudev/grid/reduce.hpp"
 #include "cudev/grid/histogram.hpp"
 #include "cudev/grid/integral.hpp"
 #include "cudev/grid/pyramids.hpp"

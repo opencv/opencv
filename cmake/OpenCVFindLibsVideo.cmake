@@ -3,13 +3,12 @@
 # ----------------------------------------------------------------------------
 
 ocv_clear_vars(HAVE_VFW)
-if (WITH_VFW)
-  TRY_COMPILE(HAVE_VFW
-    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+if(WITH_VFW)
+  try_compile(HAVE_VFW
+    "${OpenCV_BINARY_DIR}"
     "${OpenCV_SOURCE_DIR}/cmake/checks/vfwtest.cpp"
-    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32"
-    OUTPUT_VARIABLE OUTPUT)
- endif(WITH_VFW)
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32")
+endif(WITH_VFW)
 
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
@@ -87,7 +86,14 @@ if(WITH_PVAPI)
       set(_PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${CMAKE_OPENCV_GCC_VERSION_MAJOR}.${CMAKE_OPENCV_GCC_VERSION_MINOR}")
     endif()
 
-    set(PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${CMAKE_STATIC_LIBRARY_PREFIX}PvAPI${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE PATH "The PvAPI library")
+    if(WIN32)
+      if(MINGW)
+        set(PVAPI_DEFINITIONS "-DPVDECL=__stdcall")
+      endif(MINGW)
+      set(PVAPI_LIBRARY "${_PVAPI_LIBRARY}/PvAPI.lib" CACHE PATH "The PvAPI library")
+    else(WIN32)
+      set(PVAPI_LIBRARY "${_PVAPI_LIBRARY}/${CMAKE_STATIC_LIBRARY_PREFIX}PvAPI${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE PATH "The PvAPI library")
+    endif(WIN32)
     if(EXISTS "${PVAPI_LIBRARY}")
       set(HAVE_PVAPI TRUE)
     endif()
@@ -148,7 +154,9 @@ endif(WITH_XINE)
 # --- V4L ---
 ocv_clear_vars(HAVE_LIBV4L HAVE_CAMV4L HAVE_CAMV4L2 HAVE_VIDEOIO)
 if(WITH_V4L)
-  CHECK_MODULE(libv4l1 HAVE_LIBV4L)
+  if(WITH_LIBV4L)
+    CHECK_MODULE(libv4l1 HAVE_LIBV4L)
+  endif()
   CHECK_INCLUDE_FILE(linux/videodev.h HAVE_CAMV4L)
   CHECK_INCLUDE_FILE(linux/videodev2.h HAVE_CAMV4L2)
   CHECK_INCLUDE_FILE(sys/videoio.h HAVE_VIDEOIO)
@@ -257,3 +265,17 @@ if(WIN32)
     list(APPEND HIGHGUI_LIBRARIES winmm)
   endif()
 endif(WIN32)
+
+# --- Apple AV Foundation ---
+if(WITH_AVFOUNDATION)
+  set(HAVE_AVFOUNDATION YES)
+endif()
+
+# --- QuickTime ---
+if (NOT IOS)
+  if(WITH_QUICKTIME)
+    set(HAVE_QUICKTIME YES)
+  elseif(APPLE)
+    set(HAVE_QTKIT YES)
+  endif()
+endif()

@@ -65,4 +65,3 @@ inline float intensity(const cv::Point3_<uchar> &bgr)
 }
 
 #endif
-

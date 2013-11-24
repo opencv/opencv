@@ -388,7 +388,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (CVPixelBufferRef) pixelBufferFromCGImage: (CGImageRef) image
 {
-    
+
     CGSize frameSize = CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image));
     NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
                              [NSNumber numberWithBool:NO], kCVPixelBufferCGImageCompatibilityKey,
@@ -399,23 +399,23 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
                                           frameSize.height,  kCVPixelFormatType_32ARGB, (CFDictionaryRef) CFBridgingRetain(options),
                                           &pxbuffer);
     NSParameterAssert(status == kCVReturnSuccess && pxbuffer != NULL);
-    
+
     CVPixelBufferLockBaseAddress(pxbuffer, 0);
     void *pxdata = CVPixelBufferGetBaseAddress(pxbuffer);
-    
-    
+
+
     CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();
     CGContextRef context = CGBitmapContextCreate(pxdata, frameSize.width,
                                                  frameSize.height, 8, 4*frameSize.width, rgbColorSpace,
                                                  kCGImageAlphaPremultipliedFirst);
-    
+
     CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image),
                                            CGImageGetHeight(image)), image);
     CGColorSpaceRelease(rgbColorSpace);
     CGContextRelease(context);
-    
+
     CVPixelBufferUnlockBaseAddress(pxbuffer, 0);
-    
+
     return pxbuffer;
 }
 
@@ -616,4 +616,3 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 }
 
 @end
-

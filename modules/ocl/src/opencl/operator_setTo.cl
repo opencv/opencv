@@ -16,7 +16,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -34,17 +34,22 @@
 //
 //
 
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
 
-__kernel void set_to_without_mask_C1_D0(uchar scalar,__global uchar * dstMat,
+__kernel void set_to_without_mask_C1_D0(__global uchar * scalar,__global uchar * dstMat,
         int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
 {
         int x=get_global_id(0)<<2;
         int y=get_global_id(1);
-        //int addr_start = mad24(y,dstStep_in_pixel,offset_in_pixel);
-        //int addr_end = mad24(y,dstStep_in_pixel,cols+offset_in_pixel);
         int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
         uchar4 out;
-        out.x = out.y = out.z = out.w = scalar;
+        out.x = out.y = out.z = out.w = scalar[0];
 
         if ( (x+3 < cols) && (y < rows)&& ((offset_in_pixel&3) == 0))
         {
@@ -77,14 +82,14 @@ __kernel void set_to_without_mask_C1_D0(uchar scalar,__global uchar * dstMat,
         }
 }
 
-__kernel void set_to_without_mask(GENTYPE scalar,__global GENTYPE * dstMat,
-        int cols,int rows,int dstStep_in_pixel,int offset_in_pixel)
+__kernel void set_to_without_mask(__global GENTYPE * scalar,__global GENTYPE * dstMat,
+        int cols, int rows, int dstStep_in_pixel, int offset_in_pixel)
 {
-        int x=get_global_id(0);
-        int y=get_global_id(1);
+        int x = get_global_id(0);
+        int y = get_global_id(1);
         if ( (x < cols) & (y < rows))
         {
-            int idx = mad24(y,dstStep_in_pixel,x+ offset_in_pixel);
-            dstMat[idx] = scalar;
+            int idx = mad24(y, dstStep_in_pixel, x + offset_in_pixel);
+            dstMat[idx] = scalar[0];
         }
 }

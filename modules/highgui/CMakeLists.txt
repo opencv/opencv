@@ -9,13 +9,12 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 
 ocv_clear_vars(GRFMT_LIBS)
 
-if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIR})
+if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 
-if(WITH_JPEG)
-  add_definitions(-DHAVE_JPEG)
+if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
@@ -26,27 +25,23 @@ if(WITH_WEBP)
   list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
 endif()
 
-if(WITH_PNG)
-  add_definitions(-DHAVE_PNG)
+if(HAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
   ocv_include_directories(${PNG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
 endif()
 
-if(WITH_TIFF)
-  add_definitions(-DHAVE_TIFF)
+if(HAVE_TIFF)
   ocv_include_directories(${TIFF_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
 endif()
 
-if(WITH_JASPER)
-  add_definitions(-DHAVE_JASPER)
+if(HAVE_JASPER)
   ocv_include_directories(${JASPER_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${JASPER_LIBRARIES})
 endif()
 
-if(WITH_OPENEXR)
-  add_definitions(-DHAVE_OPENEXR)
+if(HAVE_OPENEXR)
   include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
 endif()
@@ -55,6 +50,8 @@ file(GLOB grfmt_hdrs src/grfmt*.hpp)
 file(GLOB grfmt_srcs src/grfmt*.cpp)
 list(APPEND grfmt_hdrs src/bitstrm.hpp)
 list(APPEND grfmt_srcs src/bitstrm.cpp)
+list(APPEND grfmt_hdrs src/rgbe.hpp)
+list(APPEND grfmt_srcs src/rgbe.cpp)
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
@@ -69,7 +66,6 @@ set(highgui_srcs
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
     src/loadsave.cpp
-    src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
@@ -114,16 +110,12 @@ elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
   list(APPEND highgui_srcs src/window_gtk.cpp)
-elseif(APPLE)
-  if(WITH_CARBON)
-    add_definitions(-DHAVE_CARBON=1)
-    list(APPEND highgui_srcs src/window_carbon.cpp)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
-  elseif(NOT IOS)
-    add_definitions(-DHAVE_COCOA=1)
-    list(APPEND highgui_srcs src/window_cocoa.mm)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
-  endif()
+elseif(HAVE_CARBON)
+  list(APPEND highgui_srcs src/window_carbon.cpp)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
+elseif(HAVE_COCOA)
+  list(APPEND highgui_srcs src/window_cocoa.mm)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
 if(WIN32 AND NOT ARM)
@@ -203,6 +195,7 @@ endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
   add_definitions(-DHAVE_PVAPI)
+  add_definitions(${PVAPI_DEFINITIONS})
   ocv_include_directories(${PVAPI_INCLUDE_PATH})
   set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
   list(APPEND HIGHGUI_LIBRARIES ${PVAPI_LIBRARY})
@@ -216,19 +209,17 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(WITH_AVFOUNDATION)
-  add_definitions(-DHAVE_AVFOUNDATION=1)
+if(HAVE_AVFOUNDATION)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
-elseif(APPLE)
-  add_definitions(-DHAVE_QUICKTIME=1)
-  if(WITH_QUICKTIME)
-    list(APPEND highgui_srcs src/cap_qt.cpp)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-  else()
-    list(APPEND highgui_srcs src/cap_qtkit.mm)
-    list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
-  endif()
+endif()
+
+if(HAVE_QUICKTIME)
+  list(APPEND highgui_srcs src/cap_qt.cpp)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
+elseif(HAVE_QTKIT)
+  list(APPEND highgui_srcs src/cap_qtkit.mm)
+  list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()
 
 if(IOS)
@@ -303,11 +294,6 @@ if(WIN32 AND WITH_FFMPEG)
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
 
-  #if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
-  #  add_custom_command(TARGET ${the_module} POST_BUILD
-  #                     COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name_ver}"
-  #                     COMMENT "Copying ${ffmpeg_path} to the output directory")
-  #else
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"
@@ -323,7 +309,7 @@ if(WIN32 AND WITH_FFMPEG)
                        COMMENT "Copying ${ffmpeg_path} to the output directory")
   endif()
 
-  install(FILES "${ffmpeg_path}" DESTINATION bin COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
+  install(FILES "${ffmpeg_path}" DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main RENAME "${ffmpeg_bare_name_ver}")
 endif()
 
 ocv_add_accuracy_tests()

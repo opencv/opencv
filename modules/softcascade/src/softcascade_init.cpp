@@ -58,8 +58,8 @@ CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc = createSCascade_hidden();
-    Ptr<Algorithm> sc1 = createDetector_hidden();
+    Ptr<Algorithm> sc = createSCascade_ptr_hidden();
+    Ptr<Algorithm> sc1 = createDetector_ptr_hidden();
     return (sc1->info() != 0) && (sc->info() != 0);
 }
 

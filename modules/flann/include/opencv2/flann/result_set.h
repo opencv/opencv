@@ -540,4 +540,3 @@ private:
 }
 
 #endif //OPENCV_FLANN_RESULTSET_H
-

@@ -130,7 +130,7 @@ PERF_TEST_P(PointsNum, DISABLED_SolvePnPRansac, testing::Values(4, 3*9, 7*13))
 
 #ifdef HAVE_TBB
     // limit concurrency to get determenistic result
-    cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+    tbb::task_scheduler_init one_thread(1);
 #endif
 
     TEST_CYCLE()

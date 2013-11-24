@@ -204,11 +204,11 @@ void QuantizedPyramid::selectScatteredFeatures(const std::vector<Candidate>& can
 Ptr<Modality> Modality::create(const String& modality_type)
 {
   if (modality_type == "ColorGradient")
-    return new ColorGradient();
+    return makePtr<ColorGradient>();
   else if (modality_type == "DepthNormal")
-    return new DepthNormal();
+    return makePtr<DepthNormal>();
   else
-    return NULL;
+    return Ptr<Modality>();
 }
 
 Ptr<Modality> Modality::create(const FileNode& fn)
@@ -574,7 +574,7 @@ String ColorGradient::name() const
 Ptr<QuantizedPyramid> ColorGradient::processImpl(const Mat& src,
                                                      const Mat& mask) const
 {
-  return new ColorGradientPyramid(src, mask, weak_threshold, num_features, strong_threshold);
+  return makePtr<ColorGradientPyramid>(src, mask, weak_threshold, num_features, strong_threshold);
 }
 
 void ColorGradient::read(const FileNode& fn)
@@ -889,8 +889,8 @@ String DepthNormal::name() const
 Ptr<QuantizedPyramid> DepthNormal::processImpl(const Mat& src,
                                                    const Mat& mask) const
 {
-  return new DepthNormalPyramid(src, mask, distance_threshold, difference_threshold,
-                                num_features, extract_threshold);
+  return makePtr<DepthNormalPyramid>(src, mask, distance_threshold, difference_threshold,
+                                     num_features, extract_threshold);
 }
 
 void DepthNormal::read(const FileNode& fn)
@@ -1828,16 +1828,16 @@ static const int T_DEFAULTS[] = {5, 8};
 Ptr<Detector> getDefaultLINE()
 {
   std::vector< Ptr<Modality> > modalities;
-  modalities.push_back(new ColorGradient);
-  return new Detector(modalities, std::vector<int>(T_DEFAULTS, T_DEFAULTS + 2));
+  modalities.push_back(makePtr<ColorGradient>());
+  return makePtr<Detector>(modalities, std::vector<int>(T_DEFAULTS, T_DEFAULTS + 2));
 }
 
 Ptr<Detector> getDefaultLINEMOD()
 {
   std::vector< Ptr<Modality> > modalities;
-  modalities.push_back(new ColorGradient);
-  modalities.push_back(new DepthNormal);
-  return new Detector(modalities, std::vector<int>(T_DEFAULTS, T_DEFAULTS + 2));
+  modalities.push_back(makePtr<ColorGradient>());
+  modalities.push_back(makePtr<DepthNormal>());
+  return makePtr<Detector>(modalities, std::vector<int>(T_DEFAULTS, T_DEFAULTS + 2));
 }
 
 } // namespace linemod

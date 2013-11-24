@@ -56,12 +56,14 @@ class CV_EXPORTS Estimator
 public:
     virtual ~Estimator() {}
 
-    void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+    bool operator ()(const std::vector<ImageFeatures> &features,
+                     const std::vector<MatchesInfo> &pairwise_matches,
                      std::vector<CameraParams> &cameras)
-        { estimate(features, pairwise_matches, cameras); }
+        { return estimate(features, pairwise_matches, cameras); }
 
 protected:
-    virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+    virtual bool estimate(const std::vector<ImageFeatures> &features,
+                          const std::vector<MatchesInfo> &pairwise_matches,
                           std::vector<CameraParams> &cameras) = 0;
 };
 
@@ -73,8 +75,9 @@ public:
         : is_focals_estimated_(is_focals_estimated) {}
 
 private:
-    void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
-                  std::vector<CameraParams> &cameras);
+    virtual bool estimate(const std::vector<ImageFeatures> &features,
+                          const std::vector<MatchesInfo> &pairwise_matches,
+                          std::vector<CameraParams> &cameras);
 
     bool is_focals_estimated_;
 };
@@ -107,7 +110,7 @@ protected:
     }
 
     // Runs bundle adjustment
-    virtual void estimate(const std::vector<ImageFeatures> &features,
+    virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
                           std::vector<CameraParams> &cameras);
 
@@ -193,11 +196,14 @@ void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
 String CV_EXPORTS matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                             float conf_threshold);
 
-std::vector<int> CV_EXPORTS leaveBiggestComponent(std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                                                  float conf_threshold);
+std::vector<int> CV_EXPORTS leaveBiggestComponent(
+        std::vector<ImageFeatures> &features,
+        std::vector<MatchesInfo> &pairwise_matches,
+        float conf_threshold);
 
-void CV_EXPORTS findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwise_matches,
-                                    Graph &span_tree, std::vector<int> &centers);
+void CV_EXPORTS findMaxSpanningTree(
+        int num_images, const std::vector<MatchesInfo> &pairwise_matches,
+        Graph &span_tree, std::vector<int> &centers);
 
 } // namespace detail
 } // namespace cv

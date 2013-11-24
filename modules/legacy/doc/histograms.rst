@@ -87,4 +87,3 @@ Returns a pointer to the histogram bin.
 ..
 
 The macros ``GetHistValue`` return a pointer to the specified bin of the 1D, 2D, 3D, or N-D histogram. In case of a sparse histogram, the function creates a new bin and sets it to 0, unless it exists already.
-

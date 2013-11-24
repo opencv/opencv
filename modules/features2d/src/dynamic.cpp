@@ -51,7 +51,7 @@ DynamicAdaptedFeatureDetector::DynamicAdaptedFeatureDetector(const Ptr<AdjusterA
 
 bool DynamicAdaptedFeatureDetector::empty() const
 {
-    return adjuster_.empty() || adjuster_->empty();
+    return !adjuster_ || adjuster_->empty();
 }
 
 void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
@@ -124,7 +124,7 @@ bool FastAdjuster::good() const
 
 Ptr<AdjusterAdapter> FastAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new FastAdjuster( init_thresh_, nonmax_, min_thresh_, max_thresh_ );
+    Ptr<AdjusterAdapter> cloned_obj(new FastAdjuster( init_thresh_, nonmax_, min_thresh_, max_thresh_ ));
     return cloned_obj;
 }
 
@@ -158,7 +158,7 @@ bool StarAdjuster::good() const
 
 Ptr<AdjusterAdapter> StarAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new StarAdjuster( init_thresh_, min_thresh_, max_thresh_ );
+    Ptr<AdjusterAdapter> cloned_obj(new StarAdjuster( init_thresh_, min_thresh_, max_thresh_ ));
     return cloned_obj;
 }
 
@@ -195,7 +195,7 @@ bool SurfAdjuster::good() const
 
 Ptr<AdjusterAdapter> SurfAdjuster::clone() const
 {
-    Ptr<AdjusterAdapter> cloned_obj = new SurfAdjuster( init_thresh_, min_thresh_, max_thresh_ );
+    Ptr<AdjusterAdapter> cloned_obj(new SurfAdjuster( init_thresh_, min_thresh_, max_thresh_ ));
     return cloned_obj;
 }
 
@@ -205,15 +205,15 @@ Ptr<AdjusterAdapter> AdjusterAdapter::create( const String& detectorType )
 
     if( !detectorType.compare( "FAST" ) )
     {
-        adapter = new FastAdjuster();
+        adapter = makePtr<FastAdjuster>();
     }
     else if( !detectorType.compare( "STAR" ) )
     {
-        adapter = new StarAdjuster();
+        adapter = makePtr<StarAdjuster>();
     }
     else if( !detectorType.compare( "SURF" ) )
     {
-        adapter = new SurfAdjuster();
+        adapter = makePtr<SurfAdjuster>();
     }
 
     return adapter;

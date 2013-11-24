@@ -535,7 +535,7 @@ void DetectorQualityEvaluator::readAlgorithm ()
 {
     defaultDetector = FeatureDetector::create( algName );
     specificDetector = FeatureDetector::create( algName );
-    if( defaultDetector.empty() )
+    if( !defaultDetector )
     {
         printf( "Algorithm can not be read\n" );
         exit(-1);
@@ -769,14 +769,14 @@ void DescriptorQualityEvaluator::readAlgorithm( )
     defaultDescMatcher = GenericDescriptorMatcher::create( algName );
     specificDescMatcher = GenericDescriptorMatcher::create( algName );
 
-    if( defaultDescMatcher.empty() )
+    if( !defaultDescMatcher )
     {
         Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create( algName );
         Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create( matcherName );
-        defaultDescMatcher = new VectorDescriptorMatch( extractor, matcher );
-        specificDescMatcher = new VectorDescriptorMatch( extractor, matcher );
+        defaultDescMatcher = makePtr<VectorDescriptorMatch>( extractor, matcher );
+        specificDescMatcher = makePtr<VectorDescriptorMatch>( extractor, matcher );
 
-        if( extractor.empty() || matcher.empty() )
+        if( !extractor || !matcher )
         {
             printf("Algorithm can not be read\n");
             exit(-1);
@@ -881,8 +881,9 @@ public:
     virtual void readAlgorithm( )
     {
         string classifierFile = data_path + "/features2d/calonder_classifier.rtc";
-        defaultDescMatcher = new VectorDescriptorMatch( new CalonderDescriptorExtractor<float>( classifierFile ),
-                                                        new BFMatcher(NORM_L2) );
+        defaultDescMatcher = makePtr<VectorDescriptorMatch>(
+            makePtr<CalonderDescriptorExtractor<float> >( classifierFile ),
+            makePtr<BFMatcher>(int(NORM_L2)));
         specificDescMatcher = defaultDescMatcher;
     }
 };
@@ -922,10 +923,11 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
 
     readAllDatasetsRunParams();
 
-    OneWayDescriptorBase *base = new OneWayDescriptorBase(patchSize, poseCount, pcaFilename,
-                                               trainPath, trainImagesList);
+    Ptr<OneWayDescriptorBase> base(
+        new OneWayDescriptorBase(patchSize, poseCount, pcaFilename,
+                                 trainPath, trainImagesList));
 
-    OneWayDescriptorMatch *match = new OneWayDescriptorMatch ();
+    Ptr<OneWayDescriptorMatch> match = makePtr<OneWayDescriptorMatch>();
     match->initialize( OneWayDescriptorMatch::Params (), base );
     defaultDescMatcher = match;
     writeAllDatasetsRunParams();
@@ -958,18 +960,18 @@ int main( int argc, char** argv )
 
     Ptr<BaseQualityEvaluator> evals[] =
     {
-        new DetectorQualityEvaluator( "FAST", "quality-detector-fast" ),
-        new DetectorQualityEvaluator( "GFTT", "quality-detector-gftt" ),
-        new DetectorQualityEvaluator( "HARRIS", "quality-detector-harris" ),
-        new DetectorQualityEvaluator( "MSER", "quality-detector-mser" ),
-        new DetectorQualityEvaluator( "STAR", "quality-detector-star" ),
-        new DetectorQualityEvaluator( "SIFT", "quality-detector-sift" ),
-        new DetectorQualityEvaluator( "SURF", "quality-detector-surf" ),
+        makePtr<DetectorQualityEvaluator>( "FAST", "quality-detector-fast" ),
+        makePtr<DetectorQualityEvaluator>( "GFTT", "quality-detector-gftt" ),
+        makePtr<DetectorQualityEvaluator>( "HARRIS", "quality-detector-harris" ),
+        makePtr<DetectorQualityEvaluator>( "MSER", "quality-detector-mser" ),
+        makePtr<DetectorQualityEvaluator>( "STAR", "quality-detector-star" ),
+        makePtr<DetectorQualityEvaluator>( "SIFT", "quality-detector-sift" ),
+        makePtr<DetectorQualityEvaluator>( "SURF", "quality-detector-surf" ),
 
-        new DescriptorQualityEvaluator( "SIFT", "quality-descriptor-sift", "BruteForce" ),
-        new DescriptorQualityEvaluator( "SURF", "quality-descriptor-surf", "BruteForce" ),
-        new DescriptorQualityEvaluator( "FERN", "quality-descriptor-fern"),
-        new CalonderDescriptorQualityEvaluator()
+        makePtr<DescriptorQualityEvaluator>( "SIFT", "quality-descriptor-sift", "BruteForce" ),
+        makePtr<DescriptorQualityEvaluator>( "SURF", "quality-descriptor-surf", "BruteForce" ),
+        makePtr<DescriptorQualityEvaluator>( "FERN", "quality-descriptor-fern"),
+        makePtr<CalonderDescriptorQualityEvaluator>()
     };
 
     for( size_t i = 0; i < sizeof(evals)/sizeof(evals[0]); i++ )

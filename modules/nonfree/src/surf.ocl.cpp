@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,47 +43,33 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <cstdio>
 
 #ifdef HAVE_OPENCV_OCL
+#include <cstdio>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
+
+static ProgramEntry surfprog = cv::ocl::nonfree::surf;
 
 namespace cv
 {
     namespace ocl
     {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *surf;
-
-        const char noImage2dOption [] = "-D DISABLE_IMAGE2D";
-
-        static bool use_image2d = false;
-
-        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernelSURF(Context *clCxt, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
             size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             char optBuf [100] = {0};
             char * optBufPtr = optBuf;
-            if( !use_image2d )
-            {
-                strcat(optBufPtr, noImage2dOption);
-                optBufPtr += strlen(noImage2dOption);
-            }
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optBufPtr);
-            size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
+            size_t wave_size = queryWaveFrontSize(kernel);
             CV_Assert(clReleaseKernel(kernel) == CL_SUCCESS);
             sprintf(optBufPtr, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optBufPtr);
         }
     }
-}
-
-static inline size_t divUp(size_t total, size_t grain)
-{
-    return (total + grain - 1) / grain;
 }
 
 static inline int calcSize(int octave, int layer)
@@ -156,13 +142,10 @@ public:
         counters.setTo(Scalar::all(0));
 
         integral(img, surf_.sum);
-        use_image2d = support_image2d();
-        if(use_image2d)
-        {
-            bindImgTex(img, imgTex);
-            bindImgTex(surf_.sum, sumTex);
-            finish();
-        }
+
+        bindImgTex(img, imgTex);
+        bindImgTex(surf_.sum, sumTex);
+        finish();
 
         maskSumTex = 0;
 
@@ -518,7 +501,7 @@ void SURF_OCL_Invoker::icvCalcLayerDetAndTrace_gpu(oclMat &det, oclMat &trace, i
         divUp(max_samples_i, localThreads[1]) *localThreads[1] *(nOctaveLayers + 2),
         1
     };
-    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat &trace, oclMat &maxPosBuffer, oclMat &maxCounter, int counterOffset,
@@ -564,7 +547,7 @@ void SURF_OCL_Invoker::icvFindMaximaInLayer_gpu(const oclMat &det, const oclMat 
                                1
                               };
 
-    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMat &maxPosBuffer, int maxCounter,
@@ -589,7 +572,7 @@ void SURF_OCL_Invoker::icvInterpolateKeypoint_gpu(const oclMat &det, const oclMa
     size_t localThreads[3]  = {3, 3, 3};
     size_t globalThreads[3] = {maxCounter *localThreads[0], localThreads[1], 1};
 
-    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeatures)
@@ -601,7 +584,7 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
 
     if(sumTex)
     {
-    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&sumTex));
     }
     else
     {
@@ -616,7 +599,7 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
     size_t localThreads[3]  = {32, 4, 1};
     size_t globalThreads[3] = {nFeatures *localThreads[0], localThreads[1], 1};
 
-    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
@@ -633,7 +616,7 @@ void SURF_OCL_Invoker::icvSetUpright_gpu(const oclMat &keypoints, int nFeatures)
     size_t localThreads[3]  = {256, 1, 1};
     size_t globalThreads[3] = {saturate_cast<size_t>(nFeatures), 1, 1};
 
-    openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 
@@ -673,7 +656,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&_img.cols));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&_img.step));
 
-        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors64";
 
@@ -687,7 +670,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
 
-        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
     }
     else
     {
@@ -716,7 +699,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&_img.cols));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&_img.step));
 
-        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 
         kernelName = "normalize_descriptors128";
 
@@ -730,7 +713,7 @@ void SURF_OCL_Invoker::compute_descriptors_gpu(const oclMat &descriptors, const 
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&descriptors.data));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&descriptors.step));
 
-        openCLExecuteKernelSURF(clCxt, &surf, kernelName, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
     }
 }
 

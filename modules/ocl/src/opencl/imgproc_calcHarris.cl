@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,60 +43,63 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////Macro for border type////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
-#ifdef BORDER_REPLICATE
-//BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (r_edge)-1 : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr))
-#endif
 
+#ifdef BORDER_CONSTANT
+#elif defined BORDER_REPLICATE
+#define EXTRAPOLATE(x, maxV) \
+    { \
+        x = max(min(x, maxV - 1), 0); \
+    }
+#elif defined BORDER_WRAP
+#define EXTRAPOLATE(x, maxV) \
+    { \
+        if (x < 0) \
+            x -= ((x - maxV + 1) / maxV) * maxV; \
+        if (x >= maxV) \
+            x %= maxV; \
+    }
+#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT101)
+#define EXTRAPOLATE_(x, maxV, delta) \
+    { \
+        if (maxV == 1) \
+            x = 0; \
+        else \
+            do \
+            { \
+                if ( x < 0 ) \
+                    x = -x - 1 + delta; \
+                else \
+                    x = maxV - 1 - (x - maxV) - delta; \
+            } \
+            while (x >= maxV || x < 0); \
+    }
 #ifdef BORDER_REFLECT
-//BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)-1               : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-1+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)-1 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-1+((b_edge)<<1) : (addr))
+#define EXTRAPOLATE(x, maxV) EXTRAPOLATE_(x, maxV, 0)
+#else
+#define EXTRAPOLATE(x, maxV) EXTRAPOLATE_(x, maxV, 1)
 #endif
-
-#ifdef BORDER_REFLECT101
-//BORDER_REFLECT101:   gfedcb|abcdefgh|gfedcba
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)                 : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-2+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)                 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-2+((b_edge)<<1) : (addr))
-#endif
-
-#ifdef BORDER_WRAP
-//BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (i)+(r_edge) : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (i)-(r_edge) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (i)+(b_edge) : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (i)-(b_edge) : (addr))
+#else
+#error No extrapolation method
 #endif
 
 #define THREADS 256
-#define ELEM(i, l_edge, r_edge, elem1, elem2) (i) >= (l_edge) && (i) < (r_edge) ? (elem1) : (elem2)
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////calcHarris////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void calcHarris(__global const float *Dx,__global const float *Dy, __global float *dst,
-                              int dx_offset, int dx_whole_rows, int dx_whole_cols, int dx_step,
-                              int dy_offset, int dy_whole_rows, int dy_whole_cols, int dy_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step,
-                              float k)
+
+__kernel void calcHarris(__global const float *Dx, __global const float *Dy, __global float *dst,
+                         int dx_offset, int dx_whole_rows, int dx_whole_cols, int dx_step,
+                         int dy_offset, int dy_whole_rows, int dy_whole_cols, int dy_step,
+                         int dst_offset, int dst_rows, int dst_cols, int dst_step, float k)
 {
     int col = get_local_id(0);
-    const int gX = get_group_id(0);
-    const int gY = get_group_id(1);
-    const int glx = get_global_id(0);
-    const int gly = get_global_id(1);
+    int gX = get_group_id(0);
+    int gY = get_group_id(1);
+    int gly = get_global_id(1);
 
     int dx_x_off = (dx_offset % dx_step) >> 2;
     int dx_y_off = dx_offset / dx_step;
@@ -112,41 +115,38 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
     int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;
     int dst_startY = (gY << 1) + dst_y_off;
 
-    float dx_data[ksY+1],dy_data[ksY+1],data[3][ksY+1];
+    float dx_data[ksY+1],dy_data[ksY+1], data[3][ksY+1];
     __local float temp[6][THREADS];
+
 #ifdef BORDER_CONSTANT
-    bool dx_con,dy_con;
-    float dx_s,dy_s;
-    for(int i=0; i < ksY+1; i++)
+    for (int i=0; i < ksY+1; i++)
     {
-        dx_con = dx_startX+col >= 0 && dx_startX+col < dx_whole_cols && dx_startY+i >= 0 && dx_startY+i < dx_whole_rows;
-        dx_s = Dx[(dx_startY+i)*(dx_step>>2)+(dx_startX+col)];
-        dx_data[i] = dx_con ? dx_s : 0.0;
-        dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
-        dy_s = Dy[(dy_startY+i)*(dy_step>>2)+(dy_startX+col)];
-        dy_data[i] = dy_con ? dy_s : 0.0;
+        bool dx_con = dx_startX+col >= 0 && dx_startX+col < dx_whole_cols && dx_startY+i >= 0 && dx_startY+i < dx_whole_rows;
+        int indexDx = (dx_startY+i)*(dx_step>>2)+(dx_startX+col);
+        float dx_s = dx_con ? Dx[indexDx] : 0.0f;
+        dx_data[i] = dx_s;
+
+        bool dy_con = dy_startX+col >= 0 && dy_startX+col < dy_whole_cols && dy_startY+i >= 0 && dy_startY+i < dy_whole_rows;
+        int indexDy = (dy_startY+i)*(dy_step>>2)+(dy_startX+col);
+        float dy_s = dy_con ? Dy[indexDy] : 0.0f;
+        dy_data[i] = dy_s;
+
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #else
     int clamped_col = min(dst_cols, col);
-    for(int i=0; i < ksY+1; i++)
+    for (int i=0; i < ksY+1; i++)
     {
-        int dx_selected_row;
-        int dx_selected_col;
-        dx_selected_row = ADDR_H(dx_startY+i, 0, dx_whole_rows);
-        dx_selected_row = ADDR_B(dx_startY+i, dx_whole_rows, dx_selected_row);
-        dx_selected_col = ADDR_L(dx_startX+clamped_col, 0, dx_whole_cols);
-        dx_selected_col = ADDR_R(dx_startX+clamped_col, dx_whole_cols, dx_selected_col);
+        int dx_selected_row = dx_startY+i, dx_selected_col = dx_startX+clamped_col;
+        EXTRAPOLATE(dx_selected_row, dx_whole_rows)
+        EXTRAPOLATE(dx_selected_col, dx_whole_cols)
         dx_data[i] = Dx[dx_selected_row * (dx_step>>2) + dx_selected_col];
 
-        int dy_selected_row;
-        int dy_selected_col;
-        dy_selected_row = ADDR_H(dy_startY+i, 0, dy_whole_rows);
-        dy_selected_row = ADDR_B(dy_startY+i, dy_whole_rows, dy_selected_row);
-        dy_selected_col = ADDR_L(dy_startX+clamped_col, 0, dy_whole_cols);
-        dy_selected_col = ADDR_R(dy_startX+clamped_col, dy_whole_cols, dy_selected_col);
+        int dy_selected_row = dy_startY+i, dy_selected_col = dy_startX+clamped_col;
+        EXTRAPOLATE(dy_selected_row, dy_whole_rows)
+        EXTRAPOLATE(dy_selected_col, dy_whole_cols)
         dy_data[i] = Dy[dy_selected_row * (dy_step>>2) + dy_selected_col];
 
         data[0][i] = dx_data[i] * dx_data[i];
@@ -154,46 +154,45 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #endif
-    float sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
-    for(int i=1; i < ksY; i++)
+    float sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f;
+    for (int i=1; i < ksY; i++)
     {
-        sum0 += (data[0][i]);
-        sum1 += (data[1][i]);
-        sum2 += (data[2][i]);
+        sum0 += data[0][i];
+        sum1 += data[1][i];
+        sum2 += data[2][i];
     }
-    float sum01,sum02,sum11,sum12,sum21,sum22;
-    sum01 = sum0 + (data[0][0]);
-    sum02 = sum0 + (data[0][ksY]);
+
+    float sum01 = sum0 + data[0][0];
+    float sum02 = sum0 + data[0][ksY];
     temp[0][col] = sum01;
     temp[1][col] = sum02;
-    sum11 = sum1 + (data[1][0]);
-    sum12 = sum1 + (data[1][ksY]);
+    float sum11 = sum1 + data[1][0];
+    float sum12 = sum1 + data[1][ksY];
     temp[2][col] = sum11;
     temp[3][col] = sum12;
-    sum21 = sum2 + (data[2][0]);
-    sum22 = sum2 + (data[2][ksY]);
+    float sum21 = sum2 + data[2][0];
+    float sum22 = sum2 + data[2][ksY];
     temp[4][col] = sum21;
     temp[5][col] = sum22;
     barrier(CLK_LOCAL_MEM_FENCE);
-    if(col < (THREADS-(ksX-1)))
+
+    if (col < (THREADS- (ksX - 1)))
     {
         col += anX;
         int posX = dst_startX - dst_x_off + col - anX;
         int posY = (gly << 1);
         int till = (ksX + 1)%2;
-        float tmp_sum[6]={ 0.0, 0.0 , 0.0, 0.0, 0.0, 0.0 };
-        for(int k=0; k<6; k++)
-            for(int i=-anX; i<=anX - till; i++)
-            {
+        float tmp_sum[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+        for (int k=0; k<6; k++)
+            for (int i=-anX; i<=anX - till; i++)
                 tmp_sum[k] += temp[k][col+i];
-            }
 
-        if(posX < dst_cols && (posY) < dst_rows)
+        if (posX < dst_cols && (posY) < dst_rows)
         {
             dst[(dst_startY+0) * (dst_step>>2)+ dst_startX + col - anX] =
                     tmp_sum[0] * tmp_sum[4] - tmp_sum[2] * tmp_sum[2] - k * (tmp_sum[0] + tmp_sum[4]) * (tmp_sum[0] + tmp_sum[4]);
         }
-        if(posX < dst_cols && (posY + 1) < dst_rows)
+        if (posX < dst_cols && (posY + 1) < dst_rows)
         {
             dst[(dst_startY+1) * (dst_step>>2)+ dst_startX + col - anX] =
                     tmp_sum[1] * tmp_sum[5] - tmp_sum[3] * tmp_sum[3] - k * (tmp_sum[1] + tmp_sum[5]) * (tmp_sum[1] + tmp_sum[5]);

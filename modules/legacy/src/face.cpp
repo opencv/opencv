@@ -351,4 +351,3 @@ inline void RFace::ResizeRect(CvRect Rect,CvRect * lpRect,long lDir,long lD)
     }
 
 }// inline void RFace::ResizeRect(CvRect * lpRect,long lDir,long lD)
-

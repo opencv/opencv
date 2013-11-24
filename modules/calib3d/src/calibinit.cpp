@@ -271,8 +271,8 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     if( !out_corners )
         CV_Error( CV_StsNullPtr, "Null pointer to corners" );
 
-    storage = cvCreateMemStorage(0);
-    thresh_img = cvCreateMat( img->rows, img->cols, CV_8UC1 );
+    storage.reset(cvCreateMemStorage(0));
+    thresh_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
 
 #ifdef DEBUG_CHESSBOARD
     dbg_img = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 3 );
@@ -284,7 +284,7 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
     {
         // equalize the input image histogram -
         // that should make the contrast between "black" and "white" areas big enough
-        norm_img = cvCreateMat( img->rows, img->cols, CV_8UC1 );
+        norm_img.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
 
         if( CV_MAT_CN(img->type) != 1 )
         {
@@ -541,12 +541,12 @@ int cvFindChessboardCorners( const void* arr, CvSize pattern_size,
         cv::Ptr<CvMat> gray;
         if( CV_MAT_CN(img->type) != 1 )
         {
-            gray = cvCreateMat(img->rows, img->cols, CV_8UC1);
+            gray.reset(cvCreateMat(img->rows, img->cols, CV_8UC1));
             cvCvtColor(img, gray, CV_BGR2GRAY);
         }
         else
         {
-            gray = cvCloneMat(img);
+            gray.reset(cvCloneMat(img));
         }
         int wsize = 2;
         cvFindCornerSubPix( gray, out_corners, pattern_size.width*pattern_size.height,
@@ -627,7 +627,7 @@ icvOrderFoundConnectedQuads( int quad_count, CvCBQuad **quads,
         int *all_count, CvCBQuad **all_quads, CvCBCorner **corners,
         CvSize pattern_size, CvMemStorage* storage )
 {
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateChildMemStorage( storage );
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateChildMemStorage( storage ));
     CvSeq* stack = cvCreateSeq( 0, sizeof(*stack), sizeof(void*), temp_storage );
 
     // first find an interior quad
@@ -1109,7 +1109,7 @@ icvCleanFoundConnectedQuads( int quad_count, CvCBQuad **quad_group, CvSize patte
 
     // create an array of quadrangle centers
     cv::AutoBuffer<CvPoint2D32f> centers( quad_count );
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateMemStorage(0);
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateMemStorage(0));
 
     for( i = 0; i < quad_count; i++ )
     {
@@ -1205,7 +1205,7 @@ static int
 icvFindConnectedQuads( CvCBQuad *quad, int quad_count, CvCBQuad **out_group,
                        int group_idx, CvMemStorage* storage )
 {
-    cv::Ptr<CvMemStorage> temp_storage = cvCreateChildMemStorage( storage );
+    cv::Ptr<CvMemStorage> temp_storage(cvCreateChildMemStorage( storage ));
     CvSeq* stack = cvCreateSeq( 0, sizeof(*stack), sizeof(void*), temp_storage );
     int i, count = 0;
 
@@ -1674,7 +1674,7 @@ icvGenerateQuads( CvCBQuad **out_quads, CvCBCorner **out_corners,
     min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     // create temporary storage for contours and the sequence of pointers to found quadrangles
-    temp_storage = cvCreateChildMemStorage( storage );
+    temp_storage.reset(cvCreateChildMemStorage( storage ));
     root = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvSeq*), temp_storage );
 
     // initialize contour retrieving routine
