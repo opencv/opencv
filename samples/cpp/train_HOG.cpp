@@ -38,7 +38,7 @@ void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
         decision_func != 0 &&
         decision_func->alpha != 0 &&
         decision_func->sv_count == sv_total );
- 
+
     float svi = 0.f;
 
     hog_detector.clear(); //clear stuff in vector.
