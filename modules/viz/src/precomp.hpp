@@ -135,20 +135,35 @@ namespace cv
     namespace viz
     {
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
+        typedef std::map<String, Viz3d> VizMap;
+        typedef std::pair<String, Viz3d> VizPair;
+
+        class VizStorage
+        {
+        public:
+            static void unregisterAll();
+
+            //! window names automatically have Viz - prefix even though not provided by the users
+            static String generateWindowName(const String &window_name);
+
+        private:
+            VizStorage(); // Static
+            ~VizStorage();
+
+            static void add(Viz3d window);
+            static Viz3d get(const String &window_name);
+            static void remove(const String &window_name);
+            static bool windowExists(const String &window_name);
+            static void removeUnreferenced();
+
+            static VizMap storage;
+            friend class Viz3d;
+        };
     }
 }
 
 #include "interactor_style.h"
 #include "viz3d_impl.hpp"
-
-namespace cv
-{
-    namespace viz
-    {
-        typedef std::map<String, Viz3d> VizMap;
-        typedef std::pair<String, Viz3d> VizPair;
-    }
-}
 
 
 #endif
