@@ -517,7 +517,7 @@ CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
 class CV_EXPORTS_W FastFeatureDetector : public FeatureDetector
 {
 public:
-    enum
+    enum Type
     {
       TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
     };
@@ -646,7 +646,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=0,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=Ptr<FeatureDetector>(),
                                         int maxTotalKeypoints=1000,
                                         int gridRows=4, int gridCols=4 );
 
@@ -961,7 +961,7 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
-template<int cellsize> struct CV_EXPORTS HammingMultilevel
+template<int cellsize> struct HammingMultilevel
 {
     enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
@@ -1143,8 +1143,8 @@ protected:
 class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
-                       const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
+                       const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
     virtual void add( const std::vector<Mat>& descriptors );
     virtual void clear();

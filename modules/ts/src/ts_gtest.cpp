@@ -960,8 +960,14 @@ class GTEST_API_ UnitTestImpl {
   // Gets the number of failed tests.
   int failed_test_count() const;
 
+  // Gets the number of disabled tests that will be reported in the XML report.
+  int reportable_disabled_test_count() const;
+
   // Gets the number of disabled tests.
   int disabled_test_count() const;
+
+  // Gets the number of tests to be printed in the XML report.
+  int reportable_test_count() const;
 
   // Gets the number of all tests.
   int total_test_count() const;
@@ -1670,6 +1676,10 @@ bool g_help_flag = false;
 
 }  // namespace internal
 
+static const char* GetDefaultFilter() {
+  return kUniversalFilter;
+}
+
 GTEST_DEFINE_bool_(
     also_run_disabled_tests,
     internal::BoolFromGTestEnv("also_run_disabled_tests", false),
@@ -1696,7 +1706,7 @@ GTEST_DEFINE_string_(
 
 GTEST_DEFINE_string_(
     filter,
-    internal::StringFromGTestEnv("filter", kUniversalFilter),
+    internal::StringFromGTestEnv("filter", GetDefaultFilter()),
     "A colon-separated list of glob (not regex) patterns "
     "for filtering the tests to run, optionally followed by a "
     "'-' and a : separated list of negative patterns (tests to "
@@ -1705,7 +1715,7 @@ GTEST_DEFINE_string_(
 
 GTEST_DEFINE_string_(
     param_filter,
-    internal::StringFromGTestEnv("param_filter", kUniversalFilter),
+    internal::StringFromGTestEnv("param_filter", GetDefaultFilter()),
     "Same syntax and semantics as for param, but these patterns "
     "have to match the test's parameters.");
 
@@ -2225,9 +2235,20 @@ int UnitTestImpl::failed_test_count() const {
   return SumOverTestCaseList(test_cases_, &TestCase::failed_test_count);
 }
 
+// Gets the number of disabled tests that will be reported in the XML report.
+int UnitTestImpl::reportable_disabled_test_count() const {
+  return SumOverTestCaseList(test_cases_,
+                             &TestCase::reportable_disabled_test_count);
+}
+
 // Gets the number of disabled tests.
 int UnitTestImpl::disabled_test_count() const {
   return SumOverTestCaseList(test_cases_, &TestCase::disabled_test_count);
+}
+
+// Gets the number of tests to be printed in the XML report.
+int UnitTestImpl::reportable_test_count() const {
+  return SumOverTestCaseList(test_cases_, &TestCase::reportable_test_count);
 }
 
 // Gets the number of all tests.
@@ -3832,8 +3853,19 @@ int TestCase::failed_test_count() const {
   return CountIf(test_info_list_, TestFailed);
 }
 
+// Gets the number of disabled tests that will be reported in the XML report.
+int TestCase::reportable_disabled_test_count() const {
+  return CountIf(test_info_list_, TestReportableDisabled);
+}
+
+// Gets the number of disabled tests in this test case.
 int TestCase::disabled_test_count() const {
   return CountIf(test_info_list_, TestDisabled);
+}
+
+// Gets the number of tests to be printed in the XML report.
+int TestCase::reportable_test_count() const {
+  return CountIf(test_info_list_, TestReportable);
 }
 
 // Get the number of tests in this test case that should run.
@@ -4353,7 +4385,7 @@ void PrettyUnitTestResultPrinter::OnTestIterationEnd(const UnitTest& unit_test,
                         num_failures == 1 ? "TEST" : "TESTS");
   }
 
-  int num_disabled = unit_test.disabled_test_count();
+  int num_disabled = unit_test.reportable_disabled_test_count();
   if (num_disabled && !GTEST_FLAG(also_run_disabled_tests)) {
     if (!num_failures) {
       printf("\n");  // Add a spacer if no FAILURE banner is displayed.
@@ -4812,19 +4844,22 @@ void XmlUnitTestResultPrinter::PrintXmlTestCase(std::ostream* stream,
   *stream << "  <" << kTestsuite;
   OutputXmlAttribute(stream, kTestsuite, "name", test_case.name());
   OutputXmlAttribute(stream, kTestsuite, "tests",
-                     StreamableToString(test_case.total_test_count()));
+                     StreamableToString(test_case.reportable_test_count()));
   OutputXmlAttribute(stream, kTestsuite, "failures",
                      StreamableToString(test_case.failed_test_count()));
-  OutputXmlAttribute(stream, kTestsuite, "disabled",
-                     StreamableToString(test_case.disabled_test_count()));
+  OutputXmlAttribute(
+      stream, kTestsuite, "disabled",
+      StreamableToString(test_case.reportable_disabled_test_count()));
   OutputXmlAttribute(stream, kTestsuite, "errors", "0");
   OutputXmlAttribute(stream, kTestsuite, "time",
                      FormatTimeInMillisAsSeconds(test_case.elapsed_time()));
   *stream << TestPropertiesAsXmlAttributes(test_case.ad_hoc_test_result())
           << ">\n";
 
-  for (int i = 0; i < test_case.total_test_count(); ++i)
-    OutputXmlTestInfo(stream, test_case.name(), *test_case.GetTestInfo(i));
+  for (int i = 0; i < test_case.total_test_count(); ++i) {
+    if (test_case.GetTestInfo(i)->is_reportable())
+      OutputXmlTestInfo(stream, test_case.name(), *test_case.GetTestInfo(i));
+  }
   *stream << "  </" << kTestsuite << ">\n";
 }
 
@@ -4837,11 +4872,12 @@ void XmlUnitTestResultPrinter::PrintXmlUnitTest(std::ostream* stream,
   *stream << "<" << kTestsuites;
 
   OutputXmlAttribute(stream, kTestsuites, "tests",
-                     StreamableToString(unit_test.total_test_count()));
+                     StreamableToString(unit_test.reportable_test_count()));
   OutputXmlAttribute(stream, kTestsuites, "failures",
                      StreamableToString(unit_test.failed_test_count()));
-  OutputXmlAttribute(stream, kTestsuites, "disabled",
-                     StreamableToString(unit_test.disabled_test_count()));
+  OutputXmlAttribute(
+      stream, kTestsuites, "disabled",
+      StreamableToString(unit_test.reportable_disabled_test_count()));
   OutputXmlAttribute(stream, kTestsuites, "errors", "0");
   OutputXmlAttribute(
       stream, kTestsuites, "timestamp",
@@ -4859,9 +4895,9 @@ void XmlUnitTestResultPrinter::PrintXmlUnitTest(std::ostream* stream,
   OutputXmlAttribute(stream, kTestsuites, "name", "AllTests");
   *stream << ">\n";
 
-
   for (int i = 0; i < unit_test.total_test_case_count(); ++i) {
-    PrintXmlTestCase(stream, *unit_test.GetTestCase(i));
+    if (unit_test.GetTestCase(i)->reportable_test_count() > 0)
+      PrintXmlTestCase(stream, *unit_test.GetTestCase(i));
   }
   *stream << "</" << kTestsuites << ">\n";
 }
@@ -4994,6 +5030,35 @@ void OsStackTraceGetter::UponLeavingGTest()
 const char* const
 OsStackTraceGetter::kElidedFramesMarker =
     "... " GTEST_NAME_ " internal frames ...";
+
+// A helper class that creates the premature-exit file in its
+// constructor and deletes the file in its destructor.
+class ScopedPrematureExitFile {
+ public:
+  explicit ScopedPrematureExitFile(const char* premature_exit_filepath)
+      : premature_exit_filepath_(premature_exit_filepath) {
+    // If a path to the premature-exit file is specified...
+    if (premature_exit_filepath != NULL && *premature_exit_filepath != '\0') {
+      // create the file with a single "0" character in it.  I/O
+      // errors are ignored as there's nothing better we can do and we
+      // don't want to fail the test because of this.
+      FILE* pfile = posix::FOpen(premature_exit_filepath, "w");
+      fwrite("0", 1, 1, pfile);
+      fclose(pfile);
+    }
+  }
+
+  ~ScopedPrematureExitFile() {
+    if (premature_exit_filepath_ != NULL && *premature_exit_filepath_ != '\0') {
+      remove(premature_exit_filepath_);
+    }
+  }
+
+ private:
+  const char* const premature_exit_filepath_;
+
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(ScopedPrematureExitFile);
+};
 
 }  // namespace internal
 
@@ -5131,9 +5196,19 @@ int UnitTest::successful_test_count() const {
 // Gets the number of failed tests.
 int UnitTest::failed_test_count() const { return impl()->failed_test_count(); }
 
+// Gets the number of disabled tests that will be reported in the XML report.
+int UnitTest::reportable_disabled_test_count() const {
+  return impl()->reportable_disabled_test_count();
+}
+
 // Gets the number of disabled tests.
 int UnitTest::disabled_test_count() const {
   return impl()->disabled_test_count();
+}
+
+// Gets the number of tests to be printed in the XML report.
+int UnitTest::reportable_test_count() const {
+  return impl()->reportable_test_count();
 }
 
 // Gets the number of all tests.
@@ -5207,13 +5282,12 @@ Environment* UnitTest::AddEnvironment(Environment* env) {
 // assertion macros (e.g. ASSERT_TRUE, EXPECT_EQ, etc) eventually call
 // this to report their results.  The user code should use the
 // assertion macros instead of calling this directly.
-GTEST_LOCK_EXCLUDED_(mutex_)
 void UnitTest::AddTestPartResult(
     TestPartResult::Type result_type,
     const char* file_name,
     int line_number,
     const std::string& message,
-    const std::string& os_stack_trace) {
+    const std::string& os_stack_trace) GTEST_LOCK_EXCLUDED_(mutex_) {
   Message msg;
   msg << message;
 
@@ -5286,14 +5360,39 @@ void UnitTest::RecordProperty(const std::string& key,
 // We don't protect this under mutex_, as we only support calling it
 // from the main thread.
 int UnitTest::Run() {
+  const bool in_death_test_child_process =
+      internal::GTEST_FLAG(internal_run_death_test).length() > 0;
+
+  // Google Test implements this protocol for catching that a test
+  // program exits before returning control to Google Test:
+  //
+  //   1. Upon start, Google Test creates a file whose absolute path
+  //      is specified by the environment variable
+  //      TEST_PREMATURE_EXIT_FILE.
+  //   2. When Google Test has finished its work, it deletes the file.
+  //
+  // This allows a test runner to set TEST_PREMATURE_EXIT_FILE before
+  // running a Google-Test-based test program and check the existence
+  // of the file at the end of the test execution to see if it has
+  // exited prematurely.
+
+  // If we are in the child process of a death test, don't
+  // create/delete the premature exit file, as doing so is unnecessary
+  // and will confuse the parent process.  Otherwise, create/delete
+  // the file upon entering/leaving this function.  If the program
+  // somehow exits before this function has a chance to return, the
+  // premature-exit file will be left undeleted, causing a test runner
+  // that understands the premature-exit-file protocol to report the
+  // test as having failed.
+  const internal::ScopedPrematureExitFile premature_exit_file(
+      in_death_test_child_process ?
+      NULL : internal::posix::GetEnv("TEST_PREMATURE_EXIT_FILE"));
+
   // Captures the value of GTEST_FLAG(catch_exceptions).  This value will be
   // used for the duration of the program.
   impl()->set_catch_exceptions(GTEST_FLAG(catch_exceptions));
 
 #if GTEST_HAS_SEH
-  const bool in_death_test_child_process =
-      internal::GTEST_FLAG(internal_run_death_test).length() > 0;
-
   // Either the user wants Google Test to catch exceptions thrown by the
   // tests or this is executing in the context of death test child
   // process. In either case the user does not want to see pop-up dialogs
@@ -5432,7 +5531,6 @@ UnitTestImpl::UnitTestImpl(UnitTest* parent)
       start_timestamp_(0),
       elapsed_time_(0),
 #if GTEST_HAS_DEATH_TEST
-      internal_run_death_test_flag_(NULL),
       death_test_factory_(new DefaultDeathTestFactory),
 #endif
       // Will be overridden by the flag before first use.

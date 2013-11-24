@@ -63,7 +63,7 @@ SunRasterDecoder::~SunRasterDecoder()
 
 ImageDecoder SunRasterDecoder::newDecoder() const
 {
-    return new SunRasterDecoder;
+    return makePtr<SunRasterDecoder>();
 }
 
 void  SunRasterDecoder::close()
@@ -388,7 +388,7 @@ SunRasterEncoder::SunRasterEncoder()
 
 ImageEncoder SunRasterEncoder::newEncoder() const
 {
-    return new SunRasterEncoder;
+    return makePtr<SunRasterEncoder>();
 }
 
 SunRasterEncoder::~SunRasterEncoder()

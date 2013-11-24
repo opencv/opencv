@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,73 +44,74 @@
 //M*/
 
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
 
 using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(PyrBase, MatType, int)
+PARAM_TEST_CASE(PyrBase, MatDepth, Channels)
 {
-    int type;
+    int depth;
     int channels;
+
     Mat dst_cpu;
-    oclMat gdst;
+    ocl::oclMat gdst;
+
     virtual void SetUp()
     {
-        type = GET_PARAM(0);
+        depth = GET_PARAM(0);
         channels = GET_PARAM(1);
     }
-
 };
 
 /////////////////////// PyrDown //////////////////////////
-struct PyrDown : PyrBase {};
 
-TEST_P(PyrDown, Mat)
+typedef PyrBase PyrDown;
+
+OCL_TEST_P(PyrDown, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
-        oclMat gsrc(src);
-        
-        pyrDown(src, dst_cpu);
-        pyrDown(gsrc, gdst);
+        Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
+        ocl::oclMat gsrc(src);
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
+        pyrDown(src, dst_cpu);
+        ocl::pyrDown(gsrc, gdst);
+
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), depth == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
+                            Values(1, 3, 4)));
 
 /////////////////////// PyrUp //////////////////////////
 
-struct PyrUp : PyrBase {};
+typedef PyrBase PyrUp;
 
-TEST_P(PyrUp, Accuracy)
+OCL_TEST_P(PyrUp, Accuracy)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
-        oclMat gsrc(src);
+        Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
+        ocl::oclMat gsrc(src);
 
         pyrUp(src, dst_cpu);
-        pyrUp(gsrc, gdst);
+        ocl::pyrUp(gsrc, gdst);
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (type == CV_32F ? 1e-4f : 1.0));
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (depth == CV_32F ? 1e-4f : 1.0));
     }
-
 }
 
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, Combine(
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
+                            Values(1, 3, 4)));
 #endif // HAVE_OPENCL

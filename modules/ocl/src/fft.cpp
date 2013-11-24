@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,7 +42,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <iomanip>
 #include "precomp.hpp"
 
 using namespace cv;
@@ -51,14 +50,14 @@ using namespace cv::ocl;
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
-    CV_Error(Error::StsNotImplemented, "OpenCL DFT is not implemented");
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL DFT is not implemented");
 }
 namespace cv { namespace ocl {
     void fft_teardown();
 }}
 void cv::ocl::fft_teardown(){}
 #else
-#include "clAmdFft.h"
+#include "opencv2/ocl/cl_runtime/clamdfft_runtime.hpp"
 namespace cv
 {
     namespace ocl
@@ -91,8 +90,7 @@ namespace cv
         protected:
             PlanCache();
             ~PlanCache();
-            friend class std::auto_ptr<PlanCache>;
-            static std::auto_ptr<PlanCache> planCache;
+            static PlanCache* planCache;
 
             bool started;
             std::vector<FftPlan *> planStore;
@@ -103,9 +101,9 @@ namespace cv
 
             static PlanCache* getPlanCache()
             {
-                if( NULL == planCache.get())
-                    planCache.reset(new PlanCache());
-                return planCache.get();
+                if (NULL == planCache)
+                    planCache = new PlanCache();
+                return planCache;
             }
             // return a baked plan->
             // if there is one matched plan, return it
@@ -119,7 +117,7 @@ namespace cv
         };
     }
 }
-std::auto_ptr<PlanCache> PlanCache::planCache;
+PlanCache* PlanCache::planCache = NULL;
 
 void cv::ocl::fft_setup()
 {
@@ -128,24 +126,30 @@ void cv::ocl::fft_setup()
     {
         return;
     }
-    pCache.setupData = new clAmdFftSetupData;
+    if (pCache.setupData == NULL)
+        pCache.setupData = new clAmdFftSetupData;
     openCLSafeCall(clAmdFftInitSetupData( pCache.setupData ));
     pCache.started = true;
 }
 void cv::ocl::fft_teardown()
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
+
     if(!pCache.started)
-    {
         return;
-    }
-    delete pCache.setupData;
+
     for(size_t i = 0; i < pCache.planStore.size(); i ++)
-    {
         delete pCache.planStore[i];
-    }
     pCache.planStore.clear();
-    openCLSafeCall( clAmdFftTeardown( ) );
+
+    try
+    {
+        openCLSafeCall( clAmdFftTeardown( ) );
+    }
+    catch (const std::bad_alloc &)
+    { }
+
+    delete pCache.setupData; pCache.setupData = NULL;
     pCache.started = false;
 }
 
@@ -155,25 +159,25 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
 {
     fft_setup();
 
-    bool is_1d_input	= (_dft_size.height == 1);
-    int is_row_dft		= flags & DFT_ROWS;
+    bool is_1d_input    = (_dft_size.height == 1);
+    int is_row_dft        = flags & DFT_ROWS;
     int is_scaled_dft   = flags & DFT_SCALE;
-    int is_inverse		= flags & DFT_INVERSE;
+    int is_inverse        = flags & DFT_INVERSE;
 
-    //clAmdFftResultLocation	place;
-    clAmdFftLayout			inLayout;
-    clAmdFftLayout			outLayout;
-    clAmdFftDim				dim = is_1d_input || is_row_dft ? CLFFT_1D : CLFFT_2D;
+    //clAmdFftResultLocation    place;
+    clAmdFftLayout            inLayout;
+    clAmdFftLayout            outLayout;
+    clAmdFftDim                dim = is_1d_input || is_row_dft ? CLFFT_1D : CLFFT_2D;
 
-    size_t batchSize		 = is_row_dft ? dft_size.height : 1;
+    size_t batchSize         = is_row_dft ? dft_size.height : 1;
     size_t clLengthsIn[ 3 ]  = {1, 1, 1};
     size_t clStridesIn[ 3 ]  = {1, 1, 1};
     //size_t clLengthsOut[ 3 ] = {1, 1, 1};
     size_t clStridesOut[ 3 ] = {1, 1, 1};
-    clLengthsIn[0]			 = dft_size.width;
-    clLengthsIn[1]			 = is_row_dft ? 1 : dft_size.height;
-    clStridesIn[0]			 = 1;
-    clStridesOut[0]			 = 1;
+    clLengthsIn[0]             = dft_size.width;
+    clLengthsIn[1]             = is_row_dft ? 1 : dft_size.height;
+    clStridesIn[0]             = 1;
+    clStridesOut[0]             = 1;
 
     switch(_type)
     {
@@ -205,7 +209,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     clStridesIn[2]  = is_row_dft ? clStridesIn[1]  : dft_size.width * clStridesIn[1];
     clStridesOut[2] = is_row_dft ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, *(cl_context*)getoclContext(), dim, clLengthsIn ) );
+    openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, *(cl_context*)getClContextPtr(), dim, clLengthsIn ) );
 
     openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
     openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
@@ -219,7 +223,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     openCLSafeCall( clAmdFftSetPlanScale  ( plHandle, is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale_ ) );
 
     //ready to bake
-    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, (cl_command_queue*)getoclCommandQueue(), NULL, NULL ) );
+    openCLSafeCall( clAmdFftBakePlan( plHandle, 1, (cl_command_queue*)getClCommandQueuePtr(), NULL, NULL ) );
 }
 cv::ocl::FftPlan::~FftPlan()
 {
@@ -295,12 +299,12 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     // similar assertions with cuda module
     CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
 
-    //bool is_1d_input	= (src.rows == 1);
-    //int is_row_dft		= flags & DFT_ROWS;
-    //int is_scaled_dft		= flags & DFT_SCALE;
-    int is_inverse			= flags & DFT_INVERSE;
-    bool is_complex_input	= src.channels() == 2;
-    bool is_complex_output	= !(flags & DFT_REAL_OUTPUT);
+    //bool is_1d_input    = (src.rows == 1);
+    //int is_row_dft        = flags & DFT_ROWS;
+    //int is_scaled_dft        = flags & DFT_SCALE;
+    int is_inverse = flags & DFT_INVERSE;
+    bool is_complex_input = src.channels() == 2;
+    bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
 
 
     // We don't support real-to-real transform
@@ -337,10 +341,10 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     if (buffersize)
     {
         cl_int medstatus;
-        clMedBuffer = clCreateBuffer ( (cl_context)src.clCxt->oclContext(), CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
+        clMedBuffer = clCreateBuffer ( *(cl_context*)(src.clCxt->getOpenCLContextPtr()), CL_MEM_READ_WRITE, buffersize, 0, &medstatus);
         openCLSafeCall( medstatus );
     }
-    cl_command_queue clq = (cl_command_queue)src.clCxt->oclCommandQueue();
+    cl_command_queue clq = *(cl_command_queue*)(src.clCxt->getOpenCLCommandQueuePtr());
     openCLSafeCall( clAmdFftEnqueueTransform( plHandle,
         is_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
         1,

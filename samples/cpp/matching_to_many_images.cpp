@@ -84,7 +84,7 @@ static bool createDetectorDescriptorMatcher( const string& detectorType, const s
     descriptorMatcher = DescriptorMatcher::create( matcherType );
     cout << ">" << endl;
 
-    bool isCreated = !( featureDetector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty() );
+    bool isCreated = featureDetector && descriptorExtractor && descriptorMatcher;
     if( !isCreated )
         cout << "Can not create feature detector or descriptor extractor or descriptor matcher of given types." << endl << ">" << endl;
 

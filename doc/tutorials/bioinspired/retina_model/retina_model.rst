@@ -130,7 +130,7 @@ To compile it, assuming OpenCV is correctly installed, use the following command
 
 Here is a code explanation :
 
-Retina definition is present in the bioinspired package and a simple include allows to use it. You can rather use the specific header : *opencv2/bioinspired.hpp* if you prefer but then include the other required openv modules : *opencv2/core.hpp* and *opencv2/highgui.hpp* 
+Retina definition is present in the bioinspired package and a simple include allows to use it. You can rather use the specific header : *opencv2/bioinspired.hpp* if you prefer but then include the other required openv modules : *opencv2/core.hpp* and *opencv2/highgui.hpp*
 
 .. code-block:: cpp
 

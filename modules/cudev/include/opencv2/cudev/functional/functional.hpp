@@ -616,6 +616,30 @@ template <typename T> struct magnitude_func : binary_function<T, T, typename fun
     }
 };
 
+template <typename T> struct magnitude_sqr_func : binary_function<T, T, typename functional_detail::FloatType<T>::type>
+{
+    __device__ __forceinline__ typename functional_detail::FloatType<T>::type operator ()(typename TypeTraits<T>::parameter_type a, typename TypeTraits<T>::parameter_type b) const
+    {
+        return a * a + b * b;
+    }
+};
+
+template <typename T, bool angleInDegrees> struct direction_func : binary_function<T, T, T>
+{
+    __device__ T operator ()(T x, T y) const
+    {
+        atan2_func<T> f;
+        typename atan2_func<T>::result_type angle = f(y, x);
+
+        angle += (angle < 0) * (2.0f * CV_PI_F);
+
+        if (angleInDegrees)
+            angle *= (180.0f / CV_PI_F);
+
+        return saturate_cast<T>(angle);
+    }
+};
+
 template <typename T> struct pow_func : binary_function<T, float, float>
 {
     __device__ __forceinline__ float operator ()(T val, float power) const

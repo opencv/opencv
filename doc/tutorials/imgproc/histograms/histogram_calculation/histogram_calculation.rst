@@ -329,4 +329,3 @@ Result
 
      .. image:: images/Histogram_Calculation_Result.jpg
               :align: center
-

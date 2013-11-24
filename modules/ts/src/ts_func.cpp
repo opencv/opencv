@@ -2968,6 +2968,16 @@ void printVersionInfo(bool useStdOut)
         if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
     }
 
+    const char * build_type =
+#ifdef _DEBUG
+        "debug";
+#else
+        "release";
+#endif
+
+    ::testing::Test::RecordProperty("cv_build_type", build_type);
+    if (useStdOut) std::cout << "Build type: " << build_type << std::endl;
+
     const char* parallel_framework = currentParallelFramework();
 
     if (parallel_framework) {

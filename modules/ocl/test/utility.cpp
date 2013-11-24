@@ -39,14 +39,13 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #define VARNAME(A) #A
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
 using namespace cvtest;
 
-
+namespace cvtest {
 //std::string generateVarList(int first,...)
 //{
 //	vector<std::string> varname;
@@ -73,65 +72,44 @@ using namespace cvtest;
 //	return ss.str();
 //};
 
-int randomInt(int minVal, int maxVal)
+cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi)
 {
-    RNG &rng = TS::ptr()->get_rng();
-    return rng.uniform(minVal, maxVal);
+    Size size0 = size;
+
+    if (useRoi)
+    {
+        size0.width += rng.uniform(5, 15);
+        size0.height += rng.uniform(5, 15);
+    }
+
+    cv::ocl::oclMat d_m(size0, type);
+
+    if (size0 != size)
+        d_m = d_m(Rect((size0.width - size.width) / 2, (size0.height - size.height) / 2, size.width, size.height));
+
+    return d_m;
 }
 
-double randomDouble(double minVal, double maxVal)
+cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi)
 {
-    RNG &rng = TS::ptr()->get_rng();
-    return rng.uniform(minVal, maxVal);
+    CV_Assert(m.type() == CV_8UC1 || m.type() == CV_8UC3);
+    cv::ocl::oclMat d_m;
+    d_m = createMat_ocl(rng, m.size(), m.type(), useRoi);
+
+    Size ls;
+    Point pt;
+
+    d_m.locateROI(ls, pt);
+
+    Rect roi(pt.x, pt.y, d_m.size().width, d_m.size().height);
+
+    cv::ocl::oclMat m_ocl(m);
+
+    cv::ocl::oclMat d_m_roi(d_m, roi);
+
+    m_ocl.copyTo(d_m);
+    return d_m;
 }
-
-Size randomSize(int minVal, int maxVal)
-{
-    return cv::Size(randomInt(minVal, maxVal), randomInt(minVal, maxVal));
-}
-
-Scalar randomScalar(double minVal, double maxVal)
-{
-    return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
-}
-
-Mat randomMat(Size size, int type, double minVal, double maxVal)
-{
-    return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
-}
-
-/*
-void showDiff(InputArray gold_, InputArray actual_, double eps)
-{
-    Mat gold;
-    if (gold_.kind() == _InputArray::MAT)
-        gold = gold_.getMat();
-    else
-        gold_.getGpuMat().download(gold);
-
-    Mat actual;
-    if (actual_.kind() == _InputArray::MAT)
-        actual = actual_.getMat();
-    else
-        actual_.getGpuMat().download(actual);
-
-    Mat diff;
-    absdiff(gold, actual, diff);
-    threshold(diff, diff, eps, 255.0, cv::THRESH_BINARY);
-
-    namedWindow("gold", WINDOW_NORMAL);
-    namedWindow("actual", WINDOW_NORMAL);
-    namedWindow("diff", WINDOW_NORMAL);
-
-    imshow("gold", gold);
-    imshow("actual", actual);
-    imshow("diff", diff);
-
-    waitKey();
-}
-*/
-
-
 
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
@@ -225,7 +203,7 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
         cpu_result.setTo(0);
 
         for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
-        {      
+        {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
             cpu_result.copyTo(cpu_result);
@@ -252,3 +230,25 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     return final_test_result;
 }
 
+void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow)
+{
+    Mat diff, diff_thresh;
+    absdiff(gold, actual, diff);
+    diff.convertTo(diff, CV_32F);
+    threshold(diff, diff_thresh, eps, 255.0, cv::THRESH_BINARY);
+
+    if (alwaysShow || cv::countNonZero(diff_thresh.reshape(1)) > 0)
+    {
+        namedWindow("gold", WINDOW_NORMAL);
+        namedWindow("actual", WINDOW_NORMAL);
+        namedWindow("diff", WINDOW_NORMAL);
+
+        imshow("gold", gold);
+        imshow("actual", actual);
+        imshow("diff", diff);
+
+        waitKey();
+    }
+}
+
+} // namespace cvtest

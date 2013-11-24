@@ -23,10 +23,21 @@ Restores the selected region in an image using the region neighborhood.
 
     :param flags: Inpainting method that could be one of the following:
 
-            * **INPAINT_NS**     Navier-Stokes based method.
+            * **INPAINT_NS**     Navier-Stokes based method [Navier01]
 
             * **INPAINT_TELEA**     Method by Alexandru Telea  [Telea04]_.
 
 The function reconstructs the selected image area from the pixel near the area boundary. The function may be used to remove dust and scratches from a scanned photo, or to remove undesirable objects from still images or video. See
 http://en.wikipedia.org/wiki/Inpainting
 for more details.
+
+.. note::
+
+   * An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
+
+   * (Python) An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py
+
+
+.. [Telea04] Telea, Alexandru. "An image inpainting technique based on the fast marching method." Journal of graphics tools 9, no. 1 (2004): 23-34.
+
+.. [Navier01] Bertalmio, Marcelo, Andrea L. Bertozzi, and Guillermo Sapiro. "Navier-stokes, fluid dynamics, and image and video inpainting." In Computer Vision and Pattern Recognition, 2001. CVPR 2001. Proceedings of the 2001 IEEE Computer Society Conference on, vol. 1, pp. I-355. IEEE, 2001.

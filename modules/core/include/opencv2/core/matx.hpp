@@ -81,7 +81,7 @@ struct CV_EXPORTS Matx_DivOp {};
 struct CV_EXPORTS Matx_MatMulOp {};
 struct CV_EXPORTS Matx_TOp {};
 
-template<typename _Tp, int m, int n> class CV_EXPORTS Matx
+template<typename _Tp, int m, int n> class Matx
 {
 public:
     enum { depth    = DataType<_Tp>::depth,
@@ -286,7 +286,7 @@ template<typename _Tp, int m, int n> static double norm(const Matx<_Tp, m, n>& M
   In addition to the universal notation like Vec<float, 3>, you can use shorter aliases
   for the most popular specialized variants of Vec, e.g. Vec3f ~ Vec<float, 3>.
 */
-template<typename _Tp, int cn> class CV_EXPORTS Vec : public Matx<_Tp, cn, 1>
+template<typename _Tp, int cn> class Vec : public Matx<_Tp, cn, 1>
 {
 public:
     typedef _Tp value_type;

@@ -5,7 +5,7 @@
 
 SET(OPENCV_CPP_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc
     opencv_highgui opencv_ml opencv_video opencv_objdetect opencv_photo opencv_nonfree opencv_softcascade
-    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_bioinspired)
+    opencv_features2d opencv_calib3d opencv_legacy opencv_contrib opencv_stitching opencv_videostab opencv_bioinspired opencv_shape)
 
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
@@ -16,17 +16,17 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
   ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-  if(HAVE_opencv_gpuoptflow)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpuoptflow/include")
+  if(HAVE_opencv_cudaoptflow)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaoptflow/include")
   endif()
-  if(HAVE_opencv_gpuimgproc)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpuimgproc/include")
+  if(HAVE_opencv_cudaimgproc)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaimgproc/include")
   endif()
-  if(HAVE_opencv_gpuarithm)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpuarithm/include")
+  if(HAVE_opencv_cudaarithm)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaarithm/include")
   endif()
-  if(HAVE_opencv_gpufilters)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpufilters/include")
+  if(HAVE_opencv_cudafilters)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -41,11 +41,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     if("${srcs}" MATCHES "tutorial_code")
       set(sample_kind tutorial)
       set(sample_KIND TUTORIAL)
-      set(sample_folder "samples//tutorials")
+      set(sample_subfolder "tutorials")
     else()
       set(sample_kind example)
       set(sample_KIND EXAMPLE)
-      set(sample_folder "samples//cpp")
+      set(sample_subfolder "cpp")
     endif()
 
     set(the_target "${sample_kind}_${name}")
@@ -53,7 +53,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
     if("${srcs}" MATCHES "gpu/")
-      target_link_libraries(${the_target} opencv_gpuarithm opencv_gpufilters)
+      target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -61,7 +61,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       PROJECT_LABEL "(${sample_KIND}) ${name}")
 
     if(ENABLE_SOLUTION_FOLDERS)
-      set_target_properties(${the_target} PROPERTIES FOLDER "${sample_folder}")
+      set_target_properties(${the_target} PROPERTIES FOLDER "samples/${sample_subfolder}")
     endif()
 
     if(WIN32)
@@ -69,7 +69,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "${sample_folder}" COMPONENT main)
+              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${sample_subfolder}" COMPONENT main)
     endif()
   ENDMACRO()
 
@@ -79,9 +79,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples Qt_sample)
   endif()
 
-  if(NOT HAVE_opencv_gpuarithm OR NOT HAVE_opencv_gpufilters)
+  if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_cudafilters)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
+
+  ocv_list_filterout(cpp_samples "viz")
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
@@ -95,4 +97,3 @@ if (INSTALL_C_EXAMPLES AND NOT WIN32)
           DESTINATION share/OpenCV/samples/cpp
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
-

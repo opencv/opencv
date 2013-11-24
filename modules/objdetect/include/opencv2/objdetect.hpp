@@ -93,6 +93,23 @@ private:
     std::vector<String> classNames;
 };
 
+// class for grouping object candidates, detected by Cascade Classifier, HOG etc.
+// instance of the class is to be passed to cv::partition (see cxoperations.hpp)
+class CV_EXPORTS SimilarRects
+{
+public:
+    SimilarRects(double _eps) : eps(_eps) {}
+    inline bool operator()(const Rect& r1, const Rect& r2) const
+    {
+        double delta = eps*(std::min(r1.width, r2.width) + std::min(r1.height, r2.height))*0.5;
+        return std::abs(r1.x - r2.x) <= delta &&
+            std::abs(r1.y - r2.y) <= delta &&
+            std::abs(r1.x + r1.width - r2.x - r2.width) <= delta &&
+            std::abs(r1.y + r1.height - r2.y - r2.height) <= delta;
+    }
+    double eps;
+};
+
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps = 0.2);
 CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights, int groupThreshold, double eps = 0.2);
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
@@ -124,7 +141,7 @@ public:
     static Ptr<FeatureEvaluator> create(int type);
 };
 
-template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_SCALE_IMAGE         = 2,
@@ -142,14 +159,14 @@ public:
     CV_WRAP virtual bool empty() const;
     CV_WRAP bool load( const String& filename );
     virtual bool read( const FileNode& node );
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    double scaleFactor = 1.1,
                                    int minNeighbors = 3, int flags = 0,
                                    Size minSize = Size(),
                                    Size maxSize = Size() );
 
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& numDetections,
                                    double scaleFactor=1.1,
@@ -157,7 +174,7 @@ public:
                                    Size minSize=Size(),
                                    Size maxSize=Size() );
 
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
+    CV_WRAP virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& rejectLevels,
                                    CV_OUT std::vector<double>& levelWeights,
@@ -393,6 +410,7 @@ public:
 
    // read/parse Dalal's alt model file
    void readALTModel(String modelfile);
+   void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
 

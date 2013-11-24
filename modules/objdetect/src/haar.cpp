@@ -1536,15 +1536,15 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         maxSize.width = img->cols;
     }
 
-    temp = cvCreateMat( img->rows, img->cols, CV_8UC1 );
-    sum = cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 );
-    sqsum = cvCreateMat( img->rows + 1, img->cols + 1, CV_64FC1 );
+    temp.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
+    sum.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 ));
+    sqsum.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_64FC1 ));
 
     if( !cascade->hid_cascade )
         icvCreateHidHaarClassifierCascade(cascade);
 
     if( cascade->hid_cascade->has_tilted_features )
-        tilted = cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 );
+        tilted.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 ));
 
     result_seq = cvCreateSeq( 0, sizeof(CvSeq), sizeof(CvAvgComp), storage );
 
@@ -1564,9 +1564,9 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         int use_ipp = cascade->hid_cascade->ipp_stages != 0;
 
         if( use_ipp )
-            normImg = cvCreateMat( img->rows, img->cols, CV_32FC1 );
+            normImg.reset(cvCreateMat( img->rows, img->cols, CV_32FC1));
 #endif
-        imgSmall = cvCreateMat( img->rows + 1, img->cols + 1, CV_8UC1 );
+        imgSmall.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_8UC1 ));
 
         for( factor = 1; ; factor *= scaleFactor )
         {
@@ -1635,7 +1635,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
 
         if( doCannyPruning )
         {
-            sumcanny = cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 );
+            sumcanny.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_32SC1 ));
             cvCanny( img, temp, 0, 50, 3 );
             cvIntegral( temp, sumcanny );
         }
@@ -1965,10 +1965,10 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
 
     size += (n+1)*sizeof(char*);
     const char** input_cascade = (const char**)cvAlloc( size );
-    
+
     if( !input_cascade )
       CV_Error( CV_StsNoMem, "Could not allocate memory for input_cascade" );
-      
+
     char* ptr = (char*)(input_cascade + n + 1);
 
     for( int i = 0; i < n; i++ )
@@ -1989,7 +1989,7 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
     }
 
     input_cascade[n] = 0;
-    
+
     CvHaarClassifierCascade* cascade = icvLoadCascadeCART( input_cascade, n, orig_window_size );
 
     if( input_cascade )

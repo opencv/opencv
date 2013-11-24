@@ -2124,7 +2124,7 @@ long videoDevices::initDevices(IMFAttributes *pAttributes)
     return hr;
 }
 
-size_t videoDevices::getCount()
+unsigned int videoDevices::getCount()
 {
     return vds_Devices.size();
 }
@@ -3026,7 +3026,7 @@ double CvCaptureFile_MSMF::getProperty(int property_id)
         return ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_NUMERATOR) /
             ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_DENOMINATOR);
     }
- 
+
     return -1;
 }
 
@@ -3062,7 +3062,7 @@ IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
 
     if(RIOut && size == RIOut->getSize())
     {
-         videoInput::processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width, 
+         videoInput::processPixels(RIOut->getpPixels(), (unsigned char*)frame->imageData, width,
              height, bytes, false, verticalFlip);
     }
 

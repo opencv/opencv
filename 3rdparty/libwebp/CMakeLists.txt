@@ -40,7 +40,7 @@ if(UNIX)
   endif()
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow -Wmaybe-uninitialized)
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 
 set_target_properties(${WEBP_LIBRARY}
@@ -54,5 +54,6 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  install(TARGETS ${WEBP_LIBRARY} ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+  ocv_install_target(${WEBP_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
 endif()
+

@@ -3698,5 +3698,3 @@ int cvComputeEssentialMatrix(  CvMatr32f rotMatr,
 
     return CV_OK;
 }
-
-

@@ -491,20 +491,6 @@ public class CoreTest extends OpenCVTestCase {
 
         Point truth[] = {
                 new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
                 new Point(4, 6)
         };
         assertArrayPointsEquals(truth, pts.toArray(), EPS);

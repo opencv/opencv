@@ -2122,9 +2122,14 @@ CvBoost::train( const Mat& _train_data, int _tflag,
                const Mat& _missing_mask,
                CvBoostParams _params, bool _update )
 {
-    CvMat tdata = _train_data, responses = _responses, vidx = _var_idx,
-        sidx = _sample_idx, vtype = _var_type, mmask = _missing_mask;
-    return train(&tdata, _tflag, &responses, vidx.data.ptr ? &vidx : 0,
+    train_data_hdr = _train_data;
+    train_data_mat = _train_data;
+    responses_hdr = _responses;
+    responses_mat = _responses;
+
+    CvMat vidx = _var_idx, sidx = _sample_idx, vtype = _var_type, mmask = _missing_mask;
+
+    return train(&train_data_hdr, _tflag, &responses_hdr, vidx.data.ptr ? &vidx : 0,
           sidx.data.ptr ? &sidx : 0, vtype.data.ptr ? &vtype : 0,
           mmask.data.ptr ? &mmask : 0, _params, _update);
 }

@@ -152,8 +152,3 @@ Result
   .. image:: images/Adding_Trackbars_Tutorial_Result_1.jpg
      :alt: Adding Trackbars - Lena
      :align: center
-
-
-
-
-

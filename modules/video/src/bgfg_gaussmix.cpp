@@ -464,10 +464,9 @@ void BackgroundSubtractorMOGImpl::apply(InputArray _image, OutputArray _fgmask, 
 Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history, int nmixtures,
                                   double backgroundRatio, double noiseSigma)
 {
-    return new BackgroundSubtractorMOGImpl(history, nmixtures, backgroundRatio, noiseSigma);
+    return makePtr<BackgroundSubtractorMOGImpl>(history, nmixtures, backgroundRatio, noiseSigma);
 }
 
 }
 
 /* End of file. */
-

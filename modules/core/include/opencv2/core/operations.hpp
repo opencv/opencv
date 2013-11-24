@@ -445,14 +445,14 @@ int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 template<typename _Tp> inline
 Ptr<_Tp> Algorithm::create(const String& name)
 {
-    return _create(name).ptr<_Tp>();
+    return _create(name).dynamicCast<_Tp>();
 }
 
 template<typename _Tp> inline
 void Algorithm::set(const char* _name, const Ptr<_Tp>& value)
 {
-    Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
-    if (algo_ptr.empty()) {
+    Ptr<Algorithm> algo_ptr = value. template dynamicCast<cv::Algorithm>();
+    if (!algo_ptr) {
         CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
     }
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);
@@ -468,7 +468,7 @@ template<typename _Tp> inline
 void Algorithm::setAlgorithm(const char* _name, const Ptr<_Tp>& value)
 {
     Ptr<Algorithm> algo_ptr = value. template ptr<cv::Algorithm>();
-    if (algo_ptr.empty()) {
+    if (!algo_ptr) {
         CV_Error( Error::StsUnsupportedFormat, "unknown/unsupported Ptr type of the second parameter of the method Algorithm::set");
     }
     info()->set(this, _name, ParamType<Algorithm>::type, &algo_ptr);

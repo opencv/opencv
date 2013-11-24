@@ -58,7 +58,6 @@
 #endif
 
 #if USE_ZLIB
-#  undef HAVE_UNISTD_H //to avoid redefinition
 #  ifndef _LFS64_LARGEFILE
 #    define _LFS64_LARGEFILE 0
 #  endif
@@ -386,13 +385,8 @@ cvCreateMap( int flags, int header_size, int elem_size,
     return map;
 }
 
-#ifdef __GNUC__
 #define CV_PARSE_ERROR( errmsg )                                    \
-    icvParseError( fs, __func__, (errmsg), __FILE__, __LINE__ )
-#else
-#define CV_PARSE_ERROR( errmsg )                                    \
-    icvParseError( fs, "", (errmsg), __FILE__, __LINE__ )
-#endif
+    icvParseError( fs, CV_Func, (errmsg), __FILE__, __LINE__ )
 
 static void
 icvParseError( CvFileStorage* fs, const char* func_name,
@@ -5130,9 +5124,11 @@ FileStorage::FileStorage(const String& filename, int flags, const String& encodi
     open( filename, flags, encoding );
 }
 
-FileStorage::FileStorage(CvFileStorage* _fs)
+FileStorage::FileStorage(CvFileStorage* _fs, bool owning)
 {
-    fs = Ptr<CvFileStorage>(_fs);
+    if (owning) fs.reset(_fs);
+    else fs = Ptr<CvFileStorage>(Ptr<CvFileStorage>(), _fs);
+
     state = _fs ? NAME_EXPECTED + INSIDE_MAP : UNDEFINED;
 }
 
@@ -5148,8 +5144,8 @@ FileStorage::~FileStorage()
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
     release();
-    fs = Ptr<CvFileStorage>(cvOpenFileStorage( filename.c_str(), 0, flags,
-                                               !encoding.empty() ? encoding.c_str() : 0));
+    fs.reset(cvOpenFileStorage( filename.c_str(), 0, flags,
+                                !encoding.empty() ? encoding.c_str() : 0));
     bool ok = isOpened();
     state = ok ? NAME_EXPECTED + INSIDE_MAP : UNDEFINED;
     return ok;
@@ -5157,7 +5153,7 @@ bool FileStorage::open(const String& filename, int flags, const String& encoding
 
 bool FileStorage::isOpened() const
 {
-    return !fs.empty() && fs.obj->is_opened;
+    return fs && fs->is_opened;
 }
 
 void FileStorage::release()
@@ -5170,8 +5166,8 @@ void FileStorage::release()
 String FileStorage::releaseAndGetString()
 {
     String buf;
-    if( fs.obj && fs.obj->outbuf )
-        icvClose(fs.obj, &buf);
+    if( fs && fs->outbuf )
+        icvClose(fs, &buf);
 
     release();
     return buf;
@@ -5480,7 +5476,7 @@ void write( FileStorage& fs, const String& name, const Mat& value )
 // TODO: the 4 functions below need to be implemented more efficiently
 void write( FileStorage& fs, const String& name, const SparseMat& value )
 {
-    Ptr<CvSparseMat> mat = cvCreateSparseMat(value);
+    Ptr<CvSparseMat> mat(cvCreateSparseMat(value));
     cvWrite( *fs, name.size() ? name.c_str() : 0, mat );
 }
 
@@ -5530,8 +5526,8 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
         default_mat.copyTo(mat);
         return;
     }
-    Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    CV_Assert(CV_IS_SPARSE_MAT(m.obj));
+    Ptr<CvSparseMat> m((CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node));
+    CV_Assert(CV_IS_SPARSE_MAT(m));
     m->copyToSparseMat(mat);
 }
 

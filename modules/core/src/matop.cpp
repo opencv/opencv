@@ -1610,7 +1610,7 @@ MatExpr Mat::mul(InputArray m, double scale) const
     MatExpr e;
     if(m.kind() == _InputArray::EXPR)
     {
-        const MatExpr& me = *(const MatExpr*)m.obj;
+        const MatExpr& me = *(const MatExpr*)m.getObj();
         me.op->multiply(MatExpr(*this), me, e, scale);
     }
     else

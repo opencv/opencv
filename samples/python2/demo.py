@@ -141,7 +141,7 @@ class App:
         count = tk.IntVar()
         while True:
             match_index = text.search(pattern, 'matchPos', count=count, regexp=regexp, stopindex='end')
-            if not match_index: 
+            if not match_index:
                 break
             end_index = text.index( "%s+%sc" % (match_index, count.get()) )
             text.mark_set('matchPos', end_index)
@@ -161,4 +161,3 @@ class App:
 
 if __name__ == '__main__':
     App().run()
-

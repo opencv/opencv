@@ -162,4 +162,3 @@ if __name__ == '__main__':
     print "Not tested methods found:", len(funcs)
     print "Total tests found:", parser.get_tests_count()
     print "Empty test stubs found:", parser.get_empty_stubs_count()
-

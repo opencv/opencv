@@ -30,7 +30,9 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include <iostream>
    #include "opencv2/core.hpp"
    #include "opencv2/features2d.hpp"
+   #include "opencv2/nonfree/features2d.hpp"
    #include "opencv2/highgui.hpp"
+   #include "opencv2/nonfree.hpp"
 
    using namespace cv;
 
@@ -94,4 +96,3 @@ Result
    .. image:: images/Feature_Detection_Result_b.jpg
       :align: center
       :height: 200pt
-

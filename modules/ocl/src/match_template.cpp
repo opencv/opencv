@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,21 +44,11 @@
 //M*/
 
 
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-
-//helper routines
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *match_template;
-    }
-}
 
 namespace cv
 {
@@ -101,7 +91,7 @@ namespace cv
         static bool useNaive(int method, int depth, Size size)
         {
 #ifdef HAVE_CLAMDFFT
-            if (method == TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(Context::CL_DOUBLE)))
+            if (method == TM_SQDIFF && (depth == CV_32F || !Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE)))
             {
                 return true;
             }
@@ -278,12 +268,15 @@ namespace cv
         void matchTemplate_CCORR_NORMED(
             const oclMat &image, const oclMat &templ, oclMat &result, MatchTemplateBuf &buf)
         {
+            cv::ocl::oclMat temp;
             matchTemplate_CCORR(image, templ, result, buf);
             buf.image_sums.resize(1);
             buf.image_sqsums.resize(1);
-
-            integral(image.reshape(1), buf.image_sums[0], buf.image_sqsums[0]);
-
+            integral(image.reshape(1), buf.image_sums[0], temp);
+            if(temp.depth() == CV_64F)
+                temp.convertTo(buf.image_sqsums[0], CV_32FC1);
+            else
+                buf.image_sqsums[0] = temp;
             unsigned long long templ_sqsum = (unsigned long long)sqrSum(templ.reshape(1))[0];
 
             Context *clCxt = image.clCxt;
@@ -449,7 +442,12 @@ namespace cv
             {
                 buf.image_sums.resize(1);
                 buf.image_sqsums.resize(1);
-                integral(image, buf.image_sums[0], buf.image_sqsums[0]);
+                cv::ocl::oclMat temp;
+                integral(image, buf.image_sums[0], temp);
+                if(temp.depth() == CV_64F)
+                    temp.convertTo(buf.image_sqsums[0], CV_32FC1);
+                else
+                    buf.image_sqsums[0] = temp;
 
                 templ_sum[0]   = (float)sum(templ)[0];
 
@@ -485,10 +483,14 @@ namespace cv
                 templ_sum   *= scale;
                 buf.image_sums.resize(buf.images.size());
                 buf.image_sqsums.resize(buf.images.size());
-
+                cv::ocl::oclMat temp;
                 for(int i = 0; i < image.oclchannels(); i ++)
                 {
-                    integral(buf.images[i], buf.image_sums[i], buf.image_sqsums[i]);
+                    integral(buf.images[i], buf.image_sums[i], temp);
+                    if(temp.depth() == CV_64F)
+                        temp.convertTo(buf.image_sqsums[i], CV_32FC1);
+                    else
+                        buf.image_sqsums[i] = temp;
                 }
 
                 switch(image.oclchannels())

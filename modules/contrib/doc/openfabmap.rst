@@ -9,6 +9,10 @@ FAB-MAP is an approach to appearance-based place recognition. FAB-MAP compares i
 
 openFABMAP requires training data (e.g. a collection of images from a similar but not identical environment) to construct a visual vocabulary for the visual bag-of-words model, along with a Chow-Liu tree representation of feature likelihood and for use in the Sampled new place method (see below).
 
+.. note::
+
+   * An example using the openFABMAP package can be found at opencv_source_code/samples/cpp/fabmap_sample.cpp
+
 of2::FabMap
 --------------------
 

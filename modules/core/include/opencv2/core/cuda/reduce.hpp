@@ -40,14 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_REDUCE_HPP__
-#define __OPENCV_GPU_REDUCE_HPP__
+#ifndef __OPENCV_CUDA_REDUCE_HPP__
+#define __OPENCV_CUDA_REDUCE_HPP__
 
 #include <thrust/tuple.h>
 #include "detail/reduce.hpp"
 #include "detail/reduce_key_val.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <int N, typename T, class Op>
     __device__ __forceinline__ void reduce(volatile T* smem, T& val, unsigned int tid, const Op& op)
@@ -194,4 +194,4 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-#endif // __OPENCV_GPU_UTILITY_HPP__
+#endif // __OPENCV_CUDA_UTILITY_HPP__

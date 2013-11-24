@@ -551,7 +551,7 @@ void  ExrDecoder::RGBToGray( float *in, float *out )
 
 ImageDecoder ExrDecoder::newDecoder() const
 {
-    return new ExrDecoder;
+    return makePtr<ExrDecoder>();
 }
 
 /////////////////////// ExrEncoder ///////////////////
@@ -726,7 +726,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& )
 
 ImageEncoder ExrEncoder::newEncoder() const
 {
-    return new ExrEncoder;
+    return makePtr<ExrEncoder>();
 }
 
 }

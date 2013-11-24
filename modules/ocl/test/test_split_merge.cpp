@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -52,39 +52,27 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(MergeTestBase, MatType, int)
+#define MAX_CHANNELS 4
+
+PARAM_TEST_CASE(MergeTestBase, MatDepth, Channels, bool)
 {
     int type;
     int channels;
+    bool use_roi;
 
     //src mat
-    cv::Mat mat1;
-    cv::Mat mat2;
-    cv::Mat mat3;
-    cv::Mat mat4;
-
+    cv::Mat mat[MAX_CHANNELS];
     //dst mat
     cv::Mat dst;
 
     // set up roi
-    int roicols;
-    int roirows;
-    int src1x;
-    int src1y;
-    int src2x;
-    int src2y;
-    int src3x;
-    int src3y;
-    int src4x;
-    int src4y;
-    int dstx;
-    int dsty;
+    int roicols, roirows;
+    int srcx[MAX_CHANNELS];
+    int srcy[MAX_CHANNELS];
+    int dstx, dsty;
 
     //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat mat2_roi;
-    cv::Mat mat3_roi;
-    cv::Mat mat4_roi;
+    cv::Mat mat_roi[MAX_CHANNELS];
 
     //dst mat with roi
     cv::Mat dst_roi;
@@ -93,278 +81,138 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
     cv::ocl::oclMat gdst_whole;
 
     //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gmat2;
-    cv::ocl::oclMat gmat3;
-    cv::ocl::oclMat gmat4;
+    cv::ocl::oclMat gmat[MAX_CHANNELS];
     cv::ocl::oclMat gdst;
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
 
-        mat1 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        mat2 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        mat3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        mat4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        dst  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
-
+        for (int i = 0; i < channels; ++i)
+            mat[i] = randomMat(size, CV_MAKETYPE(type, 1), 5, 16, false);
+        dst = randomMat(size, CV_MAKETYPE(type, channels), 5, 16, false);
     }
 
     void random_roi()
     {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat1.cols);
-        roirows = rng.uniform(1, mat1.rows);
-        src1x   = rng.uniform(0, mat1.cols - roicols);
-        src1y   = rng.uniform(0, mat1.rows - roirows);
-        src2x   = rng.uniform(0, mat2.cols - roicols);
-        src2y   = rng.uniform(0, mat2.rows - roirows);
-        src3x   = rng.uniform(0, mat3.cols - roicols);
-        src3y   = rng.uniform(0, mat3.rows - roirows);
-        src4x   = rng.uniform(0, mat4.cols - roicols);
-        src4y   = rng.uniform(0, mat4.rows - roirows);
-        dstx    = rng.uniform(0, dst.cols  - roicols);
-        dsty    = rng.uniform(0, dst.rows  - roirows);
-#else
-        roicols = mat1.cols;
-        roirows = mat1.rows;
-        src1x   = 0;
-        src1y   = 0;
-        src2x   = 0;
-        src2y   = 0;
-        src3x   = 0;
-        src3y   = 0;
-        src4x   = 0;
-        src4y   = 0;
-        dstx    = 0;
-        dsty    = 0;
-#endif
+        if (use_roi)
+        {
+            //randomize ROI
+            roicols = rng.uniform(1, mat[0].cols);
+            roirows = rng.uniform(1, mat[0].rows);
 
+            for (int i = 0; i < channels; ++i)
+            {
+                srcx[i] = rng.uniform(0, mat[i].cols - roicols);
+                srcy[i] = rng.uniform(0, mat[i].rows - roirows);
+            }
 
-        mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
-        mat2_roi = mat2(Rect(src2x, src2y, roicols, roirows));
-        mat3_roi = mat3(Rect(src3x, src3y, roicols, roirows));
-        mat4_roi = mat4(Rect(src4x, src4y, roicols, roirows));
+            dstx = rng.uniform(0, dst.cols  - roicols);
+            dsty = rng.uniform(0, dst.rows  - roirows);
+        }
+        else
+        {
+            roicols = mat[0].cols;
+            roirows = mat[0].rows;
+            for (int i = 0; i < channels; ++i)
+                srcx[i] = srcy[i] = 0;
 
+            dstx = dsty = 0;
+        }
+
+        for (int i = 0; i < channels; ++i)
+            mat_roi[i] = mat[i](Rect(srcx[i], srcy[i], roicols, roirows));
 
         dst_roi = dst(Rect(dstx, dsty, roicols, roirows));
 
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
 
-        gmat1 = mat1_roi;
-        gmat2 = mat2_roi;
-        gmat3 = mat3_roi;
-        gmat4 = mat4_roi;
+        for (int i = 0; i < channels; ++i)
+            gmat[i] = mat_roi[i];
     }
-
 };
 
 struct Merge : MergeTestBase {};
 
-TEST_P(Merge, Accuracy)
+OCL_TEST_P(Merge, Accuracy)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        std::vector<cv::Mat> dev_src;
-        dev_src.push_back(mat1_roi);
-
-        if(channels >= 2)
-            dev_src.push_back(mat2_roi);
-
-        if(channels >= 3)
-            dev_src.push_back(mat3_roi);
-
-        if(channels >= 4)
-            dev_src.push_back(mat4_roi);
-
-        std::vector<cv::ocl::oclMat> dev_gsrc;
-        dev_gsrc.push_back(gmat1);
-
-        if(channels >= 2)
-            dev_gsrc.push_back(gmat2);
-
-        if(channels >= 3)
-            dev_gsrc.push_back(gmat3);
-
-        if(channels >= 4)
-            dev_gsrc.push_back(gmat4);
-
-        cv::merge(dev_src, dst_roi);
-        cv::ocl::merge(dev_gsrc, gdst);
+        cv::merge(mat_roi, channels, dst_roi);
+        cv::ocl::merge(gmat, channels, gdst);
 
         EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
     }
 }
 
-
-
-PARAM_TEST_CASE(SplitTestBase, MatType, int)
+PARAM_TEST_CASE(SplitTestBase, MatType, int, bool)
 {
     int type;
     int channels;
+    bool use_roi;
 
-    //src mat
-    cv::Mat mat;
+    cv::Mat src, src_roi;
+    cv::Mat dst[MAX_CHANNELS], dst_roi[MAX_CHANNELS];
 
-    //dstmat
-    cv::Mat dst1;
-    cv::Mat dst2;
-    cv::Mat dst3;
-    cv::Mat dst4;
-
-    // set up roi
-    int roicols;
-    int roirows;
-    int srcx;
-    int srcy;
-    int dst1x;
-    int dst1y;
-    int dst2x;
-    int dst2y;
-    int dst3x;
-    int dst3y;
-    int dst4x;
-    int dst4y;
-
-    //src mat with roi
-    cv::Mat mat_roi;
-
-    //dst mat with roi
-    cv::Mat dst1_roi;
-    cv::Mat dst2_roi;
-    cv::Mat dst3_roi;
-    cv::Mat dst4_roi;
-
-    //ocl dst mat for testing
-    cv::ocl::oclMat gdst1_whole;
-    cv::ocl::oclMat gdst2_whole;
-    cv::ocl::oclMat gdst3_whole;
-    cv::ocl::oclMat gdst4_whole;
-
-    //ocl mat with roi
-    cv::ocl::oclMat gmat;
-    cv::ocl::oclMat gdst1;
-    cv::ocl::oclMat gdst2;
-    cv::ocl::oclMat gdst3;
-    cv::ocl::oclMat gdst4;
+    cv::ocl::oclMat gsrc_whole, gsrc_roi;
+    cv::ocl::oclMat gdst_whole[MAX_CHANNELS], gdst_roi[MAX_CHANNELS];
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
         channels = GET_PARAM(1);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
-        dst1 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        dst2 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        dst3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-        dst4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
-
+        use_roi = GET_PARAM(2);
     }
 
     void random_roi()
     {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat.cols);
-        roirows = rng.uniform(1, mat.rows);
-        srcx    = rng.uniform(0, mat.cols - roicols);
-        srcy    = rng.uniform(0, mat.rows - roirows);
-        dst1x   = rng.uniform(0, dst1.cols  - roicols);
-        dst1y   = rng.uniform(0, dst1.rows  - roirows);
-        dst2x   = rng.uniform(0, dst2.cols  - roicols);
-        dst2y   = rng.uniform(0, dst2.rows  - roirows);
-        dst3x   = rng.uniform(0, dst3.cols  - roicols);
-        dst3y   = rng.uniform(0, dst3.rows  - roirows);
-        dst4x   = rng.uniform(0, dst4.cols  - roicols);
-        dst4y   = rng.uniform(0, dst4.rows  - roirows);
-#else
-        roicols = mat.cols;
-        roirows = mat.rows;
-        srcx    = 0;
-        srcy    = 0;
-        dst1x   = 0;
-        dst1y   = 0;
-        dst2x   = 0;
-        dst2y   = 0;
-        dst3x   = 0;
-        dst3y   = 0;
-        dst4x   = 0;
-        dst4y   = 0;
-#endif
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, CV_MAKETYPE(type, channels), 0, 256);
+        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
 
-        mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-
-        dst1_roi = dst1(Rect(dst1x, dst1y, roicols, roirows));
-        dst2_roi = dst2(Rect(dst2x, dst2y, roicols, roirows));
-        dst3_roi = dst3(Rect(dst3x, dst3y, roicols, roirows));
-        dst4_roi = dst4(Rect(dst4x, dst4y, roicols, roirows));
-
-        gdst1_whole = dst1;
-        gdst1 = gdst1_whole(Rect(dst1x, dst1y, roicols, roirows));
-
-        gdst2_whole = dst2;
-        gdst2 = gdst2_whole(Rect(dst2x, dst2y, roicols, roirows));
-
-        gdst3_whole = dst3;
-        gdst3 = gdst3_whole(Rect(dst3x, dst3y, roicols, roirows));
-
-        gdst4_whole = dst4;
-        gdst4 = gdst4_whole(Rect(dst4x, dst4y, roicols, roirows));
-
-        gmat = mat_roi;
+        for (int i = 0; i < channels; ++i)
+        {
+            Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst[i], dst_roi[i], roiSize, dstBorder, CV_MAKETYPE(type, 1), 5, 16);
+            generateOclMat(gdst_whole[i], gdst_roi[i], dst[i], roiSize, dstBorder);
+        }
     }
-
 };
 
 struct Split : SplitTestBase {};
 
-TEST_P(Split, Accuracy)
+OCL_TEST_P(Split, Accuracy)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::Mat         dev_dst[4]  = {dst1_roi, dst2_roi, dst3_roi, dst4_roi};
-        cv::ocl::oclMat dev_gdst[4] = {gdst1, gdst2, gdst3, gdst4};
+        cv::split(src_roi, dst_roi);
+        cv::ocl::split(gsrc_roi, gdst_roi);
 
-        cv::split(mat_roi, dev_dst);
-        cv::ocl::split(gmat, dev_gdst);
-
-        if(channels >= 1)
-            EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), 0.0);
-
-        if(channels >= 2)
-            EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), 0.0);
-
-        if(channels >= 3)
-            EXPECT_MAT_NEAR(dst3, Mat(gdst3_whole), 0.0);
-
-        if(channels >= 4)
-            EXPECT_MAT_NEAR(dst4, Mat(gdst4_whole), 0.0);
+        for (int i = 0; i < channels; ++i)
+        {
+            EXPECT_MAT_NEAR(dst[i], gdst_whole[i], 0.0);
+            EXPECT_MAT_NEAR(dst_roi[i], gdst_roi[i], 0.0);
+        }
     }
 }
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3, 4)));
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F), Values(1, 2, 3, 4), Bool()));
 
 
 INSTANTIATE_TEST_CASE_P(SplitMerge, Split , Combine(
-                            Values(CV_8U, CV_32S, CV_32F), Values(1, 3, 4)));
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F), Values(1, 2, 3, 4), Bool()));
 
 
 #endif // HAVE_OPENCL

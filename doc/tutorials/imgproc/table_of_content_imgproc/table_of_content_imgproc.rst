@@ -539,6 +539,3 @@ In this section you will learn about the image processing (manipulation) functio
    ../shapedescriptors/bounding_rotated_ellipses/bounding_rotated_ellipses
    ../shapedescriptors/moments/moments
    ../shapedescriptors/point_polygon_test/point_polygon_test
-
-
-

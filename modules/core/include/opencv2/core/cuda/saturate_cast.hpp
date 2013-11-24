@@ -40,12 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_SATURATE_CAST_HPP__
-#define __OPENCV_GPU_SATURATE_CAST_HPP__
+#ifndef __OPENCV_CUDA_SATURATE_CAST_HPP__
+#define __OPENCV_CUDA_SATURATE_CAST_HPP__
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(uchar v) { return _Tp(v); }
     template<typename _Tp> __device__ __forceinline__ _Tp saturate_cast(schar v) { return _Tp(v); }
@@ -281,4 +281,4 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-#endif /* __OPENCV_GPU_SATURATE_CAST_HPP__ */
+#endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */

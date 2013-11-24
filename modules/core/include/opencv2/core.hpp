@@ -90,7 +90,7 @@ public:
 
     int code; ///< error code @see CVStatus
     String err; ///< error description
-    String func; ///< function name. Available only when the compiler supports __func__ macro
+    String func; ///< function name. Available only when the compiler supports getting it
     String file; ///< source file name where the error has occured
     int line; ///< line number in the source file where the error has occured
 };
@@ -157,6 +157,9 @@ enum { REDUCE_SUM = 0,
 
 //! swaps two matrices
 CV_EXPORTS void swap(Mat& a, Mat& b);
+
+//! swaps two umatrices
+CV_EXPORTS void swap( UMat& a, UMat& b );
 
 //! 1D interpolation function: returns coordinate of the "donor" pixel for the specified location p.
 CV_EXPORTS_W int borderInterpolate(int p, int len, int borderType);
@@ -344,6 +347,10 @@ CV_EXPORTS_W void max(InputArray src1, InputArray src2, OutputArray dst);
 CV_EXPORTS void min(const Mat& src1, const Mat& src2, Mat& dst);
 //! computes per-element maximum of two arrays (dst = max(src1, src2))
 CV_EXPORTS void max(const Mat& src1, const Mat& src2, Mat& dst);
+//! computes per-element minimum of two arrays (dst = min(src1, src2))
+CV_EXPORTS void min(const UMat& src1, const UMat& src2, UMat& dst);
+//! computes per-element maximum of two arrays (dst = max(src1, src2))
+CV_EXPORTS void max(const UMat& src1, const UMat& src2, UMat& dst);
 
 //! computes square root of each matrix element (dst = src**0.5)
 CV_EXPORTS_W void sqrt(InputArray src, OutputArray dst);
@@ -439,7 +446,7 @@ CV_EXPORTS void calcCovarMatrix( const Mat* samples, int nsamples, Mat& covar, M
 
 //! computes covariation matrix of a set of samples
 CV_EXPORTS_W void calcCovarMatrix( InputArray samples, OutputArray covar,
-                                   OutputArray mean, int flags, int ctype = CV_64F);
+                                   InputOutputArray mean, int flags, int ctype = CV_64F);
 
 CV_EXPORTS_W void PCACompute(InputArray data, InputOutputArray mean,
                              OutputArray eigenvectors, int maxComponents = 0);
@@ -669,6 +676,10 @@ public:
 
     //! reconstructs the original vector from the projection
     void backProject(InputArray vec, OutputArray result) const;
+
+    //! write and load PCA matrix
+    void write(FileStorage& fs ) const;
+    void read(const FileNode& fs);
 
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix

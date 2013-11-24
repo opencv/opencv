@@ -11,15 +11,17 @@
 namespace cv
 {
 
-class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector : public FeatureDetector
+class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector
 {
 public:
-#if 0
-    //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP void detect( const Mat& image, CV_OUT std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
-    CV_WRAP void detect( const std::vector<Mat>& images, CV_OUT std::vector<std::vector<KeyPoint> >& keypoints, const std::vector<Mat>& masks=std::vector<Mat>() ) const;
-    CV_WRAP virtual bool empty() const;
-#endif
+    CV_WRAP void detect( const Mat& image, CV_OUT std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
+    { return wrapped->detect(image, keypoints, mask); }
+
+    CV_WRAP void detect( const std::vector<Mat>& images, CV_OUT std::vector<std::vector<KeyPoint> >& keypoints, const std::vector<Mat>& masks=std::vector<Mat>() ) const
+    { return wrapped->detect(images, keypoints, masks); }
+
+    CV_WRAP bool empty() const
+    { return wrapped->empty(); }
 
     enum
     {
@@ -141,52 +143,74 @@ public:
             break;
         }
 
-        Ptr<FeatureDetector> detector = FeatureDetector::create(name);
-        detector.addref();
-        return (javaFeatureDetector*)((FeatureDetector*) detector);
+        return new javaFeatureDetector(FeatureDetector::create(name));
     }
 
     CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
-        ((FeatureDetector*)this)->write(fs);
-        fs.release();
+        wrapped->write(fs);
     }
 
     CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
-        ((FeatureDetector*)this)->read(fs.root());
-        fs.release();
+        wrapped->read(fs.root());
     }
+
+private:
+    javaFeatureDetector(Ptr<FeatureDetector> _wrapped) : wrapped(_wrapped)
+    {}
+
+    Ptr<FeatureDetector> wrapped;
 };
 
-class CV_EXPORTS_AS(DescriptorMatcher) javaDescriptorMatcher : public DescriptorMatcher
+class CV_EXPORTS_AS(DescriptorMatcher) javaDescriptorMatcher
 {
 public:
-#if 0
-    //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP virtual bool isMaskSupported() const;
-    CV_WRAP virtual void add( const std::vector<Mat>& descriptors );
-    CV_WRAP const std::vector<Mat>& getTrainDescriptors() const;
-    CV_WRAP virtual void clear();
-    CV_WRAP virtual bool empty() const;
-    CV_WRAP virtual void train();
+    CV_WRAP bool isMaskSupported() const
+    { return wrapped->isMaskSupported(); }
+
+    CV_WRAP void add( const std::vector<Mat>& descriptors )
+    { return wrapped->add(descriptors); }
+
+    CV_WRAP const std::vector<Mat>& getTrainDescriptors() const
+    { return wrapped->getTrainDescriptors(); }
+
+    CV_WRAP void clear()
+    { return wrapped->clear(); }
+
+    CV_WRAP bool empty() const
+    { return wrapped->empty(); }
+
+    CV_WRAP void train()
+    { return wrapped->train(); }
+
     CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const
+    { return wrapped->match(queryDescriptors, trainDescriptors, matches, mask); }
+
     CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
                    CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                   const Mat& mask=Mat(), bool compactResult=false ) const;
+                   const Mat& mask=Mat(), bool compactResult=false ) const
+    { return wrapped->knnMatch(queryDescriptors, trainDescriptors, matches, k, mask, compactResult); }
+
     CV_WRAP void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
                       CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const Mat& mask=Mat(), bool compactResult=false ) const;
+                      const Mat& mask=Mat(), bool compactResult=false ) const
+    { return wrapped->radiusMatch(queryDescriptors, trainDescriptors, matches, maxDistance, mask, compactResult); }
+
     CV_WRAP void match( const Mat& queryDescriptors, CV_OUT std::vector<DMatch>& matches,
-                const std::vector<Mat>& masks=std::vector<Mat>() );
+                const std::vector<Mat>& masks=std::vector<Mat>() )
+    { return wrapped->match(queryDescriptors, matches, masks); }
+
     CV_WRAP void knnMatch( const Mat& queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false )
+    { return wrapped->knnMatch(queryDescriptors, matches, k, masks, compactResult); }
+
     CV_WRAP void radiusMatch( const Mat& queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-#endif
+                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false )
+    { return wrapped->radiusMatch(queryDescriptors, matches, maxDistance, masks, compactResult); }
 
     enum
     {
@@ -200,9 +224,7 @@ public:
 
     CV_WRAP_AS(clone) javaDescriptorMatcher* jclone( bool emptyTrainData=false ) const
     {
-        Ptr<DescriptorMatcher> matcher = this->clone(emptyTrainData);
-        matcher.addref();
-        return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
+        return new javaDescriptorMatcher(wrapped->clone(emptyTrainData));
     }
 
     //supported: FlannBased, BruteForce, BruteForce-L1, BruteForce-Hamming, BruteForce-HammingLUT
@@ -235,38 +257,45 @@ public:
             break;
         }
 
-        Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(name);
-        matcher.addref();
-        return (javaDescriptorMatcher*)((DescriptorMatcher*) matcher);
+        return new javaDescriptorMatcher(DescriptorMatcher::create(name));
     }
 
     CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
-        ((DescriptorMatcher*)this)->write(fs);
-        fs.release();
+        wrapped->write(fs);
     }
 
     CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
-        ((DescriptorMatcher*)this)->read(fs.root());
-        fs.release();
+        wrapped->read(fs.root());
     }
+
+private:
+    javaDescriptorMatcher(Ptr<DescriptorMatcher> _wrapped) : wrapped(_wrapped)
+    {}
+
+    Ptr<DescriptorMatcher> wrapped;
 };
 
-class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor : public DescriptorExtractor
+class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor
 {
 public:
-#if 0
-    //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP void compute( const Mat& image, CV_IN_OUT std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    CV_WRAP void compute( const std::vector<Mat>& images, CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const;
-    CV_WRAP virtual int descriptorSize() const;
-    CV_WRAP virtual int descriptorType() const;
+    CV_WRAP void compute( const Mat& image, CV_IN_OUT std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
+    { return wrapped->compute(image, keypoints, descriptors); }
 
-    CV_WRAP virtual bool empty() const;
-#endif
+    CV_WRAP void compute( const std::vector<Mat>& images, CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const
+    { return wrapped->compute(images, keypoints, descriptors); }
+
+    CV_WRAP int descriptorSize() const
+    { return wrapped->descriptorSize(); }
+
+    CV_WRAP int descriptorType() const
+    { return wrapped->descriptorType(); }
+
+    CV_WRAP bool empty() const
+    { return wrapped->empty(); }
 
     enum
     {
@@ -327,62 +356,93 @@ public:
             break;
         }
 
-        Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(name);
-        extractor.addref();
-        return (javaDescriptorExtractor*)((DescriptorExtractor*) extractor);
+        return new javaDescriptorExtractor(DescriptorExtractor::create(name));
     }
 
     CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
-        ((DescriptorExtractor*)this)->write(fs);
-        fs.release();
+        wrapped->write(fs);
     }
 
     CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
-        ((DescriptorExtractor*)this)->read(fs.root());
-        fs.release();
+        wrapped->read(fs.root());
     }
+
+private:
+    javaDescriptorExtractor(Ptr<DescriptorExtractor> _wrapped) : wrapped(_wrapped)
+    {}
+
+    Ptr<DescriptorExtractor> wrapped;
 };
 
-class CV_EXPORTS_AS(GenericDescriptorMatcher) javaGenericDescriptorMatcher : public GenericDescriptorMatcher
+class CV_EXPORTS_AS(GenericDescriptorMatcher) javaGenericDescriptorMatcher
 {
 public:
-#if 0
-    //DO NOT REMOVE! The block is required for sources parser
-    CV_WRAP virtual void add( const std::vector<Mat>& images,
-                      std::vector<std::vector<KeyPoint> >& keypoints );
-    CV_WRAP const std::vector<Mat>& getTrainImages() const;
-    CV_WRAP const std::vector<std::vector<KeyPoint> >& getTrainKeypoints() const;
-    CV_WRAP virtual void clear();
-    CV_WRAP virtual bool isMaskSupported();
-    CV_WRAP virtual void train();
+    CV_WRAP void add( const std::vector<Mat>& images,
+                      std::vector<std::vector<KeyPoint> >& keypoints )
+    { return wrapped->add(images, keypoints); }
+
+    CV_WRAP const std::vector<Mat>& getTrainImages() const
+    { return wrapped->getTrainImages(); }
+
+    CV_WRAP const std::vector<std::vector<KeyPoint> >& getTrainKeypoints() const
+    { return wrapped->getTrainKeypoints(); }
+
+    CV_WRAP void clear()
+    { return wrapped->clear(); }
+
+    CV_WRAP bool isMaskSupported()
+    { return wrapped->isMaskSupported(); }
+
+    CV_WRAP void train()
+    { return wrapped->train(); }
+
     CV_WRAP void classify( const Mat& queryImage, CV_IN_OUT std::vector<KeyPoint>& queryKeypoints,
-                           const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints ) const;
-    CV_WRAP void classify( const Mat& queryImage, CV_IN_OUT std::vector<KeyPoint>& queryKeypoints );
+                           const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints ) const
+    { return wrapped->classify(queryImage, queryKeypoints, trainImage, trainKeypoints); }
+
+    CV_WRAP void classify( const Mat& queryImage, CV_IN_OUT std::vector<KeyPoint>& queryKeypoints )
+    { return wrapped->classify(queryImage, queryKeypoints); }
+
     CV_WRAP void match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
                 const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
-                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const
+    { return wrapped->match(queryImage, queryKeypoints, trainImage, trainKeypoints, matches, mask); }
+
     CV_WRAP void knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
                    const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
                    CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                   const Mat& mask=Mat(), bool compactResult=false ) const;
+                   const Mat& mask=Mat(), bool compactResult=false ) const
+    { return wrapped->knnMatch(queryImage, queryKeypoints, trainImage, trainKeypoints,
+                               matches, k, mask, compactResult); }
+
     CV_WRAP void radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
                       const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
                       CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const Mat& mask=Mat(), bool compactResult=false ) const;
+                      const Mat& mask=Mat(), bool compactResult=false ) const
+    { return wrapped->radiusMatch(queryImage, queryKeypoints, trainImage, trainKeypoints,
+                                   matches, maxDistance, mask, compactResult); }
+
     CV_WRAP void match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
-                CV_OUT std::vector<DMatch>& matches, const std::vector<Mat>& masks=std::vector<Mat>() );
+                CV_OUT std::vector<DMatch>& matches, const std::vector<Mat>& masks=std::vector<Mat>() )
+    { return wrapped->match(queryImage, queryKeypoints, matches, masks); }
+
     CV_WRAP void knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
                    CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false )
+    { return wrapped->knnMatch(queryImage, queryKeypoints, matches, k, masks, compactResult); }
+
     CV_WRAP void radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
                       CV_OUT std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    CV_WRAP virtual bool empty() const;
-#endif
+                      const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false )
+    { return wrapped->radiusMatch(queryImage, queryKeypoints, matches, maxDistance, masks, compactResult); }
+
+    CV_WRAP bool empty() const
+    { return wrapped->empty(); }
+
 
     enum
     {
@@ -392,9 +452,7 @@ public:
 
     CV_WRAP_AS(clone) javaGenericDescriptorMatcher* jclone( bool emptyTrainData=false ) const
     {
-        Ptr<GenericDescriptorMatcher> matcher = this->clone(emptyTrainData);
-        matcher.addref();
-        return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
+        return new javaGenericDescriptorMatcher(wrapped->clone(emptyTrainData));
     }
 
     //supported: OneWay, Fern
@@ -416,24 +474,26 @@ public:
             break;
         }
 
-        Ptr<GenericDescriptorMatcher> matcher = GenericDescriptorMatcher::create(name);
-        matcher.addref();
-        return (javaGenericDescriptorMatcher*)((GenericDescriptorMatcher*) matcher);
+        return new javaGenericDescriptorMatcher(GenericDescriptorMatcher::create(name));
     }
 
     CV_WRAP void write( const String& fileName ) const
     {
         FileStorage fs(fileName, FileStorage::WRITE);
-        ((GenericDescriptorMatcher*)this)->write(fs);
-        fs.release();
+        wrapped->write(fs);
     }
 
     CV_WRAP void read( const String& fileName )
     {
         FileStorage fs(fileName, FileStorage::READ);
-        ((GenericDescriptorMatcher*)this)->read(fs.root());
-        fs.release();
+        wrapped->read(fs.root());
     }
+
+private:
+    javaGenericDescriptorMatcher(Ptr<GenericDescriptorMatcher> _wrapped) : wrapped(_wrapped)
+    {}
+
+    Ptr<GenericDescriptorMatcher> wrapped;
 };
 
 #if 0

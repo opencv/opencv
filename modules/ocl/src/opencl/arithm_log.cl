@@ -1,4 +1,3 @@
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
@@ -26,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,52 +42,70 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined (DOUBLE_SUPPORT)
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-
-#define INF_FLOAT -88.029694
-#define INF_DOUBLE -709.0895657128241
-
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////LOG/////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-__kernel void arithm_log_D5(int rows, int cols, int srcStep, int dstStep, int srcOffset, int dstOffset, __global float *src, __global float *dst)
+__kernel void arithm_log_C1(__global srcT *src, __global srcT *dst,
+    int cols1, int rows,
+    int srcOffset1, int dstOffset1,
+    int srcStep1, int dstStep1)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < cols && y < rows )
+    if(x < cols1 && y < rows)
     {
-      x = x << 2;
-      int srcIdx = mad24( y, srcStep, x + srcOffset);
-      int dstIdx = mad24( y, dstStep, x + dstOffset);
+        int srcIdx = mad24(y, srcStep1, x + srcOffset1);
+        int dstIdx = mad24(y, dstStep1, x + dstOffset1);
 
-      float src_data = *((__global float *)((__global char *)src + srcIdx));
-      float dst_data = (src_data == 0) ? INF_FLOAT : log(fabs(src_data));
-
-      *((__global float *)((__global char *)dst + dstIdx)) = dst_data;
+        dst[dstIdx] = log(src[srcIdx]);
     }
 }
 
-#if defined (DOUBLE_SUPPORT)
-__kernel void arithm_log_D6(int rows, int cols, int srcStep, int dstStep, int srcOffset, int dstOffset, __global double *src, __global double *dst)
+__kernel void arithm_log_C2(__global srcT *src, __global srcT *dst,
+    int cols1, int rows,
+    int srcOffset1, int dstOffset1,
+    int srcStep1, int dstStep1)
 {
-    int x = get_global_id(0);
+    int x1 = get_global_id(0) << 1;
     int y = get_global_id(1);
 
-    if(x < cols && y < rows )
+    if(x1 < cols1 && y < rows)
     {
-      x = x << 3;
-      int srcIdx = mad24( y, srcStep, x + srcOffset);
-      int dstIdx = mad24( y, dstStep, x + dstOffset);
+        int srcIdx = mad24(y, srcStep1, x1 + srcOffset1);
+        int dstIdx = mad24(y, dstStep1, x1 + dstOffset1);
 
-      double src_data = *((__global double *)((__global char *)src + srcIdx));
-      double dst_data = (src_data == 0) ? INF_DOUBLE : log(fabs(src_data));
-      *((__global double *)((__global char *)dst + dstIdx)) = dst_data;
-
+        dst[dstIdx] =                      log(src[srcIdx]);
+        dst[dstIdx + 1] = x1 + 1 < cols1 ? log(src[srcIdx + 1]) : dst[dstIdx + 1];
     }
 }
-#endif
+
+__kernel void arithm_log_C4(__global srcT *src, __global srcT *dst,
+    int cols1, int rows,
+    int srcOffset1, int dstOffset1,
+    int srcStep1, int dstStep1)
+{
+    int x1 = get_global_id(0) << 2;
+    int y = get_global_id(1);
+
+    if(x1 < cols1 && y < rows)
+    {
+        int srcIdx = mad24(y, srcStep1, x1 + srcOffset1);
+        int dstIdx = mad24(y, dstStep1, x1 + dstOffset1);
+
+        dst[dstIdx] =                      log(src[srcIdx]);
+        dst[dstIdx + 1] = x1 + 1 < cols1 ? log(src[srcIdx + 1]) : dst[dstIdx + 1];
+        dst[dstIdx + 2] = x1 + 2 < cols1 ? log(src[srcIdx + 2]) : dst[dstIdx + 2];
+        dst[dstIdx + 3] = x1 + 3 < cols1 ? log(src[srcIdx + 3]) : dst[dstIdx + 3];
+    }
+}

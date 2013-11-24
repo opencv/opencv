@@ -820,7 +820,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         int h0 = h[0], h1 = h[1];
 
         __m128 _a0 = _mm_set1_ps(a[0]), _a1 = _mm_set1_ps(a[1]);
-		__m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
+        __m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
         __m128 _t0 = _mm_mul_ps(_a0, _w), _t1 = _mm_mul_ps(_a1, _w);
 
         _mm_storeu_ps(hist0, _t0);
@@ -1303,7 +1303,7 @@ void HOGDescriptor::detectMultiScale(
     if ( useMeanshiftGrouping )
         groupRectangles_meanshift(foundLocations, foundWeights, foundScales, finalThreshold, winSize);
     else
-        groupRectangles(foundLocations, (int)finalThreshold, 0.2);
+        groupRectangles(foundLocations, foundWeights, (int)finalThreshold, 0.2);
 }
 
 void HOGDescriptor::detectMultiScale(const Mat& img, std::vector<Rect>& foundLocations,
@@ -1353,8 +1353,7 @@ public:
     {
         if(ptr && _fs)
         {
-            FileStorage fs(_fs);
-            fs.fs.addref();
+            FileStorage fs(_fs, false);
             ((const _ClsName*)ptr)->write(fs, String(name));
         }
     }
@@ -2944,5 +2943,82 @@ void HOGDescriptor::readALTModel(String modelfile)
     fclose(modelfl);
 }
 
-}
+void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const
+{
+    if( groupThreshold <= 0 || rectList.empty() )
+    {
+        return;
+    }
 
+    CV_Assert(rectList.size() == weights.size());
+
+    std::vector<int> labels;
+    int nclasses = partition(rectList, labels, SimilarRects(eps));
+
+    std::vector<cv::Rect_<double> > rrects(nclasses);
+    std::vector<int> numInClass(nclasses, 0);
+    std::vector<double> foundWeights(nclasses, DBL_MIN);
+    std::vector<double> totalFactorsPerClass(nclasses, 1);
+    int i, j, nlabels = (int)labels.size();
+
+    for( i = 0; i < nlabels; i++ )
+    {
+        int cls = labels[i];
+        rrects[cls].x += rectList[i].x;
+        rrects[cls].y += rectList[i].y;
+        rrects[cls].width += rectList[i].width;
+        rrects[cls].height += rectList[i].height;
+        foundWeights[cls] = max(foundWeights[cls], weights[i]);
+        numInClass[cls]++;
+    }
+
+    for( i = 0; i < nclasses; i++ )
+    {
+        // find the average of all ROI in the cluster
+        cv::Rect_<double> r = rrects[i];
+        double s = 1.0/numInClass[i];
+        rrects[i] = cv::Rect_<double>(cv::saturate_cast<double>(r.x*s),
+            cv::saturate_cast<double>(r.y*s),
+            cv::saturate_cast<double>(r.width*s),
+            cv::saturate_cast<double>(r.height*s));
+    }
+
+    rectList.clear();
+    weights.clear();
+
+    for( i = 0; i < nclasses; i++ )
+    {
+        cv::Rect r1 = rrects[i];
+        int n1 = numInClass[i];
+        double w1 = foundWeights[i];
+        if( n1 <= groupThreshold )
+            continue;
+        // filter out small rectangles inside large rectangles
+        for( j = 0; j < nclasses; j++ )
+        {
+            int n2 = numInClass[j];
+
+            if( j == i || n2 <= groupThreshold )
+                continue;
+
+            cv::Rect r2 = rrects[j];
+
+            int dx = cv::saturate_cast<int>( r2.width * eps );
+            int dy = cv::saturate_cast<int>( r2.height * eps );
+
+            if( r1.x >= r2.x - dx &&
+                r1.y >= r2.y - dy &&
+                r1.x + r1.width <= r2.x + r2.width + dx &&
+                r1.y + r1.height <= r2.y + r2.height + dy &&
+                (n2 > std::max(3, n1) || n1 < 3) )
+                break;
+        }
+
+        if( j == nclasses )
+        {
+            rectList.push_back(r1);
+            weights.push_back(w1);
+        }
+    }
+}
+}

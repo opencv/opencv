@@ -1736,7 +1736,8 @@ void CvWindow::displayStatusBar(QString text, int delayms)
 
 void CvWindow::enablePropertiesButton()
 {
-    vect_QActions[9]->setDisabled(false);
+    if (!vect_QActions.empty())
+        vect_QActions[9]->setDisabled(false);
 }
 
 
@@ -2474,7 +2475,7 @@ void DefaultViewPort::saveView()
     if (!fileName.isEmpty()) //save the picture
     {
         QString extension = fileName.right(3);
-        
+
         // Create a new pixmap to render the viewport into
         QPixmap viewportPixmap(viewport()->size());
         viewport()->render(&viewportPixmap);

@@ -130,7 +130,7 @@ HRESULT OcvImageManipulations::SetProperties(ABI::Windows::Foundation::Collectio
         }
     }
 
-	return hr;
+    return hr;
 }
 
 // IMFTransform methods. Refer to the Media Foundation SDK documentation for details.
@@ -1333,16 +1333,16 @@ HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuff
             const int mHistSize[] = {25};
             const float baseRabge[] = {0.f,256.f};
             const float* ranges[] = {baseRabge};
-            
-			const cv::Scalar mColorsY[] = { cv::Scalar(76), cv::Scalar(149), cv::Scalar(29) };
-			const cv::Scalar mColorsUV[] = { cv::Scalar(84, 255), cv::Scalar(43, 21), cv::Scalar(255, 107) };
 
-			cv::Mat OutputY(m_imageHeightInPixels, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
-			cv::Mat OutputUV(m_imageHeightInPixels/2, m_imageWidthInPixels/2,
-							 CV_8UC2, pDest+m_imageHeightInPixels*lDestStride, lDestStride);
+            const cv::Scalar mColorsY[] = { cv::Scalar(76), cv::Scalar(149), cv::Scalar(29) };
+            const cv::Scalar mColorsUV[] = { cv::Scalar(84, 255), cv::Scalar(43, 21), cv::Scalar(255, 107) };
+
+            cv::Mat OutputY(m_imageHeightInPixels, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
+            cv::Mat OutputUV(m_imageHeightInPixels/2, m_imageWidthInPixels/2,
+                             CV_8UC2, pDest+m_imageHeightInPixels*lDestStride, lDestStride);
             cv::Mat BgrFrame;
 
-			InputFrame.copyTo(OutputFrame);
+            InputFrame.copyTo(OutputFrame);
 
             cv::cvtColor(InputFrame, BgrFrame, cv::COLOR_YUV420sp2BGR);
             int thikness = (int) (BgrFrame.cols / (mHistSizeNum + 10) / 5);
@@ -1357,20 +1357,20 @@ HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuff
                 cv::normalize(hist, hist, BgrFrame.rows/2, 0, cv::NORM_INF);
                 for(int h=0; h<mHistSizeNum; h++) {
                     cv::Point mP1, mP2;
-					// Draw on Y plane
-					mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
+                    // Draw on Y plane
+                    mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
                     mP1.y = BgrFrame.rows-1;
                     mP2.y = mP1.y - 2 - (int)hist.at<float>(h);
-					cv::line(OutputY, mP1, mP2, mColorsY[c], thikness);
+                    cv::line(OutputY, mP1, mP2, mColorsY[c], thikness);
 
-					// Draw on UV planes
+                    // Draw on UV planes
                     mP1.x /= 2;
                     mP1.y /= 2;
-					mP2.x /= 2;
+                    mP2.x /= 2;
                     mP2.y /= 2;
-					cv::line(OutputUV, mP1, mP2, mColorsUV[c], thikness/2);
+                    cv::line(OutputUV, mP1, mP2, mColorsUV[c], thikness/2);
                 }
-            }            
+            }
         } break;
     default:
         break;
@@ -1426,7 +1426,7 @@ HRESULT OcvImageManipulations::UpdateFormatInfo()
         }
 
         // Calculate the image size for YUV NV12 image(not including padding)
-		m_cbImageSize = (m_imageHeightInPixels + m_imageHeightInPixels/2)*m_imageWidthInPixels;
+        m_cbImageSize = (m_imageHeightInPixels + m_imageHeightInPixels/2)*m_imageWidthInPixels;
     }
 
 done:
@@ -1483,4 +1483,3 @@ HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride)
     }
     return hr;
 }
-

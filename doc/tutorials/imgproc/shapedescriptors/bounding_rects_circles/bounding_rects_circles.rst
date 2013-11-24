@@ -121,4 +121,3 @@ Result
 
    .. |BRC_1|  image:: images/Bounding_Rects_Circles_Result.jpg
                     :align: middle
-

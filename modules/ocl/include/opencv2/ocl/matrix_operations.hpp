@@ -23,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
-#define __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
+#ifndef __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
+#define __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
 
 namespace cv
 {
@@ -514,4 +514,4 @@ namespace cv
 
 } /* end of namespace cv */
 
-#endif /* __OPENCV_GPU_MATRIX_OPERATIONS_HPP__ */
+#endif /* __OPENCV_OCL_MATRIX_OPERATIONS_HPP__ */

@@ -13,6 +13,7 @@ Welcome to opencv documentation!
    platforms/android/refman.rst
    doc/user_guide/user_guide.rst
    doc/tutorials/tutorials.rst
+   doc/py_tutorials/py_tutorials.rst
 
 Indices and tables
 ==================

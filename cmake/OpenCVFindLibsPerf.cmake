@@ -27,7 +27,7 @@ endif(WITH_CUDA)
 # --- Eigen ---
 if(WITH_EIGEN)
   find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432 
+            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
             DOC "The path to Eigen3/Eigen2 headers"
             CMAKE_FIND_ROOT_PATH_BOTH)
@@ -86,13 +86,13 @@ else()
 endif()
 
 # --- OpenMP ---
-if(NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
-  set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/omptest.cpp")
-  file(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
-  try_compile(HAVE_OPENMP "${CMAKE_BINARY_DIR}" "${_fname}")
-  file(REMOVE "${_fname}")
-else()
-  set(HAVE_OPENMP 0)
+if(WITH_OPENMP AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+  find_package(OpenMP)
+  if(OPENMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
+  set(HAVE_OPENMP "${OPENMP_FOUND}")
 endif()
 
 # --- GCD ---

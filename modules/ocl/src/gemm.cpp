@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,18 +43,62 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
+
+namespace cv { namespace ocl {
+
+// used for clAmdBlas library to avoid redundant setup/teardown
+void clBlasSetup();
+void clBlasTeardown();
+
+}} /* namespace cv { namespace ocl */
+
 
 #if !defined HAVE_CLAMDBLAS
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
-    CV_Error(Error::StsNotImplemented, "OpenCL BLAS is not implemented");
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
 }
+
+void cv::ocl::clBlasSetup()
+{
+    CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL BLAS is not implemented");
+}
+
+void cv::ocl::clBlasTeardown()
+{
+    //intentionally do nothing
+}
+
 #else
-#include "clAmdBlas.h"
+#include "opencv2/ocl/cl_runtime/clamdblas_runtime.hpp"
 using namespace cv;
+
+static bool clBlasInitialized = false;
+
+void cv::ocl::clBlasSetup()
+{
+    if(!clBlasInitialized)
+    {
+        AutoLock lock(getInitializationMutex());
+        if(!clBlasInitialized)
+        {
+            openCLSafeCall(clAmdBlasSetup());
+            clBlasInitialized = true;
+        }
+    }
+}
+
+void cv::ocl::clBlasTeardown()
+{
+    AutoLock lock(getInitializationMutex());
+    if(clBlasInitialized)
+    {
+        clAmdBlasTeardown();
+        clBlasInitialized = false;
+    }
+}
 
 void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
                    const oclMat &src3, double beta, oclMat &dst, int flags)
@@ -71,7 +115,8 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         dst.create(src1.rows, src2.cols, src1.type());
         dst.setTo(Scalar::all(0));
     }
-    openCLSafeCall( clAmdBlasSetup() );
+
+    clBlasSetup();
 
     const clAmdBlasTranspose transA = (cv::GEMM_1_T & flags) ? clAmdBlasTrans : clAmdBlasNoTrans;
     const clAmdBlasTranspose transB = (cv::GEMM_2_T & flags) ? clAmdBlasTrans : clAmdBlasNoTrans;
@@ -87,7 +132,7 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     int offb    = src2.offset;
     int offc    = dst.offset;
 
-    cl_command_queue clq = (cl_command_queue)src1.clCxt->oclCommandQueue();
+    cl_command_queue clq = *(cl_command_queue*)src1.clCxt->getOpenCLCommandQueuePtr();
     switch(src1.type())
     {
     case CV_32FC1:
@@ -156,6 +201,5 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     }
     break;
     }
-    clAmdBlasTeardown();
 }
 #endif

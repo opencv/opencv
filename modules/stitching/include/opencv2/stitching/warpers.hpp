@@ -58,33 +58,33 @@ public:
 class PlaneWarper : public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PlaneWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarper>(scale); }
 };
 
 
 class CylindricalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CylindricalWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarper>(scale); }
 };
 
 
 class SphericalWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::SphericalWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarper>(scale); }
 };
 
 class FisheyeWarper : public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::FisheyeWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::FisheyeWarper>(scale); }
 };
 
 class StereographicWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::StereographicWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::StereographicWarper>(scale); }
 };
 
 class CompressedRectilinearWarper: public WarperCreator
@@ -95,7 +95,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CompressedRectilinearWarper(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CompressedRectilinearWarper>(scale, a, b); }
 };
 
 class CompressedRectilinearPortraitWarper: public WarperCreator
@@ -106,7 +106,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CompressedRectilinearPortraitWarper(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CompressedRectilinearPortraitWarper>(scale, a, b); }
 };
 
 class PaniniWarper: public WarperCreator
@@ -117,7 +117,7 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PaniniWarper(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PaniniWarper>(scale, a, b); }
 };
 
 class PaniniPortraitWarper: public WarperCreator
@@ -128,42 +128,42 @@ public:
     {
         a = A; b = B;
     }
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PaniniPortraitWarper(scale, a, b); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PaniniPortraitWarper>(scale, a, b); }
 };
 
 class MercatorWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::MercatorWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::MercatorWarper>(scale); }
 };
 
 class TransverseMercatorWarper: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::TransverseMercatorWarper(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::TransverseMercatorWarper>(scale); }
 };
 
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
 class PlaneWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::PlaneWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarperGpu>(scale); }
 };
 
 
 class CylindricalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::CylindricalWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarperGpu>(scale); }
 };
 
 
 class SphericalWarperGpu: public WarperCreator
 {
 public:
-    Ptr<detail::RotationWarper> create(float scale) const { return new detail::SphericalWarperGpu(scale); }
+    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperGpu>(scale); }
 };
 #endif
 

@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,49 +43,46 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+
+#include "perf_precomp.hpp"
+
+using namespace perf;
 
 ///////////// dft ////////////////////////
-PERFTEST(dft)
+
+typedef TestBaseWithParam<Size> dftFixture;
+
+#ifdef HAVE_CLAMDFFT
+
+PERF_TEST_P(dftFixture, dft, OCL_TYPICAL_MAT_SIZES)
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const Size srcSize = GetParam();
 
-    int all_type[] = {CV_32FC2};
-    std::string type_name[] = {"CV_32FC2"};
+    Mat src(srcSize, CV_32FC2), dst;
+    randu(src, 0.0f, 1.0f);
+    declare.in(src);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(7.4);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; complex-to-complex";
+        ocl::oclMat oclSrc(src), oclDst;
 
-            gen(src, size, size, all_type[j], Scalar::all(0), Scalar::all(1));
+        OCL_TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
 
-            dft(src, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            dft(src, dst);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::dft(d_src, d_dst, Size(size, size));
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::dft(d_src, d_dst, Size(size, size));
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::dft(d_src, d_dst, Size(size, size));
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, src.size().area() * 1e-4);
-        }
-
+        SANITY_CHECK(dst, 1.5);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::dft(src, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
+
+#endif

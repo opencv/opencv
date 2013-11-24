@@ -1,5 +1,5 @@
 #include "perf_precomp.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
 static const char * impls[] = {
 #ifdef HAVE_CUDA

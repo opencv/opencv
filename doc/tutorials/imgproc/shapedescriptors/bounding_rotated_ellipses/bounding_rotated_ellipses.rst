@@ -123,4 +123,3 @@ Result
 
    .. |BRE_1|  image:: images/Bounding_Rotated_Ellipses_Result.jpg
                     :align: middle
-

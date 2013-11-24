@@ -1424,7 +1424,7 @@ TEST(Imgproc_fitLine_vector_2d, regression)
 
 TEST(Imgproc_fitLine_Mat_2dC2, regression)
 {
-    cv::Mat mat1(3, 1, CV_32SC2);
+    cv::Mat mat1 = Mat::zeros(3, 1, CV_32SC2);
     std::vector<float> line1;
 
     cv::fitLine(mat1, line1, CV_DIST_L2, 0 ,0 ,0);
@@ -1444,7 +1444,7 @@ TEST(Imgproc_fitLine_Mat_2dC1, regression)
 
 TEST(Imgproc_fitLine_Mat_3dC3, regression)
 {
-    cv::Mat mat1(2, 1, CV_32SC3);
+    cv::Mat mat1 = Mat::zeros(2, 1, CV_32SC3);
     std::vector<float> line1;
 
     cv::fitLine(mat1, line1, CV_DIST_L2, 0 ,0 ,0);
@@ -1454,7 +1454,7 @@ TEST(Imgproc_fitLine_Mat_3dC3, regression)
 
 TEST(Imgproc_fitLine_Mat_3dC1, regression)
 {
-    cv::Mat mat2(2, 3, CV_32SC1);
+    cv::Mat mat2 = Mat::zeros(2, 3, CV_32SC1);
     std::vector<float> line2;
 
     cv::fitLine(mat2, line2, CV_DIST_L2, 0 ,0 ,0);

@@ -1,14 +1,6 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "cvconfig.h"
-
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#  ifdef BUILD_SHARED_LIBS
-#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#  endif
-#endif
-
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
 
@@ -30,7 +22,7 @@
 #endif
 
 // declare major namespaces to avoid errors on unknown namespace
-namespace cv { namespace gpu {} namespace ocl {} }
+namespace cv { namespace cuda {} namespace ocl {} }
 
 namespace perf
 {
@@ -104,7 +96,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
@@ -120,7 +112,7 @@ private:
             *os << "UNKNOWN";                                                           \
         }                                                                               \
         static ::testing::internal::ParamGenerator<class_name> all() {                  \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             static class_name vals[] = { __VA_ARGS__ };                                 \
             return ::testing::ValuesIn(vals);                                           \
         }                                                                               \
@@ -134,7 +126,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             int value = val_;                                                           \
@@ -211,6 +203,7 @@ private:
 #define SANITY_CHECK(array, ...) ::perf::Regression::add(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
+#define SANITY_CHECK_NOTHING() this->setVerified();
 
 class CV_EXPORTS GpuPerf
 {
@@ -218,7 +211,7 @@ public:
   static bool targetDevice();
 };
 
-#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#define PERF_RUN_CUDA()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -244,11 +237,23 @@ typedef struct CV_EXPORTS performance_metrics
         TERM_TIME = 1,
         TERM_INTERRUPT = 2,
         TERM_EXCEPTION = 3,
+        TERM_SKIP_TEST = 4, // there are some limitations and test should be skipped
         TERM_UNKNOWN = -1
     };
 
     performance_metrics();
+    void clear();
 } performance_metrics;
+
+
+/*****************************************************************************************\
+*                           Strategy for performance measuring                            *
+\*****************************************************************************************/
+enum PERF_STRATEGY
+{
+    PERF_STRATEGY_BASE = 0,
+    PERF_STRATEGY_SIMPLE = 1,
+};
 
 
 /*****************************************************************************************\
@@ -265,6 +270,11 @@ public:
     static void RecordRunParameters();
     static std::string getDataPath(const std::string& relativePath);
     static std::string getSelectedImpl();
+
+    static enum PERF_STRATEGY getPerformanceStrategy();
+    static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
+
+    class PerfSkipTestException: public cv::Exception {};
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -347,12 +357,13 @@ private:
         friend class TestBase;
     };
     friend class _declareHelper;
-    friend class Regression;
 
     bool verified;
 
 public:
     _declareHelper declare;
+
+    void setVerified() { this->verified = true; }
 };
 
 template<typename T> class TestBaseWithParam: public TestBase, public ::testing::WithParamInterface<T> {};
@@ -477,16 +488,25 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
+#ifndef __CV_TEST_EXEC_ARGS
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
+#define __CV_TEST_EXEC_ARGS(...)    \
+    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/
+#else
+#define __CV_TEST_EXEC_ARGS(...)    \
+    __VA_ARGS__;
+#endif
+#endif
 
-#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...) \
-    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
-    ::perf::Regression::Init(#modulename);\
-    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls),\
-                           argc, argv);\
-    ::testing::InitGoogleTest(&argc, argv);\
-    cvtest::printVersionInfo();\
-    ::testing::Test::RecordProperty("cv_module_name", #modulename);\
-    ::perf::TestBase::RecordRunParameters();\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+    ::perf::Regression::Init(#modulename); \
+    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
+                           argc, argv); \
+    ::testing::InitGoogleTest(&argc, argv); \
+    cvtest::printVersionInfo(); \
+    ::testing::Test::RecordProperty("cv_module_name", #modulename); \
+    ::perf::TestBase::RecordRunParameters(); \
+    __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     return RUN_ALL_TESTS();
 
 // impls must be an array, not a pointer; "plain" should always be one of the implementations

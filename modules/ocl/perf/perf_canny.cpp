@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,43 +43,34 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
+
+using namespace perf;
 
 ///////////// Canny ////////////////////////
-PERFTEST(Canny)
+
+PERF_TEST(CannyFixture, Canny)
 {
-    Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
+    Mat img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE),
+            edges(img.size(), CV_8UC1);
+    ASSERT_TRUE(!img.empty()) << "can't open aloe-L.png";
 
-    if (img.empty())
+    declare.in(img).out(edges);
+
+    if (RUN_OCL_IMPL)
     {
-        throw runtime_error("can't open aloeL.jpg");
+        ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
+
+        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
+        oclEdges.download(edges);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() Canny(img, edges, 50.0, 100.0);
+    }
+    else
+        OCL_PERF_ELSE
 
-    SUBTEST << img.cols << 'x' << img.rows << "; aloeL.jpg" << "; edges" << "; CV_8UC1";
-
-    Mat edges(img.size(), CV_8UC1), ocl_edges;
-
-    CPU_ON;
-    Canny(img, edges, 50.0, 100.0);
-    CPU_OFF;
-
-    ocl::oclMat d_img(img);
-    ocl::oclMat d_edges;
-    ocl::CannyBuf d_buf;
-
-    WARMUP_ON;
-    ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-    WARMUP_OFF;
-
-    GPU_ON;
-    ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-    GPU_OFF;
-
-    GPU_FULL_ON;
-    d_img.upload(img);
-    ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-    d_edges.download(ocl_edges);
-    GPU_FULL_OFF;
-
-    TestSystem::instance().ExceptedMatSimilar(edges, ocl_edges, 2e-2);
+    int value = 0;
+    SANITY_CHECK(value);
 }

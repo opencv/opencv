@@ -204,4 +204,14 @@ void BOWImgDescriptorExtractor::compute( const Mat& descriptors, Mat& imgDescrip
     imgDescriptor /= descriptors.rows;
 }
 
+int BOWImgDescriptorExtractor::descriptorSize() const
+{
+    return vocabulary.empty() ? 0 : vocabulary.rows;
+}
+
+int BOWImgDescriptorExtractor::descriptorType() const
+{
+    return CV_32FC1;
+}
+
 }

@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,79 +44,87 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
+
+using namespace perf;
+using namespace cv;
+using std::tr1::get;
+
 ///////////// blend ////////////////////////
+
 template <typename T>
-void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &weights1, const cv::Mat &weights2, cv::Mat &result_gold)
+static void blendLinearGold(const Mat &img1, const Mat &img2,
+                            const Mat &weights1, const Mat &weights2,
+                            Mat &result_gold)
 {
+    CV_Assert(img1.size() == img2.size() && img1.type() == img2.type());
+    CV_Assert(weights1.size() == weights2.size() && weights1.size() == img1.size() &&
+              weights1.type() == CV_32FC1 && weights2.type() == CV_32FC1);
+
     result_gold.create(img1.size(), img1.type());
 
     int cn = img1.channels();
+    int step1 = img1.cols * img1.channels();
 
     for (int y = 0; y < img1.rows; ++y)
     {
-        const float *weights1_row = weights1.ptr<float>(y);
-        const float *weights2_row = weights2.ptr<float>(y);
-        const T *img1_row = img1.ptr<T>(y);
-        const T *img2_row = img2.ptr<T>(y);
-        T *result_gold_row = result_gold.ptr<T>(y);
+        const float * const weights1_row = weights1.ptr<float>(y);
+        const float * const weights2_row = weights2.ptr<float>(y);
+        const T * const img1_row = img1.ptr<T>(y);
+        const T * const img2_row = img2.ptr<T>(y);
+        T * const result_gold_row = result_gold.ptr<T>(y);
 
-        for (int x = 0; x < img1.cols * cn; ++x)
+        for (int x = 0; x < step1; ++x)
         {
-            float w1 = weights1_row[x / cn];
-            float w2 = weights2_row[x / cn];
-            result_gold_row[x] = static_cast<T>((img1_row[x] * w1 + img2_row[x] * w2) / (w1 + w2 + 1e-5f));
+            int x1 = x / cn;
+            float w1 = weights1_row[x1], w2 = weights2_row[x1];
+            result_gold_row[x] = saturate_cast<T>(((float)img1_row[x] * w1
+                                                 + (float)img2_row[x] * w2) / (w1 + w2 + 1e-5f));
         }
     }
 }
-PERFTEST(blend)
+
+typedef void (*blendFunction)(const Mat &img1, const Mat &img2,
+                              const Mat &weights1, const Mat &weights2,
+                              Mat &result_gold);
+
+typedef Size_MatType blendLinearFixture;
+
+PERF_TEST_P(blendLinearFixture, blendLinear, ::testing::Combine(
+                OCL_TYPICAL_MAT_SIZES, testing::Values(CV_8UC1, CV_8UC3, CV_32FC1)))
 {
-    Mat src1, src2, weights1, weights2, dst, ocl_dst;
-    ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
+    Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int srcType = get<1>(params);
+    const double eps = CV_MAT_DEPTH(srcType) <= CV_32S ? 1.0 : 0.2;
 
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src1(srcSize, srcType), src2(srcSize, srcType), dst(srcSize, srcType);
+    Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+    randu(weights1, 0.0f, 1.0f);
+    randu(weights2, 0.0f, 1.0f);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] << " and CV_32FC1";
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclWeights1(weights1), oclWeights2(weights2);
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(src2, size, size, all_type[j], 0, 256);
-            gen(weights1, size, size, CV_32FC1, 0, 1);
-            gen(weights2, size, size, CV_32FC1, 0, 1);
+        OCL_TEST_CYCLE() ocl::blendLinear(oclSrc1, oclSrc2, oclWeights1, oclWeights2, oclDst);
 
-            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
-            CPU_OFF;
-
-            d_src1.upload(src1);
-            d_src2.upload(src2);
-            d_weights1.upload(weights1);
-            d_weights2.upload(weights2);
-
-            WARMUP_ON;
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src1.upload(src1);
-            d_src2.upload(src2);
-            d_weights1.upload(weights1);
-            d_weights2.upload(weights2);
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.f);
-        }
+        SANITY_CHECK(dst, eps);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        blendFunction funcs[] = { (blendFunction)blendLinearGold<uchar>, (blendFunction)blendLinearGold<float> };
+        int funcIdx = CV_MAT_DEPTH(srcType) == CV_8UC1 ? 0 : 1;
+
+        TEST_CYCLE() (funcs[funcIdx])(src1, src2, weights1, weights2, dst);
+
+        SANITY_CHECK(dst, eps);
+    }
+    else
+        OCL_PERF_ELSE
 }

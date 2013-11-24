@@ -10,4 +10,3 @@ add_android_project(${sample} "${CMAKE_CURRENT_SOURCE_DIR}" LIBRARY_DEPS ${OpenC
 if(TARGET ${sample})
   add_dependencies(opencv_android_examples ${sample})
 endif()
-

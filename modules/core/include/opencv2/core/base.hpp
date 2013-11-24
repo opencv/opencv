@@ -110,7 +110,10 @@ enum {
     GpuApiCallError=           -217,
     OpenGlNotSupported=        -218,
     OpenGlApiCallError=        -219,
-    OpenCLApiCallError=        -220
+    OpenCLApiCallError=        -220,
+    OpenCLDoubleNotSupported=  -221,
+    OpenCLInitError=           -222,
+    OpenCLNoAMDBlasFft=        -223
 };
 } //Error
 
@@ -219,15 +222,17 @@ enum {
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#ifdef __GNUC__
-#  define CV_Error( code, msg ) cv::error( code, msg, __func__, __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, __func__, __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, __func__, __FILE__, __LINE__ )
+#if defined __GNUC__
+#define CV_Func __func__
+#elif defined _MSC_VER
+#define CV_Func __FUNCTION__
 #else
-#  define CV_Error( code, msg ) cv::error( code, msg, "", __FILE__, __LINE__ )
-#  define CV_Error_( code, args ) cv::error( code, cv::format args, "", __FILE__, __LINE__ )
-#  define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, "", __FILE__, __LINE__ )
+#define CV_Func ""
 #endif
+
+#define CV_Error( code, msg ) cv::error( code, msg, CV_Func, __FILE__, __LINE__ )
+#define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
+#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
 
 #ifdef _DEBUG
 #  define CV_DbgAssert(expr) CV_Assert(expr)
@@ -449,15 +454,15 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
 
 ////////////////// forward declarations for important OpenCV types //////////////////
 
-template<typename _Tp, int cn> class CV_EXPORTS Vec;
-template<typename _Tp, int m, int n> class CV_EXPORTS Matx;
+template<typename _Tp, int cn> class Vec;
+template<typename _Tp, int m, int n> class Matx;
 
-template<typename _Tp> class CV_EXPORTS Complex;
-template<typename _Tp> class CV_EXPORTS Point_;
-template<typename _Tp> class CV_EXPORTS Point3_;
-template<typename _Tp> class CV_EXPORTS Size_;
-template<typename _Tp> class CV_EXPORTS Rect_;
-template<typename _Tp> class CV_EXPORTS Scalar_;
+template<typename _Tp> class Complex;
+template<typename _Tp> class Point_;
+template<typename _Tp> class Point3_;
+template<typename _Tp> class Size_;
+template<typename _Tp> class Rect_;
+template<typename _Tp> class Scalar_;
 
 class CV_EXPORTS RotatedRect;
 class CV_EXPORTS Range;
@@ -469,19 +474,22 @@ class CV_EXPORTS RNG;
 class CV_EXPORTS Mat;
 class CV_EXPORTS MatExpr;
 
+class CV_EXPORTS UMat;
+class CV_EXPORTS UMatExpr;
+
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;
 
-template<typename _Tp> class CV_EXPORTS Mat_;
-template<typename _Tp> class CV_EXPORTS SparseMat_;
+template<typename _Tp> class Mat_;
+template<typename _Tp> class SparseMat_;
 
 class CV_EXPORTS MatConstIterator;
 class CV_EXPORTS SparseMatIterator;
 class CV_EXPORTS SparseMatConstIterator;
-template<typename _Tp> class CV_EXPORTS MatIterator_;
-template<typename _Tp> class CV_EXPORTS MatConstIterator_;
-template<typename _Tp> class CV_EXPORTS SparseMatIterator_;
-template<typename _Tp> class CV_EXPORTS SparseMatConstIterator_;
+template<typename _Tp> class MatIterator_;
+template<typename _Tp> class MatConstIterator_;
+template<typename _Tp> class SparseMatIterator_;
+template<typename _Tp> class SparseMatConstIterator_;
 
 namespace ogl
 {
@@ -490,12 +498,17 @@ namespace ogl
     class CV_EXPORTS Arrays;
 }
 
-namespace gpu
+namespace cuda
 {
     class CV_EXPORTS GpuMat;
     class CV_EXPORTS CudaMem;
     class CV_EXPORTS Stream;
     class CV_EXPORTS Event;
+}
+
+namespace cudev
+{
+    template <typename _Tp> class GpuMat_;
 }
 
 } // cv

@@ -645,4 +645,3 @@ cvCreateGLCMImage( CvGLCM* GLCM, int step )
 
     return dest;
 }
-

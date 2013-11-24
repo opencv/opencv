@@ -9,7 +9,7 @@ else()
   project(${PNG_LIBRARY})
 endif()
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIR})
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIRS})
 
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
@@ -29,8 +29,12 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 endif(MSVC)
 
+if (HAVE_WINRT)
+  add_definitions(-DHAVE_WINRT)
+endif()
+
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
-target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARY})
+target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
 
 if(UNIX)
   if(CMAKE_COMPILER_IS_GNUCXX OR CV_ICC)
@@ -51,5 +55,5 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  install(TARGETS ${PNG_LIBRARY} ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
+  ocv_install_target(${PNG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT main)
 endif()

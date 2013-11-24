@@ -14,7 +14,7 @@ It has been tested with the motempl sample program
 First Patch:  August 24, 2004 Travis Wood   TravisOCV@tkwood.com
 For Release:  OpenCV-Linux Beta4  opencv-0.9.6
 Tested On:    LMLBT44 with 8 video inputs
-Problems?     Post your questions at answers.opencv.org, 
+Problems?     Post your questions at answers.opencv.org,
               Report bugs at code.opencv.org,
               Submit your fixes at https://github.com/Itseez/opencv/
 Patched Comments:
@@ -856,8 +856,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
 
    detect_v4l = try_init_v4l(capture, deviceName);
 
-   if ((detect_v4l == -1)
-       )
+   if (detect_v4l == -1)
    {
      fprintf (stderr, "HIGHGUI ERROR: V4L"
               ": device %s: Unable to open for READ ONLY\n", deviceName);
@@ -865,8 +864,7 @@ static int _capture_V4L (CvCaptureCAM_V4L *capture, char *deviceName)
      return -1;
    }
 
-   if ((detect_v4l <= 0)
-       )
+   if (detect_v4l <= 0)
    {
      fprintf (stderr, "HIGHGUI ERROR: V4L"
               ": device %s: Unable to query number of channels\n", deviceName);

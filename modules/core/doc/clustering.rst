@@ -64,6 +64,12 @@ Basically, you can use only the core of the function, set the number of
 attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( ``flags`` = ``KMEANS_USE_INITIAL_LABELS`` ) flag, and then choose the best (most-compact) clustering.
 
+.. note::
+
+   * An example on K-means clustering can be found at opencv_source_code/samples/cpp/kmeans.cpp
+
+   * (Python) An example on K-means clustering can be found at opencv_source_code/samples/python2/kmeans.py
+
 partition
 -------------
 Splits an element set into equivalency classes.

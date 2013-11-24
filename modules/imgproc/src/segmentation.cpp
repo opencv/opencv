@@ -327,7 +327,7 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
     double sr2 = sr * sr;
     int isr2 = cvRound(sr2), isr22 = MAX(isr2,16);
     int tab[768];
-    
+
 
     if( src0.type() != CV_8UC3 )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 3-channel images are supported" );
@@ -534,4 +534,3 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 
     cv::pyrMeanShiftFiltering(src, dst, sp0, sr, max_level, termcrit);
 }
-

@@ -50,13 +50,13 @@ static const float WEIGHT_EPS = 1e-5f;
 Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
-        return new Blender();
+        return makePtr<Blender>();
     if (type == FEATHER)
-        return new FeatherBlender();
+        return makePtr<FeatherBlender>();
     if (type == MULTI_BAND)
-        return new MultiBandBlender(try_gpu);
+        return makePtr<MultiBandBlender>(try_gpu);
     CV_Error(Error::StsBadArg, "unsupported blending method");
-    return NULL;
+    return Ptr<Blender>();
 }
 
 
@@ -188,8 +188,8 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
 
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
-    can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
+    can_use_gpu_ = try_gpu && cuda::getCudaEnabledDeviceCount();
 #else
     (void) try_gpu;
     can_use_gpu_ = false;
@@ -491,19 +491,19 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     pyr.resize(num_levels + 1);
 
-    std::vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
+    std::vector<cuda::GpuMat> gpu_pyr(num_levels + 1);
     gpu_pyr[0].upload(img);
     for (int i = 0; i < num_levels; ++i)
-        gpu::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
+        cuda::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
 
-    gpu::GpuMat tmp;
+    cuda::GpuMat tmp;
     for (int i = 0; i < num_levels; ++i)
     {
-        gpu::pyrUp(gpu_pyr[i + 1], tmp);
-        gpu::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
+        cuda::pyrUp(gpu_pyr[i + 1], tmp);
+        cuda::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
         gpu_pyr[i].download(pyr[i]);
     }
 
@@ -531,19 +531,19 @@ void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     if (pyr.empty())
         return;
 
-    std::vector<gpu::GpuMat> gpu_pyr(pyr.size());
+    std::vector<cuda::GpuMat> gpu_pyr(pyr.size());
     for (size_t i = 0; i < pyr.size(); ++i)
         gpu_pyr[i].upload(pyr[i]);
 
-    gpu::GpuMat tmp;
+    cuda::GpuMat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
     {
-        gpu::pyrUp(gpu_pyr[i], tmp);
-        gpu::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
+        cuda::pyrUp(gpu_pyr[i], tmp);
+        cuda::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
     }
 
     gpu_pyr[0].download(pyr[0]);

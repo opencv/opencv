@@ -76,14 +76,15 @@ enum { MORPH_RECT    = 0,
      };
 
 //! interpolation algorithm
-enum { INTER_NEAREST    = 0, //!< nearest neighbor interpolation
-       INTER_LINEAR     = 1, //!< bilinear interpolation
-       INTER_CUBIC      = 2, //!< bicubic interpolation
-       INTER_AREA       = 3, //!< area-based (or super) interpolation
-       INTER_LANCZOS4   = 4, //!< Lanczos interpolation over 8x8 neighborhood
+enum { INTER_NEAREST        = 0, //!< nearest neighbor interpolation
+       INTER_LINEAR         = 1, //!< bilinear interpolation
+       INTER_CUBIC          = 2, //!< bicubic interpolation
+       INTER_AREA           = 3, //!< area-based (or super) interpolation
+       INTER_LANCZOS4       = 4, //!< Lanczos interpolation over 8x8 neighborhood
 
-       INTER_MAX        = 7, //!< mask for interpolation codes
-       WARP_INVERSE_MAP = 16
+       INTER_MAX            = 7, //!< mask for interpolation codes
+       WARP_FILL_OUTLIERS   = 8,
+       WARP_INVERSE_MAP     = 16
      };
 
 enum { INTER_BITS      = 5,
@@ -462,7 +463,11 @@ enum { COLOR_BGR2BGRA     = 0,
        COLOR_COLORCVT_MAX  = 139
 };
 
-
+//! types of intersection between rectangles
+enum { INTERSECT_NONE = 0,
+       INTERSECT_PARTIAL  = 1,
+       INTERSECT_FULL  = 2
+     };
 
 /*!
  The Base Class for 1D or Row-wise Filters
@@ -656,7 +661,7 @@ public:
                         Point dstOfs = Point(0,0),
                         bool isolated = false);
     //! returns true if the filter is separable
-    bool isSeparable() const { return (const BaseFilter*)filter2D == 0; }
+    bool isSeparable() const { return !filter2D; }
     //! returns the number
     int remainingInputRows() const;
     int remainingOutputRows() const;
@@ -694,54 +699,119 @@ public:
 
 
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
-//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 class CV_EXPORTS GeneralizedHough : public Algorithm
 {
 public:
-    enum { GHT_POSITION = 0,
-           GHT_SCALE    = 1,
-           GHT_ROTATION = 2
-         };
-
-    static Ptr<GeneralizedHough> create(int method);
-
-    virtual ~GeneralizedHough();
-
     //! set template to search
-    void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
-    void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1));
+    virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
+    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    void detect(InputArray image, OutputArray positions, OutputArray votes = cv::noArray(), int cannyThreshold = 100);
-    void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = cv::noArray());
+    virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
+    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
 
-    void release();
+    //! Canny low threshold.
+    virtual void setCannyLowThresh(int cannyLowThresh) = 0;
+    virtual int getCannyLowThresh() const = 0;
 
-protected:
-    virtual void setTemplateImpl(const Mat& edges, const Mat& dx, const Mat& dy, Point templCenter) = 0;
-    virtual void detectImpl(const Mat& edges, const Mat& dx, const Mat& dy, OutputArray positions, OutputArray votes) = 0;
-    virtual void releaseImpl() = 0;
+    //! Canny high threshold.
+    virtual void setCannyHighThresh(int cannyHighThresh) = 0;
+    virtual int getCannyHighThresh() const = 0;
 
-private:
-    Mat edges_;
-    Mat dx_;
-    Mat dy_;
+    //! Minimum distance between the centers of the detected objects.
+    virtual void setMinDist(double minDist) = 0;
+    virtual double getMinDist() const = 0;
+
+    //! Inverse ratio of the accumulator resolution to the image resolution.
+    virtual void setDp(double dp) = 0;
+    virtual double getDp() const = 0;
+
+    //! Maximal size of inner buffers.
+    virtual void setMaxBufferSize(int maxBufferSize) = 0;
+    virtual int getMaxBufferSize() const = 0;
+};
+
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Detects position only without traslation and rotation
+class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
+{
+public:
+    //! R-Table levels.
+    virtual void setLevels(int levels) = 0;
+    virtual int getLevels() const = 0;
+
+    //! The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.
+    virtual void setVotesThreshold(int votesThreshold) = 0;
+    virtual int getVotesThreshold() const = 0;
+};
+
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Detects position, traslation and rotation
+class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
+{
+public:
+    //! Angle difference in degrees between two points in feature.
+    virtual void setXi(double xi) = 0;
+    virtual double getXi() const = 0;
+
+    //! Feature table levels.
+    virtual void setLevels(int levels) = 0;
+    virtual int getLevels() const = 0;
+
+    //! Maximal difference between angles that treated as equal.
+    virtual void setAngleEpsilon(double angleEpsilon) = 0;
+    virtual double getAngleEpsilon() const = 0;
+
+    //! Minimal rotation angle to detect in degrees.
+    virtual void setMinAngle(double minAngle) = 0;
+    virtual double getMinAngle() const = 0;
+
+    //! Maximal rotation angle to detect in degrees.
+    virtual void setMaxAngle(double maxAngle) = 0;
+    virtual double getMaxAngle() const = 0;
+
+    //! Angle step in degrees.
+    virtual void setAngleStep(double angleStep) = 0;
+    virtual double getAngleStep() const = 0;
+
+    //! Angle votes threshold.
+    virtual void setAngleThresh(int angleThresh) = 0;
+    virtual int getAngleThresh() const = 0;
+
+    //! Minimal scale to detect.
+    virtual void setMinScale(double minScale) = 0;
+    virtual double getMinScale() const = 0;
+
+    //! Maximal scale to detect.
+    virtual void setMaxScale(double maxScale) = 0;
+    virtual double getMaxScale() const = 0;
+
+    //! Scale step.
+    virtual void setScaleStep(double scaleStep) = 0;
+    virtual double getScaleStep() const = 0;
+
+    //! Scale votes threshold.
+    virtual void setScaleThresh(int scaleThresh) = 0;
+    virtual int getScaleThresh() const = 0;
+
+    //! Position votes threshold.
+    virtual void setPosThresh(int posThresh) = 0;
+    virtual int getPosThresh() const = 0;
 };
 
 
-class CV_EXPORTS CLAHE : public Algorithm
+class CV_EXPORTS_W CLAHE : public Algorithm
 {
 public:
-    virtual void apply(InputArray src, OutputArray dst) = 0;
+    CV_WRAP virtual void apply(InputArray src, OutputArray dst) = 0;
 
-    virtual void setClipLimit(double clipLimit) = 0;
-    virtual double getClipLimit() const = 0;
+    CV_WRAP virtual void setClipLimit(double clipLimit) = 0;
+    CV_WRAP virtual double getClipLimit() const = 0;
 
-    virtual void setTilesGridSize(Size tileGridSize) = 0;
-    virtual Size getTilesGridSize() const = 0;
+    CV_WRAP virtual void setTilesGridSize(Size tileGridSize) = 0;
+    CV_WRAP virtual Size getTilesGridSize() const = 0;
 
-    virtual void collectGarbage() = 0;
+    CV_WRAP virtual void collectGarbage() = 0;
 };
 
 
@@ -835,11 +905,11 @@ protected:
     Point2f bottomRight;
 };
 
-class LineSegmentDetector : public Algorithm
+class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
 public:
 /**
- * Detect lines in the input image with the specified ROI.
+ * Detect lines in the input image.
  *
  * @param _image    A grayscale(CV_8UC1) input image.
  *                  If only a roi needs to be selected, use
@@ -848,8 +918,6 @@ public:
  * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
  *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
- * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning
- *                          lines coordinates are image wise.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
  * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%.
@@ -859,7 +927,7 @@ public:
  *                              * 1 corresponds to 0.1 mean false alarms
  *                          This vector will be calculated _only_ when the objects type is REFINE_ADV
  */
-    virtual void detect(InputArray _image, OutputArray _lines,
+    CV_WRAP virtual void detect(InputArray _image, OutputArray _lines,
                         OutputArray width = noArray(), OutputArray prec = noArray(),
                         OutputArray nfa = noArray()) = 0;
 
@@ -870,24 +938,25 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    virtual void drawSegments(InputOutputArray image, InputArray lines) = 0;
+    CV_WRAP virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
  *
- * @param image     The image, where lines will be drawn.
- *                  Should have the size of the image, where the lines were found
+ * @param size      The size of the image, where lines were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
+ * @param image     Optional image, where lines will be drawn.
+ *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, Mat* image = 0) = 0;
+    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
 
     virtual ~LineSegmentDetector() {};
 };
 
 //! Returns a pointer to a LineSegmentDetector class.
-CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
+CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     int _refine = LSD_REFINE_STD, double _scale = 0.8,
     double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
     double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
@@ -996,6 +1065,11 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
                                    double sigmaColor, double sigmaSpace,
                                    int borderType = BORDER_DEFAULT );
 
+//! smooths the image using adaptive bilateral filter
+CV_EXPORTS_W void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize,
+                                           double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1),
+                                           int borderType=BORDER_DEFAULT );
+
 //! smooths the image using the box filter. Each pixel is processed in O(1) time
 CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
                              Size ksize, Point anchor = Point(-1,-1),
@@ -1074,7 +1148,7 @@ CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
                               double srn = 0, double stn = 0 );
 
-//! finds line segments in the black-n-white image using probabalistic Hough transform
+//! finds line segments in the black-n-white image using probabilistic Hough transform
 CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
                                double rho, double theta, int threshold,
                                double minLineLength = 0, double maxLineGap = 0 );
@@ -1153,6 +1227,14 @@ CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 //! extracts rectangle from the image at sub-pixel location
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
+
+//! computes the log polar transform
+CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
+                            Point2f center, double M, int flags );
+
+//! computes the linear polar transform
+CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
+                               Point2f center, double maxRadius, int flags );
 
 //! computes the integral image
 CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
@@ -1386,6 +1468,9 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
+//! computes the minimal enclosing triangle for a set of points and returns its area
+CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray triangle );
+
 //! matches two contours using one of the available algorithms
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
@@ -1414,7 +1499,18 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
 
-CV_EXPORTS Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+//! computes whether two rotated rectangles intersect and returns the vertices of the intersecting region
+CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  );
+
+CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Detects position only without traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
+
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Detects position, traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 } // cv
 

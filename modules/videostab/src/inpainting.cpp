@@ -323,10 +323,10 @@ public:
 
 MotionInpainter::MotionInpainter()
 {
-#ifdef HAVE_OPENCV_GPUOPTFLOW
-    setOptFlowEstimator(new DensePyrLkOptFlowEstimatorGpu());
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
+    setOptFlowEstimator(makePtr<DensePyrLkOptFlowEstimatorGpu>());
 #else
-    CV_Error(Error::StsNotImplemented, "Current implementation of MotionInpainter requires GPU");
+    CV_Error(Error::StsNotImplemented, "Current implementation of MotionInpainter requires CUDA");
 #endif
     setFlowErrorThreshold(1e-4f);
     setDistThreshold(5.f);

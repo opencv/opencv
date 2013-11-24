@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,12 +43,12 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
-#ifdef HAVE_OPENCL
-
 using namespace cv;
+
+#ifdef HAVE_OPENCL
 
 PARAM_TEST_CASE(StereoMatchBM, int, int)
 {
@@ -62,7 +62,7 @@ PARAM_TEST_CASE(StereoMatchBM, int, int)
     }
 };
 
-TEST_P(StereoMatchBM, Regression)
+OCL_TEST_P(StereoMatchBM, Regression)
 {
 
     Mat left_image  = readImage("gpu/stereobm/aloe-L.png", IMREAD_GRAYSCALE);
@@ -110,7 +110,7 @@ PARAM_TEST_CASE(StereoMatchBP, int, int, int, float, float, float, float)
         disc_single_jump_  = GET_PARAM(6);
     }
 };
-TEST_P(StereoMatchBP, Regression)
+OCL_TEST_P(StereoMatchBP, Regression)
 {
     Mat left_image  = readImage("gpu/stereobp/aloe-L.png");
     Mat right_image = readImage("gpu/stereobp/aloe-R.png");
@@ -163,7 +163,7 @@ PARAM_TEST_CASE(StereoMatchConstSpaceBP, int, int, int, int, float, float, float
         msg_type_  = GET_PARAM(9);
     }
 };
-TEST_P(StereoMatchConstSpaceBP, Regression)
+OCL_TEST_P(StereoMatchConstSpaceBP, Regression)
 {
     Mat left_image  = readImage("gpu/csstereobp/aloe-L.png");
     Mat right_image = readImage("gpu/csstereobp/aloe-R.png");

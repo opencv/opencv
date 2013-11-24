@@ -70,7 +70,7 @@ CV_CUDEV_MAKE_VEC_INST(double)
 
 #undef CV_CUDEV_MAKE_VEC_INST
 
-template<> struct MakeVec<schar, 1> { typedef char  type; };
+template<> struct MakeVec<schar, 1> { typedef schar type; };
 template<> struct MakeVec<schar, 2> { typedef char2 type; };
 template<> struct MakeVec<schar, 3> { typedef char3 type; };
 template<> struct MakeVec<schar, 4> { typedef char4 type; };

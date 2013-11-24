@@ -374,7 +374,15 @@ private:
 
 struct ImplMutex::Impl
 {
-    void init() { InitializeCriticalSection(&cs); refcount = 1; }
+    void init()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        ::InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        ::InitializeCriticalSection(&cs);
+#endif
+        refcount = 1;
+    }
     void destroy() { DeleteCriticalSection(&cs); }
 
     void lock() { EnterCriticalSection(&cs); }
@@ -546,7 +554,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
         goto exit_func;
     }
     err =
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 3, 0)
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
     avformat_find_stream_info(ic, NULL);
 #else
     av_find_stream_info(ic);
@@ -1204,7 +1212,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 #if LIBAVUTIL_BUILD > CALC_FFMPEG_VERSION(51,11,0)
     /* Some settings for libx264 encoding, restore dummy values for gop_size
      and qmin since they will be set to reasonable defaults by the libx264
-     preset system. Also, use a crf encode with the default quality rating, 
+     preset system. Also, use a crf encode with the default quality rating,
      this seems easier than finding an appropriate default bitrate. */
     if (c->codec_id == CODEC_ID_H264) {
       c->gop_size = -1;
@@ -1392,8 +1400,6 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 /// close video output stream and free associated memory
 void CvVideoWriter_FFMPEG::close()
 {
-    unsigned i;
-
     // nothing to do if already released
     if ( !picture )
         return;
@@ -1449,13 +1455,6 @@ void CvVideoWriter_FFMPEG::close()
 
     av_free(outbuf);
 
-    /* free the streams */
-    for(i = 0; i < oc->nb_streams; i++)
-    {
-        av_freep(&oc->streams[i]->codec);
-        av_freep(&oc->streams[i]);
-    }
-
     if (!(fmt->flags & AVFMT_NOFILE))
     {
         /* close the output file */
@@ -1473,7 +1472,7 @@ void CvVideoWriter_FFMPEG::close()
     }
 
     /* free the stream */
-    av_free(oc);
+    avformat_free_context(oc);
 
     if( temp_image.data )
     {
@@ -2145,7 +2144,7 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
     if (err < 0)
         return false;
 
-    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 3, 0)
+    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 6, 0)
         err = avformat_find_stream_info(ctx_, 0);
     #else
         err = av_find_stream_info(ctx_);

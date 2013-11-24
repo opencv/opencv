@@ -44,7 +44,7 @@
 #include "test_precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::cudev;
 using namespace cvtest;
 
@@ -178,4 +178,3 @@ TYPED_TEST(SplitTest, C4)
 {
     SplitTest<TypeParam>::test_c4();
 }
-

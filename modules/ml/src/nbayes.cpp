@@ -210,6 +210,8 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
                 prod_data[c2] += train_vec[c2]*val1;
         }
     }
+    cvReleaseMat( &responses );
+    responses = 0;
 
     /* calculate avg, covariance matrix, c */
     for( cls = 0; cls < nclasses; cls++ )
@@ -623,4 +625,3 @@ float CvNormalBayesClassifier::predict( const Mat& _samples, Mat* _results ) con
 }
 
 /* End of file. */
-

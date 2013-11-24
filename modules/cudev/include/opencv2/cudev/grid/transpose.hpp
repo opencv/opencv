@@ -49,19 +49,53 @@
 #include "../common.hpp"
 #include "../ptr2d/traits.hpp"
 #include "../ptr2d/gpumat.hpp"
+#include "../ptr2d/glob.hpp"
 #include "detail/transpose.hpp"
 
 namespace cv { namespace cudev {
 
-template <class SrcPtr, typename DstType>
-__host__ void gridTranspose(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridTranspose_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
     const int rows = getRows(src);
     const int cols = getCols(src);
 
     dst.create(cols, rows);
 
-    transpose_detail::transpose(shrinkPtr(src), shrinkPtr(dst), rows, cols, StreamAccessor::getStream(stream));
+    transpose_detail::transpose<Policy>(shrinkPtr(src), shrinkPtr(dst), rows, cols, StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridTranspose_(const SrcPtr& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
+{
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst) == cols && getCols(dst) == rows );
+
+    transpose_detail::transpose<Policy>(shrinkPtr(src), shrinkPtr(dst), rows, cols, StreamAccessor::getStream(stream));
+}
+
+// Default Policy
+
+struct DefaultTransposePolicy
+{
+    enum {
+        tile_dim    = 16,
+        block_dim_y = 16
+    };
+};
+
+template <class SrcPtr, typename DstType>
+__host__ void gridTranspose(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
+{
+    gridTranspose_<DefaultTransposePolicy>(src, dst, stream);
+}
+
+template <class SrcPtr, typename DstType>
+__host__ void gridTranspose(const SrcPtr& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
+{
+    gridTranspose_<DefaultTransposePolicy>(src, dst, stream);
 }
 
 }}

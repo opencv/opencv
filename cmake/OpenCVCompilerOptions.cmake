@@ -161,6 +161,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
   endif()
 
+  if(ENABLE_NEON)
+    add_extra_compiler_option(-mfpu=neon)
+  endif()
+
   # Profiling?
   if(ENABLE_PROFILING)
     add_extra_compiler_option("-pg -g")
@@ -232,6 +236,10 @@ if(MSVC)
     if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND ENABLE_SSE2)
       set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /fp:fast") # !! important - be on the same wave with x64 compilers
     endif()
+  endif()
+
+  if(OPENCV_WARNINGS_ARE_ERRORS)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /WX")
   endif()
 endif()
 
