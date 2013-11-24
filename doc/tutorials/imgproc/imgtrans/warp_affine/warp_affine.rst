@@ -306,4 +306,3 @@ Result
             :alt: Original image
             :width: 250pt
             :align: center
-

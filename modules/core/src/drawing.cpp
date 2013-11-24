@@ -886,12 +886,14 @@ void ellipse2Poly( Point center, Size axes, int angle,
         Point pt;
         pt.x = cvRound( cx + x * alpha - y * beta );
         pt.y = cvRound( cy + x * beta + y * alpha );
-        if( pt != prevPt )
+        if( pt != prevPt ){
             pts.push_back(pt);
+            prevPt = pt;
+        }
     }
 
     // If there are no points, it's a zero-size polygon
-    if( pts.size() < 2) {
+    if( pts.size() == 1) {
         pts.assign(2,center);
     }
 }

@@ -34,13 +34,16 @@
 //
 //M*/
 
-
 #include <iostream>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include "opencv2/contrib/compat.hpp"
 #include "opencv2/highgui/highgui_c.h"
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
 
 static void help(char **argv)
 {
@@ -410,4 +413,3 @@ int main(int argc, char** argv )
 
     return 0;
 }
-

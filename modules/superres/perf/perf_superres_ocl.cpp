@@ -42,11 +42,10 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCV_OCL
 
 #include "opencv2/ocl.hpp"
 using namespace std;
-using namespace std::tr1;
 using namespace testing;
 using namespace perf;
 using namespace cv;
@@ -108,13 +107,10 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1_OCL,
     Combine(Values(szSmall64, szSmall128),
     Values(MatType(CV_8UC1), MatType(CV_8UC3))))
 {
-    std::vector<cv::ocl::Info>info;
-    cv::ocl::getDevice(info);
-
     declare.time(5 * 60);
 
-    const Size size = get<0>(GetParam());
-    const int type = get<1>(GetParam());
+    const Size size = std::tr1::get<0>(GetParam());
+    const int type = std::tr1::get<1>(GetParam());
 
     Mat frame(size, type);
     declare.in(frame, WARMUP_RNG);
@@ -135,7 +131,7 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1_OCL,
     superRes_ocl->set("temporalAreaRadius", temporalAreaRadius);
     superRes_ocl->set("opticalFlow", opticalFlowOcl);
 
-    superRes_ocl->setInput(new OneFrameSource_OCL(frame_ocl));
+    superRes_ocl->setInput(makePtr<OneFrameSource_OCL>(frame_ocl));
 
     ocl::oclMat dst_ocl;
     superRes_ocl->nextFrame(dst_ocl);

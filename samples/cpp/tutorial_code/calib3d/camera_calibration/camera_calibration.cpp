@@ -9,6 +9,10 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS
+#endif
+
 using namespace cv;
 using namespace std;
 

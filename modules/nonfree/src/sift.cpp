@@ -543,6 +543,8 @@ static void calcSIFTDescriptor( const Mat& img, Point2f ptf, float ori, float sc
     float exp_scale = -1.f/(d * d * 0.5f);
     float hist_width = SIFT_DESCR_SCL_FCTR * scl;
     int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
+    // Clip the radius to the diagonal of the image to avoid autobuffer too large exception
+    radius = std::min(radius, (int) sqrt((double) img.cols*img.cols + img.rows*img.rows));
     cos_t /= hist_width;
     sin_t /= hist_width;
 

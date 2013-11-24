@@ -454,4 +454,3 @@ CvBlobTracker* cvCreateBlobTrackerMSFGS()
 {
     return cvCreateBlobTrackerList(cvCreateBlobTrackerOneMSFGS);
 }
-

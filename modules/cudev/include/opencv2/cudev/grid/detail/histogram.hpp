@@ -56,6 +56,7 @@ namespace grid_histogram_detail
     template <int BIN_COUNT, int BLOCK_SIZE, class SrcPtr, typename ResType, class MaskPtr>
     __global__ void histogram(const SrcPtr src, ResType* hist, const MaskPtr mask, const int rows, const int cols)
     {
+    #if CV_CUDEV_ARCH >= 120
         __shared__ ResType smem[BIN_COUNT];
 
         const int y = blockIdx.x * blockDim.y + threadIdx.y;
@@ -86,6 +87,7 @@ namespace grid_histogram_detail
             if (histVal > 0)
                 atomicAdd(hist + i, histVal);
         }
+    #endif
     }
 
     template <int BIN_COUNT, class Policy, class SrcPtr, typename ResType, class MaskPtr>

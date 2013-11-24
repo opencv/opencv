@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     std::string params_filename = std::string(argv[4]);
 
     Ptr<GenericDescriptorMatcher> descriptorMatcher = GenericDescriptorMatcher::create(alg_name, params_filename);
-    if( descriptorMatcher.empty() )
+    if( !descriptorMatcher )
     {
         printf ("Cannot create descriptor\n");
         return 0;
@@ -80,7 +80,7 @@ Mat DrawCorrespondences(const Mat& img1, const vector<KeyPoint>& features1, cons
 
     for (size_t i = 0; i < features1.size(); i++)
     {
-        circle(img_corr, features1[i].pt, 3, Scalar(255, 0, 0));
+        circle(img_corr, features1[i].pt, 3, Scalar(0, 0, 255));
     }
 
     for (size_t i = 0; i < features2.size(); i++)

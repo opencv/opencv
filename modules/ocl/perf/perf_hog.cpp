@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,52 +43,58 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
+
+using namespace perf;
 
 ///////////// HOG////////////////////////
 
-PERFTEST(HOG)
+struct RectLess :
+        public std::binary_function<cv::Rect, cv::Rect, bool>
 {
-    Mat src = imread(abspath("road.png"), cv::IMREAD_GRAYSCALE);
-
-    if (src.empty())
+    bool operator()(const cv::Rect& a,
+        const cv::Rect& b) const
     {
-        throw runtime_error("can't open road.png");
+        if (a.x != b.x)
+            return a.x < b.x;
+        else if (a.y != b.y)
+            return a.y < b.y;
+        else if (a.width != b.width)
+            return a.width < b.width;
+        else
+            return a.height < b.height;
     }
+};
 
-    cv::HOGDescriptor hog;
-    hog.setSVMDetector(hog.getDefaultPeopleDetector());
-    std::vector<cv::Rect> found_locations;
-    std::vector<cv::Rect> d_found_locations;
+PERF_TEST(HOGFixture, HOG)
+{
+    Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
 
-    SUBTEST << src.cols << 'x' << src.rows << "; road.png";
+    vector<cv::Rect> found_locations;
+    declare.in(src).time(5);
 
-    hog.detectMultiScale(src, found_locations);
+    if (RUN_PLAIN_IMPL)
+    {
+        HOGDescriptor hog;
+        hog.setSVMDetector(hog.getDefaultPeopleDetector());
 
-    CPU_ON;
-    hog.detectMultiScale(src, found_locations);
-    CPU_OFF;
+        TEST_CYCLE() hog.detectMultiScale(src, found_locations);
 
-    cv::ocl::HOGDescriptor ocl_hog;
-    ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
-    ocl::oclMat d_src;
-    d_src.upload(src);
+        std::sort(found_locations.begin(), found_locations.end(), RectLess());
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
+    }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::HOGDescriptor ocl_hog;
+        ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
+        ocl::oclMat oclSrc(src);
 
-    WARMUP_ON;
-    ocl_hog.detectMultiScale(d_src, d_found_locations);
-    WARMUP_OFF;
-    
-    if(d_found_locations.size() == found_locations.size())
-        TestSystem::instance().setAccurate(1, 0);
+        OCL_TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
+
+        std::sort(found_locations.begin(), found_locations.end(), RectLess());
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
+    }
     else
-        TestSystem::instance().setAccurate(0, abs((int)found_locations.size() - (int)d_found_locations.size()));
-
-    GPU_ON;
-    ocl_hog.detectMultiScale(d_src, found_locations);
-    GPU_OFF;
-
-    GPU_FULL_ON;
-    d_src.upload(src);
-    ocl_hog.detectMultiScale(d_src, found_locations);
-    GPU_FULL_OFF;
+        OCL_PERF_ELSE
 }

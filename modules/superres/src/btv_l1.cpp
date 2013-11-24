@@ -337,7 +337,7 @@ namespace
 
         // update blur filter and btv weights
 
-        if (filter_.empty() || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
+        if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
         {
             filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
@@ -614,5 +614,5 @@ namespace
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1()
 {
-    return new BTVL1;
+    return makePtr<BTVL1>();
 }

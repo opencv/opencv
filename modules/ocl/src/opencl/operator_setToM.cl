@@ -16,7 +16,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -33,8 +33,17 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 __kernel void set_to_with_mask(
-        GENTYPE scalar,
+        __global GENTYPE * scalar,
         __global GENTYPE * dstMat,
         int cols,
         int rows,
@@ -44,16 +53,16 @@ __kernel void set_to_with_mask(
         int maskStep,
         int maskoffset)
 {
-        int x=get_global_id(0);
-        int y=get_global_id(1);
-        x = x< cols ? x: cols-1;
-        y = y< rows ? y: rows-1;
-        int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
-        int maskidx = mad24(y,maskStep,x+ maskoffset);
-        uchar mask = maskMat[maskidx];
-        if (mask)
-        {
-            dstMat[dstidx] = scalar;
-        }
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
+    if (x < cols && y < rows)
+    {
+        int maskidx = mad24(y,maskStep,x+ maskoffset);
+        if (maskMat[maskidx])
+        {
+            int dstidx = mad24(y,dstStep_in_pixel,x+ dstoffset_in_pixel);
+            dstMat[dstidx] = scalar[0];
+        }
+    }
 }

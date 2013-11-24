@@ -384,7 +384,7 @@ inline size_t LshTable<unsigned char>::getKey(const unsigned char* feature) cons
 {
     // no need to check if T is dividable by sizeof(size_t) like in the Hamming
     // distance computation as we have a mask
-    const size_t* feature_block_ptr = reinterpret_cast<const size_t*> (feature);
+    const size_t* feature_block_ptr = reinterpret_cast<const size_t*> ((const void*)feature);
 
     // Figure out the subsignature of the feature
     // Given the feature ABCDEF, and the mask 001011, the output will be

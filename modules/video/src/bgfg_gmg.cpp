@@ -485,7 +485,7 @@ void BackgroundSubtractorGMGImpl::release()
 
 Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames, double decisionThreshold)
 {
-    Ptr<BackgroundSubtractorGMG> bgfg = new BackgroundSubtractorGMGImpl;
+    Ptr<BackgroundSubtractorGMG> bgfg = makePtr<BackgroundSubtractorGMGImpl>();
     bgfg->setNumFrames(initializationFrames);
     bgfg->setDecisionThreshold(decisionThreshold);
 

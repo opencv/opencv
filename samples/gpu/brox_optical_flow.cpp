@@ -6,11 +6,13 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/cudaoptflow.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 void getFlowField(const Mat& u, const Mat& v, Mat& flowField);
 
@@ -64,7 +66,7 @@ int main(int argc, const char* argv[])
             return -1;
         }
 
-        cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+        cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
         cout << "OpenCV / NVIDIA Computer Vision" << endl;
         cout << "Optical Flow Demo: Frame Interpolation" << endl;
@@ -161,7 +163,7 @@ int main(int argc, const char* argv[])
             interpolateFrames(d_r, d_rt, d_fu, d_fv, d_bu, d_bv, timePos, d_rNew, d_buf);
 
             GpuMat channels3[] = {d_bNew, d_gNew, d_rNew};
-            merge(channels3, 3, d_newFrame);
+            cuda::merge(channels3, 3, d_newFrame);
 
             frames.push_back(Mat(d_newFrame));
 

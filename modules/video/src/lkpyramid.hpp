@@ -34,4 +34,3 @@ namespace detail
 
 }// namespace detail
 }// namespace cv
-

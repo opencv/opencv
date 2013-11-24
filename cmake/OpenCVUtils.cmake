@@ -11,6 +11,29 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
+# assert macro
+# Note: it doesn't support lists in arguments
+# Usage samples:
+#   ocv_assert(MyLib_FOUND)
+#   ocv_assert(DEFINED MyLib_INCLUDE_DIRS)
+macro(ocv_assert)
+  if(NOT (${ARGN}))
+    string(REPLACE ";" " " __assert_msg "${ARGN}")
+    message(AUTHOR_WARNING "Assertion failed: ${__assert_msg}")
+  endif()
+endmacro()
+
+macro(ocv_check_environment_variables)
+  foreach(_var ${ARGN})
+    if(NOT DEFINED ${_var} AND DEFINED ENV{${_var}})
+      set(__value "$ENV{${_var}}")
+      file(TO_CMAKE_PATH "${__value}" __value) # Assume that we receive paths
+      set(${_var} "${__value}")
+      message(STATUS "Update variable ${_var} from environment: ${${_var}}")
+    endif()
+  endforeach()
+endmacro()
+
 # adds include directories in such way that directories from the OpenCV source tree go first
 function(ocv_include_directories)
   set(__add_before "")
@@ -77,7 +100,7 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
     if(_fname)
       MESSAGE(STATUS "Performing Test ${RESULT}")
       TRY_COMPILE(${RESULT}
-        ${CMAKE_BINARY_DIR}
+        "${CMAKE_BINARY_DIR}"
         "${_fname}"
         COMPILE_DEFINITIONS "${FLAG}"
         OUTPUT_VARIABLE OUTPUT)
@@ -423,6 +446,72 @@ macro(ocv_convert_to_full_paths VAR)
     unset(__tmp)
   endif()
 endmacro()
+
+
+# add install command
+function(ocv_install_target)
+  install(TARGETS ${ARGN})
+
+  set(isPackage 0)
+  unset(__package)
+  unset(__target)
+  foreach(e ${ARGN})
+    if(NOT DEFINED __target)
+      set(__target "${e}")
+    endif()
+    if(isPackage EQUAL 1)
+      set(__package "${e}")
+      break()
+    endif()
+    if(e STREQUAL "EXPORT")
+      set(isPackage 1)
+    endif()
+  endforeach()
+
+  if(DEFINED __package)
+    list(APPEND ${__package}_TARGETS ${__target})
+    set(${__package}_TARGETS "${${__package}_TARGETS}" CACHE INTERNAL "List of ${__package} targets")
+  endif()
+
+  if(INSTALL_CREATE_DISTRIB)
+    if(MSVC AND NOT BUILD_SHARED_LIBS)
+      set(__target "${ARGV0}")
+
+      set(isArchive 0)
+      set(isDst 0)
+      unset(__dst)
+      foreach(e ${ARGN})
+        if(isDst EQUAL 1)
+          set(__dst "${e}")
+          break()
+        endif()
+        if(isArchive EQUAL 1 AND e STREQUAL "DESTINATION")
+          set(isDst 1)
+        endif()
+        if(e STREQUAL "ARCHIVE")
+          set(isArchive 1)
+        else()
+          set(isArchive 0)
+        endif()
+      endforeach()
+
+#      message(STATUS "Process ${__target} dst=${__dst}...")
+      if(DEFINED __dst)
+        get_target_property(fname ${__target} LOCATION_DEBUG)
+        if(fname MATCHES "\\.lib$")
+          string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
+          install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Debug)
+        endif()
+
+        get_target_property(fname ${__target} LOCATION_RELEASE)
+        if(fname MATCHES "\\.lib$")
+          string(REGEX REPLACE "\\.lib$" ".pdb" fname "${fname}")
+          install(FILES ${fname} DESTINATION ${__dst} CONFIGURATIONS Release)
+        endif()
+      endif()
+    endif()
+  endif()
+endfunction()
 
 
 # read set of version defines from the header file

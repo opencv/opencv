@@ -47,11 +47,76 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <iostream>
 #include <vector>
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+static IppStatus sts = ippInit();
+#endif
+
 namespace cv
 {
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
+    typedef IppStatus (CV_STDCALL* ippiWarpPerspectiveBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
+    typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
+    typedef IppStatus (CV_STDCALL* ippiResizeSqrPixelFunc)(const void*, IppiSize, int, IppiRect, void*, int, IppiRect, double, double, double, double, int, Ipp8u *);
+
+    template <int channels, typename Type>
+    bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
+    {
+        Type values[channels];
+        for( int i = 0; i < channels; i++ )
+            values[i] = (Type)value[i];
+        return func(values, dataPointer, step, size) >= 0;
+    }
+
+    bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
+    {
+        if( channels == 1 )
+        {
+            switch( depth )
+            {
+            case CV_8U:
+                return ippiSet_8u_C1R((Ipp8u)value[0], (Ipp8u *)dataPointer, step, size) >= 0;
+            case CV_16U:
+                return ippiSet_16u_C1R((Ipp16u)value[0], (Ipp16u *)dataPointer, step, size) >= 0;
+            case CV_32F:
+                return ippiSet_32f_C1R((Ipp32f)value[0], (Ipp32f *)dataPointer, step, size) >= 0;
+            }
+        }
+        else
+        {
+            if( channels == 3 )
+            {
+                switch( depth )
+                {
+                case CV_8U:
+                    return IPPSetSimple<3, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C3R);
+                case CV_16U:
+                    return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C3R);
+                case CV_32F:
+                    return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C3R);
+                }
+            }
+            else if( channels == 4 )
+            {
+                switch( depth )
+                {
+                case CV_8U:
+                    return IPPSetSimple<4, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C4R);
+                case CV_16U:
+                    return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C4R);
+                case CV_32F:
+                    return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C4R);
+                }
+            }
+        }
+        return false;
+    }
+#endif
 
 /************** interpolation formulas and tables ***************/
 
@@ -1283,7 +1348,7 @@ public:
             }
         }
         else if (cn == 3)
-            for ( ; dx <= w - 6; dx += 6, S0 += 12, S1 += 12, D += 6)
+            for ( ; dx <= w - 11; dx += 6, S0 += 12, S1 += 12, D += 6)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1308,6 +1373,9 @@ public:
         else
         {
             CV_Assert(cn == 4);
+            int v[] = { 0, 0, -1, -1 };
+            __m128i mask = _mm_loadu_si128((const __m128i*)v);
+
             for ( ; dx <= w - 8; dx += 8, S0 += 16, S1 += 16, D += 8)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
@@ -1321,14 +1389,15 @@ public:
                 __m128i s0 = _mm_add_epi16(r0_16l, _mm_srli_si128(r0_16l, 8));
                 __m128i s1 = _mm_add_epi16(r1_16l, _mm_srli_si128(r1_16l, 8));
                 s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
-                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
-                _mm_storel_epi64((__m128i*)D, s0);
+                __m128i res0 = _mm_srli_epi16(s0, 2);
 
                 s0 = _mm_add_epi16(r0_16h, _mm_srli_si128(r0_16h, 8));
                 s1 = _mm_add_epi16(r1_16h, _mm_srli_si128(r1_16h, 8));
                 s0 = _mm_add_epi16(s1, _mm_add_epi16(s0, delta2));
-                s0 = _mm_packus_epi16(_mm_srli_epi16(s0, 2), zero);
-                _mm_storel_epi64((__m128i*)(D+4), s0);
+                __m128i res1 = _mm_srli_epi16(s0, 2);
+                s0 = _mm_packus_epi16(_mm_or_si128(_mm_andnot_si128(mask, res0),
+                                                   _mm_and_si128(mask, _mm_slli_si128(res1, 8))), zero);
+                _mm_storel_epi64((__m128i*)(D), s0);
             }
         }
 
@@ -1381,7 +1450,7 @@ public:
             }
         }
         else if (cn == 3)
-            for ( ; dx <= w - 3; dx += 3, S0 += 6, S1 += 6, D += 3)
+            for ( ; dx <= w - 4; dx += 3, S0 += 6, S1 += 6, D += 3)
             {
                 __m128i r0 = _mm_loadu_si128((const __m128i*)S0);
                 __m128i r1 = _mm_loadu_si128((const __m128i*)S1);
@@ -1795,9 +1864,83 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+class IPPresizeInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPresizeInvoker(Mat &_src, Mat &_dst, double &_inv_scale_x, double &_inv_scale_y, int _mode, ippiResizeSqrPixelFunc _func, bool *_ok) :
+      ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), func(_func), ok(_ok)
+      {
+          *ok = true;
+      }
 
+      virtual void operator() (const Range& range) const
+      {
+          int cn = src.channels();
+          IppiRect srcroi = { 0, range.start, src.cols, range.end - range.start };
+          int dsty = CV_IMIN(cvRound(range.start * inv_scale_y), dst.rows);
+          int dstwidth = CV_IMIN(cvRound(src.cols * inv_scale_x), dst.cols);
+          int dstheight = CV_IMIN(cvRound(range.end * inv_scale_y), dst.rows);
+          IppiRect dstroi = { 0, dsty, dstwidth, dstheight - dsty };
+          int bufsize;
+          ippiResizeGetBufSize( srcroi, dstroi, cn, mode, &bufsize );
+          AutoBuffer<uchar> buf(bufsize + 64);
+          uchar* bufptr = alignPtr((uchar*)buf, 32);
+          if( func( src.data, ippiSize(src.cols, src.rows), (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, inv_scale_x, inv_scale_y, 0, 0, mode, bufptr ) < 0 )
+              *ok = false;
+      }
+private:
+    Mat &src;
+    Mat &dst;
+    double inv_scale_x;
+    double inv_scale_y;
+    int mode;
+    ippiResizeSqrPixelFunc func;
+    bool *ok;
+    const IPPresizeInvoker& operator= (const IPPresizeInvoker&);
+};
+#endif
+
+static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
+                        double fx, double fy, int interpolation)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    if( !(cn <= 4 &&
+           (interpolation == INTER_NEAREST ||
+           (interpolation == INTER_LINEAR && (depth == CV_8U || depth == CV_32F)))) )
+        return false;
+    UMat src = _src.getUMat();
+    _dst.create(dsize, type);
+    UMat dst = _dst.getUMat();
+    ocl::Kernel k;
+
+    if (interpolation == INTER_LINEAR)
+    {
+        int wdepth = depth == CV_8U ? CV_32S : CV_32F;
+        int wtype = CV_MAKETYPE(wdepth, cn);
+        char buf[2][32];
+        k.create("resizeLN", ocl::imgproc::resize_oclsrc,
+                 format("-D INTER_LINEAR -D depth=%s -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(wtype),
+                        ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1])));
+    }
+    else if (interpolation == INTER_NEAREST)
+    {
+        k.create("resizeNN", ocl::imgproc::resize_oclsrc,
+                 format("-D INTER_NEAREST -D PIXTYPE=%s", ocl::memopTypeToStr(type) ));
+    }
+
+    if( k.empty() )
+        return false;
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+           (float)(1./fx), (float)(1./fy));
+    size_t globalsize[] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, 0, false);
 }
 
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1908,25 +2051,29 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         resizeArea_<double, double>, 0
     };
 
-    Mat src = _src.getMat();
-    Size ssize = src.size();
+    Size ssize = _src.size();
 
     CV_Assert( ssize.area() > 0 );
-    CV_Assert( dsize.area() || (inv_scale_x > 0 && inv_scale_y > 0) );
-    if( !dsize.area() )
+    CV_Assert( dsize.area() > 0 || (inv_scale_x > 0 && inv_scale_y > 0) );
+    if( dsize.area() == 0 )
     {
-        dsize = Size(saturate_cast<int>(src.cols*inv_scale_x),
-            saturate_cast<int>(src.rows*inv_scale_y));
-        CV_Assert( dsize.area() );
+        dsize = Size(saturate_cast<int>(ssize.width*inv_scale_x),
+                     saturate_cast<int>(ssize.height*inv_scale_y));
+        CV_Assert( dsize.area() > 0 );
     }
     else
     {
-        inv_scale_x = (double)dsize.width/src.cols;
-        inv_scale_y = (double)dsize.height/src.rows;
+        inv_scale_x = (double)dsize.width/ssize.width;
+        inv_scale_y = (double)dsize.height/ssize.height;
     }
+
+    if( ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT &&
+        ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation) )
+        return;
+
+    Mat src = _src.getMat();
     _dst.create(dsize, src.type());
     Mat dst = _dst.getMat();
-
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::resize(src, dst, (float)inv_scale_x, (float)inv_scale_y, interpolation))
@@ -1936,6 +2083,34 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
+    int type = src.type();
+    ippiResizeSqrPixelFunc ippFunc =
+        type == CV_8UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C1R :
+        type == CV_8UC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C3R :
+        type == CV_8UC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C4R :
+        type == CV_16UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C1R :
+        type == CV_16UC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C3R :
+        type == CV_16UC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C4R :
+        type == CV_16SC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C1R :
+        type == CV_16SC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C3R :
+        type == CV_16SC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C4R :
+        type == CV_32FC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C1R :
+        type == CV_32FC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C3R :
+        type == CV_32FC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C4R :
+        0;
+    if( ippFunc && mode != 0 )
+    {
+        bool ok;
+        Range range(0, src.rows);
+        IPPresizeInvoker invoker(src, dst, inv_scale_x, inv_scale_y, mode, ippFunc, &ok);
+        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+        if( ok )
+            return;
+    }
+#endif
 
     if( interpolation == INTER_NEAREST )
     {
@@ -3046,8 +3221,8 @@ public:
                             int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
                             int sy = cvRound(sY[x1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = (short)(sx >> INTER_BITS);
-                            XY[x1*2+1] = (short)(sy >> INTER_BITS);
+                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
                             A[x1] = (ushort)v;
                         }
                     }
@@ -3060,8 +3235,8 @@ public:
                             int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
                             int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = (short)(sx >> INTER_BITS);
-                            XY[x1*2+1] = (short)(sy >> INTER_BITS);
+                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
                             A[x1] = (ushort)v;
                         }
                     }
@@ -3275,8 +3450,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
-                    dst1[x*2] = (short)(ix >> INTER_BITS);
-                    dst1[x*2+1] = (short)(iy >> INTER_BITS);
+                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
         }
@@ -3293,8 +3468,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
-                    dst1[x*2] = (short)(ix >> INTER_BITS);
-                    dst1[x*2+1] = (short)(iy >> INTER_BITS);
+                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
         }
@@ -3446,6 +3621,49 @@ private:
     double *M;
 };
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+class IPPwarpAffineInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPwarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
+      ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
+      {
+          *ok = true;
+      }
+
+      virtual void operator() (const Range& range) const
+      {
+          IppiSize srcsize = { src.cols, src.rows };
+          IppiRect srcroi = { 0, 0, src.cols, src.rows };
+          IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
+          int cnn = src.channels();
+          if( borderType == BORDER_CONSTANT )
+          {
+              IppiSize setSize = { dst.cols, range.end - range.start };
+              void *dataPointer = dst.data + dst.step[0] * range.start;
+              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+              {
+                  *ok = false;
+                  return;
+              }
+          }
+          if( func( src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode ) < 0) ////Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
+              *ok = false;
+      }
+private:
+    Mat &src;
+    Mat &dst;
+    double (&coeffs)[2][3];
+    int mode;
+    int borderType;
+    Scalar borderValue;
+    ippiWarpAffineBackFunc func;
+    bool *ok;
+    const IPPwarpAffineInvoker& operator= (const IPPwarpAffineInvoker&);
+};
+#endif
+
 }
 
 
@@ -3491,6 +3709,50 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    int depth = src.depth();
+    int channels = src.channels();
+    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
+        ( channels == 1 || channels == 3 || channels == 4 ) &&
+        ( borderType == cv::BORDER_TRANSPARENT || ( borderType == cv::BORDER_CONSTANT ) ) )
+    {
+        int type = src.type();
+        ippiWarpAffineBackFunc ippFunc =
+            type == CV_8UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C1R :
+            type == CV_8UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C3R :
+            type == CV_8UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C4R :
+            type == CV_16UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C1R :
+            type == CV_16UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C3R :
+            type == CV_16UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C4R :
+            type == CV_32FC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C1R :
+            type == CV_32FC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C3R :
+            type == CV_32FC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C4R :
+            0;
+        int mode =
+            flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
+            flags == INTER_NEAREST ? IPPI_INTER_NN :
+            flags == INTER_CUBIC ? IPPI_INTER_CUBIC :
+            0;
+        if( mode && ippFunc )
+        {
+            double coeffs[2][3];
+            for( int i = 0; i < 2; i++ )
+            {
+                for( int j = 0; j < 3; j++ )
+                {
+                    coeffs[i][j] = matM.at<double>(i, j);
+                }
+            }
+            bool ok;
+            Range range(0, dst.rows);
+            IPPwarpAffineInvoker invoker(src, dst, coeffs, mode, borderType, borderValue, ippFunc, &ok);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+            if( ok )
+                return;
+        }
+    }
+#endif
 
     for( x = 0; x < dst.cols; x++ )
     {
@@ -3599,6 +3861,50 @@ private:
     Scalar borderValue;
 };
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+class IPPwarpPerspectiveInvoker :
+    public ParallelLoopBody
+{
+public:
+    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) :
+      ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
+      {
+          *ok = true;
+      }
+
+      virtual void operator() (const Range& range) const
+      {
+          IppiSize srcsize = {src.cols, src.rows};
+          IppiRect srcroi = {0, 0, src.cols, src.rows};
+          IppiRect dstroi = {0, range.start, dst.cols, range.end - range.start};
+          int cnn = src.channels();
+
+          if( borderType == BORDER_CONSTANT )
+          {
+              IppiSize setSize = {dst.cols, range.end - range.start};
+              void *dataPointer = dst.data + dst.step[0] * range.start;
+              if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
+              {
+                  *ok = false;
+                  return;
+              }
+          }
+          if( func(src.data, srcsize, (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, coeffs, mode) < 0)
+              *ok = false;
+      }
+private:
+    Mat &src;
+    Mat &dst;
+    double (&coeffs)[3][3];
+    int mode;
+    int borderType;
+    const Scalar borderValue;
+    ippiWarpPerspectiveBackFunc func;
+    bool *ok;
+    const IPPwarpPerspectiveInvoker& operator= (const IPPwarpPerspectiveInvoker&);
+};
+#endif
+
 }
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
@@ -3628,6 +3934,50 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    int depth = src.depth();
+    int channels = src.channels();
+    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
+        ( channels == 1 || channels == 3 || channels == 4 ) &&
+        ( borderType == cv::BORDER_TRANSPARENT || borderType == cv::BORDER_CONSTANT ) )
+    {
+        int type = src.type();
+        ippiWarpPerspectiveBackFunc ippFunc =
+            type == CV_8UC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C1R :
+            type == CV_8UC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C3R :
+            type == CV_8UC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C4R :
+            type == CV_16UC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C1R :
+            type == CV_16UC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C3R :
+            type == CV_16UC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_16u_C4R :
+            type == CV_32FC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C1R :
+            type == CV_32FC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C3R :
+            type == CV_32FC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C4R :
+            0;
+        int mode =
+            flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
+            flags == INTER_NEAREST ? IPPI_INTER_NN :
+            flags == INTER_CUBIC ? IPPI_INTER_CUBIC :
+            0;
+        if( mode && ippFunc )
+        {
+            double coeffs[3][3];
+            for( int i = 0; i < 3; i++ )
+            {
+                for( int j = 0; j < 3; j++ )
+                {
+                    coeffs[i][j] = matM.at<double>(i, j);
+                }
+            }
+            bool ok;
+            Range range(0, dst.rows);
+            IPPwarpPerspectiveInvoker invoker(src, dst, coeffs, mode, borderType, borderValue, ippFunc, &ok);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+            if( ok )
+                return;
+        }
+    }
+#endif
 
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
@@ -3931,8 +4281,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     ssize = cvGetMatSize(src);
     dsize = cvGetMatSize(dst);
 
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
+    mapy.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {
@@ -4023,6 +4373,14 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     cvRemap( src, dst, mapx, mapy, flags, cvScalarAll(0) );
 }
 
+void cv::logPolar( InputArray _src, OutputArray _dst,
+                   Point2f center, double M, int flags )
+{
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvLogPolar( &c_src, &c_dst, center, M, flags );
+}
 
 /****************************************************************************************
                                    Linear-Polar Transform
@@ -4049,8 +4407,8 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     dsize.width = dst->cols;
     dsize.height = dst->rows;
 
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
+    mapy.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {
@@ -4118,5 +4476,13 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     cvRemap( src, dst, mapx, mapy, flags, cvScalarAll(0) );
 }
 
+void cv::linearPolar( InputArray _src, OutputArray _dst,
+                      Point2f center, double maxRadius, int flags )
+{
+    Mat src = _src.getMat();
+    _dst.create( src.size(), src.type() );
+    CvMat c_src = src, c_dst = _dst.getMat();
+    cvLinearPolar( &c_src, &c_dst, center, maxRadius, flags );
+}
 
 /* End of file. */

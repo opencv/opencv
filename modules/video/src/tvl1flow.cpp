@@ -953,5 +953,5 @@ CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
 
 Ptr<DenseOpticalFlow> cv::createOptFlow_DualTVL1()
 {
-    return new OpticalFlowDual_TVL1;
+    return makePtr<OpticalFlowDual_TVL1>();
 }

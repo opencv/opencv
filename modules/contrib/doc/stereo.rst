@@ -113,5 +113,3 @@ The method executes the variational algorithm on a rectified stereo pair. See ``
 **Note**:
 
 The method is not constant, so you should not use the same ``StereoVar`` instance from different threads simultaneously.
-
-

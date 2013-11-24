@@ -3190,22 +3190,22 @@ cvCheckTermCriteria( CvTermCriteria criteria, double default_eps,
 namespace cv
 {
 
-template<> void Ptr<CvMat>::delete_obj()
+template<> void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const
 { cvReleaseMat(&obj); }
 
-template<> void Ptr<IplImage>::delete_obj()
+template<> void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const
 { cvReleaseImage(&obj); }
 
-template<> void Ptr<CvMatND>::delete_obj()
+template<> void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const
 { cvReleaseMatND(&obj); }
 
-template<> void Ptr<CvSparseMat>::delete_obj()
+template<> void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const
 { cvReleaseSparseMat(&obj); }
 
-template<> void Ptr<CvMemStorage>::delete_obj()
+template<> void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const
 { cvReleaseMemStorage(&obj); }
 
-template<> void Ptr<CvFileStorage>::delete_obj()
+template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const
 { cvReleaseFileStorage(&obj); }
 
 }

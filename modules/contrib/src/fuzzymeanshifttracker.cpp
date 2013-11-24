@@ -721,4 +721,3 @@ void CvFuzzyMeanShiftTracker::track(IplImage *maskImage, IplImage *depthMap, int
                 searchMode = tsTracking;
     }
 };
-

@@ -40,9 +40,9 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
 
 if __name__ == '__main__':
     import sys
-    try: 
+    try:
         fn = sys.argv[1]
-    except: 
+    except:
         fn = '../cpp/baboon.jpg'
 
     src = cv2.imread(fn)

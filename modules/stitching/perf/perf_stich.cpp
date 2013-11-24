@@ -34,12 +34,12 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/a3.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
-            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
+            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
+            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
-            ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
-            : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+            ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
+            : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
 
     declare.time(30 * 20).iterations(20);
 
@@ -48,7 +48,7 @@ PERF_TEST_P(stitch, a123, TEST_DETECTORS)
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new SphericalWarper());
+        stitcher.setWarper(makePtr<SphericalWarper>());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -72,12 +72,12 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
     imgs.push_back( imread( getDataPath("stitching/b2.png") ) );
 
     Ptr<detail::FeaturesFinder> featuresFinder = GetParam() == "orb"
-            ? (detail::FeaturesFinder*)new detail::OrbFeaturesFinder()
-            : (detail::FeaturesFinder*)new detail::SurfFeaturesFinder();
+            ? Ptr<detail::FeaturesFinder>(new detail::OrbFeaturesFinder())
+            : Ptr<detail::FeaturesFinder>(new detail::SurfFeaturesFinder());
 
     Ptr<detail::FeaturesMatcher> featuresMatcher = GetParam() == "orb"
-            ? new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE)
-            : new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+            ? makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE)
+            : makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
 
     declare.time(30 * 20).iterations(20);
 
@@ -86,7 +86,7 @@ PERF_TEST_P(stitch, b12, TEST_DETECTORS)
         Stitcher stitcher = Stitcher::createDefault();
         stitcher.setFeaturesFinder(featuresFinder);
         stitcher.setFeaturesMatcher(featuresMatcher);
-        stitcher.setWarper(new SphericalWarper());
+        stitcher.setWarper(makePtr<SphericalWarper>());
         stitcher.setRegistrationResol(WORK_MEGAPIX);
 
         startTimer();
@@ -114,13 +114,13 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = new detail::SurfFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = new detail::OrbFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
     {
@@ -169,13 +169,13 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
     int featuresVectorSize = get<1>(GetParam());
     if (detectorName == "surf")
     {
-        finder = new detail::SurfFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, SURF_MATCH_CONFIDENCE);
+        finder = makePtr<detail::SurfFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = new detail::OrbFeaturesFinder();
-        matcher = new detail::BestOf2NearestMatcher(false, ORB_MATCH_CONFIDENCE);
+        finder = makePtr<detail::OrbFeaturesFinder>();
+        matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
     {

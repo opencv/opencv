@@ -72,7 +72,7 @@ template <typename T> struct GlobPtrSz : GlobPtr<T>
 };
 
 template <typename T>
-__host__ GlobPtr<T> globPtr(T* data, size_t step)
+__host__ __device__ GlobPtr<T> globPtr(T* data, size_t step)
 {
     GlobPtr<T> p;
     p.data = data;
@@ -81,13 +81,24 @@ __host__ GlobPtr<T> globPtr(T* data, size_t step)
 }
 
 template <typename T>
-__host__ GlobPtrSz<T> globPtr(T* data, size_t step, int rows, int cols)
+__host__ __device__ GlobPtrSz<T> globPtr(T* data, size_t step, int rows, int cols)
 {
     GlobPtrSz<T> p;
     p.data = data;
     p.step = step;
     p.rows = rows;
     p.cols = cols;
+    return p;
+}
+
+template <typename T>
+__host__ GlobPtrSz<T> globPtr(const GpuMat& mat)
+{
+    GlobPtrSz<T> p;
+    p.data = (T*) mat.data;
+    p.step = mat.step;
+    p.rows = mat.rows;
+    p.cols = mat.cols;
     return p;
 }
 

@@ -295,8 +295,10 @@ private:
 };
 
 // smart pointers allocation :
-Ptr<Retina> createRetina(Size inputSize){ return new RetinaImpl(inputSize); }
-Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){return new RetinaImpl(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);}
+Ptr<Retina> createRetina(Size inputSize){ return makePtr<RetinaImpl>(inputSize); }
+Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){
+    return makePtr<RetinaImpl>(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+}
 
 
 // RetinaImpl code
@@ -597,7 +599,7 @@ void RetinaImpl::getParvoRAW(OutputArray parvoOutputBufferCopy){
 // original API level data accessors : get buffers addresses...
 const Mat RetinaImpl::getMagnoRAW() const {
     // create a cv::Mat header for the valarray
-    return Mat(_retinaFilter->getMovingContours().size(),1, CV_32F, (void*)get_data(_retinaFilter->getMovingContours()));
+    return Mat((int)_retinaFilter->getMovingContours().size(),1, CV_32F, (void*)get_data(_retinaFilter->getMovingContours()));
 
 }
 
@@ -605,11 +607,11 @@ const Mat RetinaImpl::getParvoRAW() const {
     if (_retinaFilter->getColorMode()) // check if color mode is enabled
     {
         // create a cv::Mat table (for RGB planes as a single vector)
-        return Mat(_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getColorOutput()));
+        return Mat((int)_retinaFilter->getColorOutput().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getColorOutput()));
     }
     // otherwise, output is gray level
     // create a cv::Mat header for the valarray
-    return Mat( _retinaFilter->getContours().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getContours()));
+    return Mat((int)_retinaFilter->getContours().size(), 1, CV_32F, (void*)get_data(_retinaFilter->getContours()));
 }
 
 // private method called by constructirs
@@ -628,6 +630,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, int colorSa
            delete _retinaFilter;
     _retinaFilter = new RetinaFilter(inputSz.height, inputSz.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
+    _retinaParameters.OPLandIplParvo.colorMode = colorMode;
     // prepare the default parameter XML file with default setup
     setup(_retinaParameters);
 

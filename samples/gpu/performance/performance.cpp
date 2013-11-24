@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 void TestSystem::run()
 {
@@ -158,7 +158,7 @@ int main(int argc, const char* argv[])
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices == 0)
     {
-        cerr << "No GPU found or the library was compiled without GPU support";
+        cerr << "No GPU found or the library was compiled without CUDA support";
         return -1;
     }
 
@@ -191,7 +191,7 @@ int main(int argc, const char* argv[])
     DeviceInfo dev_info(device);
     if (!dev_info.isCompatible())
     {
-        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
+        cerr << "CUDA module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
         return -1;
     }
     setDevice(device);

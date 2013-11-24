@@ -357,4 +357,3 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
 }
 
 } // namespace cv
-

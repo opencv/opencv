@@ -185,4 +185,3 @@ Results
 .. image:: images/result.png
   :alt: The seperated planes
   :align: center
-

@@ -135,4 +135,3 @@ Here is the result:
 
 .. image:: images/Corner_Subpixeles_Result.jpg
               :align: center
-

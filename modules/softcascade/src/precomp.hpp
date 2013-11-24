@@ -49,7 +49,7 @@
 #include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/private.hpp"
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 namespace cv { namespace softcascade { namespace internal
 {

@@ -279,4 +279,3 @@ Results
   .. image:: images/Morphology_2_Tutorial_Cover.jpg
      :alt: Morphology 2: Result sample
      :align: center
-

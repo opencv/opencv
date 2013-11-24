@@ -20,13 +20,13 @@ public:
         DeleteCriticalSection(&m_criticalSection);
     }
 
-	_Acquires_lock_(m_criticalSection)
+    _Acquires_lock_(m_criticalSection)
     void Lock()
     {
         EnterCriticalSection(&m_criticalSection);
     }
 
-	_Releases_lock_(m_criticalSection)
+    _Releases_lock_(m_criticalSection)
     void Unlock()
     {
         LeaveCriticalSection(&m_criticalSection);
@@ -36,7 +36,7 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 //  AutoLock
-//  Description: Provides automatic locking and unlocking of a 
+//  Description: Provides automatic locking and unlocking of a
 //               of a critical section.
 //
 //  Note: The AutoLock object must go out of scope before the CritSec.
@@ -47,16 +47,16 @@ class AutoLock
 private:
     CritSec *m_pCriticalSection;
 public:
-	_Acquires_lock_(m_pCriticalSection)
+    _Acquires_lock_(m_pCriticalSection)
     AutoLock(CritSec& crit)
     {
         m_pCriticalSection = &crit;
         m_pCriticalSection->Lock();
     }
 
-	_Releases_lock_(m_pCriticalSection)
+    _Releases_lock_(m_pCriticalSection)
     ~AutoLock()
     {
-	    m_pCriticalSection->Unlock();
+        m_pCriticalSection->Unlock();
     }
 };

@@ -28,7 +28,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -46,7 +46,7 @@
 //
 //M*/
 
-short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
+static short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
                __global uchar4* in, int in_step, int dst_off, int src_off,
                int cols, int rows, int sp, int sr, int maxIter, float eps)
 {
@@ -56,7 +56,6 @@ short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
     src_off = src_off >> 2;
     dst_off = dst_off >> 2;
     int idx = src_off + y0 * in_step + x0;
-//    uchar4 c = vload4(0, (__global uchar*)in+idx);
     uchar4 c = in[idx];
     int base = dst_off + get_global_id(1)*out_step + get_global_id(0) ;
 

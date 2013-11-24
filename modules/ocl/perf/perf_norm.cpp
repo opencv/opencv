@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,45 +43,44 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
+
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
 
 ///////////// norm////////////////////////
-PERFTEST(norm)
+
+typedef tuple<Size, MatType> normParams;
+typedef TestBaseWithParam<normParams> normFixture;
+
+PERF_TEST_P(normFixture, norm, testing::Combine(
+                OCL_TYPICAL_MAT_SIZES,
+                OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
 {
-    Mat src1, src2, ocl_src1;
-    ocl::oclMat d_src1, d_src2;
+    const normParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    double value = 0.0;
+    const double eps = CV_MAT_DEPTH(type) == CV_8U ? DBL_EPSILON : 1e-3;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src1(srcSize, type), src2(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG);
+
+    if (RUN_OCL_IMPL)
     {
-        SUBTEST << size << 'x' << size << "; CV_8UC1; NORM_INF";
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
-        gen(src1, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
-        gen(src2, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
+        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, NORM_INF);
 
-        norm(src1, src2, NORM_INF);
-
-        CPU_ON;
-        norm(src1, src2, NORM_INF);
-        CPU_OFF;
-
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-
-        WARMUP_ON;
-        ocl::norm(d_src1, d_src2, NORM_INF);
-        WARMUP_OFF;
-
-        d_src1.download(ocl_src1);
-        TestSystem::instance().ExpectedMatNear(src1, ocl_src1, .5);                        
-
-        GPU_ON;
-        ocl::norm(d_src1, d_src2, NORM_INF);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        ocl::norm(d_src1, d_src2, NORM_INF);
-        GPU_FULL_OFF;
+        SANITY_CHECK(value, eps);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() value = cv::norm(src1, src2, NORM_INF);
+
+        SANITY_CHECK(value);
+    }
+    else
+        OCL_PERF_ELSE
 }

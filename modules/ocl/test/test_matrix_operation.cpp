@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,420 +44,207 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
-using namespace cvtest;
+using namespace cv;
 using namespace testing;
 using namespace std;
 
 ////////////////////////////////converto/////////////////////////////////////////////////
-PARAM_TEST_CASE(ConvertToTestBase, MatType, MatType)
+
+PARAM_TEST_CASE(MatrixTestBase, MatDepth, MatDepth, int, bool)
 {
-    int type;
-    int dst_type;
+    int src_depth, cn, dstType;
+    bool use_roi;
 
-    //src mat
-    cv::Mat mat;
-    cv::Mat dst;
-
-    // set up roi
-    int roicols;
-    int roirows;
-    int srcx;
-    int srcy;
-    int dstx;
-    int dsty;
-
-    //src mat with roi
-    cv::Mat mat_roi;
-    cv::Mat dst_roi;
-
-    //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
-
-    //ocl mat with roi
-    cv::ocl::oclMat gmat;
-    cv::ocl::oclMat gdst;
+    Mat src, dst, src_roi, dst_roi;
+    ocl::oclMat gdst, gsrc, gdst_roi, gsrc_roi;
 
     virtual void SetUp()
     {
-        type     = GET_PARAM(0);
-        dst_type = GET_PARAM(1);
+        src_depth = GET_PARAM(0);
+        cn = GET_PARAM(2);
+        dstType = CV_MAKE_TYPE(GET_PARAM(1), cn);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
+        use_roi = GET_PARAM(3);
     }
 
-    void random_roi()
+    virtual void random_roi()
     {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat.cols);
-        roirows = rng.uniform(1, mat.rows);
-        srcx   = rng.uniform(0, mat.cols - roicols);
-        srcy   = rng.uniform(0, mat.rows - roirows);
-        dstx    = rng.uniform(0, dst.cols  - roicols);
-        dsty    = rng.uniform(0, dst.rows  - roirows);
-#else
-        roicols = mat.cols;
-        roirows = mat.rows;
-        srcx = 0;
-        srcy = 0;
-        dstx = 0;
-        dsty = 0;
-#endif
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, CV_MAKE_TYPE(src_depth, cn), -MAX_VALUE, MAX_VALUE);
 
-        mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-        dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, dstType, 5, 16);
 
-        gdst_whole = dst;
-        gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
-        gmat = mat_roi;
+        generateOclMat(gsrc, gsrc_roi, src, roiSize, srcBorder);
+        generateOclMat(gdst, gdst_roi, dst, roiSize, dstBorder);
     }
 };
 
+typedef MatrixTestBase ConvertTo;
 
-struct ConvertTo : ConvertToTestBase {};
-
-TEST_P(ConvertTo, Accuracy)
+OCL_TEST_P(ConvertTo, Accuracy)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        mat_roi.convertTo(dst_roi, dst_type);
-        gmat.convertTo(gdst, dst_type);
+        src_roi.convertTo(dst_roi, dstType);
+        gsrc_roi.convertTo(gdst_roi, dstType);
 
-        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
+        EXPECT_MAT_NEAR(dst, Mat(gdst), src_depth == CV_64F ? 1.0 : 0.0);
+        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), src_depth == CV_64F ? 1.0 : 0.0);
     }
 }
-
-
-
 
 ///////////////////////////////////////////copyto/////////////////////////////////////////////////////////////
 
-PARAM_TEST_CASE(CopyToTestBase, MatType, bool)
+struct CopyTo :
+        public MatrixTestBase
 {
-    int type;
+    Mat mask, mask_roi;
+    ocl::oclMat gmask, gmask_roi;
 
-    cv::Mat mat;
-    cv::Mat mask;
-    cv::Mat dst;
+    virtual void random_roi()
+    {
+        int type = CV_MAKE_TYPE(src_depth, cn);
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
-    // set up roi
-    int roicols;
-    int roirows;
-    int srcx;
-    int srcy;
-    int dstx;
-    int dsty;
-    int maskx;
-    int masky;
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
 
-    //src mat with roi
-    cv::Mat mat_roi;
-    cv::Mat mask_roi;
-    cv::Mat dst_roi;
+        Border maskBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC1, 5, 16);
 
-    //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
+        generateOclMat(gsrc, gsrc_roi, src, roiSize, srcBorder);
+        generateOclMat(gdst, gdst_roi, dst, roiSize, dstBorder);
+        generateOclMat(gmask, gmask_roi, mask, roiSize, maskBorder);
+    }
+};
 
-    //ocl mat with roi
-    cv::ocl::oclMat gmat;
-    cv::ocl::oclMat gdst;
-    cv::ocl::oclMat gmask;
+OCL_TEST_P(CopyTo, Without_mask)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        src_roi.copyTo(dst_roi);
+        gsrc_roi.copyTo(gdst_roi);
+
+        EXPECT_MAT_NEAR(dst, Mat(gdst), 0.0);
+        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), 0.0);
+    }
+}
+
+OCL_TEST_P(CopyTo, With_mask)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        src_roi.copyTo(dst_roi, mask_roi);
+        gsrc_roi.copyTo(gdst_roi, gmask_roi);
+
+        EXPECT_MAT_NEAR(dst, Mat(gdst), 0.0);
+        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), 0.0);
+    }
+}
+
+/////////////////////////////////////////// setTo /////////////////////////////////////////////////////////////
+
+typedef CopyTo SetTo;
+
+OCL_TEST_P(SetTo, Without_mask)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        Scalar scalar = randomScalar(-MAX_VALUE, MAX_VALUE);
+
+        src_roi.setTo(scalar);
+        gsrc_roi.setTo(scalar);
+
+        EXPECT_MAT_NEAR(dst, Mat(gdst), 0.0);
+        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), 0.0);;
+    }
+}
+
+OCL_TEST_P(SetTo, With_mask)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        Scalar scalar = randomScalar(-MAX_VALUE, MAX_VALUE);
+
+        src_roi.setTo(scalar, mask_roi);
+        gsrc_roi.setTo(scalar, gmask_roi);
+
+        EXPECT_MAT_NEAR(src, Mat(gsrc), 1.);
+        EXPECT_MAT_NEAR(src_roi, Mat(gsrc_roi), 1.);
+    }
+}
+
+// convertC3C4
+
+PARAM_TEST_CASE(convertC3C4, MatDepth, bool)
+{
+    int depth;
+    bool use_roi;
+
+    Mat src, src_roi;
+    ocl::oclMat gsrc, gsrc_roi;
 
     virtual void SetUp()
     {
-        type = GET_PARAM(0);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-        mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
-
-        cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
-
+        depth = GET_PARAM(0);
+        use_roi = GET_PARAM(1);
     }
 
     void random_roi()
     {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat.cols);
-        roirows = rng.uniform(1, mat.rows);
-        srcx   = rng.uniform(0, mat.cols - roicols);
-        srcy   = rng.uniform(0, mat.rows - roirows);
-        dstx    = rng.uniform(0, dst.cols  - roicols);
-        dsty    = rng.uniform(0, dst.rows  - roirows);
-        maskx   = rng.uniform(0, mask.cols - roicols);
-        masky   = rng.uniform(0, mask.rows - roirows);
-#else
-        roicols = mat.cols;
-        roirows = mat.rows;
-        srcx = 0;
-        srcy = 0;
-        dstx = 0;
-        dsty = 0;
-        maskx = 0;
-        masky = 0;
-#endif
-
-        mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-        mask_roi = mask(Rect(maskx, masky, roicols, roirows));
-        dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
-        gdst_whole = dst;
-        gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
-        gmat = mat_roi;
-        gmask = mask_roi;
+        int type = CV_MAKE_TYPE(depth, 3);
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+        generateOclMat(gsrc, gsrc_roi, src, roiSize, srcBorder);
     }
 };
 
-struct CopyTo : CopyToTestBase {};
-
-TEST_P(CopyTo, Without_mask)
+OCL_TEST_P(convertC3C4, Accuracy)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        mat_roi.copyTo(dst_roi);
-        gmat.copyTo(gdst);
+        gsrc_roi = src_roi;
 
-        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
+        EXPECT_MAT_NEAR(src_roi, Mat(gsrc_roi), 0.0);
+        EXPECT_MAT_NEAR(src, Mat(gsrc), 0.0);
     }
-}
-
-TEST_P(CopyTo, With_mask)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-
-        mat_roi.copyTo(dst_roi, mask_roi);
-        gmat.copyTo(gdst, gmask);
-
-        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
-    }
-}
-
-
-
-
-///////////////////////////////////////////copyto/////////////////////////////////////////////////////////////
-
-PARAM_TEST_CASE(SetToTestBase, MatType, bool)
-{
-    int type;
-    cv::Scalar val;
-
-    cv::Mat mat;
-    cv::Mat mask;
-
-    // set up roi
-    int roicols;
-    int roirows;
-    int srcx;
-    int srcy;
-    int maskx;
-    int masky;
-
-    //src mat with roi
-    cv::Mat mat_roi;
-    cv::Mat mask_roi;
-
-    //ocl dst mat for testing
-    cv::ocl::oclMat gmat_whole;
-
-    //ocl mat with roi
-    cv::ocl::oclMat gmat;
-    cv::ocl::oclMat gmask;
-
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat = randomMat(rng, size, type, 5, 16, false);
-        mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
-
-        cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
-        val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-
-    }
-
-    void random_roi()
-    {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat.cols);
-        roirows = rng.uniform(1, mat.rows);
-        srcx   = rng.uniform(0, mat.cols - roicols);
-        srcy   = rng.uniform(0, mat.rows - roirows);
-        maskx   = rng.uniform(0, mask.cols - roicols);
-        masky   = rng.uniform(0, mask.rows - roirows);
-#else
-        roicols = mat.cols;
-        roirows = mat.rows;
-        srcx = 0;
-        srcy = 0;
-        maskx = 0;
-        masky = 0;
-#endif
-
-        mat_roi = mat(Rect(srcx, srcy, roicols, roirows));
-        mask_roi = mask(Rect(maskx, masky, roicols, roirows));
-
-        gmat_whole = mat;
-        gmat = gmat_whole(Rect(srcx, srcy, roicols, roirows));
-
-        gmask = mask_roi;
-    }
-};
-
-struct SetTo : SetToTestBase {};
-
-TEST_P(SetTo, Without_mask)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-
-        mat_roi.setTo(val);
-        gmat.setTo(val);
-
-        EXPECT_MAT_NEAR(mat, Mat(gmat_whole), 1.);
-    }
-}
-
-TEST_P(SetTo, With_mask)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-
-        mat_roi.setTo(val, mask_roi);
-        gmat.setTo(val, gmask);
-
-        EXPECT_MAT_NEAR(mat, Mat(gmat_whole), 1.);
-    }
-}
-
-//convertC3C4
-PARAM_TEST_CASE(convertC3C4, MatType, cv::Size)
-{
-    int type;
-    cv::Size ksize;
-
-    //src mat
-    cv::Mat mat1;
-    cv::Mat dst;
-
-    // set up roi
-    int roicols;
-    int roirows;
-    int src1x;
-    int src1y;
-    int dstx;
-    int dsty;
-
-    //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat dst_roi;
-
-    //ocl dst mat for testing
-    cv::ocl::oclMat gdst_whole;
-
-    //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gdst;
-
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        ksize = GET_PARAM(1);
-
-    }
-
-    void random_roi()
-    {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(2, mat1.cols);
-        roirows = rng.uniform(2, mat1.rows);
-        src1x   = rng.uniform(0, mat1.cols - roicols);
-        src1y   = rng.uniform(0, mat1.rows - roirows);
-        dstx    = rng.uniform(0, dst.cols  - roicols);
-        dsty    = rng.uniform(0, dst.rows  - roirows);
-#else
-        roicols = mat1.cols;
-        roirows = mat1.rows;
-        src1x = 0;
-        src1y = 0;
-        dstx = 0;
-        dsty = 0;
-#endif
-
-        mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
-        dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-
-        gdst_whole = dst;
-        gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
-
-
-        gmat1 = mat1_roi;
-    }
-
-};
-
-TEST_P(convertC3C4, Accuracy)
-{
-    cv::RNG &rng = TS::ptr()->get_rng();
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        //random_roi();
-        int width = rng.uniform(2, MWIDTH);
-        int height = rng.uniform(2, MHEIGHT);
-        cv::Size size(width, height);
-
-        mat1 = randomMat(rng, size, type, 0, 40, false);
-        gmat1 = mat1;
-
-        EXPECT_MAT_NEAR(mat1, Mat(gmat1), 0.0);
-    }
-
 }
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4),
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4)));
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            testing::Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(MatDepth(0)), // not used
+                            testing::Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values((MatDepth)0), // not used
+                            testing::Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, convertC3C4, Combine(
-                            Values(CV_8UC3,  CV_32SC3,  CV_32FC3),
-                            Values(cv::Size())));
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Bool()));
 #endif

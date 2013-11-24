@@ -111,4 +111,3 @@ cvCalcImageHomography( float* line, CvPoint3D32f* _center,
 }
 
 /* End of file. */
-

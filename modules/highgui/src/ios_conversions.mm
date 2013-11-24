@@ -44,21 +44,21 @@
 #include "precomp.hpp"
 
 UIImage* MatToUIImage(const cv::Mat& image) {
-    
+
     NSData *data = [NSData dataWithBytes:image.data
                                   length:image.elemSize()*image.total()];
-    
+
     CGColorSpaceRef colorSpace;
-    
+
     if (image.elemSize() == 1) {
         colorSpace = CGColorSpaceCreateDeviceGray();
     } else {
         colorSpace = CGColorSpaceCreateDeviceRGB();
     }
-    
+
     CGDataProviderRef provider =
             CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
-    
+
     // Creating CGImage from cv::Mat
     CGImageRef imageRef = CGImageCreate(image.cols,
                                         image.rows,
@@ -73,14 +73,14 @@ UIImage* MatToUIImage(const cv::Mat& image) {
                                         false,
                                         kCGRenderingIntentDefault
                                         );
-    
-    
+
+
     // Getting UIImage from CGImage
     UIImage *finalImage = [UIImage imageWithCGImage:imageRef];
     CGImageRelease(imageRef);
     CGDataProviderRelease(provider);
     CGColorSpaceRelease(colorSpace);
-    
+
     return finalImage;
 }
 

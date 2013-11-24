@@ -1,15 +1,5 @@
-# ----------------------------------------------------------------------------
-#  Variables for cvconfig.h.cmake
-# ----------------------------------------------------------------------------
-set(PACKAGE "opencv")
-set(PACKAGE_BUGREPORT "opencvlibrary-devel@lists.sourceforge.net")
-set(PACKAGE_NAME "opencv")
-set(PACKAGE_STRING "${PACKAGE} ${OPENCV_VERSION}")
-set(PACKAGE_TARNAME "${PACKAGE}")
-set(PACKAGE_VERSION "${OPENCV_VERSION}")
-
 # platform-specific config file
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/cvconfig.h.cmake" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/cvconfig.h.in" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
 
 # ----------------------------------------------------------------------------
 #  opencv_modules.hpp based on actual modules list

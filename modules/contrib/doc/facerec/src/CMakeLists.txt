@@ -23,4 +23,3 @@ target_link_libraries(facerec_fisherfaces opencv_contrib opencv_core opencv_imgp
 
 add_executable(facerec_lbph facerec_lbph.cpp)
 target_link_libraries(facerec_lbph opencv_contrib opencv_core opencv_imgproc opencv_highgui)
-

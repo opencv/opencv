@@ -30,11 +30,12 @@ public class HardwareDetector
     // GPU Acceleration options
     public static final int FEATURES_HAS_GPU = 0x010000;
 
-    public static final int PLATFORM_TEGRA  = 1;
-    public static final int PLATFORM_TEGRA2 = 2;
-    public static final int PLATFORM_TEGRA3 = 3;
-    public static final int PLATFORM_TEGRA4 = 4;
-
+    public static final int PLATFORM_TEGRA   = 1;
+    public static final int PLATFORM_TEGRA2  = 2;
+    public static final int PLATFORM_TEGRA3  = 3;
+    public static final int PLATFORM_TEGRA4i = 4;
+    public static final int PLATFORM_TEGRA4  = 5;
+    public static final int PLATFORM_TEGRA5  = 6;
 
     public static final int PLATFORM_UNKNOWN = 0;
 

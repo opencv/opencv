@@ -1144,7 +1144,7 @@ CVAPI(void)   cvSetRemove( CvSet* set_header, int index );
    NULL is returned */
 CV_INLINE CvSetElem* cvGetSetElem( const CvSet* set_header, int idx )
 {
-    CvSetElem* elem = (CvSetElem*)cvGetSeqElem( (CvSeq*)set_header, idx );
+    CvSetElem* elem = (CvSetElem*)(void *)cvGetSeqElem( (CvSeq*)set_header, idx );
     return elem && CV_IS_SET_ELEM( elem ) ? elem : 0;
 }
 
@@ -1882,13 +1882,13 @@ CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
 
 
 
-//////// specializied implementations of Ptr::delete_obj() for classic OpenCV types ////////
+////// specialized implementations of DefaultDeleter::operator() for classic OpenCV types //////
 
-template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();
-template<> CV_EXPORTS void Ptr<IplImage>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvMatND>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvSparseMat>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvMemStorage>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const;
 
 ////////////// convenient wrappers for operating old-style dynamic structures //////////////
 
@@ -1906,7 +1906,7 @@ typedef Ptr<CvMemStorage> MemStorage;
     i.e. no constructors or destructors
     are called for the sequence elements.
 */
-template<typename _Tp> class CV_EXPORTS Seq
+template<typename _Tp> class Seq
 {
 public:
     typedef SeqIterator<_Tp> iterator;
@@ -1989,7 +1989,7 @@ public:
 /*!
  STL-style Sequence Iterator inherited from the CvSeqReader structure
 */
-template<typename _Tp> class CV_EXPORTS SeqIterator : public CvSeqReader
+template<typename _Tp> class SeqIterator : public CvSeqReader
 {
 public:
     //! the default constructor

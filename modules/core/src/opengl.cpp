@@ -50,7 +50,7 @@
 #endif
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 namespace
 {
@@ -105,11 +105,7 @@ namespace
     #endif
     }
 
-    #if defined(__GNUC__)
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, __func__)) )
-    #else
-        #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__)) )
-    #endif
+    #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 } // namespace
 
 #ifdef HAVE_OPENGL
@@ -122,7 +118,7 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // setGlDevice
 
-void cv::gpu::setGlDevice(int device)
+void cv::cuda::setGlDevice(int device)
 {
 #ifndef HAVE_OPENGL
     (void) device;
@@ -484,7 +480,7 @@ cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bo
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(abufId, autoRelease);
+    impl_.reset(new Impl(abufId, autoRelease));
     rows_ = arows;
     cols_ = acols;
     type_ = atype;
@@ -500,7 +496,7 @@ cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRel
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(abufId, autoRelease);
+    impl_.reset(new Impl(abufId, autoRelease));
     rows_ = asize.height;
     cols_ = asize.width;
     type_ = atype;
@@ -529,7 +525,7 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             const GLsizeiptr asize = mat.rows * mat.cols * mat.elemSize();
-            impl_ = new Impl(asize, mat.data, target, autoRelease);
+            impl_.reset(new Impl(asize, mat.data, target, autoRelease));
             rows_ = mat.rows;
             cols_ = mat.cols;
             type_ = mat.type();
@@ -552,7 +548,7 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
     if (rows_ != arows || cols_ != acols || type_ != atype)
     {
         const GLsizeiptr asize = arows * acols * CV_ELEM_SIZE(atype);
-        impl_ = new Impl(asize, 0, target, autoRelease);
+        impl_.reset(new Impl(asize, 0, target, autoRelease));
         rows_ = arows;
         cols_ = acols;
         type_ = atype;
@@ -563,7 +559,7 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
 void cv::ogl::Buffer::release()
 {
 #ifdef HAVE_OPENGL
-    if (*impl_.refcount == 1)
+    if (impl_)
         impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
@@ -627,7 +623,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target target, bool autoRelease)
+void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -647,7 +643,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target targe
 
         create(dmat.size(), dmat.type(), target, autoRelease);
 
-        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -692,7 +688,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
 #endif
 }
 
-void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
+void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -706,7 +702,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
     #else
         arr.create(rows_, cols_, type_);
         GpuMat dmat = arr.getGpuMat();
-        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -794,7 +790,7 @@ void cv::ogl::Buffer::unmapDevice()
 #endif
 }
 
-gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
+cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -806,12 +802,12 @@ gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
         throw_no_cuda();
         return GpuMat();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice(gpu::StreamAccessor::getStream(stream)));
+        return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
     #endif
 #endif
 }
 
-void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
+void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -821,7 +817,7 @@ void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
         (void) stream;
         throw_no_cuda();
     #else
-        impl_->unmapDevice(gpu::StreamAccessor::getStream(stream));
+        impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -836,10 +832,6 @@ unsigned int cv::ogl::Buffer::bufId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::ogl::Buffer::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // ogl::Texture
@@ -972,7 +964,7 @@ cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(atexId, autoRelease);
+    impl_.reset(new Impl(atexId, autoRelease));
     rows_ = arows;
     cols_ = acols;
     format_ = aformat;
@@ -988,7 +980,7 @@ cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, b
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(atexId, autoRelease);
+    impl_.reset(new Impl(atexId, autoRelease));
     rows_ = asize.height;
     cols_ = asize.width;
     format_ = aformat;
@@ -1028,7 +1020,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
         {
             ogl::Buffer buf = arr.getOGlBuffer();
             buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
+            impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
             ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             break;
         }
@@ -1041,7 +1033,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-                impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
+                impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             #endif
 
@@ -1053,7 +1045,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease);
+            impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease));
             break;
         }
     }
@@ -1076,7 +1068,7 @@ void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoR
     if (rows_ != arows || cols_ != acols || format_ != aformat)
     {
         ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-        impl_ = new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease);
+        impl_.reset(new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease));
         rows_ = arows;
         cols_ = acols;
         format_ = aformat;
@@ -1087,7 +1079,7 @@ void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoR
 void cv::ogl::Texture2D::release()
 {
 #ifdef HAVE_OPENGL
-    if (*impl_.refcount == 1)
+    if (impl_)
         impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
@@ -1243,10 +1235,6 @@ unsigned int cv::ogl::Texture2D::texId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::ogl::Texture2D::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // ogl::Arrays

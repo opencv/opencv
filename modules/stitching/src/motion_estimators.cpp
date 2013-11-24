@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/core/cvdef.h"
 
 using namespace cv;
 using namespace cv::detail;
@@ -101,8 +102,10 @@ void calcDeriv(const Mat &err1, const Mat &err2, double h, Mat res)
 namespace cv {
 namespace detail {
 
-void HomographyBasedEstimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
-                                        std::vector<CameraParams> &cameras)
+bool HomographyBasedEstimator::estimate(
+        const std::vector<ImageFeatures> &features,
+        const std::vector<MatchesInfo> &pairwise_matches,
+        std::vector<CameraParams> &cameras)
 {
     LOGLN("Estimating rotations...");
 #if ENABLE_LOG
@@ -164,12 +167,13 @@ void HomographyBasedEstimator::estimate(const std::vector<ImageFeatures> &featur
     }
 
     LOGLN("Estimating rotations, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
+bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
                                   const std::vector<MatchesInfo> &pairwise_matches,
                                   std::vector<CameraParams> &cameras)
 {
@@ -245,6 +249,19 @@ void BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
     LOGLN_CHAT("Bundle adjustment, iterations done: " << iter);
 
+    // Check if all camera parameters are valid
+    bool ok = true;
+    for (int i = 0; i < cam_params_.rows; ++i)
+    {
+        if (cvIsNaN(cam_params_.at<double>(i,0)))
+        {
+            ok = false;
+            break;
+        }
+    }
+    if (!ok)
+        return false;
+
     obtainRefinedCameraParams(cameras);
 
     // Normalize motion to center image
@@ -256,6 +273,7 @@ void BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         cameras[i].R = R_inv * cameras[i].R;
 
     LOGLN_CHAT("Bundle adjustment, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    return true;
 }
 
 
@@ -851,4 +869,3 @@ void findMaxSpanningTree(int num_images, const std::vector<MatchesInfo> &pairwis
 
 } // namespace detail
 } // namespace cv
-

@@ -110,3 +110,43 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*|ARM.*")
   set(ARM 1)
 endif()
+
+
+# Similar code is existed in OpenCVConfig.cmake
+if(NOT DEFINED OpenCV_STATIC)
+  # look for global setting
+  if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+    set(OpenCV_STATIC OFF)
+  else()
+    set(OpenCV_STATIC ON)
+  endif()
+endif()
+
+if(MSVC)
+  if(CMAKE_CL_64)
+    set(OpenCV_ARCH x64)
+  else()
+    set(OpenCV_ARCH x86)
+  endif()
+  if(MSVC_VERSION EQUAL 1400)
+    set(OpenCV_RUNTIME vc8)
+  elseif(MSVC_VERSION EQUAL 1500)
+    set(OpenCV_RUNTIME vc9)
+  elseif(MSVC_VERSION EQUAL 1600)
+    set(OpenCV_RUNTIME vc10)
+  elseif(MSVC_VERSION EQUAL 1700)
+    set(OpenCV_RUNTIME vc11)
+  endif()
+elseif(MINGW)
+  set(OpenCV_RUNTIME mingw)
+
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
+                  OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(CMAKE_OPENCV_GCC_TARGET_MACHINE MATCHES "64")
+    set(MINGW64 1)
+    set(OpenCV_ARCH x64)
+  else()
+    set(OpenCV_ARCH x86)
+  endif()
+endif()

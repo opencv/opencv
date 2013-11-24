@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other Materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,50 +43,48 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+
+#include "perf_precomp.hpp"
+
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+using namespace cv;
+using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
+using namespace std;
+
+
 ///////////// Moments ////////////////////////
-PERFTEST(Moments)
+//*! performance of image
+typedef tuple<Size, MatType, bool> MomentsParamType;
+typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
+
+PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                       OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1), ::testing::Bool()))
 {
-    Mat src;
-    bool binaryImage = 0;
+    const MomentsParamType params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const bool binaryImage = get<2>(params);
 
-    int all_type[] = {CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1};
-    std::string type_name[] = {"CV_8UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
+    Mat  src(srcSize, type), dst(7, 1, CV_64F);
+    randu(src, 0, 255);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    oclMat src_d(src);
+    cv::Moments mom;
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j];
-
-            gen(src, size, size, all_type[j], 0, 256);
-
-            cv::Moments CvMom = moments(src, binaryImage);
-
-            CPU_ON;
-            moments(src, binaryImage);
-            CPU_OFF;
-
-            cv::Moments oclMom;
-            WARMUP_ON;
-            oclMom = ocl::ocl_moments(src, binaryImage);
-            WARMUP_OFF;
-
-            Mat gpu_dst, cpu_dst;
-            HuMoments(CvMom, cpu_dst);
-            HuMoments(oclMom, gpu_dst);
-
-            GPU_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(gpu_dst, cpu_dst, .5);
-
-        }
-
+        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() mom = cv::moments(src, binaryImage);
+    }
+    else
+        OCL_PERF_ELSE
+    cv::HuMoments(mom, dst);
+    SANITY_CHECK(dst, 2e-1);
 }

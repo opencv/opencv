@@ -290,4 +290,3 @@ We get the following result by using the Probabilistic Hough Line Transform:
    :align: center
 
 You may observe that the number of lines detected vary while you change the *threshold*. The explanation is sort of evident: If you establish a higher threshold, fewer lines will be detected (since you will need more points to declare a line detected).
-

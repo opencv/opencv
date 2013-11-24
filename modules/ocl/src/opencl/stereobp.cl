@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -45,13 +45,11 @@
 //M*/
 
 #if defined (DOUBLE_SUPPORT)
-
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-
 #endif
 
 #ifdef T_FLOAT
@@ -65,7 +63,7 @@
 ///////////////////////////////////////////////////////////////
 /////////////////common///////////////////////////////////////
 /////////////////////////////////////////////////////////////
-T saturate_cast(float v){
+inline T saturate_cast(float v){
 #ifdef T_SHORT
     return convert_short_sat_rte(v);
 #else
@@ -73,7 +71,7 @@ T saturate_cast(float v){
 #endif
 }
 
-T4 saturate_cast4(float4 v){
+inline T4 saturate_cast4(float4 v){
 #ifdef T_SHORT
     return convert_short4_sat_rte(v);
 #else
@@ -99,7 +97,7 @@ inline float pix_diff_1(const uchar4 l, __global const uchar *rs)
     return abs((int)(l.x) - *rs);
 }
 
-float pix_diff_4(const uchar4 l, __global const uchar *rs)
+static float pix_diff_4(const uchar4 l, __global const uchar *rs)
 {
     uchar4 r;
     r = *((__global uchar4 *)rs);
@@ -235,7 +233,7 @@ __kernel void level_up_message(__global T *src, int src_rows, int src_step,
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
-void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
+static void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
               const __global T *dt,
               int u_step, int msg_disp_step, int data_disp_step,
               float4 cmax_disc_term, float4 cdisc_single_jump)
@@ -290,7 +288,7 @@ void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
 
     minimum += cmax_disc_term;
 
-    float4 sum = 0;
+    float4 sum = (float4)(0);
     prev = convert_float4(t_dst[CNDISP - 1]);
     for (int disp = CNDISP - 2; disp >= 0; disp--)
     {
@@ -308,7 +306,7 @@ void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
     t_dst[CNDISP - 1] = saturate_cast4(dst_reg);
     sum += dst_reg;
 
-    sum /= CNDISP;
+    sum /= (float4)(CNDISP);
 #pragma unroll
     for(int i = 0, idx = 0; i < CNDISP; ++i, idx+=msg_disp_step)
     {

@@ -321,7 +321,7 @@ void BoostedSoftCascadeOctave::traverse(const CvBoostTree* tree, cv::FileStorage
 
 
     fs << "}";
-    
+
     delete [] leafs;
 }
 

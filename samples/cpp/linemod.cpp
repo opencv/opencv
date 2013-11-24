@@ -114,7 +114,7 @@ private:
 // Functions to store detector and templates in single XML/YAML file
 static cv::Ptr<cv::linemod::Detector> readLinemod(const std::string& filename)
 {
-  cv::Ptr<cv::linemod::Detector> detector = new cv::linemod::Detector;
+  cv::Ptr<cv::linemod::Detector> detector = cv::makePtr<cv::linemod::Detector>();
   cv::FileStorage fs(filename, cv::FileStorage::READ);
   detector->read(fs.root());
 

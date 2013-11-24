@@ -67,7 +67,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
         CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector):
             Detector(detector)
         {
-            CV_Assert(!detector.empty());
+            CV_Assert(detector);
         }
 
         void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
@@ -117,11 +117,11 @@ static int test_FaceDetector(int argc, char *argv[])
     }
 
     std::string cascadeFrontalfilename=cascadefile;
-    cv::Ptr<cv::CascadeClassifier> cascade = new cv::CascadeClassifier(cascadeFrontalfilename);
-    cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = new CascadeDetectorAdapter(cascade);
+    cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
-    cascade = new cv::CascadeClassifier(cascadeFrontalfilename);
-    cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = new CascadeDetectorAdapter(cascade);
+    cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
     DetectionBasedTracker::Parameters params;
     DetectionBasedTracker fd(MainDetector, TrackingDetector, params);

@@ -11,21 +11,22 @@
 
 #include <iostream>
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/nonfree.hpp"
 
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
 #ifdef HAVE_CUDA
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 #endif

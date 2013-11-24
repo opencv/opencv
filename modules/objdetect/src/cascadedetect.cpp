@@ -113,24 +113,6 @@ struct Logger
 namespace cv
 {
 
-// class for grouping object candidates, detected by Cascade Classifier, HOG etc.
-// instance of the class is to be passed to cv::partition (see cxoperations.hpp)
-class CV_EXPORTS SimilarRects
-{
-public:
-    SimilarRects(double _eps) : eps(_eps) {}
-    inline bool operator()(const Rect& r1, const Rect& r2) const
-    {
-        double delta = eps*(std::min(r1.width, r2.width) + std::min(r1.height, r2.height))*0.5;
-        return std::abs(r1.x - r2.x) <= delta &&
-        std::abs(r1.y - r2.y) <= delta &&
-        std::abs(r1.x + r1.width - r2.x - r2.width) <= delta &&
-        std::abs(r1.y + r1.height - r2.y - r2.height) <= delta;
-    }
-    double eps;
-};
-
-
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights)
 {
     if( groupThreshold <= 0 || rectList.empty() )
@@ -196,8 +178,11 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
     for( i = 0; i < nclasses; i++ )
     {
         Rect r1 = rrects[i];
-        int n1 = levelWeights ? rejectLevels[i] : rweights[i];
+        int n1 = rweights[i];
         double w1 = rejectWeights[i];
+        int l1 = rejectLevels[i];
+
+        // filter out rectangles which don't have enough similar rectangles
         if( n1 <= groupThreshold )
             continue;
         // filter out small face rectangles inside large rectangles
@@ -225,7 +210,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         {
             rectList.push_back(r1);
             if( weights )
-                weights->push_back(n1);
+                weights->push_back(l1);
             if( levelWeights )
                 levelWeights->push_back(w1);
         }
@@ -482,7 +467,7 @@ bool HaarEvaluator::Feature :: read( const FileNode& node )
 
 HaarEvaluator::HaarEvaluator()
 {
-    features = new std::vector<Feature>();
+    features = makePtr<std::vector<Feature> >();
 }
 HaarEvaluator::~HaarEvaluator()
 {
@@ -507,7 +492,7 @@ bool HaarEvaluator::read(const FileNode& node)
 
 Ptr<FeatureEvaluator> HaarEvaluator::clone() const
 {
-    HaarEvaluator* ret = new HaarEvaluator;
+    Ptr<HaarEvaluator> ret = makePtr<HaarEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->featuresPtr = &(*ret->features)[0];
@@ -597,7 +582,7 @@ bool LBPEvaluator::Feature :: read(const FileNode& node )
 
 LBPEvaluator::LBPEvaluator()
 {
-    features = new std::vector<Feature>();
+    features = makePtr<std::vector<Feature> >();
 }
 LBPEvaluator::~LBPEvaluator()
 {
@@ -618,7 +603,7 @@ bool LBPEvaluator::read( const FileNode& node )
 
 Ptr<FeatureEvaluator> LBPEvaluator::clone() const
 {
-    LBPEvaluator* ret = new LBPEvaluator;
+    Ptr<LBPEvaluator> ret = makePtr<LBPEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->featuresPtr = &(*ret->features)[0];
@@ -677,7 +662,7 @@ bool HOGEvaluator::Feature :: read( const FileNode& node )
 
 HOGEvaluator::HOGEvaluator()
 {
-    features = new std::vector<Feature>();
+    features = makePtr<std::vector<Feature> >();
 }
 
 HOGEvaluator::~HOGEvaluator()
@@ -699,7 +684,7 @@ bool HOGEvaluator::read( const FileNode& node )
 
 Ptr<FeatureEvaluator> HOGEvaluator::clone() const
 {
-    HOGEvaluator* ret = new HOGEvaluator;
+    Ptr<HOGEvaluator> ret = makePtr<HOGEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->featuresPtr = &(*ret->features)[0];
@@ -864,7 +849,7 @@ CascadeClassifier::~CascadeClassifier()
 
 bool CascadeClassifier::empty() const
 {
-    return oldCascade.empty() && data.stages.empty();
+    return !oldCascade && data.stages.empty();
 }
 
 bool CascadeClassifier::load(const String& filename)
@@ -882,13 +867,13 @@ bool CascadeClassifier::load(const String& filename)
 
     fs.release();
 
-    oldCascade = Ptr<CvHaarClassifierCascade>((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
+    oldCascade.reset((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
     return !oldCascade.empty();
 }
 
 int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, double& weight )
 {
-    CV_Assert( oldCascade.empty() );
+    CV_Assert( !oldCascade );
 
     assert( data.featureType == FeatureEvaluator::HAAR ||
             data.featureType == FeatureEvaluator::LBP ||
@@ -988,7 +973,7 @@ public:
                 {
                     if( result == 1 )
                         result =  -(int)classifier->data.stages.size();
-                    if( classifier->data.stages.size() + result < 4 )
+                    if( classifier->data.stages.size() + result == 0 )
                     {
                         mtx->lock();
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
@@ -1037,7 +1022,7 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
 #endif
 
     Mat currentMask;
-    if (!maskGenerator.empty()) {
+    if (maskGenerator) {
         currentMask=maskGenerator->generateMask(image);
     }
 
@@ -1112,7 +1097,7 @@ void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vecto
 {
     candidates.clear();
 
-    if (!maskGenerator.empty())
+    if (maskGenerator)
         maskGenerator->initializeMask(image);
 
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
@@ -1169,13 +1154,14 @@ void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vecto
     }
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& rejectLevels,
                                           std::vector<double>& levelWeights,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
+    Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
     if( empty() )
@@ -1203,21 +1189,23 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
     }
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
+    Mat image = _image.getMat();
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
     detectMultiScale( image, objects, fakeLevels, fakeWeights, scaleFactor,
         minNeighbors, flags, minObjectSize, maxObjectSize );
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& numDetections, double scaleFactor,
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
 {
+    Mat image = _image.getMat();
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
     if( empty() )
@@ -1365,7 +1353,7 @@ bool CascadeClassifier::read(const FileNode& root)
     return featureEvaluator->read(fn);
 }
 
-template<> void Ptr<CvHaarClassifierCascade>::delete_obj()
+template<> void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const
 { cvReleaseHaarClassifierCascade(&obj); }
 
 } // namespace cv

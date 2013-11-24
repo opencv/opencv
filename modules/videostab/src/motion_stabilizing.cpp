@@ -532,9 +532,9 @@ void LpMotionStabilizer::stabilize(
     model.scaling(1);
 
     ClpPresolve presolveInfo;
-    Ptr<ClpSimplex> presolvedModel = presolveInfo.presolvedModel(model);
+    Ptr<ClpSimplex> presolvedModel(presolveInfo.presolvedModel(model));
 
-    if (!presolvedModel.empty())
+    if (presolvedModel)
     {
         presolvedModel->dual();
         presolveInfo.postsolve(true);
