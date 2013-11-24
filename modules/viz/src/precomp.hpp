@@ -149,8 +149,8 @@ namespace cv
             VizStorage(); // Static
             ~VizStorage();
 
-            static void add(Viz3d window);
-            static Viz3d get(const String &window_name);
+            static void add(const Viz3d& window);
+            static Viz3d& get(const String &window_name);
             static void remove(const String &window_name);
             static bool windowExists(const String &window_name);
             static void removeUnreferenced();
