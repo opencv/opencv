@@ -150,6 +150,7 @@ void sample_neg( const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, co
     }
 }
 
+// From http://www.juergenwiki.de/work/wiki/doku.php?id=public:hog_descriptor_computation_and_visualization
 Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, const Size & size )
 {   
     const int DIMX = size.width;
@@ -158,7 +159,6 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
     Mat visu;
     resize(color_origImg, visu, Size(color_origImg.cols*zoomFac, color_origImg.rows*zoomFac));
 
-    int blockSize       = 16;
     int cellSize        = 8;
     int gradientBinSize = 9;
     float radRangeForOneBin = CV_PI/(float)gradientBinSize; // dividing 180° into 9 bins, how large (in rad) is one bin?
@@ -166,7 +166,6 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
     // prepare data structure: 9 orientation / gradient strenghts for each cell
     int cells_in_x_dir = DIMX / cellSize;
     int cells_in_y_dir = DIMY / cellSize;
-    int totalnrofcells = cells_in_x_dir * cells_in_y_dir;
     float*** gradientStrengths = new float**[cells_in_y_dir];
     int** cellUpdateCounter   = new int*[cells_in_y_dir];
     for (int y=0; y<cells_in_y_dir; y++)
@@ -201,8 +200,8 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
             for (int cellNr=0; cellNr<4; cellNr++)
             {
                 // compute corresponding cell nr
-                int cellx = blockx;
-                int celly = blocky;
+                cellx = blockx;
+                celly = blocky;
                 if (cellNr==1) celly++;
                 if (cellNr==2) cellx++;
                 if (cellNr==3)
@@ -440,7 +439,7 @@ int main( int argc, char** argv )
 
     load_images( argv[1], argv[2], pos_lst );
     labels.assign( pos_lst.size(), +1 );
-    const int old = labels.size();
+    const unsigned int old = labels.size();
     load_images( argv[3], argv[4], full_neg_lst );
     sample_neg( full_neg_lst, neg_lst, Size( 96,160 ) );
     labels.insert( labels.end(), neg_lst.size(), -1 );
