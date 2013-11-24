@@ -62,7 +62,8 @@ cv::viz::Viz3d& cv::viz::Viz3d::operator=(const Viz3d& other)
     {
         release();
         impl_ = other.impl_;
-        if (impl_) CV_XADD(&impl_->ref_counter, 1);
+        if (impl_)
+            CV_XADD(&impl_->ref_counter, 1);
     }
     return *this;
 }
@@ -89,10 +90,15 @@ void cv::viz::Viz3d::create(const String &window_name)
 void cv::viz::Viz3d::release()
 {
     if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
+    {
         delete impl_;
+        impl_ = 0;
+    }
+
+    if (impl_ && impl_->ref_counter == 1)
+        VizStorage::removeUnreferenced();
 
     impl_ = 0;
-    VizStorage::removeUnreferenced();
 }
 
 void cv::viz::Viz3d::spin() { impl_->spin(); }

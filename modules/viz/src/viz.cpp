@@ -112,7 +112,7 @@ namespace cv { namespace viz
 cv::viz::VizMap cv::viz::VizStorage::storage;
 void cv::viz::VizStorage::unregisterAll() { storage.clear(); }
 
-cv::viz::Viz3d cv::viz::VizStorage::get(const String &window_name)
+cv::viz::Viz3d& cv::viz::VizStorage::get(const String &window_name)
 {
     String name = generateWindowName(window_name);
     VizMap::iterator vm_itr = storage.find(name);
@@ -120,7 +120,7 @@ cv::viz::Viz3d cv::viz::VizStorage::get(const String &window_name)
     return vm_itr->second;
 }
 
-void cv::viz::VizStorage::add(Viz3d window)
+void cv::viz::VizStorage::add(const Viz3d& window)
 {
     String window_name = window.getWindowName();
     VizMap::iterator vm_itr = storage.find(window_name);
@@ -136,9 +136,11 @@ bool cv::viz::VizStorage::windowExists(const String &window_name)
 
 void cv::viz::VizStorage::removeUnreferenced()
 {
-    for(VizMap::iterator pos = storage.begin(); pos != storage.end(); ++pos)
+    for(VizMap::iterator pos = storage.begin(); pos != storage.end();)
         if(pos->second.impl_->ref_counter == 1)
-            storage.erase(pos);
+            storage.erase(pos++);
+        else
+            ++pos;
 }
 
 cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
@@ -159,5 +161,5 @@ cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
     return output;
 }
 
-cv::viz::Viz3d cv::viz::get(const String &window_name) { return Viz3d(window_name); }
+cv::viz::Viz3d cv::viz::get(const String &window_name) { return Viz3d (window_name); }
 void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
