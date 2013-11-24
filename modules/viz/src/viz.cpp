@@ -125,7 +125,7 @@ void cv::viz::VizStorage::add(Viz3d window)
     String window_name = window.getWindowName();
     VizMap::iterator vm_itr = storage.find(window_name);
     CV_Assert(vm_itr == storage.end());
-    storage.insert(VizPair(window_name, window));
+    storage.insert(std::make_pair(window_name, window));
 }
 
 bool cv::viz::VizStorage::windowExists(const String &window_name)

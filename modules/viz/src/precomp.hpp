@@ -70,7 +70,7 @@
 #include <vtkSmartPointer.h>
 #include <vtkDataSet.h>
 #include <vtkPolygon.h>
-#include <vtkPointPicker.h>
+//#include <vtkPointPicker.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkDiskSource.h>
 #include <vtkPlaneSource.h>
@@ -105,7 +105,6 @@
 #include <vtkCamera.h>
 #include <vtkObjectFactory.h>
 #include <vtkPlanes.h>
-#include <vtkImageViewer.h>
 #include <vtkImageFlip.h>
 #include <vtkRenderWindow.h>
 #include <vtkTextProperty.h>
@@ -119,6 +118,7 @@
 #include <vtkTextureMapToPlane.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
+#include <vtkImageMapper.h>
 
 #if defined __GNUC__ && defined __DEPRECATED_DISABLED__
 #define __DEPRECATED
@@ -136,7 +136,6 @@ namespace cv
     {
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
         typedef std::map<String, Viz3d> VizMap;
-        typedef std::pair<String, Viz3d> VizPair;
 
         class VizStorage
         {
@@ -162,7 +161,7 @@ namespace cv
     }
 }
 
-#include "interactor_style.h"
+#include "interactor_style.hpp"
 #include "viz3d_impl.hpp"
 
 

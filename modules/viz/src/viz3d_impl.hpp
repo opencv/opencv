@@ -52,7 +52,6 @@
 struct cv::viz::Viz3d::VizImpl
 {
 public:
-    typedef cv::Ptr<VizImpl> Ptr;
     typedef Viz3d::KeyboardCallback KeyboardCallback;
     typedef Viz3d::MouseCallback MouseCallback;
 
@@ -181,9 +180,6 @@ private:
     bool camera_set_;
 
     bool removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor);
-
-    void createActorFromVTKDataSet(const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars = true);
-    void updateCells(vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
 };
 
 

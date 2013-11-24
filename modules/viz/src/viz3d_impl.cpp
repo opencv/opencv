@@ -95,9 +95,9 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     timer_id_ = interactor_->CreateRepeatingTimer(5000L);
 
     // Set a simple PointPicker
-    vtkSmartPointer<vtkPointPicker> pp = vtkSmartPointer<vtkPointPicker>::New();
-    pp->SetTolerance(pp->GetTolerance() * 2);
-    interactor_->SetPicker(pp);
+    //vtkSmartPointer<vtkPointPicker> pp = vtkSmartPointer<vtkPointPicker>::New();
+    //pp->SetTolerance(pp->GetTolerance() * 2);
+    //interactor_->SetPicker(pp);
 
     exit_main_loop_timer_callback_ = vtkSmartPointer<ExitMainLoopTimerCallback>::New();
     exit_main_loop_timer_callback_->viz_ = this;
@@ -112,8 +112,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
 
 
     //////////////////////////////
-    String window_name;
-    VizAccessor::generateWindowName(name, window_name);
+    String window_name = VizStorage::generateWindowName(name);
     window_->SetWindowName(window_name.c_str());
 }
 
@@ -314,45 +313,6 @@ bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(const vtkSmartPointer<vtkP
     return false;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::createActorFromVTKDataSet(const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars)
-{
-    if (!actor)
-        actor = vtkSmartPointer<vtkLODActor>::New();
-
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(data);
-#else
-    mapper->SetInputData(data);
-#endif
-
-    if (use_scalars)
-    {
-        vtkSmartPointer<vtkDataArray> scalars = data->GetPointData()->GetScalars();
-        if (scalars)
-        {
-            cv::Vec3d minmax(scalars->GetRange());
-            mapper->SetScalarRange(minmax.val);
-            mapper->SetScalarModeToUsePointData();
-
-            // interpolation OFF, if data is a vtkPolyData that contains only vertices, ON for anything else.
-            vtkPolyData* polyData = vtkPolyData::SafeDownCast(data);
-            bool interpolation = (polyData && polyData->GetNumberOfCells() != polyData->GetNumberOfVerts());
-
-            mapper->SetInterpolateScalarsBeforeMapping(interpolation);
-            mapper->ScalarVisibilityOn();
-        }
-    }
-    mapper->ImmediateModeRenderingOff();
-
-    actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, data->GetNumberOfPoints() / 10)));
-    actor->GetProperty()->SetInterpolationToFlat();
-    actor->GetProperty()->BackfaceCullingOn();
-
-    actor->SetMapper(mapper);
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
 {
@@ -542,48 +502,6 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::updateCells(vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points)
-{
-    // If no init cells and cells has not been initialized...
-    if (!cells)
-        cells = vtkSmartPointer<vtkIdTypeArray>::New();
-
-    // If we have less values then we need to recreate the array
-    if (cells->GetNumberOfTuples() < nr_points)
-    {
-        cells = vtkSmartPointer<vtkIdTypeArray>::New();
-
-        // If init cells is given, and there's enough data in it, use it
-        if (initcells && initcells->GetNumberOfTuples() >= nr_points)
-        {
-            cells->DeepCopy(initcells);
-            cells->SetNumberOfComponents(2);
-            cells->SetNumberOfTuples(nr_points);
-        }
-        else
-        {
-            // If the number of tuples is still too small, we need to recreate the array
-            cells->SetNumberOfComponents(2);
-            cells->SetNumberOfTuples(nr_points);
-            vtkIdType *cell = cells->GetPointer(0);
-            // Fill it with 1s
-            std::fill(cell, cell + nr_points * 2, 1);
-            cell++;
-            for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
-                *cell = i;
-            // Save the results in initcells
-            initcells = vtkSmartPointer<vtkIdTypeArray>::New();
-            initcells->DeepCopy(cells);
-        }
-    }
-    else
-    {
-        // The assumption here is that the current set of cells has more data than needed
-        cells->SetNumberOfComponents(2);
-        cells->SetNumberOfTuples(nr_points);
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode)
