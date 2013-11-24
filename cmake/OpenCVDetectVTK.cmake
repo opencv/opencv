@@ -1,0 +1,27 @@
+if(NOT WITH_VTK OR ANDROID OR IOS)
+  message(STATUS "VTK support is disabled.")
+  return()
+endif()
+
+find_package(VTK 6.0 QUIET COMPONENTS vtkRenderingCore vtkInteractionWidgets vtkInteractionStyle vtkIOLegacy vtkIOPLY vtkRenderingFreeType vtkRenderingLOD vtkFiltersTexture NO_MODULE)
+
+if(NOT DEFINED VTK_FOUND OR NOT VTK_FOUND)
+  find_package(VTK 5.10 QUIET COMPONENTS vtkCommon vtkFiltering vtkRendering vtkWidgets vtkImaging NO_MODULE)
+endif()
+
+if(NOT DEFINED VTK_FOUND OR NOT VTK_FOUND)
+  find_package(VTK 5.8 QUIET COMPONENTS vtkCommon vtkFiltering vtkRendering vtkWidgets vtkImaging NO_MODULE)
+endif()
+
+if(VTK_FOUND)
+  if (BUILD_SHARED_LIBS OR (NOT BUILD_SHARED_LIBS AND NOT VTK_BUILD_SHARED_LIBS))
+    set(HAVE_VTK ON)
+    message(STATUS "Found VTK ver. ${VTK_VERSION} (usefile: ${VTK_USE_FILE})")
+  else ()
+    set(HAVE_VTK OFF)
+    message(WARNING "VTK disabled. You are to build OpenCV in STATIC but VTK is SHARED!")
+  endif ()
+else()
+  set(HAVE_VTK OFF)
+  message(STATUS "VTK is not found. Please set -DVTK_DIR in CMake to VTK build directory, or set $VTK_DIR enviroment variable to VTK install subdirectory with UseVTK.cmake file (for windows)")
+endif()
