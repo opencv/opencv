@@ -121,6 +121,8 @@ namespace cv
 
             void create(const String &window_name);
             void release();
+
+            friend class VizStorage;
         };
 
     } /* namespace viz */
