@@ -178,7 +178,7 @@ void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& im
 
     // Match keypoint descriptors to cluster center (to vocabulary)
     std::vector<DMatch> matches;
-    dmatcher->match( descriptors, matches );
+    dmatcher->match( keypointDescriptors, matches );
 
     // Compute image descriptor
     if( pointIdxsOfClusters )
