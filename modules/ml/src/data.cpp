@@ -209,6 +209,7 @@ int CvMLData::read_csv(const char* filename)
             if (!token)
             {
                 fclose(file);
+                delete [] el_ptr;
                 return -1;
             }
         }

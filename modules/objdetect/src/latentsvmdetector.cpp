@@ -142,6 +142,7 @@ CvSeq* cvLatentSvmDetectObjects(IplImage* image,
     free(points);
     free(oppPoints);
     free(score);
+    free(scoreOut);
 
     return result_seq;
 }
