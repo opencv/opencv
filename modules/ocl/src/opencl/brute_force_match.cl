@@ -82,7 +82,7 @@ typedef float result_type;
 #define DIST_RES(x) sqrt(x)
 #elif (DIST_TYPE == 2) // Hamming
 //http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-static int bit1Count(int v)
+inline int bit1Count(int v)
 {
     v = v - ((v >> 1) & 0x55555555);                    // reuse input as temporary
     v = (v & 0x33333333) + ((v >> 2) & 0x33333333);     // temp
@@ -94,7 +94,7 @@ typedef int result_type;
 #define DIST_RES(x) (x)
 #endif
 
-static result_type reduce_block(
+inline result_type reduce_block(
     __local value_type *s_query,
     __local value_type *s_train,
     int lidx,
@@ -112,7 +112,7 @@ static result_type reduce_block(
     return DIST_RES(result);
 }
 
-static result_type reduce_block_match(
+inline result_type reduce_block_match(
     __local value_type *s_query,
     __local value_type *s_train,
     int lidx,
@@ -130,7 +130,7 @@ static result_type reduce_block_match(
     return (result);
 }
 
-static result_type reduce_multi_block(
+inline result_type reduce_multi_block(
     __local value_type *s_query,
     __local value_type *s_train,
     int block_index,

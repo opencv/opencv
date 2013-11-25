@@ -1000,7 +1000,7 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
 //////////////////////// init message /////////////////////////
 ///////////////////////////////////////////////////////////////
 
-static void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new,
+inline void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new,
     __global short *r_new, __global const short *u_cur, __global const short *d_cur,
     __global const short *l_cur, __global const short *r_cur,
     __global short *data_cost_selected, __global short *disparity_selected_new,
@@ -1165,7 +1165,7 @@ __kernel void init_message_1(__global float *u_new_, __global float *d_new_, __g
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
 
-static void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1,
+inline void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1,
     __global const short *msg2, __global const short *msg3,
     __global const short *dst_disp, __global const short *src_disp,
     int nr_plane, __global short *temp,
@@ -1202,7 +1202,7 @@ static void message_per_pixel_0(__global const short *data, __global short *msg_
         msg_dst[d * cdisp_step1] = convert_short_sat_rte(temp[d * cdisp_step1] - sum);
 }
 
-static void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1,
+inline void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1,
     __global const float *msg2, __global const float *msg3,
     __global const float *dst_disp, __global const float *src_disp,
     int nr_plane, __global float *temp,
