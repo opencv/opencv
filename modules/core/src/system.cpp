@@ -748,50 +748,27 @@ struct Mutex::Impl
     int refcount;
 };
 
-#elif defined __APPLE__
-
-#include <libkern/OSAtomic.h>
-
-struct Mutex::Impl
-{
-    Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
-    ~Impl() {}
-
-    void lock() { OSSpinLockLock(&sl); }
-    bool trylock() { return OSSpinLockTry(&sl); }
-    void unlock() { OSSpinLockUnlock(&sl); }
-
-    OSSpinLock sl;
-    int refcount;
-};
-
-#elif defined __linux__ && !defined ANDROID
-
-struct Mutex::Impl
-{
-    Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
-    ~Impl() { pthread_spin_destroy(&sl); }
-
-    void lock() { pthread_spin_lock(&sl); }
-    bool trylock() { return pthread_spin_trylock(&sl) == 0; }
-    void unlock() { pthread_spin_unlock(&sl); }
-
-    pthread_spinlock_t sl;
-    int refcount;
-};
-
 #else
 
 struct Mutex::Impl
 {
-    Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
-    ~Impl() { pthread_mutex_destroy(&sl); }
+    Impl()
+    {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&mt, &attr);
+        pthread_mutexattr_destroy(&attr);
 
-    void lock() { pthread_mutex_lock(&sl); }
-    bool trylock() { return pthread_mutex_trylock(&sl) == 0; }
-    void unlock() { pthread_mutex_unlock(&sl); }
+        refcount = 1;
+    }
+    ~Impl() { pthread_mutex_destroy(&mt); }
 
-    pthread_mutex_t sl;
+    void lock() { pthread_mutex_lock(&mt); }
+    bool trylock() { return pthread_mutex_trylock(&mt) == 0; }
+    void unlock() { pthread_mutex_unlock(&mt); }
+
+    pthread_mutex_t mt;
     int refcount;
 };
 
