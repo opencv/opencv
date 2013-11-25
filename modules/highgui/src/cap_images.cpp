@@ -200,25 +200,20 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
     }
     else // no pattern filename was given - extract the pattern
     {
-        at = name;
+        int len = (int)strlen(name);
+        // find last number
+        for(at = name + len - 1; at >= name && !isdigit(*at); --at)
+            ;
+        // find first digit that belongs to the last number
+        for ( ; at >= name && isdigit(*at); --at)
+            ;
 
-        // ignore directory names
-        char *slash = strrchr(at, '/');
-        if (slash) at = slash + 1;
-
-#ifdef _WIN32
-        slash = strrchr(at, '\\');
-        if (slash) at = slash + 1;
-#endif
-
-        while (*at && !isdigit(*at)) at++;
-
-        if(!*at)
+        if(at < name)
             return 0;
 
         sscanf(at, "%u", offset);
 
-        int size = (int)strlen(filename) + 20;
+        int size = len + 20;
         name = (char *)malloc(size);
         strncpy(name, filename, at - filename);
         name[at - filename] = 0;
@@ -238,7 +233,6 @@ static char* icvExtractPattern(const char *filename, unsigned *offset)
 
     return name;
 }
-
 
 bool CvCapture_Images::open(const char * _filename)
 {
