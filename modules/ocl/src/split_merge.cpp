@@ -234,13 +234,13 @@ namespace cv
                                    (int)VEC_SIZE, depth, channels);
 
                 if (dst0Aligned)
-                    build_options = build_options + " -D DST0_ALIGNED";
+                    build_options += " -D DST0_ALIGNED";
                 if (dst1Aligned)
-                    build_options = build_options + " -D DST1_ALIGNED";
+                    build_options += " -D DST1_ALIGNED";
                 if (dst2Aligned)
-                    build_options = build_options + " -D DST2_ALIGNED";
+                    build_options += " -D DST2_ALIGNED";
                 if (dst3Aligned)
-                    build_options = build_options + " -D DST3_ALIGNED";
+                    build_options += " -D DST3_ALIGNED";
 
                 const DeviceInfo& devInfo = clCtx->getDeviceInfo();
 
@@ -251,7 +251,7 @@ namespace cv
                         && (devInfo.deviceVersion.find("Build 56860") != std::string::npos
                             || devInfo.deviceVersion.find("Build 76921") != std::string::npos
                             || devInfo.deviceVersion.find("Build 78712") != std::string::npos))
-                    build_options = build_options + " -D BYPASS_VSTORE=true";
+                    build_options += " -D BYPASS_VSTORE=true";
 
                 size_t globalThreads[3] = { divUp(src.cols, VEC_SIZE), src.rows, 1 };
                 openCLExecuteKernel(clCtx, &split_mat, kernelName, globalThreads, NULL, args, -1, -1, build_options.c_str());
