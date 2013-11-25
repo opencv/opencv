@@ -229,7 +229,6 @@ namespace cv
                 CV_Error(CV_StsBadArg, "Unsupported map types");
 
             int ocn = dst.oclchannels();
-            size_t localThreads[3] = { 256, 1, 1 };
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             Mat scalar(1, 1, CV_MAKE_TYPE(dst.depth(), ocn), borderValue);
@@ -274,7 +273,12 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
             args.push_back( make_pair(scalar.elemSize(), (void *)scalar.data));
 
+#ifdef ANDROID
+            openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, NULL, args, -1, -1, buildOptions.c_str());
+#else
+            size_t localThreads[3] = { 256, 1, 1 };
             openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
+#endif
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
@@ -360,7 +364,11 @@ namespace cv
                                       typeMap[src.depth()], channelMap[ocn], src.depth() <= CV_32S ? "_sat_rte" : "");
             }
 
+#ifdef ANDROID
+            size_t blkSizeX = 16, blkSizeY = 8;
+#else
             size_t blkSizeX = 16, blkSizeY = 16;
+#endif
             size_t glbSizeX;
             if (src.type() == CV_8UC1 && interpolation == INTER_LINEAR)
             {
@@ -712,8 +720,13 @@ namespace cv
                                                         1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
 
                 }
+
                 //TODO: improve this kernel
+#ifdef ANDROID
+                size_t blkSizeX = 16, blkSizeY = 4;
+#else
                 size_t blkSizeX = 16, blkSizeY = 16;
+#endif
                 size_t glbSizeX;
                 size_t cols;
 
@@ -785,7 +798,11 @@ namespace cv
                 }
 
                 //TODO: improve this kernel
+#ifdef ANDROID
+                size_t blkSizeX = 16, blkSizeY = 8;
+#else
                 size_t blkSizeX = 16, blkSizeY = 16;
+#endif
                 size_t glbSizeX;
                 size_t cols;
                 if (src.type() == CV_8UC1 && interpolation == 0)
@@ -1701,7 +1718,11 @@ namespace cv
             oclMat oclspace_ofs(1, d * d, CV_32SC1, space_ofs);
 
             string kernelName = "bilateral";
+#ifdef ANDROID
+            size_t localThreads[3]  = { 16, 8, 1 };
+#else
             size_t localThreads[3]  = { 16, 16, 1 };
+#endif
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             if ((dst.type() == CV_8UC1) && ((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))
