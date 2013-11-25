@@ -2705,6 +2705,7 @@ public:
             }
             u->markHostCopyObsolete(false);
             clReleaseMemObject((cl_mem)u->handle);
+            u->handle = 0;
             u->currAllocator = u->prevAllocator;
             if(u->data && u->copyOnMap())
                 fastFree(u->data);
@@ -2717,6 +2718,7 @@ public:
             if(u->data && u->copyOnMap())
                 fastFree(u->data);
             clReleaseMemObject((cl_mem)u->handle);
+            u->handle = 0;
             delete u;
         }
     }
