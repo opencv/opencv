@@ -159,6 +159,21 @@ OpenCV-Python Tutorials
                  :alt: OD Icon
 
 
+*  :ref:`PY_ExternalModule`
+
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+
+   =========== =======================================================
+   |Objde|     In this section you will learn how to integrate third party libraries
+
+   =========== =======================================================
+
+   .. |Objde| image:: images/module.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: OD Icon
+
 
 .. raw:: latex
 
@@ -178,3 +193,4 @@ OpenCV-Python Tutorials
    py_ml/py_table_of_contents_ml/py_table_of_contents_ml
    py_photo/py_table_of_contents_photo/py_table_of_contents_photo
    py_objdetect/py_table_of_contents_objdetect/py_table_of_contents_objdetect
+   py_external_cpp_module/external_cpp_module

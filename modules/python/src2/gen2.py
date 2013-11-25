@@ -76,13 +76,13 @@ template<> PyObject* pyopencv_from(const ${cname}& r)
     return (PyObject*)m;
 }
 
-template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name)
+template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const ArgInfo info)
 {
     if( src == NULL || src == Py_None )
         return true;
     if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
     {
-        failmsg("Expected ${cname} for argument '%%s'", name);
+        failmsg("Expected ${cname} for argument '%%s'", info.name);
         return false;
     }
     dst = ((pyopencv_${name}_t*)src)->v;
@@ -119,13 +119,13 @@ template<> PyObject* pyopencv_from(const Ptr<${cname}>& r)
     return (PyObject*)m;
 }
 
-template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
+template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const ArgInfo info)
 {
     if( src == NULL || src == Py_None )
         return true;
     if(!PyObject_TypeCheck(src, &pyopencv_${name}_Type))
     {
-        failmsg("Expected ${cname} for argument '%%s'", name);
+        failmsg("Expected ${cname} for argument '%%s'", info.name);
         return false;
     }
     dst = ((pyopencv_${name}_t*)src)->v.dynamicCast<${cname}>();
@@ -135,14 +135,14 @@ template<> bool pyopencv_to(PyObject* src, Ptr<${cname}>& dst, const char* name)
 """ % head_init_str)
 
 gen_template_map_type_cvt = Template("""
-template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const char* name);
+template<> bool pyopencv_to(PyObject* src, ${cname}& dst, const ArgInfo info);
 """)
 
 gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to(tmp, dst.$propname);
+        ok = tmp && pyopencv_coerce(tmp, dst.$propname);
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -203,7 +203,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, p->v${access}${member}) ? 0 : -1;
+    return pyopencv_coerce(value, p->v${access}${member}) ? 0 : -1;
 }
 """)
 
@@ -215,7 +215,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
+    return pyopencv_coerce(value, dynamic_cast<$cname*>(p->v.get())${access}${member}) ? 0 : -1;
 }
 """)
 
@@ -234,8 +234,8 @@ simple_argtype_mapping = {
     "c_string": ("char*", "s", '(char*)""')
 }
 
-def normalize_class_name(name):
-    return re.sub(r"^cv\.", "", name).replace(".", "_")
+def normalize_class_name(namespace, name):
+    return re.sub(r"^%s\."%namespace, "", name).replace(".", "_")
 
 class ClassProp(object):
     def __init__(self, decl):
@@ -246,9 +246,9 @@ class ClassProp(object):
             self.readonly = False
 
 class ClassInfo(object):
-    def __init__(self, name, decl=None):
+    def __init__(self, namespace, name, decl=None):
         self.cname = name.replace(".", "::")
-        self.name = self.wname = normalize_class_name(name)
+        self.name = self.wname = normalize_class_name(namespace, name)
         self.ismap = False
         self.issimple = False
         self.isalgorithm = False
@@ -265,8 +265,8 @@ class ClassInfo(object):
                 print("      Only the first base class will be used")
                 self.bases = [self.bases[0].strip(",")]
                 #return sys.exit(-1)
-            if self.bases and self.bases[0].startswith("cv::"):
-                self.bases[0] = self.bases[0][4:]
+            if self.bases and self.bases[0].startswith("%s::"%namespace):
+                self.bases[0] = self.bases[0][len(namespace)+2:]
             if self.bases and self.bases[0] == "Algorithm":
                 self.isalgorithm = True
             for m in decl[2]:
@@ -283,10 +283,10 @@ class ClassInfo(object):
             self.wname = self.wname[2:]
 
     def gen_map_code(self, all_classes):
-        code = "static bool pyopencv_to(PyObject* src, %s& dst, const char* name)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
+        code = "static bool pyopencv_to(PyObject* src, %s& dst, const ArgInfo info)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.bases:
-            code += "\n    return pyopencv_to(src, (%s&)dst, name);\n}\n" % all_classes[self.bases[0]].cname
+            code += "\n    return pyopencv_to(src, (%s&)dst, info);\n}\n" % all_classes[self.bases[0]].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -555,7 +555,7 @@ class FuncInfo(object):
         proto = self.get_wrapper_prototype()
         code = "%s\n{\n" % (proto,)
 
-        selfinfo = ClassInfo("")
+        selfinfo = ClassInfo("", "")
         ismethod = self.classname != "" and not self.isconstructor
         # full name is needed for error diagnostic in PyArg_ParseTupleAndKeywords
         fullname = self.name
@@ -729,7 +729,8 @@ class FuncInfo(object):
 
 
 class PythonWrapperGenerator(object):
-    def __init__(self):
+    def __init__(self, namespace):
+        self.namespace = namespace
         self.clear()
 
     def clear(self):
@@ -744,7 +745,7 @@ class PythonWrapperGenerator(object):
         self.class_idx = 0
 
     def add_class(self, stype, name, decl):
-        classinfo = ClassInfo(name, decl)
+        classinfo = ClassInfo(self.namespace, name, decl)
         classinfo.decl_idx = self.class_idx
         self.class_idx += 1
 
@@ -769,15 +770,15 @@ class PythonWrapperGenerator(object):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] != "cv":
-            classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
+        if dpos >= 0 and name[:dpos] != self.namespace:
+            classname = bareclassname = re.sub(r"^%s\."%self.namespace, "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
             if dpos >= 0:
                 bareclassname = classname[dpos+1:]
                 classname = classname.replace(".", "_")
         cname = name
-        name = re.sub(r"^cv\.", "", name)
+        name = re.sub(r"^%s\."%self.namespace, "", name)
         isconstructor = cname == bareclassname
         cname = cname.replace(".", "::")
         isclassmethod = False
@@ -798,7 +799,7 @@ class PythonWrapperGenerator(object):
             cname = classname + "::" + cname
             classname = ""
         else:
-            classinfo = self.classes.get(classname, ClassInfo(""))
+            classinfo = self.classes.get(classname, ClassInfo("", ""))
             if not classinfo.name:
                 print("Generator error: the class for method %s is missing" % (name,))
                 sys.exit(-1)
@@ -817,7 +818,7 @@ class PythonWrapperGenerator(object):
         f.write(buf.getvalue())
         f.close()
 
-    def gen(self, srcfiles, output_path):
+    def gen(self, namespace, srcfiles, output_path):
         self.clear()
         parser = hdr_parser.CppHeaderParser()
 
@@ -879,18 +880,21 @@ class PythonWrapperGenerator(object):
             self.gen_const_reg(constinfo)
 
         # That's it. Now save all the files
-        self.save(output_path, "pyopencv_generated_funcs.h", self.code_funcs)
-        self.save(output_path, "pyopencv_generated_func_tab.h", self.code_func_tab)
-        self.save(output_path, "pyopencv_generated_const_reg.h", self.code_const_reg)
-        self.save(output_path, "pyopencv_generated_types.h", self.code_types)
-        self.save(output_path, "pyopencv_generated_type_reg.h", self.code_type_reg)
+        self.save(output_path, "%s_generated_funcs.h"%namespace, self.code_funcs)
+        self.save(output_path, "%s_generated_func_tab.h"%namespace, self.code_func_tab)
+        self.save(output_path, "%s_generated_const_reg.h"%namespace, self.code_const_reg)
+        self.save(output_path, "%s_generated_types.h"%namespace, self.code_types)
+        self.save(output_path, "%s_generated_type_reg.h"%namespace, self.code_type_reg)
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
     dstdir = "/Users/vp/tmp"
+    namespace = 'cv'
     if len(sys.argv) > 1:
-        dstdir = sys.argv[1]
+        namespace = sys.argv[1]
     if len(sys.argv) > 2:
-        srcfiles = sys.argv[2:]
-    generator = PythonWrapperGenerator()
-    generator.gen(srcfiles, dstdir)
+        dstdir = sys.argv[2]
+    if len(sys.argv) > 3:
+        srcfiles = sys.argv[3:]
+    generator = PythonWrapperGenerator(namespace)
+    generator.gen(namespace, srcfiles, dstdir)
