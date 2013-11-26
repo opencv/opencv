@@ -47,10 +47,10 @@ using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::cuda::warpAffine(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::warpAffine(InputArray, OutputArray, InputArray, Size, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
 void cv::cuda::buildWarpAffineMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::cuda::warpPerspective(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::warpPerspective(InputArray, OutputArray, InputArray, Size, int, int, const Scalar&, Stream&) { throw_no_cuda(); }
 void cv::cuda::buildWarpPerspectiveMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 void cv::cuda::buildWarpPlaneMaps(Size, Rect, InputArray, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
@@ -184,7 +184,7 @@ namespace
     };
 }
 
-void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
+void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, const Scalar& borderValue, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     Mat M = _M.getMat();
@@ -323,7 +323,7 @@ void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size
     }
 }
 
-void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
+void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, const Scalar& borderValue, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     Mat M = _M.getMat();

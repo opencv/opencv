@@ -103,7 +103,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDI
 
 
 //
-//   Mat::Mat(int rows, int cols, int type, Scalar s)
+//   Mat::Mat(int rows, int cols, int type, const Scalar& s)
 //
 
 JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIDDDD
@@ -130,7 +130,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIDDDD
 
 
 //
-//   Mat::Mat(Size size, int type, Scalar s)
+//   Mat::Mat(Size size, int type, const Scalar& s)
 //
 
 JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDIDDDD

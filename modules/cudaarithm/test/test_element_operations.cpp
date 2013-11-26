@@ -1897,7 +1897,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Compare_Array, testing::Combine(
 namespace
 {
     template <template <typename> class Op, typename T>
-    void compareScalarImpl(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst)
+    void compareScalarImpl(const cv::Mat& src, const cv::Scalar& sc, cv::Mat& dst)
     {
         Op<T> op;
 
@@ -1919,9 +1919,9 @@ namespace
         }
     }
 
-    void compareScalarGold(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst, int cmpop)
+    void compareScalarGold(const cv::Mat& src, const cv::Scalar& sc, cv::Mat& dst, int cmpop)
     {
-        typedef void (*func_t)(const cv::Mat& src, cv::Scalar sc, cv::Mat& dst);
+        typedef void (*func_t)(const cv::Mat& src, const cv::Scalar& sc, cv::Mat& dst);
         static const func_t funcs[7][6] =
         {
             {compareScalarImpl<std::equal_to, unsigned char> , compareScalarImpl<std::greater, unsigned char> , compareScalarImpl<std::greater_equal, unsigned char> , compareScalarImpl<std::less, unsigned char> , compareScalarImpl<std::less_equal, unsigned char> , compareScalarImpl<std::not_equal_to, unsigned char> },

@@ -16,7 +16,7 @@ struct BaseElemWiseOp
 {
     enum { FIX_ALPHA=1, FIX_BETA=2, FIX_GAMMA=4, REAL_GAMMA=8, SUPPORT_MASK=16, SCALAR_OUTPUT=32 };
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
-                   Scalar _gamma=Scalar::all(0), int _context=1)
+                   const Scalar& _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
     BaseElemWiseOp() { flags = 0; alpha = beta = 0; gamma = Scalar::all(0); }
     virtual ~BaseElemWiseOp() {}
@@ -96,7 +96,7 @@ struct BaseElemWiseOp
 
 struct BaseAddOp : public BaseElemWiseOp
 {
-    BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
+    BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, const Scalar& _gamma=Scalar::all(0))
     : BaseElemWiseOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
 
     void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)

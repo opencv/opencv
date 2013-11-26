@@ -154,7 +154,7 @@ public:
     Matx<_Tp, n, m> t() const;
 
     //! invert matrix the matrix
-    Matx<_Tp, n, m> inv(int method=DECOMP_LU) const;
+    Matx<_Tp, n, m> inv(int method=DECOMP_LU, bool *p_is_ok = NULL) const;
 
     //! solve linear system
     template<int l> Matx<_Tp, n, l> solve(const Matx<_Tp, m, l>& rhs, int flags=DECOMP_LU) const;
@@ -182,7 +182,7 @@ public:
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
-    _Tp val[m*n]; //< matrix elements
+    _Tp CV_DECL_ALIGNED_CONDITIONAL(_Tp,m*n) val[m*n]; //< matrix elements
 };
 
 /*!

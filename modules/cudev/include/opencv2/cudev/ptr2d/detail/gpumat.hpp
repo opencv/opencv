@@ -70,13 +70,13 @@ __host__ GpuMat_<T>::GpuMat_(Size asize)
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(int arows, int acols, Scalar val)
+__host__ GpuMat_<T>::GpuMat_(int arows, int acols, const Scalar& val)
     : GpuMat(arows, acols, DataType<T>::type, val)
 {
 }
 
 template <typename T>
-__host__ GpuMat_<T>::GpuMat_(Size asize, Scalar val)
+__host__ GpuMat_<T>::GpuMat_(Size asize, const Scalar& val)
     : GpuMat(asize.height, asize.width, DataType<T>::type, val)
 {
 }

@@ -51,7 +51,7 @@ using namespace cvtest;
 
 namespace
 {
-    template <typename T, template <typename> class Interpolator> void remapImpl(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int borderType, cv::Scalar borderVal)
+    template <typename T, template <typename> class Interpolator> void remapImpl(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int borderType, const cv::Scalar& borderVal)
     {
         const int cn = src.channels();
 
@@ -69,9 +69,9 @@ namespace
         }
     }
 
-    void remapGold(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int interpolation, int borderType, cv::Scalar borderVal)
+    void remapGold(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int interpolation, int borderType, const cv::Scalar& borderVal)
     {
-        typedef void (*func_t)(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int borderType, cv::Scalar borderVal);
+        typedef void (*func_t)(const cv::Mat& src, const cv::Mat& xmap, const cv::Mat& ymap, cv::Mat& dst, int borderType, const cv::Scalar& borderVal);
 
         static const func_t nearest_funcs[] =
         {

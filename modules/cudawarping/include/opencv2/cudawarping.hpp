@@ -55,7 +55,7 @@ namespace cv { namespace cuda {
 //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
 //! supports only CV_32FC1 map type
 CV_EXPORTS void remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap,
-                      int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(),
+                      int interpolation, int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(),
                       Stream& stream = Stream::Null());
 
 //! resizes the image
@@ -65,14 +65,14 @@ CV_EXPORTS void resize(InputArray src, OutputArray dst, Size dsize, double fx=0,
 //! warps the image using affine transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
 CV_EXPORTS void warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
-    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
+    int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null());
 
 CV_EXPORTS void buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
 //! warps the image using perspective transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
 CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
-    int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
+    int borderMode = BORDER_CONSTANT, const Scalar& borderValue = Scalar(), Stream& stream = Stream::Null());
 
 CV_EXPORTS void buildWarpPerspectiveMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 

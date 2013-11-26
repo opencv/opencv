@@ -1919,7 +1919,7 @@ static const int* getFontData(int fontFace)
 
 
 void putText( Mat& img, const String& text, Point org,
-              int fontFace, double fontScale, Scalar color,
+              int fontFace, double fontScale, const Scalar& color,
               int thickness, int line_type, bool bottomLeftOrigin )
 
 {

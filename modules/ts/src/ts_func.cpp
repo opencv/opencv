@@ -149,7 +149,7 @@ Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double
 }
 
 void add(const Mat& _a, double alpha, const Mat& _b, double beta,
-        Scalar gamma, Mat& c, int ctype, bool calcAbs)
+        const Scalar& gamma, Mat& c, int ctype, bool calcAbs)
 {
     Mat a = _a, b = _b;
     if( a.empty() || alpha == 0 )

@@ -53,7 +53,7 @@
 
 using namespace cv::cudev;
 
-void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
+void bitScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
 namespace
 {
@@ -67,7 +67,7 @@ namespace
 
     template <typename T, bit_scalar_func_t func> struct BitScalar
     {
-        static void call(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream)
+        static void call(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& stream)
         {
             func(src, cv::saturate_cast<T>(value[0]), dst, stream);
         }
@@ -75,7 +75,7 @@ namespace
 
     template <bit_scalar_func_t func> struct BitScalar4
     {
-        static void call(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream)
+        static void call(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& stream)
         {
             uint packedVal = 0;
 
@@ -99,7 +99,7 @@ namespace
     {
         typedef typename NppBitwiseCFunc<DEPTH, cn>::npp_type npp_type;
 
-        static void call(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& _stream)
+        static void call(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& _stream)
         {
             cudaStream_t stream = StreamAccessor::getStream(_stream);
             NppStreamHandler h(stream);
@@ -124,11 +124,11 @@ namespace
     };
 }
 
-void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
+void bitScalar(const GpuMat& src, const cv::Scalar& value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
 {
     (void) mask;
 
-    typedef void (*func_t)(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream);
+    typedef void (*func_t)(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& stream);
     static const func_t funcs[3][6][4] =
     {
         {

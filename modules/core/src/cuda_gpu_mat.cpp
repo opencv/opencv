@@ -422,7 +422,7 @@ void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _strea
     throw_no_cuda();
 }
 
-GpuMat& cv::cuda::GpuMat::setTo(Scalar s, Stream& _stream)
+GpuMat& cv::cuda::GpuMat::setTo(const Scalar& s, Stream& _stream)
 {
     (void) s;
     (void) _stream;
@@ -430,7 +430,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar s, Stream& _stream)
     return *this;
 }
 
-GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
+GpuMat& cv::cuda::GpuMat::setTo(const Scalar& s, InputArray _mask, Stream& _stream)
 {
     (void) s;
     (void) _mask;

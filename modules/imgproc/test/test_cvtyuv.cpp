@@ -319,7 +319,7 @@ class BGRA8888Reader : public RGBreader
 class YUV2RGB_Converter
 {
 public:
-    RGB convert(YUV yuv)
+    RGB convert(const YUV& yuv)
     {
         int y = std::max(0, yuv[0] - 16);
         int u = yuv[1] - 128;
@@ -335,7 +335,7 @@ public:
 class YUV2GRAY_Converter
 {
 public:
-    uchar convert(YUV yuv)
+    uchar convert(const YUV& yuv)
     {
         return yuv[0];
     }
@@ -344,7 +344,7 @@ public:
 class RGB2YUV_Converter
 {
 public:
-    YUV convert(RGB rgb)
+    YUV convert(const RGB& rgb)
     {
         int r = rgb[0];
         int g = rgb[1];

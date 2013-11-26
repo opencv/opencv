@@ -83,8 +83,8 @@ public:
     GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value _s
-    GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
-    GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    GpuMat(int rows, int cols, int type, const Scalar& s, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, const Scalar& s, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
     GpuMat(const GpuMat& m);
@@ -144,16 +144,16 @@ public:
     void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
 
     //! sets some of the GpuMat elements to s (Blocking call)
-    GpuMat& setTo(Scalar s);
+    GpuMat& setTo(const Scalar& s);
 
     //! sets some of the GpuMat elements to s (Non-Blocking call)
-    GpuMat& setTo(Scalar s, Stream& stream);
+    GpuMat& setTo(const Scalar& s, Stream& stream);
 
     //! sets some of the GpuMat elements to s, according to the mask (Blocking call)
-    GpuMat& setTo(Scalar s, InputArray mask);
+    GpuMat& setTo(const Scalar& s, InputArray mask);
 
     //! sets some of the GpuMat elements to s, according to the mask (Non-Blocking call)
-    GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
+    GpuMat& setTo(const Scalar& s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
     void convertTo(OutputArray dst, int rtype) const;

@@ -111,7 +111,7 @@ INSTANTIATE_TEST_CASE_P(CUDA_Warping, BuildWarpAffineMaps, testing::Combine(
 
 namespace
 {
-    template <typename T, template <typename> class Interpolator> void warpAffineImpl(const cv::Mat& src, const cv::Mat& M, cv::Size dsize, cv::Mat& dst, int borderType, cv::Scalar borderVal)
+    template <typename T, template <typename> class Interpolator> void warpAffineImpl(const cv::Mat& src, const cv::Mat& M, cv::Size dsize, cv::Mat& dst, int borderType, const cv::Scalar& borderVal)
     {
         const int cn = src.channels();
 
@@ -130,9 +130,9 @@ namespace
         }
     }
 
-    void warpAffineGold(const cv::Mat& src, const cv::Mat& M, bool inverse, cv::Size dsize, cv::Mat& dst, int interpolation, int borderType, cv::Scalar borderVal)
+    void warpAffineGold(const cv::Mat& src, const cv::Mat& M, bool inverse, cv::Size dsize, cv::Mat& dst, int interpolation, int borderType, const cv::Scalar& borderVal)
     {
-        typedef void (*func_t)(const cv::Mat& src, const cv::Mat& M, cv::Size dsize, cv::Mat& dst, int borderType, cv::Scalar borderVal);
+        typedef void (*func_t)(const cv::Mat& src, const cv::Mat& M, cv::Size dsize, cv::Mat& dst, int borderType, const cv::Scalar& borderVal);
 
         static const func_t nearest_funcs[] =
         {

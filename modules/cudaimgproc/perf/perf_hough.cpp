@@ -53,7 +53,7 @@ namespace
 {
     struct Vec4iComparator
     {
-        bool operator()(const cv::Vec4i& a, const cv::Vec4i b) const
+        bool operator()(const cv::Vec4i& a, const cv::Vec4i& b) const
         {
             if (a[0] != b[0]) return a[0] < b[0];
             else if(a[1] != b[1]) return a[1] < b[1];
@@ -63,7 +63,7 @@ namespace
     };
     struct Vec3fComparator
     {
-        bool operator()(const cv::Vec3f& a, const cv::Vec3f b) const
+        bool operator()(const cv::Vec3f& a, const cv::Vec3f& b) const
         {
             if(a[0] != b[0]) return a[0] < b[0];
             else if(a[1] != b[1]) return a[1] < b[1];
@@ -72,7 +72,7 @@ namespace
     };
     struct Vec2fComparator
     {
-        bool operator()(const cv::Vec2f& a, const cv::Vec2f b) const
+        bool operator()(const cv::Vec2f& a, const cv::Vec2f& b) const
         {
             if(a[0] != b[0]) return a[0] < b[0];
             else return a[1] < b[1];

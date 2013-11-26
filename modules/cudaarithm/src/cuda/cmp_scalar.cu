@@ -52,7 +52,7 @@
 
 using namespace cv::cudev;
 
-void cmpScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
+void cmpScalar(const GpuMat& src, const cv::Scalar& val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
 
 namespace
 {
@@ -130,7 +130,7 @@ namespace
     };
 
     template <template <typename> class Op, typename T, int cn>
-    void cmpScalarImpl(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream)
+    void cmpScalarImpl(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& stream)
     {
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<uchar, cn>::type dst_type;
@@ -144,9 +144,9 @@ namespace
     }
 }
 
-void cmpScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop)
+void cmpScalar(const GpuMat& src, const cv::Scalar& val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop)
 {
-    typedef void (*func_t)(const GpuMat& src, cv::Scalar value, GpuMat& dst, Stream& stream);
+    typedef void (*func_t)(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, Stream& stream);
     static const func_t funcs[7][6][4] =
     {
         {

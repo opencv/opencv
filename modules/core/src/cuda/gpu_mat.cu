@@ -309,21 +309,21 @@ void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream
 namespace
 {
     template <typename T>
-    void setToWithOutMask(const GpuMat& mat, Scalar _scalar, Stream& stream)
+    void setToWithOutMask(const GpuMat& mat, const Scalar& _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
         gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), stream);
     }
 
     template <typename T>
-    void setToWithMask(const GpuMat& mat, const GpuMat& mask, Scalar _scalar, Stream& stream)
+    void setToWithMask(const GpuMat& mat, const GpuMat& mask, const Scalar& _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
         gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), globPtr<uchar>(mask), stream);
     }
 }
 
-GpuMat& cv::cuda::GpuMat::setTo(Scalar value, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(const Scalar& value, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -377,7 +377,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, Stream& stream)
     return *this;
 }
 
-GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(const Scalar& value, InputArray _mask, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -386,7 +386,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
 
     CV_DbgAssert( size() == mask.size() && mask.type() == CV_8UC1 );
 
-    typedef void (*func_t)(const GpuMat& mat, const GpuMat& mask, Scalar scalar, Stream& stream);
+    typedef void (*func_t)(const GpuMat& mat, const GpuMat& mask, const Scalar& scalar, Stream& stream);
     static const func_t funcs[7][4] =
     {
         {setToWithMask<uchar>,setToWithMask<uchar2>,setToWithMask<uchar3>,setToWithMask<uchar4>},

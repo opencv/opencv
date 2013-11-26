@@ -230,7 +230,7 @@ struct Diff8uC1
 
 struct Diff8uC3
 {
-    Diff8uC3(Vec3b _lo, Vec3b _up)
+    Diff8uC3(const Vec3b& _lo, const Vec3b& _up)
     {
         for( int k = 0; k < 3; k++ )
             lo[k] = _lo[k], interval[k] = _lo[k] + _up[k];
@@ -259,7 +259,7 @@ struct DiffC1
 template<typename _Tp>
 struct DiffC3
 {
-    DiffC3(_Tp _lo, _Tp _up) : lo(-_lo), up(_up) {}
+    DiffC3(const _Tp& _lo, const _Tp& _up) : lo(-_lo), up(_up) {}
     bool operator()(const _Tp* a, const _Tp* b) const
     {
         _Tp d = *a - *b;
@@ -455,8 +455,8 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
 \****************************************************************************************/
 
 int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
-                  Point seedPoint, Scalar newVal, Rect* rect,
-                  Scalar loDiff, Scalar upDiff, int flags )
+                  Point seedPoint, const Scalar& newVal, Rect* rect,
+                  const Scalar& loDiff, const Scalar& upDiff, int flags )
 {
     ConnectedComp comp;
     std::vector<FFillSegment> buffer;
@@ -620,8 +620,8 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
 
 
 int cv::floodFill( InputOutputArray _image, Point seedPoint,
-                  Scalar newVal, Rect* rect,
-                  Scalar loDiff, Scalar upDiff, int flags )
+                  const Scalar& newVal, Rect* rect,
+                  const Scalar& loDiff, const Scalar& upDiff, int flags )
 {
     return floodFill(_image, Mat(), seedPoint, newVal, rect, loDiff, upDiff, flags);
 }

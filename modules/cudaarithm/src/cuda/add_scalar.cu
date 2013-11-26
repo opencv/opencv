@@ -52,7 +52,7 @@
 
 using namespace cv::cudev;
 
-void addScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
+void addScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int);
 
 namespace
 {
@@ -77,7 +77,7 @@ namespace
     };
 
     template <typename SrcType, typename ScalarDepth, typename DstType>
-    void addScalarImpl(const GpuMat& src, cv::Scalar value, GpuMat& dst, const GpuMat& mask, Stream& stream)
+    void addScalarImpl(const GpuMat& src, const cv::Scalar& value, GpuMat& dst, const GpuMat& mask, Stream& stream)
     {
         typedef typename MakeVec<ScalarDepth, VecTraits<SrcType>::cn>::type ScalarType;
 
@@ -93,9 +93,9 @@ namespace
     }
 }
 
-void addScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int)
+void addScalar(const GpuMat& src, const cv::Scalar& val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int)
 {
-    typedef void (*func_t)(const GpuMat& src, cv::Scalar val, GpuMat& dst, const GpuMat& mask, Stream& stream);
+    typedef void (*func_t)(const GpuMat& src, const cv::Scalar& val, GpuMat& dst, const GpuMat& mask, Stream& stream);
     static const func_t funcs[7][7][4] =
     {
         {

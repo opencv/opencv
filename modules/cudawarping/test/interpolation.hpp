@@ -46,7 +46,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
-template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int border_type, const cv::Scalar& borderVal = cv::Scalar())
 {
     if (border_type == cv::BORDER_CONSTANT)
         return (y >= 0 && y < src.rows && x >= 0 && x < src.cols) ? src.at<T>(y, x * src.channels() + c) : cv::saturate_cast<T>(borderVal.val[c]);
@@ -56,7 +56,7 @@ template <typename T> T readVal(const cv::Mat& src, int y, int x, int c, int bor
 
 template <typename T> struct NearestInterpolator
 {
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, const cv::Scalar& borderVal = cv::Scalar())
     {
         return readVal<T>(src, int(y), int(x), c, border_type, borderVal);
     }
@@ -64,7 +64,7 @@ template <typename T> struct NearestInterpolator
 
 template <typename T> struct LinearInterpolator
 {
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, const cv::Scalar& borderVal = cv::Scalar())
     {
         int x1 = cvFloor(x);
         int y1 = cvFloor(y);
@@ -101,7 +101,7 @@ template <typename T> struct CubicInterpolator
         }
     }
 
-    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, cv::Scalar borderVal = cv::Scalar())
+    static T getValue(const cv::Mat& src, float y, float x, int c, int border_type, const cv::Scalar& borderVal = cv::Scalar())
     {
         const float xmin = ceilf(x - 2.0f);
         const float xmax = floorf(x + 2.0f);
