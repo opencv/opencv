@@ -89,20 +89,11 @@
 
 #define EXTRA_PARAMS
 
-#if defined OP_ADD_SAT
-#define PROCESS_ELEM dstelem = add_sat(srcelem1, srcelem2)
-
-#elif defined OP_ADD
+#if defined OP_ADD
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1 + srcelem2)
-
-#elif defined OP_SUB_SAT
-#define PROCESS_ELEM dstelem = sub_sat(srcelem1, srcelem2)
 
 #elif defined OP_SUB
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1 - srcelem2)
-
-#elif defined OP_RSUB_SAT
-#define PROCESS_ELEM dstelem = sub_sat(srcelem2, srcelem1)
 
 #elif defined OP_RSUB
 #define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
@@ -226,7 +217,6 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
 
         PROCESS_ELEM;
-        //printf("(x=%d, y=%d). %d, %d, %d\n", x, y, (int)srcelem1, (int)srcelem2, (int)dstelem);
     }
 }
 
