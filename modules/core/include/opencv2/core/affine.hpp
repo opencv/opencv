@@ -161,9 +161,9 @@ cv::Affine3<T>::Affine3(const Mat3& R, const Vec3& t)
 }
 
 template<typename T> inline
-cv::Affine3<T>::Affine3(const Vec3& rvec, const Vec3& t)
+cv::Affine3<T>::Affine3(const Vec3& _rvec, const Vec3& t)
 {
-    rotation(rvec);
+    rotation(_rvec);
     translation(t);
     matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
     matrix.val[15] = 1;
@@ -208,9 +208,9 @@ void cv::Affine3<T>::rotation(const Mat3& R)
 }
 
 template<typename T> inline
-void cv::Affine3<T>::rotation(const Vec3& rvec)
+void cv::Affine3<T>::rotation(const Vec3& _rvec)
 {
-    double rx = rvec[0], ry = rvec[1], rz = rvec[2];
+    double rx = _rvec[0], ry = _rvec[1], rz = _rvec[2];
     double theta = std::sqrt(rx*rx + ry*ry + rz*rz);
 
     if (theta < DBL_EPSILON)
@@ -253,9 +253,9 @@ void cv::Affine3<T>::rotation(const cv::Mat& data)
     }
     else if ((data.cols == 3 && data.rows == 1) || (data.cols == 1 && data.rows == 3))
     {
-        Vec3 rvec;
-        data.reshape(1, 3).copyTo(rvec);
-        rotation(rvec);
+        Vec3 _rvec;
+        data.reshape(1, 3).copyTo(_rvec);
+        rotation(_rvec);
     }
     else
         CV_Assert(!"Input marix can be 3x3, 1x3 or 3x1");
