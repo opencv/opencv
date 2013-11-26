@@ -458,15 +458,8 @@ CV_INLINE int cvIsInf( double value )
 #      define CV_XADD(addr, delta) (int)__sync_fetch_and_add((unsigned*)(addr), (unsigned)(delta))
 #    endif
 #  endif
-#elif (defined WIN32 || defined _WIN32 || defined WINCE) && (!defined RC_INVOKED)
-#  if !defined(_M_AMD64) && !defined(_M_IA64) && !defined(_M_ARM)
-     CV_EXTERN_C __declspec(dllimport) long __stdcall InterlockedExchangeAdd(long volatile *Addend, long Value);
-#    define CV_XADD(addr, delta) (int)InterlockedExchangeAdd((long volatile*)addr, delta)
-#  else
-     CV_EXTERN_C long _InterlockedExchangeAdd (long volatile *Addend, long Value);
-#    pragma intrinsic(_InterlockedExchangeAdd)
-#    define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
-#  endif
+#elif defined _MSC_VER && !defined RC_INVOKED
+#  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
 #endif
