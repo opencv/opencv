@@ -1,5 +1,5 @@
 if(NOT WITH_VTK OR NOT DEFINED HAVE_VTK OR NOT HAVE_VTK)
-  return()
+  ocv_module_disable()
 endif()
 
 include(${VTK_USE_FILE})
