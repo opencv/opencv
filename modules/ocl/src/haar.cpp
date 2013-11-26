@@ -959,15 +959,15 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
 
             //form build options for kernel
             String  options = "-D PACKED_CLASSIFIER";
-            options = options + format(" -D NODE_SIZE=%d",NODE_SIZE);
-            options = options + format(" -D WND_SIZE_X=%d",cascade->orig_window_size.width);
-            options = options + format(" -D WND_SIZE_Y=%d",cascade->orig_window_size.height);
-            options = options + format(" -D STUMP_BASED=%d",gcascade->is_stump_based);
-            options = options + format(" -D LSx=%d",localThreads[0]);
-            options = options + format(" -D LSy=%d",localThreads[1]);
-            options = options + format(" -D SPLITNODE=%d",splitnode);
-            options = options + format(" -D SPLITSTAGE=%d",splitstage);
-            options = options + format(" -D OUTPUTSZ=%d",outputsz);
+            options += format(" -D NODE_SIZE=%d",NODE_SIZE);
+            options += format(" -D WND_SIZE_X=%d",cascade->orig_window_size.width);
+            options += format(" -D WND_SIZE_Y=%d",cascade->orig_window_size.height);
+            options += format(" -D STUMP_BASED=%d",gcascade->is_stump_based);
+            options += format(" -D LSx=%d",localThreads[0]);
+            options += format(" -D LSy=%d",localThreads[1]);
+            options += format(" -D SPLITNODE=%d",splitnode);
+            options += format(" -D SPLITSTAGE=%d",splitstage);
+            options += format(" -D OUTPUTSZ=%d",outputsz);
 
             // init candiate global count by 0
             int pattern = 0;
