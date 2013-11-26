@@ -77,7 +77,12 @@ static void fromRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::
     if (!data2.empty())
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&data2.data ));
 
-    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    size_t gt[3] = { dst.cols, dst.rows, 1 };
+#ifdef ANDROID
+    size_t lt[3] = { 16, 10, 1 };
+#else
+    size_t lt[3] = { 16, 16, 1 };
+#endif
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
@@ -105,7 +110,12 @@ static void toRGB_caller(const oclMat &src, oclMat &dst, int bidx, const std::st
     if (!data.empty())
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&data.data ));
 
-    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    size_t gt[3] = {src.cols, src.rows, 1};
+#ifdef ANDROID
+    size_t lt[3] = {16, 10, 1};
+#else
+    size_t lt[3] = {16, 16, 1};
+#endif
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
@@ -126,7 +136,12 @@ static void RGB_caller(const oclMat &src, oclMat &dst, bool reverse)
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_offset ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
-    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    size_t gt[3] = { dst.cols, dst.rows, 1 };
+#ifdef ANDROID
+    size_t lt[3] = { 16, 10, 1 };
+#else
+    size_t lt[3] = { 16, 16, 1 };
+#endif
     openCLExecuteKernel(src.clCxt, &cvt_color, "RGB", gt, lt, args, -1, -1, build_options.c_str());
 }
 
@@ -148,7 +163,12 @@ static void fromRGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int gree
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_offset ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
-    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    size_t gt[3] = { dst.cols, dst.rows, 1 };
+#ifdef ANDROID
+    size_t lt[3] = { 16, 10, 1 };
+#else
+    size_t lt[3] = { 16, 16, 1 };
+#endif
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 
@@ -170,7 +190,12 @@ static void toRGB5x5_caller(const oclMat &src, oclMat &dst, int bidx, int greenb
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_offset ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_offset ));
 
-    size_t gt[3] = { dst.cols, dst.rows, 1 }, lt[3] = { 16, 16, 1 };
+    size_t gt[3] = { dst.cols, dst.rows, 1 };
+#ifdef ANDROID
+    size_t lt[3] = { 16, 10, 1 };
+#else
+    size_t lt[3] = { 16, 16, 1 };
+#endif
     openCLExecuteKernel(src.clCxt, &cvt_color, kernelName.c_str(), gt, lt, args, -1, -1, build_options.c_str());
 }
 

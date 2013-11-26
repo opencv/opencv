@@ -184,7 +184,11 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
     String kernelName;
+#ifdef ANDROID
+    size_t localThreads[3] = {16, 8, 1};
+#else
     size_t localThreads[3] = {16, 16, 1};
+#endif
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
     if (src.type() == CV_8UC1)
@@ -265,7 +269,11 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
     String kernelName;
+#ifdef ANDROID
+    size_t localThreads[3] = {16, 10, 1};
+#else
     size_t localThreads[3] = {16, 16, 1};
+#endif
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
@@ -1001,7 +1009,11 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     CV_Assert(ksize == (anchor << 1) + 1);
     int channels = src.oclchannels();
 
+#ifdef ANDROID
+    size_t localThreads[3] = { 16, 10, 1 };
+#else
     size_t localThreads[3] = { 16, 16, 1 };
+#endif
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
@@ -1098,7 +1110,11 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     Context *clCxt = src.clCxt;
     int channels = src.oclchannels();
 
+#ifdef ANDROID
+    size_t localThreads[3] = {16, 10, 1};
+#else
     size_t localThreads[3] = {16, 16, 1};
+#endif
     String kernelName = "col_filter";
 
     char btype[30];
