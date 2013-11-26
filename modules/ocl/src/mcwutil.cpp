@@ -64,7 +64,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName = kernelName + idxStr.str().c_str();
+            kernelName += idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
