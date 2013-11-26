@@ -518,7 +518,7 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&minvalid_cols ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&moffset ));
 
-        kernelName = kernelName + "_mask";
+        kernelName += "_mask";
     }
 
     size_t globalThreads[3] = {groupnum * 256, 1, 1};
@@ -658,8 +658,8 @@ static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & s
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2step1 ));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2offset1 ));
 
-        kernelName = kernelName + "_binary";
-        buildOptions = buildOptions + " -D BINARY";
+        kernelName += "_binary";
+        buildOptions += " -D BINARY";
     }
 
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&diff.data ));

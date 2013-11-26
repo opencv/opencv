@@ -104,6 +104,13 @@ String& String::operator = (const std::string& str)
 }
 
 inline
+String& String::operator += (const std::string& str)
+{
+    *this = *this + str;
+    return *this;
+}
+
+inline
 String::operator std::string() const
 {
     return std::string(cstr_, len_);
