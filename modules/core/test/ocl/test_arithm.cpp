@@ -149,7 +149,7 @@ OCL_TEST_P(Add, Scalar)
         generateTestData();
 
         OCL_OFF(cv::add(src1_roi, val, dst1_roi));
-        OCL_ON(cv::add(usrc1_roi, val, udst1_roi));
+        OCL_ON(cv::add(val, usrc1_roi, udst1_roi));
         Near(1e-5);
     }
 }
@@ -166,12 +166,62 @@ OCL_TEST_P(Add, Scalar_Mask)
     }
 }
 
+//////////////////////////////////////// Subtract //////////////////////////////////////////////
 
+typedef ArithmTestBase Subtract;
+
+OCL_TEST_P(Subtract, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::subtract(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::subtract(usrc1_roi, usrc2_roi, udst1_roi));
+        Near(0);
+    }
+}
+
+OCL_TEST_P(Subtract, Mat_Mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::subtract(src1_roi, src2_roi, dst1_roi, mask_roi));
+        OCL_ON(cv::subtract(usrc1_roi, usrc2_roi, udst1_roi, umask_roi));
+        Near(0);
+    }
+}
+
+OCL_TEST_P(Subtract, Scalar)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::subtract(val, src1_roi, dst1_roi));
+        OCL_ON(cv::subtract(val, usrc1_roi, udst1_roi));
+        Near(1e-5);
+    }
+}
+
+OCL_TEST_P(Subtract, Scalar_Mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::subtract(src1_roi, val, dst1_roi, mask_roi));
+        OCL_ON(cv::subtract(usrc1_roi, val, udst1_roi, umask_roi));
+        Near(1e-5);
+    }
+}
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-// TODO FIXIT Invalid "add" implementation
-//OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
 
 } } // namespace cvtest::ocl
 
