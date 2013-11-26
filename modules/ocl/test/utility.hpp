@@ -54,7 +54,7 @@ extern int LOOP_TIMES;
 
 namespace cvtest {
 
-void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
+void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
 
 cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi);
 cv::ocl::oclMat loadMat_ocl(cv::RNG& rng, const Mat& m, bool useRoi);
@@ -264,7 +264,7 @@ CV_ENUM(NormCode, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NOR
 CV_ENUM(ReduceOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN)
 CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
-CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
 CV_ENUM(Border, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
 CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 

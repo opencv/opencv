@@ -92,8 +92,11 @@ void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, 
     args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
-    size_t localThreads[3]  = { 32, 8, 1 };
-
+#ifdef ANDROID
+    size_t localThreads[3]  = {32, 4, 1};
+#else
+    size_t localThreads[3]  = {32, 8, 1};
+#endif
     openCLExecuteKernel(Context::getContext(), &build_warps, "buildWarpPlaneMaps", globalThreads, localThreads, args, -1, -1);
 }
 
@@ -135,8 +138,11 @@ void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Ma
     args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
-    size_t localThreads[3]  = { 32, 8, 1 };
-
+#ifdef ANDROID
+    size_t localThreads[3]  = {32, 1, 1};
+#else
+    size_t localThreads[3]  = {32, 8, 1};
+#endif
     openCLExecuteKernel(Context::getContext(), &build_warps, "buildWarpCylindricalMaps", globalThreads, localThreads, args, -1, -1);
 }
 
@@ -178,7 +184,11 @@ void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat 
     args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
-    size_t localThreads[3]  = { 32, 8, 1 };
+#ifdef ANDROID
+    size_t localThreads[3]  = {32, 4, 1};
+#else
+    size_t localThreads[3]  = {32, 8, 1};
+#endif
     openCLExecuteKernel(Context::getContext(), &build_warps, "buildWarpSphericalMaps", globalThreads, localThreads, args, -1, -1);
 }
 
@@ -222,7 +232,11 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
-    size_t localThreads[3]  = { 32, 8, 1 };
+#ifdef ANDROID
+    size_t localThreads[3]  = {32, 4, 1};
+#else
+    size_t localThreads[3]  = {32, 8, 1};
+#endif
     openCLExecuteKernel(Context::getContext(), &build_warps, "buildWarpAffineMaps", globalThreads, localThreads, args, -1, -1);
 }
 

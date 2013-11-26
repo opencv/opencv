@@ -125,7 +125,7 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
                             int tabOfs, int )
 {
     int x, c, width = img1.cols, cn = img1.channels();
-    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int minX1 = std::max(-maxD, 0), maxX1 = width + std::min(minD, 0);
     int minX2 = std::max(minX1 - maxD, 0), maxX2 = std::min(maxX1 - minD, width);
     int D = maxD - minD, width1 = maxX1 - minX1, width2 = maxX2 - minX2;
     const PixType *row1 = img1.ptr<PixType>(y), *row2 = img2.ptr<PixType>(y);
@@ -340,7 +340,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
     int P1 = params.P1 > 0 ? params.P1 : 2, P2 = std::max(params.P2 > 0 ? params.P2 : 5, P1+1);
     int k, width = disp1.cols, height = disp1.rows;
-    int minX1 = std::max(maxD, 0), maxX1 = width + std::min(minD, 0);
+    int minX1 = std::max(-maxD, 0), maxX1 = width + std::min(minD, 0);
     int D = maxD - minD, width1 = maxX1 - minX1;
     int INVALID_DISP = minD - 1, INVALID_DISP_SCALED = INVALID_DISP*DISP_SCALE;
     int SW2 = SADWindowSize.width/2, SH2 = SADWindowSize.height/2;

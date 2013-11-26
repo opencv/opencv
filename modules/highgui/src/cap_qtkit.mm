@@ -177,6 +177,7 @@ private:
     int changedPos;
 
     int started;
+    QTTime endOfMovie;
 };
 
 
@@ -671,6 +672,8 @@ CvCaptureFile::CvCaptureFile(const char* filename) {
         return;
     }
 
+    [mCaptureSession gotoEnd];
+    endOfMovie = [mCaptureSession currentTime];
 
     [mCaptureSession gotoBeginning];
 
@@ -707,6 +710,11 @@ int CvCaptureFile::didStart() {
 bool CvCaptureFile::grabFrame() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     double t1 = getProperty(CV_CAP_PROP_POS_MSEC);
+
+    QTTime curTime;
+    curTime = [mCaptureSession currentTime];
+    bool isEnd=(QTTimeCompare(curTime,endOfMovie) == NSOrderedSame);
+
     [mCaptureSession stepForward];
     double t2 = getProperty(CV_CAP_PROP_POS_MSEC);
     if (t2>t1 && !changedPos) {
@@ -716,7 +724,7 @@ bool CvCaptureFile::grabFrame() {
     }
     changedPos = 0;
     [localpool drain];
-    return 1;
+    return !isEnd;
 }
 
 

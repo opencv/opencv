@@ -230,7 +230,6 @@ namespace cv
                 CV_Error(Error::StsBadArg, "Unsupported map types");
 
             int ocn = dst.oclchannels();
-            size_t localThreads[3] = { 256, 1, 1 };
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             Mat scalar(1, 1, CV_MAKE_TYPE(dst.depth(), ocn), borderValue);
@@ -276,29 +275,102 @@ namespace cv
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
             args.push_back( std::make_pair(scalar.elemSize(), (void *)scalar.data));
 
+#ifdef ANDROID
+            openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, NULL, args, -1, -1, buildOptions.c_str());
+#else
+            size_t localThreads[3] = { 256, 1, 1 };
             openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
+#endif
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
         // resize
 
-        static void resize_gpu( const oclMat &src, oclMat &dst, double fx, double fy, int interpolation)
+        static void computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
+                                          float * const alpha_tab, int * const ofs_tab)
         {
-            float ifx = 1.f / fx, ify = 1.f / fy;
+            int k = 0, dx = 0;
+            for ( ; dx < dsize; dx++)
+            {
+                ofs_tab[dx] = k;
+
+                double fsx1 = dx * scale;
+                double fsx2 = fsx1 + scale;
+                double cellWidth = std::min(scale, ssize - fsx1);
+
+                int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
+
+                sx2 = std::min(sx2, ssize - 1);
+                sx1 = std::min(sx1, sx2);
+
+                if (sx1 - fsx1 > 1e-3)
+                {
+                    map_tab[k] = sx1 - 1;
+                    alpha_tab[k++] = (float)((sx1 - fsx1) / cellWidth);
+                }
+
+                for (int sx = sx1; sx < sx2; sx++)
+                {
+                    map_tab[k] = sx;
+                    alpha_tab[k++] = float(1.0 / cellWidth);
+                }
+
+                if (fsx2 - sx2 > 1e-3)
+                {
+                    map_tab[k] = sx2;
+                    alpha_tab[k++] = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
+                }
+            }
+            ofs_tab[dx] = k;
+        }
+
+        static void computeResizeAreaFastTabs(int * dmap_tab, int * smap_tab, int scale, int dcols, int scol)
+        {
+            for (int i = 0; i < dcols; ++i)
+                dmap_tab[i] = scale * i;
+
+            for (int i = 0, size = dcols * scale; i < size; ++i)
+                smap_tab[i] = std::min(scol - 1, i);
+        }
+
+        static void resize_gpu( const oclMat &src, oclMat &dst, double ifx, double ify, int interpolation)
+        {
+            float ifxf = (float)ifx, ifyf = (float)ify;
             int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
             int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
-            int ocn = interpolation == INTER_LINEAR ? dst.oclchannels() : -1;
-            int depth = interpolation == INTER_LINEAR ? dst.depth() : -1;
+            int ocn = dst.oclchannels(), depth = dst.depth();
 
             const char * const interMap[] = { "NN", "LN", "CUBIC", "AREA", "LAN4" };
             std::string kernelName = std::string("resize") + interMap[interpolation];
 
-            const char * const typeMap[] = { "uchar", "uchar", "ushort", "ushort", "int", "int", "double" };
+            const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
             const char * const channelMap[] = { "" , "", "2", "4", "4" };
-            std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[dst.depth()], channelMap[dst.oclchannels()]);
+            std::string buildOption = format("-D %s -D T=%s%s", interMap[interpolation], typeMap[depth], channelMap[ocn]);
 
-            //TODO: improve this kernel
+            int wdepth = std::max(src.depth(), CV_32F);
+
+            // check if fx, fy is integer and then we have inter area fast mode
+            int iscale_x = saturate_cast<int>(ifx);
+            int iscale_y = saturate_cast<int>(ify);
+
+            bool is_area_fast = std::abs(ifx - iscale_x) < DBL_EPSILON &&
+                std::abs(ify - iscale_y) < DBL_EPSILON;
+            if (is_area_fast)
+                wdepth = std::max(src.depth(), CV_32S);
+
+            if (interpolation != INTER_NEAREST)
+            {
+                buildOption += format(" -D WT=%s -D WTV=%s%s -D convertToWTV=convert_%s%s -D convertToT=convert_%s%s%s",
+                                      typeMap[wdepth], typeMap[wdepth], channelMap[ocn],
+                                      typeMap[wdepth], channelMap[ocn],
+                                      typeMap[src.depth()], channelMap[ocn], src.depth() <= CV_32S ? "_sat_rte" : "");
+            }
+
+#ifdef ANDROID
+            size_t blkSizeX = 16, blkSizeY = 8;
+#else
             size_t blkSizeX = 16, blkSizeY = 16;
+#endif
             size_t glbSizeX;
             if (src.type() == CV_8UC1 && interpolation == INTER_LINEAR)
             {
@@ -307,6 +379,50 @@ namespace cv
             }
             else
                 glbSizeX = dst.cols;
+
+            oclMat alphaOcl, mapOcl, tabofsOcl;
+            if (interpolation == INTER_AREA)
+            {
+                if (is_area_fast)
+                {
+                    kernelName += "_FAST";
+                    int wdepth2 = std::max(CV_32F, src.depth());
+                    buildOption += format(" -D WT2V=%s%s -D convertToWT2V=convert_%s%s -D AREA_FAST -D XSCALE=%d -D YSCALE=%d -D SCALE=%f",
+                                          typeMap[wdepth2], channelMap[ocn], typeMap[wdepth2], channelMap[ocn],
+                                          iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
+
+                    int smap_tab_size = dst.cols * iscale_x + dst.rows * iscale_y;
+                    AutoBuffer<int> dmap_tab(dst.cols + dst.rows), smap_tab(smap_tab_size);
+                    int * dxmap_tab = dmap_tab, * dymap_tab = dxmap_tab + dst.cols;
+                    int * sxmap_tab = smap_tab, * symap_tab = smap_tab + dst.cols * iscale_y;
+
+                    computeResizeAreaFastTabs(dxmap_tab, sxmap_tab, iscale_x, dst.cols, src.cols);
+                    computeResizeAreaFastTabs(dymap_tab, symap_tab, iscale_y, dst.rows, src.rows);
+
+                    tabofsOcl = oclMat(1, dst.cols + dst.rows, CV_32SC1, (void *)dmap_tab);
+                    mapOcl = oclMat(1, smap_tab_size, CV_32SC1, (void *)smap_tab);
+                }
+                else
+                {
+                    Size ssize = src.size(), dsize = dst.size();
+                    int xytab_size = (ssize.width + ssize.height) << 1;
+                    int tabofs_size = dsize.height + dsize.width + 2;
+
+                    AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
+                    AutoBuffer<float> _xyalpha_tab(xytab_size);
+                    int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
+                    float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
+                    int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+
+                    computeResizeAreaTabs(ssize.width, dsize.width, ifx, xmap_tab, xalpha_tab, xofs_tab);
+                    computeResizeAreaTabs(ssize.height, dsize.height, ify, ymap_tab, yalpha_tab, yofs_tab);
+
+                    // loading precomputed arrays to GPU
+                    alphaOcl = oclMat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab);
+                    mapOcl = oclMat(1, xytab_size, CV_32SC1, (void *)_xymap_tab);
+                    tabofsOcl = oclMat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab);
+                }
+            }
 
             size_t globalThreads[3] = { glbSizeX, dst.rows, 1 };
             size_t localThreads[3] = { blkSizeX, blkSizeY, 1 };
@@ -322,8 +438,30 @@ namespace cv
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&src.rows));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( std::make_pair(sizeof(cl_int), (void *)&dst.rows));
-            args.push_back( std::make_pair(sizeof(cl_float), (void *)&ifx));
-            args.push_back( std::make_pair(sizeof(cl_float), (void *)&ify));
+
+            if (wdepth == CV_64F)
+            {
+                args.push_back( std::make_pair(sizeof(cl_double), (void *)&ifx));
+                args.push_back( std::make_pair(sizeof(cl_double), (void *)&ify));
+            }
+            else
+            {
+                args.push_back( std::make_pair(sizeof(cl_float), (void *)&ifxf));
+                args.push_back( std::make_pair(sizeof(cl_float), (void *)&ifyf));
+            }
+
+            // precomputed tabs
+            if (!tabofsOcl.empty())
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&tabofsOcl.data));
+
+            if (!mapOcl.empty())
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&mapOcl.data));
+
+            if (!alphaOcl.empty())
+                args.push_back( std::make_pair(sizeof(cl_mem), (void *)&alphaOcl.data));
+
+            ocn = interpolation == INTER_LINEAR ? ocn : -1;
+            depth = interpolation == INTER_LINEAR ? depth : -1;
 
             openCLExecuteKernel(src.clCxt, &imgproc_resize, kernelName, globalThreads, localThreads, args,
                                 ocn, depth, buildOption.c_str());
@@ -331,9 +469,14 @@ namespace cv
 
         void resize(const oclMat &src, oclMat &dst, Size dsize, double fx, double fy, int interpolation)
         {
+            if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
+            {
+                CV_Error(CV_OpenCLDoubleNotSupported, "Selected device does not support double");
+                return;
+            }
+
             CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3 || src.type() == CV_8UC4
                       || src.type() == CV_32FC1 || src.type() == CV_32FC3 || src.type() == CV_32FC4);
-            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST);
             CV_Assert(dsize.area() > 0 || (fx > 0 && fy > 0));
 
             if (dsize.area() == 0)
@@ -347,9 +490,13 @@ namespace cv
                 fy = (double)dsize.height / src.rows;
             }
 
+            double inv_fy = 1 / fy, inv_fx = 1 / fx;
+            CV_Assert(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST ||
+                      (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1));
+
             dst.create(dsize, src.type());
 
-            resize_gpu( src, dst, fx, fy, interpolation);
+            resize_gpu( src, dst, inv_fx, inv_fy, interpolation);
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -575,8 +722,13 @@ namespace cv
                                                         1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
 
                 }
+
                 //TODO: improve this kernel
+#ifdef ANDROID
+                size_t blkSizeX = 16, blkSizeY = 4;
+#else
                 size_t blkSizeX = 16, blkSizeY = 16;
+#endif
                 size_t glbSizeX;
                 size_t cols;
 
@@ -648,7 +800,11 @@ namespace cv
                 }
 
                 //TODO: improve this kernel
+#ifdef ANDROID
+                size_t blkSizeX = 16, blkSizeY = 8;
+#else
                 size_t blkSizeX = 16, blkSizeY = 16;
+#endif
                 size_t glbSizeX;
                 size_t cols;
                 if (src.type() == CV_8UC1 && interpolation == 0)
@@ -1564,7 +1720,11 @@ namespace cv
             oclMat oclspace_ofs(1, d * d, CV_32SC1, space_ofs);
 
             String kernelName = "bilateral";
+#ifdef ANDROID
+            size_t localThreads[3]  = { 16, 8, 1 };
+#else
             size_t localThreads[3]  = { 16, 16, 1 };
+#endif
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             if ((dst.type() == CV_8UC1) && ((dst.offset & 3) == 0) && ((dst.cols & 3) == 0))

@@ -46,6 +46,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <stdlib.h>
+#include <ctype.h>
 #include <iomanip>
 #include <fstream>
 #include "cl_programcache.hpp"

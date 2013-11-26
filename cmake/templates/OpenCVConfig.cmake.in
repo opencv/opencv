@@ -184,6 +184,10 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
     set(${__cvcomponent}_FOUND "${__cvcomponent}_FOUND-NOTFOUND")
   else()
     list(APPEND OpenCV_FIND_COMPONENTS_ ${__cvcomponent})
+    # Not using list(APPEND) here, because OpenCV_LIBS may not exist yet.
+    # Also not clearing OpenCV_LIBS anywhere, so that multiple calls
+    # to find_package(OpenCV) with different component lists add up.
+    set(OpenCV_LIBS ${OpenCV_LIBS} "${__cvcomponent}")
     #indicate that module is found
     string(TOUPPER "${__cvcomponent}" __cvcomponent)
     set(${__cvcomponent}_FOUND 1)
@@ -199,8 +203,6 @@ if(OpenCV_USE_MANGLED_PATHS)
 else()
   set(OpenCV_LIB_SUFFIX "")
 endif()
-
-SET(OpenCV_LIBS "${OpenCV_LIB_COMPONENTS}")
 
 foreach(__opttype OPT DBG)
   SET(OpenCV_LIBS_${__opttype} "${OpenCV_LIBS}")

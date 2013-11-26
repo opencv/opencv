@@ -106,7 +106,11 @@ namespace
         }
     };
 
+#ifdef ANDROID
+    OCL_TEST_P(BruteForceMatcher, DISABLED_Match_Single)
+#else
     OCL_TEST_P(BruteForceMatcher, Match_Single)
+#endif
     {
         cv::ocl::BruteForceMatcher_OCL_base matcher(distType);
 
@@ -126,7 +130,11 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
+#ifdef ANDROID
+    OCL_TEST_P(BruteForceMatcher, DISABLED_KnnMatch_2_Single)
+#else
     OCL_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
+#endif
     {
         const int knn = 2;
 
@@ -158,7 +166,11 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
+#ifdef ANDROID
+    OCL_TEST_P(BruteForceMatcher, DISABLED_RadiusMatch_Single)
+#else
     OCL_TEST_P(BruteForceMatcher, RadiusMatch_Single)
+#endif
     {
         float radius = 1.f / countFactor;
 
