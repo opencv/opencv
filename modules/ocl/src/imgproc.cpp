@@ -217,15 +217,15 @@ namespace cv
 
             String kernelName = "remap";
             if (map1.type() == CV_32FC2 && map2.empty())
-                kernelName = kernelName + "_32FC2";
+                kernelName += "_32FC2";
             else if (map1.type() == CV_16SC2)
             {
-                kernelName = kernelName + "_16SC2";
+                kernelName += "_16SC2";
                 if (!map2.empty())
-                    kernelName = kernelName + "_16UC1";
+                    kernelName += "_16UC1";
             }
             else if (map1.type() == CV_32FC1 && map2.type() == CV_32FC1)
-                kernelName = kernelName + "_2_32FC1";
+                kernelName += "_2_32FC1";
             else
                 CV_Error(Error::StsBadArg, "Unsupported map types");
 
@@ -916,16 +916,16 @@ namespace cv
                     switch(borderType)
                     {
                     case cv::BORDER_REPLICATE:
-                        option = option + " -D BORDER_REPLICATE";
+                        option += " -D BORDER_REPLICATE";
                         break;
                     case cv::BORDER_REFLECT:
-                        option = option + " -D BORDER_REFLECT";
+                        option += " -D BORDER_REFLECT";
                         break;
                     case cv::BORDER_REFLECT101:
-                        option = option + " -D BORDER_REFLECT101";
+                        option += " -D BORDER_REFLECT101";
                         break;
                     case cv::BORDER_WRAP:
-                        option = option + " -D BORDER_WRAP";
+                        option += " -D BORDER_WRAP";
                         break;
                     }
                     openCLExecuteKernel(src.clCxt, &imgproc_sobel3, "sobel3", gt2, lt2, args, -1, -1, option.c_str() );
