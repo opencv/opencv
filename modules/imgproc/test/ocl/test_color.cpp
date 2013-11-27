@@ -150,10 +150,10 @@ OCL_TEST_P(CvtColor, RGB2YCrCb) { performTest(3, 3, CVTCODE(RGB2YCrCb)); }
 OCL_TEST_P(CvtColor, BGR2YCrCb) { performTest(3, 3, CVTCODE(BGR2YCrCb)); }
 OCL_TEST_P(CvtColor, RGBA2YCrCb) { performTest(4, 3, CVTCODE(RGB2YCrCb)); }
 OCL_TEST_P(CvtColor, BGRA2YCrCb) { performTest(4, 3, CVTCODE(BGR2YCrCb)); }
-//OCL_TEST_P(CvtColor, YCrCb2RGB) { performTest(3, 3, CVTCODE(YCrCb2RGB)); }
-//OCL_TEST_P(CvtColor, YCrCb2BGR) { performTest(3, 3, CVTCODE(YCrCb2BGR)); }
-//OCL_TEST_P(CvtColor, YCrCb2RGBA) { performTest(3, 4, CVTCODE(YCrCb2RGB)); }
-//OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
+OCL_TEST_P(CvtColor, YCrCb2RGB) { performTest(3, 3, CVTCODE(YCrCb2RGB)); }
+OCL_TEST_P(CvtColor, YCrCb2BGR) { performTest(3, 3, CVTCODE(YCrCb2BGR)); }
+OCL_TEST_P(CvtColor, YCrCb2RGBA) { performTest(3, 4, CVTCODE(YCrCb2RGB)); }
+OCL_TEST_P(CvtColor, YCrCb2BGRA) { performTest(3, 4, CVTCODE(YCrCb2BGR)); }
 
 // RGB <-> XYZ
 

@@ -2711,10 +2711,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
      case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
      case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
      */
-    case COLOR_BGR2GRAY:
-    case COLOR_BGRA2GRAY:
-    case COLOR_RGB2GRAY:
-    case COLOR_RGBA2GRAY:
+    case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
+    case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
     {
         CV_Assert(scn == 3 || scn == 4);
         bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
@@ -2752,10 +2750,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                  format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
         break;
     }
-    case COLOR_YUV2RGB_NV12:
-    case COLOR_YUV2BGR_NV12:
-    case COLOR_YUV2RGBA_NV12:
-    case COLOR_YUV2BGRA_NV12:
+    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12:
+    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12:
     {
         CV_Assert( scn == 1 );
         CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
@@ -2779,11 +2775,18 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     }
     case COLOR_YCrCb2BGR:
     case COLOR_YCrCb2RGB:
+    {
+        if( dcn <= 0 )
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+        bidx = code == COLOR_YCrCb2BGR ? 0 : 2;
+        k.create("YCrCb2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=%d", depth, scn, dcn, bidx));
         break;
+    }
     /*
      case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
      case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
-     case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
      case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
      case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
      case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
@@ -2817,8 +2820,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     int stype = _src.type();
     int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
 
-    if( use_opencl && ocl_cvtColor(_src, _dst, code, dcn) )
-        return;
+    if( use_opencl /*&& ocl_cvtColor(_src, _dst, code, dcn)*/ )
+        return (void)ocl_cvtColor(_src, _dst, code, dcn);
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
