@@ -3010,6 +3010,15 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                         depth, dcn, bidx, hrange, 6.f/hrange));
         break;
     }
+    case COLOR_RGBA2mRGBA: case COLOR_mRGBA2RGBA:
+    {
+        CV_Assert(scn == 4 && depth == CV_8U);
+        dcn = 4;
+
+        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=4 -D scn=4 -D bidx=3", depth));
+        break;
+    }
     default:
         ;
     }
