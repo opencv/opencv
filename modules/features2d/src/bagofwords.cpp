@@ -141,7 +141,7 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
 }
 
 void BOWImgDescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
-                                         std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* _descriptors )
+                                         std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* descriptors )
 {
     imgDescriptor.release();
 
@@ -155,8 +155,8 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>
     compute( descriptors, imgDescriptor, pointIdxsOfClusters );
 
     // Add the descriptors of image keypoints
-    if (_descriptors) {
-        *_descriptors = descriptors.clone();
+    if (descriptors) {
+        *descriptors = descriptors.clone();
     }
 }
 
