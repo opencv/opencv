@@ -181,7 +181,7 @@ BOWImgDescriptorExtractor::compute
 Computes an image descriptor using the set visual vocabulary.
 
 .. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor, vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 )
-.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
+.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters=0 )
 
     :param image: Image, for which the descriptor is computed.
 
