@@ -656,8 +656,11 @@ void ContextImpl::setContext(const DeviceInfo* deviceInfo)
     cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(infoImpl.platform_id), 0 };
     cl_context clContext = clCreateContext(cps, 1, &infoImpl.device_id, NULL, NULL, &status);
     openCLVerifyCall(status);
-    // TODO add CL_QUEUE_PROFILING_ENABLE
+#ifdef PRINT_KERNEL_RUN_TIME
+    cl_command_queue clCmdQueue = clCreateCommandQueue(clContext, infoImpl.device_id, CL_QUEUE_PROFILING_ENABLE, &status);
+#else /*PRINT_KERNEL_RUN_TIME*/
     cl_command_queue clCmdQueue = clCreateCommandQueue(clContext, infoImpl.device_id, 0, &status);
+#endif /*PRINT_KERNEL_RUN_TIME*/
     openCLVerifyCall(status);
 
     ContextImpl* ctx = new ContextImpl(infoImpl.info, infoImpl.device_id);
