@@ -69,8 +69,8 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
     double fx, fy;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARATEMER(src)
-    TEST_DECLARE_OUTPUT_PARATEMER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
 
     virtual void SetUp()
     {

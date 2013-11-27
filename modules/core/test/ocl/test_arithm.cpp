@@ -47,6 +47,69 @@
 namespace cvtest {
 namespace ocl {
 
+//////////////////////////////// LUT /////////////////////////////////////////////////
+
+PARAM_TEST_CASE(Lut, MatDepth, MatDepth, Channels, bool, bool)
+{
+    int src_depth, lut_depth;
+    int cn;
+    bool use_roi, same_cn;
+
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_INPUT_PARAMETER(lut)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
+    virtual void SetUp()
+    {
+        src_depth = GET_PARAM(0);
+        lut_depth = GET_PARAM(1);
+        cn = GET_PARAM(2);
+        same_cn = GET_PARAM(3);
+        use_roi = GET_PARAM(4);
+    }
+
+    void generateTestData()
+    {
+        const int src_type = CV_MAKE_TYPE(src_depth, cn);
+        const int lut_type = CV_MAKE_TYPE(lut_depth, same_cn ? cn : 1);
+        const int dst_type = CV_MAKE_TYPE(lut_depth, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, src_type, 0, 256);
+
+        Size lutRoiSize = Size(256, 1);
+        Border lutBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(lut, lut_roi, lutRoiSize, lutBorder, lut_type, 5, 16);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, dst_type, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_INPUT_PARAMETER(lut)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+
+    void Near(double threshold = 0.)
+    {
+        EXPECT_MAT_NEAR(dst, udst, threshold);
+        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+    }
+};
+
+OCL_TEST_P(Lut, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::LUT(src_roi, lut_roi, dst_roi));
+        OCL_ON(cv::LUT(usrc_roi, ulut_roi, udst_roi));
+
+        Near();
+    }
+}
+
 ///////////////////////// ArithmTestBase ///////////////////////////
 
 PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
@@ -57,11 +120,11 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
     cv::Scalar val;
 
     // declare Mat + UMat mirrors
-    TEST_DECLARE_INPUT_PARATEMER(src1)
-    TEST_DECLARE_INPUT_PARATEMER(src2)
-    TEST_DECLARE_INPUT_PARATEMER(mask)
-    TEST_DECLARE_OUTPUT_PARATEMER(dst1)
-    TEST_DECLARE_OUTPUT_PARATEMER(dst2)
+    TEST_DECLARE_INPUT_PARAMETER(src1)
+    TEST_DECLARE_INPUT_PARAMETER(src2)
+    TEST_DECLARE_INPUT_PARAMETER(mask)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst1)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
 
     virtual void SetUp()
     {
@@ -220,6 +283,7 @@ OCL_TEST_P(Subtract, Scalar_Mask)
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, ::testing::Values(1, 2, 3, 4), Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
 
