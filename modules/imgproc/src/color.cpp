@@ -2876,7 +2876,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::ReadOnlyNoSize(c));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrOnly(c));
         return k.run(2, globalsize, 0, false);
     }
     case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
@@ -2925,19 +2925,91 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::ReadOnlyNoSize(c));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrOnly(c));
         return k.run(2, globalsize, 0, false);
     }
-    /*
-     case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
-     case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
-     case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
-     case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
-     case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
-     case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
-     case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
-     case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
-     */
+    case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+    case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
+    {
+        CV_Assert((scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_BGR2HSV || code == COLOR_BGR2HLS ||
+            code == COLOR_BGR2HSV_FULL || code == COLOR_BGR2HLS_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_BGR2HSV || code == COLOR_RGB2HSV ||
+            code == COLOR_BGR2HLS || code == COLOR_RGB2HLS ? 180 : 256;
+        bool is_hsv = code == COLOR_BGR2HSV || code == COLOR_RGB2HSV || code == COLOR_BGR2HSV_FULL || code == COLOR_RGB2HSV_FULL;
+        String kernelName = String("RGB2") + (is_hsv ? "HSV" : "HLS");
+        dcn = 3;
+
+        if (is_hsv && depth == CV_8U)
+        {
+            static UMat sdiv_data;
+            static UMat hdiv_data180;
+            static UMat hdiv_data256;
+            static int sdiv_table[256];
+            static int hdiv_table180[256];
+            static int hdiv_table256[256];
+            static volatile bool initialized180 = false, initialized256 = false;
+            volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+
+            if (!initialized)
+            {
+                int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
+                UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+                sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+
+                int v = 255 << hsv_shift;
+                if (!initialized180 && !initialized256)
+                {
+                    for(int i = 1; i < 256; i++ )
+                        sdiv_table[i] = saturate_cast<int>(v/(1.*i));
+                    Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
+                }
+
+                v = hrange << hsv_shift;
+                for (int i = 1; i < 256; i++ )
+                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+                Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
+                initialized = true;
+            }
+
+            _dst.create(dstSz, CV_8UC3);
+            dst = _dst.getUMat();
+
+            k.create("RGB2HSV", ocl::imgproc::cvtcolor_oclsrc, format("-D depth=%d -D hrange=%d -D bidx=%d -D dcn=3 -D scn=%d",
+                                                                      depth, hrange, bidx, scn));
+
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
+                   ocl::KernelArg::PtrOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrOnly(hdiv_data256) :
+                                                                       ocl::KernelArg::PtrOnly(hdiv_data180));
+
+            return k.run(2, globalsize, NULL, false);
+        }
+        else
+            k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                     format("-D depth=%d -D hscale=%f -D bidx=%d -D scn=%d -D dcn=3", depth, hrange*(1.f/360.f), bidx, scn));
+        break;
+    }
+    case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+    case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_HSV2BGR || code == COLOR_HLS2BGR ||
+            code == COLOR_HSV2BGR_FULL || code == COLOR_HLS2BGR_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+            code == COLOR_HLS2BGR || code == COLOR_HLS2RGB ? 180 : 255;
+        bool is_hsv = code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+                code == COLOR_HSV2BGR_FULL || code == COLOR_HSV2RGB_FULL;
+
+        String kernelName = String(is_hsv ? "HSV" : "HLS") + "2RGB";
+        k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d -D hrange=%d -D hscale=%f",
+                        depth, dcn, bidx, hrange, 6.f/hrange));
+        break;
+    }
     default:
         ;
     }
