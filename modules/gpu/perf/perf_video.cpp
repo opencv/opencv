@@ -807,7 +807,7 @@ PERF_TEST_P(Video_Cn_LearningRate, Video_MOG,
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, Video_MOG2,
+PERF_TEST_P(Video_Cn, DISABLED_Video_MOG2,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     GPU_CHANNELS_1_3_4))
 {
