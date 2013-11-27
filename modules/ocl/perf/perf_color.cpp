@@ -46,30 +46,62 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+using std::tr1::make_tuple;
 
 ///////////// cvtColor////////////////////////
 
-typedef TestBaseWithParam<Size> cvtColorFixture;
+CV_ENUM(ConversionTypes, COLOR_RGB2GRAY, COLOR_RGB2BGR, COLOR_RGB2YUV, COLOR_YUV2RGB, COLOR_RGB2YCrCb,
+        COLOR_YCrCb2RGB, COLOR_RGB2XYZ, COLOR_XYZ2RGB, COLOR_RGB2HSV, COLOR_HSV2RGB, COLOR_RGB2HLS,
+        COLOR_HLS2RGB, COLOR_BGR5652BGR, COLOR_BGR2BGR565, COLOR_RGBA2mRGBA, COLOR_mRGBA2RGBA, COLOR_YUV2RGB_NV12)
 
-PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
+typedef tuple<Size, tuple<ConversionTypes, int, int> > cvtColorParams;
+typedef TestBaseWithParam<cvtColorParams> cvtColorFixture;
+
+PERF_TEST_P(cvtColorFixture, cvtColor, testing::Combine(
+                testing::Values(Size(1000, 1002), Size(2000, 2004), Size(4000, 4008)),
+                testing::Values(
+                    make_tuple(ConversionTypes(COLOR_RGB2GRAY), 3, 1),
+                    make_tuple(ConversionTypes(COLOR_RGB2BGR), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_RGB2YUV), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_YUV2RGB), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_RGB2YCrCb), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_YCrCb2RGB), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_RGB2XYZ), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_XYZ2RGB), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_RGB2HSV), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_HSV2RGB), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_RGB2HLS), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_HLS2RGB), 3, 3),
+                    make_tuple(ConversionTypes(COLOR_BGR5652BGR), 2, 3),
+                    make_tuple(ConversionTypes(COLOR_BGR2BGR565), 3, 2),
+                    make_tuple(ConversionTypes(COLOR_RGBA2mRGBA), 4, 4),
+                    make_tuple(ConversionTypes(COLOR_mRGBA2RGBA), 4, 4),
+                    make_tuple(ConversionTypes(COLOR_YUV2RGB_NV12), 1, 3)
+                    )))
 {
-    const Size srcSize = GetParam();
+    cvtColorParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const tuple<int, int, int> conversionParams = get<1>(params);
+    const int code = get<0>(conversionParams), scn = get<1>(conversionParams),
+            dcn = get<2>(conversionParams);
 
-    Mat src(srcSize, CV_8UC4), dst(srcSize, CV_8UC4);
+    Mat src(srcSize, CV_8UC(scn)), dst(srcSize, CV_8UC(scn));
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclSrc(src), oclDst(src.size(), CV_8UC4);
+        ocl::oclMat oclSrc(src), oclDst(src.size(), dst.type());
 
-        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, COLOR_RGBA2GRAY, 4);
+        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, code, dcn);
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::cvtColor(src, dst, COLOR_RGBA2GRAY, 4);
+        TEST_CYCLE() cv::cvtColor(src, dst, code, dcn);
 
         SANITY_CHECK(dst);
     }

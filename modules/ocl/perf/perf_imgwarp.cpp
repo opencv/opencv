@@ -185,6 +185,46 @@ PERF_TEST_P(resizeFixture, resize,
         OCL_PERF_ELSE
 }
 
+typedef tuple<Size, MatType, double> resizeAreaParams;
+typedef TestBaseWithParam<resizeAreaParams> resizeAreaFixture;
+
+PERF_TEST_P(resizeAreaFixture, resize,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+                               ::testing::Values(0.3, 0.5, 0.6)))
+{
+    const resizeAreaParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    double scale = get<2>(params);
+    const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    Mat src(srcSize, type), dst;
+    dst.create(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::resize(oclSrc, oclDst, Size(), scale, scale, cv::INTER_AREA);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, cv::INTER_AREA);
+
+        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
 ///////////// remap////////////////////////
 
 CV_ENUM(RemapInterType, INTER_NEAREST, INTER_LINEAR)

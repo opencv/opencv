@@ -2928,8 +2928,10 @@ void HOGDescriptor::readALTModel(String modelfile)
         double *linearwt = new double[totwords+1];
         int length = totwords;
         nread = fread(linearwt, sizeof(double), totwords + 1, modelfl);
-        if(nread != static_cast<size_t>(length) + 1)
+        if(nread != static_cast<size_t>(length) + 1) {
+            delete [] linearwt;
             throw Exception();
+        }
 
         for(int i = 0; i < length; i++)
             detector.push_back((float)linearwt[i]);
