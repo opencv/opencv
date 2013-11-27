@@ -153,7 +153,7 @@ public:
     //! transpose the matrix
     Matx<_Tp, n, m> t() const;
 
-    //! invert matrix the matrix
+    //! invert the matrix
     Matx<_Tp, n, m> inv(int method=DECOMP_LU, bool *p_is_ok = NULL) const;
 
     //! solve linear system
