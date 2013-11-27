@@ -215,17 +215,17 @@ OCL_TEST_P(CvtColor, XYZ2BGRA) { performTest(3, 4, CVTCODE(XYZ2BGR)); }
 
 // RGB5x5 <-> RGB
 
-//typedef CvtColor CvtColor8u;
+typedef CvtColor CvtColor8u;
 
-//OCL_TEST_P(CvtColor8u, BGR5652BGR) { performTest(2, 3, CVTCODE(BGR5652BGR)); }
-//OCL_TEST_P(CvtColor8u, BGR5652RGB) { performTest(2, 3, CVTCODE(BGR5652RGB)); }
-//OCL_TEST_P(CvtColor8u, BGR5652BGRA) { performTest(2, 4, CVTCODE(BGR5652BGRA)); }
-//OCL_TEST_P(CvtColor8u, BGR5652RGBA) { performTest(2, 4, CVTCODE(BGR5652RGBA)); }
+OCL_TEST_P(CvtColor8u, BGR5652BGR) { performTest(2, 3, CVTCODE(BGR5652BGR)); }
+OCL_TEST_P(CvtColor8u, BGR5652RGB) { performTest(2, 3, CVTCODE(BGR5652RGB)); }
+OCL_TEST_P(CvtColor8u, BGR5652BGRA) { performTest(2, 4, CVTCODE(BGR5652BGRA)); }
+OCL_TEST_P(CvtColor8u, BGR5652RGBA) { performTest(2, 4, CVTCODE(BGR5652RGBA)); }
 
-//OCL_TEST_P(CvtColor8u, BGR5552BGR) { performTest(2, 3, CVTCODE(BGR5552BGR)); }
-//OCL_TEST_P(CvtColor8u, BGR5552RGB) { performTest(2, 3, CVTCODE(BGR5552RGB)); }
-//OCL_TEST_P(CvtColor8u, BGR5552BGRA) { performTest(2, 4, CVTCODE(BGR5552BGRA)); }
-//OCL_TEST_P(CvtColor8u, BGR5552RGBA) { performTest(2, 4, CVTCODE(BGR5552RGBA)); }
+OCL_TEST_P(CvtColor8u, BGR5552BGR) { performTest(2, 3, CVTCODE(BGR5552BGR)); }
+OCL_TEST_P(CvtColor8u, BGR5552RGB) { performTest(2, 3, CVTCODE(BGR5552RGB)); }
+OCL_TEST_P(CvtColor8u, BGR5552BGRA) { performTest(2, 4, CVTCODE(BGR5552BGRA)); }
+OCL_TEST_P(CvtColor8u, BGR5552RGBA) { performTest(2, 4, CVTCODE(BGR5552RGBA)); }
 
 //OCL_TEST_P(CvtColor8u, BGR2BGR565) { performTest(3, 2, CVTCODE(BGR2BGR565)); }
 //OCL_TEST_P(CvtColor8u, RGB2BGR565) { performTest(3, 2, CVTCODE(RGB2BGR565)); }
