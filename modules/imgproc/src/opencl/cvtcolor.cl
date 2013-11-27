@@ -417,7 +417,42 @@ __kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offse
     }
 }
 
+///////////////////////////////////// RGB[A] <-> BGR[A] //////////////////////////////////////
 
+__kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
+                  __global uchar* dstptr, int dst_step, int dst_offset,
+                  int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+
+        __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_idx);
+        __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_idx);
+
+#ifdef REVERSE
+        dst[0] = src[2];
+        dst[1] = src[1];
+        dst[2] = src[0];
+#elif defined ORDER
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+#endif
+
+#if dcn == 4
+#if scn == 3
+        dst[3] = MAX_NUM;
+#else
+        dst[3] = src[3];
+#endif
+#endif
+    }
+}
 
 
 

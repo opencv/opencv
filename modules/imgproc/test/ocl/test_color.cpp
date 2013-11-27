@@ -109,18 +109,18 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 
 // RGB[A] <-> BGR[A]
 
-//OCL_TEST_P(CvtColor, BGR2BGRA) { performTest(3, 4, CVTCODE(BGR2BGRA)); }
-//OCL_TEST_P(CvtColor, RGB2RGBA) { performTest(3, 4, CVTCODE(RGB2RGBA)); }
-//OCL_TEST_P(CvtColor, BGRA2BGR) { performTest(4, 3, CVTCODE(BGRA2BGR)); }
-//OCL_TEST_P(CvtColor, RGBA2RGB) { performTest(4, 3, CVTCODE(RGBA2RGB)); }
-//OCL_TEST_P(CvtColor, BGR2RGBA) { performTest(3, 4, CVTCODE(BGR2RGBA)); }
-//OCL_TEST_P(CvtColor, RGB2BGRA) { performTest(3, 4, CVTCODE(RGB2BGRA)); }
-//OCL_TEST_P(CvtColor, RGBA2BGR) { performTest(4, 3, CVTCODE(RGBA2BGR)); }
-//OCL_TEST_P(CvtColor, BGRA2RGB) { performTest(4, 3, CVTCODE(BGRA2RGB)); }
-//OCL_TEST_P(CvtColor, BGR2RGB) { performTest(3, 3, CVTCODE(BGR2RGB)); }
-//OCL_TEST_P(CvtColor, RGB2BGR) { performTest(3, 3, CVTCODE(RGB2BGR)); }
-//OCL_TEST_P(CvtColor, BGRA2RGBA) { performTest(4, 4, CVTCODE(BGRA2RGBA)); }
-//OCL_TEST_P(CvtColor, RGBA2BGRA) { performTest(4, 4, CVTCODE(RGBA2BGRA)); }
+OCL_TEST_P(CvtColor, BGR2BGRA) { performTest(3, 4, CVTCODE(BGR2BGRA)); }
+OCL_TEST_P(CvtColor, RGB2RGBA) { performTest(3, 4, CVTCODE(RGB2RGBA)); }
+OCL_TEST_P(CvtColor, BGRA2BGR) { performTest(4, 3, CVTCODE(BGRA2BGR)); }
+OCL_TEST_P(CvtColor, RGBA2RGB) { performTest(4, 3, CVTCODE(RGBA2RGB)); }
+OCL_TEST_P(CvtColor, BGR2RGBA) { performTest(3, 4, CVTCODE(BGR2RGBA)); }
+OCL_TEST_P(CvtColor, RGB2BGRA) { performTest(3, 4, CVTCODE(RGB2BGRA)); }
+OCL_TEST_P(CvtColor, RGBA2BGR) { performTest(4, 3, CVTCODE(RGBA2BGR)); }
+OCL_TEST_P(CvtColor, BGRA2RGB) { performTest(4, 3, CVTCODE(BGRA2RGB)); }
+OCL_TEST_P(CvtColor, BGR2RGB) { performTest(3, 3, CVTCODE(BGR2RGB)); }
+OCL_TEST_P(CvtColor, RGB2BGR) { performTest(3, 3, CVTCODE(RGB2BGR)); }
+OCL_TEST_P(CvtColor, BGRA2RGBA) { performTest(4, 4, CVTCODE(BGRA2RGBA)); }
+OCL_TEST_P(CvtColor, RGBA2BGRA) { performTest(4, 4, CVTCODE(RGBA2BGRA)); }
 
 // RGB <-> Gray
 

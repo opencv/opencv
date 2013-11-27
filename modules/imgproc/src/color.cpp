@@ -2704,13 +2704,22 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     switch (code)
     {
     /*
-     case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
-     case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
      case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
      case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
      case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
      case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
      */
+    case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
+    case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
+        bool reverse = !(code == COLOR_BGR2BGRA || code == COLOR_BGRA2BGR);
+        k.create("RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=0 -D %s", depth, scn, dcn,
+                        reverse ? "REVERSE" : "ORDER"));
+        break;
+    }
     case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
     case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
     {
