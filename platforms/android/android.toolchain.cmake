@@ -34,7 +34,7 @@
 #  See home page: https://github.com/taka-no-me/android-cmake
 #
 #  The file is mantained by the OpenCV project. The latest version can be get at
-#  http://code.opencv.org/projects/opencv/repository/revisions/master/changes/android/android.toolchain.cmake
+#  https://github.com/Itseez/opencv/tree/master/platforms/android/android.toolchain.cmake
 #
 #  Usage Linux:
 #   $ export ANDROID_NDK=/absolute/path/to/the/android-ndk
