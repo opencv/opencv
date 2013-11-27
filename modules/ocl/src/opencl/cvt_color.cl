@@ -91,66 +91,7 @@ enum
     BLOCK_SIZE = 256
 };
 
-
-///////////////////////////////////// RGB5x5 <-> RGB //////////////////////////////////////
-
-__kernel void RGB5x52RGB(int cols, int rows, int src_step, int dst_step, int bidx,
-                         __global const ushort * src, __global uchar * dst,
-                         int src_offset, int dst_offset)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (y < rows && x < cols)
-    {
-        int src_idx = mad24(y, src_step, src_offset + x);
-        int dst_idx = mad24(y, dst_step, dst_offset + (x << 2));
-        ushort t = src[src_idx];
-
-#if greenbits == 6
-        dst[dst_idx + bidx] = (uchar)(t << 3);
-        dst[dst_idx + 1] = (uchar)((t >> 3) & ~3);
-        dst[dst_idx + (bidx^2)] = (uchar)((t >> 8) & ~7);
-#else
-        dst[dst_idx + bidx] = (uchar)(t << 3);
-        dst[dst_idx + 1] = (uchar)((t >> 2) & ~7);
-        dst[dst_idx + (bidx^2)] = (uchar)((t >> 7) & ~7);
-#endif
-
-#if dcn == 4
-#if greenbits == 6
-        dst[dst_idx + 3] = 255;
-#else
-        dst[dst_idx + 3] = t & 0x8000 ? 255 : 0;
-#endif
-#endif
-    }
-}
-
-__kernel void RGB2RGB5x5(int cols, int rows, int src_step, int dst_step, int bidx,
-                         __global const uchar * src, __global ushort * dst,
-                         int src_offset, int dst_offset)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (y < rows && x < cols)
-    {
-        int src_idx = mad24(y, src_step, src_offset + (x << 2));
-        int dst_idx = mad24(y, dst_step, dst_offset + x);
-
-#if greenbits == 6
-            dst[dst_idx] = (ushort)((src[src_idx + bidx] >> 3)|((src[src_idx + 1]&~3) << 3)|((src[src_idx + (bidx^2)]&~7) << 8));
-#elif scn == 3
-            dst[dst_idx] = (ushort)((src[src_idx + bidx] >> 3)|((src[src_idx + 1]&~7) << 2)|((src[src_idx + (bidx^2)]&~7) << 7));
-#else
-            dst[dst_idx] = (ushort)((src[src_idx + bidx] >> 3)|((src[src_idx + 1]&~7) << 2)|
-                ((src[src_idx + (bidx^2)]&~7) << 7)|(src[src_idx + 3] ? 0x8000 : 0));
-#endif
-    }
-}
-
-///////////////////////////////////// RGB5x5 <-> RGB //////////////////////////////////////
+///////////////////////////////////// RGB5x5 <-> Gray //////////////////////////////////////
 
 __kernel void BGR5x52Gray(int cols, int rows, int src_step, int dst_step, int bidx,
                           __global const ushort * src, __global uchar * dst,
