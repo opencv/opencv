@@ -171,25 +171,25 @@ OCL_TEST_P(CvtColor, XYZ2BGRA) { performTest(3, 4, CVTCODE(XYZ2BGR)); }
 
 typedef CvtColor CvtColor8u32f;
 
-//OCL_TEST_P(CvtColor8u32f, RGB2HSV) { performTest(3, 3, CVTCODE(RGB2HSV)); }
-//OCL_TEST_P(CvtColor8u32f, BGR2HSV) { performTest(3, 3, CVTCODE(BGR2HSV)); }
-//OCL_TEST_P(CvtColor8u32f, RGBA2HSV) { performTest(4, 3, CVTCODE(RGB2HSV)); }
-//OCL_TEST_P(CvtColor8u32f, BGRA2HSV) { performTest(4, 3, CVTCODE(BGR2HSV)); }
+OCL_TEST_P(CvtColor8u32f, RGB2HSV) { performTest(3, 3, CVTCODE(RGB2HSV)); }
+OCL_TEST_P(CvtColor8u32f, BGR2HSV) { performTest(3, 3, CVTCODE(BGR2HSV)); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HSV) { performTest(4, 3, CVTCODE(RGB2HSV)); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HSV) { performTest(4, 3, CVTCODE(BGR2HSV)); }
 
-//OCL_TEST_P(CvtColor8u32f, RGB2HSV_FULL) { performTest(3, 3, CVTCODE(RGB2HSV_FULL)); }
-//OCL_TEST_P(CvtColor8u32f, BGR2HSV_FULL) { performTest(3, 3, CVTCODE(BGR2HSV_FULL)); }
-//OCL_TEST_P(CvtColor8u32f, RGBA2HSV_FULL) { performTest(4, 3, CVTCODE(RGB2HSV_FULL)); }
-//OCL_TEST_P(CvtColor8u32f, BGRA2HSV_FULL) { performTest(4, 3, CVTCODE(BGR2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, RGB2HSV_FULL) { performTest(3, 3, CVTCODE(RGB2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, BGR2HSV_FULL) { performTest(3, 3, CVTCODE(BGR2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, RGBA2HSV_FULL) { performTest(4, 3, CVTCODE(RGB2HSV_FULL)); }
+OCL_TEST_P(CvtColor8u32f, BGRA2HSV_FULL) { performTest(4, 3, CVTCODE(BGR2HSV_FULL)); }
 
-//OCL_TEST_P(CvtColor8u32f, HSV2RGB) { performTest(3, 3, CVTCODE(HSV2RGB), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2BGR) { performTest(3, 3, CVTCODE(HSV2BGR), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2RGBA) { performTest(3, 4, CVTCODE(HSV2RGB), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2BGRA) { performTest(3, 4, CVTCODE(HSV2BGR), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2RGB) { performTest(3, 3, CVTCODE(HSV2RGB), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2BGR) { performTest(3, 3, CVTCODE(HSV2BGR), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2RGBA) { performTest(3, 4, CVTCODE(HSV2RGB), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2BGRA) { performTest(3, 4, CVTCODE(HSV2BGR), depth == CV_8U ? 1 : 4e-1); }
 
-//OCL_TEST_P(CvtColor8u32f, HSV2RGB_FULL) { performTest(3, 3, CVTCODE(HSV2RGB_FULL), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2BGR_FULL) { performTest(3, 3, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2RGBA_FULL) { performTest(3, 4, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
-//OCL_TEST_P(CvtColor8u32f, HSV2BGRA_FULL) { performTest(3, 4, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2RGB_FULL) { performTest(3, 3, CVTCODE(HSV2RGB_FULL), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2BGR_FULL) { performTest(3, 3, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2RGBA_FULL) { performTest(3, 4, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
+OCL_TEST_P(CvtColor8u32f, HSV2BGRA_FULL) { performTest(3, 4, CVTCODE(HSV2BGR_FULL), depth == CV_8U ? 1 : 4e-1); }
 
 // RGB <-> HLS
 

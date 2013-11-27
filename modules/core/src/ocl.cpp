@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include <map>
+#include <iostream>
 
 /*
   Part of the file is an extract from the standard OpenCL headers from Khronos site.
@@ -2205,9 +2206,12 @@ int Kernel::set(int i, const KernelArg& arg)
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
-        if( arg.m->dims <= 2 )
+        if (ptronly)
+            clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h);
+        else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
             clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
@@ -2350,7 +2354,7 @@ struct Program::Impl
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
-            if( retval == CL_BUILD_PROGRAM_FAILURE )
+            if( retval < 0 /*== CL_BUILD_PROGRAM_FAILURE*/ )
             {
                 char buf[1<<16];
                 size_t retsz = 0;
