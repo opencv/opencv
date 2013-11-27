@@ -968,14 +968,14 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, std::vec
                 std::vector<DMatch> &localMatch = curMatches[queryIdx];
                 std::vector<DMatch> &globalMatch = matches[queryIdx];
 
-                for_each(localMatch.begin(), localMatch.end(), ImgIdxSetter(static_cast<int>(imgIdx)));
+                std::for_each(localMatch.begin(), localMatch.end(), ImgIdxSetter(static_cast<int>(imgIdx)));
 
                 temp.clear();
-                merge(globalMatch.begin(), globalMatch.end(), localMatch.begin(), localMatch.end(), back_inserter(temp));
+                std::merge(globalMatch.begin(), globalMatch.end(), localMatch.begin(), localMatch.end(), back_inserter(temp));
 
                 globalMatch.clear();
                 const size_t count = std::min((size_t)k, temp.size());
-                copy(temp.begin(), temp.begin() + count, back_inserter(globalMatch));
+                std::copy(temp.begin(), temp.begin() + count, back_inserter(globalMatch));
             }
         }
 
