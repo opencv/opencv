@@ -91,40 +91,6 @@ enum
     BLOCK_SIZE = 256
 };
 
-///////////////////////////////////// RGB[A] <-> BGR[A] //////////////////////////////////////
-
-__kernel void RGB(int cols, int rows, int src_step, int dst_step,
-                  __global const DATA_TYPE * src, __global DATA_TYPE * dst,
-                  int src_offset, int dst_offset)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (y < rows && x < cols)
-    {
-        x <<= 2;
-        int src_idx = mad24(y, src_step, src_offset + x);
-        int dst_idx = mad24(y, dst_step, dst_offset + x);
-
-#ifdef REVERSE
-        dst[dst_idx] = src[src_idx + 2];
-        dst[dst_idx + 1] = src[src_idx + 1];
-        dst[dst_idx + 2] = src[src_idx];
-#elif defined ORDER
-        dst[dst_idx] = src[src_idx];
-        dst[dst_idx + 1] = src[src_idx + 1];
-        dst[dst_idx + 2] = src[src_idx + 2];
-#endif
-
-#if dcn == 4
-#if scn == 3
-        dst[dst_idx + 3] = MAX_NUM;
-#else
-        dst[dst_idx + 3] = src[src_idx + 3];
-#endif
-#endif
-    }
-}
 
 ///////////////////////////////////// RGB5x5 <-> RGB //////////////////////////////////////
 
