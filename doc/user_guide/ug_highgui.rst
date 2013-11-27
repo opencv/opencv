@@ -130,4 +130,4 @@ Flags specifing the needed generator type must be used in combination with parti
 
 For more information please refer to the example of usage openni_capture.cpp_ in ``opencv/samples/cpp`` folder.
 
-.. _openni_capture.cpp: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/openni_capture.cpp
+.. _openni_capture.cpp: https://github.com/Itseez/opencv/tree/master/samples/cpp/openni_capture.cpp
