@@ -89,7 +89,8 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
     int x_ = INC(x,srccols);
     __global const PIXTYPE* src = (__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE));
 
-#if depth == 0
+#if depth <= 4
+
     u = u * INTER_RESIZE_COEF_SCALE;
     v = v * INTER_RESIZE_COEF_SCALE;
 
@@ -102,18 +103,22 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
     WORKTYPE data1 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
     WORKTYPE data2 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
     WORKTYPE data3 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
+
     WORKTYPE val = mul24((WORKTYPE)mul24(U1, V1), data0) + mul24((WORKTYPE)mul24(U, V1), data1) +
                mul24((WORKTYPE)mul24(U1, V), data2) + mul24((WORKTYPE)mul24(U, V), data3);
 
     PIXTYPE uval = convertToDT((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
+
 #else
-    float u1 = 1.f-u;
-    float v1 = 1.f-v;
+    float u1 = 1.f - u;
+    float v1 = 1.f - v;
     WORKTYPE data0 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE)));
     WORKTYPE data1 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
     WORKTYPE data2 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
     WORKTYPE data3 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
-    PIXTYPE uval = u1 * v1 * s_data1 + u * v1 * s_data2 + u1 * v *s_data3 + u * v *s_data4;
+
+    PIXTYPE uval = u1 * v1 * data0 + u * v1 * data1 + u1 * v *data2 + u * v *data3;
+
 #endif
 
     if(dx < dstcols && dy < dstrows)
