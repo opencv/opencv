@@ -268,7 +268,7 @@ __kernel void YUV2RGB_NV12(__global const uchar* srcptr, int srcstep, int srcoff
     }
 }
 
-///////////////////////////////////// RGB -> YCrCb //////////////////////////////////////
+///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
 __constant float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
 __constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
@@ -304,3 +304,66 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int srcstep, int srcoffset
         dst[2] = SAT_CAST( Cb );
     }
 }
+
+__constant float c_YCrCb2RGBCoeffs_f[4] = { 1.403f, -0.714f, -0.344f, 1.773f };
+__constant int   c_YCrCb2RGBCoeffs_i[4] = { 22987, -11698, -5636, 29049 };
+
+__kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
+                        __global uchar* dst, int dst_step, int dst_offset,
+                        int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+        __global const DATA_TYPE * srcptr = (__global const DATA_TYPE*)(src + src_idx);
+        __global DATA_TYPE * dstptr = (__global DATA_TYPE*)(dst + dst_idx);
+
+        DATA_TYPE y = srcptr[0], cr = srcptr[1], cb = srcptr[2];
+
+#ifdef DEPTH_5
+        __constant float * coeff = c_YCrCb2RGBCoeffs_f;
+        float r = y + coeff[0] * (cr - HALF_MAX);
+        float g = y + coeff[1] * (cr - HALF_MAX) + coeff[2] * (cb - HALF_MAX);
+        float b = y + coeff[3] * (cb - HALF_MAX);
+#else
+        __constant int * coeff = c_YCrCb2RGBCoeffs_i;
+        int r = y + CV_DESCALE(coeff[0] * (cr - HALF_MAX), yuv_shift);
+        int g = y + CV_DESCALE(coeff[1] * (cr - HALF_MAX) + coeff[2] * (cb - HALF_MAX), yuv_shift);
+        int b = y + CV_DESCALE(coeff[3] * (cb - HALF_MAX), yuv_shift);
+#endif
+
+        dstptr[(bidx^2)] = SAT_CAST(r);
+        dstptr[1] = SAT_CAST(g);
+        dstptr[bidx] = SAT_CAST(b);
+#if dcn == 4
+        dstptr[3] = MAX_NUM;
+#endif
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
