@@ -208,19 +208,19 @@ __constant int ITUR_BT_601_CVG = 852492;
 __constant int ITUR_BT_601_CVR = 1673527;
 __constant int ITUR_BT_601_SHIFT = 20;
 
-__kernel void YUV2RGBA_NV12(__global const uchar* srcptr, int srcstep, int srcoffset,
+__kernel void YUV2RGB_NV12(__global const uchar* srcptr, int srcstep, int srcoffset,
                             __global uchar* dstptr, int dststep, int dstoffset,
                             int rows, int cols)
 {
-    const int x = get_global_id(0); // max_x = width / 2
-    const int y = get_global_id(1); // max_y = height/ 2
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
     if (y < rows / 2 && x < cols / 2 )
     {
-        __global const uchar* ysrc = (__global const uchar*)(srcptr + mad24(y << 1, srcstep, (x << 1) + srcoffset));
-        __global const uchar* usrc = (__global const uchar*)(srcptr + mad24(rows + y, srcstep, (x << 1) + srcoffset));
-        __global uchar*       dst1 = (__global uchar*)(dstptr + mad24(y << 1, dststep, x*(dcn*2) + dstoffset));
-        __global uchar*       dst2 = (__global uchar*)(dstptr + mad24((y << 1) + 1, dststep, x*(dcn*2) + dstoffset));
+        __global const uchar* ysrc = srcptr + mad24(y << 1, srcstep, (x << 1) + srcoffset);
+        __global const uchar* usrc = srcptr + mad24(rows + y, srcstep, (x << 1) + srcoffset);
+        __global uchar*       dst1 = dstptr + mad24(y << 1, dststep, x * (dcn<<1) + dstoffset);
+        __global uchar*       dst2 = dstptr + mad24((y << 1) + 1, dststep, x * (dcn<<1) + dstoffset);
 
         int Y1 = ysrc[0];
         int Y2 = ysrc[1];
@@ -243,7 +243,7 @@ __kernel void YUV2RGBA_NV12(__global const uchar* srcptr, int srcstep, int srcof
 #endif
 
         Y2 = max(0, Y2 - 16) * ITUR_BT_601_CY;
-        dst1[(dcn + 2) - bidx] = convert_uchar_sat((Y2 + ruv) >> ITUR_BT_601_SHIFT);
+        dst1[dcn + 2 - bidx] = convert_uchar_sat((Y2 + ruv) >> ITUR_BT_601_SHIFT);
         dst1[dcn + 1]        = convert_uchar_sat((Y2 + guv) >> ITUR_BT_601_SHIFT);
         dst1[dcn + bidx] = convert_uchar_sat((Y2 + buv) >> ITUR_BT_601_SHIFT);
 #if dcn == 4
@@ -259,7 +259,7 @@ __kernel void YUV2RGBA_NV12(__global const uchar* srcptr, int srcstep, int srcof
 #endif
 
         Y4 = max(0, Y4 - 16) * ITUR_BT_601_CY;
-        dst2[(dcn + 2) - bidx] = convert_uchar_sat((Y4 + ruv) >> ITUR_BT_601_SHIFT);
+        dst2[dcn + 2 - bidx] = convert_uchar_sat((Y4 + ruv) >> ITUR_BT_601_SHIFT);
         dst2[dcn + 1]        = convert_uchar_sat((Y4 + guv) >> ITUR_BT_601_SHIFT);
         dst2[dcn + bidx] = convert_uchar_sat((Y4 + buv) >> ITUR_BT_601_SHIFT);
 #if dcn == 4
@@ -268,7 +268,7 @@ __kernel void YUV2RGBA_NV12(__global const uchar* srcptr, int srcstep, int srcof
     }
 }
 
-///////////////////////////////////// RGB <-> YUV //////////////////////////////////////
+///////////////////////////////////// RGB -> YCrCb //////////////////////////////////////
 
 __constant float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
 __constant int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
@@ -288,15 +288,15 @@ __kernel void RGB2YCrCb(__global const uchar* srcptr, int srcstep, int srcoffset
 
 #ifdef DEPTH_5
         __constant float * coeffs = c_RGB2YCrCbCoeffs_f;
-        const DATA_TYPE Y  = b * coeffs[0] + g * coeffs[1] + r * coeffs[2];
-        const DATA_TYPE Cr = (r - Y) * coeffs[3] + HALF_MAX;
-        const DATA_TYPE Cb = (b - Y) * coeffs[4] + HALF_MAX;
+        DATA_TYPE Y = b * coeffs[2] + g * coeffs[1] + r * coeffs[0];
+        DATA_TYPE Cr = (r - Y) * coeffs[3] + HALF_MAX;
+        DATA_TYPE Cb = (b - Y) * coeffs[4] + HALF_MAX;
 #else
         __constant int * coeffs = c_RGB2YCrCbCoeffs_i;
-        const int delta = HALF_MAX * (1 << yuv_shift);
-        const int Y =  CV_DESCALE(b * coeffs[0] + g * coeffs[1] + r * coeffs[2], yuv_shift);
-        const int Cr = CV_DESCALE((r - Y) * coeffs[3] + delta, yuv_shift);
-        const int Cb = CV_DESCALE((b - Y) * coeffs[4] + delta, yuv_shift);
+        int delta = HALF_MAX * (1 << yuv_shift);
+        int Y =  CV_DESCALE(b * coeffs[2] + g * coeffs[1] + r * coeffs[0], yuv_shift);
+        int Cr = CV_DESCALE((r - Y) * coeffs[3] + delta, yuv_shift);
+        int Cb = CV_DESCALE((b - Y) * coeffs[4] + delta, yuv_shift);
 #endif
 
         dst[0] = SAT_CAST( Y );
