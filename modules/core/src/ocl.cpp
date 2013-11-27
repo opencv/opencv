@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 #include <map>
-#include <iostream>
 
 /*
   Part of the file is an extract from the standard OpenCL headers from Khronos site.
@@ -2354,7 +2353,7 @@ struct Program::Impl
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
-            if( retval < 0 /*== CL_BUILD_PROGRAM_FAILURE*/ )
+            if( retval == CL_BUILD_PROGRAM_FAILURE )
             {
                 char buf[1<<16];
                 size_t retsz = 0;
