@@ -92,7 +92,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 #include <limits>
-#include <iostream>
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -3045,8 +3044,8 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     int stype = _src.type();
     int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
 
-    if( use_opencl /*&& ocl_cvtColor(_src, _dst, code, dcn)*/ )
-        return (void)ocl_cvtColor(_src, _dst, code, dcn);
+    if( use_opencl && ocl_cvtColor(_src, _dst, code, dcn) )
+        return;
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
