@@ -149,14 +149,14 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>
         return;
 
     // Compute descriptors for the image.
-    Mat descriptors;
-    dextractor->compute( image, keypoints, descriptors );
+    Mat _descriptors;
+    dextractor->compute( image, keypoints, _descriptors );
 
-    compute( descriptors, imgDescriptor, pointIdxsOfClusters );
+    compute( _descriptors, imgDescriptor, pointIdxsOfClusters );
 
     // Add the descriptors of image keypoints
     if (descriptors) {
-        *descriptors = descriptors.clone();
+        *descriptors = _descriptors.clone();
     }
 }
 
