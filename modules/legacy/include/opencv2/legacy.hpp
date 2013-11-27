@@ -2765,6 +2765,7 @@ public:
 
     virtual int descriptorSize() const { return classifier_.classes(); }
     virtual int descriptorType() const { return DataType<T>::type; }
+    virtual int defaultNorm() const { return NORM_L1; }
 
     virtual bool empty() const;
 

@@ -247,6 +247,11 @@ int OpponentColorDescriptorExtractor::descriptorType() const
     return descriptorExtractor->descriptorType();
 }
 
+int OpponentColorDescriptorExtractor::defaultNorm() const
+{
+    return descriptorExtractor->defaultNorm();
+}
+
 bool OpponentColorDescriptorExtractor::empty() const
 {
     return !descriptorExtractor || descriptorExtractor->empty();
