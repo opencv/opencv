@@ -125,7 +125,7 @@ static void testCalonderClassifier( const string& classifierFilename, const stri
     Mat descriptors2;  de.compute( img2, keypoints2, descriptors2 );
 
     // Match descriptors
-    BFMatcher matcher(NORM_L1);
+    BFMatcher matcher(de.defaultNorm());
     vector<DMatch> matches;
     matcher.match( descriptors1, descriptors2, matches );
 

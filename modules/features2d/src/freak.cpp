@@ -623,4 +623,9 @@ int FREAK::descriptorType() const {
     return CV_8U;
 }
 
+int FREAK::defaultNorm() const
+{
+    return NORM_HAMMING;
+}
+
 } // END NAMESPACE CV

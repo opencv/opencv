@@ -575,6 +575,11 @@ int ORB::descriptorType() const
     return CV_8U;
 }
 
+int ORB::defaultNorm() const
+{
+    return NORM_HAMMING;
+}
+
 /** Compute the ORB features and descriptors on an image
  * @param img the image to compute the features and descriptors on
  * @param mask the mask to apply

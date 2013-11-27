@@ -106,7 +106,7 @@ int main(int argc, const char ** argv)
 
   //Do matching using features2d
   cout << "matching with BruteForceMatcher<Hamming>" << endl;
-  BFMatcher matcher_popcount(NORM_HAMMING);
+  BFMatcher matcher_popcount(extractor.defaultNorm());
   vector<DMatch> matches_popcount;
   double pop_time = match(kpts_1, kpts_2, matcher_popcount, desc_1, desc_2, matches_popcount);
   cout << "done BruteForceMatcher<Hamming> matching. took " << pop_time << " seconds" << endl;
