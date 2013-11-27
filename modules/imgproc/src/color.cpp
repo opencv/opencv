@@ -92,6 +92,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 #include <limits>
+#include <iostream>
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -2728,7 +2729,20 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         int greenbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
             code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
         k.create("RGB5x52RGB", ocl::imgproc::cvtcolor_oclsrc,
-                 format("-D depth=%d -D scn=2 -D dcn=%s -D bidx=%d -D greenbits=%d", depth, scn, dcn, bidx, greenbits));
+                 format("-D depth=%d -D scn=2 -D dcn=%d -D bidx=%d -D greenbits=%d", depth, dcn, bidx, greenbits));
+        break;
+    }
+    case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
+    case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
+    {
+        CV_Assert((scn == 3 || scn == 4) && depth == CV_8U );
+        bidx = code == COLOR_BGR2BGR565 || code == COLOR_BGR2BGR555 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_BGRA2BGR555 ? 0 : 2;
+        int greenbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
+        dcn = 2;
+        k.create("RGB2RGB5x5", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=2 -D bidx=%d -D greenbits=%d", depth, scn, bidx, greenbits));
         break;
     }
     case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
