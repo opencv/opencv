@@ -459,28 +459,28 @@ void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, Stri
     openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                          build_options);
 #else
-    string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
-    cout << endl;
-    cout << "Function Name: " << kernelName;
+    std::string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+    std::cout << std::endl;
+    std::cout << "Function Name: " << kernelName;
     if(depth >= 0)
-        cout << " |data type: " << data_type[depth];
-    cout << " |channels: " << channels;
-    cout << " |Time Unit: " << "ms" << endl;
+        std::cout << " |data type: " << data_type[depth];
+    std::cout << " |channels: " << channels;
+    std::cout << " |Time Unit: " << "ms" << std::endl;
 
     total_execute_time = 0;
     total_kernel_time = 0;
-    cout << "-------------------------------------" << endl;
+    std::cout << "-------------------------------------" << std::endl;
 
-    cout << setiosflags(ios::left) << setw(15) << "execute time";
-    cout << setiosflags(ios::left) << setw(15) << "launch time";
-    cout << setiosflags(ios::left) << setw(15) << "kernel time" << endl;
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "execute time";
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "launch time";
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "kernel time" << std::endl;
     int i = 0;
     for(i = 0; i < RUN_TIMES; i++)
         openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                              build_options);
 
-    cout << "average kernel execute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
-    cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << endl; // "ms" << endl;
+    std::cout << "average kernel execute time: " << total_execute_time / RUN_TIMES << std::endl; // "ms" << std::endl;
+    std::cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << std::endl; // "ms" << std::endl;
 #endif
 }
 
