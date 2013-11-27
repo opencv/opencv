@@ -250,8 +250,12 @@ public:
     KernelArg();
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
-    static KernelArg PtrOnly(const UMat & m)
-    { return KernelArg(PTR_ONLY, (UMat*)&m); }
+    static KernelArg PtrWriteOnly(const UMat& m)
+    { return KernelArg(PTR_ONLY+WRITE_ONLY, (UMat*)&m); }
+    static KernelArg PtrReadOnly(const UMat& m)
+    { return KernelArg(PTR_ONLY+READ_ONLY, (UMat*)&m); }
+    static KernelArg PtrReadWrite(const UMat& m)
+    { return KernelArg(PTR_ONLY+READ_WRITE, (UMat*)&m); }
     static KernelArg ReadWrite(const UMat& m, int wscale=1)
     { return KernelArg(READ_WRITE, (UMat*)&m, wscale); }
     static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1)

@@ -305,7 +305,7 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_ALL_DEPTHS Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
-CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
 
 #define OCL_INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
     INSTANTIATE_TEST_CASE_P(OCL_ ## prefix, test_case_name, generator)
