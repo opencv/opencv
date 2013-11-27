@@ -82,7 +82,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         source_image = cv.LoadImage(sys.argv[1], cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/stuff.jpg'
+        url = 'https://raw.github.com/Itseez/opencv/master/samples/c/stuff.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))
