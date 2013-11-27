@@ -258,8 +258,8 @@ struct TestUtils
     }
 };
 
-#define TEST_DECLARE_INPUT_PARATEMER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi;
-#define TEST_DECLARE_OUTPUT_PARATEMER(name) TEST_DECLARE_INPUT_PARATEMER(name)
+#define TEST_DECLARE_INPUT_PARAMETER(name) Mat name, name ## _roi; UMat u ## name, u ## name ## _roi;
+#define TEST_DECLARE_OUTPUT_PARAMETER(name) TEST_DECLARE_INPUT_PARAMETER(name)
 
 #define UMAT_UPLOAD_INPUT_PARAMETER(name) \
 { \
