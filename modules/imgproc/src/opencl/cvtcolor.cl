@@ -513,8 +513,54 @@ __kernel void RGB2RGB5x5(__global const uchar* src, int src_step, int src_offset
     }
 }
 
+///////////////////////////////////// RGB5x5 <-> Gray //////////////////////////////////////
 
+__kernel void BGR5x52Gray(__global const uchar* src, int src_step, int src_offset,
+                          __global uchar* dst, int dst_step, int dst_offset,
+                          int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x);
+        int t = *((__global const ushort*)(src + src_idx));
+
+#if greenbits == 6
+        dst[dst_idx] = (uchar)CV_DESCALE(((t << 3) & 0xf8)*B2Y +
+                                         ((t >> 3) & 0xfc)*G2Y +
+                                         ((t >> 8) & 0xf8)*R2Y, yuv_shift);
+#else
+        dst[dst_idx] = (uchar)CV_DESCALE(((t << 3) & 0xf8)*B2Y +
+                                         ((t >> 2) & 0xf8)*G2Y +
+                                         ((t >> 7) & 0xf8)*R2Y, yuv_shift);
+#endif
+    }
+}
+
+__kernel void Gray2BGR5x5(__global const uchar* src, int src_step, int src_offset,
+                          __global uchar* dst, int dst_step, int dst_offset,
+                          int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+        int t = src[src_idx];
+
+#if greenbits == 6
+        *((__global ushort*)(dst + dst_idx)) = (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
+#else
+        t >>= 3;
+        *((__global ushort*)(dst + dst_idx)) = (ushort)(t|(t << 5)|(t << 10));
+#endif
+    }
+}
 
 
 
