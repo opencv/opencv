@@ -2875,7 +2875,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrOnly(c));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
         return k.run(2, globalsize, 0, false);
     }
     case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
@@ -2924,7 +2924,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrOnly(c));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
         return k.run(2, globalsize, 0, false);
     }
     case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
@@ -2980,8 +2980,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                                                                       depth, hrange, bidx, scn));
 
             k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
-                   ocl::KernelArg::PtrOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrOnly(hdiv_data256) :
-                                                                       ocl::KernelArg::PtrOnly(hdiv_data180));
+                   ocl::KernelArg::PtrReadOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                                                                       ocl::KernelArg::PtrReadOnly(hdiv_data180));
 
             return k.run(2, globalsize, NULL, false);
         }

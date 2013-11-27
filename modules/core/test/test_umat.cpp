@@ -107,8 +107,8 @@ bool CV_UMatTest::TestUMat()
 
         ra += Scalar::all(1.f);
         {
-        Mat temp = ura.getMat(ACCESS_RW);
-        temp += Scalar::all(1.f);
+            Mat temp = ura.getMat(ACCESS_RW);
+            temp += Scalar::all(1.f);
         }
         ra.copyTo(rb);
         CHECK_DIFF(ra, rb);
@@ -146,8 +146,8 @@ bool CV_UMatTest::TestUMat()
         CHECK_DIFF(rc0, rc);
 
         {
-        UMat tmp = rc0.getUMat(ACCESS_WRITE);
-        cv::max(ura, urb, tmp);
+            UMat tmp = rc0.getUMat(ACCESS_WRITE);
+            cv::max(ura, urb, tmp);
         }
         CHECK_DIFF(rc0, rc);
 
