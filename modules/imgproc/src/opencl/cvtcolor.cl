@@ -54,18 +54,21 @@
     #define DATA_TYPE uchar
     #define MAX_NUM  255
     #define HALF_MAX 128
+    #define COEFF_TYPE int
     #define SAT_CAST(num) convert_uchar_sat(num)
     #define DEPTH_0
 #elif depth == 2
     #define DATA_TYPE ushort
     #define MAX_NUM  65535
     #define HALF_MAX 32768
+    #define COEFF_TYPE int
     #define SAT_CAST(num) convert_ushort_sat(num)
     #define DEPTH_2
 #elif depth == 5
     #define DATA_TYPE float
     #define MAX_NUM  1.0f
     #define HALF_MAX 0.5f
+    #define COEFF_TYPE float
     #define SAT_CAST(num) (num)
     #define DEPTH_5
 #else
@@ -347,20 +350,22 @@ __kernel void YCrCb2RGB(__global const uchar* src, int src_step, int src_offset,
 
 ///////////////////////////////////// RGB <-> XYZ //////////////////////////////////////
 
-__kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
-                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
-                      int src_offset, int dst_offset, __constant COEFF_TYPE * coeffs)
+__kernel void RGB2XYZ(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset,
+                      int rows, int cols, __constant COEFF_TYPE * coeffs, int a1, int a2)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
 
     if (dy < rows && dx < cols)
     {
-        dx <<= 2;
-        int src_idx = mad24(dy, src_step, src_offset + dx);
-        int dst_idx = mad24(dy, dst_step, dst_offset + dx);
+        int src_idx = mad24(dy, src_step, src_offset + dx * scnbytes);
+        int dst_idx = mad24(dy, dst_step, dst_offset + dx * dcnbytes);
 
-        DATA_TYPE r = src[src_idx], g = src[src_idx + 1], b = src[src_idx + 2];
+        __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_idx);
+        __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_idx);
+
+        DATA_TYPE r = src[0], g = src[1], b = src[2];
 
 #ifdef DEPTH_5
         float x = r * coeffs[0] + g * coeffs[1] + b * coeffs[2];
@@ -371,26 +376,28 @@ __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
         int y = CV_DESCALE(r * coeffs[3] + g * coeffs[4] + b * coeffs[5], xyz_shift);
         int z = CV_DESCALE(r * coeffs[6] + g * coeffs[7] + b * coeffs[8], xyz_shift);
 #endif
-        dst[dst_idx] = SAT_CAST(x);
-        dst[dst_idx + 1] = SAT_CAST(y);
-        dst[dst_idx + 2] = SAT_CAST(z);
+        dst[0] = SAT_CAST(x);
+        dst[1] = SAT_CAST(y);
+        dst[2] = SAT_CAST(z);
     }
 }
 
-__kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
-                      int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
-                      int src_offset, int dst_offset, __constant COEFF_TYPE * coeffs)
+__kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset,
+                      int rows, int cols, __constant COEFF_TYPE * coeffs, int a1, int a2)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
 
     if (dy < rows && dx < cols)
     {
-        dx <<= 2;
-        int src_idx = mad24(dy, src_step, src_offset + dx);
-        int dst_idx = mad24(dy, dst_step, dst_offset + dx);
+        int src_idx = mad24(dy, src_step, src_offset + dx * scnbytes);
+        int dst_idx = mad24(dy, dst_step, dst_offset + dx * dcnbytes);
 
-        DATA_TYPE x = src[src_idx], y = src[src_idx + 1], z = src[src_idx + 2];
+        __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_idx);
+        __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_idx);
+
+        DATA_TYPE x = src[0], y = src[1], z = src[2];
 
 #ifdef DEPTH_5
         float b = x * coeffs[0] + y * coeffs[1] + z * coeffs[2];
@@ -401,11 +408,11 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
         int g = CV_DESCALE(x * coeffs[3] + y * coeffs[4] + z * coeffs[5], xyz_shift);
         int r = CV_DESCALE(x * coeffs[6] + y * coeffs[7] + z * coeffs[8], xyz_shift);
 #endif
-        dst[dst_idx] = SAT_CAST(b);
-        dst[dst_idx + 1] = SAT_CAST(g);
-        dst[dst_idx + 2] = SAT_CAST(r);
+        dst[0] = SAT_CAST(b);
+        dst[1] = SAT_CAST(g);
+        dst[2] = SAT_CAST(r);
 #if dcn == 4
-        dst[dst_idx + 3] = MAX_NUM;
+        dst[3] = MAX_NUM;
 #endif
     }
 }
