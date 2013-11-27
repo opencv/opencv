@@ -91,46 +91,6 @@ enum
     BLOCK_SIZE = 256
 };
 
-
-__constant float c_YCrCb2RGBCoeffs_f[4] = { 1.403f, -0.714f, -0.344f, 1.773f };
-__constant int   c_YCrCb2RGBCoeffs_i[4] = { 22987, -11698, -5636, 29049 };
-
-__kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
-                        int bidx, __global const DATA_TYPE* src, __global DATA_TYPE* dst,
-                        int src_offset, int dst_offset)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (y < rows && x < cols)
-    {
-        x <<= 2;
-        int src_idx = mad24(y, src_step, src_offset + x);
-        int dst_idx = mad24(y, dst_step, dst_offset + x);
-
-        DATA_TYPE ycrcb[] = { src[src_idx], src[src_idx + 1], src[src_idx + 2] };
-
-#ifdef DEPTH_5
-        __constant float * coeff = c_YCrCb2RGBCoeffs_f;
-        float r = ycrcb[0] + coeff[0] * (ycrcb[1] - HALF_MAX);
-        float g = ycrcb[0] + coeff[1] * (ycrcb[1] - HALF_MAX) + coeff[2] * (ycrcb[2] - HALF_MAX);
-        float b = ycrcb[0] + coeff[3] * (ycrcb[2] - HALF_MAX);
-#else
-        __constant int * coeff = c_YCrCb2RGBCoeffs_i;
-        int r = ycrcb[0] + CV_DESCALE(coeff[0] * (ycrcb[1] - HALF_MAX), yuv_shift);
-        int g = ycrcb[0] + CV_DESCALE(coeff[1] * (ycrcb[1] - HALF_MAX) + coeff[2] * (ycrcb[2] - HALF_MAX), yuv_shift);
-        int b = ycrcb[0] + CV_DESCALE(coeff[3] * (ycrcb[2] - HALF_MAX), yuv_shift);
-#endif
-
-        dst[dst_idx + (bidx^2)] = SAT_CAST(r);
-        dst[dst_idx + 1] = SAT_CAST(g);
-        dst[dst_idx + bidx] = SAT_CAST(b);
-#if dcn == 4
-        dst[dst_idx + 3] = MAX_NUM;
-#endif
-    }
-}
-
 ///////////////////////////////////// RGB <-> XYZ //////////////////////////////////////
 
 __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
