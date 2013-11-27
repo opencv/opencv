@@ -2691,7 +2691,7 @@ struct mRGBA2RGBA
 
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
-    bool ok = true;
+    bool ok = false;
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
@@ -2729,7 +2729,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         CV_Assert(scn == 1);
         dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
         k.create("Gray2RGB", ocl::imgproc::cvtcolor_oclsrc,
-                 format("-D depth=%d -D scn=1 -D dcn=%d", depth, dcn));
+                 format("-D depth=%d -D bidx=0 -D scn=1 -D dcn=%d", depth, dcn));
         break;
     }
     case COLOR_BGR2YUV:
@@ -2763,9 +2763,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ? 0 : 2;
 
         dstSz = Size(sz.width, sz.height * 2 / 3);
-        globalsize[0] = dstSz.height/2;
-        globalsize[1] = dstSz.width/2;
-        k.create("YUV2RGBA_NV12", ocl::imgproc::cvtcolor_oclsrc,
+        k.create("YUV2RGB_NV12", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=0 -D scn=1 -D dcn=%d -D bidx=%d", dcn, bidx));
         break;
     }
