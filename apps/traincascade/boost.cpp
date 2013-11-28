@@ -1,6 +1,19 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/internal.hpp"
 
+using cv::Size;
+using cv::Mat;
+using cv::Point;
+using cv::FileStorage;
+using cv::Rect;
+using cv::Ptr;
+using cv::FileNode;
+using cv::Mat_;
+using cv::Range;
+using cv::FileNodeIterator;
+using cv::ParallelLoopBody;
+
+
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>
@@ -160,10 +173,10 @@ CvCascadeBoostParams::CvCascadeBoostParams( int _boostType,
 
 void CvCascadeBoostParams::write( FileStorage &fs ) const
 {
-    String boostTypeStr = boost_type == CvBoost::DISCRETE ? CC_DISCRETE_BOOST :
+    string boostTypeStr = boost_type == CvBoost::DISCRETE ? CC_DISCRETE_BOOST :
                           boost_type == CvBoost::REAL ? CC_REAL_BOOST :
                           boost_type == CvBoost::LOGIT ? CC_LOGIT_BOOST :
-                          boost_type == CvBoost::GENTLE ? CC_GENTLE_BOOST : String();
+                          boost_type == CvBoost::GENTLE ? CC_GENTLE_BOOST : string();
     CV_Assert( !boostTypeStr.empty() );
     fs << CC_BOOST_TYPE << boostTypeStr;
     fs << CC_MINHITRATE << minHitRate;
@@ -175,7 +188,7 @@ void CvCascadeBoostParams::write( FileStorage &fs ) const
 
 bool CvCascadeBoostParams::read( const FileNode &node )
 {
-    String boostTypeStr;
+    string boostTypeStr;
     FileNode rnode = node[CC_BOOST_TYPE];
     rnode >> boostTypeStr;
     boost_type = !boostTypeStr.compare( CC_DISCRETE_BOOST ) ? CvBoost::DISCRETE :
@@ -213,10 +226,10 @@ void CvCascadeBoostParams::printDefaults() const
 
 void CvCascadeBoostParams::printAttrs() const
 {
-    String boostTypeStr = boost_type == CvBoost::DISCRETE ? CC_DISCRETE_BOOST :
+    string boostTypeStr = boost_type == CvBoost::DISCRETE ? CC_DISCRETE_BOOST :
                           boost_type == CvBoost::REAL ? CC_REAL_BOOST :
                           boost_type == CvBoost::LOGIT  ? CC_LOGIT_BOOST :
-                          boost_type == CvBoost::GENTLE ? CC_GENTLE_BOOST : String();
+                          boost_type == CvBoost::GENTLE ? CC_GENTLE_BOOST : string();
     CV_Assert( !boostTypeStr.empty() );
     cout << "boostType: " << boostTypeStr << endl;
     cout << "minHitRate: " << minHitRate << endl;
@@ -226,7 +239,7 @@ void CvCascadeBoostParams::printAttrs() const
     cout << "maxWeakCount: " << weak_count << endl;
 }
 
-bool CvCascadeBoostParams::scanAttr( const String prmName, const String val)
+bool CvCascadeBoostParams::scanAttr( const string prmName, const string val)
 {
     bool res = true;
 
