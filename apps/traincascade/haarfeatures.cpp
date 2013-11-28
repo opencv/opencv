@@ -5,6 +5,7 @@
 #include "cascadeclassifier.h"
 
 using namespace std;
+using namespace cv;
 
 CvHaarFeatureParams::CvHaarFeatureParams() : mode(BASIC)
 {
@@ -25,9 +26,9 @@ void CvHaarFeatureParams::init( const CvFeatureParams& fp )
 void CvHaarFeatureParams::write( FileStorage &fs ) const
 {
     CvFeatureParams::write( fs );
-    String modeStr = mode == BASIC ? CC_MODE_BASIC :
+    string modeStr = mode == BASIC ? CC_MODE_BASIC :
                      mode == CORE ? CC_MODE_CORE :
-                     mode == ALL ? CC_MODE_ALL : String();
+                     mode == ALL ? CC_MODE_ALL : string();
     CV_Assert( !modeStr.empty() );
     fs << CC_MODE << modeStr;
 }
@@ -40,7 +41,7 @@ bool CvHaarFeatureParams::read( const FileNode &node )
     FileNode rnode = node[CC_MODE];
     if( !rnode.isString() )
         return false;
-    String modeStr;
+    string modeStr;
     rnode >> modeStr;
     mode = !modeStr.compare( CC_MODE_BASIC ) ? BASIC :
            !modeStr.compare( CC_MODE_CORE ) ? CORE :
@@ -58,13 +59,13 @@ void CvHaarFeatureParams::printDefaults() const
 void CvHaarFeatureParams::printAttrs() const
 {
     CvFeatureParams::printAttrs();
-    String mode_str = mode == BASIC ? CC_MODE_BASIC :
+    string mode_str = mode == BASIC ? CC_MODE_BASIC :
                        mode == CORE ? CC_MODE_CORE :
                        mode == ALL ? CC_MODE_ALL : 0;
     cout << "mode: " <<  mode_str << endl;
 }
 
-bool CvHaarFeatureParams::scanAttr( const String prmName, const String val)
+bool CvHaarFeatureParams::scanAttr( const string prmName, const string val)
 {
     if ( !CvFeatureParams::scanAttr( prmName, val ) )
     {
