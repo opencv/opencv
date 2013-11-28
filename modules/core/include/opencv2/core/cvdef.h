@@ -464,4 +464,19 @@ CV_INLINE int cvIsInf( double value )
    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
 #endif
 
+
+/****************************************************************************************\
+*                                  CV_NORETURN attribute                                 *
+\****************************************************************************************/
+
+#ifndef CV_NORETURN
+#  if defined(__GNUC__)
+#    define CV_NORETURN __attribute__((__noreturn__))
+#  elif defined(_MSC_VER) && (_MSC_VER >= 1300)
+#    define CV_NORETURN __declspec(noreturn)
+#  else
+#    define CV_NORETURN /* nothing by default */
+#  endif
+#endif
+
 #endif // __OPENCV_CORE_CVDEF_H__
