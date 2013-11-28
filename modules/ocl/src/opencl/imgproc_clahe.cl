@@ -47,7 +47,7 @@
 #define WAVE_SIZE 1
 #endif
 
-static int calc_lut(__local int* smem, int val, int tid)
+inline int calc_lut(__local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -61,7 +61,7 @@ static int calc_lut(__local int* smem, int val, int tid)
 }
 
 #ifdef CPU
-static void reduce(volatile __local int* smem, int val, int tid)
+inline void reduce(volatile __local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -101,7 +101,7 @@ static void reduce(volatile __local int* smem, int val, int tid)
 
 #else
 
-static void reduce(__local volatile int* smem, int val, int tid)
+inline void reduce(__local volatile int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);

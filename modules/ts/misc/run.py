@@ -562,7 +562,10 @@ class TestSuite(object):
             else:
                 hw = ""
             tstamp = timestamp.strftime("%Y%m%d-%H%M%S")
-            return "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = "%s_%s_%s_%s%s%s.xml" % (app, self.targetos, self.targetarch, hw, rev, tstamp)
+            lname = str.replace(lname, '(', '_')
+            lname = str.replace(lname, ')', '_')
+            return lname
 
     def getTest(self, name):
         # full path

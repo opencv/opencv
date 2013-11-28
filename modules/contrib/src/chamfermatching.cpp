@@ -474,12 +474,19 @@ public:
         chamfer_ = new Matching(true);
     }
 
+    ~ChamferMatcher()
+    {
+        delete chamfer_;
+    }
+
     void showMatch(Mat& img, int index = 0);
     void showMatch(Mat& img, Match match_);
 
     const Matches& matching(Template&, Mat&);
 
 private:
+    ChamferMatcher(const ChamferMatcher&);
+    ChamferMatcher& operator=(const ChamferMatcher&);
     void addMatch(float cost, Point offset, const Template* tpl);
 
 

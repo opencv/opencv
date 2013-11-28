@@ -56,6 +56,8 @@
 #endif
 #define MAX_VAL   (FLT_MAX*1e-3)
 
+#define BLOCK_SIZE 16
+
 __kernel void svm_linear(__global float* src, int src_step, __global float* src2, int src2_step, __global TYPE* dst, int dst_step, int src_rows, int src2_cols,
                          int width, TYPE alpha, TYPE beta)
 {
@@ -66,7 +68,7 @@ __kernel void svm_linear(__global float* src, int src_step, __global float* src2
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -103,7 +105,7 @@ __kernel void svm_sigmod(__global float* src, int src_step, __global float* src2
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -148,7 +150,7 @@ __kernel void svm_poly(__global float* src, int src_step, __global float* src2, 
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -183,7 +185,7 @@ __kernel void svm_rbf(__global float* src, int src_step, __global float* src2, i
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);

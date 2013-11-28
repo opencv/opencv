@@ -187,17 +187,26 @@ std::vector<std::pair<int, int> > CommonPackageManager::InitArmRating()
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3d16));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv6 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv3d16));
+
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3d16));
     result.push_back(std::pair<int, int>(PLATFORM_TEGRA2,  ARCH_ARMv7 | FEATURES_HAS_VFPv3d16));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3d16 | FEATURES_HAS_VFPv3));
+
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_NEON));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3d16 | FEATURES_HAS_NEON));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
     result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv3d16 | FEATURES_HAS_NEON));
+
+    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv4 | FEATURES_HAS_NEON));
+    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv4 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
+    result.push_back(std::pair<int, int>(PLATFORM_UNKNOWN, ARCH_ARMv7 | FEATURES_HAS_VFPv4 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv3d16 | FEATURES_HAS_NEON));
+
     result.push_back(std::pair<int, int>(PLATFORM_TEGRA3,  ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
-    result.push_back(std::pair<int, int>(PLATFORM_TEGRA4,  ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_NEON));
+    result.push_back(std::pair<int, int>(PLATFORM_TEGRA4i, ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv4 | FEATURES_HAS_NEON));
+    result.push_back(std::pair<int, int>(PLATFORM_TEGRA4,  ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv4 | FEATURES_HAS_NEON));
+    result.push_back(std::pair<int, int>(PLATFORM_TEGRA5,  ARCH_ARMv7 | FEATURES_HAS_VFPv3 | FEATURES_HAS_VFPv4 | FEATURES_HAS_NEON));
 
     return result;
 }
