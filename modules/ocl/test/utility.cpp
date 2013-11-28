@@ -230,7 +230,7 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     return final_test_result;
 }
 
-void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow)
+void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow)
 {
     Mat diff, diff_thresh;
     absdiff(gold, actual, diff);
@@ -239,10 +239,18 @@ void showDiff(const Mat& gold, const Mat& actual, double eps, bool alwaysShow)
 
     if (alwaysShow || cv::countNonZero(diff_thresh.reshape(1)) > 0)
     {
+#if 0
+        std::cout << "Src: " << std::endl << src << std::endl;
+        std::cout << "Reference: " << std::endl << gold << std::endl;
+        std::cout << "OpenCL: " << std::endl << actual << std::endl;
+#endif
+
+        namedWindow("src", WINDOW_NORMAL);
         namedWindow("gold", WINDOW_NORMAL);
         namedWindow("actual", WINDOW_NORMAL);
         namedWindow("diff", WINDOW_NORMAL);
 
+        imshow("src", src);
         imshow("gold", gold);
         imshow("actual", actual);
         imshow("diff", diff);

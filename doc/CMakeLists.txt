@@ -2,9 +2,6 @@
 #  CMake file for OpenCV docs
 #
 
-file(GLOB FILES_TEX *.tex *.sty *.bib)
-file(GLOB FILES_TEX_PICS pics/*.png pics/*.jpg)
-
 if(BUILD_DOCS AND HAVE_SPHINX)
 
   project(opencv_docs)
@@ -23,55 +20,80 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   set(OPTIONAL_DOC_LIST "")
 
 
-  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann photo stitching nonfree contrib legacy bioinspired)
-
   # build lists of modules to be documented
-  set(OPENCV2_MODULES "")
-  set(OPENCV_MODULES "")
+  set(BASE_MODULES "")
+  set(EXTRA_MODULES "")
 
   foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MODULES_DISABLED_AUTO} ${OPENCV_MODULES_DISABLED_FORCE})
     string(REGEX REPLACE "^opencv_" "" mod "${mod}")
     if("${OPENCV_MODULE_opencv_${mod}_LOCATION}" STREQUAL "${OpenCV_SOURCE_DIR}/modules/${mod}")
-      list(APPEND OPENCV2_MODULES ${mod})
+      list(APPEND BASE_MODULES ${mod})
     else()
-      list(APPEND OPENCV_MODULES ${mod})
+      list(APPEND EXTRA_MODULES ${mod})
     endif()
   endforeach()
-  list(REMOVE_ITEM OPENCV2_MODULES ${OPENCV2_BASE_MODULES})
-  ocv_list_sort(OPENCV2_MODULES)
-  ocv_list_sort(OPENCV_MODULES)
+
+  set(FIXED_ORDER_MODULES core imgproc highgui video calib3d features2d objdetect ml flann photo stitching nonfree contrib legacy bioinspired)
+
+  list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
+
+  ocv_list_sort(BASE_MODULES)
+  ocv_list_sort(EXTRA_MODULES)
+
+  set(BASE_MODULES ${FIXED_ORDER_MODULES} ${BASE_MODULES})
 
   # build lists of documentation files and generate table of contents for reference manual
-  set(OPENCV_FILES_REF "")
-  set(OPENCV_FILES_REF_PICT "")
+
+  set(DOC_FAKE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/fake-root")
+  set(DOC_FAKE_ROOT_FILES "")
+
+  function(ocv_doc_add_file_to_fake_root source destination)
+    add_custom_command(
+      OUTPUT "${DOC_FAKE_ROOT}/${destination}"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${source}" "${DOC_FAKE_ROOT}/${destination}"
+      DEPENDS "${source}"
+      COMMENT "Copying ${destination} to fake root..."
+      VERBATIM
+    )
+    list(APPEND DOC_FAKE_ROOT_FILES "${DOC_FAKE_ROOT}/${destination}")
+    set(DOC_FAKE_ROOT_FILES "${DOC_FAKE_ROOT_FILES}" PARENT_SCOPE)
+  endfunction()
+
+  function(ocv_doc_add_to_fake_root source)
+    if(ARGC GREATER 1)
+      set(destination "${ARGV1}")
+    else()
+      file(RELATIVE_PATH destination "${OpenCV_SOURCE_DIR}" "${source}")
+    endif()
+
+    if(IS_DIRECTORY "${source}")
+      file(GLOB_RECURSE files RELATIVE "${source}" "${source}/*")
+
+      foreach(file ${files})
+        ocv_doc_add_file_to_fake_root("${source}/${file}" "${destination}/${file}")
+      endforeach()
+    else()
+      ocv_doc_add_file_to_fake_root("${source}" "${destination}")
+    endif()
+
+    set(DOC_FAKE_ROOT_FILES "${DOC_FAKE_ROOT_FILES}" PARENT_SCOPE)
+  endfunction()
+
   set(OPENCV_REFMAN_TOC "")
 
-  foreach(mod ${OPENCV2_BASE_MODULES} ${OPENCV2_MODULES} ${OPENCV_MODULES})
-    file(GLOB_RECURSE _OPENCV_FILES_REF "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/*.rst")
-    file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/*.png" "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/*.jpg")
-    list(APPEND OPENCV_FILES_REF ${_OPENCV_FILES_REF})
-    list(APPEND OPENCV_FILES_REF_PICT ${_OPENCV_FILES_REF_PICT})
-
-    set(toc_file "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/${mod}.rst")
-    if(EXISTS "${toc_file}")
-      file(RELATIVE_PATH toc_file "${OpenCV_SOURCE_DIR}/modules" "${toc_file}")
-      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${toc_file}\n")
+  foreach(mod ${BASE_MODULES} ${EXTRA_MODULES})
+    if(EXISTS "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/${mod}.rst")
+      ocv_doc_add_to_fake_root("${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc" modules/${mod}/doc)
+      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${mod}/doc/${mod}.rst\n")
     endif()
   endforeach()
 
-  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.rst")
-  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.jpg")
-  list(APPEND OPENCV_FILES_REF ${_OPENCV_FILES_REF})
-  list(APPEND OPENCV_FILES_REF_PICT ${_OPENCV_FILES_REF_PICT})
+  configure_file("${OpenCV_SOURCE_DIR}/modules/refman.rst.in" "${DOC_FAKE_ROOT}/modules/refman.rst" @ONLY)
 
-  configure_file("${OpenCV_SOURCE_DIR}/modules/refman.rst.in" "${OpenCV_SOURCE_DIR}/modules/refman.rst" IMMEDIATE @ONLY)
-
-  file(GLOB_RECURSE OPENCV_FILES_UG  user_guide/*.rst)
-  file(GLOB_RECURSE OPENCV_FILES_TUT tutorials/*.rst)
-  file(GLOB_RECURSE OPENCV_FILES_TUT_PICT tutorials/*.png tutorials/*.jpg)
-
-  set(OPENCV_DOC_DEPS conf.py ${OPENCV_FILES_REF} ${OPENCV_FILES_REF_PICT}
-           ${OPENCV_FILES_UG} ${OPENCV_FILES_TUT} ${OPENCV_FILES_TUT_PICT})
+  ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/index.rst")
+  ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/doc")
+  ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/platforms/android")
+  ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/samples")
 
   set(BUILD_PLANTUML "")
   if(PLANTUML)
@@ -80,7 +102,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
 
   if(PDFLATEX_COMPILER)
     add_custom_target(docs
-      COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. .
+      COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
@@ -100,7 +122,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
       COMMAND ${CMAKE_COMMAND} -E echo "Generating opencv_cheatsheet.pdf"
       COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
       COMMAND ${PDFLATEX_COMPILER} -interaction=batchmode "${CMAKE_CURRENT_SOURCE_DIR}/opencv_cheatsheet.tex"
-      DEPENDS ${OPENCV_DOC_DEPS}
+      DEPENDS ${DOC_FAKE_ROOT_FILES}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating the PDF Manuals"
       )
@@ -114,9 +136,9 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   endif()
 
   add_custom_target(html_docs
-    COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b html -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ./_html
+    COMMAND "${SPHINX_BUILD}" ${BUILD_PLANTUML} -b html -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" ./_html
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${OPENCV_DOC_DEPS}
+    DEPENDS ${DOC_FAKE_ROOT_FILES}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating Online Documentation"
     )

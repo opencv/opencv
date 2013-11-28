@@ -85,10 +85,15 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&pixel_end));
 
     size_t globalThreads[3] = { divUp(dst.wholecols * dst.wholerows, 4), 1, 1 };
-    size_t localThreads[3] = { 256, 1, 1 };
 
+#ifdef ANDROID
+    openCLExecuteKernel(clCxt, &convertC3C4, "convertC3C4", globalThreads, NULL,
+                        args, -1, -1, buildOptions.c_str());
+#else
+    size_t localThreads[3] = { 256, 1, 1 };
     openCLExecuteKernel(clCxt, &convertC3C4, "convertC3C4", globalThreads, localThreads,
                         args, -1, -1, buildOptions.c_str());
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -112,9 +117,13 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&pixel_end));
 
     size_t globalThreads[3] = { divUp(src.wholecols * src.wholerows, 4), 1, 1};
-    size_t localThreads[3] = { 256, 1, 1 };
 
+#ifdef ANDROID
+    openCLExecuteKernel(clCxt, &convertC3C4, "convertC4C3", globalThreads, NULL, args, -1, -1, buildOptions.c_str());
+#else
+    size_t localThreads[3] = { 256, 1, 1};
     openCLExecuteKernel(clCxt, &convertC3C4, "convertC4C3", globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
+#endif
 }
 
 void cv::ocl::oclMat::upload(const Mat &m)

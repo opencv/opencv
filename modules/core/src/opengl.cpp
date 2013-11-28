@@ -1032,6 +1032,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             #else
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1145,6 +1146,7 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
             #else
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1195,6 +1197,7 @@ void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) c
                 throw_no_cuda();
             #else
                 ogl::Buffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER);
+                buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_PACK_BUFFER);
                 impl_->copyTo(dstFormat, gl_types[ddepth], 0);
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
