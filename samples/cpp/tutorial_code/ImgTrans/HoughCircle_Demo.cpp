@@ -16,6 +16,7 @@ namespace
     const std::string windowName = "Hough Circle Detection Demo";
     const std::string cannyThresholdTrackbarName = "Canny threshold";
     const std::string accumulatorThresholdTrackbarName = "Accumulator Threshold";
+    const std::string usage = "Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
 
     // initial and max values of the parameters of interests.
     const int cannyThresholdInitialValue = 200;
@@ -48,9 +49,16 @@ namespace
 }
 
 
-int main(int, char** argv)
+int main(int argc, char** argv)
 {
     Mat src, src_gray;
+
+    if (argc < 2)
+    {
+        std::cerr<<"No input image specified\n";
+        std::cout<<usage;
+        return -1;
+    }
 
     // Read the image
     src = imread( argv[1], 1 );
@@ -58,7 +66,7 @@ int main(int, char** argv)
     if( !src.data )
     {
         std::cerr<<"Invalid input image\n";
-        std::cout<<"Usage : tutorial_HoughCircle_Demo <path_to_input_image>\n";
+        std::cout<<usage;
         return -1;
     }
 
