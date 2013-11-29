@@ -208,4 +208,3 @@ TEST(Core_UMat, simple)
     UMat u = m.getUMat(ACCESS_READ);
     ASSERT_NE((void*)NULL, u.u);
 }
-
