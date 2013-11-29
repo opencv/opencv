@@ -48,8 +48,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
-#include <iostream>
-#include <vector>
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
@@ -1902,18 +1900,72 @@ private:
 };
 #endif
 
+static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
+                                          float * const alpha_tab, int * const ofs_tab)
+{
+    int k = 0, dx = 0;
+    for ( ; dx < dsize; dx++)
+    {
+        ofs_tab[dx] = k;
+
+        double fsx1 = dx * scale;
+        double fsx2 = fsx1 + scale;
+        double cellWidth = std::min(scale, ssize - fsx1);
+
+        int sx1 = cvCeil(fsx1), sx2 = cvFloor(fsx2);
+
+        sx2 = std::min(sx2, ssize - 1);
+        sx1 = std::min(sx1, sx2);
+
+        if (sx1 - fsx1 > 1e-3)
+        {
+            map_tab[k] = sx1 - 1;
+            alpha_tab[k++] = (float)((sx1 - fsx1) / cellWidth);
+        }
+
+        for (int sx = sx1; sx < sx2; sx++)
+        {
+            map_tab[k] = sx;
+            alpha_tab[k++] = float(1.0 / cellWidth);
+        }
+
+        if (fsx2 - sx2 > 1e-3)
+        {
+            map_tab[k] = sx2;
+            alpha_tab[k++] = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
+        }
+    }
+    ofs_tab[dx] = k;
+}
+
+static void ocl_computeResizeAreaFastTabs(int * dmap_tab, int * smap_tab, int scale, int dcols, int scol)
+{
+    for (int i = 0; i < dcols; ++i)
+        dmap_tab[i] = scale * i;
+
+    for (int i = 0, size = dcols * scale; i < size; ++i)
+        smap_tab[i] = std::min(scol - 1, i);
+}
+
 static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                         double fx, double fy, int interpolation)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    if( !(cn <= 4 &&
-           (interpolation == INTER_NEAREST ||
-           (interpolation == INTER_LINEAR))) )
+
+    double inv_fx = 1. / fx, inv_fy = 1. / fy;
+    float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
+
+    if( cn == 3 || !(cn <= 4 &&
+           (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
+            (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1) )) )
         return false;
+
     UMat src = _src.getUMat();
     _dst.create(dsize, type);
     UMat dst = _dst.getUMat();
+
     ocl::Kernel k;
+    size_t globalsize[] = { dst.cols, dst.rows };
 
     if (interpolation == INTER_LINEAR)
     {
@@ -1929,14 +1981,86 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D PIXTYPE=%s", ocl::memopTypeToStr(type) ));
+                 format("-D INTER_NEAREST -D PIXTYPE=%s -D cn", ocl::memopTypeToStr(type), cn));
+    }
+    else if (interpolation == INTER_AREA)
+    {
+        int iscale_x = saturate_cast<int>(inv_fx);
+        int iscale_y = saturate_cast<int>(inv_fy);
+        bool is_area_fast = std::abs(inv_fx - iscale_x) < DBL_EPSILON &&
+                        std::abs(inv_fy - iscale_y) < DBL_EPSILON;
+        int wdepth = std::max(depth, is_area_fast ? CV_32S : CV_32F);
+        int wtype = CV_MAKE_TYPE(wdepth, cn);
+
+        char cvt[2][40];
+        String buildOption = format("-D INTER_AREA -D T=%s -D WTV=%s -D convertToWTV=%s",
+                                    ocl::typeToStr(type), ocl::typeToStr(wtype),
+                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]));
+
+        UMat alphaOcl, tabofsOcl, mapOcl;
+        UMat dmap, smap;
+
+        if (is_area_fast)
+        {
+            int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
+            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+                                               " -D XSCALE=%d -D YSCALE=%d -D SCALE=%f",
+                                               ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
+                                               ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
+                                  iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
+
+            k.create("resizeAREA_FAST", ocl::imgproc::resize_oclsrc, buildOption);
+
+            int smap_tab_size = dst.cols * iscale_x + dst.rows * iscale_y;
+            AutoBuffer<int> dmap_tab(dst.cols + dst.rows), smap_tab(smap_tab_size);
+            int * dxmap_tab = dmap_tab, * dymap_tab = dxmap_tab + dst.cols;
+            int * sxmap_tab = smap_tab, * symap_tab = smap_tab + dst.cols * iscale_y;
+
+            ocl_computeResizeAreaFastTabs(dxmap_tab, sxmap_tab, iscale_x, dst.cols, src.cols);
+            ocl_computeResizeAreaFastTabs(dymap_tab, symap_tab, iscale_y, dst.rows, src.rows);
+
+            Mat(1, dst.cols + dst.rows, CV_32SC1, (void *)dmap_tab).copyTo(dmap);
+            Mat(1, smap_tab_size, CV_32SC1, (void *)smap_tab).copyTo(smap);
+        }
+        else
+        {
+            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
+
+            Size ssize = src.size();
+            int xytab_size = (ssize.width + ssize.height) << 1;
+            int tabofs_size = dsize.height + dsize.width + 2;
+
+            AutoBuffer<int> _xymap_tab(xytab_size), _xyofs_tab(tabofs_size);
+            AutoBuffer<float> _xyalpha_tab(xytab_size);
+            int * xmap_tab = _xymap_tab, * ymap_tab = _xymap_tab + (ssize.width << 1);
+            float * xalpha_tab = _xyalpha_tab, * yalpha_tab = _xyalpha_tab + (ssize.width << 1);
+            int * xofs_tab = _xyofs_tab, * yofs_tab = _xyofs_tab + dsize.width + 1;
+
+            ocl_computeResizeAreaTabs(ssize.width, dsize.width, inv_fx, xmap_tab, xalpha_tab, xofs_tab);
+            ocl_computeResizeAreaTabs(ssize.height, dsize.height, inv_fy, ymap_tab, yalpha_tab, yofs_tab);
+
+            // loading precomputed arrays to GPU
+            Mat(1, xytab_size, CV_32FC1, (void *)_xyalpha_tab).copyTo(alphaOcl);
+            Mat(1, xytab_size, CV_32SC1, (void *)_xymap_tab).copyTo(mapOcl);
+            Mat(1, tabofs_size, CV_32SC1, (void *)_xyofs_tab).copyTo(tabofsOcl);
+        }
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst);
+
+        if (is_area_fast)
+            k.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(dmap), ocl::KernelArg::PtrReadOnly(smap));
+        else
+            k.args(srcarg, dstarg, inv_fxf, inv_fyf, ocl::KernelArg::PtrReadOnly(tabofsOcl),
+                   ocl::KernelArg::PtrReadOnly(mapOcl), ocl::KernelArg::PtrReadOnly(alphaOcl));
+
+        return k.run(2, globalsize, NULL, false);
     }
 
     if( k.empty() )
         return false;
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
-           (float)(1./fx), (float)(1./fy));
-    size_t globalsize[] = { dst.cols, dst.rows };
+           (float)inv_fx, (float)inv_fy);
 
     return k.run(2, globalsize, 0, false);
 }
@@ -2069,7 +2193,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     }
 
     if( ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT &&
-        ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation) )
+            ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
         return;
 
     Mat src = _src.getMat();
