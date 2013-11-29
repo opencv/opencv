@@ -61,7 +61,99 @@ namespace cvtest {
 namespace ocl {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-// resize
+// warpAffine  & warpPerspective
+
+PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
+{
+    int type, interpolation;
+    Size dsize;
+    bool useRoi, mapInverse;
+
+    TEST_DECLARE_INPUT_PARATEMER(src)
+    TEST_DECLARE_OUTPUT_PARATEMER(dst)
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        interpolation = GET_PARAM(1);
+        mapInverse = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
+
+        if (mapInverse)
+            interpolation |= WARP_INVERSE_MAP;
+    }
+
+    void random_roi()
+    {
+        dsize = randomSize(1, MAX_VALUE);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+
+    void Near(double threshold = 0.0)
+    {
+        EXPECT_MAT_NEAR(dst, udst, threshold);
+        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+    }
+};
+
+/////warpAffine
+
+typedef WarpTestBase WarpAffine;
+
+OCL_TEST_P(WarpAffine, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
+            rng.uniform(-180.f, 180.f), rng.uniform(0.4f, 2.0f));
+
+        OCL_OFF(cv::warpAffine(src_roi, dst_roi, M, dsize, interpolation));
+        OCL_ON(cv::warpAffine(usrc_roi, udst_roi, M, dsize, interpolation));
+
+        Near(1.0);
+    }
+}
+
+//// warpPerspective
+
+typedef WarpTestBase WarpPerspective;
+
+OCL_TEST_P(WarpPerspective, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        float cols = static_cast<float>(src_roi.cols), rows = static_cast<float>(src_roi.rows);
+        float cols2 = cols / 2.0f, rows2 = rows / 2.0f;
+        Point2f sp[] = { Point2f(0.0f, 0.0f), Point2f(cols, 0.0f), Point2f(0.0f, rows), Point2f(cols, rows) };
+        Point2f dp[] = { Point2f(rng.uniform(0.0f, cols2), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(0.0f, rows2)),
+            Point2f(rng.uniform(0.0f, cols2), rng.uniform(rows2, rows)),
+            Point2f(rng.uniform(cols2, cols), rng.uniform(rows2, rows)) };
+        Mat M = getPerspectiveTransform(sp, dp);
+
+        OCL_OFF(cv::warpPerspective(src_roi, dst_roi, M, dsize, interpolation));
+        OCL_ON(cv::warpPerspective(usrc_roi, udst_roi, M, dsize, interpolation));
+
+        Near(1.0);
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//// resize
 
 PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 {
@@ -127,10 +219,22 @@ OCL_TEST_P(Resize, Mat)
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResize, Resize, Combine(
-                            Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
-                            Values(0.7, 0.4, 2.0),
-                            Values(0.3, 0.6, 2.0),
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine, Combine(
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
+                            Bool(),
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
+                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
+                            Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR, (Interpolation)INTER_CUBIC),
+                            Bool(),
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, CV_32FC4),
+                            Values(0.5, 1.5, 2.0),
+                            Values(0.5, 1.5, 2.0),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
                             Bool()));
 
