@@ -51,20 +51,31 @@ namespace cv {
 class StdMatAllocator : public MatAllocator
 {
 public:
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data0, size_t* step, int /*flags*/) const
     {
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
         {
             if( step )
-                step[i] = total;
+            {
+                if( data0 && step[i] != CV_AUTOSTEP )
+                {
+                    CV_Assert(total <= step[i]);
+                    total = step[i];
+                }
+                else
+                    step[i] = total;
+            }
             total *= sizes[i];
         }
-        uchar* data = (uchar*)fastMalloc(total);
+        uchar* data = data0 ? (uchar*)data0 : (uchar*)fastMalloc(total);
         UMatData* u = new UMatData(this);
         u->data = u->origdata = data;
         u->size = total;
-        u->refcount = 1;
+        u->refcount = data0 == 0;
+        if(data0)
+            u->flags |= UMatData::USER_ALLOCATED;
 
         return u;
     }
@@ -81,7 +92,8 @@ public:
     {
         if(u)
         {
-            fastFree(u->origdata);
+            if( !(u->flags & UMatData::USER_ALLOCATED) )
+                fastFree(u->origdata);
             delete u;
         }
     }
@@ -364,13 +376,13 @@ void Mat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, step.p);
+            u = a->allocate(dims, size, _type, 0, step.p, 0);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, step.p);
+                u = a0->allocate(dims, size, _type, 0, step.p, 0);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );

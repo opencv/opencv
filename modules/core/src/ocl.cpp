@@ -2361,14 +2361,23 @@ struct Program::Impl
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
-            if( retval == CL_BUILD_PROGRAM_FAILURE )
+            if( retval < 0 )
             {
-                char buf[1<<16];
                 size_t retsz = 0;
-                clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
-                                      sizeof(buf)-16, buf, &retsz);
-                errmsg = String(buf);
-                CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                               CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+                if( retval >= 0 && retsz > 0 )
+                {
+                    AutoBuffer<char> bufbuf(retsz + 16);
+                    char* buf = bufbuf;
+                    retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                   CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
+                    if( retval >= 0 )
+                    {
+                        errmsg = String(buf);
+                        CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                    }
+                }
             }
             CV_Assert(retval >= 0);
         }
@@ -2610,15 +2619,15 @@ class OpenCLAllocator : public MatAllocator
 public:
     OpenCLAllocator() {}
 
-    UMatData* defaultAllocate(int dims, const int* sizes, int type, size_t* step) const
+    UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
-        UMatData* u = Mat::getStdAllocator()->allocate(dims, sizes, type, step);
+        UMatData* u = Mat::getStdAllocator()->allocate(dims, sizes, type, data, step, flags);
         u->urefcount = 1;
         u->refcount = 0;
         return u;
     }
 
-    void getBestFlags(const Context2& ctx, int& createFlags, int& flags0) const
+    void getBestFlags(const Context2& ctx, int /*flags*/, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = CL_MEM_READ_WRITE;
@@ -2629,10 +2638,12 @@ public:
             flags0 = UMatData::COPY_ON_MAP;
     }
 
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data, size_t* step, int flags) const
     {
         if(!useOpenCL())
-            return defaultAllocate(dims, sizes, type, step);
+            return defaultAllocate(dims, sizes, type, data, step, flags);
+        CV_Assert(data == 0);
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
         {
@@ -2643,13 +2654,13 @@ public:
 
         Context2& ctx = Context2::getDefault();
         int createFlags = 0, flags0 = 0;
-        getBestFlags(ctx, createFlags, flags0);
+        getBestFlags(ctx, flags, createFlags, flags0);
 
         cl_int retval = 0;
         void* handle = clCreateBuffer((cl_context)ctx.ptr(),
                                       createFlags, total, 0, &retval);
         if( !handle || retval < 0 )
-            return defaultAllocate(dims, sizes, type, step);
+            return defaultAllocate(dims, sizes, type, data, step, flags);
         UMatData* u = new UMatData(this);
         u->data = 0;
         u->size = total;
@@ -2672,7 +2683,7 @@ public:
             CV_Assert(u->origdata != 0);
             Context2& ctx = Context2::getDefault();
             int createFlags = 0, flags0 = 0;
-            getBestFlags(ctx, createFlags, flags0);
+            getBestFlags(ctx, accessFlags, createFlags, flags0);
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             cl_int retval = 0;
@@ -2703,7 +2714,7 @@ public:
             return;
 
         // TODO: !!! when we add Shared Virtual Memory Support,
-        // this function (as well as the others should be corrected)
+        // this function (as well as the others) should be corrected
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
@@ -2717,7 +2728,7 @@ public:
             clReleaseMemObject((cl_mem)u->handle);
             u->handle = 0;
             u->currAllocator = u->prevAllocator;
-            if(u->data && u->copyOnMap())
+            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
                 fastFree(u->data);
             u->data = u->origdata;
             if(u->refcount == 0)
@@ -2725,7 +2736,7 @@ public:
         }
         else
         {
-            if(u->data && u->copyOnMap())
+            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
                 fastFree(u->data);
             clReleaseMemObject((cl_mem)u->handle);
             u->handle = 0;
