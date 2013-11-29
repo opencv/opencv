@@ -127,11 +127,18 @@ OCL_TEST_P(Resize, Mat)
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
-                            Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, CV_32FC4),
-                            Values(0.5, 1.5, 2.0),
-                            Values(0.5, 1.5, 2.0),
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResize, Resize, Combine(
+                            Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(0.7, 0.4, 2.0),
+                            Values(0.3, 0.6, 2.0),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
+                            Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+                            Values(0.7, 0.4, 0.5),
+                            Values(0.3, 0.6, 0.5),
+                            Values((Interpolation)INTER_AREA),
                             Bool()));
 
 } } // namespace cvtest::ocl
