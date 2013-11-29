@@ -2205,9 +2205,12 @@ int Kernel::set(int i, const KernelArg& arg)
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
+        bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
-        if( arg.m->dims <= 2 )
+        if (ptronly)
+            clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h);
+        else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
             clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
