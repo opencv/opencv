@@ -309,6 +309,23 @@ CVAPI(int) cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* point
 #define CV_STEREO_BM_NORMALIZED_RESPONSE  0
 #define CV_STEREO_BM_XSOBEL               1
 
+
+/* Semi global block matching algorithm structure */
+typedef struct CvStereoSGBMState {
+  int minDisparity;
+  int numDisparities;
+  int blockSize;
+  int P1;
+  int P2;
+  int disp12MaxDiff;
+  int preFilterCap;
+  int uniquenessRatio;
+  int speckleWindowSize;
+  int speckleRange;
+  int mode;
+} CvStereoSGBMState;
+
+
 /* Block matching algorithm structure */
 typedef struct CvStereoBMState
 {
@@ -355,6 +372,9 @@ CVAPI(void) cvReleaseStereoBMState( CvStereoBMState** state );
 
 CVAPI(void) cvFindStereoCorrespondenceBM( const CvArr* left, const CvArr* right,
                                           CvArr* disparity, CvStereoBMState* state );
+
+CVAPI(void) cvFindStereoCorrespondenceSGBM( const CvArr* left, const CvArr* right,
+                                          CvArr* disparity, CvStereoSGBMState* state );
 
 CVAPI(CvRect) cvGetValidDisparityROI( CvRect roi1, CvRect roi2, int minDisparity,
                                       int numberOfDisparities, int SADWindowSize );
