@@ -2197,10 +2197,10 @@ int Kernel::set(int i, const UMat& m)
 int Kernel::set(int i, const KernelArg& arg)
 {
     CV_Assert( i >= 0 );
-    if( i == 0 )
-        p->cleanupUMats();
     if( !p || !p->handle )
         return -1;
+    if( i == 0 )
+        p->cleanupUMats();
     if( arg.m )
     {
         int accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : 0) +
@@ -2222,7 +2222,7 @@ int Kernel::set(int i, const KernelArg& arg)
             {
                 int cols = u2d.cols*arg.wscale;
                 clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
-                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.cols), &cols);
+                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols);
                 i += 2;
             }
         }
@@ -2256,10 +2256,17 @@ bool Kernel::run(int dims, size_t globalsize[], size_t localsize[],
 {
     if(!p || !p->handle || p->e != 0)
         return false;
+
+    AutoBuffer<size_t> _globalSize(dims);
+    size_t * globalSizePtr = (size_t *)_globalSize;
+    for (int i = 0; i < dims; ++i)
+        globalSizePtr[i] = localsize == NULL ? globalsize[i] :
+                                               ((globalsize[i] + localsize[i] - 1) / localsize[i]) * localsize[i];
+
     cl_command_queue qq = getQueue(q);
     size_t offset[CV_MAX_DIM] = {0};
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, localsize, 0, 0,
+                                           offset, globalSizePtr, localsize, 0, 0,
                                            sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
@@ -2350,6 +2357,7 @@ struct Program::Impl
             void** deviceList = deviceListBuf;
             for( i = 0; i < n; i++ )
                 deviceList[i] = ctx.device(i).ptr();
+
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
