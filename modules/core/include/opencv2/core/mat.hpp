@@ -279,8 +279,8 @@ public:
     //virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
-    virtual UMatData* allocate(int dims, const int* sizes,
-                               int type, size_t* step) const = 0;
+    virtual UMatData* allocate(int dims, const int* sizes, int type,
+                               void* data, size_t* step, int flags) const = 0;
     virtual bool allocate(UMatData* data, int accessflags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
     virtual void map(UMatData* data, int accessflags) const = 0;
@@ -335,7 +335,8 @@ protected:
 struct CV_EXPORTS UMatData
 {
     enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
-        DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24 };
+        DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
+        USER_ALLOCATED=32 };
     UMatData(const MatAllocator* allocator);
 
     // provide atomic access to the structure

@@ -195,8 +195,14 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
+        if( data != 0 )
+        {
+            CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // probably this is safe to do in such extreme case
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags);
+        }
         PyEnsureGIL gil;
 
         int depth = CV_MAT_DEPTH(type);
@@ -229,7 +235,7 @@ public:
         {
             PyEnsureGIL gil;
             PyObject* o = (PyObject*)u->userdata;
-            Py_DECREF(o);
+            Py_XDECREF(o);
             delete u;
         }
     }

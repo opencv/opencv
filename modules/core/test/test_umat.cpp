@@ -200,3 +200,12 @@ void CV_UMatTest::run( int /* start_from */)
 }
 
 TEST(Core_UMat, base) { CV_UMatTest test; test.safe_run(); }
+
+TEST(Core_UMat, simple)
+{
+    int a[3] = { 1, 2, 3 };
+    Mat m = Mat(1, 1, CV_32SC3, a);
+    UMat u = m.getUMat(ACCESS_READ);
+    ASSERT_NE((void*)NULL, u.u);
+}
+
