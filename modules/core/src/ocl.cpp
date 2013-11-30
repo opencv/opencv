@@ -612,7 +612,7 @@ static void* initOpenCLAndLoad(const char* funcname)
             return 0;
     }
 
-    return funcname ? dlsym(handle, funcname) : 0;
+    return funcname && handle ? dlsym(handle, funcname) : 0;
 }
 
 #elif defined WIN32 || defined _WIN32
@@ -2002,7 +2002,7 @@ void* Queue::ptr() const
 Queue& Queue::getDefault()
 {
     Queue& q = TLSData::get()->oclQueue;
-    if( !q.p )
+    if( !q.p && haveOpenCL() )
         q.create(Context2::getDefault());
     return q;
 }
@@ -2248,24 +2248,32 @@ int Kernel::set(int i, const KernelArg& arg)
 }
 
 
-bool Kernel::run(int dims, size_t globalsize[], size_t localsize[],
+bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
     if(!p || !p->handle || p->e != 0)
         return false;
     cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0};
+    size_t globalsize[CV_MAX_DIM]={1, 1, 1}, localsize[CV_MAX_DIM] = {1, 1, 1}, offset[CV_MAX_DIM] = {0};
+    for( int i = 0; i < dims; i++ )
+    {
+        localsize[i] = _localsize ? _localsize[i] : 0;
+        size_t sz = _localsize ? _localsize[i] : dims == 1 ? 128 : 16;
+        globalsize[i] = ((_globalsize[i] + sz-1)/sz)*sz;
+    }
+    p->addref();
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, localsize, 0, 0,
+                                           offset, globalsize, _localsize ? localsize : 0, 0, 0,
                                            sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
+        CV_Assert(0);
         clFinish(qq);
         p->cleanupUMats();
+        p->release();
     }
     else
     {
-        p->addref();
         clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
     }
     return retval >= 0;
@@ -2606,11 +2614,11 @@ ProgramSource2::hash_t ProgramSource2::hash() const
 class OpenCLAllocator : public MatAllocator
 {
 public:
-    OpenCLAllocator() {}
+    OpenCLAllocator() { matStdAllocator = Mat::getStdAllocator(); }
 
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
-        UMatData* u = Mat::getStdAllocator()->allocate(dims, sizes, type, data, step, flags);
+        UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags);
         u->urefcount = 1;
         u->refcount = 0;
         return u;
@@ -2709,7 +2717,7 @@ public:
         {
             if( u->hostCopyObsolete() && u->refcount > 0 && u->tempCopiedUMat() )
             {
-                clEnqueueWriteBuffer((cl_command_queue)Queue::getDefault().ptr(),
+                clEnqueueReadBuffer((cl_command_queue)Queue::getDefault().ptr(),
                                      (cl_mem)u->handle, CL_TRUE, 0,
                                      u->size, u->origdata, 0, 0, 0);
             }
@@ -2793,16 +2801,19 @@ public:
         UMatDataAutoLock autolock(u);
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        cl_int retval = 0;
         if( !u->copyOnMap() && u->data )
         {
-            CV_Assert( clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0) >= 0 );
+            CV_Assert( (retval = clEnqueueUnmapMemObject(q,
+                                (cl_mem)u->handle, u->data, 0, 0, 0)) >= 0 );
             u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
         {
-            CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                            u->size, u->data, 0, 0, 0) >= 0 );
+            CV_Assert( (retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                u->size, u->data, 0, 0, 0)) >= 0 );
         }
+        clFinish(q);
         u->markDeviceCopyObsolete(false);
         u->markHostCopyObsolete(false);
     }
@@ -3033,6 +3044,8 @@ public:
         if( sync )
             clFinish(q);
     }
+
+    MatAllocator* matStdAllocator;
 };
 
 MatAllocator* getOpenCLAllocator()

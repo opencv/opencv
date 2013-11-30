@@ -62,6 +62,17 @@ UMatData::UMatData(const MatAllocator* allocator)
     userdata = 0;
 }
 
+UMatData::~UMatData()
+{
+    prevAllocator = currAllocator = 0;
+    urefcount = refcount = 0;
+    data = origdata = 0;
+    size = 0;
+    flags = 0;
+    handle = 0;
+    userdata = 0;
+}
+
 void UMatData::lock()
 {
     umatLocks[(size_t)(void*)this % UMAT_NLOCKS].lock();
@@ -75,7 +86,9 @@ void UMatData::unlock()
 
 MatAllocator* UMat::getStdAllocator()
 {
-    return ocl::getOpenCLAllocator();
+    if( ocl::haveOpenCL() )
+        return ocl::getOpenCLAllocator();
+    return Mat::getStdAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -268,6 +281,16 @@ void UMat::copySize(const UMat& m)
         size[i] = m.size[i];
         step[i] = m.step[i];
     }
+}
+
+
+UMat::~UMat()
+{
+    if( u && u->refcount > 0 )
+        ocl::finish2();
+    release();
+    if( step.p != step.buf )
+        fastFree(step.p);
 }
 
 void UMat::deallocate()

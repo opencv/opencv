@@ -80,17 +80,16 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int accessFlags) const
+    bool allocate(UMatData* u, int /*accessFlags*/) const
     {
         if(!u) return false;
-        if(u->handle != 0)
-            return true;
-        return UMat::getStdAllocator()->allocate(u, accessFlags);
+        CV_XADD(&u->urefcount, 1);
+        return true;
     }
 
     void deallocate(UMatData* u) const
     {
-        if(u)
+        if(u && u->refcount == 0)
         {
             if( !(u->flags & UMatData::USER_ALLOCATED) )
                 fastFree(u->origdata);
@@ -104,7 +103,7 @@ public:
 
     void unmap(UMatData* u) const
     {
-        if(u->urefcount == 0)
+        if(u->urefcount == 0 && u->refcount == 0)
             deallocate(u);
     }
 

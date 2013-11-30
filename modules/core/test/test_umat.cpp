@@ -203,8 +203,32 @@ TEST(Core_UMat, base) { CV_UMatTest test; test.safe_run(); }
 
 TEST(Core_UMat, simple)
 {
+    {
     int a[3] = { 1, 2, 3 };
     Mat m = Mat(1, 1, CV_32SC3, a);
     UMat u = m.getUMat(ACCESS_READ);
     ASSERT_NE((void*)NULL, u.u);
+    }
+
+    {
+    Mat m(10, 10, CV_8UC1), ref;
+    for (int y = 0; y < m.rows; ++y)
+    {
+        uchar * const ptr = m.ptr<uchar>(y);
+        for (int x = 0; x < m.cols; ++x)
+            ptr[x] = x + y * 2;
+    }
+
+    ref = m.clone();
+    Rect r(1, 1, 8, 8);
+    ref(r).setTo(17);
+
+    {
+        UMat um = m(r).getUMat(ACCESS_WRITE);
+        um.setTo(17);
+    }
+
+    double err = norm(m, ref, NORM_INF);
+    ASSERT_EQ(err, 0.);
+    }
 }

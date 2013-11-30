@@ -338,6 +338,7 @@ struct CV_EXPORTS UMatData
         DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
         USER_ALLOCATED=32 };
     UMatData(const MatAllocator* allocator);
+    ~UMatData();
 
     // provide atomic access to the structure
     void lock();

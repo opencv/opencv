@@ -3130,14 +3130,6 @@ cols(1), allocator(0), u(0), offset(0), size(&rows)
 
 
 inline
-UMat::~UMat()
-{
-    release();
-    if( step.p != step.buf )
-        fastFree(step.p);
-}
-
-inline
 UMat& UMat::operator = (const UMat& m)
 {
     if( this != &m )
