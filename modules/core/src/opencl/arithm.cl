@@ -57,7 +57,7 @@
           -D workDepth=<work depth> [-D cn=<num channels>]" - for mixed-type operations
 */
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #elif defined (cl_amd_fp64)
@@ -69,7 +69,7 @@
 #define CV_32F 5
 
 #define dstelem *(__global dstT*)(dstptr + dst_index)
-#define noconvert(x) x
+#define noconvert
 
 #ifndef workT
 
@@ -99,7 +99,9 @@
 #define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
 
 #elif defined OP_ABSDIFF
-#define PROCESS_ELEM dstelem = abs_diff(srcelem1, srcelem2)
+#define PROCESS_ELEM \
+    workT v = srcelem1 - srcelem2; \
+    dstelem = convertToDT(v >= (workT)(0) ? v : -v);
 
 #elif defined OP_AND
 #define PROCESS_ELEM dstelem = srcelem1 & srcelem2
