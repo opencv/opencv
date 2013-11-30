@@ -929,7 +929,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
-    if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) || cn == 3)
+    if( oclop < 0 || ((haveMask || haveScalar) && (cn > 4 || cn == 3)) )
         return false;
 
     char opts[1024];
@@ -1284,7 +1284,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
-    if( ((haveMask || haveScalar) && cn > 4) || cn == 3)
+    if( ((haveMask || haveScalar) && (cn > 4 || cn == 3)) )
         return false;
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
@@ -2585,12 +2585,53 @@ static double getMaxVal(int depth)
     return tab[depth];
 }
 
+static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
+{
+    if ( !((_src1.isMat() || _src1.isUMat()) && (_src2.isMat() || _src2.isUMat())) )
+        return false;
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), type2 = _src2.type();
+    if (!doubleSupport && (depth == CV_64F || _src2.depth() == CV_64F))
+        return false;
+
+    CV_Assert(type == type2);
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    Size size = src1.size();
+    CV_Assert(size == src2.size());
+
+    _dst.create(size, CV_8UC(cn));
+    UMat dst = _dst.getUMat();
+
+    const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D BINARY_OP -D srcT1=%s -D workT=srcT1"
+                         " -D OP_CMP -D CMP_OPERATOR=%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         operationMap[op],
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
+           ocl::KernelArg::ReadOnlyNoSize(src2),
+           ocl::KernelArg::WriteOnly(dst, cn));
+
+    size_t globalsize[2] = { dst.cols * cn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
 }
 
 void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 {
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
+
+    if (ocl::useOpenCL() && _dst.isUMat() /*&&
+            ocl_compare(_src1, _src2, _dst, op)*/)
+    {
+        CV_Assert(ocl_compare(_src1, _src2, _dst, op));
+        return;
+    }
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();

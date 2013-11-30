@@ -187,6 +187,10 @@ dstT v = (dstT)(srcelem1);\
 dstelem = v > (dstT)(0) ? log(v) : log(-v)
 
 #elif defined OP_CMP
+#define dstT uchar
+#define srcT2 srcT1
+#define convertToWT1
+#define convertToWT2
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
 
 #elif defined OP_CONVERT
