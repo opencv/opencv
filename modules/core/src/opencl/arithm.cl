@@ -215,11 +215,26 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
     dstelem = magnitude; \
     dstelem2 = cartToPolar
 
+#elif defined OP_PTC_AD || defined OP_PTC_AR
+#ifdef OP_PTC_AD
+#define FROM_DEGREE \
+    dstT ascale = CV_PI/180.0f; \
+    dstT alpha = y * ascale
+#else
+#define FROM_DEGREE \
+    dstT alpha = y
+#endif
+#define PROCESS_ELEM \
+    dstT x = srcelem1, y = srcelem2; \
+    FROM_DEGREE; \
+    dstelem = cos(alpha) * x; \
+    dstelem2 = sin(alpha) * x
+
 #else
 #error "unknown op type"
 #endif
 
-#if defined OP_CTP_AD || defined OP_CTP_AR
+#if defined OP_CTP_AD || defined OP_CTP_AR || defined OP_PTC_AD || defined OP_PTC_AR
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , __global uchar* dstptr2, int dststep2, int dstoffset2
     #undef EXTRA_INDEX
@@ -295,6 +310,7 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
     {
         int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
         int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        EXTRA_INDEX;
 
         PROCESS_ELEM;
     }
