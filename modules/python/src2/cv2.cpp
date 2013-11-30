@@ -195,8 +195,14 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
+        if( data != 0 )
+        {
+            CV_Error(Error::StsAssert, "The data should normally be NULL!");
+            // probably this is safe to do in such extreme case
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags);
+        }
         PyEnsureGIL gil;
 
         int depth = CV_MAT_DEPTH(type);
@@ -229,41 +235,9 @@ public:
         {
             PyEnsureGIL gil;
             PyObject* o = (PyObject*)u->userdata;
-            Py_DECREF(o);
+            Py_XDECREF(o);
             delete u;
         }
-    }
-
-    void map(UMatData*, int) const
-    {
-    }
-
-    void unmap(UMatData* u) const
-    {
-        if(u->urefcount == 0)
-            deallocate(u);
-    }
-
-    void download(UMatData* u, void* dstptr,
-                  int dims, const size_t sz[],
-                  const size_t srcofs[], const size_t srcstep[],
-                  const size_t dststep[]) const
-    {
-        stdAllocator->download(u, dstptr, dims, sz, srcofs, srcstep, dststep);
-    }
-
-    void upload(UMatData* u, const void* srcptr, int dims, const size_t sz[],
-                const size_t dstofs[], const size_t dststep[],
-                const size_t srcstep[]) const
-    {
-        stdAllocator->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
-    }
-
-    void copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
-              const size_t srcofs[], const size_t srcstep[],
-              const size_t dstofs[], const size_t dststep[], bool sync) const
-    {
-        stdAllocator->copy(usrc, udst, dims, sz, srcofs, srcstep, dstofs, dststep, sync);
     }
 
     const MatAllocator* stdAllocator;
