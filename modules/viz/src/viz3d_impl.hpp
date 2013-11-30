@@ -191,14 +191,29 @@ namespace cv
         vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix(const cv::Matx44f &m);
         cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
 
+        struct color_tag {};
+        struct gray_tag {};
+
+        static Vec3b fetchRgb(const unsigned char* color, color_tag) { return Vec3b(color[2], color[1], color[0]); }
+        static Vec3b fetchRgb(const unsigned char* color,  gray_tag) { return Vec3b(color[0], color[0], color[0]); }
+
+        inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
+        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
+
+        inline Color vtkcolor(const Color& color)
+        {
+            Color scaled_color = color * (1.0/255.0);
+            std::swap(scaled_color[0], scaled_color[2]);
+            return scaled_color;
+        }
+
         struct NanFilter
         {
-            template<typename _Tp, typename _Msk>
+            template<typename _Msk>
             struct Impl
             {
-                typedef Vec<_Tp, 3> _Out;
-
-                static _Out* copy(const Mat& source, _Out* output, const Mat& nan_mask)
+                template<typename _Tp>
+                static Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
                 {
                     CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
                     CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
@@ -214,14 +229,15 @@ namespace cv
 
                         for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
                             if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                                *output++ = _Out(srow);
+                                *output++ = Vec<_Tp, 3>(srow);
                     }
                     return output;
                 }
 
-                static _Out* copyColor(const Mat& source, _Out* output, const Mat& nan_mask)
+                template<typename _Tag>
+                static Vec3b* copyColor(const Mat& source, Vec3b* output, const Mat& nan_mask)
                 {
-                    CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+                    CV_Assert(source.size() == nan_mask.size());
                     CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
                     CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
 
@@ -230,16 +246,12 @@ namespace cv
 
                     for (int y = 0; y < source.rows; ++y)
                     {
-                        const _Tp* srow = source.ptr<_Tp>(y);
+                        const unsigned char* srow = source.ptr<unsigned char>(y);
                         const _Msk* mrow = nan_mask.ptr<_Msk>(y);
 
                         for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
                             if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                            {
-                                *output = _Out(srow);
-                                std::swap((*output)[0], (*output)[2]); // BGR -> RGB
-                                ++output;
-                            }
+                                *output++ = fetchRgb(srow, _Tag());
                     }
                     return output;
                 }
@@ -251,20 +263,23 @@ namespace cv
                 CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
 
                 typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
-                const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copy, &NanFilter::Impl<_Tp, double>::copy };
+                const static copy_func table[2] = { &NanFilter::Impl<float>::copy<_Tp>, &NanFilter::Impl<double>::copy<_Tp> };
 
                 return table[nan_mask.depth() - 5](source, output, nan_mask);
             }
 
-            template<typename _Tp>
-            static inline Vec<_Tp, 3>* copyColor(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
+            static inline Vec3b* copyColor(const Mat& source, Vec3b* output, const Mat& nan_mask)
             {
                 CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
 
-                typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
-                const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copyColor, &NanFilter::Impl<_Tp, double>::copyColor };
+                typedef Vec3b* (*copy_func)(const Mat&, Vec3b*, const Mat&);
+                const static copy_func table[2][2] =
+                {
+                    { &NanFilter::Impl<float >::copyColor<gray_tag>, &NanFilter::Impl<float> ::copyColor<color_tag> },
+                    { &NanFilter::Impl<double>::copyColor<gray_tag>, &NanFilter::Impl<double>::copyColor<color_tag> }
+                };
 
-                return table[nan_mask.depth() - 5](source, output, nan_mask);
+                return table[nan_mask.depth() - 5][source.channels() == 1 ? 0 : 1](source, output, nan_mask);
             }
         };
 
@@ -292,47 +307,31 @@ namespace cv
         };
 
 
-        inline Color vtkcolor(const Color& color)
-        {
-            Color scaled_color = color * (1.0/255.0);
-            std::swap(scaled_color[0], scaled_color[2]);
-            return scaled_color;
-        }
-
-        inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
-        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
 
         struct ConvertToVtkImage
         {
             struct Impl
             {
-                static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
-                {
-                    int i_chs = image.channels();
+                typedef unsigned char uchar;
 
-                    for (int i = 0; i < image.rows; ++i)
+                static void copyImage(const Mat &source, vtkSmartPointer<vtkImageData> output, color_tag tag)
+                {
+                    for (int y = 0; y < source.rows; ++y)
                     {
-                        const unsigned char * irows = image.ptr<unsigned char>(i);
-                        for (int j = 0; j < image.cols; ++j, irows += i_chs)
-                        {
-                            unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
-                            memcpy(vrows, irows, i_chs);
-                            std::swap(vrows[0], vrows[2]); // BGR -> RGB
-                        }
+                        const uchar *srow = source.ptr<uchar>(y);
+                        for (int x = 0; x < source.cols; ++x, srow += source.channels())
+                            *reinterpret_cast<Vec3b*>(output->GetScalarPointer(x,y,0)) = fetchRgb(srow, tag);
                     }
                     output->Modified();
                 }
 
-                static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+                static void copyImage(const Mat &source, vtkSmartPointer<vtkImageData> output, gray_tag)
                 {
-                    for (int i = 0; i < image.rows; ++i)
+                    for (int y = 0; y < source.rows; ++y)
                     {
-                        const unsigned char * irows = image.ptr<unsigned char>(i);
-                        for (int j = 0; j < image.cols; ++j, ++irows)
-                        {
-                            unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
-                            *vrows = *irows;
-                        }
+                        const uchar *srow = source.ptr<uchar>(y);
+                        for (int x = 0; x < source.cols; ++x)
+                            *reinterpret_cast<uchar*>(output->GetScalarPointer(x,y,0)) = *srow++;
                     }
                     output->Modified();
                 }
@@ -349,16 +348,13 @@ namespace cv
 #else
                 output->AllocateScalars(VTK_UNSIGNED_CHAR, image.channels());
 #endif
-
-                int i_chs = image.channels();
-                if (i_chs > 1)
+                switch(image.channels())
                 {
-                    // Multi channel images are handled differently because of BGR <-> RGB
-                    Impl::copyImageMultiChannel(image, output);
-                }
-                else
-                {
-                    Impl::copyImageSingleChannel(image, output);
+                case 1: Impl::copyImage(image, output, gray_tag()); break;
+                case 3:
+                case 4: Impl::copyImage(image, output, color_tag()); break;
+                default:
+                    CV_Assert(!"Unsupported channel number");
                 }
             }
         };
