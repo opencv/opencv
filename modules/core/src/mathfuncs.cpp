@@ -1955,9 +1955,40 @@ static IPowFunc ipowTab[] =
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
 };
 
+static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !(_src.dims() <= 2 && (depth == CV_32F || depth == CV_64F)) ||
+         (depth == CV_64F && !doubleSupport) )
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), type);
+    UMat dst = _dst.getUMat();
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D dstT=%s -D OP_POW -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         doubleSupport ? "-D DOUBLE_SUPPORT" : ""));
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+
+    if (depth == CV_32F)
+        k.args(srcarg, dstarg, (float)power);
+    else
+        k.args(srcarg, dstarg, power);
+
+    size_t globalsize[2] = { dst.cols *  cn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_pow(_src, power, _dst))
+        return;
+
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();
 
