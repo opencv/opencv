@@ -1553,11 +1553,11 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
         _type = e.a.type();
     m.create(e.a.size(), _type);
     if( e.flags == 'I' )
-        setIdentity(m, Scalar(e.alpha));
+        setIdentity(m, Scalar::all(e.alpha));
     else if( e.flags == '0' )
         m = Scalar();
     else if( e.flags == '1' )
-        m = Scalar(e.alpha);
+        m = Scalar::all(e.alpha);
     else
         CV_Error(CV_StsError, "Invalid matrix initializer type");
 }
