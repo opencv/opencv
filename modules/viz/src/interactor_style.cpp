@@ -236,7 +236,7 @@ cv::viz::InteractorStyle::OnKeyDown()
                      "\n"
                      "          j, J   : take a .PNG snapshot of the current window view\n"
                      "          c, C   : display current camera/window parameters\n"
-                     "          f, F   : fly to point mode\n"
+                     "          f, F   : fly to point mode, hold the key and move mouse where to fly\n"
                      "\n"
                      "          e, E   : exit the interactor\n"
                      "          q, Q   : stop and call VTK's TerminateApp\n"
@@ -271,28 +271,8 @@ cv::viz::InteractorStyle::OnKeyDown()
     {
         unsigned int t = static_cast<unsigned int>(time(0));
         String png_file = cv::format("screenshot-%d.png", t);
-        String cam_file = cv::format("screenshot-%d.cam", t);
-
-        vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
-        Vec2d clip;
-        Vec3d focal, pos, view;
-        cam->GetClippingRange(clip.val);
-        cam->GetFocalPoint(focal.val);
-        cam->GetPosition(pos.val);
-        cam->GetViewUp(view.val);
-        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
-        Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
-        double angle = cam->GetViewAngle() / 180.0 * CV_PI;
-
-        String data = cv::format("%f,%f/%f,%f,%f/%f,%f,%f/%f,%f,%f/%f/%d,%d/%d,%d", clip[0],clip[1], focal[0],focal[1],focal[2],
-                 pos[0],pos[1],pos[2], view[0],view[1], view[2], angle , win_size[0],win_size[1], win_pos[0], win_pos[1]);
-
         saveScreenshot(png_file);
-        ofstream ofs_cam(cam_file.c_str());
-        ofs_cam << data.c_str() << endl;
-        ofs_cam.close();
-
-        cout << "Screenshot (" << png_file.c_str() << ") and camera information (" << cam_file.c_str() << ") successfully captured." << endl;
+        cout << "Screenshot (" << png_file.c_str() << ") successfully captured." << endl;
         break;
     }
         // display current camera settings/parameters
@@ -301,26 +281,21 @@ cv::viz::InteractorStyle::OnKeyDown()
         vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
 
         Vec2d clip;
-        Vec3d focal, pose, view;
+        Vec3d focal, pos, view;
         cam->GetClippingRange(clip.val);
         cam->GetFocalPoint(focal.val);
-        cam->GetPosition(pose.val);
+        cam->GetPosition(pos.val);
         cam->GetViewUp(view.val);
         Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
         Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
+        double angle = cam->GetViewAngle () / 180.0 * CV_PI;
 
-        cv::print(Mat(clip, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(focal, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(pose, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(view, false).reshape(1, 1));
-        std::cout << "/" << cam->GetViewAngle () / 180.0 * CV_PI;
-        cv::print(Mat(win_size, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(win_pos, false).reshape(1, 1));
-        std::cout << std::endl;
+        String data = cv::format("clip(%f,%f) focal(%f,%f,%f) pos(%f,%f,%f) view(%f,%f,%f) angle(%f) winsz(%d,%d) winpos(%d,%d)",
+            clip[0], clip[1], focal[0], focal[1], focal[2], pos[0], pos[1], pos[2], view[0], view[1], view[2],
+                angle, win_size[0], win_size[1], win_pos[0], win_pos[1]);
+
+        std::cout << data.c_str() << std::endl;
+
         break;
     }
     case '=':

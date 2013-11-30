@@ -219,7 +219,7 @@ namespace cv
         class CV_EXPORTS WText : public Widget2D
         {
         public:
-            WText(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
+            WText(const String &text, const Point2i &pos, int font_size = 20, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
