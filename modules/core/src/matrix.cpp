@@ -2647,7 +2647,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     {
         TransposeInplaceFunc func = transposeInplaceTab[esz];
         CV_Assert( func != 0 );
-//        CV_Assert( dst.cols == dst.rows );
+        CV_Assert( dst.cols == dst.rows );
         func( dst.data, dst.step, dst.rows );
     }
     else
