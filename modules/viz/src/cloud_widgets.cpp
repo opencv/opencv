@@ -124,7 +124,7 @@ struct cv::viz::WCloud::CreateCloudWidget
                 cells->SetNumberOfTuples(nr_points);
                 vtkIdType *cell = cells->GetPointer(0);
                 // Fill it with 1s
-                std::fill_n(cell, nr_points * 2, 1);
+                std::fill(cell, cell + nr_points * 2, 1);
                 cell++;
                 for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
                     *cell = i;
@@ -155,8 +155,8 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
 
     if (cloud.isContinuous() && colors.isContinuous())
     {
-        cloud.reshape(cloud.channels(), 1);
-        colors.reshape(colors.channels(), 1);
+        cloud = cloud.reshape(cloud.channels(), 1);
+        colors = colors.reshape(colors.channels(), 1);
     }
 
     vtkIdType nr_points;
@@ -307,7 +307,7 @@ struct cv::viz::WCloudCollection::CreateCloudWidget
                 cells->SetNumberOfTuples(nr_points);
                 vtkIdType *cell = cells->GetPointer(0);
                 // Fill it with 1s
-                std::fill_n(cell, nr_points * 2, 1);
+                std::fill(cell, cell + nr_points * 2, 1);
                 cell++;
                 for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
                     *cell = i;
@@ -392,8 +392,8 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
 
     if (cloud.isContinuous() && colors.isContinuous())
     {
-        cloud.reshape(cloud.channels(), 1);
-        colors.reshape(colors.channels(), 1);
+        cloud = cloud.reshape(cloud.channels(), 1);
+        colors = colors.reshape(colors.channels(), 1);
     }
 
     vtkIdType nr_points;
