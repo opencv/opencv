@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -2368,10 +2369,35 @@ void cv::vconcat(InputArray _src, OutputArray dst)
 }
 
 //////////////////////////////////////// set identity ////////////////////////////////////////////
+
+namespace cv {
+
+static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
+{
+    int type = _m.type(), cn = CV_MAT_CN(type);
+    if (cn == 3)
+        return false;
+
+    UMat m = _m.getUMat();
+
+    ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
+                  format("-D T=%s", ocl::memopTypeToStr(type)));
+    k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, type, s)));
+
+    size_t globalsize[2] = { m.cols, m.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
+    CV_Assert( _m.dims() <= 2 );
+
+    if (ocl::useOpenCL() && _m.isUMat() && ocl_setIdentity(_m, s))
+        return;
+
     Mat m = _m.getMat();
-    CV_Assert( m.dims <= 2 );
     int i, j, rows = m.rows, cols = m.cols, type = m.type();
 
     if( type == CV_32FC1 )
