@@ -929,11 +929,8 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
-    if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) )
+    if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) || cn == 3)
         return false;
-
-    UMat src1 = _src1.getUMat(), src2;
-    UMat dst = _dst.getUMat(), mask = _mask.getUMat();
 
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : 1;
@@ -945,6 +942,9 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if( k.empty() )
         return false;
+
+    UMat src1 = _src1.getUMat(), src2;
+    UMat dst = _dst.getUMat(), mask = _mask.getUMat();
 
     int cscale = cn/kercn;
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cscale);
@@ -1280,24 +1280,28 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           void* usrdata, int oclop,
                           bool haveScalar )
 {
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
-    if( ((haveMask || haveScalar) && cn > 4) || cn == 3) // TODO need fix for 3 channels
+    if( ((haveMask || haveScalar) && cn > 4) || cn == 3)
         return false;
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
+    if (!doubleSupport)
+        wdepth = std::min(wdepth, CV_32F);
+
     wtype = CV_MAKETYPE(wdepth, cn);
     int type2 = haveScalar ? wtype : _src2.type(), depth2 = CV_MAT_DEPTH(type2);
-    int kercn = haveMask || haveScalar ? cn : 1;
+    if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
+        return false;
 
-    UMat src1 = _src1.getUMat(), src2;
-    UMat dst = _dst.getUMat(), mask = _mask.getUMat();
+    int kercn = haveMask || haveScalar ? cn : 1;
 
     char cvtstr[3][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT2=%s "
             "-D dstT=%s -D workT=%s -D convertToWT1=%s "
-            "-D convertToWT2=%s -D convertToDT=%s",
+            "-D convertToWT2=%s -D convertToDT=%s%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
             ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
@@ -1305,7 +1309,8 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
-            ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]));
+            ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     const uchar* usrdata_p = (const uchar*)usrdata;
     const double* usrdata_d = (const double*)usrdata;
@@ -1323,6 +1328,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( k.empty() )
         return false;
 
+    UMat src1 = _src1.getUMat(), src2;
+    UMat dst = _dst.getUMat(), mask = _mask.getUMat();
+
     int cscale = cn/kercn;
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cscale);
@@ -1337,9 +1345,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         Mat src2sc = _src2.getMat();
 
         if( !src2sc.empty() )
-        {
             convertAndUnrollScalar(src2sc, wtype, (uchar*)buf, 1);
-        }
         ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, buf, esz);
 
         if( !haveMask )
@@ -1369,12 +1375,10 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
         else
-        {
             k.args(src1arg, src2arg, maskarg, dstarg);
-        }
     }
 
-    size_t globalsize[] = { src1.cols*cscale, src1.rows };
+    size_t globalsize[] = { src1.cols * cscale, src1.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
@@ -2075,7 +2079,7 @@ void cv::multiply(InputArray src1, InputArray src2,
                   OutputArray dst, double scale, int dtype)
 {
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
-              true, &scale, scale == 1. ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
+              true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
 }
 
 void cv::divide(InputArray src1, InputArray src2,
