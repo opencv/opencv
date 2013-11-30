@@ -2574,18 +2574,63 @@ static TransposeInplaceFunc transposeInplaceTab[] =
     0, 0, 0, 0, 0, 0, 0, transposeI_32sC6, 0, 0, 0, 0, 0, 0, 0, transposeI_32sC8
 };
 
+static inline int divUp(int a, int b)
+{
+    return (a + b - 1) / b;
+}
+
+static bool ocl_transpose( InputArray _src, OutputArray _dst )
+{
+    const int TILE_DIM = 32, BLOCK_ROWS = 8;
+    int type = _src.type(), cn = CV_MAT_CN(type);
+
+    if (cn == 3)
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.cols, src.rows, type);
+    UMat dst = _dst.getUMat();
+
+    String kernelName("transpose");
+    bool inplace = dst.u == src.u;
+
+    if (inplace)
+    {
+        CV_Assert(dst.cols == dst.rows);
+        kernelName += "_inplace";
+    }
+
+    ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
+                  format("-D T=%s -D TILE_DIM=%d -D BLOCK_ROWS=%d",
+                         ocl::memopTypeToStr(type), TILE_DIM, BLOCK_ROWS));
+    if (inplace)
+        k.args(ocl::KernelArg::ReadWriteNoSize(dst), dst.rows);
+    else
+        k.args(ocl::KernelArg::ReadOnly(src),
+               ocl::KernelArg::WriteOnlyNoSize(dst));
+
+    size_t localsize[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
+    size_t globalsize[3] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
+
+    return k.run(2, globalsize, localsize, false);
+}
+
 }
 
 void cv::transpose( InputArray _src, OutputArray _dst )
 {
+    int type = _src.type(), esz = CV_ELEM_SIZE(type);
+    CV_Assert( _src.dims() <= 2 && esz <= 32 );
+
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_transpose(_src, _dst))
+        return;
+
     Mat src = _src.getMat();
     if( src.empty() )
     {
         _dst.release();
         return;
     }
-    size_t esz = src.elemSize();
-    CV_Assert( src.dims <= 2 && esz <= (size_t)32 );
 
     _dst.create(src.cols, src.rows, src.type());
     Mat dst = _dst.getMat();
@@ -2602,6 +2647,7 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     {
         TransposeInplaceFunc func = transposeInplaceTab[esz];
         CV_Assert( func != 0 );
+//        CV_Assert( dst.cols == dst.rows );
         func( dst.data, dst.step, dst.rows );
     }
     else
