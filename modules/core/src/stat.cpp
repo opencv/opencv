@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <climits>
 #include <limits>
 
@@ -542,12 +543,51 @@ cv::Scalar cv::sum( InputArray _src )
     return s;
 }
 
+namespace cv {
+
+static bool ocl_countNonZero( InputArray _src, int & res )
+{
+    int depth = _src.depth();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+
+    int dbsize = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
+
+    ocl::Kernel k("count_non_zero", ocl::core::count_non_zero_oclsrc,
+                  format("-D srcT=%s -D WGS=%d -D WGS2_ALIGNED=%d%s", ocl::typeToStr(src.type()), (int)wgs,
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+    size_t globalsize = dbsize * wgs;
+    if (k.run(1, &globalsize, &wgs, true))
+        return res = cv::sum(db.getMat(ACCESS_READ))[0], true;
+    return false;
+}
+
+}
+
 int cv::countNonZero( InputArray _src )
 {
+    CV_Assert( _src.channels() == 1 );
+
+    int res = -1;
+    if (ocl::useOpenCL() && _src.isUMat() && ocl_countNonZero(_src, res))
+        return res;
+
     Mat src = _src.getMat();
     CountNonZeroFunc func = getCountNonZeroTab(src.depth());
 
-    CV_Assert( src.channels() == 1 && func != 0 );
+    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1];

@@ -969,10 +969,6 @@ OCL_TEST_P(Magnitude, Mat)
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Min, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
@@ -993,6 +989,10 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Repeat, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHAN
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(OCL_ALL_DEPTHS, testing::Values(Channels(1)), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 
