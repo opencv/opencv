@@ -534,12 +534,9 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
-    if (ocl::useOpenCL() && dst1.isUMat() && dst2.isUMat() /*&&
-            ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees)*/)
-    {
-        CV_Assert(ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees));
+    if (ocl::useOpenCL() && dst1.isUMat() && dst2.isUMat() &&
+            ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
         return;
-    }
 
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
@@ -2062,11 +2059,8 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() /*&& ocl_pow(_src, power, _dst)*/)
-    {
-        CV_Assert(ocl_pow(_src, power, _dst));
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_pow(_src, power, _dst))
         return;
-    }
 
     Mat src = _src.getMat();
     int type = src.type(), depth = src.depth(), cn = src.channels();

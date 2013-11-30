@@ -2626,12 +2626,9 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
-    if (ocl::useOpenCL() && _dst.isUMat() /*&&
-            ocl_compare(_src1, _src2, _dst, op)*/)
-    {
-        CV_Assert(ocl_compare(_src1, _src2, _dst, op));
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_compare(_src1, _src2, _dst, op))
         return;
-    }
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
