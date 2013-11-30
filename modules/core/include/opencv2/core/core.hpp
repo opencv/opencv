@@ -2333,7 +2333,7 @@ CV_EXPORTS_W void perspectiveTransform(InputArray src, OutputArray dst, InputArr
 //! extends the symmetrical matrix from the lower half or from the upper half
 CV_EXPORTS_W void completeSymm(InputOutputArray mtx, bool lowerToUpper=false);
 //! initializes scaled identity matrix
-CV_EXPORTS_W void setIdentity(InputOutputArray mtx, const Scalar& s=Scalar(1));
+CV_EXPORTS_W void setIdentity(InputOutputArray mtx, const Scalar& s=Scalar::all(1));
 //! computes determinant of a square matrix
 CV_EXPORTS_W double determinant(InputArray mtx);
 //! computes trace of a matrix

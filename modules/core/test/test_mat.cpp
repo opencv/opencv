@@ -897,3 +897,23 @@ TEST(Core_Mat, reshape_1942)
     );
     ASSERT_EQ(1, cn);
 }
+
+static void test_mat_eye(const Mat & me)  { ASSERT_EQ(me.channels() * std::min(me.cols,me.rows), int(sum(sum(me))[0]) ); }
+static void test_mat_ones(const Mat & me) { ASSERT_EQ(me.channels() * me.total(), int(sum(sum(me))[0]) ); }
+TEST(Core_Mat, Ones)
+{ 
+    test_mat_ones(Mat::ones(Size(3,3),CV_8UC3));
+    test_mat_ones(Mat::ones(3,3,CV_8UC4));
+    test_mat_ones(Mat(3,3,CV_8UC4,Scalar::all(1)));
+}
+TEST(Core_Mat, Eye)
+{
+    test_mat_eye(Mat::eye(3,3,CV_8UC4));
+    test_mat_eye(Mat::eye(3,3,CV_64FC4));
+}
+TEST(Core_Mat, setIdentity)
+{
+    { Mat me(3,5,CV_8UC1); setIdentity(me); test_mat_eye(me); }
+    { Mat me(3,3,CV_8UC3); setIdentity(me); test_mat_eye(me); }
+    { Mat me(3,3,CV_8UC4); setIdentity(me,Scalar::all(1)); test_mat_eye(me); }
+}
