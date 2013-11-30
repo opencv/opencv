@@ -151,7 +151,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
-    CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
+    CV_Assert(colors.depth() == CV_8U && cloud.size() == colors.size());
 
     if (cloud.isContinuous() && colors.isContinuous())
     {
@@ -388,7 +388,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
-    CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
+    CV_Assert(colors.depth() == CV_8U && cloud.size() == colors.size());
 
     if (cloud.isContinuous() && colors.isContinuous())
     {
@@ -651,7 +651,7 @@ struct cv::viz::WMesh::CopyImpl
 cv::viz::WMesh::WMesh(const Mesh3d &mesh)
 {
     CV_Assert(mesh.cloud.rows == 1 && (mesh.cloud.type() == CV_32FC3 || mesh.cloud.type() == CV_64FC3 || mesh.cloud.type() == CV_32FC4 || mesh.cloud.type() == CV_64FC4));
-    CV_Assert(mesh.colors.empty() || (mesh.colors.type() == CV_8UC3 && mesh.cloud.size() == mesh.colors.size()));
+    CV_Assert(mesh.colors.empty() || (mesh.colors.depth() == CV_8U && mesh.cloud.size() == mesh.colors.size()));
     CV_Assert(!mesh.polygons.empty() && mesh.polygons.type() == CV_32SC1);
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
@@ -680,8 +680,7 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
 
     if (!mesh.colors.empty())
     {
-        Vec3b * colors_data = 0;
-        colors_data = new Vec3b[nr_points];
+        Vec3b *colors_data = new Vec3b[nr_points];
         NanFilter::copyColor(mesh.colors, colors_data, mesh.cloud);
 
         scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
