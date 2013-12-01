@@ -604,7 +604,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
     mapper->SetColorModeToMapScalars();
     mapper->SetScalarModeToUsePointData();
 
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
     actor->SetMapper(mapper);
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
