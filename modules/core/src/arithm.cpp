@@ -929,7 +929,10 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int srcdepth = CV_MAT_DEPTH(srctype);
     int cn = CV_MAT_CN(srctype);
 
-    if( oclop < 0 || ((haveMask || haveScalar) && (cn > 4 || cn == 3)) )
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if( oclop < 0 || ((haveMask || haveScalar) && (cn > 4 || cn == 3)) ||
+            (!doubleSupport && srcdepth == CV_64F))
         return false;
 
     char opts[1024];
@@ -2626,7 +2629,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
-    if (ocl::useOpenCL() && _dst.isUMat() &&
+    if (ocl::useOpenCL() && _src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat() &&
             ocl_compare(_src1, _src2, _dst, op))
         return;
 

@@ -635,7 +635,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
     size_t globalsize = dbsize * wgs;
     if (k.run(1, &globalsize, &wgs, true))
-        return res = cv::sum(db.getMat(ACCESS_READ))[0], true;
+        return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
     return false;
 }
 
@@ -2752,9 +2752,8 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
 
 double cv::PSNR(InputArray _src1, InputArray _src2)
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    CV_Assert( src1.depth() == CV_8U );
-    double diff = std::sqrt(norm(src1, src2, NORM_L2SQR)/(src1.total()*src1.channels()));
+    CV_Assert( _src1.depth() == CV_8U );
+    double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
     return 20*log10(255./(diff+DBL_EPSILON));
 }
 
