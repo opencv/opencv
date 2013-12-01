@@ -1893,7 +1893,7 @@ Context2& Context2::getDefault()
         // First, try to retrieve existing context of the same type.
         // In its turn, Platform::getContext() may call Context2::create()
         // if there is no such context.
-        ctx.create(Device::TYPE_CPU);
+        ctx.create(Device::TYPE_ACCELERATOR);
         if(!ctx.p)
             ctx.create(Device::TYPE_DGPU);
         if(!ctx.p)
