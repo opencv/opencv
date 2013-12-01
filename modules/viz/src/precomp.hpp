@@ -101,6 +101,7 @@
 #include <vtkTextProperty.h>
 #include <vtkProperty2D.h>
 #include <vtkLODActor.h>
+#include <vtkActor.h>
 #include <vtkTextActor.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkMath.h>
@@ -120,6 +121,9 @@ namespace cv
 {
     namespace viz
     {
+        typedef vtkLODActor vizActor;
+        //typedef vtkActor vizActor;
+
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
         typedef std::map<String, Viz3d> VizMap;
 
