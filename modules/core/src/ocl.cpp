@@ -2724,15 +2724,24 @@ public:
     void sync(UMatData* u) const
     {
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
-        clFinish(q);
-
         UMatDataAutoLock lock(u);
 
-        if( u->hostCopyObsolete() && u->handle &&
-            u->tempCopiedUMat() && u->refcount > 0 && u->origdata)
+        if( u->hostCopyObsolete() && u->handle && u->refcount > 0 && u->origdata)
         {
-            clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                u->size, u->origdata, 0, 0, 0);
+            if( u->tempCopiedUMat() )
+            {
+                clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                    u->size, u->origdata, 0, 0, 0);
+            }
+            else
+            {
+                cl_int retval = 0;
+                void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                (CL_MAP_READ | CL_MAP_WRITE),
+                                                0, u->size, 0, 0, 0, &retval);
+                clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                clFinish(q);
+            }
             u->markHostCopyObsolete(false);
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() && u->data )
@@ -2753,11 +2762,23 @@ public:
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
-            if( u->hostCopyObsolete() && u->refcount > 0 && u->tempCopiedUMat() )
+            if( u->hostCopyObsolete() && u->refcount > 0 )
             {
-                clEnqueueReadBuffer((cl_command_queue)Queue::getDefault().ptr(),
-                                     (cl_mem)u->handle, CL_TRUE, 0,
-                                     u->size, u->origdata, 0, 0, 0);
+                cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+                if( u->tempCopiedUMat() )
+                {
+                    clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                        u->size, u->origdata, 0, 0, 0);
+                }
+                else
+                {
+                    cl_int retval = 0;
+                    void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                    (CL_MAP_READ | CL_MAP_WRITE),
+                                                    0, u->size, 0, 0, 0, &retval);
+                    clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                    clFinish(q);
+                }
             }
             u->markHostCopyObsolete(false);
             clReleaseMemObject((cl_mem)u->handle);
