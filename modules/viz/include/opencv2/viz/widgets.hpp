@@ -119,8 +119,6 @@ namespace cv
             Affine3f getPose() const;
 
             void setColor(const Color &color);
-        private:
-            struct MatrixConverter;
 
         };
 
@@ -145,8 +143,6 @@ namespace cv
         public:
             WPlane(const Vec4f& coefs, float size = 1.f, const Color &color = Color::white());
             WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.f, const Color &color = Color::white());
-        private:
-            struct SetSizeImpl;
         };
 
         class CV_EXPORTS WSphere : public Widget3D
@@ -189,9 +185,6 @@ namespace cv
         {
         public:
             WPolyLine(InputArray points, const Color &color = Color::white());
-
-        private:
-            struct CopyImpl;
         };
 
         class CV_EXPORTS WGrid : public Widget3D
@@ -201,10 +194,6 @@ namespace cv
             WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             //! Creates grid based on the plane equation
             WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-
-        private:
-            struct GridImpl;
-
         };
 
         class CV_EXPORTS WText3D : public Widget3D
@@ -257,9 +246,6 @@ namespace cv
             WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
             WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
-
-        private:
-            struct ProjectImage;
         };
 
         class CV_EXPORTS WTrajectory : public Widget3D
@@ -273,9 +259,6 @@ namespace cv
             WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
             WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
-
-        private:
-            struct ApplyPath;
         };
 
         class CV_EXPORTS WSpheresTrajectory: public Widget3D
@@ -292,9 +275,6 @@ namespace cv
             WCloud(InputArray cloud, InputArray colors);
             //! All points in cloud have the same color
             WCloud(InputArray cloud, const Color &color = Color::white());
-
-        private:
-            struct CreateCloudWidget;
         };
 
         class CV_EXPORTS WCloudCollection : public Widget3D
@@ -306,27 +286,18 @@ namespace cv
             void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
             //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
-
-        private:
-            struct CreateCloudWidget;
         };
 
         class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
             WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
-
-        private:
-            struct ApplyCloudNormals;
         };
 
         class CV_EXPORTS WMesh : public Widget3D
         {
         public:
             WMesh(const Mesh3d &mesh);
-
-        private:
-            struct CopyImpl;
         };
 
         template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
