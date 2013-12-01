@@ -59,92 +59,96 @@ namespace cv
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Point Cloud Widget implementation
 
-struct cv::viz::WCloud::CreateCloudWidget
+namespace cv { namespace viz { namespace
 {
-    static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
+    struct CloudUtils
     {
-        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-        vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
-
-        polydata->SetVerts(vertices);
-
-        vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
-        vtkSmartPointer<vtkIdTypeArray> initcells;
-        nr_points = cloud.total();
-
-        if (!points)
+        static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
         {
-            points = vtkSmartPointer<vtkPoints>::New();
-            if (cloud.depth() == CV_32F)
-                points->SetDataTypeToFloat();
-            else if (cloud.depth() == CV_64F)
-                points->SetDataTypeToDouble();
-            polydata->SetPoints(points);
-        }
-        points->SetNumberOfPoints(nr_points);
+            vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+            vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
 
-        if (cloud.depth() == CV_32F)
-        {
-            // Get a pointer to the beginning of the data array
-            Vec3f *data_beg = vtkpoints_data<float>(points);
-            Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
-            nr_points = data_end - data_beg;
-        }
-        else if (cloud.depth() == CV_64F)
-        {
-            // Get a pointer to the beginning of the data array
-            Vec3d *data_beg = vtkpoints_data<double>(points);
-            Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
-            nr_points = data_end - data_beg;
-        }
-        points->SetNumberOfPoints(nr_points);
+            polydata->SetVerts(vertices);
 
-        // Update cells
-        vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData();
-        // If no init cells and cells has not been initialized...
-        if (!cells)
-            cells = vtkSmartPointer<vtkIdTypeArray>::New();
+            vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
+            vtkSmartPointer<vtkIdTypeArray> initcells;
+            nr_points = cloud.total();
 
-        // If we have less values then we need to recreate the array
-        if (cells->GetNumberOfTuples() < nr_points)
-        {
-            cells = vtkSmartPointer<vtkIdTypeArray>::New();
-
-            // If init cells is given, and there's enough data in it, use it
-            if (initcells && initcells->GetNumberOfTuples() >= nr_points)
+            if (!points)
             {
-                cells->DeepCopy(initcells);
-                cells->SetNumberOfComponents(2);
-                cells->SetNumberOfTuples(nr_points);
+                points = vtkSmartPointer<vtkPoints>::New();
+                if (cloud.depth() == CV_32F)
+                    points->SetDataTypeToFloat();
+                else if (cloud.depth() == CV_64F)
+                    points->SetDataTypeToDouble();
+                polydata->SetPoints(points);
+            }
+            points->SetNumberOfPoints(nr_points);
+
+            if (cloud.depth() == CV_32F)
+            {
+                // Get a pointer to the beginning of the data array
+                Vec3f *data_beg = vtkpoints_data<float>(points);
+                Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
+                nr_points = data_end - data_beg;
+            }
+            else if (cloud.depth() == CV_64F)
+            {
+                // Get a pointer to the beginning of the data array
+                Vec3d *data_beg = vtkpoints_data<double>(points);
+                Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
+                nr_points = data_end - data_beg;
+            }
+            points->SetNumberOfPoints(nr_points);
+
+            // Update cells
+            vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData();
+            // If no init cells and cells has not been initialized...
+            if (!cells)
+                cells = vtkSmartPointer<vtkIdTypeArray>::New();
+
+            // If we have less values then we need to recreate the array
+            if (cells->GetNumberOfTuples() < nr_points)
+            {
+                cells = vtkSmartPointer<vtkIdTypeArray>::New();
+
+                // If init cells is given, and there's enough data in it, use it
+                if (initcells && initcells->GetNumberOfTuples() >= nr_points)
+                {
+                    cells->DeepCopy(initcells);
+                    cells->SetNumberOfComponents(2);
+                    cells->SetNumberOfTuples(nr_points);
+                }
+                else
+                {
+                    // If the number of tuples is still too small, we need to recreate the array
+                    cells->SetNumberOfComponents(2);
+                    cells->SetNumberOfTuples(nr_points);
+                    vtkIdType *cell = cells->GetPointer(0);
+                    // Fill it with 1s
+                    std::fill(cell, cell + nr_points * 2, 1);
+                    cell++;
+                    for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
+                        *cell = i;
+                    // Save the results in initcells
+                    initcells = vtkSmartPointer<vtkIdTypeArray>::New();
+                    initcells->DeepCopy(cells);
+                }
             }
             else
             {
-                // If the number of tuples is still too small, we need to recreate the array
+                // The assumption here is that the current set of cells has more data than needed
                 cells->SetNumberOfComponents(2);
                 cells->SetNumberOfTuples(nr_points);
-                vtkIdType *cell = cells->GetPointer(0);
-                // Fill it with 1s
-                std::fill(cell, cell + nr_points * 2, 1);
-                cell++;
-                for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
-                    *cell = i;
-                // Save the results in initcells
-                initcells = vtkSmartPointer<vtkIdTypeArray>::New();
-                initcells->DeepCopy(cells);
             }
-        }
-        else
-        {
-            // The assumption here is that the current set of cells has more data than needed
-            cells->SetNumberOfComponents(2);
-            cells->SetNumberOfTuples(nr_points);
-        }
 
-        // Set the cells and the vertices
-        vertices->SetCells(nr_points, cells);
-        return polydata;
-    }
-};
+            // Set the cells and the vertices
+            vertices->SetCells(nr_points, cells);
+            return polydata;
+        }
+    };
+}}}
+
 
 cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
 {
@@ -160,7 +164,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     }
 
     vtkIdType nr_points;
-    vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
+    vtkSmartPointer<vtkPolyData> polydata = CloudUtils::create(cloud, nr_points);
 
     // Filter colors
     Vec3b* colors_data = new Vec3b[nr_points];
@@ -207,7 +211,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, const Color &color)
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
 
     vtkIdType nr_points;
-    vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
+    vtkSmartPointer<vtkPolyData> polydata = CloudUtils::create(cloud, nr_points);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
 #if VTK_MAJOR_VERSION <= 5
@@ -242,139 +246,142 @@ template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Collection Widget implementation
 
-struct cv::viz::WCloudCollection::CreateCloudWidget
+namespace cv { namespace viz { namespace
 {
-    static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
+    struct CloudCollectionUtils
     {
-        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-        vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
-
-        polydata->SetVerts(vertices);
-
-        vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
-        vtkSmartPointer<vtkIdTypeArray> initcells;
-        nr_points = cloud.total();
-
-        if (!points)
+        static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
         {
-            points = vtkSmartPointer<vtkPoints>::New();
-            if (cloud.depth() == CV_32F)
-                points->SetDataTypeToFloat();
-            else if (cloud.depth() == CV_64F)
-                points->SetDataTypeToDouble();
-            polydata->SetPoints(points);
-        }
-        points->SetNumberOfPoints(nr_points);
+            vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+            vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
 
-        if (cloud.depth() == CV_32F)
-        {
-            // Get a pointer to the beginning of the data array
-            Vec3f *data_beg = vtkpoints_data<float>(points);
-            Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
-            nr_points = data_end - data_beg;
-        }
-        else if (cloud.depth() == CV_64F)
-        {
-            // Get a pointer to the beginning of the data array
-            Vec3d *data_beg = vtkpoints_data<double>(points);
-            Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
-            nr_points = data_end - data_beg;
-        }
-        points->SetNumberOfPoints(nr_points);
+            polydata->SetVerts(vertices);
 
-        // Update cells
-        vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData();
-        // If no init cells and cells has not been initialized...
-        if (!cells)
-            cells = vtkSmartPointer<vtkIdTypeArray>::New();
+            vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
+            vtkSmartPointer<vtkIdTypeArray> initcells;
+            nr_points = cloud.total();
 
-        // If we have less values then we need to recreate the array
-        if (cells->GetNumberOfTuples() < nr_points)
-        {
-            cells = vtkSmartPointer<vtkIdTypeArray>::New();
-
-            // If init cells is given, and there's enough data in it, use it
-            if (initcells && initcells->GetNumberOfTuples() >= nr_points)
+            if (!points)
             {
-                cells->DeepCopy(initcells);
-                cells->SetNumberOfComponents(2);
-                cells->SetNumberOfTuples(nr_points);
+                points = vtkSmartPointer<vtkPoints>::New();
+                if (cloud.depth() == CV_32F)
+                    points->SetDataTypeToFloat();
+                else if (cloud.depth() == CV_64F)
+                    points->SetDataTypeToDouble();
+                polydata->SetPoints(points);
+            }
+            points->SetNumberOfPoints(nr_points);
+
+            if (cloud.depth() == CV_32F)
+            {
+                // Get a pointer to the beginning of the data array
+                Vec3f *data_beg = vtkpoints_data<float>(points);
+                Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
+                nr_points = data_end - data_beg;
+            }
+            else if (cloud.depth() == CV_64F)
+            {
+                // Get a pointer to the beginning of the data array
+                Vec3d *data_beg = vtkpoints_data<double>(points);
+                Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
+                nr_points = data_end - data_beg;
+            }
+            points->SetNumberOfPoints(nr_points);
+
+            // Update cells
+            vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData();
+            // If no init cells and cells has not been initialized...
+            if (!cells)
+                cells = vtkSmartPointer<vtkIdTypeArray>::New();
+
+            // If we have less values then we need to recreate the array
+            if (cells->GetNumberOfTuples() < nr_points)
+            {
+                cells = vtkSmartPointer<vtkIdTypeArray>::New();
+
+                // If init cells is given, and there's enough data in it, use it
+                if (initcells && initcells->GetNumberOfTuples() >= nr_points)
+                {
+                    cells->DeepCopy(initcells);
+                    cells->SetNumberOfComponents(2);
+                    cells->SetNumberOfTuples(nr_points);
+                }
+                else
+                {
+                    // If the number of tuples is still too small, we need to recreate the array
+                    cells->SetNumberOfComponents(2);
+                    cells->SetNumberOfTuples(nr_points);
+                    vtkIdType *cell = cells->GetPointer(0);
+                    // Fill it with 1s
+                    std::fill(cell, cell + nr_points * 2, 1);
+                    cell++;
+                    for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
+                        *cell = i;
+                    // Save the results in initcells
+                    initcells = vtkSmartPointer<vtkIdTypeArray>::New();
+                    initcells->DeepCopy(cells);
+                }
             }
             else
             {
-                // If the number of tuples is still too small, we need to recreate the array
+                // The assumption here is that the current set of cells has more data than needed
                 cells->SetNumberOfComponents(2);
                 cells->SetNumberOfTuples(nr_points);
-                vtkIdType *cell = cells->GetPointer(0);
-                // Fill it with 1s
-                std::fill(cell, cell + nr_points * 2, 1);
-                cell++;
-                for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
-                    *cell = i;
-                // Save the results in initcells
-                initcells = vtkSmartPointer<vtkIdTypeArray>::New();
-                initcells->DeepCopy(cells);
             }
-        }
-        else
-        {
-            // The assumption here is that the current set of cells has more data than needed
-            cells->SetNumberOfComponents(2);
-            cells->SetNumberOfTuples(nr_points);
+
+            // Set the cells and the vertices
+            vertices->SetCells(nr_points, cells);
+            return polydata;
         }
 
-        // Set the cells and the vertices
-        vertices->SetCells(nr_points, cells);
-        return polydata;
-    }
-
-    static void createMapper(vtkSmartPointer<vtkLODActor> actor, vtkSmartPointer<vtkPolyData> poly_data, Vec3d& minmax)
-    {
-        vtkDataSetMapper *mapper = vtkDataSetMapper::SafeDownCast(actor->GetMapper());
-        if (!mapper)
+        static void createMapper(vtkSmartPointer<vtkLODActor> actor, vtkSmartPointer<vtkPolyData> poly_data, Vec3d& minmax)
         {
-            // This is the first cloud
-            vtkSmartPointer<vtkDataSetMapper> mapper_new = vtkSmartPointer<vtkDataSetMapper>::New();
+            vtkDataSetMapper *mapper = vtkDataSetMapper::SafeDownCast(actor->GetMapper());
+            if (!mapper)
+            {
+                // This is the first cloud
+                vtkSmartPointer<vtkDataSetMapper> mapper_new = vtkSmartPointer<vtkDataSetMapper>::New();
 #if VTK_MAJOR_VERSION <= 5
-            mapper_new->SetInputConnection(poly_data->GetProducerPort());
+                mapper_new->SetInputConnection(poly_data->GetProducerPort());
 #else
-            mapper_new->SetInputData(poly_data);
+                mapper_new->SetInputData(poly_data);
 #endif
 
-            mapper_new->SetScalarRange(minmax.val);
-            mapper_new->SetScalarModeToUsePointData();
+                mapper_new->SetScalarRange(minmax.val);
+                mapper_new->SetScalarModeToUsePointData();
 
-            bool interpolation = (poly_data && poly_data->GetNumberOfCells() != poly_data->GetNumberOfVerts());
+                bool interpolation = (poly_data && poly_data->GetNumberOfCells() != poly_data->GetNumberOfVerts());
 
-            mapper_new->SetInterpolateScalarsBeforeMapping(interpolation);
-            mapper_new->ScalarVisibilityOn();
-            mapper_new->ImmediateModeRenderingOff();
+                mapper_new->SetInterpolateScalarsBeforeMapping(interpolation);
+                mapper_new->ScalarVisibilityOn();
+                mapper_new->ImmediateModeRenderingOff();
 
-            actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, poly_data->GetNumberOfPoints() / 10)));
-            actor->GetProperty()->SetInterpolationToFlat();
-            actor->GetProperty()->BackfaceCullingOn();
-            actor->SetMapper(mapper_new);
-            return ;
-        }
+                actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, poly_data->GetNumberOfPoints() / 10)));
+                actor->GetProperty()->SetInterpolationToFlat();
+                actor->GetProperty()->BackfaceCullingOn();
+                actor->SetMapper(mapper_new);
+                return ;
+            }
 
-        vtkPolyData *data = vtkPolyData::SafeDownCast(mapper->GetInput());
-        CV_Assert("Cloud Widget without data" && data);
+            vtkPolyData *data = vtkPolyData::SafeDownCast(mapper->GetInput());
+            CV_Assert("Cloud Widget without data" && data);
 
-        vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+            vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 #if VTK_MAJOR_VERSION <= 5
-        appendFilter->AddInputConnection(mapper->GetInput()->GetProducerPort());
-        appendFilter->AddInputConnection(poly_data->GetProducerPort());
+            appendFilter->AddInputConnection(mapper->GetInput()->GetProducerPort());
+            appendFilter->AddInputConnection(poly_data->GetProducerPort());
 #else
-        appendFilter->AddInputData(data);
-        appendFilter->AddInputData(poly_data);
+            appendFilter->AddInputData(data);
+            appendFilter->AddInputData(poly_data);
 #endif
-        mapper->SetInputConnection(appendFilter->GetOutputPort());
+            mapper->SetInputConnection(appendFilter->GetOutputPort());
 
-        // Update the number of cloud points
-        vtkIdType old_cloud_points = actor->GetNumberOfCloudPoints();
-        actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, old_cloud_points+poly_data->GetNumberOfPoints() / 10)));
-    }
-};
+            // Update the number of cloud points
+            vtkIdType old_cloud_points = actor->GetNumberOfCloudPoints();
+            actor->SetNumberOfCloudPoints(int(std::max<vtkIdType>(1, old_cloud_points+poly_data->GetNumberOfPoints() / 10)));
+        }
+    };
+}}}
 
 cv::viz::WCloudCollection::WCloudCollection()
 {
@@ -397,7 +404,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     }
 
     vtkIdType nr_points;
-    vtkSmartPointer<vtkPolyData> polydata =  CreateCloudWidget::create(cloud, nr_points);
+    vtkSmartPointer<vtkPolyData> polydata =  CloudCollectionUtils::create(cloud, nr_points);
 
     // Filter colors
     Vec3b* colors_data = new Vec3b[nr_points];
@@ -429,7 +436,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     CV_Assert("Incompatible widget type." && actor);
 
     Vec3d minmax(scalars->GetRange());
-    CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
+    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput(), minmax);
 }
 
 void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)
@@ -438,7 +445,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, 
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
 
     vtkIdType nr_points;
-    vtkSmartPointer<vtkPolyData> polydata =  CreateCloudWidget::create(cloud, nr_points);
+    vtkSmartPointer<vtkPolyData> polydata =  CloudCollectionUtils::create(cloud, nr_points);
 
     vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
     scalars->SetNumberOfComponents(3);
@@ -468,7 +475,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, 
     CV_Assert("Incompatible widget type." && actor);
 
     Vec3d minmax(scalars->GetRange());
-    CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
+    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput(), minmax);
 }
 
 template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
@@ -480,80 +487,84 @@ template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollec
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Normals Widget implementation
 
-struct cv::viz::WCloudNormals::ApplyCloudNormals
+namespace cv { namespace viz { namespace
 {
-    template<typename _Tp>
-    struct Impl
+    struct CloudNormalsUtils
     {
-        static vtkSmartPointer<vtkCellArray> applyOrganized(const Mat &cloud, const Mat& normals, double level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+        template<typename _Tp>
+        struct Impl
         {
-            vtkIdType point_step = static_cast<vtkIdType>(std::sqrt(level));
-            nr_normals = (static_cast<vtkIdType>((cloud.cols - 1) / point_step) + 1) *
-                         (static_cast<vtkIdType>((cloud.rows - 1) / point_step) + 1);
-            vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-
-            pts = new _Tp[2 * nr_normals * 3];
-
-            int cch = cloud.channels();
-            vtkIdType cell_count = 0;
-            for (vtkIdType y = 0; y < cloud.rows; y += point_step)
+            static vtkSmartPointer<vtkCellArray> applyOrganized(const Mat &cloud, const Mat& normals, double level, float scale, _Tp *&pts, vtkIdType &nr_normals)
             {
-                const _Tp *prow = cloud.ptr<_Tp>(y);
-                const _Tp *nrow = normals.ptr<_Tp>(y);
-                for (vtkIdType x = 0; x < cloud.cols; x += point_step * cch)
+                vtkIdType point_step = static_cast<vtkIdType>(std::sqrt(level));
+                nr_normals = (static_cast<vtkIdType>((cloud.cols - 1) / point_step) + 1) *
+                             (static_cast<vtkIdType>((cloud.rows - 1) / point_step) + 1);
+                vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+
+                pts = new _Tp[2 * nr_normals * 3];
+
+                int cch = cloud.channels();
+                vtkIdType cell_count = 0;
+                for (vtkIdType y = 0; y < cloud.rows; y += point_step)
                 {
-                    pts[2 * cell_count * 3 + 0] = prow[x];
-                    pts[2 * cell_count * 3 + 1] = prow[x+1];
-                    pts[2 * cell_count * 3 + 2] = prow[x+2];
-                    pts[2 * cell_count * 3 + 3] = prow[x] + nrow[x] * scale;
-                    pts[2 * cell_count * 3 + 4] = prow[x+1] + nrow[x+1] * scale;
-                    pts[2 * cell_count * 3 + 5] = prow[x+2] + nrow[x+2] * scale;
+                    const _Tp *prow = cloud.ptr<_Tp>(y);
+                    const _Tp *nrow = normals.ptr<_Tp>(y);
+                    for (vtkIdType x = 0; x < cloud.cols; x += point_step * cch)
+                    {
+                        pts[2 * cell_count * 3 + 0] = prow[x];
+                        pts[2 * cell_count * 3 + 1] = prow[x+1];
+                        pts[2 * cell_count * 3 + 2] = prow[x+2];
+                        pts[2 * cell_count * 3 + 3] = prow[x] + nrow[x] * scale;
+                        pts[2 * cell_count * 3 + 4] = prow[x+1] + nrow[x+1] * scale;
+                        pts[2 * cell_count * 3 + 5] = prow[x+2] + nrow[x+2] * scale;
+
+                        lines->InsertNextCell(2);
+                        lines->InsertCellPoint(2 * cell_count);
+                        lines->InsertCellPoint(2 * cell_count + 1);
+                        cell_count++;
+                    }
+                }
+                return lines;
+            }
+
+            static vtkSmartPointer<vtkCellArray> applyUnorganized(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+            {
+                vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+                nr_normals = (cloud.size().area() - 1) / level + 1 ;
+                pts = new _Tp[2 * nr_normals * 3];
+
+                int cch = cloud.channels();
+                const _Tp *p = cloud.ptr<_Tp>();
+                const _Tp *n = normals.ptr<_Tp>();
+                for (vtkIdType i = 0, j = 0; j < nr_normals; j++, i = j * level * cch)
+                {
+
+                    pts[2 * j * 3 + 0] = p[i];
+                    pts[2 * j * 3 + 1] = p[i+1];
+                    pts[2 * j * 3 + 2] = p[i+2];
+                    pts[2 * j * 3 + 3] = p[i] + n[i] * scale;
+                    pts[2 * j * 3 + 4] = p[i+1] + n[i+1] * scale;
+                    pts[2 * j * 3 + 5] = p[i+2] + n[i+2] * scale;
 
                     lines->InsertNextCell(2);
-                    lines->InsertCellPoint(2 * cell_count);
-                    lines->InsertCellPoint(2 * cell_count + 1);
-                    cell_count++;
+                    lines->InsertCellPoint(2 * j);
+                    lines->InsertCellPoint(2 * j + 1);
                 }
+                return lines;
             }
-            return lines;
-        }
+        };
 
-        static vtkSmartPointer<vtkCellArray> applyUnorganized(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+        template<typename _Tp>
+        static inline vtkSmartPointer<vtkCellArray> apply(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
         {
-            vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-            nr_normals = (cloud.size().area() - 1) / level + 1 ;
-            pts = new _Tp[2 * nr_normals * 3];
-
-            int cch = cloud.channels();
-            const _Tp *p = cloud.ptr<_Tp>();
-            const _Tp *n = normals.ptr<_Tp>();
-            for (vtkIdType i = 0, j = 0; j < nr_normals; j++, i = j * level * cch)
-            {
-
-                pts[2 * j * 3 + 0] = p[i];
-                pts[2 * j * 3 + 1] = p[i+1];
-                pts[2 * j * 3 + 2] = p[i+2];
-                pts[2 * j * 3 + 3] = p[i] + n[i] * scale;
-                pts[2 * j * 3 + 4] = p[i+1] + n[i+1] * scale;
-                pts[2 * j * 3 + 5] = p[i+2] + n[i+2] * scale;
-
-                lines->InsertNextCell(2);
-                lines->InsertCellPoint(2 * j);
-                lines->InsertCellPoint(2 * j + 1);
-            }
-            return lines;
+            if (cloud.cols > 1 && cloud.rows > 1)
+                return CloudNormalsUtils::Impl<_Tp>::applyOrganized(cloud, normals, level, scale, pts, nr_normals);
+            else
+                return CloudNormalsUtils::Impl<_Tp>::applyUnorganized(cloud, normals, level, scale, pts, nr_normals);
         }
     };
 
-    template<typename _Tp>
-    static inline vtkSmartPointer<vtkCellArray> apply(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
-    {
-        if (cloud.cols > 1 && cloud.rows > 1)
-            return ApplyCloudNormals::Impl<_Tp>::applyOrganized(cloud, normals, level, scale, pts, nr_normals);
-        else
-            return ApplyCloudNormals::Impl<_Tp>::applyUnorganized(cloud, normals, level, scale, pts, nr_normals);
-    }
-};
+}}}
 
 cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
 {
@@ -574,7 +585,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
         data->SetNumberOfComponents(3);
 
         float* pts = 0;
-        lines = ApplyCloudNormals::apply(cloud, normals, level, scale, pts, nr_normals);
+        lines = CloudNormalsUtils::apply(cloud, normals, level, scale, pts, nr_normals);
         data->SetArray(&pts[0], 2 * nr_normals * 3, 0);
         points->SetData(data);
     }
@@ -586,7 +597,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
         data->SetNumberOfComponents(3);
 
         double* pts = 0;
-        lines = ApplyCloudNormals::apply(cloud, normals, level, scale, pts, nr_normals);
+        lines = CloudNormalsUtils::apply(cloud, normals, level, scale, pts, nr_normals);
         data->SetArray(&pts[0], 2 * nr_normals * 3, 0);
         points->SetData(data);
     }
@@ -619,34 +630,37 @@ template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Mesh Widget implementation
 
-struct cv::viz::WMesh::CopyImpl
+namespace cv { namespace viz { namespace
 {
-    template<typename _Tp>
-    static Vec<_Tp, 3> * copy(const Mat &source, Vec<_Tp, 3> *output, int *look_up, const Mat &nan_mask)
+    struct MeshUtils
     {
-        CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
-        CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-        CV_DbgAssert(DataDepth<_Tp>::value == nan_mask.depth());
-
-        int s_chs = source.channels();
-        int m_chs = nan_mask.channels();
-
-        int index = 0;
-        const _Tp* srow = source.ptr<_Tp>(0);
-        const _Tp* mrow = nan_mask.ptr<_Tp>(0);
-
-        for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+        template<typename _Tp>
+        static Vec<_Tp, 3> * copy(const Mat &source, Vec<_Tp, 3> *output, int *look_up, const Mat &nan_mask)
         {
-            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+            CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+            CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
+            CV_DbgAssert(DataDepth<_Tp>::value == nan_mask.depth());
+
+            int s_chs = source.channels();
+            int m_chs = nan_mask.channels();
+
+            int index = 0;
+            const _Tp* srow = source.ptr<_Tp>(0);
+            const _Tp* mrow = nan_mask.ptr<_Tp>(0);
+
+            for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
             {
-                look_up[x] = index;
-                *output++ = Vec<_Tp, 3>(srow);
-                ++index;
+                if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+                {
+                    look_up[x] = index;
+                    *output++ = Vec<_Tp, 3>(srow);
+                    ++index;
+                }
             }
+            return output;
         }
-        return output;
-    }
-};
+    };
+}}}
 
 cv::viz::WMesh::WMesh(const Mesh3d &mesh)
 {
@@ -665,14 +679,14 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
     {
         points->SetDataTypeToFloat();
         Vec3f *data_beg = vtkpoints_data<float>(points);
-        Vec3f *data_end = CopyImpl::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
+        Vec3f *data_end = MeshUtils::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
         nr_points = data_end - data_beg;
     }
     else
     {
         points->SetDataTypeToDouble();
         Vec3d *data_beg = vtkpoints_data<double>(points);
-        Vec3d *data_end = CopyImpl::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
+        Vec3d *data_end = MeshUtils::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
         nr_points = data_end - data_beg;
     }
 

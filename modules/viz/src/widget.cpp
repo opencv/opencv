@@ -303,27 +303,6 @@ void cv::viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> p
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget3D implementation
 
-struct cv::viz::Widget3D::MatrixConverter
-{
-    static Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
-    {
-        Matx44f m;
-        for (int i = 0; i < 4; i++)
-            for (int k = 0; k < 4; k++)
-                m(i, k) = vtk_matrix->GetElement(i, k);
-        return m;
-    }
-
-    static vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix(const Matx44f& m)
-    {
-        vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-        for (int i = 0; i < 4; i++)
-            for (int k = 0; k < 4; k++)
-                vtk_matrix->SetElement(i, k, m(i, k));
-        return vtk_matrix;
-    }
-};
-
 void cv::viz::Widget3D::setPose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -345,10 +324,9 @@ void cv::viz::Widget3D::updatePose(const Affine3f &pose)
         setPose(pose);
         return ;
     }
-    Matx44f matrix_cv = MatrixConverter::convertToMatx(matrix);
 
-    Affine3f updated_pose = pose * Affine3f(matrix_cv);
-    matrix = MatrixConverter::convertToVtkMatrix(updated_pose.matrix);
+    Affine3f updated_pose = pose * Affine3f(convertToMatx(matrix));
+    matrix = convertToVtkMatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
     actor->Modified();
@@ -358,10 +336,7 @@ cv::Affine3f cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
-
-    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    Matx44f matrix_cv = MatrixConverter::convertToMatx(matrix);
-    return Affine3f(matrix_cv);
+    return Affine3f(convertToMatx(actor->GetUserMatrix()));
 }
 
 void cv::viz::Widget3D::setColor(const Color &color)
