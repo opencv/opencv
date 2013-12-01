@@ -687,7 +687,7 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     int type = _angle.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( _mag.empty() || (!doubleSupport && depth == CV_64F) )
+    if ( !doubleSupport && depth == CV_64F )
         return false;
 
     UMat mag = _mag.getUMat(), angle = _angle.getUMat();
@@ -717,7 +717,7 @@ void polarToCart( InputArray src1, InputArray src2,
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
 
-    if (ocl::useOpenCL() && dst1.isUMat() && dst2.isUMat() &&
+    if (ocl::useOpenCL() && !src1.empty() && src2.dims() <= 2 && dst1.isUMat() && dst2.isUMat() &&
             ocl_polarToCart(src1, src2, dst1, dst2, angleInDegrees))
         return;
 
