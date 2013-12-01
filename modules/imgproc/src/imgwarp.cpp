@@ -3789,6 +3789,87 @@ private:
 };
 #endif
 
+enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
+
+static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
+                              Size dsize, int flags, int borderType, const Scalar& borderValue,
+                              int op_type)
+{
+    CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = depth;
+    double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    int interpolation = flags & INTER_MAX;
+    if( interpolation == INTER_AREA )
+        interpolation = INTER_LINEAR;
+
+    if ( !(borderType == cv::BORDER_CONSTANT &&
+           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
+         (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3)
+        return false;
+
+    UMat src = _src.getUMat(), M0;
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    double M[9];
+    int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
+    Mat matM(matRows, 3, CV_64F, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) &&
+               M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.type());
+
+    if( !(flags & WARP_INVERSE_MAP) )
+    {
+        if (op_type == OCL_OP_PERSPECTIVE)
+            invert(matM, matM);
+        else
+        {
+            double D = M[0]*M[4] - M[1]*M[3];
+            D = D != 0 ? 1./D : 0;
+            double A11 = M[4]*D, A22=M[0]*D;
+            M[0] = A11; M[1] *= -D;
+            M[3] *= -D; M[4] = A22;
+            double b1 = -M[0]*M[2] - M[1]*M[5];
+            double b2 = -M[3]*M[2] - M[4]*M[5];
+            M[2] = b1; M[5] = b2;
+        }
+    }
+    matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
+
+    const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
+    ocl::ProgramSource2 program = op_type == OCL_OP_AFFINE ?
+                ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
+    const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
+
+    ocl::Kernel k;
+    if (interpolation == INTER_NEAREST)
+    {
+        k.create(kernelName, program,
+                 format("-D INTER_NEAREST -D T=%s%s", ocl::typeToStr(type),
+                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    }
+    else
+    {
+        char cvt[2][50];
+        wdepth = std::max(CV_32S, depth);
+        k.create(kernelName, program,
+                  format("-D INTER_%s -D T=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s",
+                         interpolationMap[interpolation], ocl::typeToStr(type),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
+                         ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    }
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrOnly(M0),
+           ocl::KernelArg::Constant(Mat(1, 1, CV_MAKE_TYPE(wdepth, cn), borderValue)));
+
+    size_t globalThreads[2] = { dst.cols, dst.rows };
+    return k.run(2, globalThreads, NULL, false);
+}
+
 }
 
 
@@ -3796,6 +3877,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+        ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
+                                            borderValue, OCL_OP_AFFINE))
+        return;
+
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
@@ -4030,62 +4116,6 @@ private:
 };
 #endif
 
-static bool ocl_warpPerspective(InputArray _src, OutputArray _dst, InputArray _M0,
-                                Size dsize, int flags, int borderType, const Scalar& borderValue)
-{
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = depth;
-    double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-
-    int interpolation = flags & INTER_MAX;
-    if( interpolation == INTER_AREA )
-        interpolation = INTER_LINEAR;
-
-    if ( !(borderType == cv::BORDER_CONSTANT &&
-           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
-         (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3)
-        return false;
-
-    UMat src = _src.getUMat(), M0;
-    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
-    UMat dst = _dst.getUMat();
-
-    double M[9];
-    Mat matM(3, 3, doubleSupport ? CV_64F : CV_32F, M), M1 = _M0.getMat();
-    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) && M1.rows == 3 && M1.cols == 3 );
-    M1.convertTo(matM, matM.type());
-    if( !(flags & WARP_INVERSE_MAP) )
-         invert(matM, matM);
-    matM.copyTo(M0);
-
-    const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
-    ocl::Kernel k;
-
-    if (interpolation == INTER_NEAREST)
-    {
-        k.create("warpPerspective", ocl::imgproc::warp_perspective_oclsrc,
-                 format("-D INTER_NEAREST -D T=%s%s", ocl::typeToStr(type),
-                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
-    }
-    else
-    {
-        char cvt[2][50];
-        wdepth = std::max(CV_32S, depth);
-        k.create("warpPerspective", ocl::imgproc::warp_perspective_oclsrc,
-                  format("-D INTER_%s -D T=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s",
-                         interpolationMap[interpolation], ocl::typeToStr(type),
-                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
-    }
-
-    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrOnly(M0), ocl::KernelArg::Constant(Mat(1, 1, CV_MAKE_TYPE(wdepth, cn), borderValue)));
-
-    size_t globalThreads[2] = { dst.cols, dst.rows };
-    return k.run(2, globalThreads, NULL, false);
-}
-
 }
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
@@ -4093,7 +4123,9 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert( _src.total() > 0 );
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_warpPerspective(_src, _dst, _M0, dsize, flags, borderType, borderValue))
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+                              OCL_OP_PERSPECTIVE))
         return;
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
