@@ -2719,17 +2719,17 @@ public:
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         clFinish(q);
 
+        UMatDataAutoLock lock(u);
+
         if( u->hostCopyObsolete() && u->handle &&
             u->tempCopiedUMat() && u->refcount > 0 && u->origdata)
         {
-            UMatDataAutoLock lock(u);
             clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
                                 u->size, u->origdata, 0, 0, 0);
             u->markHostCopyObsolete(false);
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() && u->data )
         {
-            UMatDataAutoLock lock(u);
             clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
                                  u->size, u->data, 0, 0, 0);
         }
