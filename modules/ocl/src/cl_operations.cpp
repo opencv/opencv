@@ -459,7 +459,7 @@ void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, Stri
     openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                          build_options);
 #else
-    std::string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+    String data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
     std::cout << std::endl;
     std::cout << "Function Name: " << kernelName;
     if(depth >= 0)
