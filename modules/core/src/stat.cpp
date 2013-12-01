@@ -449,10 +449,74 @@ static SumSqrFunc getSumSqrTab(int depth)
     return sumSqrTab[depth];
 }
 
+template <typename T> Scalar ocl_part_sum(Mat m)
+{
+    CV_Assert(m.rows == 1);
+
+    Scalar s = Scalar::all(0);
+    int cn = m.channels();
+    const T * const ptr = m.ptr<T>(0);
+
+    for (int x = 0, w = m.cols * cn; x < w; )
+        for (int c = 0; c < cn; ++c, ++x)
+            s[c] += ptr[x];
+
+    return s;
+}
+
+enum { OP_SUM = 0, OP_SUM_ABS =  1, OP_SUM_SQR = 2 };
+
+static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
+{
+    CV_Assert(sum_op == OP_SUM || sum_op == OP_SUM_ABS || sum_op == OP_SUM_SQR);
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 )
+        return false;
+
+    int dbsize = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    int ddepth = std::max(CV_32S, depth), dtype = CV_MAKE_TYPE(ddepth, cn);
+    UMat src = _src.getUMat(), db(1, dbsize, dtype);
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
+
+    static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
+    char cvt[40];
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                  format("-D srcT=%s -D dstT=%s -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(type), ocl::typeToStr(dtype), ocl::convertTypeStr(depth, ddepth, cn, cvt),
+                         opMap[sum_op], (int)wgs, wgs2_aligned,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+    size_t globalsize = dbsize * wgs;
+    if (k.run(1, &globalsize, &wgs, true))
+    {
+        typedef Scalar (*part_sum)(Mat m);
+        part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },
+                func = funcs[ddepth - CV_32S];
+        res = func(db.getMat(ACCESS_READ));
+        return true;
+    }
+    return false;
+}
+
 }
 
 cv::Scalar cv::sum( InputArray _src )
 {
+    Scalar _res;
+    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OP_SUM))
+        return _res;
+
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
 
@@ -562,8 +626,9 @@ static bool ocl_countNonZero( InputArray _src, int & res )
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    ocl::Kernel k("count_non_zero", ocl::core::count_non_zero_oclsrc,
-                  format("-D srcT=%s -D WGS=%d -D WGS2_ALIGNED=%d%s", ocl::typeToStr(src.type()), (int)wgs,
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                  format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(src.type()), (int)wgs,
                          wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
            dbsize, ocl::KernelArg::PtrWriteOnly(db));
