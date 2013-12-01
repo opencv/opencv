@@ -2043,6 +2043,7 @@ struct Kernel::Impl
             clCreateKernel(ph, kname, &retval) : 0;
         for( int i = 0; i < MAX_ARRS; i++ )
             u[i] = 0;
+        haveTempDstUMats = false;
     }
 
     void cleanupUMats()
@@ -2055,14 +2056,17 @@ struct Kernel::Impl
                 u[i] = 0;
             }
         nu = 0;
+        haveTempDstUMats = false;
     }
 
-    void addUMat(const UMat& m)
+    void addUMat(const UMat& m, bool dst)
     {
         CV_Assert(nu < MAX_ARRS && m.u && m.u->urefcount > 0);
         u[nu] = m.u;
         CV_XADD(&m.u->urefcount, 1);
         nu++;
+        if(dst && m.u->tempUMat())
+            haveTempDstUMats = true;
     }
 
     void finit()
@@ -2085,6 +2089,7 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     int nu;
+    bool haveTempDstUMats;
 };
 
 }}
@@ -2243,7 +2248,7 @@ int Kernel::set(int i, const KernelArg& arg)
                 i += 3;
             }
         }
-        p->addUMat(*arg.m);
+        p->addUMat(*arg.m, (accessFlags & ACCESS_WRITE) != 0);
         return i;
     }
     clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
@@ -2271,6 +2276,8 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     }
     if( total == 0 )
         return true;
+    if( p->haveTempDstUMats )
+        sync = true;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
                                            offset, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &p->e);
