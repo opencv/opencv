@@ -2041,7 +2041,6 @@ struct Kernel::Impl
         cl_int retval = 0;
         handle = ph != 0 ?
             clCreateKernel(ph, kname, &retval) : 0;
-        printf("kernel creation error code: %d\n", retval);
         for( int i = 0; i < MAX_ARRS; i++ )
             u[i] = 0;
         haveTempDstUMats = false;
@@ -2219,7 +2218,7 @@ int Kernel::set(int i, const KernelArg& arg)
         else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h));
+            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
             clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
             clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
             i += 3;
