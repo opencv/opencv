@@ -464,16 +464,16 @@ template <typename T> Scalar ocl_part_sum(Mat m)
     return s;
 }
 
-enum { OP_SUM = 0, OP_SUM_ABS =  1, OP_SUM_SQR = 2 };
+enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
 
 static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
 {
-    CV_Assert(sum_op == OP_SUM || sum_op == OP_SUM_ABS || sum_op == OP_SUM_SQR);
+    CV_Assert(sum_op == OCL_OP_SUM || sum_op == OCL_OP_SUM_ABS || sum_op == OCL_OP_SUM_SQR);
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 )
+    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 || _src.dims() > 2 )
         return false;
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
@@ -514,7 +514,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
 cv::Scalar cv::sum( InputArray _src )
 {
     Scalar _res;
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OP_SUM))
+    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OCL_OP_SUM))
         return _res;
 
     Mat src = _src.getMat();
@@ -798,9 +798,54 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     return s*(nz0 ? 1./nz0 : 0);
 }
 
+namespace cv {
+
+static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv )
+{
+    Scalar mean, stddev;
+    if (!ocl_sum(_src, mean, OCL_OP_SUM))
+        return false;
+    if (!ocl_sum(_src, stddev, OCL_OP_SUM_SQR))
+        return false;
+
+    double total = 1.0 / _src.total();
+    int k, j, cn = _src.channels();
+    for (int i = 0; i < cn; ++i)
+    {
+        mean[i] *= total;
+        stddev[i] = std::sqrt(std::max(stddev[i] * total - mean[i] * mean[i] , 0.));
+    }
+
+    for( j = 0; j < 2; j++ )
+    {
+        const double * const sptr = j == 0 ? &mean[0] : &stddev[0];
+        _OutputArray _dst = j == 0 ? _mean : _sdv;
+        if( !_dst.needed() )
+            continue;
+
+        if( !_dst.fixedSize() )
+            _dst.create(cn, 1, CV_64F, -1, true);
+        Mat dst = _dst.getMat();
+        int dcn = (int)dst.total();
+        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
+                   (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
+        double* dptr = dst.ptr<double>();
+        for( k = 0; k < cn; k++ )
+            dptr[k] = sptr[k];
+        for( ; k < dcn; k++ )
+            dptr[k] = 0;
+    }
+
+    return true;
+}
+
+}
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
+    if (ocl::useOpenCL() && _src.isUMat() && _mask.empty() && ocl_meanStdDev(_src, _mean, _sdv))
+        return;
+
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
