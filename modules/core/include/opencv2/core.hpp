@@ -1262,5 +1262,4 @@ template<> struct ParamType<uchar>
 #include "opencv2/core/operations.hpp"
 #include "opencv2/core/cvstd.inl.hpp"
 
-
 #endif /*__OPENCV_CORE_HPP__*/

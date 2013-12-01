@@ -223,19 +223,26 @@ enum {
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
 #ifdef __GNUC__
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Winvalid-noreturn"
-#  endif
+# if defined __clang__ || defined __APPLE__
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
+# endif
 #endif
 CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
 {
     error(_code, _err, _func, _file, _line);
+#ifdef __GNUC__
+# if !defined __clang__ && !defined __APPLE__
+    // this suppresses this warning: "noreturn" function does return [enabled by default]
+    __builtin_trap();
+    // or use infinite loop: for (;;) {}
+# endif
+#endif
 }
 #ifdef __GNUC__
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic pop
-#  endif
+# if defined __clang__ || defined __APPLE__
+#   pragma GCC diagnostic pop
+# endif
 #endif
 
 
