@@ -50,36 +50,70 @@
 #endif
 #endif
 
-/**************************************Count NonZero**************************************/
+#define noconvert
 
-__kernel void count_non_zero(__global const uchar * srcptr, int step, int offset, int cols,
-                            int total, int groupnum, __global uchar * dstptr)
+#if defined OP_SUM || defined OP_SUM_ABS || defined OP_SUM_SQR
+#if OP_SUM
+#define FUNC(a, b) a += b
+#elif OP_SUM_ABS
+#define FUNC(a, b) a += b >= (dstT)(0) ? b : -b
+#elif OP_SUM_SQR
+#define FUNC(a, b) a += b * b
+#endif
+#define DEFINE_ACCUMULATOR \
+    dstT accumulator = (dstT)(0)
+#define REDUCE_GLOBAL \
+    dstT temp = convertToDT(src[0]); \
+    FUNC(accumulator, temp)
+#define REDUCE_LOCAL_1 \
+    localmem[lid] += accumulator
+#define REDUCE_LOCAL_2 \
+    localmem[lid] += localmem[lid2]
+
+#elif defined OP_COUNT_NON_ZERO
+#define dstT int
+#define DEFINE_ACCUMULATOR \
+    dstT accumulator = (dstT)(0); \
+    srcT zero = (srcT)(0), one = (srcT)(1)
+#define REDUCE_GLOBAL \
+    accumulator += src[0] == zero ? zero : one
+#define REDUCE_LOCAL_1 \
+    localmem[lid] += accumulator
+#define REDUCE_LOCAL_2 \
+    localmem[lid] += localmem[lid2]
+
+#else
+#error "No operation"
+
+#endif
+
+__kernel void reduce(__global const uchar * srcptr, int step, int offset, int cols,
+                     int total, int groupnum, __global uchar * dstptr)
 {
     int lid = get_local_id(0);
     int gid = get_group_id(0);
     int  id = get_global_id(0);
 
-    __local int localmem[WGS2_ALIGNED];
+    __local dstT localmem[WGS2_ALIGNED];
     if (lid < WGS2_ALIGNED)
-        localmem[lid] = 0;
+        localmem[lid] = (dstT)(0);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int nonzero = (int)(0), src_index;
-    srcT zero = (srcT)(0), one = (srcT)(1);
+    DEFINE_ACCUMULATOR;
 
     for (int grain = groupnum * WGS; id < total; id += grain)
     {
-        src_index = mad24(id / cols, step, offset + (id % cols) * (int)sizeof(srcT));
+        int src_index = mad24(id / cols, step, offset + (id % cols) * (int)sizeof(srcT));
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
-        nonzero += src[0] == zero ? zero : one;
+        REDUCE_GLOBAL;
     }
 
     if (lid >= WGS2_ALIGNED)
-        localmem[lid - WGS2_ALIGNED] = nonzero;
+        localmem[lid - WGS2_ALIGNED] = accumulator;
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (lid < WGS2_ALIGNED)
-        localmem[lid] = nonzero + localmem[lid];
+        REDUCE_LOCAL_1;
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for (int lsize = WGS2_ALIGNED >> 1; lsize > 0; lsize >>= 1)
@@ -87,14 +121,14 @@ __kernel void count_non_zero(__global const uchar * srcptr, int step, int offset
         if (lid < lsize)
         {
            int lid2 = lsize + lid;
-           localmem[lid] = localmem[lid] + localmem[lid2];
+           REDUCE_LOCAL_2;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
     if (lid == 0)
     {
-        __global int * dst = (__global int *)(dstptr + (int)sizeof(int) * gid);
+        __global dstT * dst = (__global dstT *)(dstptr + (int)sizeof(dstT) * gid);
         dst[0] = localmem[0];
     }
 }
