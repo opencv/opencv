@@ -2258,25 +2258,21 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
         return false;
 
     cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1}, localsize[CV_MAX_DIM] = {1,1,1};
+    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
     size_t total = 1;
+    CV_Assert(_globalsize != 0);
     for (int i = 0; i < dims; i++)
     {
-        size_t val0 = _localsize ? _localsize[i] :
-            dims == 1 ? 64 : dims == 2 ? 16>>i : dims == 3 ? 8>>(i>0) : 1;
-        size_t val = 1;
-        while( val*2 < val0 )
-            val *= 2;
-        if( _localsize )
-            localsize[i] = val;
-        CV_Assert(_globalsize && _globalsize[i] >= 0);
+        size_t val = _localsize ? _localsize[i] :
+            dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
+        CV_Assert( val > 0 );
         total *= _globalsize[i];
         globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
     }
     if( total == 0 )
         return true;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalsize, _localsize ? localsize : 0, 0, 0,
+                                           offset, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
@@ -2976,7 +2972,7 @@ public:
             return;
 
         // there should be no user-visible CPU copies of the UMat which we are going to copy to
-        CV_Assert(u->refcount == 0);
+        CV_Assert(u->refcount == 0 || u->tempUMat());
 
         size_t total = 0, new_sz[] = {0, 0, 0};
         size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
@@ -3028,7 +3024,7 @@ public:
 
     void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
               const size_t srcofs[], const size_t srcstep[],
-              const size_t dstofs[], const size_t dststep[], bool sync) const
+              const size_t dstofs[], const size_t dststep[], bool _sync) const
     {
         if(!src || !dst)
             return;
@@ -3072,14 +3068,15 @@ public:
             cl_int retval;
             CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
-                                               new_srcstep[0], new_srcstep[1], new_dststep[0], new_dststep[1],
+                                               new_srcstep[0], new_srcstep[1],
+                                               new_dststep[0], new_dststep[1],
                                                0, 0, 0)) >= 0 );
         }
 
         dst->markHostCopyObsolete(true);
         dst->markDeviceCopyObsolete(false);
 
-        if( sync )
+        if( _sync )
             clFinish(q);
     }
 

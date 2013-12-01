@@ -136,4 +136,3 @@ TEST(OCL_TestTAPI, performance)
     cv::destroyWindow("result0");
     cv::destroyWindow("result1");*/
 }
-

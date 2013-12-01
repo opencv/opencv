@@ -126,7 +126,7 @@ void MatAllocator::upload(UMatData* u, const void* srcptr, int dims, const size_
 
 void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t sz[],
                   const size_t srcofs[], const size_t srcstep[],
-                  const size_t dstofs[], const size_t dststep[], bool sync) const
+                  const size_t dstofs[], const size_t dststep[], bool /*sync*/) const
 {
     if(!usrc || !udst)
         return;
