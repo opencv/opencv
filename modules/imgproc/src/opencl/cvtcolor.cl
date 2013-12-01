@@ -124,16 +124,17 @@ __kernel void RGB2Gray(__global const uchar* srcptr, int srcstep, int srcoffset,
 #endif
     }
 #else
-    const int x0 = get_global_id(0)*STRIPE_SIZE;
-    const int x1 = min(x0 + STRIPE_SIZE, cols);
+    const int x_min = get_global_id(0)*STRIPE_SIZE;
+    const int x_max = min(x_min + STRIPE_SIZE, cols);
     const int y = get_global_id(1);
 
     if( y < rows )
     {
-        __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + mad24(y, srcstep, srcoffset)) + x0*scn;
+        __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr +
+                                        mad24(y, srcstep, srcoffset)) + x_min*scn;
         __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + mad24(y, dststep, dstoffset));
         int x;
-        for( x = x0; x < x1; x++, src += scn )
+        for( x = x_min; x < x_max; x++, src += scn )
 #ifdef DEPTH_5
         dst[x] = src[bidx] * 0.114f + src[1] * 0.587f + src[(bidx^2)] * 0.299f;
 #else

@@ -201,7 +201,7 @@ void CV_UMatTest::run( int /* start_from */)
 
 TEST(Core_UMat, base) { CV_UMatTest test; test.safe_run(); }
 
-TEST(Core_UMat, simple)
+TEST(Core_UMat, getUMat)
 {
     {
     int a[3] = { 1, 2, 3 };
@@ -216,7 +216,7 @@ TEST(Core_UMat, simple)
     {
         uchar * const ptr = m.ptr<uchar>(y);
         for (int x = 0; x < m.cols; ++x)
-            ptr[x] = x + y * 2;
+            ptr[x] = (uchar)(x + y * 2);
     }
 
     ref = m.clone();
