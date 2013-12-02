@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ocl/cl_runtime/cl_runtime.hpp" // for OpenCL types: cl_mem
+#include "opencv2/core/ocl.hpp"
 
 TEST(TestAPI, openCLExecuteKernelInterop)
 {
@@ -77,4 +78,52 @@ TEST(TestAPI, openCLExecuteKernelInterop)
     gpuMatDst.download(dst);
 
     EXPECT_LE(checkNorm(cpuMat, dst), 1e-3);
+}
+
+TEST(OCL_TestTAPI, performance)
+{
+    cv::RNG rng;
+    cv::Mat src(1280,768,CV_8UC4), dst;
+    rng.fill(src, RNG::UNIFORM, 0, 255);
+
+    cv::UMat usrc, udst;
+    src.copyTo(usrc);
+
+    cv::ocl::oclMat osrc(src);
+    cv::ocl::oclMat odst;
+
+    int cvtcode = cv::COLOR_BGR2GRAY;
+    int i, niters = 10;
+    double t;
+
+    cv::ocl::cvtColor(osrc, odst, cvtcode);
+    cv::ocl::finish();
+    t = (double)cv::getTickCount();
+    for(i = 0; i < niters; i++)
+    {
+        cv::ocl::cvtColor(osrc, odst, cvtcode);
+    }
+    cv::ocl::finish();
+    t = (double)cv::getTickCount() - t;
+    printf("ocl exec time = %gms per iter\n", t*1000./niters/cv::getTickFrequency());
+
+    cv::cvtColor(usrc, udst, cvtcode);
+    cv::ocl::finish2();
+    t = (double)cv::getTickCount();
+    for(i = 0; i < niters; i++)
+    {
+        cv::cvtColor(usrc, udst, cvtcode);
+    }
+    cv::ocl::finish2();
+    t = (double)cv::getTickCount() - t;
+    printf("t-api exec time = %gms per iter\n", t*1000./niters/cv::getTickFrequency());
+
+    cv::cvtColor(src, dst, cvtcode);
+    t = (double)cv::getTickCount();
+    for(i = 0; i < niters; i++)
+    {
+        cv::cvtColor(src, dst, cvtcode);
+    }
+    t = (double)cv::getTickCount() - t;
+    printf("cpu exec time = %gms per iter\n", t*1000./niters/cv::getTickFrequency());
 }

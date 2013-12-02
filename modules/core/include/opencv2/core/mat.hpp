@@ -279,21 +279,21 @@ public:
     //virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
-    virtual UMatData* allocate(int dims, const int* sizes,
-                               int type, size_t* step) const = 0;
+    virtual UMatData* allocate(int dims, const int* sizes, int type,
+                               void* data, size_t* step, int flags) const = 0;
     virtual bool allocate(UMatData* data, int accessflags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
-    virtual void map(UMatData* data, int accessflags) const = 0;
-    virtual void unmap(UMatData* data) const = 0;
+    virtual void map(UMatData* data, int accessflags) const;
+    virtual void unmap(UMatData* data) const;
     virtual void download(UMatData* data, void* dst, int dims, const size_t sz[],
                           const size_t srcofs[], const size_t srcstep[],
-                          const size_t dststep[]) const = 0;
+                          const size_t dststep[]) const;
     virtual void upload(UMatData* data, const void* src, int dims, const size_t sz[],
                         const size_t dstofs[], const size_t dststep[],
-                        const size_t srcstep[]) const = 0;
+                        const size_t srcstep[]) const;
     virtual void copy(UMatData* srcdata, UMatData* dstdata, int dims, const size_t sz[],
                       const size_t srcofs[], const size_t srcstep[],
-                      const size_t dstofs[], const size_t dststep[], bool sync) const = 0;
+                      const size_t dstofs[], const size_t dststep[], bool sync) const;
 };
 
 
@@ -335,8 +335,10 @@ protected:
 struct CV_EXPORTS UMatData
 {
     enum { COPY_ON_MAP=1, HOST_COPY_OBSOLETE=2,
-        DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24 };
+        DEVICE_COPY_OBSOLETE=4, TEMP_UMAT=8, TEMP_COPIED_UMAT=24,
+        USER_ALLOCATED=32 };
     UMatData(const MatAllocator* allocator);
+    ~UMatData();
 
     // provide atomic access to the structure
     void lock();

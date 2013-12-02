@@ -612,7 +612,7 @@ static void* initOpenCLAndLoad(const char* funcname)
             return 0;
     }
 
-    return funcname ? dlsym(handle, funcname) : 0;
+    return funcname && handle ? dlsym(handle, funcname) : 0;
 }
 
 #elif defined WIN32 || defined _WIN32
@@ -2002,7 +2002,7 @@ void* Queue::ptr() const
 Queue& Queue::getDefault()
 {
     Queue& q = TLSData::get()->oclQueue;
-    if( !q.p )
+    if( !q.p && haveOpenCL() )
         q.create(Context2::getDefault());
     return q;
 }
@@ -2043,6 +2043,7 @@ struct Kernel::Impl
             clCreateKernel(ph, kname, &retval) : 0;
         for( int i = 0; i < MAX_ARRS; i++ )
             u[i] = 0;
+        haveTempDstUMats = false;
     }
 
     void cleanupUMats()
@@ -2055,14 +2056,17 @@ struct Kernel::Impl
                 u[i] = 0;
             }
         nu = 0;
+        haveTempDstUMats = false;
     }
 
-    void addUMat(const UMat& m)
+    void addUMat(const UMat& m, bool dst)
     {
         CV_Assert(nu < MAX_ARRS && m.u && m.u->urefcount > 0);
         u[nu] = m.u;
         CV_XADD(&m.u->urefcount, 1);
         nu++;
+        if(dst && m.u->tempUMat())
+            haveTempDstUMats = true;
     }
 
     void finit()
@@ -2085,6 +2089,7 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     int nu;
+    bool haveTempDstUMats;
 };
 
 }}
@@ -2243,7 +2248,7 @@ int Kernel::set(int i, const KernelArg& arg)
                 i += 3;
             }
         }
-        p->addUMat(*arg.m);
+        p->addUMat(*arg.m, (accessFlags & ACCESS_WRITE) != 0);
         return i;
     }
     clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
@@ -2251,22 +2256,30 @@ int Kernel::set(int i, const KernelArg& arg)
 }
 
 
-bool Kernel::run(int dims, size_t globalsize[], size_t localsize[],
+bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                  bool sync, const Queue& q)
 {
     if(!p || !p->handle || p->e != 0)
         return false;
 
-    AutoBuffer<size_t> _globalSize(dims);
-    size_t * globalSizePtr = (size_t *)_globalSize;
-    for (int i = 0; i < dims; ++i)
-        globalSizePtr[i] = localsize == NULL ? globalsize[i] :
-                                               ((globalsize[i] + localsize[i] - 1) / localsize[i]) * localsize[i];
-
     cl_command_queue qq = getQueue(q);
-    size_t offset[CV_MAX_DIM] = {0};
+    size_t offset[CV_MAX_DIM] = {0}, globalsize[CV_MAX_DIM] = {1,1,1};
+    size_t total = 1;
+    CV_Assert(_globalsize != 0);
+    for (int i = 0; i < dims; i++)
+    {
+        size_t val = _localsize ? _localsize[i] :
+            dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
+        CV_Assert( val > 0 );
+        total *= _globalsize[i];
+        globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
+    }
+    if( total == 0 )
+        return true;
+    if( p->haveTempDstUMats )
+        sync = true;
     cl_int retval = clEnqueueNDRangeKernel(qq, p->handle, (cl_uint)dims,
-                                           offset, globalSizePtr, localsize, 0, 0,
+                                           offset, globalsize, _localsize, 0, 0,
                                            sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
@@ -2361,14 +2374,23 @@ struct Program::Impl
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
-            if( retval == CL_BUILD_PROGRAM_FAILURE )
+            if( retval < 0 )
             {
-                char buf[1<<16];
                 size_t retsz = 0;
-                clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0], CL_PROGRAM_BUILD_LOG,
-                                      sizeof(buf)-16, buf, &retsz);
-                errmsg = String(buf);
-                CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                               CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
+                if( retval >= 0 && retsz > 0 )
+                {
+                    AutoBuffer<char> bufbuf(retsz + 16);
+                    char* buf = bufbuf;
+                    retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                                                   CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
+                    if( retval >= 0 )
+                    {
+                        errmsg = String(buf);
+                        CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                    }
+                }
             }
             CV_Assert(retval >= 0);
         }
@@ -2608,17 +2630,17 @@ ProgramSource2::hash_t ProgramSource2::hash() const
 class OpenCLAllocator : public MatAllocator
 {
 public:
-    OpenCLAllocator() {}
+    OpenCLAllocator() { matStdAllocator = Mat::getStdAllocator(); }
 
-    UMatData* defaultAllocate(int dims, const int* sizes, int type, size_t* step) const
+    UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
-        UMatData* u = Mat::getStdAllocator()->allocate(dims, sizes, type, step);
+        UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags);
         u->urefcount = 1;
         u->refcount = 0;
         return u;
     }
 
-    void getBestFlags(const Context2& ctx, int& createFlags, int& flags0) const
+    void getBestFlags(const Context2& ctx, int /*flags*/, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = CL_MEM_READ_WRITE;
@@ -2629,10 +2651,12 @@ public:
             flags0 = UMatData::COPY_ON_MAP;
     }
 
-    UMatData* allocate(int dims, const int* sizes, int type, size_t* step) const
+    UMatData* allocate(int dims, const int* sizes, int type,
+                       void* data, size_t* step, int flags) const
     {
         if(!useOpenCL())
-            return defaultAllocate(dims, sizes, type, step);
+            return defaultAllocate(dims, sizes, type, data, step, flags);
+        CV_Assert(data == 0);
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
         {
@@ -2643,13 +2667,13 @@ public:
 
         Context2& ctx = Context2::getDefault();
         int createFlags = 0, flags0 = 0;
-        getBestFlags(ctx, createFlags, flags0);
+        getBestFlags(ctx, flags, createFlags, flags0);
 
         cl_int retval = 0;
         void* handle = clCreateBuffer((cl_context)ctx.ptr(),
                                       createFlags, total, 0, &retval);
         if( !handle || retval < 0 )
-            return defaultAllocate(dims, sizes, type, step);
+            return defaultAllocate(dims, sizes, type, data, step, flags);
         UMatData* u = new UMatData(this);
         u->data = 0;
         u->size = total;
@@ -2672,7 +2696,7 @@ public:
             CV_Assert(u->origdata != 0);
             Context2& ctx = Context2::getDefault();
             int createFlags = 0, flags0 = 0;
-            getBestFlags(ctx, createFlags, flags0);
+            getBestFlags(ctx, accessFlags, createFlags, flags0);
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             cl_int retval = 0;
@@ -2697,27 +2721,70 @@ public:
         return true;
     }
 
+    /*void sync(UMatData* u) const
+    {
+        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        UMatDataAutoLock lock(u);
+
+        if( u->hostCopyObsolete() && u->handle && u->refcount > 0 && u->origdata)
+        {
+            if( u->tempCopiedUMat() )
+            {
+                clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                    u->size, u->origdata, 0, 0, 0);
+            }
+            else
+            {
+                cl_int retval = 0;
+                void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                (CL_MAP_READ | CL_MAP_WRITE),
+                                                0, u->size, 0, 0, 0, &retval);
+                clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                clFinish(q);
+            }
+            u->markHostCopyObsolete(false);
+        }
+        else if( u->copyOnMap() && u->deviceCopyObsolete() && u->data )
+        {
+            clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                 u->size, u->data, 0, 0, 0);
+        }
+    }*/
+
     void deallocate(UMatData* u) const
     {
         if(!u)
             return;
 
         // TODO: !!! when we add Shared Virtual Memory Support,
-        // this function (as well as the others should be corrected)
+        // this function (as well as the others) should be corrected
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
-            if( u->hostCopyObsolete() && u->refcount > 0 && u->tempCopiedUMat() )
+            UMatDataAutoLock lock(u);
+            if( u->hostCopyObsolete() && u->refcount > 0 )
             {
-                clEnqueueWriteBuffer((cl_command_queue)Queue::getDefault().ptr(),
-                                     (cl_mem)u->handle, CL_TRUE, 0,
-                                     u->size, u->origdata, 0, 0, 0);
+                cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+                if( u->tempCopiedUMat() )
+                {
+                    clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                        u->size, u->origdata, 0, 0, 0);
+                }
+                else
+                {
+                    cl_int retval = 0;
+                    void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
+                                                    (CL_MAP_READ | CL_MAP_WRITE),
+                                                    0, u->size, 0, 0, 0, &retval);
+                    clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
+                    clFinish(q);
+                }
             }
             u->markHostCopyObsolete(false);
             clReleaseMemObject((cl_mem)u->handle);
             u->handle = 0;
             u->currAllocator = u->prevAllocator;
-            if(u->data && u->copyOnMap())
+            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
                 fastFree(u->data);
             u->data = u->origdata;
             if(u->refcount == 0)
@@ -2725,8 +2792,12 @@ public:
         }
         else
         {
-            if(u->data && u->copyOnMap())
+            CV_Assert(u->refcount == 0);
+            if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
+            {
                 fastFree(u->data);
+                u->data = 0;
+            }
             clReleaseMemObject((cl_mem)u->handle);
             u->handle = 0;
             delete u;
@@ -2793,15 +2864,18 @@ public:
         UMatDataAutoLock autolock(u);
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        cl_int retval = 0;
         if( !u->copyOnMap() && u->data )
         {
-            CV_Assert( clEnqueueUnmapMemObject(q, (cl_mem)u->handle, u->data, 0, 0, 0) >= 0 );
+            CV_Assert( (retval = clEnqueueUnmapMemObject(q,
+                                (cl_mem)u->handle, u->data, 0, 0, 0)) >= 0 );
+            clFinish(q);
             u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
         {
-            CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                            u->size, u->data, 0, 0, 0) >= 0 );
+            CV_Assert( (retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                u->size, u->data, 0, 0, 0)) >= 0 );
         }
         u->markDeviceCopyObsolete(false);
         u->markHostCopyObsolete(false);
@@ -2927,7 +3001,7 @@ public:
             return;
 
         // there should be no user-visible CPU copies of the UMat which we are going to copy to
-        CV_Assert(u->refcount == 0);
+        CV_Assert(u->refcount == 0 || u->tempUMat());
 
         size_t total = 0, new_sz[] = {0, 0, 0};
         size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
@@ -2979,7 +3053,7 @@ public:
 
     void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
               const size_t srcofs[], const size_t srcstep[],
-              const size_t dstofs[], const size_t dststep[], bool sync) const
+              const size_t dstofs[], const size_t dststep[], bool _sync) const
     {
         if(!src || !dst)
             return;
@@ -3023,16 +3097,19 @@ public:
             cl_int retval;
             CV_Assert( (retval = clEnqueueCopyBufferRect(q, (cl_mem)src->handle, (cl_mem)dst->handle,
                                                new_srcofs, new_dstofs, new_sz,
-                                               new_srcstep[0], new_srcstep[1], new_dststep[0], new_dststep[1],
+                                               new_srcstep[0], new_srcstep[1],
+                                               new_dststep[0], new_dststep[1],
                                                0, 0, 0)) >= 0 );
         }
 
         dst->markHostCopyObsolete(true);
         dst->markDeviceCopyObsolete(false);
 
-        if( sync )
+        if( _sync )
             clFinish(q);
     }
+
+    MatAllocator* matStdAllocator;
 };
 
 MatAllocator* getOpenCLAllocator()
