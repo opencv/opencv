@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -1209,16 +1210,45 @@ static LUTFunc lutTab[] =
 
 }
 
+namespace cv {
+
+static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
+{
+    int dcn = _dst.channels(), lcn = _lut.channels(), dtype = _dst.type();
+
+    if (_src.dims() > 2)
+        return false;
+
+    UMat src = _src.getUMat(), lut = _lut.getUMat();
+    _dst.create(src.size(), dtype);
+    UMat dst = _dst.getUMat();
+
+    ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::typeToStr(dst.depth())));
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
+           ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalSize[2] = { dst.cols, dst.rows };
+    return k.run(2, globalSize, NULL, false);
+}
+
+} // cv
+
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
-    Mat src = _src.getMat(), lut = _lut.getMat();
-    int cn = src.channels();
-    int lutcn = lut.channels();
+    int cn = _src.channels(), depth = _src.depth();
+    int lutcn = _lut.channels();
 
     CV_Assert( (lutcn == cn || lutcn == 1) &&
-        lut.total() == 256 && lut.isContinuous() &&
-        (src.depth() == CV_8U || src.depth() == CV_8S) );
-    _dst.create( src.dims, src.size, CV_MAKETYPE(lut.depth(), cn));
+        _lut.total() == 256 && _lut.isContinuous() &&
+        (depth == CV_8U || depth == CV_8S) );
+
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_LUT(_src, _lut, _dst))
+        return;
+
+    Mat src = _src.getMat(), lut = _lut.getMat();
+    _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
     LUTFunc func = lutTab[lut.depth()];
