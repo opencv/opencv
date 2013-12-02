@@ -2378,10 +2378,12 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
     if (cn == 3)
         return false;
 
-    UMat m = _m.getUMat();
-
     ocl::Kernel k("setIdentity", ocl::core::set_identity_oclsrc,
                   format("-D T=%s", ocl::memopTypeToStr(type)));
+    if (k.empty())
+        return false;
+
+    UMat m = _m.getUMat();
     k.args(ocl::KernelArg::WriteOnly(m), ocl::KernelArg::Constant(Mat(1, 1, type, s)));
 
     size_t globalsize[2] = { m.cols, m.rows };

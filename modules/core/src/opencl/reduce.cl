@@ -66,7 +66,7 @@
     dstT temp = convertToDT(src[0]); \
     FUNC(accumulator, temp)
 #define REDUCE_LOCAL_1 \
-    localmem[lid] += accumulator
+    localmem[lid - WGS2_ALIGNED] += accumulator
 #define REDUCE_LOCAL_2 \
     localmem[lid] += localmem[lid2]
 
@@ -78,7 +78,7 @@
 #define REDUCE_GLOBAL \
     accumulator += src[0] == zero ? zero : one
 #define REDUCE_LOCAL_1 \
-    localmem[lid] += accumulator
+    localmem[lid - WGS2_ALIGNED] += accumulator
 #define REDUCE_LOCAL_2 \
     localmem[lid] += localmem[lid2]
 
@@ -95,10 +95,6 @@ __kernel void reduce(__global const uchar * srcptr, int step, int offset, int co
     int  id = get_global_id(0);
 
     __local dstT localmem[WGS2_ALIGNED];
-    if (lid < WGS2_ALIGNED)
-        localmem[lid] = (dstT)(0);
-    barrier(CLK_LOCAL_MEM_FENCE);
-
     DEFINE_ACCUMULATOR;
 
     for (int grain = groupnum * WGS; id < total; id += grain)
@@ -108,11 +104,11 @@ __kernel void reduce(__global const uchar * srcptr, int step, int offset, int co
         REDUCE_GLOBAL;
     }
 
-    if (lid >= WGS2_ALIGNED)
-        localmem[lid - WGS2_ALIGNED] = accumulator;
+    if (lid < WGS2_ALIGNED)
+        localmem[lid] = accumulator;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (lid < WGS2_ALIGNED)
+    if (lid >= WGS2_ALIGNED)
         REDUCE_LOCAL_1;
     barrier(CLK_LOCAL_MEM_FENCE);
 

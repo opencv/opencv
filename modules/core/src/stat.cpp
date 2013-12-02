@@ -480,7 +480,6 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
     int ddepth = std::max(CV_32S, depth), dtype = CV_MAKE_TYPE(ddepth, cn);
-    UMat src = _src.getUMat(), db(1, dbsize, dtype);
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)
@@ -494,6 +493,10 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
                          ocl::typeToStr(type), ocl::typeToStr(dtype), ocl::convertTypeStr(depth, ddepth, cn, cvt),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), db(1, dbsize, dtype);
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
            dbsize, ocl::KernelArg::PtrWriteOnly(db));
 
@@ -611,7 +614,7 @@ namespace cv {
 
 static bool ocl_countNonZero( InputArray _src, int & res )
 {
-    int depth = _src.depth();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (depth == CV_64F && !doubleSupport)
@@ -619,7 +622,6 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
-    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)
@@ -628,8 +630,12 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
                   format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                         ocl::typeToStr(src.type()), (int)wgs,
+                         ocl::typeToStr(type), (int)wgs,
                          wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
            dbsize, ocl::KernelArg::PtrWriteOnly(db));
 
