@@ -109,7 +109,7 @@ __kernel void RGB2Gray(__global const uchar* srcptr, int srcstep, int srcoffset,
                        __global uchar* dstptr, int dststep, int dstoffset,
                        int rows, int cols)
 {
-#if 0
+#if 1
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 

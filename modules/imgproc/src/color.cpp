@@ -2695,7 +2695,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
-    int dims = 2, stripeSize = 32;
+    int dims = 2, stripeSize = 1;
     size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
