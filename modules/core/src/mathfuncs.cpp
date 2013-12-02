@@ -508,6 +508,14 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
          (depth == CV_64F && !doubleSupport) )
         return false;
 
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D BINARY_OP -D dstT=%s -D OP_CTP_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         angleInDegrees ? "AD" : "AR",
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
     UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
     Size size = src1.size();
     CV_Assert( size == src2.size() );
@@ -515,12 +523,6 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
     _dst1.create(size, type);
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
-
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D OP_CTP_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
            ocl::KernelArg::ReadOnlyNoSize(src2),
@@ -690,6 +692,14 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     if ( !doubleSupport && depth == CV_64F )
         return false;
 
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D dstT=%s -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         angleInDegrees ? "AD" : "AR",
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
     UMat mag = _mag.getUMat(), angle = _angle.getUMat();
     Size size = angle.size();
     CV_Assert(mag.size() == size);
@@ -697,12 +707,6 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     _dst1.create(size, type);
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
-
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D BINARY_OP -D OP_PTC_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
            ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
@@ -2037,13 +2041,15 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
          (depth == CV_64F && !doubleSupport) )
         return false;
 
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), type);
-    UMat dst = _dst.getUMat();
-
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D dstT=%s -D OP_POW -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), type);
+    UMat dst = _dst.getUMat();
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
             dstarg = ocl::KernelArg::WriteOnly(dst, cn);

@@ -2598,14 +2598,6 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     if (!doubleSupport && (depth == CV_64F || _src2.depth() == CV_64F))
         return false;
 
-    CV_Assert(type == type2);
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
-    Size size = src1.size();
-    CV_Assert(size == src2.size());
-
-    _dst.create(size, CV_8UC(cn));
-    UMat dst = _dst.getUMat();
-
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D BINARY_OP -D srcT1=%s -D workT=srcT1"
@@ -2613,6 +2605,16 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
                          operationMap[op],
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    CV_Assert(type == type2);
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    Size size = src1.size();
+    CV_Assert(size == src2.size());
+
+    _dst.create(size, CV_8UC(cn));
+    UMat dst = _dst.getUMat();
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
            ocl::KernelArg::ReadOnlyNoSize(src2),
