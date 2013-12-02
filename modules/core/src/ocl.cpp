@@ -2268,8 +2268,8 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     CV_Assert(_globalsize != 0);
     for (int i = 0; i < dims; i++)
     {
-        size_t val = _localsize ? _localsize[i] :
-            dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
+        size_t val = _localsize ? _localsize[i] : 1;
+            //dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
         globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
