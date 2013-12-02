@@ -597,12 +597,6 @@ void* UMat::handle(int /*accessFlags*/) const
         CV_Assert(u->refcount == 0);
         u->currAllocator->unmap(u);
     }
-    /*else if( u->refcount > 0 && (accessFlags & ACCESS_WRITE) )
-    {
-        CV_Error(Error::StsError,
-                 "it's not allowed to access UMat handle for writing "
-                 "while it's mapped; call Mat::release() first for all its mappings");
-    }*/
     return u->handle;
 }
 
