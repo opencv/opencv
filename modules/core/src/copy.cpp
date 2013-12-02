@@ -47,6 +47,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -477,8 +478,72 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     }
 }
 
+
+enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
+
+static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
+{
+    bool ok = true;
+    UMat src = _src.getUMat(), dst;
+
+    Size sz = src.size(), dstSz = sz;
+    int scn = src.channels();
+
+    if (scn==3)
+        return ok = false;
+
+    int typesrc = _src.type();
+    size_t globalsize[] = { src.cols, src.rows };
+
+    ocl::Kernel k;
+    const char * kernelName;
+    int flipType;
+
+    if (flipCode == 0)
+    {
+        kernelName = "arithm_flip_rows";      flipType = FLIP_ROWS;
+    }
+    else if (flipCode > 0)
+    {
+        kernelName = "arithm_flip_cols";      flipType = FLIP_COLS;
+    }
+    else
+    {
+        kernelName = "arithm_flip_rows_cols"; flipType = FLIP_BOTH;
+    }
+
+    int cols = src.cols, rows = src.rows;
+    if ((cols == 1 && flipType == FLIP_COLS) ||
+            (rows == 1 && flipType == FLIP_ROWS) ||
+            (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
+    {
+        _src.copyTo(_dst);
+        return ok;
+    }
+
+    cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
+    rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
+
+    k.create(kernelName, ocl::core::flip_oclsrc,     format( "-D type=%s", ocl::typeToStr(typesrc) ));
+
+    if (!k.empty())
+    {
+        _dst.create(dstSz, typesrc);
+        dst = _dst.getUMat();
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), (int)rows, (int)cols);
+        ok = k.run(2, globalsize, 0, false);
+    }
+    else ok = false;
+    return ok;
+}
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
+    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
+
+    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
+        return;
+
     Mat src = _src.getMat();
 
     CV_Assert( src.dims <= 2 );
