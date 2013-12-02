@@ -77,7 +77,7 @@ namespace cvtest
 #ifdef _MSC_VER
 static void SEHTranslator( unsigned int /*u*/, EXCEPTION_POINTERS* pExp )
 {
-    int code = TS::FAIL_EXCEPTION;
+    TS::FailureCode code = TS::FAIL_EXCEPTION;
     switch( pExp->ExceptionRecord->ExceptionCode )
     {
     case EXCEPTION_ACCESS_VIOLATION:
@@ -121,7 +121,7 @@ static jmp_buf tsJmpMark;
 
 static void signalHandler( int sig_code )
 {
-    int code = TS::FAIL_EXCEPTION;
+    TS::FailureCode code = TS::FAIL_EXCEPTION;
     switch( sig_code )
     {
     case SIGFPE:
@@ -135,7 +135,7 @@ static void signalHandler( int sig_code )
         code = TS::FAIL_EXCEPTION;
     }
 
-    longjmp( tsJmpMark, code );
+    longjmp( tsJmpMark, (int)code );
 }
 
 #endif
@@ -216,7 +216,7 @@ void BaseTest::safe_run( int start_from )
         if( !_code )
             run( start_from );
         else
-            throw _code;
+            throw TS::FailureCode(_code);
         #else
             run( start_from );
         #endif
@@ -226,14 +226,24 @@ void BaseTest::safe_run( int start_from )
             const char* errorStr = cvErrorStr(exc.code);
             char buf[1 << 16];
 
-            sprintf( buf, "OpenCV Error: %s (%s) in %s, file %s, line %d",
+            sprintf( buf, "OpenCV Error:\n\t%s (%s) in %s, file %s, line %d",
                     errorStr, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
+
             ts->set_failed_test_info( TS::FAIL_ERROR_IN_CALLED_FUNC );
+        }
+        catch (const TS::FailureCode& fc)
+        {
+            std::string errorStr = TS::str_from_code(fc);
+            ts->printf(TS::LOG, "General failure:\n\t%s (%d)\n", errorStr.c_str(), fc);
+
+            ts->set_failed_test_info( fc );
         }
         catch (...)
         {
+            ts->printf(TS::LOG, "Unknown failure\n");
+
             ts->set_failed_test_info( TS::FAIL_EXCEPTION );
         }
     }
@@ -404,7 +414,7 @@ TS::~TS()
 } // dtor
 
 
-string TS::str_from_code( int code )
+string TS::str_from_code( const TS::FailureCode code )
 {
     switch( code )
     {
@@ -432,7 +442,7 @@ string TS::str_from_code( int code )
 
 static int tsErrorCallback( int status, const char* func_name, const char* err_msg, const char* file_name, int line, TS* ts )
 {
-    ts->printf(TS::LOG, "OpenCV Error: %s (%s) in %s, file %s, line %d\n", cvErrorStr(status), err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s) in %s, file %s, line %d\n", cvErrorStr(status), err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
 }
 
@@ -485,7 +495,7 @@ void TS::init( const string& modulename )
 
 void TS::set_gtest_status()
 {
-    int code = get_err_code();
+    TS::FailureCode code = get_err_code();
     if( code >= 0 )
         return SUCCEED();
 
@@ -497,7 +507,7 @@ void TS::set_gtest_status()
     if( !output_buf[SUMMARY_IDX].empty() )
         logs += "\n-----------------------------------\n\tSUM: " + output_buf[SUMMARY_IDX];
     if( !output_buf[LOG_IDX].empty() )
-        logs += "\n-----------------------------------\n\tLOG: " + output_buf[LOG_IDX];
+        logs += "\n-----------------------------------\n\tLOG:\n" + output_buf[LOG_IDX];
     if( !output_buf[CONSOLE_IDX].empty() )
         logs += "\n-----------------------------------\n\tCONSOLE: " + output_buf[CONSOLE_IDX];
     logs += "\n-----------------------------------\n";
@@ -532,7 +542,7 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
 void TS::set_failed_test_info( int fail_code )
 {
     if( current_test_info.code >= 0 )
-        current_test_info.code = fail_code;
+        current_test_info.code = TS::FailureCode(fail_code);
 }
 
 #if defined _MSC_VER && _MSC_VER < 1400
