@@ -446,7 +446,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
                             testing::Values((MatDepth)CV_8U, (MatDepth)CV_16S, (MatDepth)CV_32S, (MatDepth)CV_32F),
                             testing::Values(Channels(1), Channels(3), (Channels)4),
                             Bool(), // border isolated or not
-                            Values((BorderType)BORDER_REPLICATE, (BorderType)BORDER_REFLECT,
+                            Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE, (BorderType)BORDER_REFLECT,
                                    (BorderType)BORDER_WRAP, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
