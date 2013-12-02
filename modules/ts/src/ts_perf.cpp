@@ -865,9 +865,18 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpTyp
 
 void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
-    if (a.empty()) return;
-    if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    if (a.empty())
+    {
+        return;
+    }
+    else if (a.isUMat())
+    {
+        return; // TODO current warmup_impl is not useful for GPU-based data
+    }
+    else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    {
         warmup_impl(a.getMat(), wtype);
+    }
     else
     {
         size_t total = a.total();
