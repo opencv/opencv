@@ -759,11 +759,15 @@ endif()
 set(CUDA_VERSION_STRING "${CUDA_VERSION}")
 
 # Support for arm cross compilation with CUDA 5.5
-if(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm" AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
-  set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf" CACHE PATH "Toolkit target location.")
-else()
-  set(CUDA_TOOLKIT_TARGET_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "Toolkit target location.")
+set(__cuda_toolkit_target_dir_initial "${CUDA_TOOLKIT_ROOT_DIR}")
+if(CUDA_VERSION VERSION_GREATER "5.0" AND CMAKE_CROSSCOMPILING AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  if(ANDROID AND EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-androideabi")
+    set(__cuda_toolkit_target_dir_initial "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-androideabi")
+  elseif(EXISTS "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
+    set(__cuda_toolkit_target_dir_initial "${CUDA_TOOLKIT_ROOT_DIR}/targets/armv7-linux-gnueabihf")
+  endif()
 endif()
+set(CUDA_TOOLKIT_TARGET_DIR "${__cuda_toolkit_target_dir_initial}" CACHE PATH "Toolkit target location.")
 mark_as_advanced(CUDA_TOOLKIT_TARGET_DIR)
 
 # Target CPU architecture
