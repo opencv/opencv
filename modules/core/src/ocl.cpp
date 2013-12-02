@@ -2268,8 +2268,8 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     CV_Assert(_globalsize != 0);
     for (int i = 0; i < dims; i++)
     {
-        size_t val = _localsize ? _localsize[i] : 1;
-            //dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
+        size_t val = _localsize ? _localsize[i] :
+            dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
         globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
@@ -2721,7 +2721,7 @@ public:
         return true;
     }
 
-    void sync(UMatData* u) const
+    /*void sync(UMatData* u) const
     {
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         UMatDataAutoLock lock(u);
@@ -2749,19 +2749,19 @@ public:
             clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
                                  u->size, u->data, 0, 0, 0);
         }
-    }
+    }*/
 
     void deallocate(UMatData* u) const
     {
         if(!u)
             return;
-        UMatDataAutoLock lock(u);
 
         // TODO: !!! when we add Shared Virtual Memory Support,
         // this function (as well as the others) should be corrected
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
+            UMatDataAutoLock lock(u);
             if( u->hostCopyObsolete() && u->refcount > 0 )
             {
                 cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -2792,6 +2792,7 @@ public:
         }
         else
         {
+            CV_Assert(u->refcount == 0);
             if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
             {
                 fastFree(u->data);

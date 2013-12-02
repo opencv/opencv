@@ -286,8 +286,6 @@ void UMat::copySize(const UMat& m)
 
 UMat::~UMat()
 {
-    //if( u && u->refcount > 0 )
-    //    u->currAllocator->sync(u);
     release();
     if( step.p != step.buf )
         fastFree(step.p);
