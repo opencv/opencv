@@ -288,7 +288,7 @@ protected:
 
     //_declareHelper declare;
 
-    enum
+    enum WarmUpType
     {
         WARMUP_READ,
         WARMUP_WRITE,
@@ -297,7 +297,7 @@ protected:
     };
 
     void reportMetrics(bool toJUnitXML = false);
-    static void warmup(cv::InputOutputArray a, int wtype = WARMUP_READ);
+    static void warmup(cv::InputOutputArray a, WarmUpType wtype = WARMUP_READ);
 
     performance_metrics& calcMetrics();
     void RunPerfTestBody();
@@ -327,23 +327,23 @@ private:
     static int64 _timeadjustment;
     static int64 _calibrate();
 
-    static void warmup_impl(cv::Mat m, int wtype);
+    static void warmup_impl(cv::Mat m, WarmUpType wtype);
     static int getSizeInBytes(cv::InputArray a);
     static cv::Size getSize(cv::InputArray a);
-    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype = 0);
+    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype);
 
     class CV_EXPORTS _declareHelper
     {
     public:
-        _declareHelper& in(cv::InputOutputArray a1, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_READ);
 
-        _declareHelper& out(cv::InputOutputArray a1, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_WRITE);
 
         _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
