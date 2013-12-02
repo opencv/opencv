@@ -51,86 +51,31 @@
 #endif
 #endif
 
-#ifdef VECTORIZED
-
-__kernel void threshold(__global const T * restrict src, int src_offset, int src_step,
-                        __global T * dst, int dst_offset, int dst_step,
-                        T thresh, T max_val, int max_index, int rows, int cols)
+__kernel void threshold(__global const uchar * srcptr, int src_step, int src_offset,
+                        __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
+                        T thresh, T max_val)
 {
     int gx = get_global_id(0);
     int gy = get_global_id(1);
 
     if (gx < cols && gy < rows)
     {
-        gx *= VECSIZE;
-        int src_index = mad24(gy, src_step, src_offset + gx);
-        int dst_index = mad24(gy, dst_step, dst_offset + gx);
+        int src_index = mad24(gy, src_step, src_offset + gx * (int)sizeof(T));
+        int dst_index = mad24(gy, dst_step, dst_offset + gx * (int)sizeof(T));
 
-#ifdef SRC_ALIGNED
-        VT sdata = *((__global VT *)(src + src_index));
-#else
-        VT sdata = VLOADN(0, src + src_index);
-#endif
-        VT vthresh = (VT)(thresh);
+        T sdata = *(__global const T *)(srcptr + src_index);
+        __global T * dst = (__global T *)(dstptr + dst_index);
 
 #ifdef THRESH_BINARY
-        VT vecValue = sdata > vthresh ? max_val : (VT)(0);
+        dst[0] = sdata > thresh ? max_val : (T)(0);
 #elif defined THRESH_BINARY_INV
-        VT vecValue = sdata > vthresh ? (VT)(0) : max_val;
+        dst[0] = sdata > thresh ? (T)(0) : max_val;
 #elif defined THRESH_TRUNC
-        VT vecValue = sdata > vthresh ? thresh : sdata;
+        dst[0] = sdata > thresh ? thresh : sdata;
 #elif defined THRESH_TOZERO
-        VT vecValue = sdata > vthresh ? sdata : (VT)(0);
+        dst[0] = sdata > thresh ? sdata : (T)(0);
 #elif defined THRESH_TOZERO_INV
-        VT vecValue = sdata > vthresh ? (VT)(0) : sdata;
-#endif
-
-        if (gx + VECSIZE <= max_index)
-#ifdef DST_ALIGNED
-            *(__global VT*)(dst + dst_index) = vecValue;
-#else
-            VSTOREN(vecValue, 0, dst + dst_index);
-#endif
-        else
-        {
-            __attribute__(( aligned(sizeof(VT)) )) T array[VECSIZE];
-            *((VT*)array) = vecValue;
-            #pragma unroll
-            for (int i = 0; i < VECSIZE; ++i)
-                if (gx + i < max_index)
-                    dst[dst_index + i] = array[i];
-        }
-    }
-}
-
-#else
-
-__kernel void threshold(__global const T * restrict src, int src_offset, int src_step,
-                        __global T * dst, int dst_offset, int dst_step,
-                        T thresh, T max_val, int rows, int cols)
-{
-    int gx = get_global_id(0);
-    int gy = get_global_id(1);
-
-    if (gx < cols && gy < rows)
-    {
-        int src_index = mad24(gy, src_step, src_offset + gx);
-        int dst_index = mad24(gy, dst_step, dst_offset + gx);
-
-        T sdata = src[src_index];
-
-#ifdef THRESH_BINARY
-        dst[dst_index] = sdata > thresh ? max_val : (T)(0);
-#elif defined THRESH_BINARY_INV
-        dst[dst_index] = sdata > thresh ? (T)(0) : max_val;
-#elif defined THRESH_TRUNC
-        dst[dst_index] = sdata > thresh ? thresh : sdata;
-#elif defined THRESH_TOZERO
-        dst[dst_index] = sdata > thresh ? sdata : (T)(0);
-#elif defined THRESH_TOZERO_INV
-        dst[dst_index] = sdata > thresh ? (T)(0) : sdata;
+        dst[0] = sdata > thresh ? (T)(0) : sdata;
 #endif
     }
 }
-
-#endif

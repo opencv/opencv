@@ -264,7 +264,7 @@ struct CV_EXPORTS TestUtils
 #define UMAT_UPLOAD_INPUT_PARAMETER(name) \
 { \
     name.copyTo(u ## name); \
-    Size wholeSize; Point ofs; name ## _roi.locateROI(wholeSize, ofs); \
+    Size _wholeSize; Point ofs; name ## _roi.locateROI(_wholeSize, ofs); \
     u ## name ## _roi = u ## name(Rect(ofs.x, ofs.y, name ## _roi.size().width, name ## _roi.size().height)); \
 }
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
