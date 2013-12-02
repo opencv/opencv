@@ -83,12 +83,8 @@ TEST(TestAPI, openCLExecuteKernelInterop)
 TEST(OCL_TestTAPI, performance)
 {
     cv::RNG rng;
-#if 1
     cv::Mat src(1280,768,CV_8UC4), dst;
     rng.fill(src, RNG::UNIFORM, 0, 255);
-#else
-    cv::Mat src = cv::imread("/Users/vp/work/opencv/samples/c/lena.jpg", 1), dst;
-#endif
 
     cv::UMat usrc, udst;
     src.copyTo(usrc);
@@ -130,9 +126,4 @@ TEST(OCL_TestTAPI, performance)
     }
     t = (double)cv::getTickCount() - t;
     printf("cpu exec time = %gms per iter\n", t*1000./niters/cv::getTickFrequency());
-    /*cv::imshow("result0", dst);
-    cv::imshow("result1", udst);
-    cv::waitKey();
-    cv::destroyWindow("result0");
-    cv::destroyWindow("result1");*/
 }

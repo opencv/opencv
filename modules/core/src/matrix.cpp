@@ -48,10 +48,6 @@
 
 namespace cv {
 
-void MatAllocator::sync(UMatData*) const
-{
-}
-
 void MatAllocator::map(UMatData*, int) const
 {
 }
