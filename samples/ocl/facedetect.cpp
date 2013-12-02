@@ -5,121 +5,15 @@
 #include <iostream>
 #include <stdio.h>
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+    # include <thread>
+#endif
+
 using namespace std;
 using namespace cv;
 #define LOOP_NUM 10
 
-///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
-#define MAX_THREADS 8
-
-#if defined _WIN32|| defined _WIN64
-    #include <process.h>
-    #include <windows.h>
-    HANDLE handleThreads[MAX_THREADS];
-#endif
-
-#if defined __linux__ || defined __APPLE__
-    #include <pthread.h>
-    #include <vector>
-#endif
-
-using namespace cv;
-
-#if defined _WIN32|| defined _WIN64
-    void detectFaces(void* str)
-#elif defined __linux__ || defined __APPLE__
-    void* detectFaces(void* str)
-#endif
-{
-    std::string fileName = *(std::string*)str;
-    ocl::OclCascadeClassifier cascade;
-    cascade.load("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml" );//path to haarcascade_frontalface_alt.xml
-    Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
-    if (img.empty())
-    {
-        std::cout << "cann't open file " + fileName <<std::endl;
-        return;
-    }
-
-    ocl::oclMat d_img;
-    d_img.upload(img);
-
-    std::vector<Rect> oclfaces;
-    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
-
-    for(int i = 0; i<oclfaces.size(); i++)
-        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), Scalar( 0, 255, 255 ), 3);
-
-    imwrite("path to result-images location/filename", img);
-
-}
-
-class Thread
-{
-private:
-    Thread* thread;
-public:
-    Thread(int _idx, std::string _fileName);
-    virtual ~Thread()
-    {
-        delete(thread);
-    }
-     virtual void run()
-     {
-         thread->run();
-     }
-     int idx;
-     std::string fileName;
-protected:
-    Thread():thread(NULL){}
-};
-
-class Thread_Win : public Thread
-{
-private:
-    friend class Thread;
-    Thread_Win(){}
-public:
-    ~Thread_Win(){};
-    void run()
-    {
-#if defined _WIN32|| defined _WIN64
-        handleThreads[idx] = (HANDLE)_beginthread(detectFaces, 0, (void*)&fileName);
-        WaitForMultipleObjects(MAX_THREADS, handleThreads, TRUE, INFINITE);
-#endif
-    }
-};
-
-class Thread_Lin : public Thread
-{
- private:
-    friend class Thread;
-    Thread_Lin(){}
-public:
-    ~Thread_Lin(){};
-    void run()
-    {
-#if defined __linux__ || defined __APPLE__
-        pthread_t thread;
-        pthread_create(&thread, NULL, detectFaces, (void*)&fileName);
-        pthread_join  (thread, NULL);
-#endif
-    }
-};
-
-Thread::Thread(int _idx, std::string _fileName)
-{
-#if defined _WIN32|| defined _WIN64
-    thread = new Thread_Win();
-#endif
-#if defined __linux__ || defined __APPLE__
-    thread = new Thread_Lin();
-#endif
-    thread->idx = _idx;
-    thread->fileName = _fileName;
-}
-
-///////////////////////////simple-threading faces detecting///////////////////////////////
+///////////////////////////single-threading faces detecting///////////////////////////////
 
 const static Scalar colors[] =  { CV_RGB(0,0,255),
                                   CV_RGB(0,128,255),
@@ -134,7 +28,7 @@ const static Scalar colors[] =  { CV_RGB(0,0,255),
 
 int64 work_begin = 0;
 int64 work_end = 0;
-string outputName;
+string inputName, outputName, cascadeName;
 
 static void workBegin()
 {
@@ -170,35 +64,11 @@ static void Draw(Mat& img, vector<Rect>& faces, double scale);
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
 
-int facedetect_one_thread(int argc, const char** argv )
+static int facedetect_one_thread(bool useCPU, double scale )
 {
-    const char* keys =
-        "{ h | help       | false       | print help message }"
-        "{ i | input      |             | specify input image }"
-        "{ t | template   | haarcascade_frontalface_alt.xml |"
-        " specify template file path }"
-        "{ c | scale      |   1.0       | scale image }"
-        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
-        "{ o | output     | facedetect_output.jpg  |"
-        " specify output image save path(only works when input is images) }";
-
-    CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
-    {
-        cout << "Usage : facedetect [options]" << endl;
-        cout << "Available options:" << endl;
-        cmd.printParams();
-        return EXIT_SUCCESS;
-    }
-
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;
 
-    bool useCPU = cmd.get<bool>("s");
-    string inputName = cmd.get<string>("i");
-    outputName = cmd.get<string>("o");
-    string cascadeName = cmd.get<string>("t");
-    double scale = cmd.get<double>("c");
     ocl::OclCascadeClassifier cascade;
     CascadeClassifier  cpu_cascade;
 
@@ -288,32 +158,98 @@ int facedetect_one_thread(int argc, const char** argv )
     }
 
     cvDestroyWindow("result");
-    std::cout<< "simple-threading sample was finished" <<std::endl;
+    std::cout<< "single-threaded sample has finished" <<std::endl;
     return 0;
 }
 
-void facedetect_multithreading()
+///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+
+#define MAX_THREADS 10
+
+static void detectFaces(std::string fileName)
 {
-    std::vector<Thread*> threads;
-    for(int i = 0; i<MAX_THREADS; i++)
-        threads.push_back(new Thread(i, "cv/cascadeandhog/images/audrybt1.png") );//path to source picture
-    for(int i = 0; i<MAX_THREADS; i++)
+    ocl::OclCascadeClassifier cascade;
+    cascade.load(cascadeName);
+    Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
+    if (img.empty())
     {
-        threads[i]->run();
+        std::cout << "cann't open file " + fileName <<std::endl;
+        return;
     }
-    for(int i = 0; i<MAX_THREADS; i++)
-    {
-        delete(threads[i]);
-    }
+
+    ocl::oclMat d_img;
+    d_img.upload(img);
+
+    std::vector<Rect> oclfaces;
+    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+
+    for(unsigned int i = 0; i<oclfaces.size(); i++)
+        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), Scalar( 0, 255, 255 ), 3);
+
+    imwrite(std::to_string(_threadid) + outputName, img);
+
 }
+
+static void facedetect_multithreading(int nthreads)
+{
+    int thread_number = MAX_THREADS < nthreads ? MAX_THREADS : nthreads;
+    std::vector<std::thread> threads;
+    for(int i = 0; i<thread_number; i++)
+        threads.push_back(std::thread(detectFaces, inputName));
+    for(int i = 0; i<thread_number; i++)
+        threads[i].join();
+    for(int i = 0; i<thread_number; i++)
+        threads[i].~thread();
+}
+#endif
 
 int main( int argc, const char** argv )
 {
-    std::cout<<"multi-threading sample was running" <<std::endl;
-    facedetect_multithreading();
-    std::cout<<"multi-threading sample was finished" <<std::endl;
-    std::cout<<"simple-threading sample was running" <<std::endl;
-    return facedetect_one_thread(argc,argv);
+
+    const char* keys =
+        "{ h | help       | false       | print help message }"
+        "{ i | input      |             | specify input image }"
+        "{ t | template   | haarcascade_frontalface_alt.xml |"
+        " specify template file path }"
+        "{ c | scale      |   1.0       | scale image }"
+        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ o | output     | facedetect_output.jpg  |"
+        " specify output image save path(only works when input is images) }"
+        "{ n | thread_num |      1      | set number of threads >= 1 }";
+
+    CommandLineParser cmd(argc, argv, keys);
+    if (cmd.get<bool>("help"))
+    {
+        cout << "Usage : facedetect [options]" << endl;
+        cout << "Available options:" << endl;
+        cmd.printParams();
+        return EXIT_SUCCESS;
+    }
+    bool useCPU = cmd.get<bool>("s");
+    inputName = cmd.get<string>("i");
+    outputName = cmd.get<string>("o");
+    cascadeName = cmd.get<string>("t");
+    double scale = cmd.get<double>("c");
+    int n = cmd.get<int>("n");
+
+    if(n > 1)
+    {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+            std::cout<<"multi-threaded sample is running" <<std::endl;
+            facedetect_multithreading(n);
+            std::cout<<"multi-threaded sample has finished" <<std::endl;
+            return 0;
+#else
+            std::cout << "std::thread is not supported, running a single-threaded version" << std::endl;
+#endif
+    }
+    if (n<0)
+        std::cout<<"incorrect number of threads:" << n << ", running a single-threaded version" <<std::endl;
+    else
+        std::cout<<"single-threaded sample is running" <<std::endl;
+    return facedetect_one_thread(useCPU, scale);
+
 }
 
 void detect( Mat& img, vector<Rect>& faces,
