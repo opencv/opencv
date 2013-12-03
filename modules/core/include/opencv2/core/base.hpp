@@ -222,6 +222,23 @@ enum {
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
+#ifdef __GNUC__
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Winvalid-noreturn"
+#  endif
+#endif
+CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(_code, _err, _func, _file, _line);
+}
+#ifdef __GNUC__
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic pop
+#  endif
+#endif
+
+
 #if defined __GNUC__
 #define CV_Func __func__
 #elif defined _MSC_VER
@@ -233,6 +250,9 @@ CV_EXPORTS void error(int _code, const String& _err, const char* _func, const ch
 #define CV_Error( code, msg ) cv::error( code, msg, CV_Func, __FILE__, __LINE__ )
 #define CV_Error_( code, args ) cv::error( code, cv::format args, CV_Func, __FILE__, __LINE__ )
 #define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ )
+
+#define CV_ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
+#define CV_ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
 
 #ifdef _DEBUG
 #  define CV_DbgAssert(expr) CV_Assert(expr)
