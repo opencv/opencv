@@ -56,7 +56,7 @@
   #define CV_XADD(addr,delta) _InterlockedExchangeAdd(const_cast<void*>(reinterpret_cast<volatile void*>(addr)), delta)
 #elif defined __GNUC__
 
-  #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__
+  #if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__
     #ifdef __ATOMIC_SEQ_CST
         #define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), (delta), __ATOMIC_SEQ_CST)
     #else
@@ -66,7 +66,9 @@
 
     #if !(defined WIN32 || defined _WIN32) && (defined __i486__ || defined __i586__ || \
         defined __i686__ || defined __MMX__ || defined __SSE__  || defined __ppc__) || \
-        (defined __GNUC__ && defined _STLPORT_MAJOR)
+        (defined __GNUC__ && defined _STLPORT_MAJOR) || \
+        defined __EMSCRIPTEN__
+
       #define CV_XADD __sync_fetch_and_add
     #else
       #include <ext/atomicity.h>
