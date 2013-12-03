@@ -117,10 +117,9 @@ static int test_FaceDetector(int argc, char *argv[])
     }
 
     std::string cascadeFrontalfilename=cascadefile;
-    cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<cv::CascadeClassifier> cascade = cascade = cv::createCascadeClassifier(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
-    cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
     DetectionBasedTracker::Parameters params;

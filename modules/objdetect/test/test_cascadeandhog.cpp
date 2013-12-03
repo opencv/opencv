@@ -463,7 +463,7 @@ int CV_CascadeDetectorTest::detectMultiScale( int di, const Mat& img,
               pattern.c_str()) == 0 )
         return detectMultiScale_C(filename, di, img, objects);
 
-    CascadeClassifier cascade( filename );
+    Ptr<CascadeClassifier> cascade = createCascadeClassifier( filename );
     if( cascade.empty() )
     {
         ts->printf( cvtest::TS::LOG, "cascade %s can not be opened");
@@ -472,7 +472,7 @@ int CV_CascadeDetectorTest::detectMultiScale( int di, const Mat& img,
     Mat grayImg;
     cvtColor( img, grayImg, COLOR_BGR2GRAY );
     equalizeHist( grayImg, grayImg );
-    cascade.detectMultiScale( grayImg, objects, 1.1, 3, flags[di] );
+    cascade->detectMultiScale( grayImg, objects, 1.1, 3, flags[di] );
     return cvtest::TS::OK;
 }
 

@@ -60,25 +60,25 @@ PERF_TEST(HaarFixture, Haar)
 
     if (RUN_PLAIN_IMPL)
     {
-        CascadeClassifier faceCascade;
-        ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
+        Ptr<CascadeClassifier> faceCascade;
+        ASSERT_TRUE(!(faceCascade = createCascadeClassifier(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml"))).empty())
                 << "can't load haarcascade_frontalface_alt.xml";
 
-        TEST_CYCLE() faceCascade.detectMultiScale(img, faces,
-                                                     1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+        TEST_CYCLE() faceCascade->detectMultiScale(img, faces,
+                    1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
 
         SANITY_CHECK(faces, 4 + 1e-4);
     }
     else if (RUN_OCL_IMPL)
     {
-        ocl::OclCascadeClassifier faceCascade;
+        Ptr<ocl::OclCascadeClassifier> faceCascade;
         ocl::oclMat oclImg(img);
 
-        ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
+        ASSERT_TRUE(!(faceCascade = ocl::createCascadeClassifier(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml"))).empty())
                 << "can't load haarcascade_frontalface_alt.xml";
 
-        OCL_TEST_CYCLE() faceCascade.detectMultiScale(oclImg, faces,
-                                     1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+        OCL_TEST_CYCLE() faceCascade->detectMultiScale(oclImg, faces,
+                        1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
 
         SANITY_CHECK(faces, 4 + 1e-4);
     }

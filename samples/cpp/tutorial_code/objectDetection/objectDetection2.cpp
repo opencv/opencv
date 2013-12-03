@@ -19,8 +19,8 @@ void detectAndDisplay( Mat frame );
 /** Global variables */
 String face_cascade_name = "lbpcascade_frontalface.xml";
 String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
-CascadeClassifier face_cascade;
-CascadeClassifier eyes_cascade;
+Ptr<CascadeClassifier> face_cascade;
+Ptr<CascadeClassifier> eyes_cascade;
 String window_name = "Capture - Face detection";
 /**
  * @function main
@@ -31,8 +31,8 @@ int main( void )
     Mat frame;
 
     //-- 1. Load the cascade
-    if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face cascade\n"); return -1; };
-    if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
+    if( (face_cascade = createCascadeClassifier( face_cascade_name )).empty() ){ printf("--(!)Error loading face cascade\n"); return -1; };
+    if( (eyes_cascade = createCascadeClassifier( eyes_cascade_name )).empty() ){ printf("--(!)Error loading eyes cascade\n"); return -1; };
 
     //-- 2. Read the video stream
     capture.open( -1 );
@@ -68,7 +68,7 @@ void detectAndDisplay( Mat frame )
     equalizeHist( frame_gray, frame_gray );
 
     //-- Detect faces
-    face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0, Size(80, 80) );
+    face_cascade->detectMultiScale( frame_gray, faces, 1.1, 2, 0, Size(80, 80) );
 
     for( size_t i = 0; i < faces.size(); i++ )
     {
@@ -76,7 +76,7 @@ void detectAndDisplay( Mat frame )
         std::vector<Rect> eyes;
 
         //-- In each face, detect eyes
-        eyes_cascade.detectMultiScale( faceROI, eyes, 1.1, 2, 0 |CASCADE_SCALE_IMAGE, Size(30, 30) );
+        eyes_cascade->detectMultiScale( faceROI, eyes, 1.1, 2, 0 |CASCADE_SCALE_IMAGE, Size(30, 30) );
         if( eyes.size() == 2)
         {
             //-- Draw the face

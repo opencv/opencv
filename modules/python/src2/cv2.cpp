@@ -162,6 +162,8 @@ typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
 typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
 typedef std::vector<Scalar> vector_Scalar;
 
+typedef Ptr<CascadeClassifier> Ptr_CascadeClassifier;
+
 static PyObject* failmsgp(const char *fmt, ...)
 {
   char str[1000];

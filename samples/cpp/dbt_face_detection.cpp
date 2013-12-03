@@ -51,10 +51,9 @@ int main(int , char** )
     }
 
     std::string cascadeFrontalfilename = "../../data/lbpcascades/lbpcascade_frontalface.xml";
-    cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<cv::CascadeClassifier> cascade = createCascadeClassifier(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
-    cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
     DetectionBasedTracker::Parameters params;

@@ -186,8 +186,8 @@ CascadeName cascade_frontalface_alt2(std::string("haarcascade_frontalface_alt2.x
 
 PARAM_TEST_CASE(Haar, int, CascadeName)
 {
-    ocl::OclCascadeClassifier cascade, nestedCascade;
-    CascadeClassifier cpucascade, cpunestedCascade;
+    Ptr<ocl::OclCascadeClassifier> cascade, nestedCascade;
+    Ptr<CascadeClassifier> cpucascade, cpunestedCascade;
 
     int flags;
     std::string cascadeName;
@@ -199,8 +199,8 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
     {
         flags = GET_PARAM(0);
         cascadeName = (std::string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
-        ASSERT_TRUE(cascade.load( cascadeName ));
-        ASSERT_TRUE(cpucascade.load(cascadeName));
+        ASSERT_TRUE(!(cascade = ocl::createCascadeClassifier( cascadeName )).empty());
+        ASSERT_TRUE(!(cpucascade = createCascadeClassifier(cascadeName)).empty());
         img = readImage("cv/shared/lena.png", IMREAD_GRAYSCALE);
         ASSERT_FALSE(img.empty());
         equalizeHist(img, img);
@@ -210,11 +210,11 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
 
 OCL_TEST_P(Haar, FaceDetect)
 {
-    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3,
+    cascade->detectMultiScale(d_img, oclfaces,  1.1, 3,
                                 flags,
                                 Size(30, 30), Size(0, 0));
 
-    cpucascade.detectMultiScale(img, faces,  1.1, 3,
+    cpucascade->detectMultiScale(img, faces,  1.1, 3,
                                 flags,
                                 Size(30, 30), Size(0, 0));
 
