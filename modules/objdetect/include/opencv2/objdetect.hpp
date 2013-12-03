@@ -182,7 +182,7 @@ public:
     virtual bool isOldFormatCascade() const = 0;
     virtual Size getOriginalWindowSize() const = 0;
     virtual int getFeatureType() const = 0;
-    virtual bool setImage( InputArray ) = 0;
+    virtual bool setImage( InputArray image ) = 0;
     virtual void* getOldCascade() = 0;
 
     class CV_EXPORTS MaskGenerator

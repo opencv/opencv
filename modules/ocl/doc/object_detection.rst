@@ -9,7 +9,7 @@ ocl::OclCascadeClassifier
 
 Cascade classifier class used for object detection. Supports HAAR cascade classifier  in the form of cross link ::
 
-    class CV_EXPORTS OclCascadeClassifier : public CascadeClassifier
+    class CV_EXPORTS OclCascadeClassifier : public Algorithm
     {
     public:
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
