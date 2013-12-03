@@ -43,6 +43,7 @@
 #include "Iex.h"
 #include <ImfMisc.h>
 #include <ImfChannelList.h>
+#include <algorithm> // for std::max()
 
 
 namespace Imf {
