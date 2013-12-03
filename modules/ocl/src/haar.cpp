@@ -923,7 +923,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
                 //use known local data stride to precalulate indexes
                 int DATA_SIZE_X = (localThreads[0]+cascade->orig_window_size.width);
                 // check that maximal value is less than maximal unsigned short
-                assert(DATA_SIZE_X*cascade->orig_window_size.height+cascade->orig_window_size.width < USHRT_MAX);
+                assert(DATA_SIZE_X*cascade->orig_window_size.height+cascade->orig_window_size.width < (int)USHRT_MAX);
                 for(int i = 0;i<nodenum;++i)
                 {//process each node from classifier
                     struct NodePK

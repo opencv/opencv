@@ -14,6 +14,19 @@ using cv::FileNodeIterator;
 using cv::ParallelLoopBody;
 
 
+using cv::Size;
+using cv::Mat;
+using cv::Point;
+using cv::FileStorage;
+using cv::Rect;
+using cv::Ptr;
+using cv::FileNode;
+using cv::Mat_;
+using cv::Range;
+using cv::FileNodeIterator;
+using cv::ParallelLoopBody;
+
+
 #include "boost.h"
 #include "cascadeclassifier.h"
 #include <queue>

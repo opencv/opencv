@@ -189,11 +189,8 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-static bool __deviceSelected = false;
 static bool selectOpenCLDevice()
 {
-    __deviceSelected = true;
-
     std::string platform;
     std::vector<std::string> deviceTypes;
     std::string deviceName;
@@ -528,26 +525,38 @@ private:
 
 static ContextImpl* currentContext = NULL;
 
+static bool __deviceSelected = false;
+
 Context* Context::getContext()
 {
     if (currentContext == NULL)
     {
-        if (!__initialized || !__deviceSelected)
+        static bool defaultInitiaization = false;
+        if (!defaultInitiaization)
         {
             cv::AutoLock lock(getInitializationMutex());
-            if (!__initialized)
+            try
             {
-                if (initializeOpenCLDevices() == 0)
+                if (!__initialized)
                 {
-                    CV_Error(Error::OpenCLInitError, "OpenCL not available");
+                    if (initializeOpenCLDevices() == 0)
+                    {
+                        CV_Error(Error::OpenCLInitError, "OpenCL not available");
+                    }
                 }
+                if (!__deviceSelected)
+                {
+                    if (!selectOpenCLDevice())
+                    {
+                        CV_Error(Error::OpenCLInitError, "Can't select OpenCL device");
+                    }
+                }
+                defaultInitiaization = true;
             }
-            if (!__deviceSelected)
+            catch (...)
             {
-                if (!selectOpenCLDevice())
-                {
-                    CV_Error(Error::OpenCLInitError, "Can't select OpenCL device");
-                }
+                defaultInitiaization = true;
+                throw;
             }
         }
         CV_Assert(currentContext != NULL);
@@ -744,10 +753,16 @@ int getOpenCLDevices(std::vector<const DeviceInfo*> &devices, int deviceType, co
 
 void setDevice(const DeviceInfo* info)
 {
-    if (!__deviceSelected)
+    try
+    {
+        ContextImpl::setContext(info);
         __deviceSelected = true;
-
-    ContextImpl::setContext(info);
+    }
+    catch (...)
+    {
+        __deviceSelected = true;
+        throw;
+    }
 }
 
 bool supportsFeature(FEATURE_TYPE featureType)
