@@ -78,9 +78,9 @@ JNIEXPORT jlong JNICALL Java_org_opencv_samples_facedetect_DetectionBasedTracker
     try
     {
         cv::Ptr<CascadeDetectorAdapter> mainDetector = makePtr<CascadeDetectorAdapter>(
-            makePtr<CascadeClassifier>(stdFileName));
+            createCascadeClassifier(stdFileName));
         cv::Ptr<CascadeDetectorAdapter> trackingDetector = makePtr<CascadeDetectorAdapter>(
-            makePtr<CascadeClassifier>(stdFileName));
+            createCascadeClassifier(stdFileName));
         result = (jlong)new DetectorAgregator(mainDetector, trackingDetector);
         if (faceSize > 0)
         {

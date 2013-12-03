@@ -114,18 +114,18 @@ protected:
         int featureType;
         int ncategories;
         Size origWinSize;
-        
+
         std::vector<Stage> stages;
         std::vector<DTree> classifiers;
         std::vector<DTreeNode> nodes;
         std::vector<float> leaves;
         std::vector<int> subsets;
     };
-    
+
     Data data;
     Ptr<FeatureEvaluator> featureEvaluator;
     Ptr<CvHaarClassifierCascade> oldCascade;
-    
+
     Ptr<MaskGenerator> maskGenerator;
 };
 

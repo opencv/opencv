@@ -5,7 +5,7 @@ Object Detection
 
 ocl::OclCascadeClassifier
 -----------------------------
-.. ocv:class:: ocl::OclCascadeClassifier : public CascadeClassifier
+.. ocv:class:: ocl::OclCascadeClassifier : public Algorithm
 
 Cascade classifier class used for object detection. Supports HAAR cascade classifier  in the form of cross link ::
 
@@ -13,8 +13,8 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
     {
     public:
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
-                                              double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
-                                              Size minSize = Size(), Size maxSize = Size());
+                                  double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                                  Size minSize = Size(), Size maxSize = Size());
     };
 
 .. note::
@@ -25,7 +25,7 @@ ocl::OclCascadeClassifier::detectMultiScale
 ------------------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
+.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
 
     :param faces: Vector of rectangles where each rectangle contains the detected object.
 

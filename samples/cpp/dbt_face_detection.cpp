@@ -54,6 +54,7 @@ int main(int , char** )
     cv::Ptr<cv::CascadeClassifier> cascade = createCascadeClassifier(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
+    cascade = createCascadeClassifier(cascadeFrontalfilename);
     cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
     DetectionBasedTracker::Parameters params;
