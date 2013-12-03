@@ -2695,6 +2695,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     UMat src = _src.getUMat(), dst;
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels(), depth = src.depth(), bidx;
+    int dims = 2, stripeSize = 1;
     size_t globalsize[] = { src.cols, src.rows };
     ocl::Kernel k;
 
@@ -2765,7 +2766,9 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
         dcn = 1;
         k.create("RGB2Gray", ocl::imgproc::cvtcolor_oclsrc,
-                 format("-D depth=%d -D scn=%d -D dcn=1 -D bidx=%d", depth, scn, bidx));
+                 format("-D depth=%d -D scn=%d -D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d",
+                        depth, scn, bidx, stripeSize));
+        globalsize[0] = (src.cols + stripeSize-1)/stripeSize;
         break;
     }
     case COLOR_GRAY2BGR:
@@ -3027,7 +3030,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
         dst = _dst.getUMat();
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
-        ok = k.run(2, globalsize, 0, false);
+        ok = k.run(dims, globalsize, 0, false);
     }
     return ok;
 }

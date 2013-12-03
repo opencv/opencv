@@ -62,6 +62,17 @@ UMatData::UMatData(const MatAllocator* allocator)
     userdata = 0;
 }
 
+UMatData::~UMatData()
+{
+    prevAllocator = currAllocator = 0;
+    urefcount = refcount = 0;
+    data = origdata = 0;
+    size = 0;
+    flags = 0;
+    handle = 0;
+    userdata = 0;
+}
+
 void UMatData::lock()
 {
     umatLocks[(size_t)(void*)this % UMAT_NLOCKS].lock();
@@ -75,7 +86,9 @@ void UMatData::unlock()
 
 MatAllocator* UMat::getStdAllocator()
 {
-    return ocl::getOpenCLAllocator();
+    if( ocl::haveOpenCL() )
+        return ocl::getOpenCLAllocator();
+    return Mat::getStdAllocator();
 }
 
 void swap( UMat& a, UMat& b )
@@ -195,13 +208,21 @@ static void finalizeHdr(UMat& m)
 UMat Mat::getUMat(int accessFlags) const
 {
     UMat hdr;
-    if(!u)
+    if(!data)
         return hdr;
-    UMat::getStdAllocator()->allocate(u, accessFlags);
+    UMatData* temp_u = u;
+    if(!temp_u)
+    {
+        MatAllocator *a = allocator, *a0 = getStdAllocator();
+        if(!a)
+            a = a0;
+        temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags);
+    }
+    UMat::getStdAllocator()->allocate(temp_u, accessFlags);
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
-    hdr.u = u;
+    hdr.u = temp_u;
     hdr.offset = data - datastart;
     return hdr;
 }
@@ -237,13 +258,13 @@ void UMat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, step.p);
+            u = a->allocate(dims, size, _type, 0, step.p, 0);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, step.p);
+                u = a0->allocate(dims, size, _type, 0, step.p, 0);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -260,6 +281,14 @@ void UMat::copySize(const UMat& m)
         size[i] = m.size[i];
         step[i] = m.step[i];
     }
+}
+
+
+UMat::~UMat()
+{
+    release();
+    if( step.p != step.buf )
+        fastFree(step.p);
 }
 
 void UMat::deallocate()
@@ -546,7 +575,7 @@ Mat UMat::getMat(int accessFlags) const
 {
     if(!u)
         return Mat();
-    u->currAllocator->map(u, accessFlags);
+    u->currAllocator->map(u, accessFlags | ACCESS_READ);
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.u = u;
@@ -568,12 +597,6 @@ void* UMat::handle(int /*accessFlags*/) const
         CV_Assert(u->refcount == 0);
         u->currAllocator->unmap(u);
     }
-    /*else if( u->refcount > 0 && (accessFlags & ACCESS_WRITE) )
-    {
-        CV_Error(Error::StsError,
-                 "it's not allowed to access UMat handle for writing "
-                 "while it's mapped; call Mat::release() first for all its mappings");
-    }*/
     return u->handle;
 }
 

@@ -75,6 +75,10 @@
     #error "invalid depth: should be 0 (CV_8U), 2 (CV_16U) or 5 (CV_32F)"
 #endif
 
+#ifndef STRIPE_SIZE
+#define STRIPE_SIZE 1
+#endif
+
 #define CV_DESCALE(x,n) (((x) + (1 << ((n)-1))) >> (n))
 
 enum
@@ -105,6 +109,7 @@ __kernel void RGB2Gray(__global const uchar* srcptr, int srcstep, int srcoffset,
                        __global uchar* dstptr, int dststep, int dstoffset,
                        int rows, int cols)
 {
+#if 1
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
@@ -118,6 +123,26 @@ __kernel void RGB2Gray(__global const uchar* srcptr, int srcstep, int srcoffset,
         dst[0] = (DATA_TYPE)CV_DESCALE((src[bidx] * B2Y + src[1] * G2Y + src[(bidx^2)] * R2Y), yuv_shift);
 #endif
     }
+#else
+    const int x_min = get_global_id(0)*STRIPE_SIZE;
+    const int x_max = min(x_min + STRIPE_SIZE, cols);
+    const int y = get_global_id(1);
+
+    if( y < rows )
+    {
+        __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr +
+                                        mad24(y, srcstep, srcoffset)) + x_min*scn;
+        __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + mad24(y, dststep, dstoffset));
+        int x;
+        for( x = x_min; x < x_max; x++, src += scn )
+#ifdef DEPTH_5
+        dst[x] = src[bidx] * 0.114f + src[1] * 0.587f + src[(bidx^2)] * 0.299f;
+#else
+        dst[x] = (DATA_TYPE)(mad24(src[bidx], B2Y, mad24(src[1], G2Y,
+                        mad24(src[(bidx^2)], R2Y, 1 << (yuv_shift-1)))) >> yuv_shift);
+#endif
+    }
+#endif
 }
 
 __kernel void Gray2RGB(__global const uchar* srcptr, int srcstep, int srcoffset,
