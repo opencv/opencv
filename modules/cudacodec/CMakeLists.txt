@@ -1,4 +1,4 @@
-if(ANDROID OR IOS OR APPLE)
+if(IOS OR APPLE)
   ocv_module_disable(cudacodec)
 endif()
 

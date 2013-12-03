@@ -47,6 +47,13 @@
 /////////////////////////////////Macro for border type////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+#if defined (DOUBLE_SUPPORT) && defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#define FPTYPE double
+#else
+#define FPTYPE float
+#endif
+
 #ifdef BORDER_CONSTANT
 #elif defined BORDER_REPLICATE
 #define EXTRAPOLATE(x, maxV) \
@@ -116,7 +123,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
     int dst_startY = (gY << 1) + dst_y_off;
 
     float dx_data[ksY+1],dy_data[ksY+1], data[3][ksY+1];
-    __local float temp[6][THREADS];
+    __local FPTYPE temp[6][THREADS];
 
 #ifdef BORDER_CONSTANT
     for (int i=0; i < ksY+1; i++)
@@ -136,7 +143,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #else
-    int clamped_col = min(dst_cols, col);
+    int clamped_col = min(2*dst_cols, col);
     for (int i=0; i < ksY+1; i++)
     {
         int dx_selected_row = dx_startY+i, dx_selected_col = dx_startX+clamped_col;
@@ -154,7 +161,7 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #endif
-    float sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f;
+    FPTYPE sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f;
     for (int i=1; i < ksY; i++)
     {
         sum0 += data[0][i];
@@ -162,16 +169,16 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         sum2 += data[2][i];
     }
 
-    float sum01 = sum0 + data[0][0];
-    float sum02 = sum0 + data[0][ksY];
+    FPTYPE sum01 = sum0 + data[0][0];
+    FPTYPE sum02 = sum0 + data[0][ksY];
     temp[0][col] = sum01;
     temp[1][col] = sum02;
-    float sum11 = sum1 + data[1][0];
-    float sum12 = sum1 + data[1][ksY];
+    FPTYPE sum11 = sum1 + data[1][0];
+    FPTYPE sum12 = sum1 + data[1][ksY];
     temp[2][col] = sum11;
     temp[3][col] = sum12;
-    float sum21 = sum2 + data[2][0];
-    float sum22 = sum2 + data[2][ksY];
+    FPTYPE sum21 = sum2 + data[2][0];
+    FPTYPE sum22 = sum2 + data[2][ksY];
     temp[4][col] = sum21;
     temp[5][col] = sum22;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -184,8 +191,14 @@ __kernel void calcHarris(__global const float *Dx, __global const float *Dy, __g
         int till = (ksX + 1)%2;
         float tmp_sum[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
         for (int k=0; k<6; k++)
+        {
+            FPTYPE temp_sum = 0;
             for (int i=-anX; i<=anX - till; i++)
-                tmp_sum[k] += temp[k][col+i];
+            {
+                temp_sum += temp[k][col+i];
+            }
+            tmp_sum[k] = temp_sum;
+        }
 
         if (posX < dst_cols && (posY) < dst_rows)
         {

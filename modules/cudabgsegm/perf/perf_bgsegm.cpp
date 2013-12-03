@@ -89,6 +89,8 @@ DEF_PARAM_TEST_1(Video, string);
 PERF_TEST_P(Video, FGDStatModel,
             Values(string("gpu/video/768x576.avi")))
 {
+    const int numIters = 10;
+
     declare.time(60);
 
     const string inputFile = perf::TestBase::getDataPath(GetParam());
@@ -107,16 +109,34 @@ PERF_TEST_P(Video, FGDStatModel,
         cv::Ptr<cv::cuda::BackgroundSubtractorFGD> d_fgd = cv::cuda::createBackgroundSubtractorFGD();
         d_fgd->apply(d_frame, foreground);
 
-        for (int i = 0; i < 10; ++i)
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
 
             d_frame.upload(frame);
 
-            startTimer(); next();
+            startTimer();
+            if(!next())
+                break;
+
             d_fgd->apply(d_frame, foreground);
+
             stopTimer();
+        }
+
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            d_frame.upload(frame);
+
+            d_fgd->apply(d_frame, foreground);
         }
 
         CUDA_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
@@ -134,16 +154,34 @@ PERF_TEST_P(Video, FGDStatModel,
         IplImage ipl_frame = frame;
         cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
-        for (int i = 0; i < 10; ++i)
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
 
             ipl_frame = frame;
 
-            startTimer(); next();
+            startTimer();
+            if(!next())
+                break;
+
             cvUpdateBGStatModel(&ipl_frame, model);
+
             stopTimer();
+        }
+
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            ipl_frame = frame;
+
+            cvUpdateBGStatModel(&ipl_frame, model);
         }
 
         const cv::Mat background = cv::cvarrToMat(model->background);
@@ -171,6 +209,8 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
                     CUDA_CHANNELS_1_3_4,
                     Values(0.0, 0.01)))
 {
+    const int numIters = 10;
+
     const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     const int cn = GET_PARAM(1);
     const float learningRate = static_cast<float>(GET_PARAM(2));
@@ -202,7 +242,10 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
 
         d_mog->apply(d_frame, foreground, learningRate);
 
-        for (int i = 0; i < 10; ++i)
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
@@ -219,21 +262,17 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
 
             d_frame.upload(frame);
 
-            startTimer(); next();
+            startTimer();
+            if(!next())
+                break;
+
             d_mog->apply(d_frame, foreground, learningRate);
+
             stopTimer();
         }
 
-        CUDA_SANITY_CHECK(foreground);
-    }
-    else
-    {
-        cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
-        cv::Mat foreground;
-
-        mog->apply(frame, foreground, learningRate);
-
-        for (int i = 0; i < 10; ++i)
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
@@ -248,9 +287,64 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
                 cv::swap(temp, frame);
             }
 
-            startTimer(); next();
+            d_frame.upload(frame);
+
+            d_mog->apply(d_frame, foreground, learningRate);
+        }
+
+        CUDA_SANITY_CHECK(foreground);
+    }
+    else
+    {
+        cv::Ptr<cv::BackgroundSubtractor> mog = cv::createBackgroundSubtractorMOG();
+        cv::Mat foreground;
+
+        mog->apply(frame, foreground, learningRate);
+
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            startTimer();
+            if(!next())
+                break;
+
             mog->apply(frame, foreground, learningRate);
+
             stopTimer();
+        }
+
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            mog->apply(frame, foreground, learningRate);
         }
 
         CPU_SANITY_CHECK(foreground);
@@ -266,10 +360,12 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
 
 DEF_PARAM_TEST(Video_Cn, string, int);
 
-PERF_TEST_P(Video_Cn, MOG2,
+PERF_TEST_P(Video_Cn, DISABLED_MOG2,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
                     CUDA_CHANNELS_1_3_4))
 {
+    const int numIters = 10;
+
     const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     const int cn = GET_PARAM(1);
 
@@ -301,7 +397,10 @@ PERF_TEST_P(Video_Cn, MOG2,
 
         d_mog2->apply(d_frame, foreground);
 
-        for (int i = 0; i < 10; ++i)
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
@@ -318,23 +417,17 @@ PERF_TEST_P(Video_Cn, MOG2,
 
             d_frame.upload(frame);
 
-            startTimer(); next();
+            startTimer();
+            if(!next())
+                break;
+
             d_mog2->apply(d_frame, foreground);
+
             stopTimer();
         }
 
-        CUDA_SANITY_CHECK(foreground);
-    }
-    else
-    {
-        cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2();
-        mog2->setDetectShadows(false);
-
-        cv::Mat foreground;
-
-        mog2->apply(frame, foreground);
-
-        for (int i = 0; i < 10; ++i)
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             ASSERT_FALSE(frame.empty());
@@ -349,9 +442,66 @@ PERF_TEST_P(Video_Cn, MOG2,
                 cv::swap(temp, frame);
             }
 
-            startTimer(); next();
+            d_frame.upload(frame);
+
+            d_mog2->apply(d_frame, foreground);
+        }
+
+        CUDA_SANITY_CHECK(foreground);
+    }
+    else
+    {
+        cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2();
+        mog2->setDetectShadows(false);
+
+        cv::Mat foreground;
+
+        mog2->apply(frame, foreground);
+
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            startTimer();
+            if(!next())
+                break;
+
             mog2->apply(frame, foreground);
+
             stopTimer();
+        }
+
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            ASSERT_FALSE(frame.empty());
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            mog2->apply(frame, foreground);
         }
 
         CPU_SANITY_CHECK(foreground);
@@ -455,6 +605,8 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
                     CUDA_CHANNELS_1_3_4,
                     Values(20, 40, 60)))
 {
+    const int numIters = 150;
+
     const std::string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     const int cn = GET_PARAM(1);
     const int maxFeatures = GET_PARAM(2);
@@ -486,7 +638,10 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
 
         d_gmg->apply(d_frame, foreground);
 
-        for (int i = 0; i < 150; ++i)
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             if (frame.empty())
@@ -508,24 +663,17 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
 
             d_frame.upload(frame);
 
-            startTimer(); next();
+            startTimer();
+            if(!next())
+                break;
+
             d_gmg->apply(d_frame, foreground);
+
             stopTimer();
         }
 
-        CUDA_SANITY_CHECK(foreground);
-    }
-    else
-    {
-        cv::Mat foreground;
-        cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
-
-        cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::createBackgroundSubtractorGMG();
-        gmg->setMaxFeatures(maxFeatures);
-
-        gmg->apply(frame, foreground);
-
-        for (int i = 0; i < 150; ++i)
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
         {
             cap >> frame;
             if (frame.empty())
@@ -545,9 +693,77 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
                 cv::swap(temp, frame);
             }
 
-            startTimer(); next();
+            d_frame.upload(frame);
+
+            d_gmg->apply(d_frame, foreground);
+        }
+
+        CUDA_SANITY_CHECK(foreground);
+    }
+    else
+    {
+        cv::Mat foreground;
+        cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
+
+        cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::createBackgroundSubtractorGMG();
+        gmg->setMaxFeatures(maxFeatures);
+
+        gmg->apply(frame, foreground);
+
+        int i = 0;
+
+        // collect performance data
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            if (frame.empty())
+            {
+                cap.release();
+                cap.open(inputFile);
+                cap >> frame;
+            }
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            startTimer();
+            if(!next())
+                break;
+
             gmg->apply(frame, foreground);
+
             stopTimer();
+        }
+
+        // process last frame in sequence to get data for sanity test
+        for (; i < numIters; ++i)
+        {
+            cap >> frame;
+            if (frame.empty())
+            {
+                cap.release();
+                cap.open(inputFile);
+                cap >> frame;
+            }
+
+            if (cn != 3)
+            {
+                cv::Mat temp;
+                if (cn == 1)
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
+                else
+                    cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
+                cv::swap(temp, frame);
+            }
+
+            gmg->apply(frame, foreground);
         }
 
         CPU_SANITY_CHECK(foreground);
