@@ -5,7 +5,7 @@ Object Detection
 
 ocl::OclCascadeClassifier
 -----------------------------
-.. ocv:class:: ocl::OclCascadeClassifier : public Algorithm
+.. ocv:class:: ocl::OclCascadeClassifier : public ocl::Algorithm
 
 Cascade classifier class used for object detection. Supports HAAR cascade classifier  in the form of cross link ::
 
