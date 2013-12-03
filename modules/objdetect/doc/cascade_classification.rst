@@ -222,7 +222,7 @@ Sets an image for detection.
 
     :param image: Matrix of the type ``CV_8UC1`` containing an image where the features are computed.
 
-The function is automatically called by :ocv:func:`CascadeClassifier::detectMultiScale` at every image scale. But if you want to test various locations manually using :ocv:func:`CascadeClassifier::runAt`, you need to call the function before, so that the integral images are computed.
+The function is automatically called by :ocv:func:`CascadeClassifier::detectMultiScale` at every image scale. But if you want to test various locations manually using ``CascadeClassifier::runAt``, you need to call the function before, so that the integral images are computed.
 
 .. note:: in the old API you need to supply integral images (that can be obtained using :ocv:cfunc:`Integral`) instead of the original image.
 
