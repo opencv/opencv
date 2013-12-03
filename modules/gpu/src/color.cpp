@@ -1863,7 +1863,7 @@ void cv::gpu::demosaicing(const GpuMat& src, GpuMat& dst, int code, int dcn, Str
 {
     const int depth = src.depth();
 
-    CV_Assert( src.channels() == 1 );
+    CV_Assert( src.channels() == 1 && !src.empty() );
 
     switch (code)
     {
