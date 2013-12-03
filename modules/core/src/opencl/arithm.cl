@@ -173,7 +173,9 @@
 #define PROCESS_ELEM dstelem = sqrt(srcelem1)
 
 #elif defined OP_LOG
-#define PROCESS_ELEM dstelem = log(abs(srcelem1))
+#define PROCESS_ELEM \
+dstT v = (dstT)(srcelem1);\
+dstelem = v > (dstT)(0) ? log(v) : log(-v)
 
 #elif defined OP_CMP
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
