@@ -59,7 +59,7 @@ enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_
 
 static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGREES", "OP_PHASE_RADIANS", 0 };
 
-bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
+static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
 {
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn1 = CV_MAT_CN(type1);
     int type2 = _src2.type(), cn2 = CV_MAT_CN(type2);
