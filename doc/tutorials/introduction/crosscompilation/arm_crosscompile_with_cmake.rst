@@ -105,7 +105,7 @@ Building OpenCV
 Enable hardware optimizations
 -----------------------------
 
-Depending on target platfrom architecture different instruction sets can be used. By default
+Depending on target platform architecture different instruction sets can be used. By default
 compiler generates code for armv5l without VFPv3 and NEON extensions. Add ``-DUSE_VFPV3=ON``
 to cmake command line to enable code generation for VFPv3 and ``-DUSE_NEON=ON`` for using
 NEON SIMD extensions.
