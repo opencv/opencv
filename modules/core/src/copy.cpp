@@ -488,8 +488,9 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
     Size sz = src.size(), dstSz = sz;
     int scn = src.channels();
+    int dep = src.depth();
 
-    if (scn==3)
+    if (scn==3 || scn>4)
         return ok = false;
 
     int typesrc = _src.type();
@@ -524,7 +525,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
     rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
 
-    k.create(kernelName, ocl::core::flip_oclsrc,     format( "-D type=%s", ocl::typeToStr(typesrc) ));
+    k.create(kernelName, ocl::core::flip_oclsrc, format( "-D type=%s -D scn=%d", ocl::typeToStr(typesrc), scn));
 
     if (!k.empty())
     {
@@ -539,14 +540,15 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
-    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
-
-    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
-        return;
-
+    
     Mat src = _src.getMat();
 
     CV_Assert( src.dims <= 2 );
+    
+    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
+    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
+        return;
+
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     size_t esz = src.elemSize();
