@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <climits>
 #include <limits>
 
@@ -448,10 +449,77 @@ static SumSqrFunc getSumSqrTab(int depth)
     return sumSqrTab[depth];
 }
 
+template <typename T> Scalar ocl_part_sum(Mat m)
+{
+    CV_Assert(m.rows == 1);
+
+    Scalar s = Scalar::all(0);
+    int cn = m.channels();
+    const T * const ptr = m.ptr<T>(0);
+
+    for (int x = 0, w = m.cols * cn; x < w; )
+        for (int c = 0; c < cn; ++c, ++x)
+            s[c] += ptr[x];
+
+    return s;
+}
+
+enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
+
+static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
+{
+    CV_Assert(sum_op == OCL_OP_SUM || sum_op == OCL_OP_SUM_ABS || sum_op == OCL_OP_SUM_SQR);
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 || _src.dims() > 2 )
+        return false;
+
+    int dbsize = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    int ddepth = std::max(CV_32S, depth), dtype = CV_MAKE_TYPE(ddepth, cn);
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
+
+    static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
+    char cvt[40];
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                  format("-D srcT=%s -D dstT=%s -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(type), ocl::typeToStr(dtype), ocl::convertTypeStr(depth, ddepth, cn, cvt),
+                         opMap[sum_op], (int)wgs, wgs2_aligned,
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), db(1, dbsize, dtype);
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+    size_t globalsize = dbsize * wgs;
+    if (k.run(1, &globalsize, &wgs, true))
+    {
+        typedef Scalar (*part_sum)(Mat m);
+        part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },
+                func = funcs[ddepth - CV_32S];
+        res = func(db.getMat(ACCESS_READ));
+        return true;
+    }
+    return false;
+}
+
 }
 
 cv::Scalar cv::sum( InputArray _src )
 {
+    Scalar _res;
+    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OCL_OP_SUM))
+        return _res;
+
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
 
@@ -542,12 +610,55 @@ cv::Scalar cv::sum( InputArray _src )
     return s;
 }
 
+namespace cv {
+
+static bool ocl_countNonZero( InputArray _src, int & res )
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (depth == CV_64F && !doubleSupport)
+        return false;
+
+    int dbsize = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
+
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                  format("-D srcT=%s -D OP_COUNT_NON_ZERO -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(type), (int)wgs,
+                         wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
+           dbsize, ocl::KernelArg::PtrWriteOnly(db));
+
+    size_t globalsize = dbsize * wgs;
+    if (k.run(1, &globalsize, &wgs, true))
+        return res = saturate_cast<int>(cv::sum(db.getMat(ACCESS_READ))[0]), true;
+    return false;
+}
+
+}
+
 int cv::countNonZero( InputArray _src )
 {
+    CV_Assert( _src.channels() == 1 );
+
+    int res = -1;
+    if (ocl::useOpenCL() && _src.isUMat() && ocl_countNonZero(_src, res))
+        return res;
+
     Mat src = _src.getMat();
     CountNonZeroFunc func = getCountNonZeroTab(src.depth());
 
-    CV_Assert( src.channels() == 1 && func != 0 );
+    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1];
@@ -693,9 +804,54 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     return s*(nz0 ? 1./nz0 : 0);
 }
 
+namespace cv {
+
+static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv )
+{
+    Scalar mean, stddev;
+    if (!ocl_sum(_src, mean, OCL_OP_SUM))
+        return false;
+    if (!ocl_sum(_src, stddev, OCL_OP_SUM_SQR))
+        return false;
+
+    double total = 1.0 / _src.total();
+    int k, j, cn = _src.channels();
+    for (int i = 0; i < cn; ++i)
+    {
+        mean[i] *= total;
+        stddev[i] = std::sqrt(std::max(stddev[i] * total - mean[i] * mean[i] , 0.));
+    }
+
+    for( j = 0; j < 2; j++ )
+    {
+        const double * const sptr = j == 0 ? &mean[0] : &stddev[0];
+        _OutputArray _dst = j == 0 ? _mean : _sdv;
+        if( !_dst.needed() )
+            continue;
+
+        if( !_dst.fixedSize() )
+            _dst.create(cn, 1, CV_64F, -1, true);
+        Mat dst = _dst.getMat();
+        int dcn = (int)dst.total();
+        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
+                   (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
+        double* dptr = dst.ptr<double>();
+        for( k = 0; k < cn; k++ )
+            dptr[k] = sptr[k];
+        for( ; k < dcn; k++ )
+            dptr[k] = 0;
+    }
+
+    return true;
+}
+
+}
 
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
+    if (ocl::useOpenCL() && _src.isUMat() && _mask.empty() && ocl_meanStdDev(_src, _mean, _sdv))
+        return;
+
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
@@ -2602,9 +2758,8 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
 
 double cv::PSNR(InputArray _src1, InputArray _src2)
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    CV_Assert( src1.depth() == CV_8U );
-    double diff = std::sqrt(norm(src1, src2, NORM_L2SQR)/(src1.total()*src1.channels()));
+    CV_Assert( _src1.depth() == CV_8U );
+    double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
     return 20*log10(255./(diff+DBL_EPSILON));
 }
 
