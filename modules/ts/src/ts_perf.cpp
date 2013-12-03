@@ -851,7 +851,7 @@ TestBase::TestBase(): declare(this)
 #endif
 
 
-void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype)
+void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype)
 {
     if (!a.empty())
     {
@@ -862,7 +862,7 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype
         ADD_FAILURE() << "  Uninitialized input/output parameters are not allowed for performance tests";
 }
 
-void TestBase::warmup(cv::InputOutputArray a, int wtype)
+void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
     if (a.empty()) return;
     if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
@@ -974,7 +974,7 @@ bool TestBase::next()
     return has_next;
 }
 
-void TestBase::warmup_impl(cv::Mat m, int wtype)
+void TestBase::warmup_impl(cv::Mat m, WarmUpType wtype)
 {
     switch(wtype)
     {
@@ -1411,14 +1411,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::runs(unsigned int runsNumber
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1426,7 +1426,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1435,7 +1435,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1445,14 +1445,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1460,7 +1460,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1469,7 +1469,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
