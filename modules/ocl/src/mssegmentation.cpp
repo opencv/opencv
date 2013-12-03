@@ -42,6 +42,10 @@
 //
 //M*/
 
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 6)
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
