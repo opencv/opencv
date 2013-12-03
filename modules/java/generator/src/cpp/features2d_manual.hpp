@@ -565,7 +565,7 @@ namespace cv
             cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
         }
 
-        CV_WRAP virtual void detectMultiScale( InputArray image,
+        CV_WRAP void detectMultiScale( InputArray image,
                                        CV_OUT std::vector<Rect>& objects,
                                        CV_OUT std::vector<int>& numDetections,
                                        double scaleFactor=1.1,
@@ -577,7 +577,7 @@ namespace cv
                     scaleFactor, minNeighbors, flags, minSize, maxSize);
         }
 
-        CV_WRAP virtual void detectMultiScale( InputArray image,
+        CV_WRAP void detectMultiScale( InputArray image,
                                        CV_OUT std::vector<Rect>& objects,
                                        CV_OUT std::vector<int>& rejectLevels,
                                        CV_OUT std::vector<double>& levelWeights,
@@ -588,7 +588,8 @@ namespace cv
                                        bool outputRejectLevels = false )
         {
             cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
-                                 scaleFactor, minNeighbors, flags, minSize, maxSize);
+                                 scaleFactor, minNeighbors, flags,
+                                 minSize, maxSize, outputRejectLevels);
         }
 
     private:
