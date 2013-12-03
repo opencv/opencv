@@ -250,7 +250,7 @@ struct TestInfo
     // pointer to the test
     BaseTest* test;
 
-    // failure code (CV_FAIL*)
+    // failure code (TS::FAIL_*)
     int code;
 
     // seed value right before the data for the failed test case is prepared.
@@ -324,7 +324,7 @@ public:
     virtual void set_gtest_status();
 
     // test error codes
-    enum
+    enum FailureCode
     {
         // everything is Ok
         OK=0,
@@ -397,7 +397,7 @@ public:
     RNG& get_rng() { return rng; }
 
     // returns the current error code
-    int get_err_code() { return current_test_info.code; }
+    TS::FailureCode get_err_code() { return TS::FailureCode(current_test_info.code); }
 
     // returns the test extensivity scale
     double get_test_case_count_scale() { return params.test_case_count_scale; }
@@ -405,7 +405,7 @@ public:
     const string& get_data_path() const { return data_path; }
 
     // returns textual description of failure code
-    static string str_from_code( int code );
+    static string str_from_code( const TS::FailureCode code );
 
 protected:
 
