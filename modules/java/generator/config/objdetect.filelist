@@ -1,2 +1,2 @@
-include/opencv2/objdetect/objdetect.hpp
+include/opencv2/objdetect.hpp
 ../java/generator/src/cpp/objdetect_manual.hpp
