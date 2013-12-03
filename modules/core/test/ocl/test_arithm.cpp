@@ -281,11 +281,91 @@ OCL_TEST_P(Subtract, Scalar_Mask)
     }
 }
 
+//////////////////////////////////////// Log /////////////////////////////////////////
+
+typedef ArithmTestBase Log;
+
+OCL_TEST_P(Log, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::log(src1_roi, dst1_roi));
+        OCL_ON(cv::log(usrc1_roi, udst1_roi));
+        Near(1);
+    }
+}
+
+//////////////////////////////////////// Exp /////////////////////////////////////////
+
+typedef ArithmTestBase Exp;
+
+OCL_TEST_P(Exp, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::exp(src1_roi, dst1_roi));
+        OCL_ON(cv::exp(usrc1_roi, udst1_roi));
+        Near(2);
+    }
+}
+
+//////////////////////////////////////// Phase /////////////////////////////////////////
+
+typedef ArithmTestBase Phase;
+
+OCL_TEST_P(Phase, angleInDegree)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::phase(src1_roi, src2_roi, dst1_roi, true));
+        OCL_ON(cv::phase(usrc1_roi, usrc2_roi, udst1_roi, true));
+        Near(1e-2);
+    }
+}
+
+OCL_TEST_P(Phase, angleInRadians)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::phase(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::phase(usrc1_roi, usrc2_roi, udst1_roi));
+        Near(1e-2);
+    }
+}
+
+//////////////////////////////////////// Magnitude /////////////////////////////////////////
+
+typedef ArithmTestBase Magnitude;
+
+OCL_TEST_P(Magnitude, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::magnitude(src1_roi, src2_roi, dst1_roi));
+        OCL_ON(cv::magnitude(usrc1_roi, usrc2_roi, udst1_roi));
+        Near(depth == CV_64F ? 1e-5 : 1e-2);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, ::testing::Values(1, 2, 3, 4), Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Subtract, Combine(OCL_ALL_DEPTHS, ::testing::Values(1, 2, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64F), ::testing::Values(1, 2, 3, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), ::testing::Values(1, 2, 3, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), ::testing::Values(1, 2, 3, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), ::testing::Values(1, 2, 3, 4), Bool()));
 
 } } // namespace cvtest::ocl
 
