@@ -86,7 +86,7 @@ protected:
     class Data
     {
     public:
-        struct CV_EXPORTS DTreeNode
+        struct DTreeNode
         {
             int featureIdx;
             float threshold; // for ordered features only
@@ -94,12 +94,12 @@ protected:
             int right;
         };
 
-        struct CV_EXPORTS DTree
+        struct DTree
         {
             int nodeCount;
         };
 
-        struct CV_EXPORTS Stage
+        struct Stage
         {
             int first;
             int ntrees;
