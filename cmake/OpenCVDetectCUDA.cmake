@@ -88,12 +88,17 @@ if(CUDA_FOUND)
   endif()
 
   if(NOT DEFINED __cuda_arch_bin)
-    if(${CUDA_VERSION} VERSION_LESS "5.0")
-      set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
+    if(ANDROID)
+      set(__cuda_arch_bin "3.2")
+      set(__cuda_arch_ptx "")
     else()
-      set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0 3.5")
+      if(${CUDA_VERSION} VERSION_LESS "5.0")
+        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0")
+      else()
+        set(__cuda_arch_bin "1.1 1.2 1.3 2.0 2.1(2.0) 3.0 3.5")
+      endif()
+      set(__cuda_arch_ptx "3.0")
     endif()
-    set(__cuda_arch_ptx "3.0")
   endif()
 
   set(CUDA_ARCH_BIN ${__cuda_arch_bin} CACHE STRING "Specify 'real' GPU architectures to build binaries for, BIN(PTX) format is supported")
@@ -145,6 +150,11 @@ if(CUDA_FOUND)
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${NVCC_FLAGS_EXTRA})
   set(OpenCV_CUDA_CC "${NVCC_FLAGS_EXTRA}")
 
+  if(ANDROID)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-target-os-variant=Android")
+  endif()
+
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
   OCV_OPTION(CUDA_FAST_MATH "Enable --use_fast_math for CUDA compiler " OFF)
@@ -171,6 +181,14 @@ if(CUDA_FOUND)
       # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
       # but NVCC uses C compiler by default
       string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
+
+      # we remove -Wno-delete-non-virtual-dtor because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-Wno-delete-non-virtual-dtor" "" ${var} "${${var}}")
+
+      # we remove -frtti because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-frtti" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)

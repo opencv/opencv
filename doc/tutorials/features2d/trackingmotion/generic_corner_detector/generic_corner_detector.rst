@@ -20,7 +20,7 @@ Theory
 Code
 ====
 
-This tutorial code's is shown lines below. You can also download it from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp>`_
+This tutorial code's is shown lines below. You can also download it from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp>`_
 
 .. literalinclude:: ../../../../../samples/cpp/tutorial_code/TrackingMotion/cornerDetector_Demo.cpp
    :language: cpp
