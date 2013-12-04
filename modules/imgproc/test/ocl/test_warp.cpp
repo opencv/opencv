@@ -224,7 +224,7 @@ OCL_TEST_P(Resize, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // remap
 
-PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, Border, bool)
+PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderType, bool)
 {
     int srcType, map1Type, map2Type;
     int borderType;
@@ -349,11 +349,11 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType)),
-                            Values((Border)BORDER_CONSTANT,
-                                   (Border)BORDER_REPLICATE,
-                                   (Border)BORDER_WRAP,
-                                   (Border)BORDER_REFLECT,
-                                   (Border)BORDER_REFLECT_101),
+                            Values((BorderType)BORDER_CONSTANT,
+                                   (BorderType)BORDER_REPLICATE,
+                                   (BorderType)BORDER_WRAP,
+                                   (BorderType)BORDER_REFLECT,
+                                   (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
@@ -363,11 +363,11 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, noType)),
-                            Values((Border)BORDER_CONSTANT,
-                                   (Border)BORDER_REPLICATE,
-                                   (Border)BORDER_WRAP,
-                                   (Border)BORDER_REFLECT,
-                                   (Border)BORDER_REFLECT_101),
+                            Values((BorderType)BORDER_CONSTANT,
+                                   (BorderType)BORDER_REPLICATE,
+                                   (BorderType)BORDER_WRAP,
+                                   (BorderType)BORDER_REFLECT,
+                                   (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
 } } // namespace cvtest::ocl

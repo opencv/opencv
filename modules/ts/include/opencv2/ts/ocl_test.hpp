@@ -264,7 +264,7 @@ struct CV_EXPORTS TestUtils
 #define UMAT_UPLOAD_INPUT_PARAMETER(name) \
 { \
     name.copyTo(u ## name); \
-    Size wholeSize; Point ofs; name ## _roi.locateROI(wholeSize, ofs); \
+    Size _wholeSize; Point ofs; name ## _roi.locateROI(_wholeSize, ofs); \
     u ## name ## _roi = u ## name(Rect(ofs.x, ofs.y, name ## _roi.size().width, name ## _roi.size().height)); \
 }
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
@@ -306,7 +306,8 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #define OCL_ALL_CHANNELS Values(1, 2, 3, 4)
 
 CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
-CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_WRAP, BORDER_REFLECT, BORDER_REFLECT_101)
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101)
 
 #define OCL_INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
     INSTANTIATE_TEST_CASE_P(OCL_ ## prefix, test_case_name, generator)
