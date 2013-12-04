@@ -10,12 +10,11 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Jia Haipeng, jiahaipeng95@gmail.com
+//    Elena Gvozdeva, elena.gvozdeva@itseez.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -30,10 +29,10 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -43,20 +42,15 @@
 //
 //M*/
 
-#ifdef DOUBLE_SUPPORT
-#ifdef cl_amd_fp64
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (cl_khr_fp64)
+#if defined (DOUBLE_SUPPORT)
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#elif defined (cl_amd_fp64)
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
 #endif
 
 #define sizeoftype ((int)sizeof(type))
-//#define sizeoftype ((int)sizeof(dep)*scn)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////// flip rows ///////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 __kernel void arithm_flip_rows(__global const uchar* srcptr, int srcstep, int srcoffset,
                                __global uchar* dstptr, int dststep, int dstoffset,
@@ -97,10 +91,6 @@ __kernel void arithm_flip_rows_cols(__global const uchar* srcptr, int srcstep, i
         dst1[0] = src1[0];
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////// flip cols ///////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 __kernel void arithm_flip_cols(__global const uchar* srcptr, int srcstep, int srcoffset,
                                __global uchar* dstptr, int dststep, int dstoffset,
