@@ -60,7 +60,6 @@ void cv::ocl::blendLinear(const oclMat &src1, const oclMat &src2, const oclMat &
     dst.create(src1.size(), src1.type());
 
     size_t globalSize[] = { dst.cols, dst.rows, 1};
-    size_t localSize[] = { 16, 16, 1 };
 
     int depth = dst.depth(), ocn = dst.oclchannels();
     int src1_step = src1.step / src1.elemSize(), src1_offset = src1.offset / src1.elemSize();
@@ -94,6 +93,6 @@ void cv::ocl::blendLinear(const oclMat &src1, const oclMat &src2, const oclMat &
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
 
-    openCLExecuteKernel(src1.clCxt, &blend_linear, "blendLinear", globalSize, localSize, args,
+    openCLExecuteKernel(src1.clCxt, &blend_linear, "blendLinear", globalSize, NULL, args,
                         -1, -1, buildOptions.c_str());
 }

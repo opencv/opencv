@@ -256,6 +256,7 @@ void canny::calcMagnitude_gpu(const oclMat &dx_buf, const oclMat &dy_buf, oclMat
     const char * build_options = L2Grad ? "-D L2GRAD":"";
     openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
+
 void canny::calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad)
 {
     Context *clCxt = dx.clCxt;
@@ -275,10 +276,9 @@ void canny::calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, i
     args.push_back( make_pair( sizeof(cl_int), (void *)&mag.offset));
 
     size_t globalThreads[3] = {cols, rows, 1};
-    size_t localThreads[3]  = {16, 16, 1};
 
     const char * build_options = L2Grad ? "-D L2GRAD":"";
-    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, NULL, args, -1, -1, build_options);
 }
 
 void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh)
@@ -387,7 +387,5 @@ void canny::getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols)
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
 
     size_t globalThreads[3] = {cols, rows, 1};
-    size_t localThreads[3]  = {16, 16, 1};
-
-    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, NULL, args, -1, -1);
 }

@@ -79,7 +79,6 @@ namespace cv
                 int offset_cols = (mat_dst.offset / mat_dst.elemSize()) & (vector_length - 1);
                 int cols = divUp(mat_dst.cols + offset_cols, vector_length);
 
-                size_t localThreads[3]  = { 64, 4, 1 };
                 size_t globalThreads[3] = { cols, mat_dst.rows, 1 };
 
                 int dst_step1 = mat_dst.cols * mat_dst.elemSize();
@@ -118,7 +117,7 @@ namespace cv
                 args.push_back( make_pair( sizeof(cl_int), (void *)&cols));
                 args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1));
 
-                openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, localThreads, args, channels, depth);
+                openCLExecuteKernel(clCxt, &merge_mat, kernelName, globalThreads, NULL, args, channels, depth);
             }
             static void merge(const oclMat *mat_src, size_t n, oclMat &mat_dst)
             {
