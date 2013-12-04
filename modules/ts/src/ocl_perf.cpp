@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -27,10 +26,10 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -40,37 +39,59 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "precomp.hpp"
 
-#define DUMP_PROPERTY_XML(propertyName, propertyValue) \
-    do { \
-        std::stringstream ssName, ssValue;\
-        ssName << propertyName;\
-        ssValue << propertyValue; \
-        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
-    } while (false)
+#include "opencv2/ts/ocl_perf.hpp"
 
-#define DUMP_MESSAGE_STDOUT(msg) \
-    do { \
-        std::cout << msg << std::endl; \
-    } while (false)
+#ifdef HAVE_OPENCL
 
+namespace cvtest {
+namespace ocl {
 
-#include "opencv2/ocl/private/opencl_dumpinfo.hpp"
+namespace perf {
 
-static const char * impls[] =
+void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor)
 {
-    IMPL_OCL,
-    IMPL_PLAIN,
-#ifdef HAVE_OPENCV_GPU
-    IMPL_GPU
-#endif
-};
-
-
-int main(int argc, char ** argv)
-{
-    ::perf::TestBase::setModulePerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
-
-    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, dumpOpenCLDevice())
+    assert(factor > 0);
+    if (!cv::ocl::useOpenCL())
+        return;
+    int cn = CV_MAT_CN(type);
+    int cn_ocl = cn == 3 ? 4 : cn;
+    int type_ocl = CV_MAKE_TYPE(CV_MAT_DEPTH(type), cn_ocl);
+    size_t memSize = size.area() * CV_ELEM_SIZE(type_ocl);
+    const cv::ocl::Device& dev = cv::ocl::Device::getDefault();
+    if (memSize * factor >= dev.maxMemAllocSize())
+    {
+        throw ::perf::TestBase::PerfSkipTestException();
+    }
 }
+
+void randu(InputOutputArray dst)
+{
+    if (dst.depth() == CV_8U)
+    {
+        cv::randu(dst, 0, 256);
+    }
+    else if (dst.depth() == CV_8S)
+    {
+        cv::randu(dst, -128, 128);
+    }
+    else if (dst.depth() == CV_16U)
+    {
+        cv::randu(dst, 0, 1024);
+    }
+    else if (dst.depth() == CV_32F || dst.depth() == CV_64F)
+    {
+        cv::randu(dst, -1.0, 1.0);
+    }
+    else // (dst.depth() == CV_16S || dst.depth() == CV_32S)
+    {
+        cv::randu(dst, -4096, 4096);
+    }
+}
+
+} // namespace perf
+
+}} // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL

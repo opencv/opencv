@@ -19,7 +19,8 @@ static std::vector<std::string> available_impls;
 
 static std::string  param_impl;
 
-static enum PERF_STRATEGY param_strategy = PERF_STRATEGY_BASE;
+static enum PERF_STRATEGY strategyForce = PERF_STRATEGY_DEFAULT;
+static enum PERF_STRATEGY strategyModule = PERF_STRATEGY_BASE;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -684,11 +685,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     }
     else if (perf_strategy == "base")
     {
-        param_strategy = PERF_STRATEGY_BASE;
+        strategyForce = PERF_STRATEGY_BASE;
     }
     else if (perf_strategy == "simple")
     {
-        param_strategy = PERF_STRATEGY_SIMPLE;
+        strategyForce = PERF_STRATEGY_SIMPLE;
     }
     else
     {
@@ -788,16 +789,16 @@ std::string TestBase::getSelectedImpl()
     return param_impl;
 }
 
-enum PERF_STRATEGY TestBase::getPerformanceStrategy()
+enum PERF_STRATEGY TestBase::setModulePerformanceStrategy(enum PERF_STRATEGY strategy)
 {
-    return param_strategy;
+    enum PERF_STRATEGY ret = strategyModule;
+    strategyModule = strategy;
+    return ret;
 }
 
-enum PERF_STRATEGY TestBase::setPerformanceStrategy(enum PERF_STRATEGY strategy)
+enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 {
-    enum PERF_STRATEGY ret = param_strategy;
-    param_strategy = strategy;
-    return ret;
+    return strategyForce == PERF_STRATEGY_DEFAULT ? strategyModule : strategyForce;
 }
 
 
@@ -830,7 +831,7 @@ int64 TestBase::_calibrate()
     _helper h;
     h.PerfTestBody();
     double compensation = h.getMetrics().min;
-    if (param_strategy == PERF_STRATEGY_SIMPLE)
+    if (getCurrentModulePerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         CV_Assert(compensation < 0.01 * cv::getTickFrequency());
         compensation = 0.0f; // simple strategy doesn't require any compensation
@@ -843,7 +844,7 @@ int64 TestBase::_calibrate()
 # pragma warning(push)
 # pragma warning(disable:4355)  // 'this' : used in base member initializer list
 #endif
-TestBase::TestBase(): declare(this)
+TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
 }
 #ifdef _MSC_VER
@@ -864,9 +865,18 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpTyp
 
 void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
-    if (a.empty()) return;
-    if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    if (a.empty())
+    {
+        return;
+    }
+    else if (a.isUMat())
+    {
+        return; // TODO current warmup_impl is not useful for GPU-based data
+    }
+    else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    {
         warmup_impl(a.getMat(), wtype);
+    }
     else
     {
         size_t total = a.total();
@@ -894,6 +904,14 @@ cv::Size TestBase::getSize(cv::InputArray a)
     if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
         return a.size();
     return cv::Size();
+}
+
+PERF_STRATEGY TestBase::getCurrentPerformanceStrategy() const
+{
+    if (strategyForce == PERF_STRATEGY_DEFAULT)
+        return (testStrategy == PERF_STRATEGY_DEFAULT) ? strategyModule : testStrategy;
+    else
+        return strategyForce;
 }
 
 bool TestBase::next()
@@ -924,13 +942,13 @@ bool TestBase::next()
             break;
         }
 
-        if (param_strategy == PERF_STRATEGY_BASE)
+        if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
         {
             has_next = currentIter < nIters && totalTime < timeLimit;
         }
         else
         {
-            assert(param_strategy == PERF_STRATEGY_SIMPLE);
+            assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
                 std::cout << '.' << std::endl;
@@ -1053,7 +1071,7 @@ performance_metrics& TestBase::calcMetrics()
     TimeVector::const_iterator start = times.begin();
     TimeVector::const_iterator end = times.end();
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         //estimate mean and stddev for log(time)
         double gmean = 0;
@@ -1084,7 +1102,7 @@ performance_metrics& TestBase::calcMetrics()
             ++end, --metrics.outliers;
         }
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         metrics.outliers = static_cast<int>(times.size() * param_max_outliers / 100);
         for (unsigned int i = 0; i < metrics.outliers; i++)
@@ -1143,7 +1161,7 @@ void TestBase::validateMetrics()
     ASSERT_GE(m.samples, 1u)
       << "  No time measurements was performed.\nstartTimer() and stopTimer() commands are required for performance tests.";
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         EXPECT_GE(m.samples, param_min_samples)
           << "  Only a few samples are collected.\nPlease increase number of iterations or/and time limit to get reliable performance measurements.";
@@ -1157,7 +1175,7 @@ void TestBase::validateMetrics()
         EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
           << "  Test results are not reliable (too many outliers).";
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
@@ -1476,6 +1494,12 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     TestBase::declareArray(test->outputData, a2, wtype);
     TestBase::declareArray(test->outputData, a3, wtype);
     TestBase::declareArray(test->outputData, a4, wtype);
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::strategy(enum PERF_STRATEGY s)
+{
+    test->testStrategy = s;
     return *this;
 }
 
