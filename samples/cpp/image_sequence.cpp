@@ -9,9 +9,9 @@ using namespace std;
 static void help(char** argv)
 {
     cout << "\nThis sample shows you how to read a sequence of images using the VideoCapture interface.\n"
-         << "Usage: " << argv[0] << " <image_mask> (example mask: example_%%02d.jpg)\n"
+         << "Usage: " << argv[0] << " <image_mask> (example mask: example_%02d.jpg)\n"
          << "Image mask defines the name variation for the input images that have to be read as a sequence. \n"
-         << "Using the mask example_%%02d.jpg will read in images labeled as 'example_00.jpg', 'example_01.jpg', etc."
+         << "Using the mask example_%02d.jpg will read in images labeled as 'example_00.jpg', 'example_01.jpg', etc."
          << endl;
 }
 

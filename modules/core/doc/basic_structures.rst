@@ -3122,5 +3122,5 @@ The above methods are usually enough for users. If you want to make your own alg
  * Make a class and specify ``Algorithm`` as its base class.
  * The algorithm parameters should be the class members. See ``Algorithm::get()`` for the list of possible types of the parameters.
  * Add public virtual method ``AlgorithmInfo* info() const;`` to your class.
- * Add constructor function, ``AlgorithmInfo`` instance and implement the ``info()`` method. The simplest way is to take  http://code.opencv.org/projects/opencv/repository/revisions/master/entry/modules/ml/src/ml_init.cpp as the reference and modify it according to the list of your parameters.
+ * Add constructor function, ``AlgorithmInfo`` instance and implement the ``info()`` method. The simplest way is to take https://github.com/Itseez/opencv/tree/master/modules/ml/src/ml_init.cpp as the reference and modify it according to the list of your parameters.
  * Add some public function (e.g. ``initModule_<mymodule>()``) that calls info() of your algorithm and put it into the same source file as ``info()`` implementation. This is to force C++ linker to include this object file into the target application. See ``Algorithm::create()`` for details.

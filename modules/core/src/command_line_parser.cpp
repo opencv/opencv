@@ -211,16 +211,15 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
             }
             impl->apply_params(k_v[0], k_v[1]);
         }
+        else if (s.length() > 2 && s[0] == '-' && s[1] == '-')
+        {
+            impl->apply_params(s.substr(2), "true");
+        }
         else if (s.length() > 1 && s[0] == '-')
         {
-            for (int h = 0; h < 2; h++)
-            {
-                if (s[0] == '-')
-                    s = s.substr(1, s.length() - 1);
-            }
-            impl->apply_params(s, "true");
+            impl->apply_params(s.substr(1), "true");
         }
-        else if (s[0] != '-')
+        else
         {
             impl->apply_params(jj, s);
             jj++;
