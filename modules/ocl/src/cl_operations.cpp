@@ -114,7 +114,7 @@ cl_mem openCLCreateBuffer(Context *ctx, size_t flag , size_t size)
 //#define CHECK_MEMORY_CORRUPTION
 #define CHECK_MEMORY_CORRUPTION_PRINT_ERROR
 #define CHECK_MEMORY_CORRUPTION_RAISE_ERROR
-static const int __memory_corruption_guard_bytes = 64*1024;
+static const int __memory_corruption_guard_bytes = 4*1024;
 #ifdef CHECK_MEMORY_CORRUPTION
 static const int __memory_corruption_check_pattern = 0x14326547; // change pattern for sizeof(int)==8
 #endif
@@ -290,8 +290,8 @@ void openCLFree(void *devPtr)
         }
 #else
         // TODO FIXIT Attach clReleaseMemObject call to event completion callback
-        Context* ctx = Context::getContext();
-        clFinish(getClCommandQueue(ctx));
+        //Context* ctx = Context::getContext();
+        //clFinish(getClCommandQueue(ctx));
 #endif
         openCLSafeCall(clReleaseMemObject(data.mainBuffer));
     }
