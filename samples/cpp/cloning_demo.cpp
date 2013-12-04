@@ -16,6 +16,9 @@
 
 * The program takes as input a source and a destination image (for 1-3 methods)
 * and ouputs the cloned image.
+*
+* Download test images from opencv_extra folder @github.
+*
 */
 
 #include "opencv2/photo.hpp"
