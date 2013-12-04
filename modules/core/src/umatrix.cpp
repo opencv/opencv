@@ -578,6 +578,7 @@ Mat UMat::getMat(int accessFlags) const
     u->currAllocator->map(u, accessFlags | ACCESS_READ);
     CV_Assert(u->data != 0);
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
+    hdr.flags = flags;
     hdr.u = u;
     hdr.datastart = u->data;
     hdr.data = hdr.datastart + offset;
