@@ -90,28 +90,28 @@ public class ManagerActivity extends Activity
         mInstalledPackageView.setAdapter(mInstalledPacksAdapter);
 
         TextView HardwarePlatformView = (TextView)findViewById(R.id.HardwareValue);
-        int Platfrom = HardwareDetector.DetectKnownPlatforms();
+        int Platform = HardwareDetector.DetectKnownPlatforms();
         int CpuId = HardwareDetector.GetCpuID();
 
-        if (HardwareDetector.PLATFORM_UNKNOWN != Platfrom)
+        if (HardwareDetector.PLATFORM_UNKNOWN != Platform)
         {
-            if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
+            if (HardwareDetector.PLATFORM_TEGRA == Platform)
             {
                 HardwarePlatformView.setText("Tegra");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA2 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA2 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 2");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA3 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA3 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 3");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA4i == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA4i == Platform)
             {
                 HardwarePlatformView.setText("Tegra 4i");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA4 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA4 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 4");
             }
