@@ -170,7 +170,7 @@ inline string JoinPlatform(int platform)
     return result;
 }
 
-inline int SplitPlatfrom(const vector<string>& features)
+inline int SplitPlatform(const vector<string>& features)
 {
     int result = 0;
 
@@ -419,7 +419,7 @@ InstallPath(install_path)
             return;
         }
 
-        Platform = SplitPlatfrom(features);
+        Platform = SplitPlatform(features);
         if (PLATFORM_UNKNOWN != Platform)
         {
             switch (Platform)
