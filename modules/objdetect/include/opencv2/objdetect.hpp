@@ -197,7 +197,7 @@ class CV_EXPORTS_W CascadeClassifier
 {
 public:
     CV_WRAP CascadeClassifier();
-    CV_WRAP explicit CascadeClassifier(const String& filename);
+    CV_WRAP CascadeClassifier(const String& filename);
     ~CascadeClassifier();
     CV_WRAP bool empty() const;
     CV_WRAP bool load( const String& filename );
@@ -234,7 +234,7 @@ public:
 
     void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
     Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();
-protected:
+
     Ptr<BaseCascadeClassifier> cc;
 };
 
