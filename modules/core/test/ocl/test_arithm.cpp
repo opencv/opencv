@@ -47,69 +47,6 @@
 namespace cvtest {
 namespace ocl {
 
-//////////////////////////////////FLIP////////////////////////////////////////////////
-
-PARAM_TEST_CASE(Flip, MatDepth, MatDepth, bool)
-{
-    int src_depth;
-    int cn;
-    bool use_roi;
-
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
-
-    virtual void SetUp()
-    {
-        src_depth = GET_PARAM(0);
-        cn = GET_PARAM(1);
-        use_roi = GET_PARAM(2);
-    }
-
-    void generateTestData()
-    {
-        const int src_type = CV_MAKE_TYPE(src_depth, cn);
-        const int dst_type = CV_MAKE_TYPE(src_depth, cn);
-
-        Size roiSize = randomSize(1, MAX_VALUE);
-        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src, src_roi, roiSize, srcBorder, src_type, 0, 256);
-
-        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, roiSize, dstBorder, dst_type, 5, 16);
-
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
-    }
-
-    void Near(double threshold)
-    {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
-    }
-
-    void performTest(int code, double threshold = 1e-3)
-    {
-        for (int j = 0; j < test_loop_times; j++)
-        {
-            generateTestData();
-
-            OCL_OFF(cv::flip(src_roi, dst_roi, code));
-            OCL_ON(cv::flip( src_roi, dst_roi, code));
-
-            Near(threshold);
-        }
-    }
-};
-
-#define FLIP_ROWS 0
-#define FLIP_COLS 1
-#define FLIP_BOTH() -1
-
-OCL_TEST_P(Flip, FLIP_ROWS) { performTest(FLIP_ROWS);}
-OCL_TEST_P(Flip, FLIP_COLS) { performTest(FLIP_COLS);}
-OCL_TEST_P(Flip, FLIP_BOTH) { performTest(FLIP_BOTH());}
-
-
 //////////////////////////////// LUT /////////////////////////////////////////////////
 
 PARAM_TEST_CASE(Lut, MatDepth, MatDepth, Channels, bool, bool)
@@ -1027,6 +964,46 @@ OCL_TEST_P(Magnitude, Mat)
     }
 }
 
+//////////////////////////////// Flip /////////////////////////////////////////////////
+
+typedef ArithmTestBase Flip;
+
+OCL_TEST_P(Flip, X)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, 0));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, 0));
+        Near(1e-5);
+    }
+}
+
+OCL_TEST_P(Flip, Y)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, 1));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, 1));
+        Near(1e-5);
+    }
+}
+
+OCL_TEST_P(Flip, BOTH)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, -1));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, -1));
+        Near(1e-5);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1056,6 +1033,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 
 } } // namespace cvtest::ocl
 

@@ -486,72 +486,55 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
-    bool ok = true;
-    UMat src = _src.getUMat(), dst;
+    int type = _src.type(), cn = CV_MAT_CN(type);
 
-    Size sz = src.size(), dstSz = sz;
-    int scn = src.channels();
-    int dep = src.depth();
-
-    if (scn==3 || scn>4)
+    if (cn > 4 || cn == 3)
         return false;
 
-    int typesrc = _src.type();
-    size_t globalsize[] = { src.cols, src.rows };
-
-    ocl::Kernel k;
     const char * kernelName;
     int flipType;
 
     if (flipCode == 0)
-    {
-        kernelName = "arithm_flip_rows";      flipType = FLIP_ROWS;
-    }
+        kernelName = "arithm_flip_rows", flipType = FLIP_ROWS;
     else if (flipCode > 0)
-    {
-        kernelName = "arithm_flip_cols";      flipType = FLIP_COLS;
-    }
+        kernelName = "arithm_flip_cols", flipType = FLIP_COLS;
     else
-    {
-        kernelName = "arithm_flip_rows_cols"; flipType = FLIP_BOTH;
-    }
-
-    int cols = src.cols, rows = src.rows;
+        kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
+  
+    Size size = _src.size();
+    int cols = size.width, rows = size.height;
     if ((cols == 1 && flipType == FLIP_COLS) ||
             (rows == 1 && flipType == FLIP_ROWS) ||
             (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
     {
         _src.copyTo(_dst);
-        return ok;
+        return true;
     }
 
+    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc, 
+        format( "-D type=%s", ocl::memopTypeToStr(type)));
+    if (k.empty())
+        return false;
+    
+    _dst.create(size, type);
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    
     cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
     rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
 
-    k.create(kernelName, ocl::core::flip_oclsrc, format( "-D type=%s -D dep=%s -D scn=%d", ocl::typeToStr(typesrc), ocl::typeToStr(dep), scn));
-
-    if (!k.empty())
-    {
-        _dst.create(dstSz, typesrc);
-        dst = _dst.getUMat();
-        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), (int)rows, (int)cols);
-        ok = k.run(2, globalsize, 0, false);
-    }
-    else ok = false;
-    return ok;
+    size_t globalsize[2] = { cols, rows };
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), rows, cols).run(2, globalsize, NULL, false);
 }
 
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
+    CV_Assert( _src.dims() <= 2 );
     
-    Mat src = _src.getMat();
-
-    CV_Assert( src.dims <= 2 );
-    
-    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
+    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
     if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
         return;
-
+    
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     size_t esz = src.elemSize();
