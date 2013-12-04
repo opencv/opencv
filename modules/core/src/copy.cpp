@@ -491,7 +491,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     int dep = src.depth();
 
     if (scn==3 || scn>4)
-        return ok = false;
+        return false;
 
     int typesrc = _src.type();
     size_t globalsize[] = { src.cols, src.rows };
@@ -525,7 +525,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
     rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
 
-    k.create(kernelName, ocl::core::flip_oclsrc, format( "-D type=%s -D scn=%d", ocl::typeToStr(typesrc), scn));
+    k.create(kernelName, ocl::core::flip_oclsrc, format( "-D type=%s -D dep=%s -D scn=%d", ocl::typeToStr(typesrc), ocl::typeToStr(dep), scn));
 
     if (!k.empty())
     {
