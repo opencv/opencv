@@ -286,7 +286,7 @@ public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource2& prog,
-           const String& buildopts, String* errmsg=0);
+           const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);

@@ -2010,6 +2010,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                                   iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
 
             k.create("resizeAREA_FAST", ocl::imgproc::resize_oclsrc, buildOption);
+            if (k.empty())
+                return false;
 
             int smap_tab_size = dst.cols * iscale_x + dst.rows * iscale_y;
             AutoBuffer<int> dmap_tab(dst.cols + dst.rows), smap_tab(smap_tab_size);
@@ -2026,6 +2028,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         {
             buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
+            if (k.empty())
+                return false;
 
             Size ssize = src.size();
             int xytab_size = (ssize.width + ssize.height) << 1;
@@ -3383,6 +3387,78 @@ private:
     const void *ctab;
 };
 
+static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
+                      int interpolation, int borderType, const Scalar& borderValue)
+{
+    int cn = _src.channels(), type = _src.type(), depth = _src.depth();
+
+    if (borderType == BORDER_TRANSPARENT || cn == 3 || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
+            || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
+        return false;
+
+    UMat src = _src.getUMat(), map1 = _map1.getUMat(), map2 = _map2.getUMat();
+
+    if( (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.empty())) ||
+        (map2.type() == CV_16SC2 && (map1.type() == CV_16UC1 || map1.empty())) )
+    {
+        if (map1.type() != CV_16SC2)
+            std::swap(map1, map2);
+    }
+    else
+        CV_Assert( map1.type() == CV_32FC2 || (map1.type() == CV_32FC1 && map2.type() == CV_32FC1) );
+
+    _dst.create(map1.size(), type);
+    UMat dst = _dst.getUMat();
+
+    String kernelName = "remap";
+    if (map1.type() == CV_32FC2 && map2.empty())
+        kernelName += "_32FC2";
+    else if (map1.type() == CV_16SC2)
+    {
+        kernelName += "_16SC2";
+        if (!map2.empty())
+            kernelName += "_16UC1";
+    }
+    else if (map1.type() == CV_32FC1 && map2.type() == CV_32FC1)
+        kernelName += "_2_32FC1";
+    else
+        CV_Error(Error::StsBadArg, "Unsupported map types");
+
+    static const char * const interMap[] = { "INTER_NEAREST", "INTER_LINEAR", "INTER_CUBIC", "INTER_LINEAR", "INTER_LANCZOS" };
+    static const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                           "BORDER_REFLECT_101", "BORDER_TRANSPARENT" };
+    String buildOptions = format("-D %s -D %s -D T=%s", interMap[interpolation], borderMap[borderType], ocl::typeToStr(type));
+
+    if (interpolation != INTER_NEAREST)
+    {
+        char cvt[3][40];
+        int wdepth = std::max(CV_32F, dst.depth());
+        buildOptions = buildOptions
+                      + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
+                               " -D convertToWT2=%s -D WT2=%s",
+                               ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                               ocl::convertTypeStr(wdepth, depth, cn, cvt[0]),
+                               ocl::convertTypeStr(depth, wdepth, cn, cvt[1]),
+                               ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2]),
+                               ocl::typeToStr(CV_MAKE_TYPE(wdepth, 2)));
+    }
+
+    ocl::Kernel k(kernelName.c_str(), ocl::imgproc::remap_oclsrc, buildOptions);
+
+    Mat scalar(1, 1, type, borderValue);
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst),
+            map1arg = ocl::KernelArg::ReadOnlyNoSize(map1),
+            scalararg = ocl::KernelArg::Constant((void*)scalar.data, scalar.elemSize());
+
+    if (map2.empty())
+        k.args(srcarg, dstarg, map1arg, scalararg);
+    else
+        k.args(srcarg, dstarg, map1arg, ocl::KernelArg::ReadOnlyNoSize(map2), scalararg);
+
+    size_t globalThreads[2] = { dst.cols, dst.rows };
+    return k.run(2, globalThreads, NULL, false);
+}
+
 }
 
 void cv::remap( InputArray _src, OutputArray _dst,
@@ -3422,11 +3498,13 @@ void cv::remap( InputArray _src, OutputArray _dst,
         remapLanczos4<Cast<double, double>, float, 1>, 0
     };
 
+    CV_Assert( _map1.size().area() > 0 );
+    CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
+
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
+        return;
+
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
-
-    CV_Assert( map1.size().area() > 0 );
-    CV_Assert( !map2.data || (map2.size() == map1.size()));
-
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
     if( dst.data == src.data )
@@ -3789,6 +3867,89 @@ private:
 };
 #endif
 
+enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
+
+static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
+                              Size dsize, int flags, int borderType, const Scalar& borderValue,
+                              int op_type)
+{
+    CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = depth;
+    double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    int interpolation = flags & INTER_MAX;
+    if( interpolation == INTER_AREA )
+        interpolation = INTER_LINEAR;
+
+    if ( !(borderType == cv::BORDER_CONSTANT &&
+           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
+         (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3)
+        return false;
+
+    const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
+    ocl::ProgramSource2 program = op_type == OCL_OP_AFFINE ?
+                ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
+    const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
+
+    ocl::Kernel k;
+    if (interpolation == INTER_NEAREST)
+    {
+        k.create(kernelName, program,
+                 format("-D INTER_NEAREST -D T=%s%s", ocl::typeToStr(type),
+                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    }
+    else
+    {
+        char cvt[2][50];
+        wdepth = std::max(CV_32S, depth);
+        k.create(kernelName, program,
+                  format("-D INTER_%s -D T=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s",
+                         interpolationMap[interpolation], ocl::typeToStr(type),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
+                         ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    }
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), M0;
+    _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    double M[9];
+    int matRows = (op_type == OCL_OP_AFFINE ? 2 : 3);
+    Mat matM(matRows, 3, CV_64F, M), M1 = _M0.getMat();
+    CV_Assert( (M1.type() == CV_32F || M1.type() == CV_64F) &&
+               M1.rows == matRows && M1.cols == 3 );
+    M1.convertTo(matM, matM.type());
+
+    if( !(flags & WARP_INVERSE_MAP) )
+    {
+        if (op_type == OCL_OP_PERSPECTIVE)
+            invert(matM, matM);
+        else
+        {
+            double D = M[0]*M[4] - M[1]*M[3];
+            D = D != 0 ? 1./D : 0;
+            double A11 = M[4]*D, A22=M[0]*D;
+            M[0] = A11; M[1] *= -D;
+            M[3] *= -D; M[4] = A22;
+            double b1 = -M[0]*M[2] - M[1]*M[5];
+            double b2 = -M[3]*M[2] - M[4]*M[5];
+            M[2] = b1; M[5] = b2;
+        }
+    }
+    matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
+           ocl::KernelArg::Constant(Mat(1, 1, CV_MAKE_TYPE(wdepth, cn), borderValue)));
+
+    size_t globalThreads[2] = { dst.cols, dst.rows };
+    return k.run(2, globalThreads, NULL, false);
+}
+
 }
 
 
@@ -3796,6 +3957,11 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+        ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
+                                            borderValue, OCL_OP_AFFINE))
+        return;
+
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
@@ -4035,11 +4201,17 @@ private:
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
                           Size dsize, int flags, int borderType, const Scalar& borderValue )
 {
+    CV_Assert( _src.total() > 0 );
+
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+                              OCL_OP_PERSPECTIVE))
+        return;
+
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
     Mat dst = _dst.getMat();
 
-    CV_Assert( src.cols > 0 && src.rows > 0 );
     if( dst.data == src.data )
         src = src.clone();
 
