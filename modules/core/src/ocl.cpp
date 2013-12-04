@@ -3145,7 +3145,7 @@ const char* memopTypeToStr(int t)
         "ushort", "ushort2", "ushort3", "ushort4",
         "int", "int2", "int3", "int4",
         "int", "int2", "int3", "int4",
-        "long", "long2", "long3", "long4",
+        "int2", "int4", "?", "int8",
         "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(t);

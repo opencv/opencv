@@ -57,19 +57,22 @@
           -D workDepth=<work depth> [-D cn=<num channels>]" - for mixed-type operations
 */
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #elif defined (cl_amd_fp64)
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
 #endif
+#define CV_EPSILON DBL_EPSILON
+#define CV_PI M_PI
+#else
+#define CV_EPSILON FLT_EPSILON
+#define CV_PI M_PI_F
 #endif
 
-#define CV_32S 4
-#define CV_32F 5
-
 #define dstelem *(__global dstT*)(dstptr + dst_index)
-#define noconvert(x) x
+#define dstelem2 *(__global dstT*)(dstptr2 + dst_index2)
+#define noconvert
 
 #ifndef workT
 
@@ -88,6 +91,7 @@
 #endif
 
 #define EXTRA_PARAMS
+#define EXTRA_INDEX
 
 #if defined OP_ADD
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1 + srcelem2)
@@ -99,7 +103,9 @@
 #define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
 
 #elif defined OP_ABSDIFF
-#define PROCESS_ELEM dstelem = abs_diff(srcelem1, srcelem2)
+#define PROCESS_ELEM \
+    workT v = srcelem1 - srcelem2; \
+    dstelem = convertToDT(v >= (workT)(0) ? v : -v);
 
 #elif defined OP_AND
 #define PROCESS_ELEM dstelem = srcelem1 & srcelem2
@@ -169,6 +175,9 @@
 #elif defined OP_EXP
 #define PROCESS_ELEM dstelem = exp(srcelem1)
 
+#elif defined OP_POW
+#define PROCESS_ELEM dstelem = pow(srcelem1, srcelem2)
+
 #elif defined OP_SQRT
 #define PROCESS_ELEM dstelem = sqrt(srcelem1)
 
@@ -178,6 +187,10 @@ dstT v = (dstT)(srcelem1);\
 dstelem = v > (dstT)(0) ? log(v) : log(-v)
 
 #elif defined OP_CMP
+#define dstT uchar
+#define srcT2 srcT1
+#define convertToWT1
+#define convertToWT2
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
 
 #elif defined OP_CONVERT
@@ -188,15 +201,55 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #define EXTRA_PARAMS , workT alpha, workT beta
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + beta)
 
+#elif defined OP_CTP_AD || defined OP_CTP_AR
+#ifdef OP_CTP_AD
+#define TO_DEGREE cartToPolar *= (180 / CV_PI);
+#elif defined OP_CTP_AR
+#define TO_DEGREE
+#endif
+#define PROCESS_ELEM \
+    dstT x = srcelem1, y = srcelem2; \
+    dstT x2 = x * x, y2 = y * y; \
+    dstT magnitude = sqrt(x2 + y2); \
+    dstT tmp = y >= 0 ? 0 : CV_PI * 2; \
+    tmp = x < 0 ? CV_PI : tmp; \
+    dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
+    dstT cartToPolar = y2 <= x2 ? x * y / (x2 + 0.28f * y2 + CV_EPSILON) + tmp : (tmp1 - x * y / (y2 + 0.28f * x2 + CV_EPSILON)); \
+    TO_DEGREE \
+    dstelem = magnitude; \
+    dstelem2 = cartToPolar
+
+#elif defined OP_PTC_AD || defined OP_PTC_AR
+#ifdef OP_PTC_AD
+#define FROM_DEGREE \
+    dstT ascale = CV_PI/180.0f; \
+    dstT alpha = y * ascale
+#else
+#define FROM_DEGREE \
+    dstT alpha = y
+#endif
+#define PROCESS_ELEM \
+    dstT x = srcelem1, y = srcelem2; \
+    FROM_DEGREE; \
+    dstelem = cos(alpha) * x; \
+    dstelem2 = sin(alpha) * x
+
 #else
 #error "unknown op type"
+#endif
+
+#if defined OP_CTP_AD || defined OP_CTP_AR || defined OP_PTC_AD || defined OP_PTC_AR
+    #undef EXTRA_PARAMS
+    #define EXTRA_PARAMS , __global uchar* dstptr2, int dststep2, int dstoffset2
+    #undef EXTRA_INDEX
+    #define EXTRA_INDEX int dst_index2 = mad24(y, dststep2, x*(int)sizeof(dstT) + dstoffset2)
 #endif
 
 #if defined UNARY_OP || defined MASK_UNARY_OP
 #undef srcelem2
 #if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
     defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
-    defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX
+    defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , workT srcelem2
 #endif
@@ -217,6 +270,7 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
         int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
         int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        EXTRA_INDEX;
 
         PROCESS_ELEM;
     }
@@ -260,6 +314,7 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
     {
         int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
         int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        EXTRA_INDEX;
 
         PROCESS_ELEM;
     }
