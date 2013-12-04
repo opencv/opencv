@@ -918,12 +918,12 @@ Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerato
     return maskGenerator;
 }
 
-Ptr<CascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
+Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     return tegra::getCascadeClassifierMaskGenerator(*this);
 #else
-    return Ptr<CascadeClassifierImpl::MaskGenerator>();
+    return Ptr<BaseCascadeClassifier::MaskGenerator>();
 #endif
 }
 
@@ -1390,6 +1390,17 @@ bool CascadeClassifier::load( const String& filename )
     return !empty();
 }
 
+bool CascadeClassifier::read(const FileNode &root)
+{
+    Ptr<CascadeClassifierImpl> ccimpl;
+    bool ok = ccimpl->read_(root);
+    if( ok )
+        cc = ccimpl.staticCast<BaseCascadeClassifier>();
+    else
+        cc.release();
+    return ok;
+}
+
 void CascadeClassifier::detectMultiScale( InputArray image,
                       CV_OUT std::vector<Rect>& objects,
                       double scaleFactor,
@@ -1452,7 +1463,7 @@ void* CascadeClassifier::getOldCascade()
     return cc->getOldCascade();
 }
 
-void CascadeClassifier::setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator)
+void CascadeClassifier::setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator)
 {
     CV_Assert(!empty());
     cc->setMaskGenerator(maskGenerator);
