@@ -907,16 +907,18 @@ namespace cv
                                      TermCriteria criteria, int attemps, int flags, oclMat &centers);
 
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        class CV_EXPORTS OclCascadeClassifier : public  cv::CascadeClassifier
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////           CascadeClassifier              /////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        class OclCascadeClassifier : public Algorithm
         {
         public:
-            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
-                double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
-                Size minSize = Size(), Size maxSize = Size());
+            virtual bool load(const String& filename) = 0;
+            virtual void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                                          double scaleFactor=1.1, int minNeighbors=3, int flags=0,
+                                          Size minSize=Size(), Size maxSize=Size()) = 0;
         };
+        CV_EXPORTS Ptr<OclCascadeClassifier> createCascadeClassifier(const String& filename);
 
         /////////////////////////////// Pyramid /////////////////////////////////////
         CV_EXPORTS void pyrDown(const oclMat &src, oclMat &dst);

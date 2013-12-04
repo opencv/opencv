@@ -45,12 +45,12 @@ static double getTime()
 
 
 static void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifier& cascade,
+             const Ptr<ocl::OclCascadeClassifier>& cascade,
              double scale);
 
 
 static void detectCPU( Mat& img, vector<Rect>& faces,
-                CascadeClassifier& cascade,
+                const Ptr<CascadeClassifier>& cascade,
                 double scale);
 
 static void Draw(Mat& img, vector<Rect>& faces, double scale);
@@ -90,10 +90,11 @@ int main( int argc, const char** argv )
     outputName = cmd.get<string>("o");
     string cascadeName = cmd.get<string>("t");
     double scale = cmd.get<double>("c");
-    ocl::OclCascadeClassifier cascade;
-    CascadeClassifier  cpu_cascade;
+    Ptr<ocl::OclCascadeClassifier> cascade;
+    Ptr<CascadeClassifier>  cpu_cascade;
 
-    if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
+    if( (cascade = ocl::createCascadeClassifier(cascadeName)).empty() ||
+        (cpu_cascade = createCascadeClassifier(cascadeName)).empty() )
     {
         cout << "ERROR: Could not load classifier cascade" << endl;
         return EXIT_FAILURE;
@@ -190,7 +191,7 @@ int main( int argc, const char** argv )
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifier& cascade,
+             const Ptr<ocl::OclCascadeClassifier>& cascade,
              double scale)
 {
     ocl::oclMat image(img);
@@ -200,7 +201,7 @@ void detect( Mat& img, vector<Rect>& faces,
     ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     ocl::equalizeHist( smallImg, smallImg );
 
-    cascade.detectMultiScale( smallImg, faces, 1.1,
+    cascade->detectMultiScale( smallImg, faces, 1.1,
                               3, 0
                               |CASCADE_SCALE_IMAGE
                               , Size(30,30), Size(0, 0) );
@@ -208,7 +209,7 @@ void detect( Mat& img, vector<Rect>& faces,
 }
 
 void detectCPU( Mat& img, vector<Rect>& faces,
-                CascadeClassifier& cascade,
+                const Ptr<CascadeClassifier>& cascade,
                 double scale)
 {
     workBegin();
@@ -216,7 +217,7 @@ void detectCPU( Mat& img, vector<Rect>& faces,
     cvtColor(img, cpu_gray, COLOR_BGR2GRAY);
     resize(cpu_gray, cpu_smallImg, cpu_smallImg.size(), 0, 0, INTER_LINEAR);
     equalizeHist(cpu_smallImg, cpu_smallImg);
-    cascade.detectMultiScale(cpu_smallImg, faces, 1.1,
+    cascade->detectMultiScale(cpu_smallImg, faces, 1.1,
                              3, 0 | CASCADE_SCALE_IMAGE,
                              Size(30, 30), Size(0, 0));
     workEnd();

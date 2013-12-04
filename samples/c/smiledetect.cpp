@@ -28,8 +28,8 @@ static void help()
             "\tUsing OpenCV version " << CV_VERSION << "\n" << endl;
 }
 
-void detectAndDraw( Mat& img, CascadeClassifier& cascade,
-                    CascadeClassifier& nestedCascade,
+void detectAndDraw( Mat& img, const Ptr<CascadeClassifier>& cascade,
+                    const Ptr<CascadeClassifier>& nestedCascade,
                     double scale, bool tryflip );
 
 string cascadeName = "../../data/haarcascades/haarcascade_frontalface_alt.xml";
@@ -53,7 +53,7 @@ int main( int argc, const char** argv )
 
     help();
 
-    CascadeClassifier cascade, nestedCascade;
+    Ptr<CascadeClassifier> cascade, nestedCascade;
     double scale = 1;
 
     for( int i = 1; i < argc; i++ )
@@ -88,13 +88,13 @@ int main( int argc, const char** argv )
             inputName.assign( argv[i] );
     }
 
-    if( !cascade.load( cascadeName ) )
+    if( (cascade = createCascadeClassifier( cascadeName )).empty() )
     {
         cerr << "ERROR: Could not load face cascade" << endl;
         help();
         return -1;
     }
-    if( !nestedCascade.load( nestedCascadeName ) )
+    if( (nestedCascade = createCascadeClassifier( nestedCascadeName )).empty() )
     {
         cerr << "ERROR: Could not load smile cascade" << endl;
         help();
@@ -153,8 +153,8 @@ _cleanup_:
     return 0;
 }
 
-void detectAndDraw( Mat& img, CascadeClassifier& cascade,
-                    CascadeClassifier& nestedCascade,
+void detectAndDraw( Mat& img, const Ptr<CascadeClassifier>& cascade,
+                    const Ptr<CascadeClassifier>& nestedCascade,
                     double scale, bool tryflip)
 {
     int i = 0;
@@ -173,7 +173,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
 
-    cascade.detectMultiScale( smallImg, faces,
+    cascade->detectMultiScale( smallImg, faces,
         1.1, 2, 0
         //|CASCADE_FIND_BIGGEST_OBJECT
         //|CASCADE_DO_ROUGH_SEARCH
@@ -183,7 +183,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
     if( tryflip )
     {
         flip(smallImg, smallImg, 1);
-        cascade.detectMultiScale( smallImg, faces2,
+        cascade->detectMultiScale( smallImg, faces2,
                                  1.1, 2, 0
                                  //|CASCADE_FIND_BIGGEST_OBJECT
                                  //|CASCADE_DO_ROUGH_SEARCH
@@ -221,7 +221,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         r->y=r->y + half_height;
         r->height = half_height;
         smallImgROI = smallImg(*r);
-        nestedCascade.detectMultiScale( smallImgROI, nestedObjects,
+        nestedCascade->detectMultiScale( smallImgROI, nestedObjects,
             1.1, 0, 0
             //|CASCADE_FIND_BIGGEST_OBJECT
             //|CASCADE_DO_ROUGH_SEARCH

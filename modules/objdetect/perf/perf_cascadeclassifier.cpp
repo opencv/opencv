@@ -23,7 +23,7 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
     int min_size = get<1>(GetParam());
     Size minSize(min_size, min_size);
 
-    CascadeClassifier cc(getDataPath("cv/cascadeandhog/cascades/lbpcascade_frontalface.xml"));
+    Ptr<CascadeClassifier> cc = createCascadeClassifier(getDataPath("cv/cascadeandhog/cascades/lbpcascade_frontalface.xml"));
     if (cc.empty())
         FAIL() << "Can't load cascade file";
 
@@ -41,7 +41,7 @@ PERF_TEST_P(ImageName_MinSize, CascadeClassifierLBPFrontalFace,
         faces.clear();
 
         startTimer();
-        cc.detectMultiScale(img, faces, 1.1, 3, 0, minSize);
+        cc->detectMultiScale(img, faces, 1.1, 3, 0, minSize);
         stopTimer();
     }
 

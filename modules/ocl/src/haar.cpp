@@ -649,13 +649,39 @@ static void gpuSetHaarClassifierCascade( CvHaarClassifierCascade *_cascade)
         } /* j */
     }
 }
-void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv::Rect>& faces,
+
+
+class OclCascadeClassifierImpl : public OclCascadeClassifier
+{
+public:
+    virtual ~OclCascadeClassifierImpl() {}
+    bool load(const String& filename)
+    {
+        cascadeptr = ::cv::createCascadeClassifier(filename);
+        return !cascadeptr.empty();
+    }
+    void detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv::Rect>& faces,
+                          double scaleFactor, int minNeighbors, int flags,
+                          Size minSize, Size maxSize);
+
+    Ptr<CascadeClassifier> cascadeptr;
+};
+
+Ptr<OclCascadeClassifier> cv::ocl::createCascadeClassifier(const String& filename)
+{
+    Ptr<OclCascadeClassifier> c = makePtr<OclCascadeClassifierImpl>();
+    if( !c->load(filename) )
+        c.release();
+    return c;
+}
+
+void OclCascadeClassifierImpl::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv::Rect>& faces,
                                             double scaleFactor, int minNeighbors, int flags,
                                             Size minSize, Size maxSize)
 //CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemStorage *storage, double scaleFactor,
 //        int minNeighbors, int flags, CvSize minSize, CvSize maxSize)
 {
-    CvHaarClassifierCascade *cascade = oldCascade;
+    CvHaarClassifierCascade *cascade = (CvHaarClassifierCascade*)(cascadeptr->getOldCascade());
 
     const double GROUP_EPS = 0.2;
 

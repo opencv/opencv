@@ -26,7 +26,7 @@
 
 #include "core_manual.hpp"
 #include "features2d_manual.hpp"
-
+#include "objdetect_manual.hpp"
 
 #ifdef _MSC_VER
 #  pragma warning(disable:4800 4244)

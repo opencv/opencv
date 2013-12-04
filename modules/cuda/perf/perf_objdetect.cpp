@@ -122,12 +122,12 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
     }
     else
     {
-        cv::CascadeClassifier cascade;
-        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/perf/haarcascade_frontalface_alt.xml")));
+        cv::Ptr<cv::CascadeClassifier> cascade;
+        ASSERT_TRUE(!(cascade = cv::createCascadeClassifier(perf::TestBase::getDataPath("gpu/perf/haarcascade_frontalface_alt.xml"))).empty());
 
         std::vector<cv::Rect> cpu_rects;
 
-        TEST_CYCLE() cascade.detectMultiScale(img, cpu_rects);
+        TEST_CYCLE() cascade->detectMultiScale(img, cpu_rects);
 
         SANITY_CHECK(cpu_rects);
     }
@@ -161,12 +161,12 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
     }
     else
     {
-        cv::CascadeClassifier cascade;
-        ASSERT_TRUE(cascade.load(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml")));
+        cv::Ptr<cv::CascadeClassifier> cascade;
+        ASSERT_TRUE(!(cascade = cv::createCascadeClassifier(perf::TestBase::getDataPath("gpu/lbpcascade/lbpcascade_frontalface.xml"))).empty());
 
         std::vector<cv::Rect> cpu_rects;
 
-        TEST_CYCLE() cascade.detectMultiScale(img, cpu_rects);
+        TEST_CYCLE() cascade->detectMultiScale(img, cpu_rects);
 
         SANITY_CHECK(cpu_rects);
     }
