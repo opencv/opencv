@@ -2357,6 +2357,7 @@ struct Demosaicing : testing::TestWithParam<cv::gpu::DeviceInfo>
 GPU_TEST_P(Demosaicing, BayerBG2BGR)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(1, 1));
@@ -2370,6 +2371,7 @@ GPU_TEST_P(Demosaicing, BayerBG2BGR)
 GPU_TEST_P(Demosaicing, BayerGB2BGR)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(0, 1));
@@ -2383,6 +2385,7 @@ GPU_TEST_P(Demosaicing, BayerGB2BGR)
 GPU_TEST_P(Demosaicing, BayerRG2BGR)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(0, 0));
@@ -2396,6 +2399,7 @@ GPU_TEST_P(Demosaicing, BayerRG2BGR)
 GPU_TEST_P(Demosaicing, BayerGR2BGR)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(1, 0));
@@ -2409,6 +2413,7 @@ GPU_TEST_P(Demosaicing, BayerGR2BGR)
 GPU_TEST_P(Demosaicing, BayerBG2BGR_MHT)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(1, 1));
@@ -2422,6 +2427,7 @@ GPU_TEST_P(Demosaicing, BayerBG2BGR_MHT)
 GPU_TEST_P(Demosaicing, BayerGB2BGR_MHT)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(0, 1));
@@ -2435,6 +2441,7 @@ GPU_TEST_P(Demosaicing, BayerGB2BGR_MHT)
 GPU_TEST_P(Demosaicing, BayerRG2BGR_MHT)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(0, 0));
@@ -2448,6 +2455,7 @@ GPU_TEST_P(Demosaicing, BayerRG2BGR_MHT)
 GPU_TEST_P(Demosaicing, BayerGR2BGR_MHT)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png");
+    ASSERT_FALSE(img.empty()) << "Can't load input image";
 
     cv::Mat_<uchar> src;
     mosaic(img, src, cv::Point(1, 0));
