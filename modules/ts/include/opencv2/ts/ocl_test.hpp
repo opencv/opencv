@@ -42,10 +42,10 @@
 #ifndef __OPENCV_TS_OCL_TEST_HPP__
 #define __OPENCV_TS_OCL_TEST_HPP__
 
-#ifdef HAVE_OPENCL
-
-#include "cvconfig.h"
+#include "cvconfig.h" // to get definition of HAVE_OPENCL
 #include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCL
 
 #include "opencv2/ts.hpp"
 
@@ -123,7 +123,7 @@ using perf::MatType;
 
 #define OCL_RNG_SEED 123456
 
-struct TestUtils
+struct CV_EXPORTS TestUtils
 {
     cv::RNG rng;
 
@@ -270,7 +270,7 @@ struct TestUtils
 #define UMAT_UPLOAD_OUTPUT_PARAMETER(name) UMAT_UPLOAD_INPUT_PARAMETER(name)
 
 template <typename T>
-struct TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
+struct CV_EXPORTS TSTestWithParam : public TestUtils, public ::testing::TestWithParam<T>
 {
 
 };

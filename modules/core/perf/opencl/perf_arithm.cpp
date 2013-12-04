@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -27,10 +26,10 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -41,36 +40,36 @@
 //M*/
 
 #include "perf_precomp.hpp"
+#include "opencv2/ts/ocl_perf.hpp"
 
-#define DUMP_PROPERTY_XML(propertyName, propertyValue) \
-    do { \
-        std::stringstream ssName, ssValue;\
-        ssName << propertyName;\
-        ssValue << propertyValue; \
-        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
-    } while (false)
+#ifdef HAVE_OPENCL
 
-#define DUMP_MESSAGE_STDOUT(msg) \
-    do { \
-        std::cout << msg << std::endl; \
-    } while (false)
+namespace cvtest {
+namespace ocl {
 
+///////////// Add ////////////////////////
 
-#include "opencv2/ocl/private/opencl_dumpinfo.hpp"
+typedef Size_MatType AddFixture;
 
-static const char * impls[] =
+OCL_PERF_TEST_P(AddFixture, Add,
+            ::testing::Combine(OCL_TEST_SIZES,
+                               OCL_TEST_TYPES))
 {
-    IMPL_OCL,
-    IMPL_PLAIN,
-#ifdef HAVE_OPENCV_GPU
-    IMPL_GPU
-#endif
-};
+    const Size srcSize = GET_PARAM(0);
+    const int type = GET_PARAM(1);
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-int main(int argc, char ** argv)
-{
-    ::perf::TestBase::setModulePerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    randu(src1);
+    randu(src2);
+    declare.in(src1, src2).out(dst);
 
-    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, dumpOpenCLDevice())
+    OCL_TEST_CYCLE() cv::add(src1, src2, dst);
+
+    SANITY_CHECK(dst);
 }
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL

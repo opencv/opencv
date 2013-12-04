@@ -251,6 +251,7 @@ typedef struct CV_EXPORTS performance_metrics
 \*****************************************************************************************/
 enum PERF_STRATEGY
 {
+    PERF_STRATEGY_DEFAULT = -1,
     PERF_STRATEGY_BASE = 0,
     PERF_STRATEGY_SIMPLE = 1,
 };
@@ -271,8 +272,8 @@ public:
     static std::string getDataPath(const std::string& relativePath);
     static std::string getSelectedImpl();
 
-    static enum PERF_STRATEGY getPerformanceStrategy();
-    static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
+    static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
+    static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
     class PerfSkipTestException: public cv::Exception {};
 
@@ -286,7 +287,7 @@ protected:
     void stopTimer();
     bool next();
 
-    //_declareHelper declare;
+    PERF_STRATEGY getCurrentPerformanceStrategy() const;
 
     enum WarmUpType
     {
@@ -300,6 +301,7 @@ protected:
     static void warmup(cv::InputOutputArray a, WarmUpType wtype = WARMUP_READ);
 
     performance_metrics& calcMetrics();
+
     void RunPerfTestBody();
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
@@ -309,6 +311,8 @@ private:
     SizeVector outputData;
     unsigned int getTotalInputSize() const;
     unsigned int getTotalOutputSize() const;
+
+    enum PERF_STRATEGY testStrategy;
 
     TimeVector times;
     int64 lastTime;
@@ -349,6 +353,8 @@ private:
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
         _declareHelper& runs(unsigned int runsNumber);
+
+        _declareHelper& strategy(enum PERF_STRATEGY s);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);
