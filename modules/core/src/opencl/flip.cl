@@ -13,9 +13,6 @@
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
-// @Authors
-//    Elena Gvozdeva, elena.gvozdeva@itseez.com
-//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
