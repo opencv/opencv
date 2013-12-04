@@ -1,6 +1,12 @@
+#include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/ml/ml.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#ifdef HAVE_OPENCV_OCL
+#define _OCL_KNN_ 1 // select whether using ocl::KNN method or not, default is using
+#define _OCL_SVM_ 1 // select whether using ocl::svm method or not, default is using
+#include "opencv2/ocl/ocl.hpp"
+#endif
 
 #include <stdio.h>
 
@@ -133,7 +139,14 @@ static void find_decision_boundary_KNN( int K )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
+    cv::ocl::KNearestNeighbour knnClassifier;
+    Mat temp, result;
+    knnClassifier.train(trainSamples, trainClasses, temp, false, K);
+    cv::ocl::oclMat testSample_ocl, reslut_ocl;
+#else
     CvKNearest knnClassifier( trainSamples, trainClasses, Mat(), false, K );
+#endif
 
     Mat testSample( 1, 2, CV_32FC1 );
     for( int y = 0; y < img.rows; y += testStep )
@@ -142,9 +155,19 @@ static void find_decision_boundary_KNN( int K )
         {
             testSample.at<float>(0) = (float)x;
             testSample.at<float>(1) = (float)y;
+#if defined HAVE_OPENCV_OCL && _OCL_KNN_
+            testSample_ocl.upload(testSample);
+
+            knnClassifier.find_nearest(testSample_ocl, K, reslut_ocl);
+
+            reslut_ocl.download(result);
+            int response = saturate_cast<int>(result.at<float>(0));
+            circle(imgDst, Point(x, y), 1, classColors[response]);
+#else
 
             int response = (int)knnClassifier.find_nearest( testSample, K );
             circle( imgDst, Point(x,y), 1, classColors[response] );
+#endif
         }
     }
 }
@@ -159,7 +182,11 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     prepare_train_data( trainSamples, trainClasses );
 
     // learn classifier
+#if defined HAVE_OPENCV_OCL && _OCL_SVM_
+    cv::ocl::CvSVM_OCL svmClassifier(trainSamples, trainClasses, Mat(), Mat(), params);
+#else
     CvSVM svmClassifier( trainSamples, trainClasses, Mat(), Mat(), params );
+#endif
 
     Mat testSample( 1, 2, CV_32FC1 );
     for( int y = 0; y < img.rows; y += testStep )
@@ -178,7 +205,7 @@ static void find_decision_boundary_SVM( CvSVMParams params )
     for( int i = 0; i < svmClassifier.get_support_vector_count(); i++ )
     {
         const float* supportVector = svmClassifier.get_support_vector(i);
-        circle( imgDst, Point(supportVector[0],supportVector[1]), 5, Scalar(255,255,255), -1 );
+        circle( imgDst, Point(saturate_cast<int>(supportVector[0]),saturate_cast<int>(supportVector[1])), 5, CV_RGB(255,255,255), -1 );
     }
 
 }
