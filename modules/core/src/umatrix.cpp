@@ -580,6 +580,7 @@ Mat UMat::getMat(int accessFlags) const
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.flags = flags;
     hdr.u = u;
+    hdr.flags = flags;
     hdr.datastart = u->data;
     hdr.data = hdr.datastart + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
