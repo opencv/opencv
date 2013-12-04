@@ -686,7 +686,7 @@ void CameraHandler::closeCameraConnect()
 
     camera->stopPreview();
 #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
- || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_3_0)
+ || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
     camera->setPreviewCallbackFlags(CAMERA_FRAME_CALLBACK_FLAG_NOOP);
 #endif
     camera->disconnect();

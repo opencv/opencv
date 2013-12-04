@@ -250,7 +250,7 @@ VideoCapture constructors.
 .. ocv:cfunction:: CvCapture* cvCaptureFromCAM( int device )
 .. ocv:cfunction:: CvCapture* cvCaptureFromFile( const char* filename )
 
-    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     :param device: id of the opened video capturing device (i.e. a camera index). If there is a single camera connected, just pass 0.
 
@@ -267,7 +267,7 @@ Open video file or a capturing device for video capturing
 .. ocv:pyfunction:: cv2.VideoCapture.open(filename) -> retval
 .. ocv:pyfunction:: cv2.VideoCapture.open(device) -> retval
 
-    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img_%02d.jpg, which will read samples like img_00.jpg, img_01.jpg, img_02.jpg, ...)
 
     :param device: id of the opened video capturing device (i.e. a camera index).
 
@@ -313,7 +313,7 @@ The methods/functions grab the next frame from video file or camera and return t
 
 The primary use of the function is in multi-camera environments, especially when the cameras do not have hardware synchronization. That is, you call ``VideoCapture::grab()`` for each camera and after that call the slower method ``VideoCapture::retrieve()`` to decode and get frame from each camera. This way the overhead on demosaicing or motion jpeg decompression etc. is eliminated and the retrieved frames from different cameras will be closer in time.
 
-Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the correct way of retrieving data from it is to call `VideoCapture::grab` first and then call :ocv:func:`VideoCapture::retrieve` one or more times with different values of the ``channel`` parameter. See http://code.opencv.org/projects/opencv/repository/revisions/master/entry/samples/cpp/kinect_maps.cpp
+Also, when a connected camera is multi-head (for example, a stereo camera or a Kinect device), the correct way of retrieving data from it is to call `VideoCapture::grab` first and then call :ocv:func:`VideoCapture::retrieve` one or more times with different values of the ``channel`` parameter. See https://github.com/Itseez/opencv/tree/master/samples/cpp/openni_capture.cpp
 
 
 VideoCapture::retrieve

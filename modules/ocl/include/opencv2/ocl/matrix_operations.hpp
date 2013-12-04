@@ -44,6 +44,8 @@
 #ifndef __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
 #define __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
 
+#include "opencv2/ocl.hpp"
+
 namespace cv
 {
 

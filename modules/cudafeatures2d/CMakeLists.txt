@@ -1,4 +1,4 @@
-if(ANDROID OR IOS)
+if(IOS)
   ocv_module_disable(cudafeatures2d)
 endif()
 
