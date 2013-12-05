@@ -110,7 +110,7 @@ OCL_TEST_P(Lut, Mat)
     }
 }
 
-///////////////////////// ArithmTestBase ///////////////////////////
+///////////////////////// ArithmTestBase ////////////////////////////
 
 PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 {
