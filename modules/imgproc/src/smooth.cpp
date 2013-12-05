@@ -622,12 +622,14 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         return false;//TODO
 
     int sdepth = CV_MAT_DEPTH(type);
+    if( ddepth < 0 )
+        ddepth = sdepth;
+    else if (ddepth != sdepth)
+        return false;
     if( anchor.x < 0 )
         anchor.x = ksize.width / 2;
     if( anchor.y < 0 )
         anchor.y = ksize.height / 2;
-    if( ddepth < 0 )
-        ddepth = sdepth;
 
     ocl::Kernel kernel;
 
