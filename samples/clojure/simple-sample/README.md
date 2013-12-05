@@ -1,11 +1,11 @@
-# Introduction to OpenCV Development with Clojure 
+# Introduction to OpenCV Development with Clojure
 
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using
 nearly the same interface as for Android development.
 
 [Clojure][1] is a contemporary LISP dialect hosted by the Java Virtual
 Machine and it offers a complete interoperability with the underlying
-JVM. This means that we should be able to even use the Clojure REPL
+JVM. This means that we should even be able to use the Clojure REPL
 (Read Eval Print Loop) as and interactive programmable interface to
 the underlying OpenCV engine.
 
@@ -21,11 +21,15 @@ support refer to the [corresponding tutorial][2].
 If you are in hurry, here is a minimum quick start to install OpenCV
 on Mac OS X:
 
+> NOTE 1: I'm assuming you already installed [xcode][9], [jdk][10] and
+> [Cmake][11].
+
 ```bash
 cd ~/
 mkdir opt
 git clone https://github.com/Itseez/opencv.git
 cd opencv
+git checkout 2.4
 mkdir build
 cd build
 cmake -DBUILD_SHARED_LIBS=OFF ..
@@ -110,7 +114,7 @@ directory where you built OpenCV:
 They are the only opencv libs needed by the JVM to interact with
 OpenCV.
 
-### Take apart the needed opencv libs 
+### Take apart the needed opencv libs
 
 Create a new directory to store in the above two libs. Start by
 copying into it the `opencv-247.jar` lib.
@@ -143,8 +147,8 @@ Copy into the `x86_64` directory the `libopencv_java247.dylib` lib.
 cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 ```
 
-> NOTE 1: On a GNU/Linux
-> 
+> NOTE 2: On a GNU/Linux
+>
 > ```bash
 > mkdir -p native/linux/x86_64
 > cp ~/opt/opencv/build/lib/libopencv_java247.so native/linux/x86_64/
@@ -159,7 +163,7 @@ Next you need to package the native lib in a jar file by using the
 jar -cMf opencv-native-247.jar native
 ```
 
-> NOTE 2: the `M` option instructs the `jar` command to not create a
+> NOTE 3: the `M` option instructs the `jar` command to not create a
 > MANIFEST file for the artifact.
 
 Your directories layout should look like the following:
@@ -251,7 +255,7 @@ section as follows:
                  [opencv/opencv-native "2.4.7"]]) ;added line
 ```
 
-> NOTE 3: The Clojure Programming Language is an artifact too. This is
+> NOTE 4: The Clojure Programming Language is an artifact too. This is
 > why Clojure is called an hosted language.
 
 To verify that everything went right issue the `lein deps` task. The
@@ -328,7 +332,7 @@ annoying to prefix the `Point.` instance constructors with the fully
 qualified namespace.
 
 Fortunately CLJ offer a very easy way to overcome this annoyance by
-just importing the java package in which the `Point` class lives.
+directly importing the `Point` class.
 
 ```clj
 user=> (import 'org.opencv.core.Point)
@@ -352,8 +356,8 @@ true
 ```
 
 If we now want to use the opencv `Rect` class to create a rectangle,
-we ha to fully qualify it's constructor even if it leaves in the same
-`org.opencv.core` namespace.
+we again have to fully qualify it's constructor even if it leaves in
+the same `org.opencv.core` namespace.
 
 ```clj
 user=> (org.opencv.core.Rect. p1 p2)
@@ -419,13 +423,16 @@ Bye for now!
 
 ## Next Steps
 
-I recommend any newbie with Clojure to read the
+This tutorial only introduce the very basic environment set up to be
+able to interact with OpenCV in a CLJ REPL.
+
+I recommend any Clojure newbie to read the
 [Clojure Java Interop chapter][8] to get all you need to know to
 interoperate with any plain java lib that has not been wrapped in
 Clojure to make it usable in a more idiomatic and functional way
-within Clojure (e.g. [Vision][9]).
+within Clojure.
 
-### License ###
+### License
 
 Copyright © 2013 Giacomo (Mimmo) Cosenza aka Magomimmo
 
@@ -440,5 +447,6 @@ your option) any later version.
 [6]: https://github.com/technomancy/leiningen#windows
 [7]: https://github.com/kumarshantanu/lein-localrepo
 [8]: http://clojure.org/java_interop
-[9]: http://nakkaya.com/vision.html
-
+[9]: https://developer.apple.com/xcode/
+[10]: http://www.oracle.com/technetwork/java/javase/downloads/index.html
+[11]: http://www.cmake.org/cmake/resources/software.html

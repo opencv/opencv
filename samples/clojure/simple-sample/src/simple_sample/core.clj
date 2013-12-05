@@ -1,6 +1,4 @@
-(ns simple-sample.core
-  (:import [org.opencv.core Mat CvType Scalar]))
-
+(ns simple-sample.core)
 
 (defn foo
   "I don't do a whole lot."
