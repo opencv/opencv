@@ -497,7 +497,7 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
         kernelName = "arithm_flip_cols", flipType = FLIP_COLS;
     else
         kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
-  
+
     Size size = _src.size();
     int cols = size.width, rows = size.height;
     if ((cols == 1 && flipType == FLIP_COLS) ||
@@ -508,14 +508,14 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
         return true;
     }
 
-    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc, 
+    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
         format( "-D type=%s", ocl::memopTypeToStr(type)));
     if (k.empty())
         return false;
-    
+
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
-    
+
     cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
     rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
 
@@ -526,11 +526,11 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_Assert( _src.dims() <= 2 );
-    
+
     bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
     if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
         return;
-    
+
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
