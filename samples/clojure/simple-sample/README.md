@@ -240,7 +240,7 @@ simple-sample/
 6 directories, 6 files
 ```
 
-We need do add the two `opencv` artifacts as dependencies of the newly
+We need to add the two `opencv` artifacts as dependencies of the newly
 created project. Open the `project.clj` and modify its dependencies
 section as follows:
 
@@ -315,10 +315,10 @@ user=> (foo)
 "bar"
 ```
 
-When ran from the a the home directory of a lein based project, the
-`lein repl` task automatically loads all the project dependencies. So
-we should be able to interact with the OpenCV libs by just importing
-the corresponding java packages (namespaces in Clojure parlance).
+When ran from the home directory of a lein based project, the `lein
+repl` task automatically loads all the project dependencies. So we
+should be able to interact with the OpenCV libs by just referencing
+the corresponding java packages (mapped to Clojure namespaces).
 
 ```clj
 user=> (org.opencv.core.Point. 0 0)
@@ -327,9 +327,9 @@ user=> (org.opencv.core.Point. 0 0)
 
 Here we created a two dimensions opencv `Point` instance. Even if all
 the java packages included within the java interface to OpenCV are
-immediately available as CLJ namespeces from the CLJ REPL, it's very
-annoying to prefix the `Point.` instance constructors with the fully
-qualified namespace.
+immediately available from the CLJ REPL, it's very annoying to prefix
+the `Point.` instance constructors with the fully qualified package
+name.
 
 Fortunately CLJ offer a very easy way to overcome this annoyance by
 directly importing the `Point` class.
@@ -357,7 +357,7 @@ true
 
 If we now want to use the opencv `Rect` class to create a rectangle,
 we again have to fully qualify it's constructor even if it leaves in
-the same `org.opencv.core` namespace.
+the same `org.opencv.core` package of the `Point` class.
 
 ```clj
 user=> (org.opencv.core.Rect. p1 p2)
@@ -423,7 +423,7 @@ Bye for now!
 
 ## Next Steps
 
-This tutorial only introduce the very basic environment set up to be
+This tutorial only introduces the very basic environment set up to be
 able to interact with OpenCV in a CLJ REPL.
 
 I recommend any Clojure newbie to read the
