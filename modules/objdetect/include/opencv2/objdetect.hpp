@@ -149,142 +149,96 @@ enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_DO_ROUGH_SEARCH     = 8
      };
 
-class CV_EXPORTS_W CascadeClassifier
+class CV_EXPORTS_W BaseCascadeClassifier : public Algorithm
 {
 public:
-    CV_WRAP CascadeClassifier();
-    CV_WRAP CascadeClassifier( const String& filename );
-    virtual ~CascadeClassifier();
+    virtual ~BaseCascadeClassifier();
+    virtual bool empty() const = 0;
+    virtual bool load( const String& filename ) = 0;
+    virtual void detectMultiScale( InputArray image,
+                           CV_OUT std::vector<Rect>& objects,
+                           double scaleFactor,
+                           int minNeighbors, int flags,
+                           Size minSize, Size maxSize ) = 0;
 
-    CV_WRAP virtual bool empty() const;
-    CV_WRAP bool load( const String& filename );
-    virtual bool read( const FileNode& node );
-    CV_WRAP virtual void detectMultiScale( InputArray image,
-                                   CV_OUT std::vector<Rect>& objects,
-                                   double scaleFactor = 1.1,
-                                   int minNeighbors = 3, int flags = 0,
-                                   Size minSize = Size(),
-                                   Size maxSize = Size() );
+    virtual void detectMultiScale( InputArray image,
+                           CV_OUT std::vector<Rect>& objects,
+                           CV_OUT std::vector<int>& numDetections,
+                           double scaleFactor,
+                           int minNeighbors, int flags,
+                           Size minSize, Size maxSize ) = 0;
 
-    CV_WRAP virtual void detectMultiScale( InputArray image,
-                                   CV_OUT std::vector<Rect>& objects,
-                                   CV_OUT std::vector<int>& numDetections,
-                                   double scaleFactor=1.1,
-                                   int minNeighbors=3, int flags=0,
-                                   Size minSize=Size(),
-                                   Size maxSize=Size() );
-
-    CV_WRAP virtual void detectMultiScale( InputArray image,
+    virtual void detectMultiScale( InputArray image,
                                    CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& rejectLevels,
                                    CV_OUT std::vector<double>& levelWeights,
-                                   double scaleFactor = 1.1,
-                                   int minNeighbors = 3, int flags = 0,
-                                   Size minSize = Size(),
-                                   Size maxSize = Size(),
-                                   bool outputRejectLevels = false );
+                                   double scaleFactor,
+                                   int minNeighbors, int flags,
+                                   Size minSize, Size maxSize,
+                                   bool outputRejectLevels ) = 0;
 
+    virtual bool isOldFormatCascade() const = 0;
+    virtual Size getOriginalWindowSize() const = 0;
+    virtual int getFeatureType() const = 0;
+    virtual void* getOldCascade() = 0;
 
-    bool isOldFormatCascade() const;
-    virtual Size getOriginalWindowSize() const;
-    int getFeatureType() const;
-    bool setImage( const Mat& );
-
-protected:
-    virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-                                    int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
-                                    std::vector<int>& rejectLevels, std::vector<double>& levelWeights, bool outputRejectLevels = false );
-
-    virtual void detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
-                                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
-                                             double scaleFactor, Size minObjectSize, Size maxObjectSize,
-                                             bool outputRejectLevels = false );
-
-protected:
-    enum { BOOST = 0
-         };
-    enum { DO_CANNY_PRUNING    = CASCADE_DO_CANNY_PRUNING,
-           SCALE_IMAGE         = CASCADE_SCALE_IMAGE,
-           FIND_BIGGEST_OBJECT = CASCADE_FIND_BIGGEST_OBJECT,
-           DO_ROUGH_SEARCH     = CASCADE_DO_ROUGH_SEARCH
-         };
-
-    friend class CascadeClassifierInvoker;
-
-    template<class FEval>
-    friend int predictOrdered( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
-
-    template<class FEval>
-    friend int predictCategorical( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
-
-    template<class FEval>
-    friend int predictOrderedStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
-
-    template<class FEval>
-    friend int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
-
-    bool setImage( Ptr<FeatureEvaluator>& feval, const Mat& image);
-    virtual int runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight );
-
-    class Data
-    {
-    public:
-        struct CV_EXPORTS DTreeNode
-        {
-            int featureIdx;
-            float threshold; // for ordered features only
-            int left;
-            int right;
-        };
-
-        struct CV_EXPORTS DTree
-        {
-            int nodeCount;
-        };
-
-        struct CV_EXPORTS Stage
-        {
-            int first;
-            int ntrees;
-            float threshold;
-        };
-
-        bool read(const FileNode &node);
-
-        bool isStumpBased;
-
-        int stageType;
-        int featureType;
-        int ncategories;
-        Size origWinSize;
-
-        std::vector<Stage> stages;
-        std::vector<DTree> classifiers;
-        std::vector<DTreeNode> nodes;
-        std::vector<float> leaves;
-        std::vector<int> subsets;
-    };
-
-    Data data;
-    Ptr<FeatureEvaluator> featureEvaluator;
-    Ptr<CvHaarClassifierCascade> oldCascade;
-
-public:
     class CV_EXPORTS MaskGenerator
     {
     public:
         virtual ~MaskGenerator() {}
-        virtual cv::Mat generateMask(const cv::Mat& src)=0;
-        virtual void initializeMask(const cv::Mat& /*src*/) {};
+        virtual Mat generateMask(const Mat& src)=0;
+        virtual void initializeMask(const Mat& /*src*/) {};
     };
-    void setMaskGenerator(Ptr<MaskGenerator> maskGenerator);
-    Ptr<MaskGenerator> getMaskGenerator();
-
-    void setFaceDetectionMaskGenerator();
-
-protected:
-    Ptr<MaskGenerator> maskGenerator;
+    virtual void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) = 0;
+    virtual Ptr<MaskGenerator> getMaskGenerator() = 0;
 };
+
+class CV_EXPORTS_W CascadeClassifier
+{
+public:
+    CV_WRAP CascadeClassifier();
+    CV_WRAP CascadeClassifier(const String& filename);
+    ~CascadeClassifier();
+    CV_WRAP bool empty() const;
+    CV_WRAP bool load( const String& filename );
+    CV_WRAP bool read( const FileNode& node );
+    CV_WRAP void detectMultiScale( InputArray image,
+                          CV_OUT std::vector<Rect>& objects,
+                          double scaleFactor = 1.1,
+                          int minNeighbors = 3, int flags = 0,
+                          Size minSize = Size(),
+                          Size maxSize = Size() );
+
+    CV_WRAP void detectMultiScale( InputArray image,
+                          CV_OUT std::vector<Rect>& objects,
+                          CV_OUT std::vector<int>& numDetections,
+                          double scaleFactor=1.1,
+                          int minNeighbors=3, int flags=0,
+                          Size minSize=Size(),
+                          Size maxSize=Size() );
+
+    CV_WRAP void detectMultiScale( InputArray image,
+                                  CV_OUT std::vector<Rect>& objects,
+                                  CV_OUT std::vector<int>& rejectLevels,
+                                  CV_OUT std::vector<double>& levelWeights,
+                                  double scaleFactor = 1.1,
+                                  int minNeighbors = 3, int flags = 0,
+                                  Size minSize = Size(),
+                                  Size maxSize = Size(),
+                                  bool outputRejectLevels = false );
+
+    CV_WRAP bool isOldFormatCascade() const;
+    CV_WRAP Size getOriginalWindowSize() const;
+    CV_WRAP int getFeatureType() const;
+    void* getOldCascade();
+
+    void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
+    Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();
+
+    Ptr<BaseCascadeClassifier> cc;
+};
+
+CV_EXPORTS Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator();
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
