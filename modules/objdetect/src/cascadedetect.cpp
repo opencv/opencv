@@ -430,7 +430,6 @@ void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>&
 }
 
 
-
 FeatureEvaluator::~FeatureEvaluator() {}
 bool FeatureEvaluator::read(const FileNode&) {return true;}
 Ptr<FeatureEvaluator> FeatureEvaluator::clone() const { return Ptr<FeatureEvaluator>(); }
@@ -834,25 +833,20 @@ Ptr<FeatureEvaluator> FeatureEvaluator::create( int featureType )
 
 //---------------------------------------- Classifier Cascade --------------------------------------------
 
-CascadeClassifier::CascadeClassifier()
+CascadeClassifierImpl::CascadeClassifierImpl()
 {
 }
 
-CascadeClassifier::CascadeClassifier(const String& filename)
-{
-    load(filename);
-}
-
-CascadeClassifier::~CascadeClassifier()
+CascadeClassifierImpl::~CascadeClassifierImpl()
 {
 }
 
-bool CascadeClassifier::empty() const
+bool CascadeClassifierImpl::empty() const
 {
     return !oldCascade && data.stages.empty();
 }
 
-bool CascadeClassifier::load(const String& filename)
+bool CascadeClassifierImpl::load(const String& filename)
 {
     oldCascade.release();
     data = Data();
@@ -862,7 +856,7 @@ bool CascadeClassifier::load(const String& filename)
     if( !fs.isOpened() )
         return false;
 
-    if( read(fs.getFirstTopLevelNode()) )
+    if( read_(fs.getFirstTopLevelNode()) )
         return true;
 
     fs.release();
@@ -871,7 +865,12 @@ bool CascadeClassifier::load(const String& filename)
     return !oldCascade.empty();
 }
 
-int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, double& weight )
+void CascadeClassifierImpl::read(const FileNode& node)
+{
+    read_(node);
+}
+
+int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, double& weight )
 {
     CV_Assert( !oldCascade );
 
@@ -905,33 +904,33 @@ int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, double
     }
 }
 
-bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& evaluator, const Mat& image )
+bool CascadeClassifierImpl::setImage( Ptr<FeatureEvaluator>& evaluator, const Mat& image )
 {
     return empty() ? false : evaluator->setImage(image, data.origWinSize);
 }
 
-void CascadeClassifier::setMaskGenerator(Ptr<MaskGenerator> _maskGenerator)
+void CascadeClassifierImpl::setMaskGenerator(const Ptr<MaskGenerator>& _maskGenerator)
 {
     maskGenerator=_maskGenerator;
 }
-Ptr<CascadeClassifier::MaskGenerator> CascadeClassifier::getMaskGenerator()
+Ptr<CascadeClassifierImpl::MaskGenerator> CascadeClassifierImpl::getMaskGenerator()
 {
     return maskGenerator;
 }
 
-void CascadeClassifier::setFaceDetectionMaskGenerator()
+Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    setMaskGenerator(tegra::getCascadeClassifierMaskGenerator(*this));
+    return tegra::getCascadeClassifierMaskGenerator(*this);
 #else
-    setMaskGenerator(Ptr<CascadeClassifier::MaskGenerator>());
+    return Ptr<BaseCascadeClassifier::MaskGenerator>();
 #endif
 }
 
 class CascadeClassifierInvoker : public ParallelLoopBody
 {
 public:
-    CascadeClassifierInvoker( CascadeClassifier& _cc, Size _sz1, int _stripSize, int _yStep, double _factor,
+    CascadeClassifierInvoker( CascadeClassifierImpl& _cc, Size _sz1, int _stripSize, int _yStep, double _factor,
         std::vector<Rect>& _vec, std::vector<int>& _levels, std::vector<double>& _weights, bool outputLevels, const Mat& _mask, Mutex* _mtx)
     {
         classifier = &_cc;
@@ -950,7 +949,8 @@ public:
     {
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
 
-        Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor), cvRound(classifier->data.origWinSize.height * scalingFactor));
+        Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor),
+                     cvRound(classifier->data.origWinSize.height * scalingFactor));
 
         int y1 = range.start * stripSize;
         int y2 = std::min(range.end * stripSize, processingRectSize.height);
@@ -995,7 +995,7 @@ public:
         }
     }
 
-    CascadeClassifier* classifier;
+    CascadeClassifierImpl* classifier;
     std::vector<Rect>* rectangles;
     Size processingRectSize;
     int stripSize, yStep;
@@ -1010,7 +1010,7 @@ struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } }
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
 
-bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
+bool CascadeClassifierImpl::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                            int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
                                            std::vector<int>& levels, std::vector<double>& weights, bool outputRejectLevels )
 {
@@ -1051,25 +1051,31 @@ bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Siz
     return true;
 }
 
-bool CascadeClassifier::isOldFormatCascade() const
+bool CascadeClassifierImpl::isOldFormatCascade() const
 {
     return !oldCascade.empty();
 }
 
 
-int CascadeClassifier::getFeatureType() const
+int CascadeClassifierImpl::getFeatureType() const
 {
     return featureEvaluator->getFeatureType();
 }
 
-Size CascadeClassifier::getOriginalWindowSize() const
+Size CascadeClassifierImpl::getOriginalWindowSize() const
 {
     return data.origWinSize;
 }
 
-bool CascadeClassifier::setImage(const Mat& image)
+bool CascadeClassifierImpl::setImage(InputArray _image)
 {
+    Mat image = _image.getMat();
     return featureEvaluator->setImage(image, data.origWinSize);
+}
+
+void* CascadeClassifierImpl::getOldCascade()
+{
+    return oldCascade;
 }
 
 static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCascade> oldCascade,
@@ -1090,7 +1096,7 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
 }
 
-void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
+void CascadeClassifierImpl::detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
                                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
@@ -1154,7 +1160,7 @@ void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vecto
     }
 }
 
-void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
+void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& rejectLevels,
                                           std::vector<double>& levelWeights,
                                           double scaleFactor, int minNeighbors,
@@ -1189,7 +1195,7 @@ void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& 
     }
 }
 
-void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
+void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize)
 {
@@ -1200,7 +1206,7 @@ void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& 
         minNeighbors, flags, minObjectSize, maxObjectSize );
 }
 
-void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
+void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rect>& objects,
                                           std::vector<int>& numDetections, double scaleFactor,
                                           int minNeighbors, int flags, Size minObjectSize,
                                           Size maxObjectSize )
@@ -1229,7 +1235,7 @@ void CascadeClassifier::detectMultiScale( InputArray _image, std::vector<Rect>& 
     }
 }
 
-bool CascadeClassifier::Data::read(const FileNode &root)
+bool CascadeClassifierImpl::Data::read(const FileNode &root)
 {
     static const float THRESHOLD_EPS = 1e-5f;
 
@@ -1339,7 +1345,7 @@ bool CascadeClassifier::Data::read(const FileNode &root)
     return true;
 }
 
-bool CascadeClassifier::read(const FileNode& root)
+bool CascadeClassifierImpl::read_(const FileNode& root)
 {
     if( !data.read(root) )
         return false;
@@ -1355,5 +1361,118 @@ bool CascadeClassifier::read(const FileNode& root)
 
 template<> void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const
 { cvReleaseHaarClassifierCascade(&obj); }
+
+
+BaseCascadeClassifier::~BaseCascadeClassifier()
+{
+}
+
+CascadeClassifier::CascadeClassifier() {}
+CascadeClassifier::CascadeClassifier(const String& filename)
+{
+    load(filename);
+}
+
+CascadeClassifier::~CascadeClassifier()
+{
+}
+
+bool CascadeClassifier::empty() const
+{
+    return cc.empty() || cc->empty();
+}
+
+bool CascadeClassifier::load( const String& filename )
+{
+    cc = makePtr<CascadeClassifierImpl>();
+    if(!cc->load(filename))
+        cc.release();
+    return !empty();
+}
+
+bool CascadeClassifier::read(const FileNode &root)
+{
+    Ptr<CascadeClassifierImpl> ccimpl;
+    bool ok = ccimpl->read_(root);
+    if( ok )
+        cc = ccimpl.staticCast<BaseCascadeClassifier>();
+    else
+        cc.release();
+    return ok;
+}
+
+void CascadeClassifier::detectMultiScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      double scaleFactor,
+                      int minNeighbors, int flags,
+                      Size minSize,
+                      Size maxSize )
+{
+    CV_Assert(!empty());
+    cc->detectMultiScale(image, objects, scaleFactor, minNeighbors, flags, minSize, maxSize);
+}
+
+void CascadeClassifier::detectMultiScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      CV_OUT std::vector<int>& numDetections,
+                      double scaleFactor,
+                      int minNeighbors, int flags,
+                      Size minSize, Size maxSize )
+{
+    CV_Assert(!empty());
+    cc->detectMultiScale(image, objects, numDetections,
+                         scaleFactor, minNeighbors, flags, minSize, maxSize);
+}
+
+void CascadeClassifier::detectMultiScale( InputArray image,
+                      CV_OUT std::vector<Rect>& objects,
+                      CV_OUT std::vector<int>& rejectLevels,
+                      CV_OUT std::vector<double>& levelWeights,
+                      double scaleFactor,
+                      int minNeighbors, int flags,
+                      Size minSize, Size maxSize,
+                      bool outputRejectLevels )
+{
+    CV_Assert(!empty());
+    cc->detectMultiScale(image, objects, rejectLevels, levelWeights,
+                         scaleFactor, minNeighbors, flags,
+                         minSize, maxSize, outputRejectLevels);
+}
+
+bool CascadeClassifier::isOldFormatCascade() const
+{
+    CV_Assert(!empty());
+    return cc->isOldFormatCascade();
+}
+
+Size CascadeClassifier::getOriginalWindowSize() const
+{
+    CV_Assert(!empty());
+    return cc->getOriginalWindowSize();
+}
+
+int CascadeClassifier::getFeatureType() const
+{
+    CV_Assert(!empty());
+    return cc->getFeatureType();
+}
+
+void* CascadeClassifier::getOldCascade()
+{
+    CV_Assert(!empty());
+    return cc->getOldCascade();
+}
+
+void CascadeClassifier::setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator)
+{
+    CV_Assert(!empty());
+    cc->setMaskGenerator(maskGenerator);
+}
+
+Ptr<BaseCascadeClassifier::MaskGenerator> CascadeClassifier::getMaskGenerator()
+{
+    CV_Assert(!empty());
+    return cc->getMaskGenerator();
+}
 
 } // namespace cv

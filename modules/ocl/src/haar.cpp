@@ -655,7 +655,7 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
 //CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemStorage *storage, double scaleFactor,
 //        int minNeighbors, int flags, CvSize minSize, CvSize maxSize)
 {
-    CvHaarClassifierCascade *cascade = oldCascade;
+    CvHaarClassifierCascade *cascade = (CvHaarClassifierCascade*)getOldCascade();
 
     const double GROUP_EPS = 0.2;
 
