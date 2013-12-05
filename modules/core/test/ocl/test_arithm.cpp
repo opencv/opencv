@@ -999,6 +999,67 @@ OCL_TEST_P(Flip, BOTH)
         Near(0);
     }
 }
+//////////////////////////////////////// minMaxIdx /////////////////////////////////////////
+
+typedef ArithmTestBase MinMaxIdx;
+
+OCL_TEST_P(MinMaxIdx, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        int p1[2], p2[2], up1[2], up2[2];
+        double minv, maxv, uminv, umaxv;
+
+        if(src1_roi.channels() > 1)
+        {
+            OCL_OFF(cv::minMaxIdx(src2_roi, &minv, &maxv) );
+            OCL_ON(cv::minMaxIdx(usrc2_roi, &uminv, &umaxv));
+
+            EXPECT_DOUBLE_EQ(minv, uminv);
+            EXPECT_DOUBLE_EQ(maxv, umaxv);
+        }
+        else
+        {
+            OCL_OFF(cv::minMaxIdx(src2_roi, &minv, &maxv, p1, p2, noArray()));
+            OCL_ON(cv::minMaxIdx(usrc2_roi, &uminv, &umaxv, up1, up2, noArray()));
+
+            EXPECT_DOUBLE_EQ(minv, uminv);
+            EXPECT_DOUBLE_EQ(maxv, umaxv);
+            for( int i = 0; i < 2; i++)
+            {
+                EXPECT_EQ(p1[i], up1[i]);
+                EXPECT_EQ(p2[i], up2[i]);
+            }
+        }
+    }
+}
+
+typedef ArithmTestBase MinMaxIdx_Mask;
+
+OCL_TEST_P(MinMaxIdx_Mask, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        int p1[2], p2[2], up1[2], up2[2];
+        double minv, maxv, uminv, umaxv;
+
+        OCL_OFF(cv::minMaxIdx(src2_roi, &minv, &maxv, p1, p2, mask_roi));
+        OCL_ON(cv::minMaxIdx(usrc2_roi, &uminv, &umaxv, up1, up2, umask_roi));
+
+        EXPECT_DOUBLE_EQ(minv, uminv);
+        EXPECT_DOUBLE_EQ(maxv, umaxv);
+        for( int i = 0; i < 2; i++)
+        {
+            EXPECT_EQ(p1[i], up1[i]);
+            EXPECT_EQ(p2[i], up2[i]);
+        }
+
+    }
+}
 
 //////////////////////////////// Norm /////////////////////////////////////////////////
 
@@ -1149,6 +1210,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx_Mask, Combine(OCL_ALL_DEPTHS, ::testing::Values(Channels(1)), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 
