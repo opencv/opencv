@@ -1792,6 +1792,85 @@ bool _InputArray::isContinuous(int i) const
     return false;
 }
 
+size_t _InputArray::offset(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        const Mat * const m = ((const Mat*)obj);
+        return (size_t)(m->data - m->datastart);
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->offset;
+    }
+
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+        return 0;
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+
+        return (size_t)(vv[i].data - vv[i].datastart);
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        const cuda::GpuMat * const m = ((const cuda::GpuMat*)obj);
+        return (size_t)(m->data - m->datastart);
+    }
+
+    CV_Error(Error::StsNotImplemented, "");
+    return 0;
+}
+
+size_t _InputArray::step(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const Mat*)obj)->step;
+    }
+
+    if( k == UMAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const UMat*)obj)->step;
+    }
+
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+        return 0;
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+        return vv[i].step;
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        return ((const cuda::GpuMat*)obj)->step;
+    }
+
+    CV_Error(Error::StsNotImplemented, "");
+    return 0;
+}
+
 void _InputArray::copyTo(const _OutputArray& arr) const
 {
     int k = kind();

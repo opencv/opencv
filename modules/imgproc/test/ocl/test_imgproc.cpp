@@ -271,14 +271,49 @@ OCL_TEST_P(CornerHarris, DISABLED_Mat)
 struct Integral :
         public ImgprocTestBase
 {
-    int sdepth;
+    int sdepth, sqdepth;
+
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
 
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-        blockSize = GET_PARAM(1);
-        sdepth = GET_PARAM(2);
+        sdepth = GET_PARAM(1);
+        sqdepth = GET_PARAM(2);
         useRoi = GET_PARAM(3);
+    }
+
+    virtual void random_roi()
+    {
+        ASSERT_EQ(CV_MAT_CN(type), 1);
+
+        Size roiSize = randomSize(1, MAX_VALUE), isize = Size(roiSize.width + 1, roiSize.height + 1);
+        Border srcBorder = randomBorder(0, useRoi ? 2 : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 5, 256);
+
+        Border dstBorder = randomBorder(0, useRoi ? 2 : 0);
+        randomSubMat(dst, dst_roi, isize, dstBorder, sdepth, 5, 16);
+
+        Border dst2Border = randomBorder(0, useRoi ? 2 : 0);
+        randomSubMat(dst2, dst2_roi, isize, dst2Border, sqdepth, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
+    }
+
+    void Near2(double threshold = 0.0, bool relative = false)
+    {
+        if (relative)
+        {
+            EXPECT_MAT_NEAR_RELATIVE(dst2, udst2, threshold);
+            EXPECT_MAT_NEAR_RELATIVE(dst2_roi, udst2_roi, threshold);
+        }
+        else
+        {
+            EXPECT_MAT_NEAR(dst2, udst2, threshold);
+            EXPECT_MAT_NEAR(dst2_roi, udst2_roi, threshold);
+        }
     }
 };
 
@@ -297,19 +332,15 @@ OCL_TEST_P(Integral, Mat1)
 
 OCL_TEST_P(Integral, Mat2)
 {
-    Mat dst1;
-    UMat udst1;
-
     for (int j = 0; j < test_loop_times; j++)
     {
         random_roi();
 
-        OCL_OFF(cv::integral(src_roi, dst_roi, dst1, sdepth));
-        OCL_ON(cv::integral(usrc_roi, udst_roi, udst1, sdepth));
+        OCL_OFF(cv::integral(src_roi, dst_roi, dst2_roi, sdepth, sqdepth));
+        OCL_ON(cv::integral(usrc_roi, udst_roi, udst2_roi, sdepth, sqdepth));
 
         Near();
-        if (cv::ocl::Device::getDefault().doubleFPConfig() > 0)
-            EXPECT_MAT_NEAR(dst1, udst1, 0.);
+        sqdepth == CV_32F ? Near2(1e-6, true) : Near2();
     }
 }
 
@@ -412,19 +443,21 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, EqualizeHist, Combine(
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerMinEigenVal, Combine(
                             Values((MatType)CV_8UC1, (MatType)CV_32FC1),
                             Values(3, 5),
-                            Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT101),
+                            Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
+                                   (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CornerHarris, Combine(
                             Values((MatType)CV_8UC1, CV_32FC1),
                             Values(3, 5),
-                            Values( (int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_REFLECT_101),
+                            Values( (BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE,
+                                    (BorderType)BORDER_REFLECT, (BorderType)BORDER_REFLECT_101),
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Integral, Combine(
                             Values((MatType)CV_8UC1), // TODO does not work with CV_32F, CV_64F
-                            Values(0), // not used
-                            Values((MatType)CV_32SC1, (MatType)CV_32FC1),
+                            Values(CV_32SC1, CV_32FC1), // desired sdepth
+                            Values(CV_32FC1, CV_64FC1), // desired sqdepth
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
