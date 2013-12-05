@@ -65,13 +65,23 @@ int main( int argc, char** argv )
   printf("-- Max dist : %f \n", max_dist );
   printf("-- Min dist : %f \n", min_dist );
 
-  //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist )
+  //-- Draw only "good" matches (i.e. whose distance is within 10% of (max_dist - min_dist) from min_dist )
   //-- PS.- radiusMatch can also be used here.
   std::vector< DMatch > good_matches;
+  double threshold = ( max_dist - min_dist ) * 0.1;
 
-  for( int i = 0; i < descriptors_1.rows; i++ )
-  { if( matches[i].distance <= 2*min_dist )
-    { good_matches.push_back( matches[i]); }
+  if ( !threshold )
+  {
+		for( int i = 0; i < descriptors_1.rows; i++ )
+			good_matches.push_back( matches[i] );
+  }
+  else
+  {
+	  for( int i = 0; i < descriptors_1.rows; i++ )
+	  { 
+		  if ( matches[i].distance - min_dist < threshold )
+			  good_matches.push_back( matches[i] );
+	  }
   }
 
   //-- Draw only "good" matches
