@@ -49,6 +49,8 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "opencv2/core/ocl.hpp" // cv::ocl::haveOpenCL
+
 #if defined(HAVE_OPENCV_OCL)
 
 #include "opencv2/ocl.hpp"
@@ -63,6 +65,7 @@ static double checkNear(const cv::Mat &m1, const cv::Mat &m2)
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
 static int oclInit = false;
+static int oclAvailable = false;
 
 PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
 {
@@ -72,8 +75,6 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
     double reductionFactor;
     double samplingStrength;
 
-    cv::ocl::DevicesInfo infos;
-
     virtual void SetUp()
     {
         colorMode           = GET_PARAM(0);
@@ -82,10 +83,21 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
         reductionFactor     = GET_PARAM(3);
         samplingStrength    = GET_PARAM(4);
 
-        if(!oclInit)
+        if (!oclInit)
         {
-            cv::ocl::getOpenCLDevices(infos);
-            std::cout << "Device name:" << infos[0]->deviceName << std::endl;
+            if (cv::ocl::haveOpenCL())
+            {
+                try
+                {
+                    const cv::ocl::DeviceInfo& dev = cv::ocl::Context::getContext()->getDeviceInfo();
+                    std::cout << "Device name:" << dev.deviceName << std::endl;
+                    oclAvailable = true;
+                }
+                catch (...)
+                {
+                    std::cout << "Device name: N/A" << std::endl;
+                }
+            }
             oclInit = true;
         }
     }
@@ -93,6 +105,12 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
 
 TEST_P(Retina_OCL, Accuracy)
 {
+    if (!oclAvailable)
+    {
+        std::cout << "SKIP test" << std::endl;
+        return;
+    }
+
     using namespace cv;
     Mat input = imread(cvtest::TS::ptr()->get_data_path() + "shared/lena.png", colorMode);
     CV_Assert(!input.empty());
