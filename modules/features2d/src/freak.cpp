@@ -226,8 +226,8 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
 
     // Convert to gray if not already
     Mat grayImage = image;
-    if( image.channels() > 1 )
-        cvtColor( image, grayImage, COLOR_BGR2GRAY );
+//    if( image.channels() > 1 )
+//        cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     // Use 32-bit integers if we won't overflow in the integral image
     if ((image.depth() == CV_8U || image.depth() == CV_8S) &&
