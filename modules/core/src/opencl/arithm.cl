@@ -58,10 +58,10 @@
 */
 
 #ifdef DOUBLE_SUPPORT
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 #define CV_EPSILON DBL_EPSILON
 #define CV_PI M_PI
@@ -76,12 +76,18 @@
 
 #ifndef workT
 
+    #ifndef srcT1
     #define srcT1 dstT
+    #endif
+    #ifndef srcT2
     #define srcT2 dstT
+    #endif
     #define workT dstT
-    #define srcelem1 *(__global dstT*)(srcptr1 + src1_index)
-    #define srcelem2 *(__global dstT*)(srcptr2 + src2_index)
+    #define srcelem1 *(__global srcT1*)(srcptr1 + src1_index)
+    #define srcelem2 *(__global srcT2*)(srcptr2 + src2_index)
+    #ifndef convertToDT
     #define convertToDT noconvert
+    #endif
 
 #else
 
@@ -159,6 +165,11 @@
 
 #elif defined OP_MAG
 #define PROCESS_ELEM dstelem = hypot(srcelem1, srcelem2)
+
+#elif defined OP_ABS_NOSAT
+#define PROCESS_ELEM \
+    dstT v = convertToDT(srcelem1); \
+    dstelem = v >= 0 ? v : -v
 
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
