@@ -98,7 +98,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     obj.weak_order(img,alf);
 
     // Solver
-    Mat Mt = Mat(polyGrad.size(),polyGrad[0].size(), CV_32FC1);
+    Mat Mt = Mat((int)polyGrad.size(),(int)polyGrad[0].size(), CV_32FC1);
     obj.wei_update_matrix(polyGrad,Cg,Mt);
 
     vector <double> wei;
