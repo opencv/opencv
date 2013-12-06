@@ -413,8 +413,96 @@ user=> (.area sq-100)
 100.0
 ```
 
-To exit the REPL type `(exit)`, `ctr-D` or `(quit)` at the REPL
-prompt.
+### Mimic the OpenCV Java Tutorial Sample in the REPL
+
+Let's now try to port to Clojure the
+[opencv java tutorial sample][2]. Instead of writing it in a source
+file we're going to evaluate it at the REPL.
+
+Following is the original Java source code of the cited sample.
+
+```java
+import org.opencv.core.Mat;
+import org.opencv.core.CvType;
+import org.opencv.core.Scalar;
+
+class SimpleSample {
+
+  static{ System.loadLibrary("opencv_java244"); }
+
+  public static void main(String[] args) {
+    Mat m = new Mat(5, 10, CvType.CV_8UC1, new Scalar(0));
+    System.out.println("OpenCV Mat: " + m);
+    Mat mr1 = m.row(1);
+    mr1.setTo(new Scalar(1));
+    Mat mc5 = m.col(5);
+    mc5.setTo(new Scalar(5));
+    System.out.println("OpenCV Mat data:\n" + m.dump());
+  }
+
+}
+```
+
+To start from a clean environment, ff you did not stop the REPL from
+the previous session, do it now and run the `lein repl` task again
+
+```bash
+lein repl
+nREPL server started on port 51645 on host 127.0.0.1
+REPL-y 0.3.0
+Clojure 1.5.1
+    Docs: (doc function-name-here)
+          (find-doc "part-of-name-here")
+  Source: (source function-name-here)
+ Javadoc: (javadoc java-object-or-class-here)
+    Exit: Control+D or (exit) or (quit)
+ Results: Stored in vars *1, *2, *3, an exception in *e
+
+user=>
+```
+
+Import the interested OpenCV java interfaces and load the
+corresponding native library.
+
+```clj
+user=> (import '[org.opencv.core Mat CvType Scalar])
+org.opencv.core.Scalar
+user=> (clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)
+nil
+```
+
+As you see we have mimicked almost verbatim the original java
+code. Following is the rest of the REPL session to obtain the same
+result produced by the OpenCV java tutorial.
+
+```clj
+user=> (def m (Mat. 5 10 CvType/CV_8UC1 (Scalar. 0 0)))
+#'user/m
+user=> (def mr1 (.row m 1))
+#'user/mr1
+user=> (.setTo mr1 (Scalar. 1 0))
+#<Mat Mat [ 1*10*CV_8UC1, isCont=true, isSubmat=true, nativeObj=0x7fc9dac49880, dataAddr=0x7fc9d9c98d5a ]>
+user=> (def mc5 (.col m 5))
+#'user/mc5
+user=> (.setTo mc5 (Scalar. 5 0))
+#<Mat Mat [ 5*1*CV_8UC1, isCont=false, isSubmat=true, nativeObj=0x7fc9d9c995a0, dataAddr=0x7fc9d9c98d55 ]>
+user=> (println (.dump m))
+[0, 0, 0, 0, 0, 5, 0, 0, 0, 0;
+  1, 1, 1, 1, 1, 5, 1, 1, 1, 1;
+  0, 0, 0, 0, 0, 5, 0, 0, 0, 0;
+  0, 0, 0, 0, 0, 5, 0, 0, 0, 0;
+  0, 0, 0, 0, 0, 5, 0, 0, 0, 0]
+nil
+```
+
+> NOTE 5: If you are accustomed to a functional language all those
+> abused and mutating nouns are going to irritate you preference for
+> verbs. Even if the CLJ interop syntax is very handy and complete,
+> there is still an impedance mismatch between any OOP language and any
+> FP language (Scala is a mixed paradigm programming language).
+
+To exit the REPL type `(exit)`,
+`ctr-D` or `(quit)` at the REPL prompt.
 
 ```clj
 user=> (exit)
