@@ -1361,7 +1361,7 @@ namespace
                 static const func_t funcs[7][4] =
                 {
                     {NppSet<CV_8U , 1, nppiSet_8u_C1R >::call, cv::gpu::setTo                          , cv::gpu::setTo                        , NppSet<CV_8U , 4, nppiSet_8u_C4R >::call},
-                    {NppSet<CV_8S , 1, nppiSet_8s_C1R >::call, NppSet<CV_8S , 2, nppiSet_8s_C2R >::call, NppSet<CV_8S, 3, nppiSet_8s_C3R>::call, NppSet<CV_8S , 4, nppiSet_8s_C4R >::call},
+                    {cv::gpu::setTo                          , cv::gpu::setTo                          , cv::gpu::setTo                        , cv::gpu::setTo                          },
                     {NppSet<CV_16U, 1, nppiSet_16u_C1R>::call, NppSet<CV_16U, 2, nppiSet_16u_C2R>::call, cv::gpu::setTo                        , NppSet<CV_16U, 4, nppiSet_16u_C4R>::call},
                     {NppSet<CV_16S, 1, nppiSet_16s_C1R>::call, NppSet<CV_16S, 2, nppiSet_16s_C2R>::call, cv::gpu::setTo                        , NppSet<CV_16S, 4, nppiSet_16s_C4R>::call},
                     {NppSet<CV_32S, 1, nppiSet_32s_C1R>::call, cv::gpu::setTo                          , cv::gpu::setTo                        , NppSet<CV_32S, 4, nppiSet_32s_C4R>::call},
