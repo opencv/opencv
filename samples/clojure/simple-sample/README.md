@@ -466,8 +466,9 @@ class SimpleSample {
 }
 ```
 
-To start from a clean environment, if you did not stop the REPL from
-the previous session, do it now and run the `lein repl` task again
+If you want To start from a clean environment stop the REPL by
+evaluating the `(exit)` expression and then rerun the `lein repl`
+task.
 
 ```bash
 lein repl
@@ -526,7 +527,7 @@ nil
 > abused and mutating nouns are going to irritate your preference for
 > verbs. Even if the CLJ interop syntax is very handy and complete,
 > there is still an impedance mismatch between any OOP language and
-> any FP language (Scala is a mixed paradigm programming language).
+> any FP language (bein Scala a mixed paradigms programming language).
 
 To exit the REPL type `(exit)`,
 `ctr-D` or `(quit)` at the REPL prompt.
