@@ -680,5 +680,5 @@ your option) any later version.
 [10]: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 [11]: http://www.cmake.org/cmake/resources/software.html
 [12]: http://docs.opencv.org/java/
-[13]:
-[14]:
+[13]: https://github.com/magomimmo/opencv/blob/2.4.7-macosx/samples/clojure/simple-sample/resources/images/lena.png
+[14]: https://github.com/magomimmo/opencv/blob/2.4.7-macosx/samples/clojure/simple-sample/resources/images/blurred.png
