@@ -976,7 +976,7 @@ OCL_TEST_P(Flip, X)
 
         OCL_OFF(cv::flip(src1_roi, dst1_roi, 0));
         OCL_ON(cv::flip(usrc1_roi, udst1_roi, 0));
-        Near(1e-5);
+        Near(0);
     }
 }
 
@@ -988,7 +988,7 @@ OCL_TEST_P(Flip, Y)
 
         OCL_OFF(cv::flip(src1_roi, dst1_roi, 1));
         OCL_ON(cv::flip(usrc1_roi, udst1_roi, 1));
-        Near(1e-5);
+        Near(0);
     }
 }
 
@@ -1000,7 +1000,7 @@ OCL_TEST_P(Flip, BOTH)
 
         OCL_OFF(cv::flip(src1_roi, dst1_roi, -1));
         OCL_ON(cv::flip(usrc1_roi, udst1_roi, -1));
-        Near(1e-5);
+        Near(0);
     }
 }
 
