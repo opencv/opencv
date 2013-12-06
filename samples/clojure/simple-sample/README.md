@@ -147,12 +147,25 @@ Copy into the `x86_64` directory the `libopencv_java247.dylib` lib.
 cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 ```
 
-> NOTE 2: On a GNU/Linux
->
-> ```bash
-> mkdir -p native/linux/x86_64
-> cp ~/opt/opencv/build/lib/libopencv_java247.so native/linux/x86_64/
-> ```
+NOTE 2: Summary of Operating System and Architecture mapping
+
+```
+OS
+
+Mac OS X -> macosx
+Windows  -> windows
+Linux    -> linux
+SunOS"   -> solaris
+
+Architectures
+
+amd64    -> x86_64
+x86_64   -> x86_64
+x86      -> x86
+i386     -> x86
+arm      -> arm
+sparc    -> sparc
+```
 
 #### Package the native lib as a jar
 
@@ -315,10 +328,18 @@ user=> (foo)
 "bar"
 ```
 
-When ran from the home directory of a lein based project, the `lein
-repl` task automatically loads all the project dependencies. So we
-should be able to interact with the OpenCV libs by just referencing
-the corresponding java packages (mapped to Clojure namespaces).
+When ran from the home directory of a lein based project, even if the
+`lein repl` task automatically loads all the project dependencies, you
+still need to load the open native library to be able to interact with
+the OpenCV.
+
+```clj
+user=> (clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)
+nil
+```
+
+Then you can start interacting with OpenCV by just referencing the
+fully qualified names of its classes.
 
 ```clj
 user=> (org.opencv.core.Point. 0 0)
@@ -443,7 +464,7 @@ class SimpleSample {
 }
 ```
 
-To start from a clean environment, ff you did not stop the REPL from
+To start from a clean environment, if you did not stop the REPL from
 the previous session, do it now and run the `lein repl` task again
 
 ```bash
@@ -462,7 +483,7 @@ user=>
 ```
 
 Import the interested OpenCV java interfaces and load the
-corresponding native library.
+corresponding native library as we did before.
 
 ```clj
 user=> (import '[org.opencv.core Mat CvType Scalar])
@@ -471,9 +492,8 @@ user=> (clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)
 nil
 ```
 
-As you see we have mimicked almost verbatim the original java
-code. Following is the rest of the REPL session to obtain the same
-result produced by the OpenCV java tutorial:
+We're going to mimic almost verbatim the original OpenCV java
+tutorial to:
 
 * create a 5x10 matrix with all its elements intialized to 0
 * change the value of every element of the second row to 1
@@ -501,10 +521,10 @@ nil
 ```
 
 > NOTE 5: If you are accustomed to a functional language all those
-> abused and mutating nouns are going to irritate you preference for
+> abused and mutating nouns are going to irritate your preference for
 > verbs. Even if the CLJ interop syntax is very handy and complete,
-> there is still an impedance mismatch between any OOP language and any
-> FP language (Scala is a mixed paradigm programming language).
+> there is still an impedance mismatch between any OOP language and
+> any FP language (Scala is a mixed paradigm programming language).
 
 To exit the REPL type `(exit)`,
 `ctr-D` or `(quit)` at the REPL prompt.
