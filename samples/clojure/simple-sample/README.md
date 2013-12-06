@@ -473,7 +473,12 @@ nil
 
 As you see we have mimicked almost verbatim the original java
 code. Following is the rest of the REPL session to obtain the same
-result produced by the OpenCV java tutorial.
+result produced by the OpenCV java tutorial:
+
+* create a 5x10 matrix with all its elements intialized to 0
+* change the value of every element of the second row to 1
+* change the value of every element of the 6th column to 5
+* print the content of the obtained matrix
 
 ```clj
 user=> (def m (Mat. 5 10 CvType/CV_8UC1 (Scalar. 0 0)))
