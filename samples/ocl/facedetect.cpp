@@ -74,7 +74,7 @@ static int facedetect_one_thread(bool useCPU, double scale )
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
     {
-        cout << "ERROR: Could not load classifier cascade" << endl;
+        cout << "ERROR: Could not load classifier cascade: " << cascadeName << endl;
         return EXIT_FAILURE;
     }
 
@@ -170,7 +170,12 @@ static int facedetect_one_thread(bool useCPU, double scale )
 static void detectFaces(std::string fileName)
 {
     ocl::OclCascadeClassifier cascade;
-    cascade.load(cascadeName);
+    if(!cascade.load(cascadeName))
+    {
+        std::cout << "ERROR: Could not load classifier cascade: " << cascadeName << std::endl;
+        return;
+    }
+
     Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
     if (img.empty())
     {
@@ -187,8 +192,16 @@ static void detectFaces(std::string fileName)
     for(unsigned int i = 0; i<oclfaces.size(); i++)
         rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), Scalar( 0, 255, 255 ), 3);
 
-    imwrite(std::to_string(_threadid) + outputName, img);
+    int n = (int)outputName.length();
+    while( n > 0 && outputName[n-1] != '.')
+        n--;
+    if( n == 0 )
+    {
+        std::cout << "Invalid output file name: " << outputName << std::endl;
+        return;
+    }
 
+    imwrite(outputName.substr(0,n-1) + "_" + std::to_string(_threadid) + outputName.substr(n-1, outputName.length()-1), img);
 }
 
 static void facedetect_multithreading(int nthreads)
