@@ -168,9 +168,9 @@ Copy into the ``x86_64`` directory the ``libopencv_java247.dylib`` lib.
 
     cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 
-    NOTE 2: Summary of Operating System and Architecture mapping
+Summary of Operating System and Architecture mapping
 
-    ::
+.. code:: bash
 
         OS
 
@@ -198,8 +198,8 @@ Next you need to package the native lib in a jar file by using the
 
     jar -cMf opencv-native-247.jar native
 
-    NOTE 3: the ``M`` option instructs the ``jar`` command to not create
-    a MANIFEST file for the artifact.
+Note that ehe ``M`` option instructs the ``jar`` command to not create
+a MANIFEST file for the artifact.
 
 Your directories layout should look like the following:
 
@@ -293,8 +293,9 @@ section as follows:
                      [opencv/opencv "2.4.7"] ; added line
                      [opencv/opencv-native "2.4.7"]]) ;added line
 
-    NOTE 4: The Clojure Programming Language is an artifact too. This is
-    why Clojure is called an hosted language.
+
+Note that The Clojure Programming Language is an artifact too. This is
+why Clojure is called an hosted language.
 
 To verify that everything went right issue the ``lein deps`` task. The
 very first time you run a ``lein`` task it will take sometimes to
@@ -365,7 +366,7 @@ the OpenCV.
 Then you can start interacting with OpenCV by just referencing the fully
 qualified names of its classes.
 
-    NOTE 5: `Here <http://docs.opencv.org/java/>`_ you can find the
+    NOTE 2: `Here <http://docs.opencv.org/java/>`_ you can find the
     full OpenCV Java API.
 
 .. code:: clj
@@ -570,11 +571,11 @@ to:
       0, 0, 0, 0, 0, 5, 0, 0, 0, 0]
     nil
 
-    NOTE 6: If you are accustomed to a functional language all those
-    abused and mutating nouns are going to irritate your preference for
-    verbs. Even if the CLJ interop syntax is very handy and complete,
-    there is still an impedance mismatch between any OOP language and
-    any FP language (bein Scala a mixed paradigms programming language).
+If you are accustomed to a functional language all those abused and
+mutating nouns are going to irritate your preference for verbs. Even
+if the CLJ interop syntax is very handy and complete, there is still
+an impedance mismatch between any OOP language and any FP language
+(bein Scala a mixed paradigms programming language).
 
 To exit the REPL type ``(exit)``, ``ctr-D`` or ``(quit)`` at the REPL
 prompt.
