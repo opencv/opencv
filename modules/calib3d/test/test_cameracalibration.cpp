@@ -508,7 +508,7 @@ void CV_CameraCalibrationTest::run( int start_from )
                      // + CV_CALIB_USE_INTRINSIC_GUESS
                      + CV_CALIB_FIX_K3
                      + CV_CALIB_FIX_K4+CV_CALIB_FIX_K5
-                     + CV_CALIB_FIX_K6
+                     + CV_CALIB_FIX_K6 + CALIB_FIX_P3_P4
                     ;
         memset( cameraMatrix, 0, 9*sizeof(cameraMatrix[0]) );
         cameraMatrix[0] = cameraMatrix[4] = 807.;
