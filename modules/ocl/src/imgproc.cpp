@@ -273,12 +273,7 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
             args.push_back( make_pair(scalar.elemSize(), (void *)scalar.data));
 
-#ifdef ANDROID
             openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, NULL, args, -1, -1, buildOptions.c_str());
-#else
-            size_t localThreads[3] = { 256, 1, 1 };
-            openCLExecuteKernel(clCxt, &imgproc_remap, kernelName, globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
-#endif
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
@@ -588,7 +583,6 @@ namespace cv
             if (bordertype_index < 0)
                 CV_Error(CV_StsBadArg, "Unsupported border type");
 
-            size_t localThreads[3] = { 16, 16, 1 };
             size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
             vector< pair<size_t, const void *> > args;
@@ -621,7 +615,7 @@ namespace cv
             args.push_back( make_pair( bufSize , (void *)buf ));
 
             openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, "copymakeborder", globalThreads,
-                                localThreads, args, -1, -1, buildOptions.c_str());
+                                NULL, args, -1, -1, buildOptions.c_str());
         }
 
         ////////////////////////////////////////////////////////////////////////

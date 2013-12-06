@@ -86,14 +86,8 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
 
     size_t globalThreads[3] = { divUp(dst.wholecols * dst.wholerows, 4), 1, 1 };
 
-#ifdef ANDROID
     openCLExecuteKernel(clCxt, &convertC3C4, "convertC3C4", globalThreads, NULL,
                         args, -1, -1, buildOptions.c_str());
-#else
-    size_t localThreads[3] = { 256, 1, 1 };
-    openCLExecuteKernel(clCxt, &convertC3C4, "convertC3C4", globalThreads, localThreads,
-                        args, -1, -1, buildOptions.c_str());
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -118,12 +112,7 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
 
     size_t globalThreads[3] = { divUp(src.wholecols * src.wholerows, 4), 1, 1};
 
-#ifdef ANDROID
     openCLExecuteKernel(clCxt, &convertC3C4, "convertC4C3", globalThreads, NULL, args, -1, -1, buildOptions.c_str());
-#else
-    size_t localThreads[3] = { 256, 1, 1};
-    openCLExecuteKernel(clCxt, &convertC3C4, "convertC4C3", globalThreads, localThreads, args, -1, -1, buildOptions.c_str());
-#endif
 }
 
 void cv::ocl::oclMat::upload(const Mat &m)
@@ -237,7 +226,6 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
 
     char compile_option[32];
     sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
-    size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
     int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
@@ -256,7 +244,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
 
     openCLExecuteKernel(dst.clCxt , &operator_copyToM, kernelName, globalThreads,
-                        localThreads, args, -1, -1, compile_option);
+                        NULL, args, -1, -1, compile_option);
 }
 
 void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
@@ -296,9 +284,7 @@ static void convert_run(const oclMat &src, oclMat &dst, double alpha, double bet
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     vector<pair<size_t , const void *> > args;
 
-    size_t localThreads[3] = { 16, 16, 1 };
-    size_t globalThreads[3] = { divUp(cols1, localThreads[0]) * localThreads[0],
-                                divUp(dst.rows, localThreads[1]) * localThreads[1], 1 };
+    size_t globalThreads[3] = { cols1, dst.rows, 1 };
 
     int doffset1 = dst.offset / dst.elemSize1();
     int soffset1 = src.offset / src.elemSize1();
@@ -315,7 +301,7 @@ static void convert_run(const oclMat &src, oclMat &dst, double alpha, double bet
     args.push_back( make_pair( sizeof(cl_float) , (void *)&beta_f ));
 
     openCLExecuteKernel(dst.clCxt , &operator_convertTo, kernelName, globalThreads,
-                        localThreads, args, -1, -1, buildOptions);
+                        NULL, args, -1, -1, buildOptions);
 }
 
 void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double beta ) const
@@ -425,12 +411,11 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
 {
     vector<pair<size_t , const void *> > args;
 
-    size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
 
     if (dst.type() == CV_8UC1)
-        globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0] - 1) / localThreads[0] * localThreads[0];
+        globalThreads[0] = (dst.cols + 3) / 4 ;
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char channelMap[] = { ' ', ' ', '2', '4', '4' };
@@ -460,7 +445,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
         args.push_back( make_pair( sizeof(cl_int) , (void *)&offset_in_pixel ));
 
         openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-            localThreads, args, -1, -1, buildOptions.c_str());
+            NULL, args, -1, -1, buildOptions.c_str());
     }
 }
 
@@ -468,7 +453,6 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols);
     vector<pair<size_t , const void *> > args;
-    size_t localThreads[3] = { 16, 16, 1 };
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
     int step_in_pixel = dst.step / dst.elemSize(), offset_in_pixel = dst.offset / dst.elemSize();
 
@@ -487,7 +471,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset ));
     openCLExecuteKernel(dst.clCxt , &operator_setToM, kernelName, globalThreads,
-                        localThreads, args, -1, -1, buildOptions.c_str());
+                        NULL, args, -1, -1, buildOptions.c_str());
 }
 
 oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)

@@ -189,10 +189,9 @@ int findCorners_caller(
     args.push_back(make_pair( sizeof(cl_mem), (void*)&g_counter.data ));
 
     size_t globalThreads[3] = {eig.cols, eig.rows, 1};
-    size_t localThreads[3]  = {16, 16, 1};
 
     const char * opt = mask.empty() ? "" : "-D WITH_MASK";
-    openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1, opt);
+    openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, NULL, args, -1, -1, opt);
     return std::min(Mat(g_counter).at<int>(0), max_count);
 }
 }//unnamed namespace
@@ -228,20 +227,14 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         return;
     }
     if(use_cpu_sorter)
-    {
         Sorter<CPU_STL>::sortCorners_caller(eig_, tmpCorners_, total);
-    }
     else
     {
         //if total is power of 2
         if(((total - 1) & (total)) == 0)
-        {
             Sorter<BITONIC>::sortCorners_caller(*eig_tex, tmpCorners_, total);
-        }
         else
-        {
             Sorter<SELECTION>::sortCorners_caller(*eig_tex, tmpCorners_, total);
-        }
     }
 
     if (minDistance < 1)
