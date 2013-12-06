@@ -669,8 +669,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     size_t maxWorkItemSizes[32]; device.maxWorkItemSizes(maxWorkItemSizes);
     size_t tryWorkItems = maxWorkItemSizes[0];
-    bool dummy = true; // for make compiler happy
-    do {
+    for (;;)
+    {
         size_t BLOCK_SIZE = tryWorkItems;
         while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
             BLOCK_SIZE /= 2;
@@ -710,15 +710,12 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
         size_t kernelWorkGroupSize = kernel.workGroupSize();
         if (localsize[0] <= kernelWorkGroupSize)
-        {
-            dummy = false;
             break;
-        }
 
         if (BLOCK_SIZE < kernelWorkGroupSize)
             return false;
         tryWorkItems = kernelWorkGroupSize;
-    } while (dummy);
+    }
 
     _dst.create(sz, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
