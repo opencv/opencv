@@ -117,7 +117,7 @@ void Decolor::init()
     kernely.at<float>(0,0)=1.0;
     kernely.at<float>(1,0)=-1.0;
     order = 2;
-    sigma = .02;
+    sigma = 0.02f;
 }
 
 vector<double> Decolor::product(vector < vector<int> > &comb, vector <double> &initRGB)
@@ -343,18 +343,19 @@ void Decolor::grad_system(Mat img, vector < vector < double > > &polyGrad,
 
 void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double> &Cg, Mat &X)
 {
-    Mat P = Mat(poly.size(),poly[0].size(), CV_32FC1);
-    Mat A = Mat(poly.size(),poly.size(), CV_32FC1);
+    int size = static_cast<int>(poly.size()), size0 = static_cast<int>(poly[0].size());
+    Mat P = Mat(size, size0, CV_32FC1);
+    Mat A = Mat(size, size, CV_32FC1);
 
-    for(unsigned int i =0;i<poly.size();i++)
-        for(unsigned int j=0;j<poly[0].size();j++)
+    for (int i = 0; i < size; i++)
+        for (int j = 0; j < size0;j++)
             P.at<float>(i,j) = (float) poly[i][j];
 
     Mat P_trans = P.t();
-    Mat B = Mat(poly.size(),poly[0].size(), CV_32FC1);
-    for(unsigned int i =0;i < poly.size();i++)
+    Mat B = Mat(size, size0, CV_32FC1);
+    for(int i =0;i < size;i++)
     {
-        for(unsigned int j=0;j<Cg.size();j++)
+        for(int j = 0, end = Cg.size(); j < end;j++)
             B.at<float>(i,j) = (float) (poly[i][j] * Cg[j]);
     }
 
@@ -414,8 +415,8 @@ void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
                     kk=kk+1;
                 }
 
-    float minval = INT_MAX;
-    float maxval = INT_MIN;
+    float minval = FLT_MAX;
+    float maxval = -FLT_MAX;
 
     for(int i=0;i<h;i++)
         for(int j =0;j<w;j++)

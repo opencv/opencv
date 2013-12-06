@@ -39,7 +39,7 @@ colorChange
 -----------
 Given an original color image, two differently colored versions of this image can be mixed seamlessly.
 
-.. ocv:function:: void colorChange( InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0, float green_mul = 1.0, float blue_mul = 1.0)
+.. ocv:function:: void colorChange( InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0f, float green_mul = 1.0f, float blue_mul = 1.0f)
 
     :param src: Input 8-bit 3-channel image.
 
@@ -61,7 +61,7 @@ illuminationChange
 Applying an appropriate non-linear transformation to the gradient field inside the selection and then integrating back with a Poisson
 solver, modifies locally the apparent illumination of an image.
 
-.. ocv:function:: void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2, float beta = 0.4)
+.. ocv:function:: void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2f, float beta = 0.4f)
 
     :param src: Input 8-bit 3-channel image.
 

@@ -306,27 +306,27 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
         OutputArray blend, int flags);
 
-CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0,
-        float green_mul = 1.0, float blue_mul = 1.0);
+CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0f,
+        float green_mul = 1.0f, float blue_mul = 1.0f);
 
 CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArray dst,
-        float alpha = 0.2, float beta = 0.4);
+        float alpha = 0.2f, float beta = 0.4f);
 
 CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst,
         double low_threshold = 30, double high_threshold = 45,
         int kernel_size = 3);
 
 CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,
-        float sigma_s = 60, float sigma_r = 0.4);
+        float sigma_s = 60, float sigma_r = 0.4f);
 
 CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
-        float sigma_r = 0.15);
+        float sigma_r = 0.15f);
 
 CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst1, OutputArray dst2,
-        float sigma_s = 60, float sigma_r = 0.07, float shade_factor = 0.02);
+        float sigma_s = 60, float sigma_r = 0.07f, float shade_factor = 0.02f);
 
 CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
-        float sigma_r = 0.45);
+        float sigma_r = 0.45f);
 
 } // cv
 
