@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/ocl/cl_runtime/cl_runtime.hpp" // for OpenCL types: cl_mem
+#include "opencv2/core/opencl/runtime/opencl_core.hpp" // for OpenCL types: cl_mem
 #include "opencv2/core/ocl.hpp"
 
 TEST(TestAPI, openCLExecuteKernelInterop)
