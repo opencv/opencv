@@ -964,6 +964,46 @@ OCL_TEST_P(Magnitude, Mat)
     }
 }
 
+//////////////////////////////// Flip /////////////////////////////////////////////////
+
+typedef ArithmTestBase Flip;
+
+OCL_TEST_P(Flip, X)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, 0));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, 0));
+        Near(0);
+    }
+}
+
+OCL_TEST_P(Flip, Y)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, 1));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, 1));
+        Near(0);
+    }
+}
+
+OCL_TEST_P(Flip, BOTH)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::flip(src1_roi, dst1_roi, -1));
+        OCL_ON(cv::flip(usrc1_roi, udst1_roi, -1));
+        Near(0);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -993,6 +1033,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 
 } } // namespace cvtest::ocl
 
