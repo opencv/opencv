@@ -596,15 +596,15 @@ Calculates the integral of an image.
 
 .. ocv:function:: void integral( InputArray src, OutputArray sum, int sdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1, int sqdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1, int sqdepth=-1 )
 
 .. ocv:pyfunction:: cv2.integral(src[, sum[, sdepth]]) -> sum
 
-.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth]]]) -> sum, sqsum
+.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth[, sqdepth]]]]) -> sum, sqsum
 
-.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth]]]]) -> sum, sqsum, tilted
+.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth[, sqdepth]]]]]) -> sum, sqsum, tilted
 
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tilted_sum=NULL )
 
@@ -617,6 +617,8 @@ Calculates the integral of an image.
     :param tilted: integral for the image rotated by 45 degrees; it is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
 
     :param sdepth: desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
+
+    :param sqdepth: desired depth of the integral image of squared pixel values, ``CV_32F``  or  ``CV_64F``.
 
 The functions calculate one or more integral images for the source image as follows:
 

@@ -1241,12 +1241,12 @@ CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
 
 //! computes the integral image and integral for the squared image
 CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
-                                        OutputArray sqsum, int sdepth = -1 );
+                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
 
 //! computes the integral image, integral for the squared image and the tilted integral image
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
-                                        int sdepth = -1 );
+                                        int sdepth = -1, int sqdepth = -1 );
 
 //! adds image to the accumulator (dst += src). Unlike cv::add, dst and src can have different types.
 CV_EXPORTS_W void accumulate( InputArray src, InputOutputArray dst,
