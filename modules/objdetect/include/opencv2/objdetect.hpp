@@ -232,6 +232,8 @@ public:
     CV_WRAP int getFeatureType() const;
     void* getOldCascade();
 
+    CV_WRAP static bool convert(const String& oldcascade, const String& newcascade);
+
     void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
     Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();
 
