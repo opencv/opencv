@@ -190,18 +190,21 @@ static void detectFaces(std::string fileName)
     cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
 
     for(unsigned int i = 0; i<oclfaces.size(); i++)
-        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), Scalar( 0, 255, 255 ), 3);
+        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), colors[i%8], 3);
 
-    int n = (int)outputName.length();
-    while( n > 0 && outputName[n-1] != '.')
-        n--;
-    if( n == 0 )
+    std::string::size_type pos = outputName.rfind('.');
+    std::string outputNameTid = outputName + '-' + std::to_string(_threadid);
+    if(pos == std::string::npos)
     {
         std::cout << "Invalid output file name: " << outputName << std::endl;
-        return;
     }
-
-    imwrite(outputName.substr(0,n-1) + "_" + std::to_string(_threadid) + outputName.substr(n-1, outputName.length()-1), img);
+    else
+    {
+        outputNameTid = outputName.substr(0, pos) + "_" + std::to_string(_threadid) + outputName.substr(pos);
+        imwrite(outputNameTid, img);
+    }
+    imshow(outputNameTid, img);
+    waitKey(0);
 }
 
 static void facedetect_multithreading(int nthreads)
@@ -212,8 +215,6 @@ static void facedetect_multithreading(int nthreads)
         threads.push_back(std::thread(detectFaces, inputName));
     for(int i = 0; i<thread_number; i++)
         threads[i].join();
-    for(int i = 0; i<thread_number; i++)
-        threads[i].~thread();
 }
 #endif
 
