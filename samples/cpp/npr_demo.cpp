@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
     else if(num == 3)
     {
         Mat img1;
-        pencilSketch(I,img1, img, 10 ,.1,.03);
+        pencilSketch(I,img1, img, 10 , 0.1f, 0.03f);
         imshow("Pencil Sketch",img1);
         imshow("Color Pencil Sketch",img);
     }

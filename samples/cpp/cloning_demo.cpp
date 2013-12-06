@@ -210,7 +210,7 @@ int main()
 
         Mat result;
 
-        illuminationChange(source, mask, result, .2, .4);
+        illuminationChange(source, mask, result, 0.2f, 0.4f);
 
         imshow("Output",result);
         imwrite(folder + "cloned.png", result);

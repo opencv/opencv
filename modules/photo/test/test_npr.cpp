@@ -106,7 +106,7 @@ TEST(Photo_NPR_PencilSketch, regression)
     ASSERT_FALSE(source.empty()) << "Could not load input image " << original_path;
 
     Mat result,result1;
-    pencilSketch(source,result,result1,10,.1,.03);
+    pencilSketch(source,result,result1, 10, 0.1f, 0.03f);
 
     imwrite(folder + "pencil_sketch.png", result);
     imwrite(folder + "color_pencil_sketch.png", result1);

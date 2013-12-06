@@ -155,7 +155,7 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
 
     Mat result;
-    illuminationChange(source, mask, result, .2, .4);
+    illuminationChange(source, mask, result, 0.2f, 0.4f);
 
     imwrite(folder + "cloned.png", result);
 
