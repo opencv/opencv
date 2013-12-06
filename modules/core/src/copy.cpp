@@ -6,7 +6,6 @@
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
 //
-//
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
@@ -478,11 +477,59 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     }
 }
 
+enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
+
+static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+
+    if (cn > 4 || cn == 3)
+        return false;
+
+    const char * kernelName;
+    int flipType;
+
+    if (flipCode == 0)
+        kernelName = "arithm_flip_rows", flipType = FLIP_ROWS;
+    else if (flipCode > 0)
+        kernelName = "arithm_flip_cols", flipType = FLIP_COLS;
+    else
+        kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
+
+    Size size = _src.size();
+    int cols = size.width, rows = size.height;
+    if ((cols == 1 && flipType == FLIP_COLS) ||
+            (rows == 1 && flipType == FLIP_ROWS) ||
+            (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
+
+    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
+        format( "-D type=%s", ocl::memopTypeToStr(type)));
+    if (k.empty())
+        return false;
+
+    _dst.create(size, type);
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+    cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
+    rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
+
+    size_t globalsize[2] = { cols, rows };
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), rows, cols).run(2, globalsize, NULL, false);
+}
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
-    Mat src = _src.getMat();
+    CV_Assert( _src.dims() <= 2 );
 
-    CV_Assert( src.dims <= 2 );
+    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
+    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
+        return;
+
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     size_t esz = src.elemSize();
