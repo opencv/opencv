@@ -10,12 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//   Long Guoping , longguoping@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -33,7 +29,7 @@
 // This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the OpenCV Foundation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -43,27 +39,19 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPENCL_SAFE_CALL_HPP__
-#define __OPENCV_OPENCL_SAFE_CALL_HPP__
+#ifndef __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
+#define __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
 
-#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+namespace cv { namespace ocl { namespace runtime {
 
-#define openCLSafeCall(expr)  ___openCLSafeCall(expr, __FILE__, __LINE__, CV_Func)
-#define openCLVerifyCall(res) ___openCLSafeCall(res, __FILE__, __LINE__, CV_Func)
-
-
-namespace cv
+struct DynamicFnEntry
 {
-    namespace ocl
-    {
-        const char *getOpenCLErrorString( int err );
+    const char* fnName; // "clCreateContext"
+    void** ppFn; // &clCreateContext_pfn
+};
 
-        static inline void ___openCLSafeCall(int err, const char *file, const int line, const char *func = "")
-        {
-            if (CL_SUCCESS != err)
-                cv::error(Error::OpenCLApiCallError, getOpenCLErrorString(err), func, file, line);
-        }
-    }
-}
+} } } // namespace cv::ocl::runtime
 
-#endif /* __OPENCV_OPENCL_SAFE_CALL_HPP__ */
+using namespace cv::ocl::runtime;
+
+#endif // __OPENCV_CORE_OCL_RUNTIME_COMMON_HPP__
