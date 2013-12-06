@@ -250,9 +250,9 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
     UMat src = _src.getUMat(), t_sum(t_size, sdepth), sum = _sum.getUMat();
     t_sum = t_sum(Range::all(), Range(0, size.height));
 
-    int offset = src.offset / vlen, pre_invalid = src.offset % vlen;
+    int offset = (int)src.offset / vlen, pre_invalid = (int)src.offset % vlen;
     int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
-    int sum_offset = sum.offset / vlen;
+    int sum_offset = (int)sum.offset / vlen;
 
     k1.args(ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(t_sum),
             offset, pre_invalid, src.rows, src.cols, (int)src.step, (int)t_sum.step);
@@ -297,12 +297,11 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
     _sqsum.create(dsize, sqdepth);
     UMat sum = _sum.getUMat(), sqsum = _sqsum.getUMat();
 
-    int offset = src.offset / vlen;
+    int offset = (int)src.offset / vlen;
     int pre_invalid = src.offset % vlen;
     int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
-    int sum_offset = sum.offset / sum.elemSize();
-    int sqsum_offset = sqsum.offset / sqsum.elemSize();
-    CV_Assert(sqsum.offset % sqsum.elemSize() == 0);
+    int sum_offset = (int)(sum.offset / sum.elemSize());
+    int sqsum_offset = (int)(sqsum.offset / sqsum.elemSize());
 
     k1.args(ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(t_sum),
             ocl::KernelArg::PtrWriteOnly(t_sqsum), offset, pre_invalid, src.rows,
