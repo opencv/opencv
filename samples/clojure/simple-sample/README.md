@@ -147,25 +147,25 @@ Copy into the `x86_64` directory the `libopencv_java247.dylib` lib.
 cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 ```
 
-NOTE 2: Summary of Operating System and Architecture mapping
-
-```
-OS
-
-Mac OS X -> macosx
-Windows  -> windows
-Linux    -> linux
-SunOS"   -> solaris
-
-Architectures
-
-amd64    -> x86_64
-x86_64   -> x86_64
-x86      -> x86
-i386     -> x86
-arm      -> arm
-sparc    -> sparc
-```
+> NOTE 2: Summary of Operating System and Architecture mapping
+> 
+> ```
+> OS
+> 
+> Mac OS X -> macosx
+> Windows  -> windows
+> Linux    -> linux
+> SunOS"   -> solaris
+> 
+> Architectures
+> 
+> amd64    -> x86_64
+> x86_64   -> x86_64
+> x86      -> x86
+> i386     -> x86
+> arm      -> arm
+> sparc    -> sparc
+> ```
 
 #### Package the native lib as a jar
 
