@@ -341,6 +341,8 @@ nil
 Then you can start interacting with OpenCV by just referencing the
 fully qualified names of its classes.
 
+> NOTE 5: [Here][12] you can find the full OpenCV Java API.
+
 ```clj
 user=> (org.opencv.core.Point. 0 0)
 #<Point {0.0, 0.0}>
@@ -520,7 +522,7 @@ user=> (println (.dump m))
 nil
 ```
 
-> NOTE 5: If you are accustomed to a functional language all those
+> NOTE 6: If you are accustomed to a functional language all those
 > abused and mutating nouns are going to irritate your preference for
 > verbs. Even if the CLJ interop syntax is very handy and complete,
 > there is still an impedance mismatch between any OOP language and
@@ -563,3 +565,4 @@ your option) any later version.
 [9]: https://developer.apple.com/xcode/
 [10]: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 [11]: http://www.cmake.org/cmake/resources/software.html
+[12]: http://docs.opencv.org/java/
