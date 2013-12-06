@@ -148,17 +148,17 @@ cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 ```
 
 > NOTE 2: Summary of Operating System and Architecture mapping
-> 
+>
 > ```
 > OS
-> 
+>
 > Mac OS X -> macosx
 > Windows  -> windows
 > Linux    -> linux
 > SunOS"   -> solaris
-> 
+>
 > Architectures
-> 
+>
 > amd64    -> x86_64
 > x86_64   -> x86_64
 > x86      -> x86
@@ -330,7 +330,7 @@ user=> (foo)
 
 When ran from the home directory of a lein based project, even if the
 `lein repl` task automatically loads all the project dependencies, you
-still need to load the open native library to be able to interact with
+still need to load the opencv native library to be able to interact with
 the OpenCV.
 
 ```clj
@@ -466,9 +466,33 @@ class SimpleSample {
 }
 ```
 
-If you want To start from a clean environment stop the REPL by
-evaluating the `(exit)` expression and then rerun the `lein repl`
-task.
+#### Add injections to the project
+
+Before start coding, we'd like to eliminate the boring need of
+interactively loading the native opencv lib any time we start a new
+REPL to interact with it.
+
+First, stop the REPL by evaluating the `(exit)` expression at the REPL
+prompt.
+
+```clj
+user=> (exit)
+Bye for now!
+```
+
+Then open your `project.clj` file and edit it as follows:
+
+```clj
+(defproject simple-sample "0.1.0-SNAPSHOT"
+  ...
+  :injections [(clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)])
+```
+
+Here we're saying to load the opencv native lib anytime we run the
+REPL in such a way that we have not anymore to remember to manually do
+it.
+
+Rerun the `lein repl` task
 
 ```bash
 lein repl
@@ -485,14 +509,11 @@ Clojure 1.5.1
 user=>
 ```
 
-Import the interested OpenCV java interfaces and load the
-corresponding native library as we did before.
+Import the interested OpenCV java interfaces.
 
 ```clj
 user=> (import '[org.opencv.core Mat CvType Scalar])
 org.opencv.core.Scalar
-user=> (clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)
-nil
 ```
 
 We're going to mimic almost verbatim the original OpenCV java
@@ -537,6 +558,98 @@ user=> (exit)
 Bye for now!
 ```
 
+### Interactively load and blur an image
+
+In the next sample you will learn how to interactively load and blur
+and image from the REPL by using the following OpenCV methods:
+
+* the `imread` static method from the `Highgui` class to read an image
+  from a file
+* the `imwrite` static method from the `Highgui` class to write an
+  image to a file
+* the `GaussianBlur` static method from the `Imgproc` class to apply
+  to blur the original image
+
+We're also going to use the `Mat` class which is returned from the
+`imread` method and accpeted as the main argument to both the
+`GaussianBlur` and the `imwrite` methods.
+
+#### Add an image to the project
+
+First we want to add an image file to a newly create directory for
+storing static resources of the project.
+
+![Original Image][13]
+
+```bash
+mkdir -p resources/images
+cp ~/opt/opencv/doc/tutorials/introduction/desktop_java/images/lena.png resource/images/
+```
+
+#### Read the image
+
+Now launch the REPL as usual and start by importing all the OpenCV
+classes we're going to use:
+
+```clj
+lein repl
+nREPL server started on port 50624 on host 127.0.0.1
+REPL-y 0.3.0
+Clojure 1.5.1
+    Docs: (doc function-name-here)
+          (find-doc "part-of-name-here")
+  Source: (source function-name-here)
+ Javadoc: (javadoc java-object-or-class-here)
+    Exit: Control+D or (exit) or (quit)
+ Results: Stored in vars *1, *2, *3, an exception in *e
+
+user=> (import '[org.opencv.core Mat Size CvType]
+               '[org.opencv.highgui Highgui]
+               '[org.opencv.imgproc Imgproc])
+org.opencv.imgproc.Imgproc
+```
+
+Now read the image from the `resources/images/lena.png`
+file.
+
+```clj
+user=> (def lena (Highgui/imread "resources/images/lena.png"))
+#'user/lena
+user=> lena
+#<Mat Mat [ 512*512*CV_8UC3, isCont=true, isSubmat=false, nativeObj=0x7f9ab3054c40, dataAddr=0x19fea9010 ]>
+```
+
+As you see, by simply evaluating the `lena` symbol we know that
+`lena.png` is a `512x512` matrix of `CV_8UC3` elements type. Let's
+create a new `Mat` instance of the same dimensions and elements type.
+
+```clj
+user=> (def blurred (Mat. 512 512 CvType/CV_8UC3))
+#'user/blurred
+user=>
+```
+
+Now apply a `GaussianBlur` filter using `lena` as the source matrix
+and `blurred` as the destination matrix.
+
+```clj
+user=> (Imgproc/GaussianBlur lena blurred (Size. 5 5) 3 3)
+nil
+```
+
+As a last step just save the `blurred` matrix in a new image file.
+
+```clj
+user=> (Highgui/imwrite "resources/images/blurred.png" blurred)
+true
+user=> (exit)
+Bye for now!
+```
+
+Following is the new blurred image of Lena.
+
+![Blurred Image][14]
+
 ## Next Steps
 
 This tutorial only introduces the very basic environment set up to be
@@ -567,3 +680,5 @@ your option) any later version.
 [10]: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 [11]: http://www.cmake.org/cmake/resources/software.html
 [12]: http://docs.opencv.org/java/
+[13]:
+[14]:
