@@ -355,7 +355,7 @@ void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double
     Mat B = Mat(size, size0, CV_32FC1);
     for(int i =0;i < size;i++)
     {
-        for(int j = 0, end = Cg.size(); j < end;j++)
+        for(int j = 0, end = (int)Cg.size(); j < end;j++)
             B.at<float>(i,j) = (float) (poly[i][j] * Cg[j]);
     }
 
