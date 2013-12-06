@@ -139,7 +139,9 @@ extern "C" {
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
+#ifndef ANDROID
     #include <sys/sysctl.h>
+#endif
 #endif
 
 #ifndef MIN
@@ -173,7 +175,7 @@ static int get_number_of_cpus(void)
     GetSystemInfo( &sysinfo );
 
     return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__
+#elif defined __linux__ && ! defined ANDROID
     return (int)sysconf( _SC_NPROCESSORS_ONLN );
 #elif defined __APPLE__
     int numCPU=0;

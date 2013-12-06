@@ -183,30 +183,58 @@ if(WITH_FFMPEG)
   if(WIN32 AND NOT ARM)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/ffmpeg_version.cmake")
   elseif(UNIX)
-    CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
-    CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
-    CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
-    CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
+    if (ANDROID)
+      find_path(FFMPEG_INCLUDE_DIR libavformat/avformat.h)
+      find_library(HAVE_FFMPEG_CODEC avcodec)
+      find_library(HAVE_FFMPEG_FORMAT avformat)
+      find_library(HAVE_FFMPEG_UTIL avutil)
+      find_library(HAVE_FFMPEG_SWSCALE swscale)
 
-    CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
-    CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
-    if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
-      if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
-        set(HAVE_GENTOO_FFMPEG TRUE)
+      set(HAVE_GENTOO_FFMPEG 1)
+      if(FFMPEG_INCLUDE_DIR AND HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL AND HAVE_FFMPEG_SWSCALE)
+        set(HAVE_FFMPEG TRUE)
       endif()
-    endif()
-    if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL AND HAVE_FFMPEG_SWSCALE)
-      set(HAVE_FFMPEG TRUE)
-    endif()
+      if(HAVE_FFMPEG)
+        set(HIGHGUI_LIBRARIES ${HIGHGUI_LIBRARIES}
+            ${HAVE_FFMPEG_CODEC}
+            ${HAVE_FFMPEG_FORMAT}
+            ${HAVE_FFMPEG_UTIL}
+            ${HAVE_FFMPEG_SWSCALE}
 
-    if(HAVE_FFMPEG)
-      # Find the bzip2 library because it is required on some systems
-      FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
-      if(NOT BZIP2_LIBRARIES)
-        # Do an other trial
-        FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
+            #TODO: fixes linker error when using ffmpeg as static library
+            ${HAVE_FFMPEG_CODEC}
+            ${HAVE_FFMPEG_FORMAT}
+            ${HAVE_FFMPEG_UTIL}
+            ${HAVE_FFMPEG_SWSCALE}
+        )
+        ocv_include_directories(${FFMPEG_INCLUDE_DIR})
       endif()
-    endif(HAVE_FFMPEG)
+    else()
+      CHECK_MODULE(libavcodec HAVE_FFMPEG_CODEC)
+      CHECK_MODULE(libavformat HAVE_FFMPEG_FORMAT)
+      CHECK_MODULE(libavutil HAVE_FFMPEG_UTIL)
+      CHECK_MODULE(libswscale HAVE_FFMPEG_SWSCALE)
+
+      CHECK_INCLUDE_FILE(libavformat/avformat.h HAVE_GENTOO_FFMPEG)
+      CHECK_INCLUDE_FILE(ffmpeg/avformat.h HAVE_FFMPEG_FFMPEG)
+      if(NOT HAVE_GENTOO_FFMPEG AND NOT HAVE_FFMPEG_FFMPEG)
+        if(EXISTS /usr/include/ffmpeg/libavformat/avformat.h OR HAVE_FFMPEG_SWSCALE)
+          set(HAVE_GENTOO_FFMPEG TRUE)
+        endif()
+      endif()
+      if(HAVE_FFMPEG_CODEC AND HAVE_FFMPEG_FORMAT AND HAVE_FFMPEG_UTIL AND HAVE_FFMPEG_SWSCALE)
+        set(HAVE_FFMPEG TRUE)
+      endif()
+
+      if(HAVE_FFMPEG)
+        # Find the bzip2 library because it is required on some systems
+        FIND_LIBRARY(BZIP2_LIBRARIES NAMES bz2 bzip2)
+        if(NOT BZIP2_LIBRARIES)
+          # Do an other trial
+          FIND_FILE(BZIP2_LIBRARIES NAMES libbz2.so.1 PATHS /lib)
+        endif()
+      endif(HAVE_FFMPEG)
+    endif()
   endif()
 
   if(APPLE)
