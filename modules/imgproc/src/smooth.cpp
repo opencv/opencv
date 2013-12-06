@@ -714,7 +714,10 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         if (BLOCK_SIZE < kernelWorkGroupSize)
             return false;
         tryWorkItems = kernelWorkGroupSize;
+#pragma warning( push )
+#pragma warning( disable : 4127 )
     } while (true);
+#pragma warning( pop )
 
     _dst.create(sz, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
