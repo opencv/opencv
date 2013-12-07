@@ -48,6 +48,8 @@
 
 #include "precomp.hpp"
 
+vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew();
+
 #if 1 || !defined __APPLE__
 vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
 {
@@ -57,7 +59,7 @@ vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
-    :  style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()) , widget_actor_map_(new WidgetActorMap), s_lastDone_(0.0)
+    :  s_lastDone_(0.0), style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
 
@@ -77,7 +79,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     style_->UseTimersOn();
 
     /////////////////////////////////////////////////
-    interactor_ = vtkSmartPointer <vtkRenderWindowInteractor>::Take(vtkRenderWindowInteractorFixNew());
+    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::Take(vtkRenderWindowInteractorFixNew());
 
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
