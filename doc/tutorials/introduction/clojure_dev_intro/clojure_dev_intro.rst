@@ -1,4 +1,4 @@
-.. _Clojure_Dev_Intro:
+.. _clojure_dev_intro:
 
 Introduction to OpenCV Development with Clojure
 ***********************************************
@@ -109,7 +109,7 @@ So I decide to make it available to any CLJ project:
 Create a file named ``profiles.clj`` in the ``~/.lein`` directory and
 copy into it the following content:
 
-.. code:: clj
+.. code:: bash
 
     {:user {:plugins [[lein-localrepo "0.5.2"]]}}
 
@@ -343,7 +343,7 @@ Now ``cd`` in the ``simple-sample`` directory and issue the following
 You can immediately interact with the REPL by issuing any CLJ expression
 to be evaluated.
 
-.. code:: clj
+.. code:: bash
 
     user=> (+ 41 1)
     42
@@ -360,7 +360,7 @@ When ran from the home directory of a lein based project, even if the
 still need to load the opencv native library to be able to interact with
 the OpenCV.
 
-.. code:: clj
+.. code:: bash
 
     user=> (clojure.lang.RT/loadLibrary org.opencv.core.Core/NATIVE_LIBRARY_NAME)
     nil
@@ -371,7 +371,7 @@ qualified names of its classes.
     NOTE 2: `Here <http://docs.opencv.org/java/>`_ you can find the
     full OpenCV Java API.
 
-.. code:: clj
+.. code:: bash
 
     user=> (org.opencv.core.Point. 0 0)
     #<Point {0.0, 0.0}>
@@ -385,7 +385,7 @@ name.
 Fortunately CLJ offer a very easy way to overcome this annoyance by
 directly importing the ``Point`` class.
 
-.. code:: clj
+.. code:: bash
 
     user=> (import 'org.opencv.core.Point)
     org.opencv.core.Point
@@ -399,7 +399,7 @@ directly importing the ``Point`` class.
 We can even inspect the class of an instance and verify if the value of
 a symbol is an instance of a ``Point`` java class.
 
-.. code:: clj
+.. code:: bash
 
     user=> (class p1)
     org.opencv.core.Point
@@ -410,7 +410,7 @@ If we now want to use the opencv ``Rect`` class to create a rectangle,
 we again have to fully qualify its constructor even if it leaves in
 the same ``org.opencv.core`` package of the ``Point`` class.
 
-.. code:: clj
+.. code:: bash
 
     user=> (org.opencv.core.Rect. p1 p2)
     #<Rect {0, 0, 100x100}>
@@ -418,7 +418,7 @@ the same ``org.opencv.core`` package of the ``Point`` class.
 Again, the CLJ importing facilities is very handy and let you to map
 more symbols in one shot.
 
-.. code:: clj
+.. code:: bash
 
     user=> (import '[org.opencv.core Point Rect Size])
     org.opencv.core.Size
@@ -441,7 +441,7 @@ more symbols in one shot.
 
 Obviously you can call methods on instances as well.
 
-.. code:: clj
+.. code:: bash
 
     user=> (.area r1)
     10000.0
@@ -450,7 +450,7 @@ Obviously you can call methods on instances as well.
 
 Or modify the value of a member field.
 
-.. code:: clj
+.. code:: bash
 
     user=> (set! (.x p1) 10)
     10
@@ -462,6 +462,15 @@ Or modify the value of a member field.
     10
     user=> (.area sq-100)
     100.0
+
+If you find yourself not remembering a OpenCV class behavior, the
+REPL gives you the opportunity to easily search the corresponding
+javadoc documention:
+
+.. code:: bash
+
+    user=> (javadoc Rect)
+    "http://www.google.com/search?btnI=I%27m%20Feeling%20Lucky&q=allinurl:org/opencv/core/Rect.html"
 
 Mimic the OpenCV Java Tutorial Sample in the REPL
 -------------------------------------------------
@@ -504,14 +513,14 @@ to interact with it.
 First, stop the REPL by evaluating the ``(exit)`` expression at the REPL
 prompt.
 
-.. code:: clj
+.. code:: bash
 
     user=> (exit)
     Bye for now!
 
 Then open your ``project.clj`` file and edit it as follows:
 
-.. code:: clj
+.. code:: bash
 
     (defproject simple-sample "0.1.0-SNAPSHOT"
       ...
@@ -539,7 +548,7 @@ Rerun the ``lein repl`` task
 
 Import the interested OpenCV java interfaces.
 
-.. code:: clj
+.. code:: bash
 
     user=> (import '[org.opencv.core Mat CvType Scalar])
     org.opencv.core.Scalar
@@ -552,7 +561,7 @@ to:
 -  change the value of every element of the 6th column to 5
 -  print the content of the obtained matrix
 
-.. code:: clj
+.. code:: bash
 
     user=> (def m (Mat. 5 10 CvType/CV_8UC1 (Scalar. 0 0)))
     #'user/m
@@ -581,7 +590,7 @@ an impedance mismatch between any OOP language and any FP language
 To exit the REPL type ``(exit)``, ``ctr-D`` or ``(quit)`` at the REPL
 prompt.
 
-.. code:: clj
+.. code:: bash
 
     user=> (exit)
     Bye for now!
@@ -624,7 +633,7 @@ Read the image
 Now launch the REPL as usual and start by importing all the OpenCV
 classes we're going to use:
 
-.. code:: clj
+.. code:: bash
 
     lein repl
     nREPL server started on port 50624 on host 127.0.0.1
@@ -644,7 +653,7 @@ classes we're going to use:
 
 Now read the image from the ``resources/images/lena.png`` file.
 
-.. code:: clj
+.. code:: bash
 
     user=> (def lena (Highgui/imread "resources/images/lena.png"))
     #'user/lena
@@ -655,7 +664,7 @@ As you see, by simply evaluating the ``lena`` symbol we know that
 ``lena.png`` is a ``512x512`` matrix of ``CV_8UC3`` elements type. Let's
 create a new ``Mat`` instance of the same dimensions and elements type.
 
-.. code:: clj
+.. code:: bash
 
     user=> (def blurred (Mat. 512 512 CvType/CV_8UC3))
     #'user/blurred
@@ -664,14 +673,14 @@ create a new ``Mat`` instance of the same dimensions and elements type.
 Now apply a ``GaussianBlur`` filter using ``lena`` as the source matrix
 and ``blurred`` as the destination matrix.
 
-.. code:: clj
+.. code:: bash
 
     user=> (Imgproc/GaussianBlur lena blurred (Size. 5 5) 3 3)
     nil
 
 As a last step just save the ``blurred`` matrix in a new image file.
 
-.. code:: clj
+.. code:: bash
 
     user=> (Highgui/imwrite "resources/images/blurred.png" blurred)
     true
