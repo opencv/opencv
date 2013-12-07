@@ -22,7 +22,7 @@ CLojure REPL.
 Tutorial source code
 --------------------
 
-You can find the source code of this tutorial in the :file:`samples/clojure/simple-sample` folder of the OpenCV repository.
+You can find the source code of this tutorial in the :file:`samples/java/clojure/simple-sample` folder of the OpenCV repository.
 
 
 
