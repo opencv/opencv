@@ -30,11 +30,10 @@ Preamble
 ========
 
 For detailed instruction on installing OpenCV with desktop Java support
-refer to the `corresponding
-tutorial <http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html>`_.
+refer to the `corresponding tutorial <http://docs.opencv.org/2.4.4-beta/doc/tutorials/introduction/desktop_java/java_dev_intro.html>`_.
 
-If you are in hurry, here is a minimum quick start to install OpenCV on
-Mac OS X:
+If you are in hurry, here is a minimum quick start guide to install
+OpenCV on Mac OS X:
 
     NOTE 1: I'm assuming you already installed
     `xcode <https://developer.apple.com/xcode/>`_,
@@ -78,7 +77,7 @@ You now have both the OpenCV library and a fully installed basic Clojure
 environment. What is now needed is to configure the Clojure environment
 to interact with the OpenCV library.
 
-Install the local-repo Leiningen plugin
+Install the localrepo Leiningen plugin
 =======================================
 
 The set of commands (tasks in Leiningen parlance) natively supported by
@@ -99,7 +98,7 @@ Instead, when you want a plugin to be available to any CLJ project in
 your username space, you can add it to the ``profiles.clj`` in the
 ``~/.lein/`` directory.
 
-I think the ``lein-localrepo`` plugin will be useful to me in other CLJ
+The ``lein-localrepo`` plugin will be useful to me in other CLJ
 projects where I need to call native libs wrapped by a Java interface.
 So I decide to make it available to any CLJ project:
 
@@ -168,7 +167,8 @@ Copy into the ``x86_64`` directory the ``libopencv_java247.dylib`` lib.
 
     cp ~/opt/opencv/build/lib/libopencv_java247.dylib native/macosx/x86_64/
 
-Summary of Operating System and Architecture mapping
+If you're running OpenCV from a different OS/Architecture pair, here
+is a summary of the mapping you can choose from.
 
 .. code:: bash
 
@@ -294,25 +294,27 @@ section as follows:
                      [opencv/opencv-native "2.4.7"]]) ;added line
 
 
-Note that The Clojure Programming Language is an artifact too. This is
-why Clojure is called an hosted language.
+Note that The Clojure Programming Language is a jar artifact too. This
+is why Clojure is called an hosted language.
 
 To verify that everything went right issue the ``lein deps`` task. The
-very first time you run a ``lein`` task it will take sometimes to
-download all the required dependencies before executing the task itself.
+very first time you run a ``lein`` task it will take sometime to
+download all the required dependencies before executing the task
+itself.
 
 .. code:: bash
 
     cd simple-sample
     lein deps
+    ...
 
-The ``deps`` task reads from the ``project.clj`` and the
+The ``deps`` task reads and merges from the ``project.clj`` and the
 ``~/.lein/profiles.clj`` files all the dependencies of the
-``simple-sample`` project and verifies if they have already been cached
-in the local maven repository. If the task returns without messages
-about not being able to retrieve the two new artifacts, your
-installation is correct, otherwise go back and check that you did
-everything right.
+``simple-sample`` project and verifies if they have already been
+cached in the local maven repository. If the task returns without
+messages about not being able to retrieve the two new artifacts your
+installation is correct, otherwise go back and double check that you
+did everything right.
 
 REPLing with OpenCV
 -------------------
@@ -405,17 +407,16 @@ a symbol is an instance of a ``Point`` java class.
     true
 
 If we now want to use the opencv ``Rect`` class to create a rectangle,
-we again have to fully qualify it's constructor even if it leaves in the
-same ``org.opencv.core`` package of the ``Point`` class.
+we again have to fully qualify its constructor even if it leaves in
+the same ``org.opencv.core`` package of the ``Point`` class.
 
 .. code:: clj
 
     user=> (org.opencv.core.Rect. p1 p2)
     #<Rect {0, 0, 100x100}>
 
-Again, the CLJ importing facilities is very handy. You can decide to
-import in your REPL session from a java package all the symbols you're
-going to use more frequently.
+Again, the CLJ importing facilities is very handy and let you to map
+more symbols in one shot.
 
 .. code:: clj
 
@@ -693,6 +694,13 @@ I recommend any Clojure newbie to read the `Clojure Java Interop chapter <http:/
 to interoperate with any plain java lib that has not been wrapped in
 Clojure to make it usable in a more idiomatic and functional way within
 Clojure.
+
+The OpenCV Java API does not wrap the ``highgui`` module
+functionalities depending on ``Qt`` (e.g. ``namedWindow`` and
+``imshow``. If you want to create windows and show images into them
+while interacting with OpenCV from the REPL, at the moment you're left
+at your own. You could use Java Swing to fill the gap.
+
 
 License
 -------
