@@ -1,4 +1,4 @@
-.. _Clojure_Dev_Intro
+.. _Clojure_Dev_Intro:
 
 Introduction to OpenCV Development with Clojure
 ***********************************************

@@ -163,7 +163,7 @@ world of the OpenCV.
 
                    *Author:* |Author_MimmoC|
 
-                   A tutorial on how to interactively use OpenCV with the Clojure REPL.
+                   A tutorial on how to interactively use OpenCV from the Clojure REPL.
 
   ================ =================================================
 
