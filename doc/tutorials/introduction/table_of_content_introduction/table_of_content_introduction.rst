@@ -156,6 +156,22 @@ world of the OpenCV.
                         :height: 90pt
                         :width:  90pt
 
+  ================ =================================================
+  |ClojureLogo|    **Title:** :ref:`Clojure_Dev_Intro`
+
+                   *Compatibility:* > OpenCV 2.4.4
+
+                   *Author:* |Author_MimmoC|
+
+                   A tutorial on how to interactively use OpenCV from the Clojure REPL.
+
+  ================ =================================================
+
+     .. |ClojureLogo| image:: images/clojure-logo.png
+                        :height: 90pt
+                        :width:  90pt
+
+
 * **Android**
 
   .. tabularcolumns:: m{100pt} m{300pt}
