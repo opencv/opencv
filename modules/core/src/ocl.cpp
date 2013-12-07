@@ -1893,7 +1893,7 @@ Context2& Context2::getDefault()
         // First, try to retrieve existing context of the same type.
         // In its turn, Platform::getContext() may call Context2::create()
         // if there is no such context.
-        ctx.create(Device::TYPE_ACCELERATOR);
+        ctx.create(Device::TYPE_CPU);
         if(!ctx.p)
             ctx.create(Device::TYPE_DGPU);
         if(!ctx.p)
@@ -2189,8 +2189,13 @@ int Kernel::set(int i, const void* value, size_t sz)
     CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
-    if( !p || !p->handle || clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+    cl_int retval;
+    if( !p || !p->handle || (retval = clSetKernelArg(p->handle, (cl_uint)i, sz, value)) < 0 )
+    {
+        printf("%d\n", retval);
         return -1;
+    }
+    printf("%d\n", retval);
     return i+1;
 }
 
@@ -2201,6 +2206,7 @@ int Kernel::set(int i, const UMat& m)
 
 int Kernel::set(int i, const KernelArg& arg)
 {
+    printf("Setting to index %d\n", i);
     CV_Assert( i >= 0 );
     if( !p || !p->handle )
         return -1;
@@ -2214,20 +2220,21 @@ int Kernel::set(int i, const KernelArg& arg)
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
         if (ptronly)
-            clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h);
+            printf("%d\n", clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h));
         else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
+            printf("setting ... \n");
+            printf("%d\n", clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h));
+            printf("%d\n", clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step));
+            printf("%d\n", clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset));
             i += 3;
 
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u2d.cols*arg.wscale;
-                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
-                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols);
+                printf("%d\n", clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows));
+                printf("%d\n", clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols));
                 i += 2;
             }
         }

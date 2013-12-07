@@ -353,8 +353,62 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
     }
 }
 
+namespace cv {
+
+static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
+{
+    const std::vector<UMat> & src = *(const std::vector<UMat> *)(_mv.getObj());
+    CV_Assert(!src.empty());
+
+    int type = src[0].type(), depth = CV_MAT_DEPTH(type);
+    Size size = src[0].size();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (doubleSupport && depth == CV_64F)
+        return false;
+
+    size_t srcsize = src.size();
+    for (size_t i = 0; i < srcsize; ++i)
+    {
+        int itype = src[i].type(), icn = CV_MAT_CN(itype), idepth = CV_MAT_DEPTH(itype);
+        if (src[i].dims > 2 || icn != 1)
+            return false;
+        CV_Assert(size == src[i].size() && depth == idepth);
+    }
+
+    String srcargs, srcdecl, processelem;
+    for (size_t i = 0; i < srcsize; ++i)
+    {
+        srcargs += format("DECLARE_SRC_PARAM(%d)", i);
+        srcdecl += format("DECLARE_DATA(%d)", i);
+        processelem += format("PROCESS_ELEM(%d)", i);
+    }
+
+    ocl::Kernel k("merge", ocl::core::split_merge_oclsrc,
+                  format("-D OP_MERGE -D cn=%d -D T=%s -D DECLARE_SRC_PARAMS_N=%s -D DECLARE_DATA_N=%s -D PROCESS_ELEMS_N=%s",
+                         (int)srcsize, ocl::memopTypeToStr(depth), srcargs.c_str(), srcdecl.c_str(), processelem.c_str()));
+    if (k.empty())
+        return false;
+
+    _dst.create(size, CV_MAKE_TYPE(depth, srcsize));
+    UMat dst = _dst.getUMat();
+
+    int argidx = 0;
+    for (size_t i = 0; i < srcsize; ++i)
+        argidx = k.set(argidx, ocl::KernelArg::ReadOnlyNoSize(src[i]));
+    k.set(argidx, ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
+    if (ocl::useOpenCL() && _mv.isUMatVector() && _dst.isUMat() && ocl_merge(_mv, _dst))
+        return;
+
     std::vector<Mat> mv;
     _mv.getMatVector(mv);
     merge(!mv.empty() ? &mv[0] : 0, mv.size(), _dst);
