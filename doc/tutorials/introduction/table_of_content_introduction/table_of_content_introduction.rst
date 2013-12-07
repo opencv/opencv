@@ -171,6 +171,8 @@ world of the OpenCV.
                         :height: 90pt
                         :width:  90pt
 
+  .. tabularcolumns:: m{100pt} m{300pt}
+  .. cssclass:: toctableopencv
 
 * **Android**
 
