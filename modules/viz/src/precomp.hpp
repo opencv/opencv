@@ -54,14 +54,6 @@
 #include <list>
 #include <vector>
 
-#if defined __GNUC__
-#pragma GCC system_header
-#ifdef __DEPRECATED
-#undef __DEPRECATED
-#define __DEPRECATED_DISABLED__
-#endif
-#endif
-
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
 #include <vtkCellData.h>
@@ -70,7 +62,6 @@
 #include <vtkSmartPointer.h>
 #include <vtkDataSet.h>
 #include <vtkPolygon.h>
-//#include <vtkPointPicker.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkDiskSource.h>
 #include <vtkPlaneSource.h>
@@ -119,11 +110,6 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
 #include <vtkImageMapper.h>
-
-#if defined __GNUC__ && defined __DEPRECATED_DISABLED__
-#define __DEPRECATED
-#undef __DEPRECATED_DISABLED__
-#endif
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
