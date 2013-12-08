@@ -729,10 +729,10 @@ This 3D Widget represents a trajectory. ::
     class CV_EXPORTS WTrajectory : public Widget3D
     {
     public:
-        enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
+        enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.0);
+        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.0);
         //! Displays trajectory of the given path by frustums
         WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
         //! Displays trajectory of the given path by frustums
@@ -746,18 +746,18 @@ viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.0)
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.0)
 
     :param path: List of poses on a trajectory.
-    :param display_mode: Display mode. This can be DISPLAY_PATH, DISPLAY_FRAMES, DISPLAY_PATH & DISPLAY_FRAMES.
+    :param display_mode: Display mode. This can be PATH, FRAMES, and BOTH.
     :param color: :ocv:class:`Color` of the polyline that represents path. Frames are not affected.
     :param scale: Scale of the frames. Polyline is not affected.
 
     Displays trajectory of the given path as follows:
 
-    * DISPLAY_PATH : Displays a poly line that represents the path.
-    * DISPLAY_FRAMES : Displays coordinate frames at each pose.
-    * DISPLAY_PATH & DISPLAY_FRAMES : Displays both poly line and coordinate frames.
+    * PATH : Displays a poly line that represents the path.
+    * FRAMES : Displays coordinate frames at each pose.
+    * PATH & FRAMES : Displays both poly line and coordinate frames.
 
 .. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
 
@@ -777,26 +777,26 @@ Constructs a WTrajectory.
 
     Displays frustums at each pose of the trajectory.
 
-viz::WSpheresTrajectory
+viz::WTrajectorySpheres
 -----------------------
-.. ocv:class:: WSpheresTrajectory
+.. ocv:class:: WTrajectorySpheres
 
 This 3D Widget represents a trajectory using spheres and lines, where spheres represent the positions of the camera, and lines
 represent the direction from previous position to the current. ::
 
-    class CV_EXPORTS WSpheresTrajectory : public Widget3D
+    class CV_EXPORTS WTrajectorySpheres : public Widget3D
     {
     public:
-        WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f,
+        WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f,
                     float init_sphere_radius = 0.021, sphere_radius = 0.007,
                     Color &line_color = Color::white(), const Color &sphere_color = Color::white());
     };
 
-viz::WSpheresTrajectory::WSpheresTrajectory
+viz::WTrajectorySpheres::WTrajectorySpheres
 -------------------------------------------
-Constructs a WSpheresTrajectory.
+Constructs a WTrajectorySpheres.
 
-.. ocv:function:: WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021, float sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
+.. ocv:function:: WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021, float sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param line_length: Length of the lines.
