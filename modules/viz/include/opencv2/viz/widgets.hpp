@@ -132,6 +132,9 @@ namespace cv
             void setColor(const Color &color);
         };
 
+        /////////////////////////////////////////////////////////////////////////////
+        /// Simple widgets
+
         class CV_EXPORTS WLine : public Widget3D
         {
         public:
@@ -174,6 +177,9 @@ namespace cv
         public:
             WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
         };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Compond widgets
 
         class CV_EXPORTS WCoordinateSystem : public Widget3D
         {
@@ -268,6 +274,9 @@ namespace cv
                                     float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
+        /////////////////////////////////////////////////////////////////////////////
+        /// Cloud widgets
+
         class CV_EXPORTS WCloud: public Widget3D
         {
         public:
@@ -299,6 +308,9 @@ namespace cv
         public:
             WMesh(const Mesh3d &mesh);
         };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Utility exports
 
         template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
         template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();

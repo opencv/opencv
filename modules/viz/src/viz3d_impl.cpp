@@ -48,9 +48,9 @@
 
 #include "precomp.hpp"
 
-vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew();
 
-#if 1 || !defined __APPLE__
+#if (1 || !defined __APPLE__) && !defined _MSC_VER
+vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew();
 vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
 {
   return vtkRenderWindowInteractor::New();
@@ -79,7 +79,11 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     style_->UseTimersOn();
 
     /////////////////////////////////////////////////
+#if (1 || !defined __APPLE__) && !defined _MSC_VER
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::Take(vtkRenderWindowInteractorFixNew());
+#else
+    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+#endif
 
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
