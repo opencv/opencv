@@ -65,16 +65,21 @@ __kernel void merge(DECLARE_SRC_PARAMS_N
 
 #elif defined OP_SPLIT
 
-__kernel void set(__global uchar* dstptr, int dststep, int dstoffset,
-                  int rows, int cols, dstT value )
+#define DECLARE_DST_PARAM(index) , __global uchar * dst##index##ptr, int dst##index##_step, int dst##index##_offset
+#define DECLARE_DATA(index) __global T * dst##index = \
+    (__global T *)(dst##index##ptr + mad24(y, dst##index##_step, x * (int)sizeof(T) + dst##index##_offset));
+#define PROCESS_ELEM(index) dst##index[0] = src[index];
+
+__kernel void split(__global uchar* srcptr, int src_step, int src_offset, int rows, int cols DECLARE_DST_PARAMS)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
     {
-        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
-        *(__global dstT*)(dstptr + dst_index) = value;
+        DECLARE_DATA_N
+        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, x *  cn * (int)sizeof(T) + src_offset));
+        PROCESS_ELEMS_N
     }
 }
 

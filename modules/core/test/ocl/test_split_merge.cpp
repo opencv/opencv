@@ -47,6 +47,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
+#ifdef HAVE_OPENCL
+
 namespace cvtest {
 namespace ocl {
 
@@ -69,11 +71,12 @@ PARAM_TEST_CASE(MergeTestBase, MatDepth, Channels, bool)
         depth = GET_PARAM(0);
         cn = GET_PARAM(1);
         use_roi = GET_PARAM(2);
+
+        CV_Assert(cn >= 1 && cn <= 4);
     }
 
-    virtual void random_roi()
+    void random_roi()
     {
-        CV_Assert(cn >= 1 && cn <= 4);
         Size roiSize = randomSize(1, MAX_VALUE);
 
         {
@@ -130,72 +133,91 @@ OCL_TEST_P(Merge, Accuracy)
     }
 }
 
-//PARAM_TEST_CASE(SplitTestBase, MatType, int, bool)
-//{
-//    int type;
-//    int channels;
-//    bool use_roi;
+PARAM_TEST_CASE(SplitTestBase, MatType, Channels, bool)
+{
+    int depth, cn;
+    bool use_roi;
 
-//    cv::Mat src, src_roi;
-//    cv::Mat dst[MAX_CHANNELS], dst_roi[MAX_CHANNELS];
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst1)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst3)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst4)
 
-//    cv::ocl::oclMat gsrc_whole, gsrc_roi;
-//    cv::ocl::oclMat gdst_whole[MAX_CHANNELS], gdst_roi[MAX_CHANNELS];
+    std::vector<Mat> dst_roi, dst;
+    std::vector<UMat> udst_roi, udst;
 
-//    virtual void SetUp()
-//    {
-//        type = GET_PARAM(0);
-//        channels = GET_PARAM(1);
-//        use_roi = GET_PARAM(2);
-//    }
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
 
-//    void random_roi()
-//    {
-//        Size roiSize = randomSize(1, MAX_VALUE);
-//        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-//        randomSubMat(src, src_roi, roiSize, srcBorder, CV_MAKETYPE(type, channels), 0, 256);
-//        generateOclMat(gsrc_whole, gsrc_roi, src, roiSize, srcBorder);
+        CV_Assert(cn >= 1 && cn <= 4);
+    }
 
-//        for (int i = 0; i < channels; ++i)
-//        {
-//            Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-//            randomSubMat(dst[i], dst_roi[i], roiSize, dstBorder, CV_MAKETYPE(type, 1), 5, 16);
-//            generateOclMat(gdst_whole[i], gdst_roi[i], dst[i], roiSize, dstBorder);
-//        }
-//    }
-//};
+    void random_roi()
+    {
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, CV_MAKE_TYPE(depth, cn), 5, 16);
 
-//struct Split : SplitTestBase {};
+        {
+            Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst1, dst1_roi, roiSize, dst1Border, depth, 2, 11);
 
-//#ifdef ANDROID
-//// NOTE: The test fail on Android is the top of the iceberg only
-//// The real fail reason is memory access vialation somewhere else
-//OCL_TEST_P(Split, DISABLED_Accuracy)
-//#else
-//OCL_TEST_P(Split, Accuracy)
-//#endif
-//{
-//    for(int j = 0; j < LOOP_TIMES; j++)
-//    {
-//        random_roi();
+            Border dst2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst2, dst2_roi, roiSize, dst2Border, depth, -1540, 1740);
 
-//        cv::split(src_roi, dst_roi);
-//        cv::ocl::split(gsrc_roi, gdst_roi);
+            Border dst3Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst3, dst3_roi, roiSize, dst3Border, depth, -1540, 1740);
 
-//        for (int i = 0; i < channels; ++i)
-//        {
-//            EXPECT_MAT_NEAR(dst[i], gdst_whole[i], 0.0);
-//            EXPECT_MAT_NEAR(dst_roi[i], gdst_roi[i], 0.0);
-//        }
-//    }
-//}
+            Border dst4Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst4, dst4_roi, roiSize, dst4Border, depth, -1540, 1740);
+        }
 
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4)
+
+        dst_roi.push_back(dst1_roi), udst_roi.push_back(udst1_roi),
+                dst.push_back(dst1), udst.push_back(udst1);
+        if (cn >= 2)
+            dst_roi.push_back(dst2_roi), udst_roi.push_back(udst2_roi),
+                    dst.push_back(dst2), udst.push_back(udst2);
+        if (cn >= 3)
+            dst_roi.push_back(dst3_roi), udst_roi.push_back(udst3_roi),
+                    dst.push_back(dst3), udst.push_back(udst3);
+        if (cn >= 4)
+            dst_roi.push_back(dst4_roi), udst_roi.push_back(udst4_roi),
+                    dst.push_back(dst4), udst.push_back(udst4);
+    }
+};
+
+typedef SplitTestBase Split;
+
+OCL_TEST_P(Split, Accuracy)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::split(src_roi, dst_roi));
+        OCL_ON(cv::split(usrc_roi, udst_roi));
+
+        for (int i = 0; i < cn; ++i)
+        {
+            EXPECT_MAT_NEAR(dst[i], udst[i], 0.0);
+            EXPECT_MAT_NEAR(dst_roi[i], udst_roi[i], 0.0);
+        }
+    }
+}
 
 OCL_INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-
-
-//INSTANTIATE_TEST_CASE_P(SplitMerge, Split , Combine(
-//                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F), Values(1, 2, 3, 4), Bool()));
-
+OCL_INSTANTIATE_TEST_CASE_P(SplitMerge, Split, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL
