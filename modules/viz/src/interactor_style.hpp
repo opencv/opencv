@@ -56,9 +56,6 @@ namespace cv
         class InteractorStyle : public vtkInteractorStyleTrackballCamera
         {
         public:
-
-            enum KeyboardModifier { KB_MOD_ALT, KB_MOD_CTRL, KB_MOD_SHIFT };
-
             static InteractorStyle *New();
             virtual ~InteractorStyle() {}
 
@@ -73,9 +70,6 @@ namespace cv
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
             void saveScreenshot(const String &file);
-
-            /** \brief Change the default keyboard modified from ALT to a different special key.*/
-            inline void setKeyboardModifier(const KeyboardModifier &modifier) { modifier_ = modifier; }
 
         private:
             /** \brief Set to true after initialization is complete. */
@@ -121,8 +115,6 @@ namespace cv
             /** \brief True if we're using red-blue colors for anaglyphic stereo, false if magenta-green. */
             bool stereo_anaglyph_mask_default_;
 
-            KeyboardModifier modifier_;
-
             void (*keyboardCallback_)(const KeyboardEvent&, void*);
             void *keyboard_callback_cookie_;
 
@@ -132,6 +124,7 @@ namespace cv
             bool getAltKey();
             bool getControlKey();
             bool getShiftKey();
+            int getModifiers();
         };
     }
 }

@@ -185,7 +185,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     mapper->SetInputData(polydata);
 #endif
 
-    Vec3d minmax(scalars->GetRange());
+    Vec2d minmax(scalars->GetRange());
     mapper->SetScalarRange(minmax.val);
     mapper->SetScalarModeToUsePointData();
 
