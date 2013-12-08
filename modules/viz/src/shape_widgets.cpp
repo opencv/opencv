@@ -1235,7 +1235,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display_mode, const Color &color, float scale)
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display_mode, float scale, const Color &color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
@@ -1331,7 +1331,16 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale, const Color &color)
+template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<WTrajectory&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// WTrajectoryFrustums widget implementation
+
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
     float f_x = K(0,0);
@@ -1375,7 +1384,7 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Matx3
     setColor(color);
 }
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
@@ -1415,14 +1424,14 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Vec2f
     setColor(color);
 }
 
-template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
+template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajectoryFrustums>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<WTrajectory&>(widget);
+    return static_cast<WTrajectoryFrustums&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-/// spheres trajectory widget implementation
+/// WTrajectorySpheres widget implementation
 
 cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length, float init_sphere_radius, float sphere_radius,
                                                           const Color &line_color, const Color &sphere_color)

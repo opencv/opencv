@@ -732,26 +732,19 @@ This 3D Widget represents a trajectory. ::
         enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.0);
-        //! Displays trajectory of the given path by frustums
-        WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
-        //! Displays trajectory of the given path by frustums
-        WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
-
-    private:
-        /* hidden */
+        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white(),;
     };
 
 viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.0)
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param display_mode: Display mode. This can be PATH, FRAMES, and BOTH.
-    :param color: :ocv:class:`Color` of the polyline that represents path. Frames are not affected.
     :param scale: Scale of the frames. Polyline is not affected.
+    :param color: :ocv:class:`Color` of the polyline that represents path. Frames are not affected.
 
     Displays trajectory of the given path as follows:
 
@@ -759,7 +752,26 @@ Constructs a WTrajectory.
     * FRAMES : Displays coordinate frames at each pose.
     * PATH & FRAMES : Displays both poly line and coordinate frames.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
+viz::WTrajectoryFrustums
+----------------
+.. ocv:class:: WTrajectoryFrustums
+
+This 3D Widget represents a trajectory. ::
+
+    class CV_EXPORTS WTrajectoryFrustums : public Widget3D
+    {
+    public:
+        //! Displays trajectory of the given path by frustums
+        WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
+        //! Displays trajectory of the given path by frustums
+        WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
+    };
+
+viz::WTrajectoryFrustums::WTrajectoryFrustums
+-----------------------------
+Constructs a WTrajectoryFrustums.
+
+.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param K: Intrinsic matrix of the camera.
@@ -768,7 +780,7 @@ Constructs a WTrajectory.
 
     Displays frustums at each pose of the trajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param fov: Field of view of the camera (horizontal, vertical).
