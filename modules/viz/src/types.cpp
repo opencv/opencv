@@ -49,44 +49,13 @@
 #include "precomp.hpp"
 
 ////////////////////////////////////////////////////////////////////
-/// cv::viz::KeyboardEvent
+/// Events
 
-cv::viz::KeyboardEvent::KeyboardEvent(bool _action, const String& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
-  : action_(_action), modifiers_(0), key_code_(key), key_sym_(_key_sym)
-{
-  if (alt)
-    modifiers_ = Alt;
+cv::viz::KeyboardEvent::KeyboardEvent(Action _action, const String& _symbol, unsigned char _code, int _modifiers)
+  : action(_action), symbol(_symbol), code(_code), modifiers(_modifiers) {}
 
-  if (ctrl)
-    modifiers_ |= Ctrl;
-
-  if (shift)
-    modifiers_ |= Shift;
-}
-
-bool cv::viz::KeyboardEvent::isAltPressed() const { return (modifiers_ & Alt) != 0; }
-bool cv::viz::KeyboardEvent::isCtrlPressed() const { return (modifiers_ & Ctrl) != 0; }
-bool cv::viz::KeyboardEvent::isShiftPressed() const { return (modifiers_ & Shift) != 0; }
-unsigned char cv::viz::KeyboardEvent::getKeyCode() const { return key_code_; }
-const cv::String& cv::viz::KeyboardEvent::getKeySym() const { return key_sym_; }
-bool cv::viz::KeyboardEvent::keyDown() const { return action_; }
-bool cv::viz::KeyboardEvent::keyUp() const { return !action_; }
-
-////////////////////////////////////////////////////////////////////
-/// cv::viz::MouseEvent
-
-cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, const Point& _p,  bool alt, bool ctrl, bool shift)
-    : type(_type), button(_button), pointer(_p), key_state(0)
-{
-    if (alt)
-        key_state = KeyboardEvent::Alt;
-
-    if (ctrl)
-        key_state |= KeyboardEvent::Ctrl;
-
-    if (shift)
-        key_state |= KeyboardEvent::Shift;
-}
+cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, const Point& _pointer, int _modifiers)
+    : type(_type), button(_button), pointer(_pointer), modifiers(_modifiers) {}
 
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::Mesh3d
@@ -167,9 +136,9 @@ cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 ////////////////////////////////////////////////////////////////////
 /// Camera implementation
 
-cv::viz::Camera::Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+cv::viz::Camera::Camera(float fx, float fy, float cx, float cy, const Size &window_size)
 {
-    init(f_x, f_y, c_x, c_y, window_size);
+    init(fx, fy, cx, cy, window_size);
 }
 
 cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
@@ -220,19 +189,19 @@ cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
     window_size_ = window_size;
 }
 
-void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+void cv::viz::Camera::init(float fx, float fy, float cx, float cy, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
 
-    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x));
-    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y));
+    fov_[0] = (atan2(cx,fx) + atan2(window_size.width-cx,fx));
+    fov_[1] = (atan2(cy,fy) + atan2(window_size.height-cy,fy));
 
-    principal_point_[0] = c_x;
-    principal_point_[1] = c_y;
+    principal_point_[0] = cx;
+    principal_point_[1] = cy;
 
-    focal_[0] = f_x;
-    focal_[1] = f_y;
+    focal_[0] = fx;
+    focal_[1] = fy;
 
     window_size_ = window_size;
 }

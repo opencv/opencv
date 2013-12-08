@@ -247,9 +247,7 @@ void cv::viz::Viz3d::VizImpl::setDesiredUpdateRate(double rate)
 /////////////////////////////////////////////////////////////////////////////////////////////
 double cv::viz::Viz3d::VizImpl::getDesiredUpdateRate()
 {
-    if (interactor_)
-        return interactor_->GetDesiredUpdateRate();
-    return 0.0;
+    return interactor_ ? interactor_->GetDesiredUpdateRate() : 0.0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

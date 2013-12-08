@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_TYPES_HPP__
@@ -121,56 +118,13 @@ namespace cv
             struct loadMeshImpl;
         };
 
-        class CV_EXPORTS KeyboardEvent
-        {
-        public:
-            static const unsigned int Alt   = 1;
-            static const unsigned int Ctrl  = 2;
-            static const unsigned int Shift = 4;
-
-            //! Create a keyboard event
-            //! - Note that action is true if key is pressed, false if released
-            KeyboardEvent(bool action, const String& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
-
-            bool isAltPressed() const;
-            bool isCtrlPressed() const;
-            bool isShiftPressed() const;
-
-            unsigned char getKeyCode() const;
-
-            const String& getKeySym() const;
-            bool keyDown() const;
-            bool keyUp() const;
-
-        protected:
-
-            bool action_;
-            unsigned int modifiers_;
-            unsigned char key_code_;
-            String key_sym_;
-        };
-
-        class CV_EXPORTS MouseEvent
-        {
-        public:
-            enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
-            enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
-
-            MouseEvent(const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift);
-
-            Type type;
-            MouseButton button;
-            Point pointer;
-            unsigned int key_state;
-        };
-
         class CV_EXPORTS Camera
         {
         public:
-            Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-            Camera(const Vec2f &fov, const Size &window_size);
-            Camera(const cv::Matx33f &K, const Size &window_size);
-            Camera(const cv::Matx44f &proj, const Size &window_size);
+            Camera(float fx, float fy, float cx, float cy, const Size &window_size);
+            explicit Camera(const Vec2f &fov, const Size &window_size);
+            explicit Camera(const cv::Matx33f &K, const Size &window_size);
+            explicit Camera(const cv::Matx44f &proj, const Size &window_size);
 
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }
@@ -189,13 +143,41 @@ namespace cv
             static Camera KinectCamera(const Size &window_size);
 
         private:
-            void init(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
+            void init(float fx, float fy, float cx, float cy, const Size &window_size);
 
             Vec2d clip_;
             Vec2f fov_;
             Size window_size_;
             Vec2f principal_point_;
             Vec2f focal_;
+        };
+
+        class CV_EXPORTS KeyboardEvent
+        {
+        public:
+            enum { NONE = 0, ALT = 1, CTRL = 2, SHIFT = 4 };
+            enum Action { KEY_UP = 0, KEY_DOWN = 1 };
+
+            KeyboardEvent(Action action, const String& symbol, unsigned char code, int modifiers);
+
+            Action action;
+            String symbol;
+            unsigned char code;
+            int modifiers;
+        };
+
+        class CV_EXPORTS MouseEvent
+        {
+        public:
+            enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
+            enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
+
+            MouseEvent(const Type& type, const MouseButton& button, const Point& pointer, int modifiers);
+
+            Type type;
+            MouseButton button;
+            Point pointer;
+            int modifiers;
         };
     } /* namespace viz */
 } /* namespace cv */

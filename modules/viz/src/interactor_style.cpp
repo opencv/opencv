@@ -51,7 +51,6 @@
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::Initialize()
 {
-    modifier_ = cv::viz::InteractorStyle::KB_MOD_ALT;
     // Set windows size (width, height) to unknown (-1)
     win_size_ = Vec2i(-1, -1);
     win_pos_ = Vec2i(0, 0);
@@ -121,13 +120,7 @@ void cv::viz::InteractorStyle::OnChar()
     else if (key.find("XF86ZoomOut") != String::npos)
         zoomOut();
 
-    int keymod = false;
-    switch (modifier_)
-    {
-    case KB_MOD_ALT:   keymod = Interactor->GetAltKey(); break;
-    case KB_MOD_CTRL:  keymod = Interactor->GetControlKey(); break;
-    case KB_MOD_SHIFT: keymod = Interactor->GetShiftKey(); break;
-    }
+    int keymod = Interactor->GetAltKey();
 
     switch (Interactor->GetKeyCode())
     {
@@ -184,6 +177,21 @@ bool cv::viz::InteractorStyle::getAltKey() { return Interactor->GetAltKey() != 0
 bool cv::viz::InteractorStyle::getShiftKey() { return Interactor->GetShiftKey()!= 0; }
 bool cv::viz::InteractorStyle::getControlKey() { return Interactor->GetControlKey()!= 0; }
 
+int cv::viz::InteractorStyle::getModifiers()
+{
+    int modifiers = KeyboardEvent::NONE;
+
+    if (Interactor->GetAltKey())
+        modifiers |= KeyboardEvent::ALT;
+
+    if (Interactor->GetControlKey())
+        modifiers |= KeyboardEvent::CTRL;
+
+    if (Interactor->GetShiftKey())
+        modifiers |= KeyboardEvent::SHIFT;
+    return modifiers;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 void
 cv::viz::InteractorStyle::OnKeyDown()
@@ -204,19 +212,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     if (win_size_[0] == -1 || win_size_[1] == -1)
         win_size_ = Vec2i(Interactor->GetRenderWindow()->GetSize());
 
-
-    // Get the status of special keys (Cltr+Alt+Shift)
-    bool shift = getShiftKey();
-    bool ctrl  = getControlKey();
-    bool alt   = getAltKey();
-
-    bool keymod = false;
-    switch (modifier_)
-    {
-    case KB_MOD_ALT:   keymod = alt;   break;
-    case KB_MOD_CTRL:  keymod = ctrl;  break;
-    case KB_MOD_SHIFT: keymod = shift; break;
-    }
+    bool alt = getAltKey();
 
     std::string key(Interactor->GetKeySym());
     if (key.find("XF86ZoomIn") != std::string::npos)
@@ -344,7 +340,7 @@ cv::viz::InteractorStyle::OnKeyDown()
         // Switch between maximize and original window size
     case 'f': case 'F':
     {
-        if (keymod)
+        if (alt)
         {
             Vec2i screen_size(Interactor->GetRenderWindow()->GetScreenSize());
             Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
@@ -386,7 +382,7 @@ cv::viz::InteractorStyle::OnKeyDown()
         // 's'/'S' w/out ALT
     case 's': case 'S':
     {
-        if (keymod)
+        if (alt)
         {
             int stereo_render = Interactor->GetRenderWindow()->GetStereoRender();
             if (!stereo_render)
@@ -423,7 +419,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     // Overwrite the camera reset
     case 'r': case 'R':
     {
-        if (!keymod)
+        if (!alt)
         {
             Superclass::OnKeyDown();
             break;
@@ -491,7 +487,8 @@ cv::viz::InteractorStyle::OnKeyDown()
     }
     }
 
-    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
+
+    KeyboardEvent event(KeyboardEvent::KEY_DOWN, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -503,7 +500,7 @@ cv::viz::InteractorStyle::OnKeyDown()
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnKeyUp()
 {
-    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
+    KeyboardEvent event(KeyboardEvent::KEY_UP, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
@@ -515,7 +512,7 @@ void cv::viz::InteractorStyle::OnKeyUp()
 void cv::viz::InteractorStyle::OnMouseMove()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMouseMove();
@@ -526,7 +523,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonDown();
@@ -536,7 +533,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 void cv::viz::InteractorStyle::OnLeftButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonUp();
@@ -548,7 +545,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonDown();
@@ -558,7 +555,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
 void cv::viz::InteractorStyle::OnMiddleButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonUp();
@@ -570,7 +567,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
     Vec2i p(Interactor->GetEventPosition());
 
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonDown();
@@ -580,7 +577,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
 void cv::viz::InteractorStyle::OnRightButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonUp();
@@ -590,7 +587,7 @@ void cv::viz::InteractorStyle::OnRightButtonUp()
 void cv::viz::InteractorStyle::OnMouseWheelForward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getModifiers());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
@@ -622,7 +619,7 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 void cv::viz::InteractorStyle::OnMouseWheelBackward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getModifiers());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
