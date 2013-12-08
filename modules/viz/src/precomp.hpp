@@ -123,9 +123,6 @@ namespace cv
 {
     namespace viz
     {
-        typedef vtkLODActor vizActor;
-        //typedef vtkActor vizActor;
-
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
         typedef std::map<String, Viz3d> VizMap;
 
