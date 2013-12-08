@@ -278,13 +278,6 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
-    // Without distortion, RGB Camera
-    // Received from http://nicolas.burrus.name/index.php/Research/KinectCalibration
-    Matx33f K = Matx33f::zeros();
-    K(0,0) = 5.2921508098293293e+02;
-    K(0,2) = 3.2894272028759258e+02;
-    K(1,1) = 5.2556393630057437e+02;
-    K(1,2) = 2.6748068171871557e+02;
-    K(2,2) = 1.0f;
+    Matx33f K(525.f, 0.f, 320.f, 0.f, 525.f, 240.f, 0.f, 0.f, 1.f) ;
     return Camera(K, window_size);
 }
