@@ -1240,7 +1240,7 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
     // Bitwise and with 3 in order to limit the domain to 2 bits
-    if ((~display_mode & 3) ^ WTrajectory::DISPLAY_PATH)
+    if ((~display_mode & 3) ^ WTrajectory::PATH)
     {
         // Create a poly line along the path
         vtkIdType nr_points = path.size();
@@ -1284,7 +1284,7 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display
 #endif
     }
 
-    if ((~display_mode & 3) ^ WTrajectory::DISPLAY_FRAMES)
+    if ((~display_mode & 3) ^ WTrajectory::FRAMES)
     {
         // Create frames and transform along the path
         vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
@@ -1424,7 +1424,7 @@ template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// spheres trajectory widget implementation
 
-cv::viz::WSpheresTrajectory::WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length, float init_sphere_radius, float sphere_radius,
+cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length, float init_sphere_radius, float sphere_radius,
                                                           const Color &line_color, const Color &sphere_color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
@@ -1505,8 +1505,8 @@ cv::viz::WSpheresTrajectory::WSpheresTrajectory(const std::vector<Affine3f> &pat
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> cv::viz::WSpheresTrajectory cv::viz::Widget::cast<cv::viz::WSpheresTrajectory>()
+template<> cv::viz::WTrajectorySpheres cv::viz::Widget::cast<cv::viz::WTrajectorySpheres>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<WSpheresTrajectory&>(widget);
+    return static_cast<WTrajectorySpheres&>(widget);
 }
