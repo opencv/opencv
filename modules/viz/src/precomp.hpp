@@ -154,7 +154,7 @@ namespace cv
 }
 
 #include "interactor_style.hpp"
-#include "viz3d_impl.hpp"
+#include "vizimpl.hpp"
 
 
 #endif
