@@ -160,3 +160,85 @@ cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
 
 cv::viz::Viz3d cv::viz::get(const String &window_name) { return Viz3d (window_name); }
 void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Read/write poses and trajectories
+
+namespace cv { namespace viz { namespace impl
+{
+    template <typename _Tp>
+    bool readPose(const String& file, Affine3<_Tp>& pose, const String& tag)
+    {
+        FileStorage fs(file, FileStorage::READ);
+        if (!fs.isOpened())
+            return false;
+
+        Mat hdr(pose.matrix, false);
+        fs[tag] >> hdr;
+        return !hdr.empty() && hdr.depth() == DataDepth<_Tp>::value;
+    }
+
+    template <typename _Tp>
+    void writePose(const String& file, const Affine3<_Tp>& pose, const String& tag)
+    {
+        FileStorage fs(file, FileStorage::WRITE);
+        fs << tag << Mat(pose.matrix, false);
+    }
+
+    template <typename _Tp>
+    void readTrajectory(std::vector<Affine3<_Tp> >& traj, const String& files_format, int start, int end, const String& tag)
+    {
+        start = max(0, std::min(start, end));
+        end = std::max(start, end);
+
+        std::vector< Affine3<_Tp> > temp;
+
+        for(int i = start; i < end; ++i)
+        {
+            Affine3<_Tp> affine;
+            bool ok = readPose(cv::format(files_format.c_str(), i),affine, tag);
+            if (!ok)
+                break;
+
+            temp.push_back(affine);
+        }
+        traj.swap(temp);
+    }
+
+    template <typename _Tp>
+    void writeTrajectory(const std::vector<Affine3<_Tp> >& traj, const String& files_format, int start, const String& tag)
+    {
+        for(size_t i = 0, index = max(0, start); i < traj.size(); ++i, ++index)
+            writePose(cv::format(files_format.c_str(), index), traj[i], tag);
+    }
+}}}
+
+
+bool cv::viz::readPose(const String& file, Affine3f& pose, const String& tag) { return impl::readPose(file, pose, tag); }
+bool cv::viz::readPose(const String& file, Affine3d& pose, const String& tag) { return impl::readPose(file, pose, tag); }
+
+void cv::viz::writePose(const String& file, const Affine3f& pose, const String& tag) { impl::writePose(file, pose, tag); }
+void cv::viz::writePose(const String& file, const Affine3d& pose, const String& tag) { impl::writePose(file, pose, tag); }
+
+void cv::viz::readTrajectory(std::vector<Affine3f>& traj, const String& files_format, int start, int end, const String& tag)
+{ impl::readTrajectory(traj, files_format, start, end, tag); }
+
+void cv::viz::readTrajectory(std::vector<Affine3d>& traj, const String& files_format, int start, int end, const String& tag)
+{ impl::readTrajectory(traj, files_format, start, end, tag); }
+
+void cv::viz::writeTrajectory(const std::vector<Affine3f>& traj, const String& files_format, int start, const String& tag)
+{ impl::writeTrajectory(traj, files_format, start, tag); }
+
+void cv::viz::writeTrajectory(const std::vector<Affine3d>& traj, const String& files_format, int start, const String& tag)
+{ impl::writeTrajectory(traj, files_format, start, tag); }
+
+
+
+
+
+
+
+
+
+

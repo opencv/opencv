@@ -91,6 +91,22 @@ namespace cv
         template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
         { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
 
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        /// Read/write poses and trajectories
+
+        CV_EXPORTS bool readPose(const String& file, Affine3f& pose, const String& tag = "pose");
+        CV_EXPORTS bool readPose(const String& file, Affine3d& pose, const String& tag = "pose");
+
+        CV_EXPORTS void writePose(const String& file, const Affine3f& pose, const String& tag = "pose");
+        CV_EXPORTS void writePose(const String& file, const Affine3d& pose, const String& tag = "pose");
+
+        CV_EXPORTS void writeTrajectory(const std::vector<Affine3f>& traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
+        CV_EXPORTS void writeTrajectory(const std::vector<Affine3d>& traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
+
+        CV_EXPORTS void readTrajectory(std::vector<Affine3f>& traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
+        CV_EXPORTS void readTrajectory(std::vector<Affine3d>& traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
+
     } /* namespace viz */
 } /* namespace cv */
 
