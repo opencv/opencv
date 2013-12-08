@@ -1486,6 +1486,65 @@ namespace cv
             harrisK = harrisK_;
         }
 
+        ////////////////////////////////// FAST Feature Detector //////////////////////////////////
+        class CV_EXPORTS FAST_OCL
+        {
+        public:
+            enum
+            {
+                X_ROW = 0,
+                Y_ROW,
+                RESPONSE_ROW,
+                ROWS_COUNT
+            };
+
+            // all features have same size
+            static const int FEATURE_SIZE = 7;
+
+            explicit FAST_OCL(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
+
+            //! finds the keypoints using FAST detector
+            //! supports only CV_8UC1 images
+            void operator ()(const oclMat& image, const oclMat& mask, oclMat& keypoints);
+            void operator ()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints);
+
+            //! download keypoints from device to host memory
+            static void downloadKeypoints(const oclMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+            //! convert keypoints to KeyPoint vector
+            static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
+
+            //! release temporary buffer's memory
+            void release();
+
+            bool nonmaxSupression;
+
+            int threshold;
+
+            //! max keypoints = keypointsRatio * img.size().area()
+            double keypointsRatio;
+
+            //! find keypoints and compute it's response if nonmaxSupression is true
+            //! return count of detected keypoints
+            int calcKeyPointsLocation(const oclMat& image, const oclMat& mask);
+
+            //! get final array of keypoints
+            //! performs nonmax supression if needed
+            //! return final count of keypoints
+            int getKeyPoints(oclMat& keypoints);
+
+        private:
+            oclMat kpLoc_;
+            int count_;
+
+            oclMat score_;
+
+            oclMat d_keypoints_;
+
+            int calcKeypointsOCL(const oclMat& img, const oclMat& mask, int maxKeypoints);
+            int nonmaxSupressionOCL(oclMat& keypoints);
+        };
+
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
 
         class CV_EXPORTS PyrLKOpticalFlow
