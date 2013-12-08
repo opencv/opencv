@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_WIDGETS_HPP__
@@ -178,43 +175,28 @@ namespace cv
             WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
         };
 
-        /////////////////////////////////////////////////////////////////////////////
-        /// Compond widgets
-
-        class CV_EXPORTS WCoordinateSystem : public Widget3D
-        {
-        public:
-            WCoordinateSystem(float scale = 1.f);
-        };
-
         class CV_EXPORTS WPolyLine : public Widget3D
         {
         public:
             WPolyLine(InputArray points, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS WGrid : public Widget3D
+        /////////////////////////////////////////////////////////////////////////////
+        /// Text and image widgets
+
+        class CV_EXPORTS WText : public Widget2D
         {
         public:
-            //! Creates grid at the origin
-            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-            //! Creates grid based on the plane equation
-            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            WText(const String &text, const Point2i &pos, int font_size = 20, const Color &color = Color::white());
+
+            void setText(const String &text);
+            String getText() const;
         };
 
         class CV_EXPORTS WText3D : public Widget3D
         {
         public:
             WText3D(const String &text, const Point3f &position, float text_scale = 1.f, bool face_camera = true, const Color &color = Color::white());
-
-            void setText(const String &text);
-            String getText() const;
-        };
-
-        class CV_EXPORTS WText : public Widget2D
-        {
-        public:
-            WText(const String &text, const Point2i &pos, int font_size = 20, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
@@ -239,6 +221,24 @@ namespace cv
             void setImage(const Mat &image);
         };
 
+        /////////////////////////////////////////////////////////////////////////////
+        /// Compond widgets
+
+        class CV_EXPORTS WCoordinateSystem : public Widget3D
+        {
+        public:
+            WCoordinateSystem(float scale = 1.f);
+        };
+
+        class CV_EXPORTS WGrid : public Widget3D
+        {
+        public:
+            //! Creates grid at the origin
+            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            //! Creates grid based on the plane equation
+            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+        };
+
         class CV_EXPORTS WCameraPosition : public Widget3D
         {
         public:
@@ -253,6 +253,9 @@ namespace cv
             //! Creates frustum and display given image at the far plane
             explicit WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
         };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Trajectories
 
         class CV_EXPORTS WTrajectory : public Widget3D
         {
@@ -280,7 +283,7 @@ namespace cv
         };
 
         /////////////////////////////////////////////////////////////////////////////
-        /// Cloud widgets
+        /// Clouds
 
         class CV_EXPORTS WCloud: public Widget3D
         {
