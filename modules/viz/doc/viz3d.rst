@@ -506,40 +506,28 @@ This class represents a keyboard event. ::
     class CV_EXPORTS KeyboardEvent
     {
     public:
-        static const unsigned int Alt   = 1;
-        static const unsigned int Ctrl  = 2;
-        static const unsigned int Shift = 4;
+        enum { ALT = 1, CTRL = 2, SHIFT = 4 };
+        enum Action { KEY_UP = 0, KEY_DOWN = 1 };
 
-        //! Create a keyboard event
-        //! - Note that action is true if key is pressed, false if released
-        KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
+        KeyboardEvent(Action action, const String& symbol, unsigned char code, int modifiers);
 
-        bool isAltPressed () const;
-        bool isCtrlPressed () const;
-        bool isShiftPressed () const;
-
-        unsigned char getKeyCode () const;
-
-        const String& getKeySym () const;
-        bool keyDown () const;
-        bool keyUp () const;
-
-    protected:
-        /* hidden */
+        Action action;
+        String symbol;
+        unsigned char code;
+        int modifiers;
     };
 
 viz::KeyboardEvent::KeyboardEvent
 ---------------------------------
 Constructs a KeyboardEvent.
 
-.. ocv:function:: KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
+.. ocv:function:: KeyboardEvent (Action action, const String& symbol, unsigned char code, Modifiers modifiers)
 
-    :param action: If true, key is pressed. If false, key is released.
-    :param key_sym: Name of the key.
-    :param key: Code of the key.
-    :param alt: If true, ``alt`` is pressed.
-    :param ctrl: If true, ``ctrl`` is pressed.
-    :param shift: If true, ``shift`` is pressed.
+    :param action: Signals if key is pressed or released.
+    :param symbol: Name of the key.
+    :param code: Code of the key.
+    :param modifiers: Signals if ``alt``, ``ctrl`` or ``shift`` are pressed or their combination.
+    
 
 viz::MouseEvent
 ---------------
@@ -553,26 +541,24 @@ This class represents a mouse event. ::
         enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
         enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
 
-        MouseEvent (const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift);
+        MouseEvent(const Type& type, const MouseButton& button, const Point& pointer, int modifiers);
 
         Type type;
         MouseButton button;
         Point pointer;
-        unsigned int key_state;
+        int modifiers;
     };
 
 viz::MouseEvent::MouseEvent
 ---------------------------
 Constructs a MouseEvent.
 
-.. ocv:function:: MouseEvent (const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift)
+.. ocv:function:: MouseEvent (const Type& type, const MouseButton& button, const Point& p, Modifiers modifiers)
 
     :param type: Type of the event. This can be **MouseMove**, **MouseButtonPress**, **MouseButtonRelease**, **MouseScrollDown**, **MouseScrollUp**, **MouseDblClick**.
     :param button: Mouse button. This can be **NoButton**, **LeftButton**, **MiddleButton**, **RightButton**, **VScroll**.
     :param p: Position of the event.
-    :param alt: If true, ``alt`` is pressed.
-    :param ctrl: If true, ``ctrl`` is pressed.
-    :param shift: If true, ``shift`` is pressed.
+    :param modifiers: Signals if ``alt``, ``ctrl`` or ``shift`` are pressed or their combination.
 
 viz::Camera
 -----------
