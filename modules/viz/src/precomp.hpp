@@ -94,7 +94,6 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkProperty.h>
 #include <vtkCamera.h>
-#include <vtkObjectFactory.h>
 #include <vtkPlanes.h>
 #include <vtkImageFlip.h>
 #include <vtkRenderWindow.h>
@@ -111,6 +110,12 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
 #include <vtkImageMapper.h>
+#include <vtkPoints.h>
+#include <vtkInformation.h>
+#include <vtkInformationVector.h>
+#include <vtkObjectFactory.h>
+#include <vtkPolyDataAlgorithm.h>
+#include <vtkMergeFilter.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
