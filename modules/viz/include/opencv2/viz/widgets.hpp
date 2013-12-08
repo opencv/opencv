@@ -257,21 +257,21 @@ namespace cv
         class CV_EXPORTS WTrajectory : public Widget3D
         {
         public:
-            enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
+            enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
             //! Displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.f);
+            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.f);
             //! Displays trajectory of the given path by frustums
             WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
             WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS WSpheresTrajectory: public Widget3D
+        class CV_EXPORTS WTrajectorySpheres: public Widget3D
         {
         public:
-            WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
-                                    float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
+                float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
@@ -330,7 +330,7 @@ namespace cv
         template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>();
         template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>();
         template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>();
-        template<> CV_EXPORTS WSpheresTrajectory Widget::cast<WSpheresTrajectory>();
+        template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>();
         template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
         template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
         template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
