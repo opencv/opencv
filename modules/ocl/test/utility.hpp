@@ -54,6 +54,9 @@ extern int LOOP_TIMES;
 
 namespace cvtest {
 
+testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual);
+#define ASSERT_KEYPOINTS_EQ(gold, actual) EXPECT_PRED_FORMAT2(assertKeyPointsEquals, gold, actual)
+
 void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
 
 cv::ocl::oclMat createMat_ocl(cv::RNG& rng, Size size, int type, bool useRoi);

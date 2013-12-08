@@ -305,6 +305,153 @@ Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiu
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
+
+ocl::FAST_OCL
+------------------
+.. ocv:class:: ocl::FAST_OCL
+
+Class used for corner detection using the FAST algorithm. ::
+
+        class CV_EXPORTS FAST_OCL
+        {
+        public:
+            enum
+            {
+                X_ROW = 0,
+                Y_ROW,
+                RESPONSE_ROW,
+                ROWS_COUNT
+            };
+
+            // all features have same size
+            static const int FEATURE_SIZE = 7;
+
+            explicit FAST_OCL(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
+
+            //! finds the keypoints using FAST detector
+            //! supports only CV_8UC1 images
+            void operator ()(const oclMat& image, const oclMat& mask, oclMat& keypoints);
+            void operator ()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints);
+
+            //! download keypoints from device to host memory
+            static void downloadKeypoints(const oclMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+            //! convert keypoints to KeyPoint vector
+            static void convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints);
+
+            //! release temporary buffer's memory
+            void release();
+
+            bool nonmaxSupression;
+
+            int threshold;
+
+            //! max keypoints = keypointsRatio * img.size().area()
+            double keypointsRatio;
+
+            //! find keypoints and compute it's response if nonmaxSupression is true
+            //! return count of detected keypoints
+            int calcKeyPointsLocation(const oclMat& image, const oclMat& mask);
+
+            //! get final array of keypoints
+            //! performs nonmax supression if needed
+            //! return final count of keypoints
+            int getKeyPoints(oclMat& keypoints);
+
+        private:
+            // Hidden
+        };
+
+
+The class ``FAST_OCL`` implements FAST corner detection algorithm.
+
+.. seealso:: :ocv:func:`FAST`
+
+
+
+ocl::FAST_OCL::FAST_OCL
+--------------------------
+Constructor.
+
+.. ocv:function:: ocl::FAST_OCL::FAST_OCL(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05)
+
+    :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel.
+
+    :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
+
+    :param keypointsRatio: Inner buffer size for keypoints store is determined as (keypointsRatio * image_width * image_height).
+
+
+
+ocl::FAST_OCL::operator ()
+----------------------------
+Finds the keypoints using FAST detector.
+
+.. ocv:function:: void ocl::FAST_OCL::operator ()(const oclMat& image, const oclMat& mask, oclMat& keypoints)
+.. ocv:function:: void ocl::FAST_OCL::operator ()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints)
+
+    :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+    :param keypoints: The output vector of keypoints. Can be stored both in host or device memory. For device memory:
+
+            * X_ROW of keypoints will contain the horizontal coordinate of the i'th point
+            * Y_ROW of keypoints will contain the vertical coordinate of the i'th point
+            * RESPONSE_ROW will contain response of i'th point (if non-maximum suppression is applied)
+
+
+
+ocl::FAST_OCL::downloadKeypoints
+----------------------------------
+Download keypoints from device to host memory.
+
+.. ocv:function:: void ocl::FAST_OCL::downloadKeypoints(const oclMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+ocl::FAST_OCL::convertKeypoints
+---------------------------------
+Converts keypoints from OpenCL representation to vector of ``KeyPoint``.
+
+.. ocv:function:: void ocl::FAST_OCL::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
+
+
+
+ocl::FAST_OCL::release
+------------------------
+Releases inner buffer memory.
+
+.. ocv:function:: void ocl::FAST_OCL::release()
+
+
+
+ocl::FAST_OCL::calcKeyPointsLocation
+--------------------------------------
+Find keypoints. If ``nonmaxSupression`` is true, responses are computed and eliminates keypoints with the smaller responses from 9-neighborhood regions.
+
+.. ocv:function:: int ocl::FAST_OCL::calcKeyPointsLocation(const oclMat& image, const oclMat& mask)
+
+    :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+The function returns the amount of detected keypoints.
+
+
+
+ocl::FAST_OCL::getKeyPoints
+-----------------------------
+Gets final array of keypoints.
+
+.. ocv:function:: int ocl::FAST_OCL::getKeyPoints(oclMat& keypoints)
+
+    :param keypoints: The output vector of keypoints.
+
+The function performs non-max suppression if needed and returns the final amount of keypoints.
+
+
+
 ocl::HOGDescriptor
 ----------------------
 
