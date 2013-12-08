@@ -68,7 +68,7 @@ cv::viz::WLine::WLine(const Point3f &pt1, const Point3f &pt2, const Color &color
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(line->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -120,7 +120,7 @@ cv::viz::WPlane::WPlane(const Vec4f& coefs, float size, const Color &color)
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(PlaneUtils::setSize(p_center, plane->GetOutputPort(), size)->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -141,7 +141,7 @@ cv::viz::WPlane::WPlane(const Vec4f& coefs, const Point3f& pt, float size, const
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(PlaneUtils::setSize(p_center, plane->GetOutputPort(), size)->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -170,7 +170,7 @@ cv::viz::WSphere::WSphere(const Point3f &center, float radius, int sphere_resolu
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(sphere->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -243,7 +243,7 @@ cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, float thickness,
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(transformPD->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -279,7 +279,7 @@ cv::viz::WCircle::WCircle(const Point3f& pt, float radius, float thickness, cons
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(tf->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -310,7 +310,7 @@ cv::viz::WCylinder::WCylinder(const Point3f& pt_on_axis, const Point3f& axis_dir
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(tuber->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -342,7 +342,7 @@ cv::viz::WCube::WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_fr
         mapper->SetInputConnection(cube->GetOutputPort());
     }
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -394,7 +394,7 @@ cv::viz::WCoordinateSystem::WCoordinateSystem(float scale)
     mapper->SetScalarModeToUsePointData();
     mapper->SetInputConnection(axes_tubes->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
@@ -1080,7 +1080,7 @@ cv::viz::WCameraPosition::WCameraPosition(float scale)
     mapper->SetScalarModeToUsePointData();
     mapper->SetInputConnection(axes_tubes->GetOutputPort());
 
-    vtkSmartPointer<vizActor> actor = vtkSmartPointer<vizActor>::New();
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
