@@ -245,13 +245,13 @@ namespace cv
             //! Creates camera coordinate frame (axes) at the origin
             WCameraPosition(float scale = 1.f);
             //! Creates frustum based on the intrinsic marix K at the origin
-            WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            explicit WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            explicit WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            explicit WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            explicit WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectory : public Widget3D
@@ -260,11 +260,16 @@ namespace cv
             enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
             //! Displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, const Color &color = Color::white(), float scale = 1.f);
+            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
+        };
+
+        class CV_EXPORTS WTrajectoryFrustums : public Widget3D
+        {
+        public:
             //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            explicit WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            explicit WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
@@ -330,6 +335,7 @@ namespace cv
         template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>();
         template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>();
         template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>();
+        template<> CV_EXPORTS WTrajectoryFrustums Widget::cast<WTrajectoryFrustums>();
         template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>();
         template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
         template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
