@@ -73,10 +73,10 @@ public:
     double getDesiredUpdateRate();
 
     /** \brief Returns true when the user tried to close the window */
-    bool wasStopped() const { if (interactor_ != NULL) return (stopped_); else return true; }
+    bool wasStopped() const { return interactor_ ? stopped_ : true; }
 
     /** \brief Set the stopped flag back to false */
-    void resetStoppedFlag() { if (interactor_ != NULL) stopped_ = false; }
+    void resetStoppedFlag() { if (interactor_) stopped_ = false; }
 
     /** \brief Stop the interaction and close the visualizaton window. */
     void close()
