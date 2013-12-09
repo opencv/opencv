@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 using namespace cv;
 using namespace cv::cuda;
 using namespace cv::superres;
