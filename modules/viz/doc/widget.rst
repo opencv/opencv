@@ -262,8 +262,8 @@ This 3D Widget defines a finite plane. ::
     class CV_EXPORTS WPlane : public Widget3D
     {
     public:
-        WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
-        WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+        WPlane(const Vec4f& coefs, float size = 1.0, const Color &color = Color::white());
+        WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.0, const Color &color = Color::white());
     private:
         /* hidden */
     };
@@ -272,13 +272,13 @@ viz::WPlane::WPlane
 -------------------
 Constructs a WPlane.
 
-.. ocv:function:: WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white())
+.. ocv:function:: WPlane(const Vec4f& coefs, float size = 1.0, const Color &color = Color::white())
 
     :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
     :param size: Size of the plane.
     :param color: :ocv:class:`Color` of the plane.
 
-.. ocv:function:: WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white())
+.. ocv:function:: WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.0, const Color &color = Color::white())
 
     :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
     :param pt: Position of the plane.
@@ -317,14 +317,14 @@ This 3D Widget defines an arrow. ::
     class CV_EXPORTS WArrow : public Widget3D
     {
     public:
-        WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
+        WArrow(const Point3f& pt1, const Point3f& pt2, float thickness = 0.03, const Color &color = Color::white());
     };
 
 viz::WArrow::WArrow
 -----------------------------
 Constructs an WArrow.
 
-.. ocv:function:: WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white())
+.. ocv:function:: WArrow(const Point3f& pt1, const Point3f& pt2, float thickness = 0.03, const Color &color = Color::white())
 
     :param pt1: Start point of the arrow.
     :param pt2: End point of the arrow.
@@ -342,14 +342,14 @@ This 3D Widget defines a circle. ::
     class CV_EXPORTS WCircle : public Widget3D
     {
     public:
-        WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+        WCircle(const Point3f& pt, float radius, float thickness = 0.01, const Color &color = Color::white());
     };
 
 viz::WCircle::WCircle
 -------------------------------
 Constructs a WCircle.
 
-.. ocv:function:: WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white())
+.. ocv:function:: WCircle(const Point3f& pt, float radius, float thickness = 0.01, const Color &color = Color::white())
 
     :param pt: Center of the circle.
     :param radius: Radius of the circle.
@@ -365,14 +365,14 @@ This 3D Widget defines a cylinder. ::
     class CV_EXPORTS WCylinder : public Widget3D
     {
     public:
-        WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+        WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides = 30, const Color &color = Color::white());
     };
 
 viz::WCylinder::WCylinder
 -----------------------------------
 Constructs a WCylinder.
 
-.. ocv:function:: WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white())
+.. ocv:function:: WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides = 30, const Color &color = Color::white())
 
     :param pt_on_axis: A point on the axis of the cylinder.
     :param axis_direction: Direction of the axis of the cylinder.
@@ -416,14 +416,14 @@ This 3D Widget represents a coordinate system. ::
     class CV_EXPORTS WCoordinateSystem : public Widget3D
     {
     public:
-        WCoordinateSystem(double scale = 1.0);
+        WCoordinateSystem(float scale = 1.0);
     };
 
 viz::WCoordinateSystem::WCoordinateSystem
 ---------------------------------------------------
 Constructs a WCoordinateSystem.
 
-.. ocv:function:: WCoordinateSystem(double scale = 1.0)
+.. ocv:function:: WCoordinateSystem(float scale = 1.0)
 
     :param scale: Determines the size of the axes.
 
@@ -494,7 +494,7 @@ This 3D Widget represents 3D text. The text always faces the camera. ::
     class CV_EXPORTS WText3D : public Widget3D
     {
     public:
-        WText3D(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white());
+        WText3D(const String &text, const Point3f &position, float text_scale = 1.0, bool face_camera = true, const Color &color = Color::white());
 
         void setText(const String &text);
         String getText() const;
@@ -504,7 +504,7 @@ viz::WText3D::WText3D
 -------------------------------
 Constructs a WText3D.
 
-.. ocv:function:: WText3D(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white())
+.. ocv:function:: WText3D(const String &text, const Point3f &position, float text_scale = 1.0, bool face_camera = true, const Color &color = Color::white())
 
     :param text: Text content of the widget.
     :param position: Position of the text.
@@ -649,15 +649,15 @@ This 3D Widget represents camera position in a scene by its axes or viewing frus
     {
     public:
         //! Creates camera coordinate frame (axes) at the origin
-        WCameraPosition(double scale = 1.0);
+        WCameraPosition(float scale = 1.0);
         //! Creates frustum based on the intrinsic marix K at the origin
-        WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
         //! Creates frustum based on the field of view at the origin
-        WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.0, const Color &color = Color::white());
     };
 
 viz::WCameraPosition::WCameraPosition
@@ -666,7 +666,7 @@ Constructs a WCameraPosition.
 
 - **Display camera coordinate frame.**
 
-    .. ocv:function:: WCameraPosition(double scale = 1.0)
+    .. ocv:function:: WCameraPosition(float scale = 1.0)
 
         Creates camera coordinate frame at the origin.
 
@@ -676,7 +676,7 @@ Constructs a WCameraPosition.
 
 - **Display the viewing frustum.**
 
-    .. ocv:function:: WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
 
         :param K: Intrinsic matrix of the camera.
         :param scale: Scale of the frustum.
@@ -684,7 +684,7 @@ Constructs a WCameraPosition.
 
         Creates viewing frustum of the camera based on its intrinsic matrix K.
 
-    .. ocv:function:: WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
 
         :param fov: Field of view of the camera (horizontal, vertical).
         :param scale: Scale of the frustum.
@@ -698,7 +698,7 @@ Constructs a WCameraPosition.
 
 - **Display image on the far plane of the viewing frustum.**
 
-    .. ocv:function:: WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.0, const Color &color = Color::white())
 
         :param K: Intrinsic matrix of the camera.
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
@@ -707,7 +707,7 @@ Constructs a WCameraPosition.
 
         Creates viewing frustum of the camera based on its intrinsic matrix K, and displays image on the far end plane.
 
-    .. ocv:function:: WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.0, const Color &color = Color::white())
 
         :param fov: Field of view of the camera (horizontal, vertical).
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
@@ -732,11 +732,11 @@ This 3D Widget represents a trajectory. ::
         enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.0);
         //! Displays trajectory of the given path by frustums
-        WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+        WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
         //! Displays trajectory of the given path by frustums
-        WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+        WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
 
     private:
         /* hidden */
@@ -746,7 +746,7 @@ viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0)
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.0)
 
     :param path: List of poses on a trajectory.
     :param display_mode: Display mode. This can be DISPLAY_PATH, DISPLAY_FRAMES, DISPLAY_PATH & DISPLAY_FRAMES.
@@ -759,7 +759,7 @@ Constructs a WTrajectory.
     * DISPLAY_FRAMES : Displays coordinate frames at each pose.
     * DISPLAY_PATH & DISPLAY_FRAMES : Displays both poly line and coordinate frames.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param K: Intrinsic matrix of the camera.
@@ -768,7 +768,7 @@ Constructs a WTrajectory.
 
     Displays frustums at each pose of the trajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param fov: Field of view of the camera (horizontal, vertical).
@@ -788,7 +788,7 @@ represent the direction from previous position to the current. ::
     {
     public:
         WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f,
-                    double init_sphere_radius = 0.021, sphere_radius = 0.007,
+                    float init_sphere_radius = 0.021, sphere_radius = 0.007,
                     Color &line_color = Color::white(), const Color &sphere_color = Color::white());
     };
 
@@ -796,7 +796,7 @@ viz::WSpheresTrajectory::WSpheresTrajectory
 -------------------------------------------
 Constructs a WSpheresTrajectory.
 
-.. ocv:function:: WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021, double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
+.. ocv:function:: WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021, float sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param line_length: Length of the lines.
