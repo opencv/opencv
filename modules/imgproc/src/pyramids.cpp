@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -402,8 +403,51 @@ typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
 }
 
+namespace cv
+{
+
+static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
+
+    if (depth != CV_8U && depth != CV_16U && depth != CV_16S && depth != CV_32F)
+        return false;
+    if (channels != 1 && channels != 3 && channels != 4)
+        return false;
+    double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    UMat src = _src.getUMat();
+    Size dsize = cv::Size((src.rows + 1) / 2, (src.cols + 1) / 2);
+    _dst.create( dsize, src.type() );
+    UMat dst = _dst.getUMat();
+
+    const char * const kernelName = "pyrDown";
+    ocl::ProgramSource2 program = ocl::imgproc::pyr_down_oclsrc;
+    ocl::Kernel k;
+
+    char cvt[2][50];
+    k.create(kernelName, program,
+                 format("-D T=%s -D cn=%d -D convertToT=%s%s -D convertToFT=%s%s", 
+                 ocl::typeToStr(type), channels, 
+                 ocl::convertTypeStr(CV_32F, depth, channels, cvt[0]),
+                 ocl::convertTypeStr(depth, CV_32F, channels, cvt[1]),
+                 doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
+    
+    size_t localThreads[2]  = { 256, 1 };
+    size_t globalThreads[2] = { src.cols, dst.rows };
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+}
+
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+        ocl_pyrDown(_src, _dst, _dsz, borderType))
+    return;
+
     Mat src = _src.getMat();
     Size dsz = _dsz == Size() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
     _dst.create( dsz, src.type() );
