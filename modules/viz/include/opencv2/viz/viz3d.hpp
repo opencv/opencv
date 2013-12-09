@@ -49,7 +49,7 @@
 #ifndef __OPENCV_VIZ_VIZ3D_HPP__
 #define __OPENCV_VIZ_VIZ3D_HPP__
 
-#if !defined YES_I_AGREE_THAT_VIZ_API_IS_NOT_STABLE_NOW_AND_BINARY_COMPARTIBILITY_WONT_BE_SUPPORTED
+#if !defined YES_I_AGREE_THAT_VIZ_API_IS_NOT_STABLE_NOW_AND_BINARY_COMPARTIBILITY_WONT_BE_SUPPORTED && !defined CVAPI_EXPORTS
     //#error "Viz is in beta state now. Please define macro above to use it"
 #endif
 
@@ -64,7 +64,6 @@ namespace cv
         class CV_EXPORTS Viz3d
         {
         public:
-            typedef cv::Ptr<Viz3d> Ptr;
             typedef void (*KeyboardCallback)(const KeyboardEvent&, void*);
             typedef void (*MouseCallback)(const MouseEvent&, void*);
 
@@ -122,6 +121,8 @@ namespace cv
 
             void create(const String &window_name);
             void release();
+
+            friend class VizStorage;
         };
 
     } /* namespace viz */
