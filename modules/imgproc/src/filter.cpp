@@ -3148,7 +3148,7 @@ static int _prepareKernelFilter2D(std::vector<T>& data, const Mat &kernel)
     return size_y_aligned;
 }
 
-bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
+static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
