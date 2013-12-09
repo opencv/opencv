@@ -43,6 +43,9 @@
 
 using namespace std;
 
+static const string feature2DPrefix = "Feature2D.";
+static const string opponentExtractorPrefix = "Opponent";
+
 namespace cv
 {
 
@@ -96,14 +99,13 @@ void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
 
 Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
 {
-    if( descriptorExtractorType.find("Opponent") == 0 )
+    if( descriptorExtractorType.find(opponentExtractorPrefix) == 0 )
     {
-        size_t pos = string("Opponent").size();
+        size_t pos = opponentExtractorPrefix.size();
         string type = descriptorExtractorType.substr(pos);
         return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
     }
-
-    return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
+    return Algorithm::create<DescriptorExtractor>(feature2DPrefix + descriptorExtractorType);
 }
 
 
@@ -251,6 +253,17 @@ int OpponentColorDescriptorExtractor::descriptorType() const
 bool OpponentColorDescriptorExtractor::empty() const
 {
     return descriptorExtractor.empty() || (DescriptorExtractor*)(descriptorExtractor)->empty();
+}
+
+string OpponentColorDescriptorExtractor::name() const
+{
+    string opponentDescriptorExtractorName = descriptorExtractor->name();
+
+    if( 0 == opponentDescriptorExtractorName.find(feature2DPrefix) )
+    {
+        opponentDescriptorExtractorName.insert(feature2DPrefix.size(), opponentExtractorPrefix);
+    }
+    return opponentDescriptorExtractorName;
 }
 
 }

@@ -895,6 +895,7 @@ public:
     virtual int descriptorType() const;
 
     virtual bool empty() const;
+    virtual string name() const;
 
 protected:
     virtual void computeImpl( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const;

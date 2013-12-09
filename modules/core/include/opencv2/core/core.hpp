@@ -4388,7 +4388,7 @@ class CV_EXPORTS_W Algorithm
 public:
     Algorithm();
     virtual ~Algorithm();
-    string name() const;
+    virtual string name() const;
 
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
     template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
