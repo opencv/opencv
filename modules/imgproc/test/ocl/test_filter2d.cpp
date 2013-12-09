@@ -63,7 +63,6 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool)
     static const int kernelMaxSize = 10;
 
     int type;
-    Size ksize;
     Size dsize;
     Point anchor;
     int borderType;
