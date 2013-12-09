@@ -329,7 +329,7 @@ world of the OpenCV.
    ../windows_visual_studio_image_watch/windows_visual_studio_image_watch
    ../desktop_java/java_dev_intro
    ../java_eclipse/java_eclipse
-   ../clojure_java/clojure_dev_intro
+   ../clojure_dev_intro/clojure_dev_intro
    ../android_binary_package/android_dev_intro
    ../android_binary_package/O4A_SDK
    ../android_binary_package/dev_with_OCV_on_Android
