@@ -73,10 +73,10 @@ PERF_TEST_P(MomentsFixture, Moments,
     Mat  src(srcSize, type), dst(7, 1, CV_64F);
     randu(src, 0, 255);
 
-    oclMat src_d(src);
     cv::Moments mom;
     if (RUN_OCL_IMPL)
     {
+        oclMat src_d(src);
         OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
     }
     else if (RUN_PLAIN_IMPL)

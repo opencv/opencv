@@ -2110,6 +2110,8 @@ void cv::cuda::cvtColor(InputArray src, OutputArray dst, int code, int dcn, Stre
 
 void cv::cuda::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn, Stream& stream)
 {
+    CV_Assert( !_src.empty() );
+
     switch (code)
     {
     case cv::COLOR_BayerBG2GRAY: case cv::COLOR_BayerGB2GRAY: case cv::COLOR_BayerRG2GRAY: case cv::COLOR_BayerGR2GRAY:
