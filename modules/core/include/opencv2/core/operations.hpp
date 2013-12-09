@@ -436,7 +436,7 @@ int print(const std::vector<Point3_<_Tp> >& vec, FILE* stream = stdout)
 template<typename _Tp, int m, int n> static inline
 int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 {
-    return print(Formatter::get()->format(matx), stream);
+    return print(Formatter::get()->format(cv::Mat(matx)), stream);
 }
 
 

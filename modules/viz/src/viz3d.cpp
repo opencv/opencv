@@ -52,7 +52,8 @@ cv::viz::Viz3d::Viz3d(const String& window_name) : impl_(0) { create(window_name
 
 cv::viz::Viz3d::Viz3d(const Viz3d& other) : impl_(other.impl_)
 {
-    if (impl_) CV_XADD(&impl_->ref_counter, 1);
+    if (impl_)
+        CV_XADD(&impl_->ref_counter, 1);
 }
 
 cv::viz::Viz3d& cv::viz::Viz3d::operator=(const Viz3d& other)
@@ -61,7 +62,8 @@ cv::viz::Viz3d& cv::viz::Viz3d::operator=(const Viz3d& other)
     {
         release();
         impl_ = other.impl_;
-        if (impl_) CV_XADD(&impl_->ref_counter, 1);
+        if (impl_)
+            CV_XADD(&impl_->ref_counter, 1);
     }
     return *this;
 }
@@ -70,24 +72,33 @@ cv::viz::Viz3d::~Viz3d() { release(); }
 
 void cv::viz::Viz3d::create(const String &window_name)
 {
-    if (impl_) release();
-    impl_ = new VizImpl(window_name);
-    impl_->ref_counter = 1;
-    // Register the window
-    cv::viz::VizAccessor::getInstance().add(*this);
+    if (impl_)
+        release();
+
+    if (VizStorage::windowExists(window_name))
+        *this = VizStorage::get(window_name);
+    else
+    {
+        impl_ = new VizImpl(window_name);
+        impl_->ref_counter = 1;
+
+        // Register the window
+        VizStorage::add(*this);
+    }
 }
 
 void cv::viz::Viz3d::release()
 {
-    // If the current referene count is equal to 2, we can delete it
-    // - 2 : because minimum there will be two instances, one of which is in the map
-    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 2)
+    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
     {
-        // Erase the window
-        cv::viz::VizAccessor::getInstance().remove(getWindowName());
         delete impl_;
         impl_ = 0;
     }
+
+    if (impl_ && impl_->ref_counter == 1)
+        VizStorage::removeUnreferenced();
+
+    impl_ = 0;
 }
 
 void cv::viz::Viz3d::spin() { impl_->spin(); }

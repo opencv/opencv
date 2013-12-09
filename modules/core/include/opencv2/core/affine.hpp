@@ -51,7 +51,7 @@
 namespace cv
 {
     template<typename T>
-    class CV_EXPORTS Affine3
+    class Affine3
     {
     public:
         typedef T float_type;
@@ -96,6 +96,9 @@ namespace cv
         Mat3 rotation() const;
         Mat3 linear() const;
         Vec3 translation() const;
+
+        //Rodrigues vector
+        Vec3 rvec() const;
 
         Affine3 inv(int method = cv::DECOMP_SVD) const;
 
@@ -158,9 +161,9 @@ cv::Affine3<T>::Affine3(const Mat3& R, const Vec3& t)
 }
 
 template<typename T> inline
-cv::Affine3<T>::Affine3(const Vec3& rvec, const Vec3& t)
+cv::Affine3<T>::Affine3(const Vec3& _rvec, const Vec3& t)
 {
-    rotation(rvec);
+    rotation(_rvec);
     translation(t);
     matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
     matrix.val[15] = 1;
@@ -205,9 +208,9 @@ void cv::Affine3<T>::rotation(const Mat3& R)
 }
 
 template<typename T> inline
-void cv::Affine3<T>::rotation(const Vec3& rvec)
+void cv::Affine3<T>::rotation(const Vec3& _rvec)
 {
-    double rx = rvec[0], ry = rvec[1], rz = rvec[2];
+    double rx = _rvec[0], ry = _rvec[1], rz = _rvec[2];
     double theta = std::sqrt(rx*rx + ry*ry + rz*rz);
 
     if (theta < DBL_EPSILON)
@@ -250,9 +253,9 @@ void cv::Affine3<T>::rotation(const cv::Mat& data)
     }
     else if ((data.cols == 3 && data.rows == 1) || (data.cols == 1 && data.rows == 3))
     {
-        Vec3 rvec;
-        data.reshape(1, 3).copyTo(rvec);
-        rotation(rvec);
+        Vec3 _rvec;
+        data.reshape(1, 3).copyTo(_rvec);
+        rotation(_rvec);
     }
     else
         CV_Assert(!"Input marix can be 3x3, 1x3 or 3x1");
@@ -298,6 +301,55 @@ template<typename T> inline
 typename cv::Affine3<T>::Vec3 cv::Affine3<T>::translation() const
 {
     return Vec3(matrix.val[3], matrix.val[7], matrix.val[11]);
+}
+
+template<typename T> inline
+typename cv::Affine3<T>::Vec3 cv::Affine3<T>::rvec() const
+{
+    cv::Vec3d w;
+    cv::Matx33d u, vt, R = rotation();
+    cv::SVD::compute(R, w, u, vt, cv::SVD::FULL_UV + cv::SVD::MODIFY_A);
+    R = u * vt;
+
+    double rx = R.val[7] - R.val[5];
+    double ry = R.val[2] - R.val[6];
+    double rz = R.val[3] - R.val[1];
+
+    double s = std::sqrt((rx*rx + ry*ry + rz*rz)*0.25);
+    double c = (R.val[0] + R.val[4] + R.val[8] - 1) * 0.5;
+    c = c > 1.0 ? 1.0 : c < -1.0 ? -1.0 : c;
+    double theta = acos(c);
+
+    if( s < 1e-5 )
+    {
+        if( c > 0 )
+            rx = ry = rz = 0;
+        else
+        {
+            double t;
+            t = (R.val[0] + 1) * 0.5;
+            rx = std::sqrt(std::max(t, 0.0));
+            t = (R.val[4] + 1) * 0.5;
+            ry = std::sqrt(std::max(t, 0.0)) * (R.val[1] < 0 ? -1.0 : 1.0);
+            t = (R.val[8] + 1) * 0.5;
+            rz = std::sqrt(std::max(t, 0.0)) * (R.val[2] < 0 ? -1.0 : 1.0);
+
+            if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R.val[5] > 0) != (ry*rz > 0) )
+                rz = -rz;
+            theta /= std::sqrt(rx*rx + ry*ry + rz*rz);
+            rx *= theta;
+            ry *= theta;
+            rz *= theta;
+        }
+    }
+    else
+    {
+        double vth = 1/(2*s);
+        vth *= theta;
+        rx *= vth; ry *= vth; rz *= vth;
+    }
+
+    return cv::Vec3d(rx, ry, rz);
 }
 
 template<typename T> inline
