@@ -657,7 +657,7 @@ void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage
 Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN(int _history, double _threshold2,
                                                              bool _bShadowDetection)
 {
-    return new BackgroundSubtractorKNNImpl(_history, (float)_threshold2, _bShadowDetection);
+    return makePtr<BackgroundSubtractorKNNImpl>(_history, (float)_threshold2, _bShadowDetection);
 }
 
 };//namespace cv
