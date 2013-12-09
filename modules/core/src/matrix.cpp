@@ -1822,6 +1822,13 @@ size_t _InputArray::offset(int i) const
         return (size_t)(vv[i].data - vv[i].datastart);
     }
 
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].offset;
+    }
+
     if( k == GPU_MAT )
     {
         CV_Assert( i < 0 );
@@ -1858,6 +1865,13 @@ size_t _InputArray::step(int i) const
         if( i < 0 )
             return 1;
         CV_Assert( i < (int)vv.size() );
+        return vv[i].step;
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert((size_t)i < vv.size());
         return vv[i].step;
     }
 
