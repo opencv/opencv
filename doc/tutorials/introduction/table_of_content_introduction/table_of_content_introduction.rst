@@ -157,7 +157,7 @@ world of the OpenCV.
                         :width:  90pt
 
   ================ =================================================
-  |ClojureLogo|    **Title:** :ref:`Clojure_Dev_Intro`
+  |ClojureLogo|    **Title:** :ref:`clojure_dev_intro`
 
                    *Compatibility:* > OpenCV 2.4.4
 

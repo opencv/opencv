@@ -1,4 +1,4 @@
-.. _Clojure_Dev_Intro:
+.. _clojure_dev_intro:
 
 Introduction to OpenCV Development with Clojure
 ***********************************************
@@ -462,6 +462,15 @@ Or modify the value of a member field.
     10
     user=> (.area sq-100)
     100.0
+
+If you find yourself not remembering a OpenCV class behavior, the
+REPL gives you the opportunity to easily search the corresponding
+javadoc documention:
+
+.. code:: bash
+
+    user=> (javadoc Rect)
+    "http://www.google.com/search?btnI=I%27m%20Feeling%20Lucky&q=allinurl:org/opencv/core/Rect.html"
 
 Mimic the OpenCV Java Tutorial Sample in the REPL
 -------------------------------------------------
