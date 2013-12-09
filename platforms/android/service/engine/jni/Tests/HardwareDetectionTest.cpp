@@ -170,7 +170,7 @@ TEST(CpuID, CheckVFPv3)
     EXPECT_TRUE(cpu_id & FEATURES_HAS_VFPv3);
 }
 
-TEST(PlatfromDetector, CheckTegra)
+TEST(PlatformDetector, CheckTegra)
 {
     EXPECT_NE(PLATFORM_UNKNOWN, DetectKnownPlatforms());
 }
