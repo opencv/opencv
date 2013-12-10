@@ -798,10 +798,10 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
     return kernel;
 }
 
+namespace cv {
 
-cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
-                                        double sigma1, double sigma2,
-                                        int borderType )
+static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
+                                   double sigma1, double sigma2 )
 {
     int depth = CV_MAT_DEPTH(type);
     if( sigma2 <= 0 )
@@ -819,12 +819,21 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    Mat kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
-    Mat ky;
+    kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
         ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
+}
+
+}
+
+cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
+                                        double sigma1, double sigma2,
+                                        int borderType )
+{
+    Mat kx, ky;
+    createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
     return createSeparableLinearFilter( type, type, kx, ky, Point(-1,-1), 0, borderType );
 }
@@ -834,33 +843,34 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
+    int type = _src.type();
+    Size size = _src.size();
+    _dst.create( size, type );
 
     if( borderType != BORDER_CONSTANT )
     {
-        if( src.rows == 1 )
+        if( size.height == 1 )
             ksize.height = 1;
-        if( src.cols == 1 )
+        if( size.width == 1 )
             ksize.width = 1;
     }
 
     if( ksize.width == 1 && ksize.height == 1 )
     {
-        src.copyTo(dst);
+        _src.copyTo(_dst);
         return;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(src, dst, ksize, borderType))
+    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(_src.getMat(), _dst.getMat(), ksize, borderType))
         return;
 #endif
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
-    if(src.type() == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
+    if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
-        IppiSize roi = {src.cols, src.rows};
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        IppiSize roi = { src.cols, src.rows };
         int bufSize = 0;
         ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
         AutoBuffer<uchar> buf(bufSize+128);
@@ -873,10 +883,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     }
 #endif
 
-    Ptr<FilterEngine> f = createGaussianFilter( src.type(), ksize, sigma1, sigma2, borderType );
-    f->apply( src, dst );
+    Mat kx, ky;
+    createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
+    sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
-
 
 /****************************************************************************************\
                                       Median Filter
