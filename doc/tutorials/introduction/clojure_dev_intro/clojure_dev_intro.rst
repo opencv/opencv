@@ -177,7 +177,7 @@ is a summary of the mapping you can choose from.
         Mac OS X -> macosx
         Windows  -> windows
         Linux    -> linux
-        SunOS   -> solaris
+        SunOS    -> solaris
 
         Architectures
 
