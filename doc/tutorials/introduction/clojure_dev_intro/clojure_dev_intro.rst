@@ -177,7 +177,7 @@ is a summary of the mapping you can choose from.
         Mac OS X -> macosx
         Windows  -> windows
         Linux    -> linux
-        SunOS   -> solaris
+        SunOS    -> solaris
 
         Architectures
 
@@ -207,12 +207,13 @@ Your directories layout should look like the following:
 
     tree
     .
-    ├── native
-    │   └── macosx
-    │       └── x86_64
-    │           └── libopencv_java247.dylib
-    ├── opencv-247.jar
-    └── opencv-native-247.jar
+    |__ native
+    |   |__ macosx
+    |       |__ x86_64
+    |           |__ libopencv_java247.dylib
+    |
+    |__ opencv-247.jar
+    |__ opencv-native-247.jar
 
     3 directories, 3 files
 
@@ -263,18 +264,19 @@ layout:
 
     tree simple-sample/
     simple-sample/
-    ├── LICENSE
-    ├── README.md
-    ├── doc
-    │   └── intro.md
-    ├── project.clj
-    ├── resources
-    ├── src
-    │   └── simple_sample
-    │       └── core.clj
-    └── test
-        └── simple_sample
-            └── core_test.clj
+    |__ LICENSE
+    |__ README.md
+    |__ doc
+    |   |__ intro.md
+    |
+    |__ project.clj
+    |__ resources
+    |__ src
+    |   |__ simple_sample
+    |       |__ core.clj
+    |__ test
+        |__ simple_sample
+            |__ core_test.clj
 
     6 directories, 6 files
 
