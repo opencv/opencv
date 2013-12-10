@@ -86,8 +86,7 @@ PARAM_TEST_CASE(CvtColor, MatDepth, bool)
 
     void Near(double threshold)
     {
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
-        EXPECT_MAT_NEAR(dst, udst, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 
     void performTest(int channelsIn, int channelsOut, int code, double threshold = 1e-3)
