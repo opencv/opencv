@@ -3,10 +3,10 @@
                               [:name "Mimmo Cosenza"]
                               [:url "https://github.com/magomimmoo"]]]
 
-  :description "FIXME: write description"
+  :description "A simple project to start REPLing with OpenCV"
   :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license {:name "BSD 3-Clause License"
+            :url "http://opensource.org/licenses/BSD-3-Clause"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [opencv/opencv "2.4.7"]
                  [opencv/opencv-native "2.4.7"]]
