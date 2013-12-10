@@ -378,14 +378,6 @@ namespace cv
             //! returns true if oclMatrix data is NULL
             bool empty() const;
 
-            //! returns pointer to y-th row
-            uchar* ptr(int y = 0);
-            const uchar *ptr(int y = 0) const;
-
-            //! template version of the above method
-            template<typename _Tp> _Tp *ptr(int y = 0);
-            template<typename _Tp> const _Tp *ptr(int y = 0) const;
-
             //! matrix transposition
             oclMat t() const;
 

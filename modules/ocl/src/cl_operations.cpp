@@ -290,8 +290,9 @@ void openCLFree(void *devPtr)
         }
 #else
         // TODO FIXIT Attach clReleaseMemObject call to event completion callback
-        Context* ctx = Context::getContext();
-        clFinish(getClCommandQueue(ctx));
+        // TODO 2013/12/04 Disable workaround
+        // Context* ctx = Context::getContext();
+        // clFinish(getClCommandQueue(ctx));
 #endif
         openCLSafeCall(clReleaseMemObject(data.mainBuffer));
     }
