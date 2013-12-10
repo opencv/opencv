@@ -22,9 +22,16 @@ CLojure REPL.
 Tutorial source code
 --------------------
 
-You can find the source code of this tutorial in the :file:`samples/java/clojure/simple-sample` folder of the OpenCV repository.
+You can find a runnable source code of the sample in the
+:file:`samples/java/clojure/simple-sample` folder of the OpenCV
+repository. After having installed OpenCV and Clojure as explained in
+the tutorial, issue the following command to run the sample from the
+command line.
 
+.. code:: bash
 
+    cd path/to/samples/java/clojure/simple-sample
+    lein run
 
 Preamble
 ========
@@ -349,8 +356,8 @@ to be evaluated.
 
     user=> (+ 41 1)
     42
-    user=> (println "Hello, Clojure!")
-    Hello, Clojure!
+    user=> (println "Hello, OpenCV!")
+    Hello, OpenCV!
     nil
     user=> (defn foo [] (str "bar"))
     #'user/foo
