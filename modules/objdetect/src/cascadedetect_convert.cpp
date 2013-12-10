@@ -203,7 +203,8 @@ static bool convert(const String& oldcascade, const String& newcascade)
     for( i = 0; i < nstages; i++ )
         maxWeakCount = std::max(maxWeakCount, stages[i].weaks.size());
 
-    newfs << "stageType" << "BOOST"
+    newfs << "cascade" << "{:opencv-cascade-classifier"
+    << "stageType" << "BOOST"
     << "featureType" << "HAAR"
     << "height" << cascadesize.width
     << "width" << cascadesize.height
@@ -250,8 +251,8 @@ static bool convert(const String& oldcascade, const String& newcascade)
         {
             if( j >= 2 && fabs(f.rect[j].weight) < FLT_EPSILON )
                 break;
-            newfs << f.rect[j].r.x << f.rect[j].r.y <<
-                f.rect[j].r.width << f.rect[j].r.height << f.rect[j].weight;
+            newfs << "[" << f.rect[j].r.x << f.rect[j].r.y <<
+                f.rect[j].r.width << f.rect[j].r.height << f.rect[j].weight << "]";
         }
         newfs << "]";
         if( f.tilted )
@@ -259,7 +260,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
         newfs << "}";
     }
 
-    newfs << "]";
+    newfs << "]" << "}";
     return true;
 }
 

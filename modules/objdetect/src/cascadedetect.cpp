@@ -474,16 +474,18 @@ HaarEvaluator::~HaarEvaluator()
 
 bool HaarEvaluator::read(const FileNode& node)
 {
-    features->resize(node.size());
-    featuresPtr = &(*features)[0];
-    FileNodeIterator it = node.begin(), it_end = node.end();
+    size_t i, n = node.size();
+    CV_Assert(n > 0);
+    features.resize(n);
+    featuresPtr = &features[0];
+    FileNodeIterator it = node.begin();
     hasTiltedFeatures = false;
 
-    for(int i = 0; it != it_end; ++it, i++)
+    for(i = 0; i < n; i++, ++it)
     {
-        if(!featuresPtr[i].read(*it))
+        if(!features[i].read(*it))
             return false;
-        if( featuresPtr[i].tilted )
+        if( features[i].tilted )
             hasTiltedFeatures = true;
     }
     return true;
@@ -494,7 +496,6 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     Ptr<HaarEvaluator> ret = makePtr<HaarEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
-    ret->featuresPtr = &(*ret->features)[0];
     ret->hasTiltedFeatures = hasTiltedFeatures;
     ret->sum0 = sum0, ret->sqsum0 = sqsum0, ret->tilted0 = tilted0;
     ret->sum = sum, ret->sqsum = sqsum, ret->tilted = tilted;
@@ -540,10 +541,10 @@ bool HaarEvaluator::setImage( const Mat &image, Size _origWinSize )
     CV_SUM_PTRS( p[0], p[1], p[2], p[3], sdata, normrect, sumStep );
     CV_SUM_PTRS( pq[0], pq[1], pq[2], pq[3], sqdata, normrect, sqsumStep );
 
-    size_t fi, nfeatures = features->size();
+    size_t fi, nfeatures = features.size();
 
     for( fi = 0; fi < nfeatures; fi++ )
-        featuresPtr[fi].updatePtrs( !featuresPtr[fi].tilted ? sum : tilted );
+        optfeaturesPtr[fi].updatePtrs( !featuresPtr[fi].tilted ? sum : tilted );
     return true;
 }
 
