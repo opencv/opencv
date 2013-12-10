@@ -718,5 +718,4 @@ License
 
 Copyright © 2013 Giacomo (Mimmo) Cosenza aka Magomimmo
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the BSD 3-clause License, the same of OpenCV.
