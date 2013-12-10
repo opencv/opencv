@@ -29,6 +29,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
   endif()
 
+  if(HAVE_opencv_ocl)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
+  endif()
+
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
@@ -54,6 +58,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     if("${srcs}" MATCHES "gpu/")
       target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
+    endif()
+
+    if(HAVE_opencv_ocl)
+      target_link_libraries(${the_target} opencv_ocl)
     endif()
 
     set_target_properties(${the_target} PROPERTIES

@@ -59,13 +59,13 @@ typedef struct __attribute__((aligned(128))) GpuHidHaarTreeNode
     int right __attribute__((aligned(4)));
 }
 GpuHidHaarTreeNode;
-typedef struct __attribute__((aligned(32))) GpuHidHaarClassifier
-{
-    int count __attribute__((aligned(4)));
-    GpuHidHaarTreeNode *node __attribute__((aligned(8)));
-    float *alpha __attribute__((aligned(8)));
-}
-GpuHidHaarClassifier;
+//typedef struct __attribute__((aligned(32))) GpuHidHaarClassifier
+//{
+//    int count __attribute__((aligned(4)));
+//    GpuHidHaarTreeNode *node __attribute__((aligned(8)));
+//    float *alpha __attribute__((aligned(8)));
+//}
+//GpuHidHaarClassifier;
 typedef struct __attribute__((aligned(64))) GpuHidHaarStageClassifier
 {
     int  count __attribute__((aligned(4)));
@@ -77,29 +77,29 @@ typedef struct __attribute__((aligned(64))) GpuHidHaarStageClassifier
     int reserved3 __attribute__((aligned(8)));
 }
 GpuHidHaarStageClassifier;
-typedef struct __attribute__((aligned(64))) GpuHidHaarClassifierCascade
-{
-    int  count __attribute__((aligned(4)));
-    int  is_stump_based __attribute__((aligned(4)));
-    int  has_tilted_features __attribute__((aligned(4)));
-    int  is_tree __attribute__((aligned(4)));
-    int pq0 __attribute__((aligned(4)));
-    int pq1 __attribute__((aligned(4)));
-    int pq2 __attribute__((aligned(4)));
-    int pq3 __attribute__((aligned(4)));
-    int p0 __attribute__((aligned(4)));
-    int p1 __attribute__((aligned(4)));
-    int p2 __attribute__((aligned(4)));
-    int p3 __attribute__((aligned(4)));
-    float inv_window_area __attribute__((aligned(4)));
-} GpuHidHaarClassifierCascade;
+//typedef struct __attribute__((aligned(64))) GpuHidHaarClassifierCascade
+//{
+//    int  count __attribute__((aligned(4)));
+//    int  is_stump_based __attribute__((aligned(4)));
+//    int  has_tilted_features __attribute__((aligned(4)));
+//    int  is_tree __attribute__((aligned(4)));
+//    int pq0 __attribute__((aligned(4)));
+//    int pq1 __attribute__((aligned(4)));
+//    int pq2 __attribute__((aligned(4)));
+//    int pq3 __attribute__((aligned(4)));
+//    int p0 __attribute__((aligned(4)));
+//    int p1 __attribute__((aligned(4)));
+//    int p2 __attribute__((aligned(4)));
+//    int p3 __attribute__((aligned(4)));
+//    float inv_window_area __attribute__((aligned(4)));
+//} GpuHidHaarClassifierCascade;
 
 __kernel void gpuRunHaarClassifierCascade_scaled2(
-    global GpuHidHaarStageClassifier *stagecascadeptr,
+    global GpuHidHaarStageClassifier *stagecascadeptr_,
     global int4 *info,
-    global GpuHidHaarTreeNode *nodeptr,
+    global GpuHidHaarTreeNode *nodeptr_,
     global const int *restrict sum,
-    global const float   *restrict sqsum,
+    global const float *restrict sqsum,
     global int4 *candidate,
     const int rows,
     const int cols,
@@ -132,8 +132,7 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
     int max_idx = rows * cols - 1;
     for (int scalei = 0; scalei < loopcount; scalei++)
     {
-        int4 scaleinfo1;
-        scaleinfo1 = info[scalei];
+        int4 scaleinfo1 = info[scalei];
         int grpnumperline = (scaleinfo1.y & 0xffff0000) >> 16;
         int totalgrp = scaleinfo1.y & 0xffff;
         float factor = as_float(scaleinfo1.w);
@@ -174,15 +173,18 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                 for (int stageloop = start_stage; (stageloop < end_stage) && result; stageloop++)
                 {
                     float stage_sum = 0.f;
-                    int   stagecount = stagecascadeptr[stageloop].count;
+                    __global GpuHidHaarStageClassifier* stageinfo = (__global GpuHidHaarStageClassifier*)
+                        (((__global uchar*)stagecascadeptr_)+stageloop*sizeof(GpuHidHaarStageClassifier));
+                    int stagecount = stageinfo->count;
                     for (int nodeloop = 0; nodeloop < stagecount;)
                     {
-                        __global GpuHidHaarTreeNode *currentnodeptr = (nodeptr + nodecounter);
+                        __global GpuHidHaarTreeNode* currentnodeptr = (__global GpuHidHaarTreeNode*)
+                            (((__global uchar*)nodeptr_) + nodecounter * sizeof(GpuHidHaarTreeNode));
                         int4 info1 = *(__global int4 *)(&(currentnodeptr->p[0][0]));
                         int4 info2 = *(__global int4 *)(&(currentnodeptr->p[1][0]));
                         int4 info3 = *(__global int4 *)(&(currentnodeptr->p[2][0]));
                         float4 w = *(__global float4 *)(&(currentnodeptr->weight[0]));
-                        float3 alpha3 = *(__global float3 *)(&(currentnodeptr->alpha[0]));
+                        float3 alpha3 = *(__global float3*)(&(currentnodeptr->alpha[0]));
                         float nodethreshold  = w.w * variance_norm_factor;
 
                         info1.x += p_offset;
@@ -204,7 +206,7 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                                      sum[clamp(mad24(info3.w, step, info3.x), 0, max_idx)]
                         + sum[clamp(mad24(info3.w, step, info3.z), 0, max_idx)]) * w.z;
 
-                        bool passThres = classsum >= nodethreshold;
+                        bool passThres = (classsum >= nodethreshold) ? 1 : 0;
 
 #if STUMP_BASED
                         stage_sum += passThres ? alpha3.y : alpha3.x;
@@ -234,7 +236,8 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                         }
 #endif
                     }
-                    result = (int)(stage_sum >= stagecascadeptr[stageloop].threshold);
+
+                    result = (stage_sum >= stageinfo->threshold) ? 1 : 0;
                 }
 
                 barrier(CLK_LOCAL_MEM_FENCE);
@@ -281,11 +284,14 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
         }
     }
 }
-__kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuHidHaarTreeNode *newnode, float scale, float weight_scale, int nodenum)
+__kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuHidHaarTreeNode *newnode, float scale, float weight_scale, const int nodenum)
 {
-    int counter = get_global_id(0);
+    const int counter = get_global_id(0);
     int tr_x[3], tr_y[3], tr_h[3], tr_w[3], i = 0;
-    GpuHidHaarTreeNode t1 = *(orinode + counter);
+    GpuHidHaarTreeNode t1 = *(__global GpuHidHaarTreeNode*)
+        (((__global uchar*)orinode) + counter * sizeof(GpuHidHaarTreeNode));
+    __global GpuHidHaarTreeNode* pNew = (__global GpuHidHaarTreeNode*)
+        (((__global uchar*)newnode) + (counter + nodenum) * sizeof(GpuHidHaarTreeNode));
 
     #pragma unroll
     for (i = 0; i < 3; i++)
@@ -297,22 +303,21 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     }
 
     t1.weight[0] = -(t1.weight[1] * tr_h[1] * tr_w[1] + t1.weight[2] * tr_h[2] * tr_w[2]) / (tr_h[0] * tr_w[0]);
-    counter += nodenum;
 
     #pragma unroll
     for (i = 0; i < 3; i++)
     {
-        newnode[counter].p[i][0] = tr_x[i];
-        newnode[counter].p[i][1] = tr_y[i];
-        newnode[counter].p[i][2] = tr_x[i] + tr_w[i];
-        newnode[counter].p[i][3] = tr_y[i] + tr_h[i];
-        newnode[counter].weight[i] = t1.weight[i] * weight_scale;
+        pNew->p[i][0] = tr_x[i];
+        pNew->p[i][1] = tr_y[i];
+        pNew->p[i][2] = tr_x[i] + tr_w[i];
+        pNew->p[i][3] = tr_y[i] + tr_h[i];
+        pNew->weight[i] = t1.weight[i] * weight_scale;
     }
 
-    newnode[counter].left = t1.left;
-    newnode[counter].right = t1.right;
-    newnode[counter].threshold = t1.threshold;
-    newnode[counter].alpha[0] = t1.alpha[0];
-    newnode[counter].alpha[1] = t1.alpha[1];
-    newnode[counter].alpha[2] = t1.alpha[2];
+    pNew->left = t1.left;
+    pNew->right = t1.right;
+    pNew->threshold = t1.threshold;
+    pNew->alpha[0] = t1.alpha[0];
+    pNew->alpha[1] = t1.alpha[1];
+    pNew->alpha[2] = t1.alpha[2];
 }

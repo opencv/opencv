@@ -795,8 +795,8 @@ struct RepeatTestCase :
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
-        nx = 2;//randomInt(1, 4);
-        ny = 2;//randomInt(1, 4);
+        nx = randomInt(1, 4);
+        ny = randomInt(1, 4);
 
         Size srcRoiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -813,7 +813,7 @@ struct RepeatTestCase :
 
 typedef RepeatTestCase Repeat;
 
-OCL_TEST_P(Repeat, DISABLED_Mat)
+OCL_TEST_P(Repeat, Mat)
 {
     for (int i = 0; i < test_loop_times; ++i)
     {
@@ -1004,6 +1004,108 @@ OCL_TEST_P(Flip, BOTH)
     }
 }
 
+//////////////////////////////// Norm /////////////////////////////////////////////////
+
+static bool relativeError(double actual, double expected, double eps)
+{
+    return std::abs(actual - expected) / actual < eps;
+}
+
+typedef ArithmTestBase Norm;
+
+OCL_TEST_P(Norm, NORM_INF_1arg)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_INF));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_INF));
+
+        EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+    }
+}
+
+OCL_TEST_P(Norm, NORM_L1_1arg)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_L1));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_L1));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
+OCL_TEST_P(Norm, NORM_L2_1arg)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_L2));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_L2));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
+OCL_TEST_P(Norm, NORM_INF_2args)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_INF;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
+OCL_TEST_P(Norm, NORM_L1_2args)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_L1;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
+
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        }
+}
+
+OCL_TEST_P(Norm, NORM_L2_2args)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_L2;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
+
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1017,10 +1119,10 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHA
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-//OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-//OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-//OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-//OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
@@ -1033,7 +1135,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(::testing::Values(CV_32F, CV_64
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 

@@ -152,7 +152,7 @@ public:
         task = new( tbb::task::allocate_root() ) TBBApproximateSynchronizerTask( *this );
         tbb::task::enqueue(*task);
 #else
-        task->reset( new ApproximateSynchronizer( *this ) );
+        task.reset( new ApproximateSynchronizer( *this ) );
 #endif
     }
 

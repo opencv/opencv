@@ -10,13 +10,10 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Fangfang Bai, fangfang@multicorewareinc.com
-//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -26,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other Materials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -34,7 +31,7 @@
 // This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the copyright holders or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -44,47 +41,48 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#ifdef OP_MERGE
 
-using namespace perf;
-using std::tr1::tuple;
-using std::tr1::get;
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
+#define DECLARE_SRC_PARAM(index) __global const uchar * src##index##ptr, int src##index##_step, int src##index##_offset,
+#define DECLARE_DATA(index) __global const T * src##index = \
+    (__global T *)(src##index##ptr + mad24(src##index##_step, y, x * (int)sizeof(T) + src##index##_offset));
+#define PROCESS_ELEM(index) dst[index] = src##index[0];
 
-
-///////////// Moments ////////////////////////
-//*! performance of image
-typedef tuple<Size, MatType, bool> MomentsParamType;
-typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
-
-PERF_TEST_P(MomentsFixture, Moments,
-    ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                       OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1), ::testing::Bool()))
+__kernel void merge(DECLARE_SRC_PARAMS_N
+                    __global uchar * dstptr, int dst_step, int dst_offset,
+                    int rows, int cols)
 {
-    const MomentsParamType params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-    const bool binaryImage = get<2>(params);
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-    Mat  src(srcSize, type), dst(7, 1, CV_64F);
-    randu(src, 0, 255);
-
-    cv::Moments mom;
-    if (RUN_OCL_IMPL)
+    if (x < cols && y < rows)
     {
-        oclMat src_d(src);
-        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(src_d, binaryImage);
+        DECLARE_DATA_N
+        __global T * dst = (__global T *)(dstptr + mad24(dst_step, y, x * (int)sizeof(T) * cn + dst_offset));
+        PROCESS_ELEMS_N
     }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() mom = cv::moments(src, binaryImage);
-    }
-    else
-        OCL_PERF_ELSE
-    cv::HuMoments(mom, dst);
-    SANITY_CHECK(dst, 2e-1);
 }
+
+#elif defined OP_SPLIT
+
+#define DECLARE_DST_PARAM(index) , __global uchar * dst##index##ptr, int dst##index##_step, int dst##index##_offset
+#define DECLARE_DATA(index) __global T * dst##index = \
+    (__global T *)(dst##index##ptr + mad24(y, dst##index##_step, x * (int)sizeof(T) + dst##index##_offset));
+#define PROCESS_ELEM(index) dst##index[0] = src[index];
+
+__kernel void split(__global uchar* srcptr, int src_step, int src_offset, int rows, int cols DECLARE_DST_PARAMS)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (x < cols && y < rows)
+    {
+        DECLARE_DATA_N
+        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, x *  cn * (int)sizeof(T) + src_offset));
+        PROCESS_ELEMS_N
+    }
+}
+
+#else
+#error "No operation"
+#endif

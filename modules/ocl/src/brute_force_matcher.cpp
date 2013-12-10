@@ -676,7 +676,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::matchCollection(const oclMat &query, c
     ensureSizeIsEnough(1, nQuery, CV_32S, imgIdx);
     ensureSizeIsEnough(1, nQuery, CV_32F, distance);
 
-    matchDispatcher(query, (const oclMat *)trainCollection.ptr(), trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
+    matchDispatcher(query, &trainCollection, trainCollection.cols, masks, trainIdx, imgIdx, distance, distType);
 
     return;
 }

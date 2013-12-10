@@ -64,7 +64,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
             rect.x = win_size.width;
     }
 
-    if( ip.x + win_size.width < src_size.width )
+    if( ip.x < src_size.width - win_size.width )
         rect.width = win_size.width;
     else
     {
@@ -85,7 +85,7 @@ adjustRect( const uchar* src, size_t src_step, int pix_size,
     else
         rect.y = -ip.y;
 
-    if( ip.y + win_size.height < src_size.height )
+    if( ip.y < src_size.height - win_size.height )
         rect.height = win_size.height;
     else
     {
@@ -155,8 +155,8 @@ void getRectSubPix_Cn_(const _Tp* src, size_t src_step, Size src_size,
     src_step /= sizeof(src[0]);
     dst_step /= sizeof(dst[0]);
 
-    if( 0 <= ip.x && ip.x + win_size.width < src_size.width &&
-       0 <= ip.y && ip.y + win_size.height < src_size.height )
+    if( 0 <= ip.x && ip.x < src_size.width - win_size.width &&
+       0 <= ip.y && ip.y < src_size.height - win_size.height)
     {
         // extracted rectangle is totally inside the image
         src += ip.y * src_step + ip.x*cn;

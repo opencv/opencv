@@ -186,7 +186,7 @@ Matx<_Tp,m,n> Matx<_Tp,m,n>::randn(_Tp a, _Tp b)
 }
 
 template<typename _Tp, int m, int n> inline
-Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method) const
+Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method, bool *p_is_ok /*= NULL*/) const
 {
     Matx<_Tp, n, m> b;
     bool ok;
@@ -197,6 +197,7 @@ Matx<_Tp, n, m> Matx<_Tp, m, n>::inv(int method) const
         Mat A(*this, false), B(b, false);
         ok = (invert(A, B, method) != 0);
     }
+    if( NULL != p_is_ok ) { *p_is_ok = ok; }
     return ok ? b : Matx<_Tp, n, m>::zeros();
 }
 
@@ -435,7 +436,7 @@ int print(const std::vector<Point3_<_Tp> >& vec, FILE* stream = stdout)
 template<typename _Tp, int m, int n> static inline
 int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 {
-    return print(Formatter::get()->format(matx), stream);
+    return print(Formatter::get()->format(cv::Mat(matx)), stream);
 }
 
 

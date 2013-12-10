@@ -63,8 +63,11 @@ namespace cv
         //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation)
         CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir);
 
-        //! retrieves a window by its name
+        //! retrieves a window by its name. If no window with such name, then it creates new.
         CV_EXPORTS Viz3d get(const String &window_name);
+
+        //! Unregisters all Viz windows from internal database. After it 'get()' will create new windows instead getting existing from the database.
+        CV_EXPORTS void unregisterAllWindows();
 
         //! checks float value for Nan
         inline bool isNan(float x)
@@ -88,32 +91,6 @@ namespace cv
         template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
         { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
 
-        //! helper class that provides access by name infrastructure
-        class CV_EXPORTS VizAccessor
-        {
-        public:
-            static VizAccessor & getInstance();
-            static void release();
-
-            Viz3d get(const String &window_name);
-
-            //! window names automatically have Viz - prefix even though not provided by the users
-            static void generateWindowName(const String &window_name, String &output);
-
-        private:
-            VizAccessor(); // Singleton
-            ~VizAccessor();
-
-            void add(Viz3d window);
-            void remove(const String &window_name);
-
-            static VizAccessor * instance_;
-
-            struct VizAccessorImpl;
-            VizAccessorImpl * impl_;
-
-            friend class Viz3d;
-        };
     } /* namespace viz */
 } /* namespace cv */
 
