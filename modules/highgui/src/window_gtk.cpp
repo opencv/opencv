@@ -1552,9 +1552,9 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             // image origin is not necessarily at (0,0)
             int x0 = (widget->allocation.width - image_widget->scaled_image->cols)/2;
             int y0 = (widget->allocation.height - image_widget->scaled_image->rows)/2;
-            pt.x = cvRound( ((pt32f.x-x0)*image_widget->original_image->cols)/
+            pt.x = cvFloor( ((pt32f.x-x0)*image_widget->original_image->cols)/
                                             image_widget->scaled_image->cols );
-            pt.y = cvRound( ((pt32f.y-y0)*image_widget->original_image->rows)/
+            pt.y = cvFloor( ((pt32f.y-y0)*image_widget->original_image->rows)/
                                             image_widget->scaled_image->rows );
         }
         else{

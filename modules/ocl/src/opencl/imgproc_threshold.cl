@@ -74,11 +74,11 @@ __kernel void threshold(__global const T * restrict src, int src_offset, int src
         VT vthresh = (VT)(thresh);
 
 #ifdef THRESH_BINARY
-        VT vecValue = sdata > vthresh ? max_val : (VT)(0);
+        VT vecValue = sdata > vthresh ? (VT)max_val : (VT)(0);
 #elif defined THRESH_BINARY_INV
-        VT vecValue = sdata > vthresh ? (VT)(0) : max_val;
+        VT vecValue = sdata > vthresh ? (VT)(0) : (VT)max_val;
 #elif defined THRESH_TRUNC
-        VT vecValue = sdata > vthresh ? thresh : sdata;
+        VT vecValue = sdata > vthresh ? (VT)thresh : sdata;
 #elif defined THRESH_TOZERO
         VT vecValue = sdata > vthresh ? sdata : (VT)(0);
 #elif defined THRESH_TOZERO_INV

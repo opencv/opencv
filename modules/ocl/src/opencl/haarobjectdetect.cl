@@ -62,13 +62,13 @@ typedef struct __attribute__((aligned (128) )) GpuHidHaarTreeNode
 GpuHidHaarTreeNode;
 
 
-typedef struct __attribute__((aligned (32))) GpuHidHaarClassifier
-{
-    int count __attribute__((aligned (4)));
-    GpuHidHaarTreeNode* node __attribute__((aligned (8)));
-    float* alpha __attribute__((aligned (8)));
-}
-GpuHidHaarClassifier;
+//typedef struct __attribute__((aligned (32))) GpuHidHaarClassifier
+//{
+//    int count __attribute__((aligned (4)));
+//    GpuHidHaarTreeNode* node __attribute__((aligned (8)));
+//    float* alpha __attribute__((aligned (8)));
+//}
+//GpuHidHaarClassifier;
 
 
 typedef struct __attribute__((aligned (64))) GpuHidHaarStageClassifier
@@ -84,22 +84,22 @@ typedef struct __attribute__((aligned (64))) GpuHidHaarStageClassifier
 GpuHidHaarStageClassifier;
 
 
-typedef struct __attribute__((aligned (64))) GpuHidHaarClassifierCascade
-{
-    int  count __attribute__((aligned (4)));
-    int  is_stump_based __attribute__((aligned (4)));
-    int  has_tilted_features __attribute__((aligned (4)));
-    int  is_tree __attribute__((aligned (4)));
-    int pq0 __attribute__((aligned (4)));
-    int pq1 __attribute__((aligned (4)));
-    int pq2 __attribute__((aligned (4)));
-    int pq3 __attribute__((aligned (4)));
-    int p0 __attribute__((aligned (4)));
-    int p1 __attribute__((aligned (4)));
-    int p2 __attribute__((aligned (4)));
-    int p3 __attribute__((aligned (4)));
-    float inv_window_area __attribute__((aligned (4)));
-} GpuHidHaarClassifierCascade;
+//typedef struct __attribute__((aligned (64))) GpuHidHaarClassifierCascade
+//{
+//    int  count __attribute__((aligned (4)));
+//    int  is_stump_based __attribute__((aligned (4)));
+//    int  has_tilted_features __attribute__((aligned (4)));
+//    int  is_tree __attribute__((aligned (4)));
+//    int pq0 __attribute__((aligned (4)));
+//    int pq1 __attribute__((aligned (4)));
+//    int pq2 __attribute__((aligned (4)));
+//    int pq3 __attribute__((aligned (4)));
+//    int p0 __attribute__((aligned (4)));
+//    int p1 __attribute__((aligned (4)));
+//    int p2 __attribute__((aligned (4)));
+//    int p3 __attribute__((aligned (4)));
+//    float inv_window_area __attribute__((aligned (4)));
+//} GpuHidHaarClassifierCascade;
 
 
 #ifdef PACKED_CLASSIFIER
@@ -196,10 +196,12 @@ __kernel void gpuRunHaarClassifierCascadePacked(
     for(int stageloop = start_stage; (stageloop < end_stage) && result; stageloop++ )
     {// iterate until candidate is exist
         float   stage_sum = 0.0f;
-        int2    stageinfo = *(global int2*)(stagecascadeptr+stageloop);
-        float   stagethreshold = as_float(stageinfo.y);
+        __global GpuHidHaarStageClassifier* stageinfo = (__global GpuHidHaarStageClassifier*)
+            ((__global uchar*)stagecascadeptr+stageloop*sizeof(GpuHidHaarStageClassifier));
+        int stagecount = stageinfo->count;
+        float stagethreshold = stageinfo->threshold;
         int     lcl_off = (lid_y*DATA_SIZE_X)+(lid_x);
-        for(int nodeloop = 0; nodeloop < stageinfo.x; nodecounter++,nodeloop++ )
+        for(int nodeloop = 0; nodeloop < stagecount; nodecounter++,nodeloop++ )
         {
         // simple macro to extract shorts from int
 #define M0(_t) ((_t)&0xFFFF)
@@ -355,14 +357,17 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
             variance_norm_factor = variance_norm_factor * correction - mean * mean;
             variance_norm_factor = variance_norm_factor >=0.f ? sqrt(variance_norm_factor) : 1.f;
 
-            for(int stageloop = start_stage; (stageloop < split_stage)  && result; stageloop++ )
+            for(int stageloop = start_stage; (stageloop < split_stage) && result; stageloop++ )
             {
                 float stage_sum = 0.f;
-                int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
-                float stagethreshold = as_float(stageinfo.y);
-                for(int nodeloop = 0; nodeloop < stageinfo.x; )
+                __global GpuHidHaarStageClassifier* stageinfo = (__global GpuHidHaarStageClassifier*)
+                    ((__global uchar*)stagecascadeptr+stageloop*sizeof(GpuHidHaarStageClassifier));
+                int stagecount = stageinfo->count;
+                float stagethreshold = stageinfo->threshold;
+                for(int nodeloop = 0; nodeloop < stagecount; )
                 {
-                    __global GpuHidHaarTreeNode* currentnodeptr = (nodeptr + nodecounter);
+                    __global GpuHidHaarTreeNode* currentnodeptr = (__global GpuHidHaarTreeNode*)
+                        (((__global uchar*)nodeptr) + nodecounter * sizeof(GpuHidHaarTreeNode));
 
                     int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
                     int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
@@ -418,7 +423,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 #endif
                 }
 
-                result = (stage_sum >= stagethreshold);
+                result = (stage_sum >= stagethreshold) ? 1 : 0;
             }
             if(factor < 2)
             {
@@ -447,14 +452,17 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                 lclcount[0]=0;
                 barrier(CLK_LOCAL_MEM_FENCE);
 
-                int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
-                float stagethreshold = as_float(stageinfo.y);
+                //int2 stageinfo = *(global int2*)(stagecascadeptr+stageloop);
+                __global GpuHidHaarStageClassifier* stageinfo = (__global GpuHidHaarStageClassifier*)
+                    ((__global uchar*)stagecascadeptr+stageloop*sizeof(GpuHidHaarStageClassifier));
+                int stagecount = stageinfo->count;
+                float stagethreshold = stageinfo->threshold;
 
                 int perfscale = queuecount > 4 ? 3 : 2;
                 int queuecount_loop = (queuecount + (1<<perfscale)-1) >> perfscale;
                 int lcl_compute_win = lcl_sz >> perfscale;
                 int lcl_compute_win_id = (lcl_id >>(6-perfscale));
-                int lcl_loops = (stageinfo.x + lcl_compute_win -1) >> (6-perfscale);
+                int lcl_loops = (stagecount + lcl_compute_win -1) >> (6-perfscale);
                 int lcl_compute_id = lcl_id - (lcl_compute_win_id << (6-perfscale));
                 for(int queueloop=0; queueloop<queuecount_loop; queueloop++)
                 {
@@ -469,10 +477,10 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                         float part_sum = 0.f;
                         const int stump_factor = STUMP_BASED ? 1 : 2;
                         int root_offset = 0;
-                        for(int lcl_loop=0; lcl_loop<lcl_loops && tempnodecounter<stageinfo.x;)
+                        for(int lcl_loop=0; lcl_loop<lcl_loops && tempnodecounter<stagecount;)
                         {
-                            __global GpuHidHaarTreeNode* currentnodeptr =
-                                nodeptr + (nodecounter + tempnodecounter) * stump_factor + root_offset;
+                            __global GpuHidHaarTreeNode* currentnodeptr = (__global GpuHidHaarTreeNode*)
+                                    (((__global uchar*)nodeptr) + sizeof(GpuHidHaarTreeNode) * ((nodecounter + tempnodecounter) * stump_factor + root_offset));
 
                             int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
                             int4 info2 = *(__global int4*)(&(currentnodeptr->p[1][0]));
@@ -549,7 +557,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
 
                 queuecount = lclcount[0];
                 barrier(CLK_LOCAL_MEM_FENCE);
-                nodecounter += stageinfo.x;
+                nodecounter += stagecount;
             }//end for(int stageloop = splitstage; stageloop< endstage && queuecount>0;stageloop++)
 
             if(lcl_id<queuecount)
