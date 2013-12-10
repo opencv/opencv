@@ -92,8 +92,7 @@ PARAM_TEST_CASE(Lut, MatDepth, MatDepth, Channels, bool, bool)
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
@@ -165,14 +164,12 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst1, udst1, threshold);
-        EXPECT_MAT_NEAR(dst1_roi, udst1_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst1, threshold)
     }
 
     void Near1(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst2, udst2, threshold);
-        EXPECT_MAT_NEAR(dst2_roi, udst2_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst2, threshold)
     }
 };
 
@@ -532,8 +529,7 @@ OCL_TEST_P(Transpose, SquareInplace)
         OCL_OFF(cv::transpose(src1_roi, src1_roi));
         OCL_ON(cv::transpose(usrc1_roi, usrc1_roi));
 
-        EXPECT_MAT_NEAR(src1, usrc1, 0.0);
-        EXPECT_MAT_NEAR(src1_roi, usrc1_roi, 0.0);
+        OCL_EXPECT_MATS_NEAR(src1, 0)
     }
 }
 

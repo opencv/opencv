@@ -1306,9 +1306,10 @@ namespace cv {
 
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
-    int dcn = _dst.channels(), lcn = _lut.channels(), dtype = _dst.type();
+    int dtype = _dst.type(), lcn = _lut.channels(), dcn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if (_src.dims() > 2)
+    if (_src.dims() > 2 || (!doubleSupport && ddepth == CV_64F))
         return false;
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
@@ -1316,8 +1317,9 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     UMat dst = _dst.getUMat();
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::typeToStr(dst.depth())));
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s%s", dcn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::typeToStr(ddepth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
            ocl::KernelArg::WriteOnly(dst));
 
