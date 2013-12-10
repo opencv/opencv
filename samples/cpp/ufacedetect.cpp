@@ -98,6 +98,8 @@ int main( int argc, const char** argv )
         return -1;
     }
 
+    cout << "old cascade: " << (cascade.isOldFormatCascade() ? "TRUE" : "FALSE") << endl;
+
     if( inputName.empty() || (isdigit(inputName.c_str()[0]) && inputName.c_str()[1] == '\0') )
     {
         int c = inputName.empty() ? 0 : inputName.c_str()[0] - '0';

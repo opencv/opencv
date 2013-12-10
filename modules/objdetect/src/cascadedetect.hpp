@@ -186,6 +186,32 @@ protected:
 
 #define CALC_SUM(rect,offset) CALC_SUM_((rect)[0], (rect)[1], (rect)[2], (rect)[3], offset)
 
+#define CV_SUM_OFS( p0, p1, p2, p3, sum, rect, step )                 \
+/* (x, y) */                                                          \
+(p0) = sum + (rect).x + (step) * (rect).y,                            \
+/* (x + w, y) */                                                      \
+(p1) = sum + (rect).x + (rect).width + (step) * (rect).y,             \
+/* (x + w, y) */                                                      \
+(p2) = sum + (rect).x + (step) * ((rect).y + (rect).height),          \
+/* (x + w, y + h) */                                                  \
+(p3) = sum + (rect).x + (rect).width + (step) * ((rect).y + (rect).height)
+
+#define CV_TILTED_OFS( p0, p1, p2, p3, tilted, rect, step )                     \
+/* (x, y) */                                                                    \
+(p0) = tilted + (rect).x + (step) * (rect).y,                                   \
+/* (x - h, y + h) */                                                            \
+(p1) = tilted + (rect).x - (rect).height + (step) * ((rect).y + (rect).height), \
+/* (x + w, y + w) */                                                            \
+(p2) = tilted + (rect).x + (rect).width + (step) * ((rect).y + (rect).width),   \
+/* (x + w - h, y + w + h) */                                                    \
+(p3) = tilted + (rect).x + (rect).width - (rect).height                         \
++ (step) * ((rect).y + (rect).width + (rect).height)
+
+#define CALC_SUM_(p0, p1, p2, p3, offset) \
+((p0)[offset] - (p1)[offset] - (p2)[offset] + (p3)[offset])
+
+#define CALC_SUM(rect,offset) CALC_SUM_((rect)[0], (rect)[1], (rect)[2], (rect)[3], offset)
+
 
 //----------------------------------------------  HaarEvaluator ---------------------------------------
 class HaarEvaluator : public FeatureEvaluator
@@ -195,8 +221,6 @@ public:
     {
         Feature();
 
-        float calc( int offset ) const;
-        void updatePtrs( const Mat& sum );
         bool read( const FileNode& node );
 
         bool tilted;
@@ -208,8 +232,19 @@ public:
             Rect r;
             float weight;
         } rect[RECT_NUM];
+    };
 
-        const int* p[RECT_NUM][4];
+    struct OptFeature
+    {
+        OptFeature();
+
+        enum { RECT_NUM = Feature::RECT_NUM };
+        float calc( const int* pwin ) const;
+
+        void setPtrs( const Mat& sum, const Feature& f );
+
+        int ofs[RECT_NUM][4];
+        float weight[RECT_NUM];
     };
 
     HaarEvaluator();
@@ -223,23 +258,26 @@ public:
     virtual bool setWindow(Point pt);
 
     double operator()(int featureIdx) const
-    { return featuresPtr[featureIdx].calc(offset) * varianceNormFactor; }
+    { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
     virtual double calcOrd(int featureIdx) const
     { return (*this)(featureIdx); }
 
 protected:
     Size origWinSize;
-    Ptr<std::vector<Feature> > features;
-    Feature* featuresPtr; // optimization
+    std::vector<Feature> features;
+    std::vector<OptFeature> optfeatures;
+    OptFeature* optfeaturesPtr; // optimization
     bool hasTiltedFeatures;
 
     Mat sum0, sqsum0, tilted0;
     Mat sum, sqsum, tilted;
 
     Rect normrect;
-    const int *p[4];
-    const double *pq[4];
+    int p[4];
+    int pq[4];
 
+    const int* pwin;
+    const double* pqwin;
     int offset;
     double varianceNormFactor;
 };
@@ -249,12 +287,18 @@ inline HaarEvaluator::Feature :: Feature()
     tilted = false;
     rect[0].r = rect[1].r = rect[2].r = Rect();
     rect[0].weight = rect[1].weight = rect[2].weight = 0;
-    p[0][0] = p[0][1] = p[0][2] = p[0][3] =
-        p[1][0] = p[1][1] = p[1][2] = p[1][3] =
-        p[2][0] = p[2][1] = p[2][2] = p[2][3] = 0;
 }
 
-inline float HaarEvaluator::Feature :: calc( int _offset ) const
+inline HaarEvaluator::OptFeature :: OptFeature()
+{
+    weight[0] = weight[1] = weight[2] = 0.f;
+
+    ofs[0][0] = ofs[0][1] = ofs[0][2] = ofs[0][3] =
+    ofs[1][0] = ofs[1][1] = ofs[1][2] = ofs[1][3] =
+    ofs[2][0] = ofs[2][1] = ofs[2][2] = ofs[2][3] = 0;
+}
+
+/*inline float HaarEvaluator::Feature :: calc( int _offset ) const
 {
     float ret = rect[0].weight * CALC_SUM(p[0], _offset) + rect[1].weight * CALC_SUM(p[1], _offset);
 
@@ -262,12 +306,13 @@ inline float HaarEvaluator::Feature :: calc( int _offset ) const
         ret += rect[2].weight * CALC_SUM(p[2], _offset);
 
     return ret;
-}
+}*/
 
-inline void HaarEvaluator::Feature :: updatePtrs( const Mat& _sum )
+inline void HaarEvaluator::OptFeature :: setPtrs( const Mat& _sum, const Feature& _f )
 {
     const int* ptr = (const int*)_sum.data;
     size_t step = _sum.step/sizeof(ptr[0]);
+    size_t tiltedofs =
     if (tilted)
     {
         CV_TILTED_PTRS( p[0][0], p[0][1], p[0][2], p[0][3], ptr, rect[0].r, step );
