@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 /*
  * This file includes the code, contributed by Simon Perreault
@@ -797,10 +798,10 @@ cv::Mat cv::getGaussianKernel( int n, double sigma, int ktype )
     return kernel;
 }
 
+namespace cv {
 
-cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
-                                        double sigma1, double sigma2,
-                                        int borderType )
+static void createGaussianKernels( Mat & kx, Mat & ky, int type, Size ksize,
+                                   double sigma1, double sigma2 )
 {
     int depth = CV_MAT_DEPTH(type);
     if( sigma2 <= 0 )
@@ -818,12 +819,21 @@ cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
     sigma1 = std::max( sigma1, 0. );
     sigma2 = std::max( sigma2, 0. );
 
-    Mat kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
-    Mat ky;
+    kx = getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F) );
     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
         ky = kx;
     else
         ky = getGaussianKernel( ksize.height, sigma2, std::max(depth, CV_32F) );
+}
+
+}
+
+cv::Ptr<cv::FilterEngine> cv::createGaussianFilter( int type, Size ksize,
+                                        double sigma1, double sigma2,
+                                        int borderType )
+{
+    Mat kx, ky;
+    createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
     return createSeparableLinearFilter( type, type, kx, ky, Point(-1,-1), 0, borderType );
 }
@@ -833,33 +843,34 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
                    double sigma1, double sigma2,
                    int borderType )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
+    int type = _src.type();
+    Size size = _src.size();
+    _dst.create( size, type );
 
     if( borderType != BORDER_CONSTANT )
     {
-        if( src.rows == 1 )
+        if( size.height == 1 )
             ksize.height = 1;
-        if( src.cols == 1 )
+        if( size.width == 1 )
             ksize.width = 1;
     }
 
     if( ksize.width == 1 && ksize.height == 1 )
     {
-        src.copyTo(dst);
+        _src.copyTo(_dst);
         return;
     }
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
-    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(src, dst, ksize, borderType))
+    if(sigma1 == 0 && sigma2 == 0 && tegra::gaussian(_src.getMat(), _dst.getMat(), ksize, borderType))
         return;
 #endif
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
-    if(src.type() == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
+    if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
-        IppiSize roi = {src.cols, src.rows};
+        Mat src = _src.getMat(), dst = _dst.getMat();
+        IppiSize roi = { src.cols, src.rows };
         int bufSize = 0;
         ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
         AutoBuffer<uchar> buf(bufSize+128);
@@ -872,10 +883,10 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     }
 #endif
 
-    Ptr<FilterEngine> f = createGaussianFilter( src.type(), ksize, sigma1, sigma2, borderType );
-    f->apply( src, dst );
+    Mat kx, ky;
+    createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
+    sepFilter2D(_src, _dst, CV_MAT_DEPTH(type), kx, ky, Point(-1,-1), 0, borderType );
 }
-
 
 /****************************************************************************************\
                                       Median Filter
@@ -1914,19 +1925,91 @@ private:
 };
 #endif
 
+static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
+                                   double sigma_color, double sigma_space,
+                                   int borderType)
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    int i, j, maxk, radius;
+
+    if ( type != CV_8UC1 )
+        return false;
+
+    if (sigma_color <= 0)
+        sigma_color = 1;
+    if (sigma_space <= 0)
+        sigma_space = 1;
+
+    double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
+    double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
+
+    if ( d <= 0 )
+        radius = cvRound(sigma_space * 1.5);
+    else
+        radius = d / 2;
+    radius = MAX(radius, 1);
+    d = radius * 2 + 1;
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat(), temp;
+    if (src.u == dst.u)
+        return false;
+
+    copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
+
+    std::vector<float> _color_weight(cn * 256);
+    std::vector<float> _space_weight(d * d);
+    std::vector<int> _space_ofs(d * d);
+    float *color_weight = &_color_weight[0];
+    float *space_weight = &_space_weight[0];
+    int *space_ofs = &_space_ofs[0];
+
+    // initialize color-related bilateral filter coefficients
+    for( i = 0; i < 256 * cn; i++ )
+        color_weight[i] = (float)std::exp(i * i * gauss_color_coeff);
+
+    // initialize space-related bilateral filter coefficients
+    for( i = -radius, maxk = 0; i <= radius; i++ )
+        for( j = -radius; j <= radius; j++ )
+        {
+            double r = std::sqrt((double)i * i + (double)j * j);
+            if ( r > radius )
+                continue;
+            space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
+            space_ofs[maxk++] = (int)(i * temp.step + j);
+        }
+
+    ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
+                  format("-D radius=%d -D maxk=%d", radius, maxk));
+    if (k.empty())
+        return false;
+
+    Mat mcolor_weight(1, cn * 256, CV_32FC1, color_weight);
+    Mat mspace_weight(1, d * d, CV_32FC1, space_weight);
+    Mat mspace_ofs(1, d * d, CV_32SC1, space_ofs);
+    UMat ucolor_weight, uspace_weight, uspace_ofs;
+    mcolor_weight.copyTo(ucolor_weight);
+    mspace_weight.copyTo(uspace_weight);
+    mspace_ofs.copyTo(uspace_ofs);
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(temp), ocl::KernelArg::WriteOnly(dst),
+           ocl::KernelArg::PtrReadOnly(ucolor_weight),
+           ocl::KernelArg::PtrReadOnly(uspace_weight),
+           ocl::KernelArg::PtrReadOnly(uspace_ofs));
+
+    size_t globalsize[2] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
     int borderType )
 {
-
     int cn = src.channels();
     int i, j, maxk, radius;
     Size size = src.size();
 
-    CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
-              src.type() == dst.type() && src.size() == dst.size() &&
-              src.data != dst.data );
+    CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) && src.data != dst.data );
 
     if( sigma_color <= 0 )
         sigma_color = 1;
@@ -1973,7 +2056,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     {
         j = -radius;
 
-        for( ;j <= radius; j++ )
+        for( ; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);
             if( r > radius )
@@ -2184,9 +2267,7 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
     float len, scale_index;
     Size size = src.size();
 
-    CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) &&
-        src.type() == dst.type() && src.size() == dst.size() &&
-        src.data != dst.data );
+    CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) && src.data != dst.data );
 
     if( sigma_color <= 0 )
         sigma_color = 1;
@@ -2267,9 +2348,13 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
                       double sigmaColor, double sigmaSpace,
                       int borderType )
 {
-    Mat src = _src.getMat();
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
+    _dst.create( _src.size(), _src.type() );
+
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
+            ocl_bilateralFilter_8u(_src, _dst, d, sigmaColor, sigmaSpace, borderType))
+        return;
+
+    Mat src = _src.getMat(), dst = _dst.getMat();
 
     if( src.depth() == CV_8U )
         bilateralFilter_8u( src, dst, d, sigmaColor, sigmaSpace, borderType );

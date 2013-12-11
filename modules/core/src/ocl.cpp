@@ -1932,10 +1932,15 @@ struct Queue::Impl
 
     ~Impl()
     {
-        if(handle)
+#ifdef _WIN32
+        if (!cv::__termination)
+#endif
         {
-            clFinish(handle);
-            clReleaseCommandQueue(handle);
+            if(handle)
+            {
+                clFinish(handle);
+                clReleaseCommandQueue(handle);
+            }
         }
     }
 
@@ -2379,7 +2384,7 @@ struct Program::Impl
                 size_t retsz = 0;
                 retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
                                                CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if( retval >= 0 && retsz > 0 )
+                if( retval >= 0 && retsz > 1 )
                 {
                     AutoBuffer<char> bufbuf(retsz + 16);
                     char* buf = bufbuf;

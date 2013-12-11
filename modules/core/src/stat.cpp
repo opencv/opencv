@@ -1760,15 +1760,76 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
 
 }
 
+namespace cv {
+
+static bool ocl_norm( InputArray _src, int normType, double & result )
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) ||
+         (!doubleSupport && depth == CV_64F))
+        return false;
+
+    UMat src = _src.getUMat();
+
+    if (normType == NORM_INF)
+    {
+        UMat abssrc;
+
+        if (depth != CV_8U && depth != CV_16U)
+        {
+            int wdepth = std::max(CV_32S, depth);
+            char cvt[50];
+
+            ocl::Kernel kabs("KF", ocl::core::arithm_oclsrc,
+                             format("-D UNARY_OP -D OP_ABS_NOSAT -D dstT=%s -D srcT1=%s -D convertToDT=%s%s",
+                                    ocl::typeToStr(wdepth), ocl::typeToStr(depth),
+                                    ocl::convertTypeStr(depth, wdepth, 1, cvt),
+                                    doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+            if (kabs.empty())
+                return false;
+
+            abssrc.create(src.size(), CV_MAKE_TYPE(wdepth, cn));
+            kabs.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(abssrc, cn));
+
+            size_t globalsize[2] = { src.cols * cn, src.rows };
+            if (!kabs.run(2, globalsize, NULL, false))
+                return false;
+        }
+        else
+            abssrc = src;
+
+        cv::minMaxIdx(abssrc.reshape(1), NULL, &result);
+    }
+    else if (normType == NORM_L1 || normType == NORM_L2)
+    {
+        Scalar s;
+        bool unstype = depth == CV_8U || depth == CV_16U;
+
+        ocl_sum(src.reshape(1), s, normType == NORM_L2 ?
+                    OCL_OP_SUM_SQR : (unstype ? OCL_OP_SUM : OCL_OP_SUM_ABS) );
+        result = normType == NORM_L1 ? s[0] : std::sqrt(s[0]);
+    }
+
+    return true;
+}
+
+}
+
 double cv::norm( InputArray _src, int normType, InputArray _mask )
 {
-    Mat src = _src.getMat(), mask = _mask.getMat();
-    int depth = src.depth(), cn = src.channels();
-
-    normType &= 7;
+    normType &= NORM_TYPE_MASK;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
                normType == NORM_L2 || normType == NORM_L2SQR ||
-               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
+               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && _src.type() == CV_8U) );
+
+    double _result = 0;
+    if (ocl::useOpenCL() && _mask.empty() && _src.isUMat() && _src.dims() <= 2 && ocl_norm(_src, normType, _result))
+        return _result;
+
+    Mat src = _src.getMat(), mask = _mask.getMat();
+    int depth = src.depth(), cn = src.channels();
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
@@ -2047,9 +2108,56 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     return result.d;
 }
 
+namespace cv {
+
+static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double & result )
+{
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool relative = (normType & NORM_RELATIVE) != 0;
+    normType &= ~NORM_RELATIVE;
+
+    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) ||
+         (!doubleSupport && depth == CV_64F))
+        return false;
+
+    int wdepth = std::max(CV_32S, depth);
+    char cvt[50];
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D BINARY_OP -D OP_ABSDIFF -D dstT=%s -D workT=dstT -D srcT1=%s -D srcT2=srcT1"
+                         " -D convertToDT=%s -D convertToWT1=convertToDT -D convertToWT2=convertToDT%s",
+                         ocl::typeToStr(wdepth), ocl::typeToStr(depth),
+                         ocl::convertTypeStr(depth, wdepth, 1, cvt),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), diff(src1.size(), CV_MAKE_TYPE(wdepth, cn));
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src1), ocl::KernelArg::ReadOnlyNoSize(src2),
+           ocl::KernelArg::WriteOnly(diff, cn));
+
+    size_t globalsize[2] = { diff.cols * cn, diff.rows };
+    if (!k.run(2, globalsize, NULL, false))
+        return false;
+
+    result = cv::norm(diff, normType);
+    if (relative)
+        result /= cv::norm(src2, normType) + DBL_EPSILON;
+
+    return true;
+}
+
+}
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
+    CV_Assert( _src1.size() == _src2.size() && _src1.type() == _src2.type() );
+
+    double _result = 0;
+    if (ocl::useOpenCL() && _mask.empty() && _src1.isUMat() && _src2.isUMat() &&
+            _src1.dims() <= 2 && _src2.dims() <= 2 && ocl_norm(_src1, _src2, normType, _result))
+        return _result;
+
     if( normType & CV_RELATIVE )
     {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
@@ -2135,7 +2243,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
 
-    CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
+    CV_Assert( src1.size == src2.size );
 
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||

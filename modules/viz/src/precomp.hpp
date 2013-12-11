@@ -54,14 +54,6 @@
 #include <list>
 #include <vector>
 
-#if defined __GNUC__
-#pragma GCC system_header
-#ifdef __DEPRECATED
-#undef __DEPRECATED
-#define __DEPRECATED_DISABLED__
-#endif
-#endif
-
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
 #include <vtkCellData.h>
@@ -70,7 +62,6 @@
 #include <vtkSmartPointer.h>
 #include <vtkDataSet.h>
 #include <vtkPolygon.h>
-#include <vtkPointPicker.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkDiskSource.h>
 #include <vtkPlaneSource.h>
@@ -105,7 +96,6 @@
 #include <vtkCamera.h>
 #include <vtkObjectFactory.h>
 #include <vtkPlanes.h>
-#include <vtkImageViewer.h>
 #include <vtkImageFlip.h>
 #include <vtkRenderWindow.h>
 #include <vtkTextProperty.h>
@@ -119,11 +109,7 @@
 #include <vtkTextureMapToPlane.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkAlgorithmOutput.h>
-
-#if defined __GNUC__ && defined __DEPRECATED_DISABLED__
-#define __DEPRECATED
-#undef __DEPRECATED_DISABLED__
-#endif
+#include <vtkImageMapper.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
@@ -135,20 +121,34 @@ namespace cv
     namespace viz
     {
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
-    }
-}
-
-#include "interactor_style.h"
-#include "viz3d_impl.hpp"
-
-namespace cv
-{
-    namespace viz
-    {
         typedef std::map<String, Viz3d> VizMap;
-        typedef std::pair<String, Viz3d> VizPair;
+
+        class VizStorage
+        {
+        public:
+            static void unregisterAll();
+
+            //! window names automatically have Viz - prefix even though not provided by the users
+            static String generateWindowName(const String &window_name);
+
+        private:
+            VizStorage(); // Static
+            ~VizStorage();
+
+            static void add(const Viz3d& window);
+            static Viz3d& get(const String &window_name);
+            static void remove(const String &window_name);
+            static bool windowExists(const String &window_name);
+            static void removeUnreferenced();
+
+            static VizMap storage;
+            friend class Viz3d;
+        };
     }
 }
+
+#include "interactor_style.hpp"
+#include "viz3d_impl.hpp"
 
 
 #endif
