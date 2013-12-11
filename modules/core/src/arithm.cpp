@@ -937,10 +937,10 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : 1;
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s",
+    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"), oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
-            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)));
+            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if( k.empty() )
