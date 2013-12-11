@@ -88,11 +88,11 @@ struct TSTestWithParam : public ::testing::TestWithParam<T>
 
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
-#define UMAT_TEST_CHANNELS testing::Values(1, 2, 3, 4/*, 5*/)
+#define UMAT_TEST_CHANNELS testing::Values(1, 2, 3, 4)
 
-#define UMAT_TEST_SIZES testing::Values(cv::Size(1,1), cv::Size(1,128), cv::Size(128,1), cv::Size(128, 128), cv::Size(59, 113), cv::Size(640,480), cv::Size(751,373), cv::Size(2000, 2000))
+#define UMAT_TEST_SIZES testing::Values(cv::Size(1,1), cv::Size(1,128), cv::Size(128,1), cv::Size(128, 128), cv::Size(640,480), cv::Size(751,373), cv::Size(1200, 1200))
 
-#define UMAT_TEST_DEPTH testing::Values(CV_8S, CV_8U, CV_16S, CV_16U, CV_32F, CV_32S, CV_64F)
+#define UMAT_TEST_DEPTH testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F)
 
 # define CORE_TEST_P(test_case_name, test_name) \
     class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : \
