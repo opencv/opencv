@@ -104,8 +104,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
@@ -203,8 +202,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
-        EXPECT_MAT_NEAR(dst, udst, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
@@ -280,8 +278,7 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 

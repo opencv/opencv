@@ -97,15 +97,9 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
     void Near(double threshold = 0.0, bool relative = false)
     {
         if (relative)
-        {
-            EXPECT_MAT_NEAR_RELATIVE(dst, udst, threshold);
-            EXPECT_MAT_NEAR_RELATIVE(dst_roi, udst_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold)
         else
-        {
-            EXPECT_MAT_NEAR(dst, udst, threshold);
-            EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
@@ -158,10 +152,9 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
     }
 
-    void Near(double threshold = 0.0)
+    void Near()
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, 0)
     }
 };
 
@@ -305,15 +298,9 @@ struct Integral :
     void Near2(double threshold = 0.0, bool relative = false)
     {
         if (relative)
-        {
-            EXPECT_MAT_NEAR_RELATIVE(dst2, udst2, threshold);
-            EXPECT_MAT_NEAR_RELATIVE(dst2_roi, udst2_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst2, threshold)
         else
-        {
-            EXPECT_MAT_NEAR(dst2, udst2, threshold);
-            EXPECT_MAT_NEAR(dst2_roi, udst2_roi, threshold);
-        }
+            OCL_EXPECT_MATS_NEAR(dst2, threshold)
     }
 };
 
@@ -412,8 +399,7 @@ PARAM_TEST_CASE(CLAHETest, Size, double, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
