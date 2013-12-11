@@ -1932,10 +1932,15 @@ struct Queue::Impl
 
     ~Impl()
     {
-        if(handle)
+#ifdef _WIN32
+        if (!cv::__termination)
+#endif
         {
-            clFinish(handle);
-            clReleaseCommandQueue(handle);
+            if(handle)
+            {
+                clFinish(handle);
+                clReleaseCommandQueue(handle);
+            }
         }
     }
 
