@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 #include <stdio.h>
 
 using namespace cv;
@@ -71,8 +71,8 @@ void CV_FramecountTest::run(int)
     {
         string file_path = src_dir+"video/big_buck_bunny."+ext[i];
 
-        cap = cvCreateFileCapture(file_path.c_str());
-        if (cap.empty())
+        cap.reset(cvCreateFileCapture(file_path.c_str()));
+        if (!cap)
         {
             ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
             ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");
@@ -91,7 +91,7 @@ void CV_FramecountTest::run(int)
             FrameCount++;
         }
 
-        int framecount = (int)cvGetCaptureProperty(cap, CV_CAP_PROP_FRAME_COUNT);
+        int framecount = (int)cvGetCaptureProperty(cap, CAP_PROP_FRAME_COUNT);
 
         ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n"\
                    "\nName: big_buck_bunny.%s\nActual frame count: %d\n"\

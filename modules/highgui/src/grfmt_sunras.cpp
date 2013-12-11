@@ -63,7 +63,7 @@ SunRasterDecoder::~SunRasterDecoder()
 
 ImageDecoder SunRasterDecoder::newDecoder() const
 {
-    return new SunRasterDecoder;
+    return makePtr<SunRasterDecoder>();
 }
 
 void  SunRasterDecoder::close()
@@ -388,14 +388,14 @@ SunRasterEncoder::SunRasterEncoder()
 
 ImageEncoder SunRasterEncoder::newEncoder() const
 {
-    return new SunRasterEncoder;
+    return makePtr<SunRasterEncoder>();
 }
 
 SunRasterEncoder::~SunRasterEncoder()
 {
 }
 
-bool  SunRasterEncoder::write( const Mat& img, const vector<int>& )
+bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 {
     bool result = false;
     int y, width = img.cols, height = img.rows, channels = img.channels();

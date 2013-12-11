@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/ocl/ocl.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/ocl.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -15,16 +16,16 @@ using namespace cv::ocl;
 int main(int argc, const char** argv)
 {
     cv::CommandLineParser cmd(argc, argv,
-        "{ c | camera | false       | use camera }"
-        "{ f | file   | 768x576.avi | input video file }"
-        "{ m | method | mog         | method (mog, mog2) }"
-        "{ h | help   | false       | print help message }");
+        "{ c camera | false       | use camera }"
+        "{ f file   | 768x576.avi | input video file }"
+        "{ m method | mog         | method (mog, mog2) }"
+        "{ h help   | false       | print help message }");
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage : bgfg_segm [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 

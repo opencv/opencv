@@ -26,5 +26,5 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1, testing::Values(impair("cv/optflow/
 
     TEST_CYCLE_N(10) tvl1->calc(frame1, frame2, flow);
 
-    SANITY_CHECK(flow, 0.5);
+    SANITY_CHECK(flow, 0.8);
 }

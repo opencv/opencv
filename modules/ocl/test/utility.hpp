@@ -41,6 +41,8 @@
 
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
+#include "opencv2/core.hpp"
+
 
 extern int LOOP_TIMES;
 
@@ -259,7 +261,7 @@ CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 
 CV_ENUM(CmpCode, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
 CV_ENUM(NormCode, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
-CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(ReduceOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN)
 CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
 CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA)
@@ -307,9 +309,9 @@ CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REA
         } \
         catch (const cv::Exception & ex) \
         { \
-            if (ex.code == CV_OpenCLDoubleNotSupported)\
+            if (ex.code == cv::Error::OpenCLDoubleNotSupported)\
                 std::cout << "Test skipped (selected device does not support double)" << std::endl; \
-            else if (ex.code == CV_OpenCLNoAMDBlasFft) \
+            else if (ex.code == cv::Error::OpenCLNoAMDBlasFft) \
                 std::cout << "Test skipped (AMD Blas / Fft libraries are not available)" << std::endl; \
             else \
                 throw; \

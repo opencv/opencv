@@ -1,7 +1,8 @@
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
 #include "opencv2/video/background_segm.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <stdio.h>
 
 using namespace std;
@@ -18,8 +19,8 @@ static void help()
 
 const char* keys =
 {
-    "{c |camera   |true    | use camera or not}"
-    "{fn|file_name|tree.avi | movie file             }"
+    "{c  camera   |         | use camera or not}"
+    "{fn file_name|tree.avi | movie file        }"
 };
 
 //this is a sample for foreground detection functions
@@ -28,7 +29,7 @@ int main(int argc, const char** argv)
     help();
 
     CommandLineParser parser(argc, argv, keys);
-    bool useCamera = parser.get<bool>("camera");
+    bool useCamera = parser.has("camera");
     string file = parser.get<string>("file_name");
     VideoCapture cap;
     bool update_bg_model = true;
@@ -37,7 +38,8 @@ int main(int argc, const char** argv)
         cap.open(0);
     else
         cap.open(file.c_str());
-    parser.printParams();
+
+    parser.printMessage();
 
     if( !cap.isOpened() )
     {
@@ -50,7 +52,7 @@ int main(int argc, const char** argv)
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
 
-    BackgroundSubtractorMOG2 bg_model;//(100, 3, 0.3, 5);
+    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
 
     Mat img, fgmask, fgimg;
 
@@ -67,13 +69,13 @@ int main(int argc, const char** argv)
           fgimg.create(img.size(), img.type());
 
         //update the model
-        bg_model(img, fgmask, update_bg_model ? -1 : 0);
+        bg_model->apply(img, fgmask, update_bg_model ? -1 : 0);
 
         fgimg = Scalar::all(0);
         img.copyTo(fgimg, fgmask);
 
         Mat bgimg;
-        bg_model.getBackgroundImage(bgimg);
+        bg_model->getBackgroundImage(bgimg);
 
         imshow("image", img);
         imshow("foreground mask", fgmask);

@@ -1,14 +1,8 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
 #include "ts_gtest.h"
-
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
-#endif
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
 # if defined(ANDROID) && defined(USE_ANDROID_LOGGING)
@@ -28,7 +22,7 @@
 #endif
 
 // declare major namespaces to avoid errors on unknown namespace
-namespace cv { namespace gpu {} namespace ocl {} }
+namespace cv { namespace cuda {} namespace ocl {} }
 
 namespace perf
 {
@@ -102,7 +96,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
@@ -118,7 +112,7 @@ private:
             *os << "UNKNOWN";                                                           \
         }                                                                               \
         static ::testing::internal::ParamGenerator<class_name> all() {                  \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             static class_name vals[] = { __VA_ARGS__ };                                 \
             return ::testing::ValuesIn(vals);                                           \
         }                                                                               \
@@ -132,7 +126,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             int value = val_;                                                           \
@@ -217,7 +211,7 @@ public:
   static bool targetDevice();
 };
 
-#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#define PERF_RUN_CUDA()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -257,6 +251,7 @@ typedef struct CV_EXPORTS performance_metrics
 \*****************************************************************************************/
 enum PERF_STRATEGY
 {
+    PERF_STRATEGY_DEFAULT = -1,
     PERF_STRATEGY_BASE = 0,
     PERF_STRATEGY_SIMPLE = 1,
 };
@@ -277,8 +272,8 @@ public:
     static std::string getDataPath(const std::string& relativePath);
     static std::string getSelectedImpl();
 
-    static enum PERF_STRATEGY getPerformanceStrategy();
-    static enum PERF_STRATEGY setPerformanceStrategy(enum PERF_STRATEGY strategy);
+    static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
+    static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
     class PerfSkipTestException: public cv::Exception {};
 
@@ -292,9 +287,9 @@ protected:
     void stopTimer();
     bool next();
 
-    //_declareHelper declare;
+    PERF_STRATEGY getCurrentPerformanceStrategy() const;
 
-    enum
+    enum WarmUpType
     {
         WARMUP_READ,
         WARMUP_WRITE,
@@ -303,9 +298,10 @@ protected:
     };
 
     void reportMetrics(bool toJUnitXML = false);
-    static void warmup(cv::InputOutputArray a, int wtype = WARMUP_READ);
+    static void warmup(cv::InputOutputArray a, WarmUpType wtype = WARMUP_READ);
 
     performance_metrics& calcMetrics();
+
     void RunPerfTestBody();
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
@@ -315,6 +311,8 @@ private:
     SizeVector outputData;
     unsigned int getTotalInputSize() const;
     unsigned int getTotalOutputSize() const;
+
+    enum PERF_STRATEGY testStrategy;
 
     TimeVector times;
     int64 lastTime;
@@ -333,28 +331,30 @@ private:
     static int64 _timeadjustment;
     static int64 _calibrate();
 
-    static void warmup_impl(cv::Mat m, int wtype);
+    static void warmup_impl(cv::Mat m, WarmUpType wtype);
     static int getSizeInBytes(cv::InputArray a);
     static cv::Size getSize(cv::InputArray a);
-    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype = 0);
+    static void declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype);
 
     class CV_EXPORTS _declareHelper
     {
     public:
-        _declareHelper& in(cv::InputOutputArray a1, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_READ);
-        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_READ);
+        _declareHelper& in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_READ);
 
-        _declareHelper& out(cv::InputOutputArray a1, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype = WARMUP_WRITE);
-        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype = WARMUP_WRITE);
+        _declareHelper& out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype = WARMUP_WRITE);
 
         _declareHelper& iterations(unsigned int n);
         _declareHelper& time(double timeLimitSecs);
         _declareHelper& tbb_threads(int n = -1);
         _declareHelper& runs(unsigned int runsNumber);
+
+        _declareHelper& strategy(enum PERF_STRATEGY s);
     private:
         TestBase* test;
         _declareHelper(TestBase* t);

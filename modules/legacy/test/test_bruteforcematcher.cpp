@@ -1,5 +1,6 @@
 #include "test_precomp.hpp"
 
+using namespace std;
 using namespace cv;
 
 struct CV_EXPORTS L2Fake : public L2<float>

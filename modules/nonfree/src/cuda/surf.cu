@@ -42,17 +42,17 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDAARITHM
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/limits.hpp"
-#include "opencv2/gpu/device/saturate_cast.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/utility.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/filters.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/limits.hpp"
+#include "opencv2/core/cuda/saturate_cast.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -955,7 +955,6 @@ namespace cv { namespace gpu { namespace device
             }
         }
     } // namespace surf
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace cuda { namespace cudev
 
-
-#endif /* HAVE_OPENCV_GPU */
+#endif // HAVE_OPENCV_CUDAARITHM

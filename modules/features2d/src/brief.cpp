@@ -111,7 +111,7 @@ BriefDescriptorExtractor::BriefDescriptorExtractor(int bytes) :
             test_fn_ = pixelTests64;
             break;
         default:
-            CV_Error(CV_StsBadArg, "bytes must be 16, 32, or 64");
+            CV_Error(Error::StsBadArg, "bytes must be 16, 32, or 64");
     }
 }
 
@@ -140,7 +140,7 @@ void BriefDescriptorExtractor::read( const FileNode& fn)
             test_fn_ = pixelTests64;
             break;
         default:
-            CV_Error(CV_StsBadArg, "descriptorSize must be 16, 32, or 64");
+            CV_Error(Error::StsBadArg, "descriptorSize must be 16, 32, or 64");
     }
     bytes_ = dSize;
 }
@@ -156,7 +156,7 @@ void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoin
     Mat sum;
 
     Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     ///TODO allow the user to pass in a precomputed integral image
     //if(image.type() == CV_32S)

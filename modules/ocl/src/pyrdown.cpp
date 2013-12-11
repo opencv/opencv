@@ -60,19 +60,19 @@ static void pyrdown_run(const oclMat &src, const oclMat &dst)
     CV_Assert(src.depth() != CV_8S);
 
     Context  *clCxt = src.clCxt;
-    string kernelName = "pyrDown";
+    String kernelName = "pyrDown";
 
     size_t localThreads[3]  = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, dst.rows, 1};
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
 
     openCLExecuteKernel(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
 }

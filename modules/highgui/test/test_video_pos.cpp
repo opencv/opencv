@@ -41,7 +41,7 @@
  //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace cv;
 using namespace std;
@@ -110,13 +110,13 @@ public:
                 return;
             }
 
-            int N0 = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
-            cap.set(CV_CAP_PROP_POS_FRAMES, 0);
-            int N = (int)cap.get(CV_CAP_PROP_FRAME_COUNT);
+            int N0 = (int)cap.get(CAP_PROP_FRAME_COUNT);
+            cap.set(CAP_PROP_POS_FRAMES, 0);
+            int N = (int)cap.get(CAP_PROP_FRAME_COUNT);
 
             // See the same hack in CV_HighGuiTest::SpecificVideoTest for explanation.
             int allowed_extra_frames = 0;
-            if (fmt.fourcc == CV_FOURCC('M', 'P', 'E', 'G') && fmt.ext == "mkv")
+            if (fmt.fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && fmt.ext == "mkv")
                 allowed_extra_frames = 1;
 
             if (N < n_frames || N > n_frames + allowed_extra_frames || N != N0)
@@ -130,14 +130,14 @@ public:
             {
                 int idx = theRNG().uniform(0, n_frames);
 
-                if( !cap.set(CV_CAP_PROP_POS_FRAMES, idx) )
+                if( !cap.set(CAP_PROP_POS_FRAMES, idx) )
                 {
                     ts->printf(ts->LOG, "\nError: cannot seek to frame %d.\n", idx);
                     ts->set_failed_test_info(ts->FAIL_INVALID_OUTPUT);
                     return;
                 }
 
-                int idx1 = (int)cap.get(CV_CAP_PROP_POS_FRAMES);
+                int idx1 = (int)cap.get(CAP_PROP_POS_FRAMES);
 
                 Mat img; cap >> img;
                 Mat img0 = drawFrame(idx);

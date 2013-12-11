@@ -47,7 +47,7 @@
 
 using namespace cv;
 
-namespace internal
+namespace
 {
     void __wrap_printf_func(const char* fmt, ...)
     {
@@ -62,7 +62,6 @@ namespace internal
     #define PRINT_TO_LOG __wrap_printf_func
 }
 
-using internal::PRINT_TO_LOG;
 #define SHOW_IMAGE
 #undef SHOW_IMAGE
 
@@ -359,7 +358,7 @@ CV_Resize_Test::~CV_Resize_Test()
 {
 }
 
-namespace internal
+namespace
 {
     void interpolateLinear(float x, float* coeffs)
     {
@@ -523,7 +522,7 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
     }
     else if (interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_LANCZOS4)
     {
-        internal::interpolate_method inter_func = internal::inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
+        interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
         size_t elemsize = _src.elemSize();
 
         int ofs = 0, ksize = 2;
@@ -874,7 +873,7 @@ void CV_Remap_Test::remap_generic(const Mat& _src, Mat& _dst)
         height1 = std::max(ssize.height - ksize + 1, 0);
 
     float ix[8], w[16];
-    internal::interpolate_method inter_func = internal::inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
+    interpolate_method inter_func = inter_array[interpolation - (interpolation == INTER_LANCZOS4 ? 2 : 1)];
 
     for (int dy = 0; dy < dsize.height; ++dy)
     {

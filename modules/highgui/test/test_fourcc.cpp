@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 #undef DEFINE_GUID
 #define DEFINE_GUID(n, fourcc, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) fourcc,

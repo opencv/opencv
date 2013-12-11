@@ -62,13 +62,13 @@ public:
 protected:
     //lookup the binary given the file name
     // (with acquired mutexCache)
-    cl_program progLookup(const string& srcsign);
+    cl_program progLookup(const String& srcsign);
 
     //add program to the cache
     // (with acquired mutexCache)
-    void addProgram(const string& srcsign, cl_program program);
+    void addProgram(const String& srcsign, cl_program program);
 
-    map <string, cl_program> codeCache;
+    std::map <String, cl_program> codeCache;
     unsigned int cacheSize;
 
     //The presumed watermark for the cache volume (256MB). Is it enough?

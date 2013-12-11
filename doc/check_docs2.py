@@ -33,12 +33,12 @@ doc_signatures_whitelist = [
 # templates
 "Matx", "Vec", "SparseMat_", "Scalar_", "Mat_", "Ptr", "Size_", "Point_", "Rect_", "Point3_",
 "DataType", "detail::RotationWarperBase", "flann::Index_", "CalonderDescriptorExtractor",
-"gpu::PtrStepSz", "gpu::PtrStep", "gpu::PtrElemStep_",
+"cuda::PtrStepSz", "cuda::PtrStep", "cuda::PtrElemStep_",
 # black boxes
 "CvArr", "CvFileStorage",
 # other
 "InputArray", "OutputArray",
-] + ["CvSubdiv2D", "CvQuadEdge2D", "CvSubdiv2DPoint", "cvDrawContours"]
+]
 
 defines = ["cvGraphEdgeIdx", "cvFree", "CV_Assert", "cvSqrt", "cvGetGraphVtx", "cvGraphVtxIdx",
 "cvCaptureFromFile", "cvCaptureFromCAM", "cvCalcBackProjectPatch", "cvCalcBackProject",
@@ -83,11 +83,15 @@ def get_cv2_object(name):
     elif name == "DescriptorExtractor":
         return cv2.DescriptorExtractor_create("ORB"), name
     elif name == "BackgroundSubtractor":
-        return cv2.BackgroundSubtractorMOG(), name
+        return cv2.createBackgroundSubtractorMOG(), name
     elif name == "StatModel":
         return cv2.KNearest(), name
     else:
-        return getattr(cv2, name)(), name
+        try:
+            obj = getattr(cv2, name)()
+        except AttributeError:
+            obj = getattr(cv2, "create" + name)()
+        return obj, name
 
 def compareSignatures(f, s):
     # function names
@@ -156,9 +160,10 @@ def formatSignature(s):
             argtype = re.sub(r"\s+(\*|&)$", "\\1", arg[0])
             bidx = argtype.find('[')
             if bidx < 0:
-                _str += argtype + " "
+                _str += argtype
             else:
-                _srt += argtype[:bidx]
+                _str += argtype[:bidx]
+            _str += " "
             if arg[1]:
                 _str += arg[1]
             else:
@@ -195,9 +200,10 @@ def process_module(module, path):
         for filename in fnmatch.filter(files, "*.h*"):
             hdrlist.append(os.path.join(root, filename))
 
-    if module == "gpu":
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_devptrs.hpp"))
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
+    if module == "cuda":
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_types.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_stream_accessor.hpp"))
 
     decls = []
     for hname in hdrlist:
@@ -206,7 +212,7 @@ def process_module(module, path):
 
     funcs = []
     # not really needed to hardcode all the namespaces. Normally all they are collected automatically
-    namespaces = ['cv', 'cv.gpu', 'cvflann', 'cvflann.anyimpl', 'cvflann.lsh', 'cv.flann', 'cv.linemod', 'cv.detail', 'cvtest', 'perf', 'cv.videostab']
+    namespaces = ['cv', 'cv.cuda', 'cvflann', 'cvflann.anyimpl', 'cvflann.lsh', 'cv.flann', 'cv.linemod', 'cv.detail', 'cvtest', 'perf', 'cv.videostab']
     classes = []
     structs = []
 
@@ -326,6 +332,7 @@ def process_module(module, path):
             flookup[fn[0]] = flookup_entry
 
     if do_python_crosscheck:
+        pyclsnamespaces = ["cv." + x[3:].replace(".", "_") for x in clsnamespaces]
         for name, doc in rst.iteritems():
             decls = doc.get("decls")
             if not decls:
@@ -394,7 +401,7 @@ def process_module(module, path):
                     pname = signature[1][4:signature[1].find('(')]
                     cvname = "cv." + pname
                     parent = None
-                    for cl in clsnamespaces:
+                    for cl in pyclsnamespaces:
                         if cvname.startswith(cl + "."):
                             if cl.startswith(parent or ""):
                                 parent = cl

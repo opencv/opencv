@@ -6,12 +6,13 @@
 #  Usage from an external project:
 #    In your CMakeLists.txt, add these lines:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED)
-#    TARGET_LINK_LIBRARIES(MY_TARGET_NAME ${OpenCV_LIBS})
+#    find_package(OpenCV REQUIRED)
+#    include_directories(${OpenCV_INCLUDE_DIRS})
+#    target_link_libraries(MY_TARGET_NAME ${OpenCV_LIBS})
 #
 #    Or you can search for specific OpenCV modules:
 #
-#    FIND_PACKAGE(OpenCV REQUIRED core highgui)
+#    find_package(OpenCV REQUIRED core highgui)
 #
 #    If the module is found then OPENCV_<MODULE>_FOUND is set to TRUE.
 #
@@ -20,11 +21,11 @@
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
 #      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API
-#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION@"
+#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
 #      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
 #      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
 #      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
-#      - OpenCV_VERSION_TWEAK            : Tweak version part of OpenCV_VERSION: "@OPENCV_VERSION_TWEAK@"
+#      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 #    Advanced variables:
 #      - OpenCV_SHARED
@@ -33,6 +34,9 @@
 #      - OpenCV_LIB_COMPONENTS
 #      - OpenCV_USE_MANGLED_PATHS
 #      - OpenCV_HAVE_ANDROID_CAMERA
+#
+#    Deprecated variables:
+#      - OpenCV_VERSION_TWEAK            : Always "0"
 #
 # ===================================================================================
 
@@ -90,7 +94,6 @@ set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
 
 # Provide the include directories to the caller
 set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
-include_directories(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
 # Link directories to add to the user project:
@@ -106,11 +109,12 @@ mark_as_advanced(FORCE OpenCV_LIB_DIR_OPT OpenCV_LIB_DIR_DBG OpenCV_3RDPARTY_LIB
 # ======================================================
 #  Version variables:
 # ======================================================
-SET(OpenCV_VERSION @OPENCV_VERSION@)
+SET(OpenCV_VERSION @OPENCV_VERSION_PLAIN@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
 SET(OpenCV_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
 SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
-SET(OpenCV_VERSION_TWEAK  @OPENCV_VERSION_TWEAK@)
+SET(OpenCV_VERSION_TWEAK  0)
+SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 # ====================================================================
 # Link libraries: e.g. opencv_core;opencv_imgproc; etc...
@@ -123,7 +127,6 @@ SET(OpenCV_LIB_COMPONENTS @OPENCV_MODULES_CONFIGCMAKE@)
 # ==============================================================
 SET(OpenCV2_INCLUDE_DIRS @OpenCV2_INCLUDE_DIRS_CONFIGCMAKE@)
 if(OpenCV2_INCLUDE_DIRS)
-  include_directories(${OpenCV2_INCLUDE_DIRS})
   list(APPEND OpenCV_INCLUDE_DIRS ${OpenCV2_INCLUDE_DIRS})
 
   set(OpenCV_ADD_DEBUG_RELEASE @OpenCV_ADD_DEBUG_RELEASE_CONFIGCMAKE@)

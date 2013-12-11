@@ -1,6 +1,5 @@
-
-#include "opencv2/contrib/contrib.hpp"
-#include <cvconfig.h>
+#include "opencv2/contrib.hpp"
+#include "cvconfig.h"
 
 #if defined(WIN32) || defined(_WIN32)
     #include <windows.h>
@@ -11,11 +10,11 @@
 
 namespace cv
 {
-    std::vector<std::string> Directory::GetListFiles( const std::string& path, const std::string & exten, bool addPath )
+    std::vector<String> Directory::GetListFiles( const String& path, const String & exten, bool addPath )
     {
-        std::vector<std::string> list;
+        std::vector<String> list;
         list.clear();
-        std::string path_f = path + "/" + exten;
+        String path_f = path + "/" + exten;
         #ifdef WIN32
         #ifdef HAVE_WINRT
             WIN32_FIND_DATAW FindFileData;
@@ -56,9 +55,9 @@ namespace cv
                         fname = FindFileData.cFileName;
                     #endif
                         if (addPath)
-                            list.push_back(path + "/" + std::string(fname));
+                            list.push_back(path + "/" + String(fname));
                         else
-                            list.push_back(std::string(fname));
+                            list.push_back(String(fname));
                     }
                 }
             #ifdef HAVE_WINRT
@@ -82,10 +81,10 @@ namespace cv
                 if (dirp->d_type == DT_REG)
                 {
                     if (exten.compare("*") == 0)
-                        list.push_back(static_cast<std::string>(dirp->d_name));
+                        list.push_back(static_cast<String>(dirp->d_name));
                     else
-                        if (std::string(dirp->d_name).find(exten) != std::string::npos)
-                            list.push_back(static_cast<std::string>(dirp->d_name));
+                        if (String(dirp->d_name).find(exten) != String::npos)
+                            list.push_back(static_cast<String>(dirp->d_name));
                 }
             }
             closedir(dp);
@@ -94,10 +93,10 @@ namespace cv
         return list;
     }
 
-    std::vector<std::string> Directory::GetListFolders( const std::string& path, const std::string & exten, bool addPath )
+    std::vector<String> Directory::GetListFolders( const String& path, const String & exten, bool addPath )
     {
-        std::vector<std::string> list;
-        std::string path_f = path + "/" + exten;
+        std::vector<String> list;
+        String path_f = path + "/" + exten;
         list.clear();
         #ifdef WIN32
         #ifdef HAVE_WINRT
@@ -145,9 +144,9 @@ namespace cv
                     #endif
 
                         if (addPath)
-                            list.push_back(path + "/" + std::string(fname));
+                            list.push_back(path + "/" + String(fname));
                         else
-                            list.push_back(std::string(fname));
+                            list.push_back(String(fname));
                     }
                 }
             #ifdef HAVE_WINRT
@@ -174,10 +173,10 @@ namespace cv
                     strcmp(dirp->d_name, "..") != 0 )
                 {
                     if (exten.compare("*") == 0)
-                        list.push_back(static_cast<std::string>(dirp->d_name));
+                        list.push_back(static_cast<String>(dirp->d_name));
                     else
-                        if (std::string(dirp->d_name).find(exten) != std::string::npos)
-                            list.push_back(static_cast<std::string>(dirp->d_name));
+                        if (String(dirp->d_name).find(exten) != String::npos)
+                            list.push_back(static_cast<String>(dirp->d_name));
                 }
             }
             closedir(dp);
@@ -186,16 +185,16 @@ namespace cv
         return list;
     }
 
-    std::vector<std::string> Directory::GetListFilesR ( const std::string& path, const std::string & exten, bool addPath )
+    std::vector<String> Directory::GetListFilesR ( const String& path, const String & exten, bool addPath )
     {
-        std::vector<std::string> list = Directory::GetListFiles(path, exten, addPath);
+        std::vector<String> list = Directory::GetListFiles(path, exten, addPath);
 
-        std::vector<std::string> dirs = Directory::GetListFolders(path, exten, addPath);
+        std::vector<String> dirs = Directory::GetListFolders(path, exten, addPath);
 
-        std::vector<std::string>::const_iterator it;
+        std::vector<String>::const_iterator it;
         for (it = dirs.begin(); it != dirs.end(); ++it)
         {
-            std::vector<std::string> cl = Directory::GetListFiles(*it, exten, addPath);
+            std::vector<String> cl = Directory::GetListFiles(*it, exten, addPath);
             list.insert(list.end(), cl.begin(), cl.end());
         }
 

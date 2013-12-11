@@ -93,7 +93,7 @@ if __name__ == "__main__":
     shift_dft(log_spectrum, log_spectrum)
 
     # normalize and display the results as rgb
-    cv2.normalize(log_spectrum, log_spectrum, 0.0, 1.0, cv2.cv.CV_MINMAX)
+    cv2.normalize(log_spectrum, log_spectrum, 0.0, 1.0, cv2.NORM_MINMAX)
     cv2.imshow("magnitude", log_spectrum)
 
     cv2.waitKey(0)

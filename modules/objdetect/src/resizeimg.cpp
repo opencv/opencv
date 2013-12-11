@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
 #include "_lsvm_resizeimg.h"
 #include <stdio.h>
 #include <assert.h>

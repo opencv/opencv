@@ -90,9 +90,9 @@ ProgramCache::~ProgramCache()
     }
 }
 
-cl_program ProgramCache::progLookup(const string& srcsign)
+cl_program ProgramCache::progLookup(const String& srcsign)
 {
-    map<string, cl_program>::iterator iter;
+    std::map<String, cl_program>::iterator iter;
     iter = codeCache.find(srcsign);
     if(iter != codeCache.end())
         return iter->second;
@@ -100,18 +100,18 @@ cl_program ProgramCache::progLookup(const string& srcsign)
         return NULL;
 }
 
-void ProgramCache::addProgram(const string& srcsign, cl_program program)
+void ProgramCache::addProgram(const String& srcsign, cl_program program)
 {
     if (!progLookup(srcsign))
     {
         clRetainProgram(program);
-        codeCache.insert(map<string, cl_program>::value_type(srcsign, program));
+        codeCache.insert(std::map<String, cl_program>::value_type(srcsign, program));
     }
 }
 
 void ProgramCache::releaseProgram()
 {
-    map<string, cl_program>::iterator iter;
+    std::map<String, cl_program>::iterator iter;
     for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
     {
         openCLSafeCall(clReleaseProgram(iter->second));
@@ -174,16 +174,16 @@ struct ProgramFileCache
         // char data[];
     };
 
-    string fileName_;
+    String fileName_;
     const char* hash_;
     std::fstream f;
 
-    ProgramFileCache(const string& fileName, const char* hash)
+    ProgramFileCache(const String& fileName, const char* hash)
         : fileName_(fileName), hash_(hash)
     {
         if (hash_ != NULL)
         {
-            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
             if(f.is_open())
             {
                 int hashLength = 0;
@@ -200,7 +200,7 @@ struct ProgramFileCache
         }
     }
 
-    int getHash(const string& options)
+    int getHash(const String& options)
     {
         int hash = 0;
         for (size_t i = 0; i < options.length(); i++)
@@ -210,7 +210,7 @@ struct ProgramFileCache
         return (hash + (hash >> 16)) & (MAX_ENTRIES - 1);
     }
 
-    bool readConfigurationFromFile(const string& options, std::vector<char>& buf)
+    bool readConfigurationFromFile(const String& options, std::vector<char>& buf)
     {
         if (hash_ == NULL)
             return false;
@@ -277,17 +277,17 @@ struct ProgramFileCache
         return false;
     }
 
-    bool writeConfigurationToFile(const string& options, std::vector<char>& buf)
+    bool writeConfigurationToFile(const String& options, std::vector<char>& buf)
     {
         if (hash_ == NULL)
             return true; // don't save programs without hash
 
         if (!f.is_open())
         {
-            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
             if (!f.is_open())
             {
-                f.open(fileName_.c_str(), ios::out|ios::binary);
+                f.open(fileName_.c_str(), std::ios::out|std::ios::binary);
                 if (!f.is_open())
                     return false;
             }
@@ -307,7 +307,7 @@ struct ProgramFileCache
             std::vector<int> firstEntryOffset(MAX_ENTRIES, 0);
             f.write((char*)&firstEntryOffset[0], sizeof(int)*numberOfEntries);
             f.close();
-            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            f.open(fileName_.c_str(), std::ios::in|std::ios::out|std::ios::binary);
             CV_Assert(f.is_open());
             f.seekg(0, std::fstream::end);
             fileSize = (size_t)f.tellg();
@@ -376,7 +376,7 @@ struct ProgramFileCache
         return true;
     }
 
-    cl_program getOrBuildProgram(const Context* ctx, const cv::ocl::ProgramEntry* source, const string& options)
+    cl_program getOrBuildProgram(const Context* ctx, const cv::ocl::ProgramEntry* source, const String& options)
     {
         cl_int status = 0;
         cl_program program = NULL;
@@ -440,7 +440,7 @@ struct ProgramFileCache
                 std::cout << std::endl << "BUILD LOG: "
                         << (source->name ? source->name : "dynamic program") << ": "
                         << options << "\n";
-                std::cout << &buildLog[0] << endl;
+                std::cout << &buildLog[0] << std::endl;
             }
             openCLVerifyCall(status);
         }
@@ -451,7 +451,7 @@ struct ProgramFileCache
 cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEntry* source,
                                     const char *build_options)
 {
-    stringstream src_sign;
+    std::stringstream src_sign;
 
     if (source->name)
     {
@@ -487,7 +487,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
         }
     }
 
-    string all_build_options;
+    String all_build_options;
     if (!ctx->getDeviceInfo().compilationExtraOptions.empty())
         all_build_options += ctx->getDeviceInfo().compilationExtraOptions;
     if (build_options != NULL)
@@ -496,7 +496,7 @@ cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEn
         all_build_options += build_options;
     }
     const DeviceInfo& devInfo = ctx->getDeviceInfo();
-    string filename = binpath + (source->name ? source->name : "NULL") + "_" + devInfo.platform->platformName + "_" + devInfo.deviceName + ".clb";
+    String filename = binpath + (source->name ? source->name : "NULL") + "_" + devInfo.platform->platformName + "_" + devInfo.deviceName + ".clb";
 
     ProgramFileCache programFileCache(filename, source->programHash);
     cl_program program = programFileCache.getOrBuildProgram(ctx, source, all_build_options);

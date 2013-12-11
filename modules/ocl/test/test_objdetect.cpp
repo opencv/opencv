@@ -44,12 +44,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/objdetect.hpp"
 
 using namespace cv;
 using namespace testing;
-#ifdef HAVE_OPENCL
 
 ///////////////////// HOG /////////////////////////////
 PARAM_TEST_CASE(HOG, Size, int)
@@ -73,11 +71,11 @@ OCL_TEST_P(HOG, GetDescriptors)
     switch (type)
     {
     case CV_8UC1:
-        cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cvtColor(img_rgb, img, COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cvtColor(img_rgb, img, COLOR_BGR2BGRA);
         break;
     }
     ocl::oclMat d_img(img);
@@ -119,11 +117,11 @@ OCL_TEST_P(HOG, Detect)
     switch (type)
     {
     case CV_8UC1:
-        cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cvtColor(img_rgb, img, COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cvtColor(img_rgb, img, COLOR_BGR2BGRA);
         break;
     }
     ocl::oclMat d_img(img);
@@ -180,17 +178,11 @@ INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(Size(64, 128), Size(48, 96)),
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 
+
 ///////////////////////////// Haar //////////////////////////////
 IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
 CascadeName cascade_frontalface_alt(std::string("haarcascade_frontalface_alt.xml"));
 CascadeName cascade_frontalface_alt2(std::string("haarcascade_frontalface_alt2.xml"));
-struct getRect
-{
-    Rect operator ()(const CvAvgComp &e) const
-    {
-        return e.rect;
-    }
-};
 
 PARAM_TEST_CASE(Haar, int, CascadeName)
 {
@@ -199,14 +191,14 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
 
     int flags;
     std::string cascadeName;
-    vector<Rect> faces, oclfaces;
+    std::vector<Rect> faces, oclfaces;
     Mat img;
     ocl::oclMat d_img;
 
     virtual void SetUp()
     {
         flags = GET_PARAM(0);
-        cascadeName = (string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
+        cascadeName = (std::string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
         ASSERT_TRUE(cascade.load( cascadeName ));
         ASSERT_TRUE(cpucascade.load(cascadeName));
         img = readImage("cv/shared/lena.png", IMREAD_GRAYSCALE);
@@ -229,29 +221,6 @@ OCL_TEST_P(Haar, FaceDetect)
     EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 1.0);
 }
 
-OCL_TEST_P(Haar, FaceDetectUseBuf)
-{
-    ocl::OclCascadeClassifierBuf cascadebuf;
-    ASSERT_TRUE(cascadebuf.load(cascadeName)) << "could not load classifier cascade for FaceDetectUseBuf!";
-
-    cascadebuf.detectMultiScale(d_img, oclfaces,  1.1, 3,
-                                flags,
-                                Size(30, 30), Size(0, 0));
-    cpucascade.detectMultiScale(img, faces,  1.1, 3,
-                                flags,
-                                Size(30, 30), Size(0, 0));
-
-    // intentionally run ocl facedetect again and check if it still works after the first run
-    cascadebuf.detectMultiScale(d_img, oclfaces,  1.1, 3,
-                                flags,
-                                Size(30, 30));
-    cascadebuf.release();
-
-    EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 1.0);
-}
-
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, Haar,
-    Combine(Values(CV_HAAR_SCALE_IMAGE, 0),
-            Values(cascade_frontalface_alt/*, cascade_frontalface_alt2*/)));
-
-#endif //HAVE_OPENCL
+    Combine(Values((int)CASCADE_SCALE_IMAGE, 0),
+            Values(cascade_frontalface_alt, cascade_frontalface_alt2)));

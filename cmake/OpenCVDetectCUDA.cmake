@@ -1,8 +1,3 @@
-if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
-  message(STATUS "WITH_CUDA flag requires CMake 2.8.3 or newer. CUDA support is disabled.")
-  return()
-endif()
-
 if(WIN32 AND NOT MSVC)
   message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler supported on your platform).")
   return()
@@ -23,7 +18,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
 
-find_package(CUDA 4.2 QUIET)
+find_package(CUDA "${MIN_VER_CUDA}" QUIET)
 
 foreach(var INCLUDE LIBRARY PROGRAM)
   set(CMAKE_FIND_ROOT_PATH_MODE_${var} "${__old_frpm_${var}}")
@@ -44,6 +39,9 @@ if(CUDA_FOUND)
 
   if(WITH_NVCUVID)
     find_cuda_helper_libs(nvcuvid)
+    if(WIN32)
+      find_cuda_helper_libs(nvcuvenc)
+    endif()
     set(HAVE_NVCUVID 1)
   endif()
 
@@ -179,6 +177,10 @@ if(CUDA_FOUND)
 
       # we remove -Wsign-promo as it generates warnings under linux
       string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
+
+      # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
 
       # we remove -Wno-delete-non-virtual-dtor because it's used for C++ compiler
       # but NVCC uses C compiler by default

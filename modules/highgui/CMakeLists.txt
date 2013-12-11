@@ -10,13 +10,19 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 ocv_clear_vars(GRFMT_LIBS)
 
 if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIR})
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 
 if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
+endif()
+
+if(WITH_WEBP)
+  add_definitions(-DHAVE_WEBP)
+  ocv_include_directories(${WEBP_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
 endif()
 
 if(HAVE_PNG)
@@ -44,6 +50,8 @@ file(GLOB grfmt_hdrs src/grfmt*.hpp)
 file(GLOB grfmt_srcs src/grfmt*.cpp)
 list(APPEND grfmt_hdrs src/bitstrm.hpp)
 list(APPEND grfmt_srcs src/bitstrm.cpp)
+list(APPEND grfmt_hdrs src/rgbe.hpp)
+list(APPEND grfmt_srcs src/rgbe.cpp)
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
@@ -62,7 +70,7 @@ set(highgui_srcs
     src/window.cpp
     )
 
-file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
 if(HAVE_QT5)
   set(CMAKE_AUTOMOC ON)
@@ -201,10 +209,6 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(HAVE_IMAGEIO AND IOS)
-  list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
-endif()
-
 if(HAVE_AVFOUNDATION)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
@@ -227,6 +231,7 @@ endif()
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)
@@ -289,11 +294,6 @@ if(WIN32 AND WITH_FFMPEG)
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
 
-  #if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
-  #  add_custom_command(TARGET ${the_module} POST_BUILD
-  #                     COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name_ver}"
-  #                     COMMENT "Copying ${ffmpeg_path} to the output directory")
-  #else
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"

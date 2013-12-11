@@ -40,8 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
-#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif
@@ -49,7 +49,7 @@
 namespace cv
 {
 
-Mat windowedMatchingMask( const vector<KeyPoint>& keypoints1, const vector<KeyPoint>& keypoints2,
+Mat windowedMatchingMask( const std::vector<KeyPoint>& keypoints1, const std::vector<KeyPoint>& keypoints2,
                           float maxDeltaX, float maxDeltaY )
 {
     if( keypoints1.empty() || keypoints2.empty() )
@@ -83,7 +83,7 @@ DescriptorMatcher::DescriptorCollection::DescriptorCollection( const DescriptorC
 DescriptorMatcher::DescriptorCollection::~DescriptorCollection()
 {}
 
-void DescriptorMatcher::DescriptorCollection::set( const vector<Mat>& descriptors )
+void DescriptorMatcher::DescriptorCollection::set( const std::vector<Mat>& descriptors )
 {
     clear();
 
@@ -113,7 +113,7 @@ void DescriptorMatcher::DescriptorCollection::set( const vector<Mat>& descriptor
         dim = descriptors[0].cols;
         type = descriptors[0].type();
     }
-    assert( dim > 0 );
+    CV_Assert( dim > 0 );
 
     int count = startIdxs[imageCount-1] + descriptors[imageCount-1].rows;
 
@@ -175,7 +175,7 @@ int DescriptorMatcher::DescriptorCollection::size() const
 /*
  * DescriptorMatcher
  */
-static void convertMatches( const vector<vector<DMatch> >& knnMatches, vector<DMatch>& matches )
+static void convertMatches( const std::vector<std::vector<DMatch> >& knnMatches, std::vector<DMatch>& matches )
 {
     matches.clear();
     matches.reserve( knnMatches.size() );
@@ -190,12 +190,12 @@ static void convertMatches( const vector<vector<DMatch> >& knnMatches, vector<DM
 DescriptorMatcher::~DescriptorMatcher()
 {}
 
-void DescriptorMatcher::add( const vector<Mat>& descriptors )
+void DescriptorMatcher::add( const std::vector<Mat>& descriptors )
 {
     trainDescCollection.insert( trainDescCollection.end(), descriptors.begin(), descriptors.end() );
 }
 
-const vector<Mat>& DescriptorMatcher::getTrainDescriptors() const
+const std::vector<Mat>& DescriptorMatcher::getTrainDescriptors() const
 {
     return trainDescCollection;
 }
@@ -213,37 +213,37 @@ bool DescriptorMatcher::empty() const
 void DescriptorMatcher::train()
 {}
 
-void DescriptorMatcher::match( const Mat& queryDescriptors, const Mat& trainDescriptors, vector<DMatch>& matches, const Mat& mask ) const
+void DescriptorMatcher::match( const Mat& queryDescriptors, const Mat& trainDescriptors, std::vector<DMatch>& matches, const Mat& mask ) const
 {
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
-    tempMatcher->add( vector<Mat>(1, trainDescriptors) );
-    tempMatcher->match( queryDescriptors, matches, vector<Mat>(1, mask) );
+    tempMatcher->add( std::vector<Mat>(1, trainDescriptors) );
+    tempMatcher->match( queryDescriptors, matches, std::vector<Mat>(1, mask) );
 }
 
-void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors, vector<vector<DMatch> >& matches, int knn,
+void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
                                   const Mat& mask, bool compactResult ) const
 {
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
-    tempMatcher->add( vector<Mat>(1, trainDescriptors) );
-    tempMatcher->knnMatch( queryDescriptors, matches, knn, vector<Mat>(1, mask), compactResult );
+    tempMatcher->add( std::vector<Mat>(1, trainDescriptors) );
+    tempMatcher->knnMatch( queryDescriptors, matches, knn, std::vector<Mat>(1, mask), compactResult );
 }
 
-void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
+void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                      const Mat& mask, bool compactResult ) const
 {
     Ptr<DescriptorMatcher> tempMatcher = clone(true);
-    tempMatcher->add( vector<Mat>(1, trainDescriptors) );
-    tempMatcher->radiusMatch( queryDescriptors, matches, maxDistance, vector<Mat>(1, mask), compactResult );
+    tempMatcher->add( std::vector<Mat>(1, trainDescriptors) );
+    tempMatcher->radiusMatch( queryDescriptors, matches, maxDistance, std::vector<Mat>(1, mask), compactResult );
 }
 
-void DescriptorMatcher::match( const Mat& queryDescriptors, vector<DMatch>& matches, const vector<Mat>& masks )
+void DescriptorMatcher::match( const Mat& queryDescriptors, std::vector<DMatch>& matches, const std::vector<Mat>& masks )
 {
-    vector<vector<DMatch> > knnMatches;
+    std::vector<std::vector<DMatch> > knnMatches;
     knnMatch( queryDescriptors, knnMatches, 1, masks, true /*compactResult*/ );
     convertMatches( knnMatches, matches );
 }
 
-void DescriptorMatcher::checkMasks( const vector<Mat>& masks, int queryDescriptorsCount ) const
+void DescriptorMatcher::checkMasks( const std::vector<Mat>& masks, int queryDescriptorsCount ) const
 {
     if( isMaskSupported() && !masks.empty() )
     {
@@ -262,8 +262,8 @@ void DescriptorMatcher::checkMasks( const vector<Mat>& masks, int queryDescripto
     }
 }
 
-void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
-                                  const vector<Mat>& masks, bool compactResult )
+void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
+                                  const std::vector<Mat>& masks, bool compactResult )
 {
     matches.clear();
     if( empty() || queryDescriptors.empty() )
@@ -277,8 +277,8 @@ void DescriptorMatcher::knnMatch( const Mat& queryDescriptors, vector<vector<DMa
     knnMatchImpl( queryDescriptors, matches, knn, masks, compactResult );
 }
 
-void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
-                                     const vector<Mat>& masks, bool compactResult )
+void DescriptorMatcher::radiusMatch( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                     const std::vector<Mat>& masks, bool compactResult )
 {
     matches.clear();
     if( empty() || queryDescriptors.empty() )
@@ -303,7 +303,7 @@ bool DescriptorMatcher::isPossibleMatch( const Mat& mask, int queryIdx, int trai
     return mask.empty() || mask.at<uchar>(queryIdx, trainIdx);
 }
 
-bool DescriptorMatcher::isMaskedOut( const vector<Mat>& masks, int queryIdx )
+bool DescriptorMatcher::isMaskedOut( const std::vector<Mat>& masks, int queryIdx )
 {
     size_t outCount = 0;
     for( size_t i = 0; i < masks.size(); i++ )
@@ -326,7 +326,7 @@ BFMatcher::BFMatcher( int _normType, bool _crossCheck )
 
 Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
 {
-    BFMatcher* matcher = new BFMatcher(normType, crossCheck);
+    Ptr<BFMatcher> matcher = makePtr<BFMatcher>(normType, crossCheck);
     if( !emptyTrainData )
     {
         matcher->trainDescCollection.resize(trainDescCollection.size());
@@ -337,8 +337,8 @@ Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
 }
 
 
-void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
-                              const vector<Mat>& masks, bool compactResult )
+void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
+                              const std::vector<Mat>& masks, bool compactResult )
 {
     const int IMGIDX_SHIFT = 18;
     const int IMGIDX_ONE = (1 << IMGIDX_SHIFT);
@@ -380,8 +380,8 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
         const float* distptr = dist.ptr<float>(qIdx);
         const int* nidxptr = nidx.ptr<int>(qIdx);
 
-        matches.push_back( vector<DMatch>() );
-        vector<DMatch>& mq = matches.back();
+        matches.push_back( std::vector<DMatch>() );
+        std::vector<DMatch>& mq = matches.back();
         mq.reserve(knn);
 
         for( int k = 0; k < nidx.cols; k++ )
@@ -398,8 +398,8 @@ void BFMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch>
 }
 
 
-void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches,
-                                 float maxDistance, const vector<Mat>& masks, bool compactResult )
+void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches,
+                                 float maxDistance, const std::vector<Mat>& masks, bool compactResult )
 {
     if( queryDescriptors.empty() || trainDescCollection.empty() )
     {
@@ -428,7 +428,7 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMat
         {
             const float* distptr = distf.ptr<float>(qIdx);
 
-            vector<DMatch>& mq = matches[qIdx];
+            std::vector<DMatch>& mq = matches[qIdx];
             for( int k = 0; k < distf.cols; k++ )
             {
                 if( distptr[k] <= maxDistance )
@@ -456,36 +456,36 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMat
 /*
  * Factory function for DescriptorMatcher creating
  */
-Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 {
-    DescriptorMatcher* dm = 0;
+    Ptr<DescriptorMatcher> dm;
     if( !descriptorMatcherType.compare( "FlannBased" ) )
     {
-        dm = new FlannBasedMatcher();
+        dm = makePtr<FlannBasedMatcher>();
     }
     else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
     {
-        dm = new BFMatcher(NORM_L2);
+        dm = makePtr<BFMatcher>(int(NORM_L2)); // anonymous enums can't be template parameters
     }
     else if( !descriptorMatcherType.compare( "BruteForce-SL2" ) ) // Squared L2
     {
-        dm = new BFMatcher(NORM_L2SQR);
+        dm = makePtr<BFMatcher>(int(NORM_L2SQR));
     }
     else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
-        dm = new BFMatcher(NORM_L1);
+        dm = makePtr<BFMatcher>(int(NORM_L1));
     }
     else if( !descriptorMatcherType.compare("BruteForce-Hamming") ||
              !descriptorMatcherType.compare("BruteForce-HammingLUT") )
     {
-        dm = new BFMatcher(NORM_HAMMING);
+        dm = makePtr<BFMatcher>(int(NORM_HAMMING));
     }
     else if( !descriptorMatcherType.compare("BruteForce-Hamming(2)") )
     {
-        dm = new BFMatcher(NORM_HAMMING2);
+        dm = makePtr<BFMatcher>(int(NORM_HAMMING2));
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown matcher name" );
+        CV_Error( Error::StsBadArg, "Unknown matcher name" );
 
     return dm;
 }
@@ -497,11 +497,11 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatche
 FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParams, const Ptr<flann::SearchParams>& _searchParams )
     : indexParams(_indexParams), searchParams(_searchParams), addedDescCount(0)
 {
-    CV_Assert( !_indexParams.empty() );
-    CV_Assert( !_searchParams.empty() );
+    CV_Assert( _indexParams );
+    CV_Assert( _searchParams );
 }
 
-void FlannBasedMatcher::add( const vector<Mat>& descriptors )
+void FlannBasedMatcher::add( const std::vector<Mat>& descriptors )
 {
     DescriptorMatcher::add( descriptors );
     for( size_t i = 0; i < descriptors.size(); i++ )
@@ -522,17 +522,17 @@ void FlannBasedMatcher::clear()
 
 void FlannBasedMatcher::train()
 {
-    if( flannIndex.empty() || mergedDescriptors.size() < addedDescCount )
+    if( !flannIndex || mergedDescriptors.size() < addedDescCount )
     {
         mergedDescriptors.set( trainDescCollection );
-        flannIndex = new flann::Index( mergedDescriptors.getDescriptors(), *indexParams );
+        flannIndex = makePtr<flann::Index>( mergedDescriptors.getDescriptors(), *indexParams );
     }
 }
 
 void FlannBasedMatcher::read( const FileNode& fn)
 {
-     if (indexParams == 0)
-         indexParams = new flann::IndexParams();
+     if (!indexParams)
+         indexParams = makePtr<flann::IndexParams>();
 
      FileNode ip = fn["indexParams"];
      CV_Assert(ip.type() == FileNode::SEQ);
@@ -540,7 +540,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)ip[i]["name"];
+        String _name =  (String)ip[i]["name"];
         int type =  (int)ip[i]["type"];
 
         switch(type)
@@ -559,7 +559,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            indexParams->setString(_name, (std::string) ip[i]["value"]);
+            indexParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             indexParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -570,8 +570,8 @@ void FlannBasedMatcher::read( const FileNode& fn)
         };
      }
 
-     if (searchParams == 0)
-         searchParams = new flann::SearchParams();
+     if (!searchParams)
+         searchParams = makePtr<flann::SearchParams>();
 
      FileNode sp = fn["searchParams"];
      CV_Assert(sp.type() == FileNode::SEQ);
@@ -579,7 +579,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)sp[i]["name"];
+        String _name =  (String)sp[i]["name"];
         int type =  (int)sp[i]["type"];
 
         switch(type)
@@ -598,7 +598,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            searchParams->setString(_name, (std::string) ip[i]["value"]);
+            searchParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             searchParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -616,11 +616,11 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 {
      fs << "indexParams" << "[";
 
-     if (indexParams != 0)
+     if (indexParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          indexParams->getAll(names, types, strValues, numValues);
@@ -667,11 +667,11 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      fs << "]" << "searchParams" << "[";
 
-     if (searchParams != 0)
+     if (searchParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          searchParams->getAll(names, types, strValues, numValues);
@@ -725,10 +725,10 @@ bool FlannBasedMatcher::isMaskSupported() const
 
 Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
 {
-    FlannBasedMatcher* matcher = new FlannBasedMatcher(indexParams, searchParams);
+    Ptr<FlannBasedMatcher> matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
     if( !emptyTrainData )
     {
-        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
+        CV_Error( Error::StsNotImplemented, "deep clone functionality is not implemented, because "
                   "Flann::Index has not copy constructor or clone method ");
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;
@@ -740,7 +740,7 @@ Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
 }
 
 void FlannBasedMatcher::convertToDMatches( const DescriptorCollection& collection, const Mat& indices, const Mat& dists,
-                                           vector<vector<DMatch> >& matches )
+                                           std::vector<std::vector<DMatch> >& matches )
 {
     matches.resize( indices.rows );
     for( int i = 0; i < indices.rows; i++ )
@@ -763,8 +763,8 @@ void FlannBasedMatcher::convertToDMatches( const DescriptorCollection& collectio
     }
 }
 
-void FlannBasedMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, int knn,
-                                      const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+void FlannBasedMatcher::knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int knn,
+                                      const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
 {
     Mat indices( queryDescriptors.rows, knn, CV_32SC1 );
     Mat dists( queryDescriptors.rows, knn, CV_32FC1);
@@ -773,8 +773,8 @@ void FlannBasedMatcher::knnMatchImpl( const Mat& queryDescriptors, vector<vector
     convertToDMatches( mergedDescriptors, indices, dists, matches );
 }
 
-void FlannBasedMatcher::radiusMatchImpl( const Mat& queryDescriptors, vector<vector<DMatch> >& matches, float maxDistance,
-                                         const vector<Mat>& /*masks*/, bool /*compactResult*/ )
+void FlannBasedMatcher::radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                         const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
 {
     const int count = mergedDescriptors.size(); // TODO do count as param?
     Mat indices( queryDescriptors.rows, count, CV_32SC1, Scalar::all(-1) );
@@ -812,8 +812,8 @@ GenericDescriptorMatcher::KeyPointCollection::KeyPointCollection( const KeyPoint
     std::copy( collection.startIndices.begin(), collection.startIndices.end(), startIndices.begin() );
 }
 
-void GenericDescriptorMatcher::KeyPointCollection::add( const vector<Mat>& _images,
-                                                        const vector<vector<KeyPoint> >& _points )
+void GenericDescriptorMatcher::KeyPointCollection::add( const std::vector<Mat>& _images,
+                                                        const std::vector<std::vector<KeyPoint> >& _points )
 {
     CV_Assert( !_images.empty() );
     CV_Assert( _images.size() == _points.size() );
@@ -856,12 +856,12 @@ size_t GenericDescriptorMatcher::KeyPointCollection::imageCount() const
     return images.size();
 }
 
-const vector<vector<KeyPoint> >& GenericDescriptorMatcher::KeyPointCollection::getKeypoints() const
+const std::vector<std::vector<KeyPoint> >& GenericDescriptorMatcher::KeyPointCollection::getKeypoints() const
 {
     return keypoints;
 }
 
-const vector<KeyPoint>& GenericDescriptorMatcher::KeyPointCollection::getKeypoints( int imgIdx ) const
+const std::vector<KeyPoint>& GenericDescriptorMatcher::KeyPointCollection::getKeypoints( int imgIdx ) const
 {
     CV_Assert( imgIdx < (int)imageCount() );
     return keypoints[imgIdx];
@@ -897,7 +897,7 @@ void GenericDescriptorMatcher::KeyPointCollection::getLocalIdx( int globalPointI
     localPointIdx = globalPointIdx - startIndices[imgIdx];
 }
 
-const vector<Mat>& GenericDescriptorMatcher::KeyPointCollection::getImages() const
+const std::vector<Mat>& GenericDescriptorMatcher::KeyPointCollection::getImages() const
 {
     return images;
 }
@@ -917,8 +917,8 @@ GenericDescriptorMatcher::GenericDescriptorMatcher()
 GenericDescriptorMatcher::~GenericDescriptorMatcher()
 {}
 
-void GenericDescriptorMatcher::add( const vector<Mat>& images,
-                                    vector<vector<KeyPoint> >& keypoints )
+void GenericDescriptorMatcher::add( const std::vector<Mat>& images,
+                                    std::vector<std::vector<KeyPoint> >& keypoints )
 {
     CV_Assert( !images.empty() );
     CV_Assert( images.size() == keypoints.size() );
@@ -933,12 +933,12 @@ void GenericDescriptorMatcher::add( const vector<Mat>& images,
     trainPointCollection.add( images, keypoints );
 }
 
-const vector<Mat>& GenericDescriptorMatcher::getTrainImages() const
+const std::vector<Mat>& GenericDescriptorMatcher::getTrainImages() const
 {
     return trainPointCollection.getImages();
 }
 
-const vector<vector<KeyPoint> >& GenericDescriptorMatcher::getTrainKeypoints() const
+const std::vector<std::vector<KeyPoint> >& GenericDescriptorMatcher::getTrainKeypoints() const
 {
     return trainPointCollection.getKeypoints();
 }
@@ -951,10 +951,10 @@ void GenericDescriptorMatcher::clear()
 void GenericDescriptorMatcher::train()
 {}
 
-void GenericDescriptorMatcher::classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                         const Mat& trainImage, vector<KeyPoint>& trainKeypoints ) const
+void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                         const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints ) const
 {
-    vector<DMatch> matches;
+    std::vector<DMatch> matches;
     match( queryImage, queryKeypoints, trainImage, trainKeypoints, matches );
 
     // remap keypoint indices to descriptors
@@ -962,9 +962,9 @@ void GenericDescriptorMatcher::classify( const Mat& queryImage, vector<KeyPoint>
         queryKeypoints[matches[i].queryIdx].class_id = trainKeypoints[matches[i].trainIdx].class_id;
 }
 
-void GenericDescriptorMatcher::classify( const Mat& queryImage, vector<KeyPoint>& queryKeypoints )
+void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints )
 {
-    vector<DMatch> matches;
+    std::vector<DMatch> matches;
     match( queryImage, queryKeypoints, matches );
 
     // remap keypoint indices to descriptors
@@ -972,51 +972,51 @@ void GenericDescriptorMatcher::classify( const Mat& queryImage, vector<KeyPoint>
         queryKeypoints[matches[i].queryIdx].class_id = trainPointCollection.getKeyPoint( matches[i].trainIdx, matches[i].trainIdx ).class_id;
 }
 
-void GenericDescriptorMatcher::match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                                      vector<DMatch>& matches, const Mat& mask ) const
+void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                      const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+                                      std::vector<DMatch>& matches, const Mat& mask ) const
 {
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
-    vector<vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
-    tempMatcher->add( vector<Mat>(1, trainImage), vecTrainPoints );
-    tempMatcher->match( queryImage, queryKeypoints, matches, vector<Mat>(1, mask) );
+    std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
+    tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
+    tempMatcher->match( queryImage, queryKeypoints, matches, std::vector<Mat>(1, mask) );
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                         const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                                         vector<vector<DMatch> >& matches, int knn, const Mat& mask, bool compactResult ) const
+void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                         const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+                                         std::vector<std::vector<DMatch> >& matches, int knn, const Mat& mask, bool compactResult ) const
 {
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
-    vector<vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
-    tempMatcher->add( vector<Mat>(1, trainImage), vecTrainPoints );
-    tempMatcher->knnMatch( queryImage, queryKeypoints, matches, knn, vector<Mat>(1, mask), compactResult );
+    std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
+    tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
+    tempMatcher->knnMatch( queryImage, queryKeypoints, matches, knn, std::vector<Mat>(1, mask), compactResult );
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                            const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
-                                            vector<vector<DMatch> >& matches, float maxDistance,
+void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                            const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+                                            std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                             const Mat& mask, bool compactResult ) const
 {
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
-    vector<vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
-    tempMatcher->add( vector<Mat>(1, trainImage), vecTrainPoints );
-    tempMatcher->radiusMatch( queryImage, queryKeypoints, matches, maxDistance, vector<Mat>(1, mask), compactResult );
+    std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
+    tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
+    tempMatcher->radiusMatch( queryImage, queryKeypoints, matches, maxDistance, std::vector<Mat>(1, mask), compactResult );
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                      vector<DMatch>& matches, const vector<Mat>& masks )
+void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                      std::vector<DMatch>& matches, const std::vector<Mat>& masks )
 {
-    vector<vector<DMatch> > knnMatches;
+    std::vector<std::vector<DMatch> > knnMatches;
     knnMatch( queryImage, queryKeypoints, knnMatches, 1, masks, false );
     convertMatches( knnMatches, matches );
 }
 
-void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                         vector<vector<DMatch> >& matches, int knn,
-                                         const vector<Mat>& masks, bool compactResult )
+void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                         std::vector<std::vector<DMatch> >& matches, int knn,
+                                         const std::vector<Mat>& masks, bool compactResult )
 {
     matches.clear();
 
@@ -1030,9 +1030,9 @@ void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, vector<KeyPoint>
     knnMatchImpl( queryImage, queryKeypoints, matches, knn, masks, compactResult );
 }
 
-void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                            vector<vector<DMatch> >& matches, float maxDistance,
-                                            const vector<Mat>& masks, bool compactResult )
+void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                            std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                            const std::vector<Mat>& masks, bool compactResult )
 {
     matches.clear();
 
@@ -1060,13 +1060,13 @@ bool GenericDescriptorMatcher::empty() const
 /*
  * Factory function for GenericDescriptorMatch creating
  */
-Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const string& genericDescritptorMatcherType,
-                                                                const string &paramsFilename )
+Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const String& genericDescritptorMatcherType,
+                                                                const String &paramsFilename )
 {
     Ptr<GenericDescriptorMatcher> descriptorMatcher =
         Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);
 
-    if( !paramsFilename.empty() && !descriptorMatcher.empty() )
+    if( !paramsFilename.empty() && descriptorMatcher )
     {
         FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
         if( fs.isOpened() )
@@ -1086,16 +1086,16 @@ VectorDescriptorMatcher::VectorDescriptorMatcher( const Ptr<DescriptorExtractor>
                                                   const Ptr<DescriptorMatcher>& _matcher )
                                 : extractor( _extractor ), matcher( _matcher )
 {
-    CV_Assert( !extractor.empty() && !matcher.empty() );
+    CV_Assert( extractor && matcher );
 }
 
 VectorDescriptorMatcher::~VectorDescriptorMatcher()
 {}
 
-void VectorDescriptorMatcher::add( const vector<Mat>& imgCollection,
-                                   vector<vector<KeyPoint> >& pointCollection )
+void VectorDescriptorMatcher::add( const std::vector<Mat>& imgCollection,
+                                   std::vector<std::vector<KeyPoint> >& pointCollection )
 {
-    vector<Mat> descriptors;
+    std::vector<Mat> descriptors;
     extractor->compute( imgCollection, pointCollection, descriptors );
 
     matcher->add( descriptors );
@@ -1120,18 +1120,18 @@ bool VectorDescriptorMatcher::isMaskSupported()
     return matcher->isMaskSupported();
 }
 
-void VectorDescriptorMatcher::knnMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                            vector<vector<DMatch> >& matches, int knn,
-                                            const vector<Mat>& masks, bool compactResult )
+void VectorDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                            std::vector<std::vector<DMatch> >& matches, int knn,
+                                            const std::vector<Mat>& masks, bool compactResult )
 {
     Mat queryDescriptors;
     extractor->compute( queryImage, queryKeypoints, queryDescriptors );
     matcher->knnMatch( queryDescriptors, matches, knn, masks, compactResult );
 }
 
-void VectorDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                                               vector<vector<DMatch> >& matches, float maxDistance,
-                                               const vector<Mat>& masks, bool compactResult )
+void VectorDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                               std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                                               const std::vector<Mat>& masks, bool compactResult )
 {
     Mat queryDescriptors;
     extractor->compute( queryImage, queryKeypoints, queryDescriptors );
@@ -1152,14 +1152,14 @@ void VectorDescriptorMatcher::write (FileStorage& fs) const
 
 bool VectorDescriptorMatcher::empty() const
 {
-    return extractor.empty() || extractor->empty() ||
-           matcher.empty() || matcher->empty();
+    return !extractor || extractor->empty() ||
+           !matcher || matcher->empty();
 }
 
 Ptr<GenericDescriptorMatcher> VectorDescriptorMatcher::clone( bool emptyTrainData ) const
 {
     // TODO clone extractor
-    return new VectorDescriptorMatcher( extractor, matcher->clone(emptyTrainData) );
+    return makePtr<VectorDescriptorMatcher>( extractor, matcher->clone(emptyTrainData) );
 }
 
 }

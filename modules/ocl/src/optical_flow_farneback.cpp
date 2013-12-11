@@ -72,7 +72,7 @@ inline void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
 
 static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("gaussianBlur");
+    String kernelName("gaussianBlur");
 #ifdef ANDROID
     size_t localThreads[3] = { 128, 1, 1 };
 #else
@@ -99,7 +99,7 @@ static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 
 static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 {
-    string kernelName("polynomialExpansion");
+    String kernelName("polynomialExpansion");
 
 #ifdef ANDROID
     size_t localThreads[3] = { 128, 1, 1 };
@@ -131,7 +131,7 @@ static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 
 static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
 {
-    string kernelName("updateMatrices");
+    String kernelName("updateMatrices");
 #ifdef ANDROID
     size_t localThreads[3] = { 32, 4, 1 };
 #else
@@ -159,7 +159,7 @@ static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oc
 
 static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("boxFilter5");
+    String kernelName("boxFilter5");
     int height = src.rows / 5;
 #ifdef ANDROID
     size_t localThreads[3] = { 128, 1, 1 };
@@ -185,7 +185,7 @@ static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 
 static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 {
-    string kernelName("updateFlow");
+    String kernelName("updateFlow");
     int cols = divUp(flowx.cols, 4);
 #ifdef ANDROID
     size_t localThreads[3] = { 32, 4, 1 };
@@ -210,7 +210,7 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 
 static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
-    string kernelName("gaussianBlur5");
+    String kernelName("gaussianBlur5");
     int height = src.rows / 5;
 #ifdef ANDROID
     size_t localThreads[3] = { 128, 1, 1 };
@@ -328,7 +328,7 @@ void cv::ocl::FarnebackOpticalFlow::prepareGaussian(
 
 void cv::ocl::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
 {
-    vector<float> buf(n*6 + 3);
+    std::vector<float> buf(n*6 + 3);
     float* g = &buf[0] + n;
     float* xg = g + n*2 + 1;
     float* xxg = xg + n*2 + 1;

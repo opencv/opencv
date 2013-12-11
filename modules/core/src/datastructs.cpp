@@ -40,6 +40,12 @@
 //M*/
 #include "precomp.hpp"
 
+/* default alignment for dynamic data strucutures, resided in storages. */
+#define  CV_STRUCT_ALIGN    ((int)sizeof(double))
+
+/* default storage block size */
+#define  CV_STORAGE_BLOCK_SIZE   ((1<<16) - 128)
+
 #define ICV_FREE_PTR(storage)  \
     ((schar*)(storage)->top + (storage)->block_size - (storage)->free_space)
 
@@ -3643,7 +3649,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
 {
     Mat _points = __points.getMat(), _labels = __labels.getMat();
     CV_Assert(_points.type() == CV_32F && !_points.empty());
-    vector<KDTree::Node>().swap(nodes);
+    std::vector<KDTree::Node>().swap(nodes);
 
     if( !_copyData )
         points = _points;
@@ -3672,7 +3678,7 @@ void KDTree::build(InputArray __points, InputArray __labels, bool _copyData)
     Mat sumstack(MAX_TREE_DEPTH*2, ptdims*2, CV_64F);
     SubTree stack[MAX_TREE_DEPTH*2];
 
-    vector<size_t> _ptofs(n);
+    std::vector<size_t> _ptofs(n);
     size_t* ptofs = &_ptofs[0];
 
     for( i = 0; i < n; i++ )
@@ -3909,7 +3915,7 @@ void KDTree::findOrthoRange(InputArray _lowerBound,
     const float* L = lowerBound.ptr<float>();
     const float* R = upperBound.ptr<float>();
 
-    vector<int> idx;
+    std::vector<int> idx;
     AutoBuffer<int> _stack(MAX_TREE_DEPTH*2 + 1);
     int* stack = _stack;
     int top = 0;

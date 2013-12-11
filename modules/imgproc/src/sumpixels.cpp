@@ -41,6 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
 #endif
@@ -215,28 +217,138 @@ static void integral_##suffix( T* src, size_t srcstep, ST* sum, size_t sumstep, 
 { integral_(src, srcstep, sum, sumstep, sqsum, sqsumstep, tilted, tiltedstep, size, cn); }
 
 DEF_INTEGRAL_FUNC(8u32s, uchar, int, double)
-DEF_INTEGRAL_FUNC(8u32f, uchar, float, double)
-DEF_INTEGRAL_FUNC(8u64f, uchar, double, double)
-DEF_INTEGRAL_FUNC(32f, float, float, double)
-DEF_INTEGRAL_FUNC(32f64f, float, double, double)
-DEF_INTEGRAL_FUNC(64f, double, double, double)
+DEF_INTEGRAL_FUNC(8u32f64f, uchar, float, double)
+DEF_INTEGRAL_FUNC(8u64f64f, uchar, double, double)
+DEF_INTEGRAL_FUNC(32f32f64f, float, float, double)
+DEF_INTEGRAL_FUNC(32f64f64f, float, double, double)
+DEF_INTEGRAL_FUNC(64f64f64f, double, double, double)
+
+DEF_INTEGRAL_FUNC(8u32s32f, uchar, int, float)
+DEF_INTEGRAL_FUNC(8u32f32f, uchar, float, float)
+DEF_INTEGRAL_FUNC(32f32f32f, float, float, float)
 
 typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_t sumstep,
                              uchar* sqsum, size_t sqsumstep, uchar* tilted, size_t tstep,
                              Size size, int cn );
 
+enum { vlen = 4 };
+
+static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
+{
+    if ( _src.type() != CV_8UC1 || _src.step() % vlen != 0 || _src.offset() % vlen != 0  ||
+         !(sdepth == CV_32S || sdepth == CV_32F) )
+        return false;
+
+    ocl::Kernel k1("integral_sum_cols", ocl::imgproc::integral_sum_oclsrc,
+                   format("-D sdepth=%d", sdepth));
+    if (k1.empty())
+        return false;
+
+    Size size = _src.size(), t_size = Size(((size.height + vlen - 1) / vlen) * vlen, size.width),
+            ssize(size.width + 1, size.height + 1);
+    _sum.create(ssize, sdepth);
+    UMat src = _src.getUMat(), t_sum(t_size, sdepth), sum = _sum.getUMat();
+    t_sum = t_sum(Range::all(), Range(0, size.height));
+
+    int offset = (int)src.offset / vlen, pre_invalid = (int)src.offset % vlen;
+    int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
+    int sum_offset = (int)sum.offset / vlen;
+
+    k1.args(ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(t_sum),
+            offset, pre_invalid, src.rows, src.cols, (int)src.step, (int)t_sum.step);
+    size_t gt = ((vcols + 1) / 2) * 256, lt = 256;
+    if (!k1.run(1, &gt, &lt, false))
+        return false;
+
+    ocl::Kernel k2("integral_sum_rows", ocl::imgproc::integral_sum_oclsrc,
+                   format("-D sdepth=%d", sdepth));
+    k2.args(ocl::KernelArg::PtrReadWrite(t_sum), ocl::KernelArg::PtrWriteOnly(sum),
+            t_sum.rows, t_sum.cols, (int)t_sum.step, (int)sum.step, sum_offset);
+
+    size_t gt2 = t_sum.cols  * 32, lt2 = 256;
+    return k2.run(1, &gt2, &lt2, false);
+}
+
+static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, int sdepth, int sqdepth )
+{
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( _src.type() != CV_8UC1 || _src.step() % vlen != 0 || _src.offset() % vlen != 0 ||
+         (!doubleSupport && (sdepth == CV_64F || sqdepth == CV_64F)) )
+        return false;
+
+    char cvt[40];
+    String opts = format("-D sdepth=%d -D sqdepth=%d -D TYPE=%s -D TYPE4=%s4 -D convert_TYPE4=%s%s",
+                         sdepth, sqdepth, ocl::typeToStr(sqdepth), ocl::typeToStr(sqdepth),
+                         ocl::convertTypeStr(sdepth, sqdepth, 4, cvt),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+
+    ocl::Kernel k1("integral_cols", ocl::imgproc::integral_sqrsum_oclsrc, opts);
+    if (k1.empty())
+        return false;
+
+    Size size = _src.size(), dsize = Size(size.width + 1, size.height + 1),
+            t_size = Size(((size.height + vlen - 1) / vlen) * vlen, size.width);
+    UMat src = _src.getUMat(), t_sum(t_size, sdepth), t_sqsum(t_size, sqdepth);
+    t_sum = t_sum(Range::all(), Range(0, size.height));
+    t_sqsum = t_sqsum(Range::all(), Range(0, size.height));
+
+    _sum.create(dsize, sdepth);
+    _sqsum.create(dsize, sqdepth);
+    UMat sum = _sum.getUMat(), sqsum = _sqsum.getUMat();
+
+    int offset = (int)src.offset / vlen;
+    int pre_invalid = src.offset % vlen;
+    int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
+    int sum_offset = (int)(sum.offset / sum.elemSize());
+    int sqsum_offset = (int)(sqsum.offset / sqsum.elemSize());
+
+    k1.args(ocl::KernelArg::PtrReadOnly(src), ocl::KernelArg::PtrWriteOnly(t_sum),
+            ocl::KernelArg::PtrWriteOnly(t_sqsum), offset, pre_invalid, src.rows,
+            src.cols, (int)src.step, (int)t_sum.step, (int)t_sqsum.step);
+
+    size_t gt = ((vcols + 1) / 2) * 256, lt = 256;
+    if (!k1.run(1, &gt, &lt, false))
+        return false;
+
+    ocl::Kernel k2("integral_rows", ocl::imgproc::integral_sqrsum_oclsrc, opts);
+    if (k2.empty())
+        return false;
+
+    k2.args(ocl::KernelArg::PtrReadOnly(t_sum), ocl::KernelArg::PtrReadOnly(t_sqsum),
+            ocl::KernelArg::PtrWriteOnly(sum), ocl::KernelArg::PtrWriteOnly(sqsum),
+            t_sum.rows, t_sum.cols, (int)t_sum.step, (int)t_sqsum.step,
+            (int)sum.step, (int)sqsum.step, sum_offset, sqsum_offset);
+
+    size_t gt2 = t_sum.cols  * 32, lt2 = 256;
+    return k2.run(1, &gt2, &lt2, false);
+}
+
 }
 
 
-void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth )
+void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, OutputArray _tilted, int sdepth, int sqdepth )
 {
-    Mat src = _src.getMat(), sum, sqsum, tilted;
-    int depth = src.depth(), cn = src.channels();
-    Size isize(src.cols + 1, src.rows+1);
-
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
-    sdepth = CV_MAT_DEPTH(sdepth);
+    if ( sqdepth <= 0 )
+         sqdepth = CV_64F;
+    sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
+
+    if (ocl::useOpenCL() && _sum.isUMat() && !_tilted.needed())
+    {
+        if (!_sqsum.needed())
+        {
+            if (ocl_integral(_src, _sum, sdepth))
+                return;
+        }
+        else if (_sqsum.isUMat())
+        {
+            if (ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth))
+                return;
+        }
+    }
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     if( ( depth == CV_8U ) && ( !_tilted.needed() ) )
@@ -248,9 +360,9 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
                 _sum.create( isize, CV_MAKETYPE( sdepth, cn ) );
                 sum = _sum.getMat();
-                if( _sqsum.needed() )
+                if( _sqsum.needed() && sqdepth == CV_64F )
                 {
-                    _sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
+                    _sqsum.create( isize, CV_MAKETYPE( sqdepth, cn ) );
                     sqsum = _sqsum.getMat();
                     ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32f*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
                 }
@@ -268,9 +380,9 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
                 IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
                 _sum.create( isize, CV_MAKETYPE( sdepth, cn ) );
                 sum = _sum.getMat();
-                if( _sqsum.needed() )
+                if( _sqsum.needed() && sqdepth == CV_64F )
                 {
-                    _sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
+                    _sqsum.create( isize, CV_MAKETYPE( sqdepth, cn ) );
                     sqsum = _sqsum.getMat();
                     ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, (int)src.step, (Ipp32s*)sum.data, (int)sum.step, (Ipp64f*)sqsum.data, (int)sqsum.step, srcRoiSize, 0, 0 );
                 }
@@ -284,8 +396,15 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     }
 #endif
 
+    Size ssize = _src.size(), isize(ssize.width + 1, ssize.height + 1);
     _sum.create( isize, CV_MAKETYPE(sdepth, cn) );
-    sum = _sum.getMat();
+    Mat src = _src.getMat(), sum =_sum.getMat(), sqsum, tilted;
+
+    if( _sqsum.needed() )
+    {
+        _sqsum.create( isize, CV_MAKETYPE(sqdepth, cn) );
+        sqsum = _sqsum.getMat();
+    }
 
     if( _tilted.needed() )
     {
@@ -293,26 +412,25 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
         tilted = _tilted.getMat();
     }
 
-    if( _sqsum.needed() )
-    {
-        _sqsum.create( isize, CV_MAKETYPE(CV_64F, cn) );
-        sqsum = _sqsum.getMat();
-    }
-
     IntegralFunc func = 0;
-
-    if( depth == CV_8U && sdepth == CV_32S )
+    if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_64F )
         func = (IntegralFunc)GET_OPTIMIZED(integral_8u32s);
-    else if( depth == CV_8U && sdepth == CV_32F )
-        func = (IntegralFunc)integral_8u32f;
-    else if( depth == CV_8U && sdepth == CV_64F )
-        func = (IntegralFunc)integral_8u64f;
-    else if( depth == CV_32F && sdepth == CV_32F )
-        func = (IntegralFunc)integral_32f;
-    else if( depth == CV_32F && sdepth == CV_64F )
-        func = (IntegralFunc)integral_32f64f;
-    else if( depth == CV_64F && sdepth == CV_64F )
-        func = (IntegralFunc)integral_64f;
+    else if( depth == CV_8U && sdepth == CV_32S && sqdepth == CV_32F )
+        func = (IntegralFunc)integral_8u32s32f;
+    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_8u32f64f;
+    else if( depth == CV_8U && sdepth == CV_32F && sqdepth == CV_32F )
+        func = (IntegralFunc)integral_8u32f32f;
+    else if( depth == CV_8U && sdepth == CV_64F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_8u64f64f;
+    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_32f32f64f;
+    else if( depth == CV_32F && sdepth == CV_32F && sqdepth == CV_32F )
+        func = (IntegralFunc)integral_32f32f32f;
+    else if( depth == CV_32F && sdepth == CV_64F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_32f64f64f;
+    else if( depth == CV_64F && sdepth == CV_64F && sqdepth == CV_64F )
+        func = (IntegralFunc)integral_64f64f64f;
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
@@ -325,9 +443,9 @@ void cv::integral( InputArray src, OutputArray sum, int sdepth )
     integral( src, sum, noArray(), noArray(), sdepth );
 }
 
-void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth )
+void cv::integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, int sqdepth )
 {
-    integral( src, sum, sqsum, noArray(), sdepth );
+    integral( src, sum, sqsum, noArray(), sdepth, sqdepth );
 }
 
 

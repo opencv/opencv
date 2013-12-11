@@ -39,10 +39,10 @@
 //
 //M*/
 
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/legacy/legacy.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/legacy.hpp"
 
 #include <limits>
 #include <cstdio>
@@ -93,7 +93,7 @@ static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<dou
 {
     if(  !src.empty() )
     {
-        assert( !H.empty() && H.cols == 3 && H.rows == 3);
+        CV_Assert( !H.empty() && H.cols == 3 && H.rows == 3);
         dst.resize(src.size());
         vector<KeyPoint>::const_iterator srcIt = src.begin();
         vector<KeyPoint>::iterator       dstIt = dst.begin();
@@ -109,7 +109,7 @@ static void calcKeyPointProjections( const vector<KeyPoint>& src, const Mat_<dou
             Mat_<double> Aff; linearizeHomographyAt(H, srcIt->pt, Aff);
             Mat_<double> dstM; invert(Aff*invM*Aff.t(), dstM);
             Mat_<double> eval; eigen( dstM, eval );
-            assert( eval(0,0) && eval(1,0) );
+            CV_Assert( eval(0,0) && eval(1,0) );
             float dstSize = (float)pow(1./(eval(0,0)*eval(1,0)), 0.25);
 
             // TODO: check angle projection
@@ -526,7 +526,7 @@ inline void writeKeypoints( FileStorage& fs, const vector<KeyPoint>& keypoints, 
 
 inline void readKeypoints( FileStorage& fs, vector<KeyPoint>& keypoints, int imgIdx )
 {
-    assert( fs.isOpened() );
+    CV_Assert( fs.isOpened() );
     stringstream imgName; imgName << "img" << imgIdx;
     read( fs[imgName.str()], keypoints);
 }
@@ -535,7 +535,7 @@ void DetectorQualityEvaluator::readAlgorithm ()
 {
     defaultDetector = FeatureDetector::create( algName );
     specificDetector = FeatureDetector::create( algName );
-    if( defaultDetector == 0 )
+    if( !defaultDetector )
     {
         printf( "Algorithm can not be read\n" );
         exit(-1);
@@ -769,14 +769,14 @@ void DescriptorQualityEvaluator::readAlgorithm( )
     defaultDescMatcher = GenericDescriptorMatcher::create( algName );
     specificDescMatcher = GenericDescriptorMatcher::create( algName );
 
-    if( defaultDescMatcher == 0 )
+    if( !defaultDescMatcher )
     {
         Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create( algName );
         Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create( matcherName );
-        defaultDescMatcher = new VectorDescriptorMatch( extractor, matcher );
-        specificDescMatcher = new VectorDescriptorMatch( extractor, matcher );
+        defaultDescMatcher = makePtr<VectorDescriptorMatch>( extractor, matcher );
+        specificDescMatcher = makePtr<VectorDescriptorMatch>( extractor, matcher );
 
-        if( extractor == 0 || matcher == 0 )
+        if( !extractor || !matcher )
         {
             printf("Algorithm can not be read\n");
             exit(-1);
@@ -881,8 +881,9 @@ public:
     virtual void readAlgorithm( )
     {
         string classifierFile = data_path + "/features2d/calonder_classifier.rtc";
-        defaultDescMatcher = new VectorDescriptorMatch( new CalonderDescriptorExtractor<float>( classifierFile ),
-                                                        new BFMatcher(NORM_L2) );
+        defaultDescMatcher = makePtr<VectorDescriptorMatch>(
+            makePtr<CalonderDescriptorExtractor<float> >( classifierFile ),
+            makePtr<BFMatcher>(int(NORM_L2)));
         specificDescMatcher = defaultDescMatcher;
     }
 };
@@ -922,10 +923,11 @@ void OneWayDescriptorQualityTest::processRunParamsFile ()
 
     readAllDatasetsRunParams();
 
-    OneWayDescriptorBase *base = new OneWayDescriptorBase(patchSize, poseCount, pcaFilename,
-                                               trainPath, trainImagesList);
+    Ptr<OneWayDescriptorBase> base(
+        new OneWayDescriptorBase(patchSize, poseCount, pcaFilename,
+                                 trainPath, trainImagesList));
 
-    OneWayDescriptorMatch *match = new OneWayDescriptorMatch ();
+    Ptr<OneWayDescriptorMatch> match = makePtr<OneWayDescriptorMatch>();
     match->initialize( OneWayDescriptorMatch::Params (), base );
     defaultDescMatcher = match;
     writeAllDatasetsRunParams();
@@ -958,18 +960,18 @@ int main( int argc, char** argv )
 
     Ptr<BaseQualityEvaluator> evals[] =
     {
-        new DetectorQualityEvaluator( "FAST", "quality-detector-fast" ),
-        new DetectorQualityEvaluator( "GFTT", "quality-detector-gftt" ),
-        new DetectorQualityEvaluator( "HARRIS", "quality-detector-harris" ),
-        new DetectorQualityEvaluator( "MSER", "quality-detector-mser" ),
-        new DetectorQualityEvaluator( "STAR", "quality-detector-star" ),
-        new DetectorQualityEvaluator( "SIFT", "quality-detector-sift" ),
-        new DetectorQualityEvaluator( "SURF", "quality-detector-surf" ),
+        makePtr<DetectorQualityEvaluator>( "FAST", "quality-detector-fast" ),
+        makePtr<DetectorQualityEvaluator>( "GFTT", "quality-detector-gftt" ),
+        makePtr<DetectorQualityEvaluator>( "HARRIS", "quality-detector-harris" ),
+        makePtr<DetectorQualityEvaluator>( "MSER", "quality-detector-mser" ),
+        makePtr<DetectorQualityEvaluator>( "STAR", "quality-detector-star" ),
+        makePtr<DetectorQualityEvaluator>( "SIFT", "quality-detector-sift" ),
+        makePtr<DetectorQualityEvaluator>( "SURF", "quality-detector-surf" ),
 
-        new DescriptorQualityEvaluator( "SIFT", "quality-descriptor-sift", "BruteForce" ),
-        new DescriptorQualityEvaluator( "SURF", "quality-descriptor-surf", "BruteForce" ),
-        new DescriptorQualityEvaluator( "FERN", "quality-descriptor-fern"),
-        new CalonderDescriptorQualityEvaluator()
+        makePtr<DescriptorQualityEvaluator>( "SIFT", "quality-descriptor-sift", "BruteForce" ),
+        makePtr<DescriptorQualityEvaluator>( "SURF", "quality-descriptor-surf", "BruteForce" ),
+        makePtr<DescriptorQualityEvaluator>( "FERN", "quality-descriptor-fern"),
+        makePtr<CalonderDescriptorQualityEvaluator>()
     };
 
     for( size_t i = 0; i < sizeof(evals)/sizeof(evals[0]); i++ )

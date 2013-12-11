@@ -132,20 +132,20 @@ void KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lable
     if(CvKNearest::regression)
         _regression = 1;
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&samples.data));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&k));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&samples_ocl.data));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples_ocl.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples_ocl_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&lables.data));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&lables_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&_regression));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&k1));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&samples_ocl.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&nThreads));
-    args.push_back(make_pair(smem_size, (void*)NULL));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&samples.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&k));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&samples_ocl.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples_ocl.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples_ocl_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&lables.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&lables_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&_regression));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&k1));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&samples_ocl.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&nThreads));
+    args.push_back(std::make_pair(smem_size, (void*)NULL));
     openCLExecuteKernel(Context::getContext(), &knearest, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }

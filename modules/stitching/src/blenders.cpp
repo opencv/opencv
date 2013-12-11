@@ -42,8 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 namespace cv {
 namespace detail {
 
@@ -52,17 +50,17 @@ static const float WEIGHT_EPS = 1e-5f;
 Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
-        return new Blender();
+        return makePtr<Blender>();
     if (type == FEATHER)
-        return new FeatherBlender();
+        return makePtr<FeatherBlender>();
     if (type == MULTI_BAND)
-        return new MultiBandBlender(try_gpu);
-    CV_Error(CV_StsBadArg, "unsupported blending method");
-    return NULL;
+        return makePtr<MultiBandBlender>(try_gpu);
+    CV_Error(Error::StsBadArg, "unsupported blending method");
+    return Ptr<Blender>();
 }
 
 
-void Blender::prepare(const vector<Point> &corners, const vector<Size> &sizes)
+void Blender::prepare(const std::vector<Point> &corners, const std::vector<Size> &sizes)
 {
     prepare(resultRoi(corners, sizes));
 }
@@ -155,8 +153,8 @@ void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
 }
 
 
-Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Point> &corners,
-                                      vector<Mat> &weight_maps)
+Rect FeatherBlender::createWeightMaps(const std::vector<Mat> &masks, const std::vector<Point> &corners,
+                                      std::vector<Mat> &weight_maps)
 {
     weight_maps.resize(masks.size());
     for (size_t i = 0; i < masks.size(); ++i)
@@ -178,7 +176,7 @@ Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Poi
         Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y,
                  weight_maps[i].cols, weight_maps[i].rows);
         Mat tmp = weights_sum(roi);
-        tmp.setTo(1, tmp < numeric_limits<float>::epsilon());
+        tmp.setTo(1, tmp < std::numeric_limits<float>::epsilon());
         divide(weight_maps[i], tmp, weight_maps[i]);
     }
 
@@ -189,12 +187,14 @@ Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Poi
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
-#ifdef HAVE_OPENCV_GPU
-    can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
+
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
+    can_use_gpu_ = try_gpu && cuda::getCudaEnabledDeviceCount();
 #else
-    (void)try_gpu;
+    (void) try_gpu;
     can_use_gpu_ = false;
 #endif
+
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
     weight_type_ = weight_type;
 }
@@ -205,8 +205,8 @@ void MultiBandBlender::prepare(Rect dst_roi)
     dst_roi_final_ = dst_roi;
 
     // Crop unnecessary bands
-    double max_len = static_cast<double>(max(dst_roi.width, dst_roi.height));
-    num_bands_ = min(actual_num_bands_, static_cast<int>(ceil(log(max_len) / log(2.0))));
+    double max_len = static_cast<double>(std::max(dst_roi.width, dst_roi.height));
+    num_bands_ = std::min(actual_num_bands_, static_cast<int>(ceil(std::log(max_len) / std::log(2.0))));
 
     // Add border to the final image, to ensure sizes are divided by (1 << num_bands_)
     dst_roi.width += ((1 << num_bands_) - dst_roi.width % (1 << num_bands_)) % (1 << num_bands_);
@@ -240,10 +240,10 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
     // Keep source image in memory with small border
     int gap = 3 * (1 << num_bands_);
-    Point tl_new(max(dst_roi_.x, tl.x - gap),
-                 max(dst_roi_.y, tl.y - gap));
-    Point br_new(min(dst_roi_.br().x, tl.x + img.cols + gap),
-                 min(dst_roi_.br().y, tl.y + img.rows + gap));
+    Point tl_new(std::max(dst_roi_.x, tl.x - gap),
+                 std::max(dst_roi_.y, tl.y - gap));
+    Point br_new(std::min(dst_roi_.br().x, tl.x + img.cols + gap),
+                 std::min(dst_roi_.br().y, tl.y + img.rows + gap));
 
     // Ensure coordinates of top-left, bottom-right corners are divided by (1 << num_bands_).
     // After that scale between layers is exactly 2.
@@ -258,8 +258,8 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     height += ((1 << num_bands_) - height % (1 << num_bands_)) % (1 << num_bands_);
     br_new.x = tl_new.x + width;
     br_new.y = tl_new.y + height;
-    int dy = max(br_new.y - dst_roi_.br().y, 0);
-    int dx = max(br_new.x - dst_roi_.br().x, 0);
+    int dy = std::max(br_new.y - dst_roi_.br().y, 0);
+    int dx = std::max(br_new.x - dst_roi_.br().x, 0);
     tl_new.x -= dx; br_new.x -= dx;
     tl_new.y -= dy; br_new.y -= dy;
 
@@ -272,7 +272,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     Mat img_with_border;
     copyMakeBorder(img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
-    vector<Mat> src_pyr_laplace;
+    std::vector<Mat> src_pyr_laplace;
     if (can_use_gpu_ && img_with_border.depth() == CV_16S)
         createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
     else
@@ -280,7 +280,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 
     // Create the weight map Gaussian pyramid
     Mat weight_map;
-    vector<Mat> weight_pyr_gauss(num_bands_ + 1);
+    std::vector<Mat> weight_pyr_gauss(num_bands_ + 1);
 
     if(weight_type_ == CV_32F)
     {
@@ -427,12 +427,12 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 {
     CV_Assert(mask.type() == CV_8U);
-    distanceTransform(mask, weight, CV_DIST_L1, 3);
+    distanceTransform(mask, weight, DIST_L1, 3);
     threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
 }
 
 
-void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
+void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::createLaplacePyr(img, num_levels, pyr))
@@ -489,21 +489,21 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 }
 
 
-void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
+void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     pyr.resize(num_levels + 1);
 
-    vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
+    std::vector<cuda::GpuMat> gpu_pyr(num_levels + 1);
     gpu_pyr[0].upload(img);
     for (int i = 0; i < num_levels; ++i)
-        gpu::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
+        cuda::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
 
-    gpu::GpuMat tmp;
+    cuda::GpuMat tmp;
     for (int i = 0; i < num_levels; ++i)
     {
-        gpu::pyrUp(gpu_pyr[i + 1], tmp);
-        gpu::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
+        cuda::pyrUp(gpu_pyr[i + 1], tmp);
+        cuda::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
         gpu_pyr[i].download(pyr[i]);
     }
 
@@ -516,7 +516,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 }
 
 
-void restoreImageFromLaplacePyr(vector<Mat> &pyr)
+void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 {
     if (pyr.empty())
         return;
@@ -529,21 +529,21 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 }
 
 
-void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
+void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
 {
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     if (pyr.empty())
         return;
 
-    vector<gpu::GpuMat> gpu_pyr(pyr.size());
+    std::vector<cuda::GpuMat> gpu_pyr(pyr.size());
     for (size_t i = 0; i < pyr.size(); ++i)
         gpu_pyr[i].upload(pyr[i]);
 
-    gpu::GpuMat tmp;
+    cuda::GpuMat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
     {
-        gpu::pyrUp(gpu_pyr[i], tmp);
-        gpu::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
+        cuda::pyrUp(gpu_pyr[i], tmp);
+        cuda::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
     }
 
     gpu_pyr[0].download(pyr[0]);

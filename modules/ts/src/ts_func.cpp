@@ -75,7 +75,7 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
     for(;;)
     {
         depth = rng.uniform(CV_8U, CV_64F+1);
@@ -276,10 +276,13 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     }
 }
 
-void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
+void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, double beta)
 {
+    if (dtype < 0) dtype = _dst.depth();
+
     dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
-    dst.create(src.dims, &src.size[0], dtype);
+    _dst.create(src.dims, &src.size[0], dtype);
+    Mat dst = _dst.getMat();
     if( alpha == 0 )
     {
         set( dst, Scalar::all(beta) );
@@ -646,7 +649,7 @@ void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     }
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMaxVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -703,7 +706,7 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     }
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMinVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -779,7 +782,7 @@ void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
     CV_Assert( kernel.type() == CV_32F || kernel.type() == CV_64F );
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMinVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -831,11 +834,11 @@ static int borderInterpolate( int p, int len, int borderType )
 {
     if( (unsigned)p < (unsigned)len )
         ;
-    else if( borderType == IPL_BORDER_REPLICATE )
+    else if( borderType == BORDER_REPLICATE )
         p = p < 0 ? 0 : len - 1;
-    else if( borderType == IPL_BORDER_REFLECT || borderType == IPL_BORDER_REFLECT_101 )
+    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
     {
-        int delta = borderType == IPL_BORDER_REFLECT_101;
+        int delta = borderType == BORDER_REFLECT_101;
         if( len == 1 )
             return 0;
         do
@@ -847,17 +850,17 @@ static int borderInterpolate( int p, int len, int borderType )
         }
         while( (unsigned)p >= (unsigned)len );
     }
-    else if( borderType == IPL_BORDER_WRAP )
+    else if( borderType == BORDER_WRAP )
     {
         if( p < 0 )
             p -= ((p-len+1)/len)*len;
         if( p >= len )
             p %= len;
     }
-    else if( borderType == IPL_BORDER_CONSTANT )
+    else if( borderType == BORDER_CONSTANT )
         p = -1;
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+        CV_Error( Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 
@@ -869,7 +872,7 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
     int i, j, k, esz = (int)src.elemSize();
     int width = src.cols*esz, width1 = dst.cols*esz;
 
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
     {
         vector<uchar> valvec((src.cols + left + right)*esz);
         uchar* val = &valvec[0];
@@ -1305,7 +1308,7 @@ double norm(const Mat& src, int normType, const Mat& mask)
             result = norm_((const double*)sptr, total, cn, normType, result, mptr);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     if( normType0 == NORM_L2 )
@@ -1383,7 +1386,7 @@ double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
             result = norm_((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     if( normType0 == NORM_L2 )
@@ -1442,7 +1445,7 @@ double crossCorr(const Mat& src1, const Mat& src2)
             result += crossCorr_((const double*)sptr1, (const double*)sptr2, total);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     return result;
@@ -1575,7 +1578,7 @@ compare_(const _Tp* src1, const _Tp* src2, uchar* dst, size_t total, int cmpop)
             dst[i] = src1[i] > src2[i] ? 255 : 0;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown comparison operation");
+        CV_Error(Error::StsBadArg, "Unknown comparison operation");
     }
 }
 
@@ -1611,7 +1614,7 @@ compareS_(const _Tp* src1, _WTp value, uchar* dst, size_t total, int cmpop)
             dst[i] = src1[i] > value ? 255 : 0;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown comparison operation");
+        CV_Error(Error::StsBadArg, "Unknown comparison operation");
     }
 }
 
@@ -1658,7 +1661,7 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
             compare_((const double*)sptr1, (const double*)sptr2, dptr, total, cmpop);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -1705,7 +1708,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
             compareS_((const double*)sptr, value, dptr, total, cmpop);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -1837,7 +1840,7 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
             realmaxdiff = cmpUlpsFlt_((const int64*)sptr1, (const int64*)sptr2, total, imaxDiff, startidx, idx);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
 
         if(_realmaxdiff)
@@ -1926,7 +1929,7 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
                 checkFlt_((const double*)aptr, total, fmin, fmax, startidx, idx);
                 break;
             default:
-                CV_Error(CV_StsUnsupportedFormat, "");
+                CV_Error(Error::StsUnsupportedFormat, "");
         }
 
         if( idx != 0 )
@@ -2345,7 +2348,7 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
             transform_((const double*)sptr, (double*)dptr, total, scn, dcn, mat);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2402,7 +2405,7 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             minmax_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2470,7 +2473,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
             minmax_((const double*)sptr1, saturate_cast<double>(val), (double*)dptr, total, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2542,7 +2545,7 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
             muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2627,7 +2630,7 @@ Scalar mean(const Mat& src, const Mat& mask)
             mean_((const double*)sptr, mptr, total, cn, sum, nz);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 
@@ -2864,7 +2867,7 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
         out.precision(pp);
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 
@@ -3021,16 +3024,4 @@ void printVersionInfo(bool useStdOut)
 #endif
 }
 
-} //namespace cvtest
-
-void cvTsConvert( const CvMat* src, CvMat* dst )
-{
-    Mat _src = cvarrToMat(src), _dst = cvarrToMat(dst);
-    cvtest::convert(_src, _dst, _dst.depth());
-}
-
-void cvTsZero( CvMat* dst, const CvMat* mask )
-{
-    Mat _dst = cvarrToMat(dst), _mask = mask ? cvarrToMat(mask) : Mat();
-    cvtest::set(_dst, Scalar::all(0), _mask);
 }

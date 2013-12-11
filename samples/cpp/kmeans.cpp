@@ -47,13 +47,13 @@ int main( int /*argc*/, char** /*argv*/ )
             Mat pointChunk = points.rowRange(k*sampleCount/clusterCount,
                                              k == clusterCount - 1 ? sampleCount :
                                              (k+1)*sampleCount/clusterCount);
-            rng.fill(pointChunk, CV_RAND_NORMAL, Scalar(center.x, center.y), Scalar(img.cols*0.05, img.rows*0.05));
+            rng.fill(pointChunk, RNG::NORMAL, Scalar(center.x, center.y), Scalar(img.cols*0.05, img.rows*0.05));
         }
 
         randShuffle(points, 1, &rng);
 
         kmeans(points, clusterCount, labels,
-               TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0),
+            TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 10, 1.0),
                3, KMEANS_PP_CENTERS, centers);
 
         img = Scalar::all(0);
@@ -62,7 +62,7 @@ int main( int /*argc*/, char** /*argv*/ )
         {
             int clusterIdx = labels.at<int>(i);
             Point ipt = points.at<Point2f>(i);
-            circle( img, ipt, 2, colorTab[clusterIdx], CV_FILLED, CV_AA );
+            circle( img, ipt, 2, colorTab[clusterIdx], FILLED, LINE_AA );
         }
 
         imshow("clusters", img);

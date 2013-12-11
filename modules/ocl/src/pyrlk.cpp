@@ -16,7 +16,7 @@
 //
 // @Authors
 //      Dachuan Zhao, dachuan@multicorewareinc.com
-//      Yao Wang, bitwangyaoyao@gmail.com
+//      Yao Wang, yao@multicorewareinc.com
 //      Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -77,40 +77,73 @@ static void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bo
     block.z = patch.z = 1;
 }
 
+static void pyrdown_run_cus(const oclMat &src, const oclMat &dst)
+{
+
+    CV_Assert(src.type() == dst.type());
+    CV_Assert(src.depth() != CV_8S);
+
+    Context  *clCxt = src.clCxt;
+
+    String kernelName = "pyrDown";
+
+    size_t localThreads[3]  = { 256, 1, 1 };
+    size_t globalThreads[3] = { src.cols, dst.rows, 1};
+
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
+
+    openCLExecuteKernel2(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth(), CLFLUSH);
+}
+
+static void pyrDown_cus(const oclMat &src, oclMat &dst)
+{
+    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+
+    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
+    pyrdown_run_cus(src, dst);
+}
+
 static void lkSparse_run(oclMat &I, oclMat &J,
-                         const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
-                         int level, dim3 patch, Size winSize, int iters)
+                  const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
+                  int level, /*dim3 block, */dim3 patch, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
-    string kernelName = "lkSparse";
+    String kernelName = "lkSparse";
     size_t localThreads[3]  = { 8, 8, 1 };
     size_t globalThreads[3] = { 8 * ptcount, 8, 1};
     int cn = I.oclchannels();
     char calcErr = level==0?1:0;
 
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
 
     cl_mem ITex = bindTexture(I);
     cl_mem JTex = bindTexture(J);
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevPts.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevPts.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&nextPts.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&nextPts.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&status.data ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&err.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&level ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&patch.x ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&patch.y ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cn ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.width ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.height ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ITex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&JTex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevPts.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevPts.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&nextPts.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&nextPts.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&status.data ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&err.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&level ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&patch.x ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&patch.y ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&cn ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.width ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.height ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&iters ));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&calcErr ));
 
     bool is_cpu = isCpuDevice();
     if (is_cpu)
@@ -119,7 +152,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     }
     else
     {
-        stringstream idxStr;
+        std::stringstream idxStr;
         idxStr << kernelName << "_C" << I.oclchannels() << "_D" << I.depth();
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str());
         int wave_size = (int)queryWaveFrontSize(kernel);
@@ -141,7 +174,6 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
     {
         nextPts.release();
         status.release();
-        if (err) err->release();
         return;
     }
 
@@ -193,8 +225,8 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        pyrDown_cus(prevPyr_[level - 1], prevPyr_[level]);
+        pyrDown_cus(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     // dI/dx ~ Ix, dI/dy ~ Iy
@@ -202,19 +234,21 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
     {
         lkSparse_run(prevPyr_[level], nextPyr_[level],
                      prevPts, nextPts, status, *err, getMinEigenVals, prevPts.cols,
-                     level, patch, winSize, iters);
+                     level, /*block, */patch, winSize, iters);
     }
+
+    clFinish(*(cl_command_queue*)prevImg.clCxt->getOpenCLCommandQueuePtr());
 
     if(errMat)
         delete err;
 }
 
 static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
-                        oclMat &prevU, oclMat &prevV, oclMat *err, Size winSize, int iters)
+                 oclMat &prevU, oclMat &prevV, oclMat *err, Size winSize, int iters)
 {
     Context  *clCxt = I.clCxt;
 
-    string kernelName = "lkDense";
+    String kernelName = "lkDense";
 
     size_t localThreads[3]  = { 16, 16, 1 };
     size_t globalThreads[3] = { I.cols, I.rows, 1};
@@ -227,25 +261,25 @@ static void lkDense_run(oclMat &I, oclMat &J, oclMat &u, oclMat &v,
     ITex = bindTexture(I);
     JTex = bindTexture(J);
 
-    vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ITex ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&JTex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ITex ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&JTex ));
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&u.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&u.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&v.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&v.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevU.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevU.step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&prevV.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&prevV.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&I.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.width ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&winSize.height ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
-    args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&u.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&u.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&v.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&v.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevU.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevU.step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&prevV.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&prevV.step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&I.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.width ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&winSize.height ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&iters ));
+    args.push_back( std::make_pair( sizeof(cl_char), (void *)&calcErr ));
 
     openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth());
 
@@ -271,8 +305,8 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        pyrDown_cus(prevPyr_[level - 1], prevPyr_[level]);
+        pyrDown_cus(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
@@ -299,4 +333,6 @@ void cv::ocl::PyrLKOpticalFlow::dense(const oclMat &prevImg, const oclMat &nextI
 
     uPyr_[idx].copyTo(u);
     vPyr_[idx].copyTo(v);
+
+    clFinish(*(cl_command_queue*)prevImg.clCxt->getOpenCLCommandQueuePtr());
 }

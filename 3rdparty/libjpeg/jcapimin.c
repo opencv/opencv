@@ -2,6 +2,7 @@
  * jcapimin.c
  *
  * Copyright (C) 1994-1998, Thomas G. Lane.
+ * Modified 2003-2010 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -37,7 +38,7 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
     ERREXIT2(cinfo, JERR_BAD_LIB_VERSION, JPEG_LIB_VERSION, version);
   if (structsize != SIZEOF(struct jpeg_compress_struct))
     ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE,
-         (int) SIZEOF(struct jpeg_compress_struct), (int) structsize);
+             (int) SIZEOF(struct jpeg_compress_struct), (int) structsize);
 
   /* For debugging purposes, we zero the whole master structure.
    * But the application has already set the err pointer, and may have set
@@ -63,13 +64,20 @@ jpeg_CreateCompress (j_compress_ptr cinfo, int version, size_t structsize)
 
   cinfo->comp_info = NULL;
 
-  for (i = 0; i < NUM_QUANT_TBLS; i++)
+  for (i = 0; i < NUM_QUANT_TBLS; i++) {
     cinfo->quant_tbl_ptrs[i] = NULL;
+    cinfo->q_scale_factor[i] = 100;
+  }
 
   for (i = 0; i < NUM_HUFF_TBLS; i++) {
     cinfo->dc_huff_tbl_ptrs[i] = NULL;
     cinfo->ac_huff_tbl_ptrs[i] = NULL;
   }
+
+  /* Must do it here for emit_dqt in case jpeg_write_tables is used */
+  cinfo->block_size = DCTSIZE;
+  cinfo->natural_order = jpeg_natural_order;
+  cinfo->lim_Se = DCTSIZE2-1;
 
   cinfo->script_space = NULL;
 
@@ -161,15 +169,15 @@ jpeg_finish_compress (j_compress_ptr cinfo)
     (*cinfo->master->prepare_for_pass) (cinfo);
     for (iMCU_row = 0; iMCU_row < cinfo->total_iMCU_rows; iMCU_row++) {
       if (cinfo->progress != NULL) {
-    cinfo->progress->pass_counter = (long) iMCU_row;
-    cinfo->progress->pass_limit = (long) cinfo->total_iMCU_rows;
-    (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
+        cinfo->progress->pass_counter = (long) iMCU_row;
+        cinfo->progress->pass_limit = (long) cinfo->total_iMCU_rows;
+        (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
       }
       /* We bypass the main controller and invoke coef controller directly;
        * all work is being done from the coefficient buffer.
        */
       if (! (*cinfo->coef->compress_data) (cinfo, (JSAMPIMAGE) NULL))
-    ERREXIT(cinfo, JERR_CANT_SUSPEND);
+        ERREXIT(cinfo, JERR_CANT_SUSPEND);
     }
     (*cinfo->master->finish_pass) (cinfo);
   }
@@ -190,7 +198,7 @@ jpeg_finish_compress (j_compress_ptr cinfo)
 
 GLOBAL(void)
 jpeg_write_marker (j_compress_ptr cinfo, int marker,
-           const JOCTET *dataptr, unsigned int datalen)
+                   const JOCTET *dataptr, unsigned int datalen)
 {
   JMETHOD(void, write_marker_byte, (j_compress_ptr info, int val));
 

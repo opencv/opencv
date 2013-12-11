@@ -10,7 +10,7 @@ except:
 
 class_ignore_list = (
     #core
-    "FileNode", "FileStorage", "KDTree",
+    "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #highgui
     "VideoWriter",
 )
@@ -165,6 +165,8 @@ missing_consts = \
             ('CV_CALIB_FIX_K5',           4096),
             ('CV_CALIB_FIX_K6',           8192),
             ('CV_CALIB_RATIONAL_MODEL',  16384),
+            ('CV_CALIB_THIN_PRISM_MODEL',32768),
+            ('CV_CALIB_FIX_S1_S2_S3_S4', 65536),
             ('CV_CALIB_FIX_INTRINSIC',     256),
             ('CV_CALIB_SAME_FOCAL_LENGTH', 512),
             ('CV_CALIB_ZERO_DISPARITY',   1024),
@@ -202,32 +204,32 @@ type_dict = {
 
 # "complex" : { j_type : "?", jn_args : (("", ""),), jn_name : "", jni_var : "", jni_name : "", "suffix" : "?" },
 
-    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point> %(n)s", "suffix" : "J" },
-    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2f> %(n)s", "suffix" : "J" },
-    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point2d> %(n)s", "suffix" : "J" },
-    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3i> %(n)s", "suffix" : "J" },
-    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3f> %(n)s", "suffix" : "J" },
-    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Point3d> %(n)s", "suffix" : "J" },
-    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<KeyPoint> %(n)s", "suffix" : "J" },
-    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<DMatch> %(n)s", "suffix" : "J" },
-    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Rect> %(n)s", "suffix" : "J" },
-    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<uchar> %(n)s", "suffix" : "J" },
-    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<char> %(n)s", "suffix" : "J" },
-    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<int> %(n)s", "suffix" : "J" },
-    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<float> %(n)s", "suffix" : "J" },
-    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<double> %(n)s", "suffix" : "J" },
-    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4i> %(n)s", "suffix" : "J" },
-    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec4f> %(n)s", "suffix" : "J" },
-    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Vec6f> %(n)s", "suffix" : "J" },
+    "vector_Point"    : { "j_type" : "MatOfPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point> %(n)s", "suffix" : "J" },
+    "vector_Point2f"  : { "j_type" : "MatOfPoint2f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2f> %(n)s", "suffix" : "J" },
+    #"vector_Point2d"  : { "j_type" : "MatOfPoint2d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point2d> %(n)s", "suffix" : "J" },
+    "vector_Point3i"  : { "j_type" : "MatOfPoint3", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3i> %(n)s", "suffix" : "J" },
+    "vector_Point3f"  : { "j_type" : "MatOfPoint3f", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3f> %(n)s", "suffix" : "J" },
+    #"vector_Point3d"  : { "j_type" : "MatOfPoint3d", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Point3d> %(n)s", "suffix" : "J" },
+    "vector_KeyPoint" : { "j_type" : "MatOfKeyPoint", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<KeyPoint> %(n)s", "suffix" : "J" },
+    "vector_DMatch"   : { "j_type" : "MatOfDMatch", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<DMatch> %(n)s", "suffix" : "J" },
+    "vector_Rect"     : { "j_type" : "MatOfRect",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Rect> %(n)s", "suffix" : "J" },
+    "vector_uchar"    : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<uchar> %(n)s", "suffix" : "J" },
+    "vector_char"     : { "j_type" : "MatOfByte",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<char> %(n)s", "suffix" : "J" },
+    "vector_int"      : { "j_type" : "MatOfInt",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<int> %(n)s", "suffix" : "J" },
+    "vector_float"    : { "j_type" : "MatOfFloat",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<float> %(n)s", "suffix" : "J" },
+    "vector_double"   : { "j_type" : "MatOfDouble", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<double> %(n)s", "suffix" : "J" },
+    "vector_Vec4i"    : { "j_type" : "MatOfInt4",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4i> %(n)s", "suffix" : "J" },
+    "vector_Vec4f"    : { "j_type" : "MatOfFloat4",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec4f> %(n)s", "suffix" : "J" },
+    "vector_Vec6f"    : { "j_type" : "MatOfFloat6",  "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Vec6f> %(n)s", "suffix" : "J" },
 
-    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector<Mat> %(n)s", "suffix" : "J" },
+    "vector_Mat"      : { "j_type" : "List<Mat>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector<Mat> %(n)s", "suffix" : "J" },
 
-    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<KeyPoint> > %(n)s" },
-    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<DMatch> > %(n)s" },
-    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<char> > %(n)s" },
-    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point> > %(n)s" },
-    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point2f> > %(n)s" },
-    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "vector< vector<Point3f> > %(n)s" },
+    "vector_vector_KeyPoint": { "j_type" : "List<MatOfKeyPoint>", "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<KeyPoint> > %(n)s" },
+    "vector_vector_DMatch"  : { "j_type" : "List<MatOfDMatch>",   "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<DMatch> > %(n)s" },
+    "vector_vector_char"    : { "j_type" : "List<MatOfByte>",     "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<char> > %(n)s" },
+    "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point> > %(n)s" },
+    "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point2f> > %(n)s" },
+    "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point3f> > %(n)s" },
 
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
@@ -283,17 +285,13 @@ type_dict = {
     "CvSlice" : { "j_type" : "Range",  "jn_args" : (("int", ".start"), ("int", ".end")),
                   "jni_var" : "Range %(n)s(%(n)s_start, %(n)s_end)", "jni_type" : "jdoubleArray",
                   "suffix" : "II"},
-    "string"  : { "j_type" : "String",  "jn_type" : "String",
-                  "jni_type" : "jstring", "jni_name" : "n_%(n)s",
-                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
-                  "suffix" : "Ljava_lang_String_2"},
     "String"  : { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s",
                   "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
     "c_string": { "j_type" : "String",  "jn_type" : "String",
                   "jni_type" : "jstring", "jni_name" : "n_%(n)s.c_str()",
-                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); std::string n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
+                  "jni_var" : 'const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : "" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)',
                   "suffix" : "Ljava_lang_String_2"},
 "TermCriteria": { "j_type" : "TermCriteria",  "jn_args" : (("int", ".type"), ("int", ".maxCount"), ("double", ".epsilon")),
                   "jni_var" : "TermCriteria %(n)s(%(n)s_type, %(n)s_maxCount, %(n)s_epsilon)", "jni_type" : "jdoubleArray",
@@ -419,7 +417,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
         {
             'j_code'   :
 """
-    // C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+    // C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
     //javadoc:getTextSize(text, fontFace, fontScale, thickness, baseLine)
     public static Size getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine) {
         if(baseLine != null && baseLine.length != 1)
@@ -432,7 +430,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 """    private static native double[] n_getTextSize(String text, int fontFace, double fontScale, int thickness, int[] baseLine);\n""",
             'cpp_code' :
 """
-// C++: Size getTextSize(const string& text, int fontFace, double fontScale, int thickness, int* baseLine);
+// C++: Size getTextSize(const String& text, int fontFace, double fontScale, int thickness, int* baseLine);
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize (JNIEnv*, jclass, jstring, jint, jdouble, jint, jintArray);
 
 JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
@@ -447,7 +445,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         }
 
         const char* utf_text = env->GetStringUTFChars(text, 0);
-        std::string n_text( utf_text ? utf_text : "" );
+        String n_text( utf_text ? utf_text : "" );
         env->ReleaseStringUTFChars(text, utf_text);
 
         int _baseLine;
@@ -547,7 +545,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPrevi
         LOGD("%s", method_name);
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         union {double prop; const char* name;} u;
-        u.prop = me->get(CV_CAP_PROP_SUPPORTED_PREVIEW_SIZES_STRING);
+        u.prop = me->get(CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);
         return env->NewStringUTF(u.name);
     } catch(const std::exception &e) {
         throwJavaException(env, &e, method_name);
@@ -562,59 +560,79 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPrevi
     }, # VideoCapture
 }
 
-# { class : { func : {arg_name : ctype} } }
+# { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {
     '' : {
-        'randu'    : { 'low'     : 'double', 'high'   : 'double', },
-        'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
-        'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
-        'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
-        'findFundamentalMat' : { 'points1' : 'vector_Point2f', 'points2' : 'vector_Point2f', },
-        'cornerSubPix' : { 'corners' : 'vector_Point2f', },
-        'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
-        'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
-        'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                       'distCoeffs' : 'vector_double' },
-        'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                             'distCoeffs' : 'vector_double' },
-        'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
-                                   'status' : 'vector_uchar', 'err' : 'vector_float', },
-        'fitEllipse' : { 'points' : 'vector_Point2f', },
-        'fillPoly' : { 'pts' : 'vector_vector_Point', },
-        'polylines' : { 'pts' : 'vector_vector_Point', },
-        'fillConvexPoly' : { 'points' : 'vector_Point', },
-        'boundingRect' : { 'points' : 'vector_Point', },
-        'approxPolyDP' : { 'curve' : 'vector_Point2f', 'approxCurve' : 'vector_Point2f', },
-        'arcLength' : { 'curve' : 'vector_Point2f', },
-        'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
-        'minAreaRect' : { 'points' : 'vector_Point2f', },
-        'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
-        'hconcat' : { 'src' : 'vector_Mat', },
-        'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f' },
-        'checkRange' : {'pos' : '*'},
-        'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
-        'drawContours' : {'contours' : 'vector_vector_Point'},
-        'findContours' : {'contours' : 'vector_vector_Point'},
-        'convexityDefects' : {'contour' : 'vector_Point', 'convexhull' : 'vector_int', 'convexityDefects' : 'vector_Vec4i'},
-        'isContourConvex' : { 'contour' : 'vector_Point', },
-        'convexHull' : {'points' : 'vector_Point', 'hull' : 'vector_int', 'returnPoints' : ''},
-        'projectPoints' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                            'distCoeffs' : 'vector_double' },
-        'initCameraMatrix2D' : {'objectPoints' : 'vector_vector_Point3f', 'imagePoints' : 'vector_vector_Point2f', },
-        'findChessboardCorners' : { 'corners' : 'vector_Point2f' },
-        'drawChessboardCorners' : { 'corners' : 'vector_Point2f' },
+        'randu'    : { 'low'  : {"ctype" : 'double'},
+                       'high' : {"ctype"    : 'double'} },
+        'randn'    : { 'mean'   : {"ctype" : 'double'},
+                       'stddev' : {"ctype"  : 'double'} },
+        'inRange'  : { 'lowerb' : {"ctype" : 'Scalar'},
+                       'upperb' : {"ctype" : 'Scalar'} },
+        'goodFeaturesToTrack' : { 'corners' : {"ctype" : 'vector_Point'} },
+        'findFundamentalMat'  : { 'points1' : {"ctype" : 'vector_Point2f'},
+                                  'points2' : {"ctype" : 'vector_Point2f'} },
+        'cornerSubPix' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'minEnclosingCircle' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'findHomography' : { 'srcPoints' : {"ctype" : 'vector_Point2f'},
+                             'dstPoints' : {"ctype" : 'vector_Point2f'} },
+        'solvePnP' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                      'imagePoints'   : {"ctype" : 'vector_Point2f'},
+                      'distCoeffs'    : {"ctype" : 'vector_double' } },
+        'solvePnPRansac' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                             'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                             'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'calcOpticalFlowPyrLK' : { 'prevPts' : {"ctype" : 'vector_Point2f'},
+                                   'nextPts' : {"ctype" : 'vector_Point2f'},
+                                   'status'  : {"ctype" : 'vector_uchar'},
+                                   'err'     : {"ctype" : 'vector_float'} },
+        'fitEllipse' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'fillPoly'   : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'polylines'  : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'fillConvexPoly' : { 'points' : {"ctype" : 'vector_Point'} },
+        'boundingRect'   : { 'points' : {"ctype" : 'vector_Point'} },
+        'approxPolyDP' : { 'curve'       : {"ctype" : 'vector_Point2f'},
+                           'approxCurve' : {"ctype" : 'vector_Point2f'} },
+        'arcLength' : { 'curve' : {"ctype" : 'vector_Point2f'} },
+        'pointPolygonTest' : { 'contour' : {"ctype" : 'vector_Point2f'} },
+        'minAreaRect' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'getAffineTransform' : { 'src' : {"ctype" : 'vector_Point2f'},
+                                 'dst' : {"ctype" : 'vector_Point2f'} },
+        'hconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'vconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'undistortPoints' : { 'src' : {"ctype" : 'vector_Point2f'},
+                              'dst' : {"ctype" : 'vector_Point2f'} },
+        'checkRange' : {'pos' : {"ctype" : '*'} },
+        'meanStdDev' : { 'mean'   : {"ctype" : 'vector_double'},
+                         'stddev' : {"ctype" : 'vector_double'} },
+        'drawContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'findContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'convexityDefects' : { 'contour'          : {"ctype" : 'vector_Point'},
+                               'convexhull'       : {"ctype" : 'vector_int'},
+                               'convexityDefects' : {"ctype" : 'vector_Vec4i'} },
+        'isContourConvex' : { 'contour' : {"ctype" : 'vector_Point'} },
+        'convexHull' : { 'points' : {"ctype" : 'vector_Point'},
+                         'hull'   : {"ctype" : 'vector_int'},
+                         'returnPoints' : {"ctype" : ''} },
+        'projectPoints' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                            'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                            'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'initCameraMatrix2D' : { 'objectPoints' : {"ctype" : 'vector_vector_Point3f'},
+                                 'imagePoints'  : {"ctype" : 'vector_vector_Point2f'} },
+        'findChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'drawChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'mixChannels' : { 'dst' : {"attrib" : []} },
     }, # '', i.e. no class
 } # func_arg_fix
 
 
 def getLibVersion(version_hpp_path):
     version_file = open(version_hpp_path, "rt").read()
-    epoch = re.search("^W*#\W*define\W+CV_VERSION_EPOCH\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     major = re.search("^W*#\W*define\W+CV_VERSION_MAJOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     minor = re.search("^W*#\W*define\W+CV_VERSION_MINOR\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
     revision = re.search("^W*#\W*define\W+CV_VERSION_REVISION\W+(\d+)\W*$", version_file, re.MULTILINE).group(1)
-    return (epoch, major, minor, revision)
+    status = re.search("^W*#\W*define\W+CV_VERSION_STATUS\W+\"(.*?)\"\W*$", version_file, re.MULTILINE).group(1)
+    return (major, minor, revision, status)
 
 class ConstInfo(object):
     def __init__(self, cname, name, val, addedManually=False):
@@ -691,10 +709,12 @@ class FuncInfo(object):
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
-        arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
+        func_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
-            arg[0] = arg_fix_map.get(arg[1], arg[0])
+            arg_fix_map = func_fix_map.get(arg[1], {})
+            arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
+            arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
             ai = ArgInfo(arg)
             self.args.append(ai)
 
@@ -779,27 +799,27 @@ public class %(jc)s {
 """ % { 'm' : self.module, 'jc' : jname } )
 
         if class_name == 'Core':
-            (epoch, major, minor, revision) = getLibVersion(
+            (major, minor, revision, status) = getLibVersion(
                 (os.path.dirname(__file__) or '.') + '/../../core/include/opencv2/core/version.hpp')
-            version_str    = '.'.join( (epoch, major, minor, revision) )
-            version_suffix =  ''.join( (epoch, major, minor) )
+            version_str    = '.'.join( (major, minor, revision) ) + status
+            version_suffix =  ''.join( (major, minor, revision) )
             self.classes[class_name].imports.add("java.lang.String")
             self.java_code[class_name]["j_code"].write("""
     // these constants are wrapped inside functions to prevent inlining
     private static String getVersion() { return "%(v)s"; }
     private static String getNativeLibraryName() { return "opencv_java%(vs)s"; }
-    private static int getVersionEpoch() { return %(ep)s; }
     private static int getVersionMajor() { return %(ma)s; }
     private static int getVersionMinor() { return %(mi)s; }
     private static int getVersionRevision() { return %(re)s; }
+    private static String getVersionStatus() { return "%(st)s"; }
 
     public static final String VERSION = getVersion();
     public static final String NATIVE_LIBRARY_NAME = getNativeLibraryName();
-    public static final int VERSION_EPOCH = getVersionEpoch();
     public static final int VERSION_MAJOR = getVersionMajor();
     public static final int VERSION_MINOR = getVersionMinor();
     public static final int VERSION_REVISION = getVersionRevision();
-""" % { 'v' : version_str, 'vs' : version_suffix, 'ep' : epoch, 'ma' : major, 'mi' : minor, 're' : revision } )
+    public static final String VERSION_STATUS = getVersionStatus();
+""" % { 'v' : version_str, 'vs' : version_suffix, 'ma' : major, 'mi' : minor, 're' : revision, 'st': status } )
 
 
     def add_class(self, decl):
@@ -949,7 +969,10 @@ public class %(jc)s {
 
 #include "opencv2/opencv_modules.hpp"
 #ifdef HAVE_OPENCV_$M
-#include "opencv2/$m/$m.hpp"
+
+#include <string>
+
+#include "opencv2/$m.hpp"
 
 using namespace cv;
 
@@ -1085,6 +1108,11 @@ extern "C" {
             return
         for a in fi.args:
             if a.ctype not in type_dict:
+                if not a.defval and a.ctype.endswith("*"):
+                    a.defval = 0
+                if a.defval:
+                    a.ctype = ''
+                    continue
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
@@ -1285,7 +1313,7 @@ extern "C" {
                 ret = "return (jlong) _retval_;"
             elif fi.ctype.startswith('vector'): # c-tor
                 ret = "return (jlong) _retval_;"
-            elif fi.ctype == "string":
+            elif fi.ctype == "String":
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif fi.ctype in self.classes: # wrapped class:
@@ -1307,6 +1335,8 @@ extern "C" {
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
+            elif fi.ctype == "String":
+                retval = "cv::" + retval
             elif fi.ctype.startswith('vector'):
                 retval = type_dict[fi.ctype]['jni_var'] % {"n" : '_ret_val_vector_'} + " = "
                 c_epilogue.append("Mat* _retval_ = new Mat();")
@@ -1492,15 +1522,8 @@ if __name__ == "__main__":
         hdr_parser_path = os.path.dirname(hdr_parser_path)
     sys.path.append(hdr_parser_path)
     import hdr_parser
-    if (sys.argv[2] == "-android"):
-        class_ignore_list += ("VideoCapture",)
-        ManualFuncs.pop("VideoCapture")
-        module = sys.argv[3]
-        srcfiles = sys.argv[4:]
-    else:
-        module = sys.argv[2]
-        srcfiles = sys.argv[3:]
-
+    module = sys.argv[2]
+    srcfiles = sys.argv[3:]
     #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)

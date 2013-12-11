@@ -54,6 +54,8 @@
     #undef min
     #undef max
     #undef abs
+#else
+    #include <pthread.h>
 #endif
 
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
@@ -537,13 +539,13 @@ void RNG::fill( InputOutputArray _mat, int disttype,
             ip = (Vec2i*)(parambuf + cn*2);
             for( j = 0, fast_int_mode = 1; j < cn; j++ )
             {
-                double a = min(p1[j], p2[j]);
-                double b = max(p1[j], p2[j]);
+                double a = std::min(p1[j], p2[j]);
+                double b = std::max(p1[j], p2[j]);
                 if( saturateRange )
                 {
-                    a = max(a, depth == CV_8U || depth == CV_16U ? 0. :
+                    a = std::max(a, depth == CV_8U || depth == CV_16U ? 0. :
                             depth == CV_8S ? -128. : depth == CV_16S ? -32768. : (double)INT_MIN);
-                    b = min(b, depth == CV_8U ? 256. : depth == CV_16U ? 65536. :
+                    b = std::min(b, depth == CV_8U ? 256. : depth == CV_16U ? 65536. :
                             depth == CV_8S ? 128. : depth == CV_16S ? 32768. : (double)INT_MAX);
                 }
                 ip[j][1] = cvCeil(a);
@@ -573,8 +575,8 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                     while(((uint64)1 << l) < d)
                         l++;
                     ds[j].M = (unsigned)(((uint64)1 << 32)*(((uint64)1 << l) - d)/d) + 1;
-                    ds[j].sh1 = min(l, 1);
-                    ds[j].sh2 = max(l - 1, 0);
+                    ds[j].sh1 = std::min(l, 1);
+                    ds[j].sh2 = std::max(l - 1, 0);
                 }
             }
 
@@ -725,85 +727,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     }
 }
 
-#ifdef WIN32
-
-
-#ifdef HAVE_WINRT
-// using C++11 thread attribute for local thread data
-__declspec( thread ) RNG* rng = NULL;
-
- void deleteThreadRNGData()
- {
-    if (rng)
-        delete rng;
 }
 
-RNG& theRNG()
+cv::RNG& cv::theRNG()
 {
-    if (!rng)
-    {
-        rng =  new RNG;
-    }
-    return *rng;
-}
-#else
-#ifdef WINCE
-#	define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-#endif
-static DWORD tlsRNGKey = TLS_OUT_OF_INDEXES;
-
- void deleteThreadRNGData()
- {
-     if( tlsRNGKey != TLS_OUT_OF_INDEXES )
-         delete (RNG*)TlsGetValue( tlsRNGKey );
-}
-
-RNG& theRNG()
-{
-    if( tlsRNGKey == TLS_OUT_OF_INDEXES )
-    {
-       tlsRNGKey = TlsAlloc();
-       CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
-    }
-    RNG* rng = (RNG*)TlsGetValue( tlsRNGKey );
-    if( !rng )
-    {
-       rng = new RNG;
-       TlsSetValue( tlsRNGKey, rng );
-    }
-    return *rng;
-}
-#endif //HAVE_WINRT
-#else
-
-static pthread_key_t tlsRNGKey = 0;
-static pthread_once_t tlsRNGKeyOnce = PTHREAD_ONCE_INIT;
-
-static void deleteRNG(void* data)
-{
-    delete (RNG*)data;
-}
-
-static void makeRNGKey()
-{
-    int errcode = pthread_key_create(&tlsRNGKey, deleteRNG);
-    CV_Assert(errcode == 0);
-}
-
-RNG& theRNG()
-{
-    pthread_once(&tlsRNGKeyOnce, makeRNGKey);
-    RNG* rng = (RNG*)pthread_getspecific(tlsRNGKey);
-    if( !rng )
-    {
-        rng = new RNG;
-        pthread_setspecific(tlsRNGKey, rng);
-    }
-    return *rng;
-}
-
-#endif
-
+    return TLSData::get()->rng;
 }
 
 void cv::randu(InputOutputArray dst, InputArray low, InputArray high)
@@ -880,11 +808,6 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     RandShuffleFunc func = tab[dst.elemSize()];
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
-}
-
-void cv::randShuffle_( InputOutputArray _dst, double iterFactor )
-{
-    randShuffle(_dst, iterFactor);
 }
 
 CV_IMPL void

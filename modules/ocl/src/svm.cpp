@@ -116,7 +116,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
 
     CV_FUNCNAME( "cvPreparePredictData" );
 
-    __BEGIN__;
+    __CV_BEGIN__;
 
     const CvMat* sample = (const CvMat*)_sample;
     float* sample_data;
@@ -282,7 +282,7 @@ void  cvPreparePredictData( const CvArr* _sample, int dims_all,
         *_row_sample = row_sample;
     }
 
-    __END__;
+    __CV_END__;
 
     if( inverse_comp_idx )
         cvFree( &inverse_comp_idx );
@@ -437,7 +437,7 @@ float* CvSVMSolver_ocl::get_row_base( int i, bool* _existed, Mat& src )
 static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "svm_sigmod";
+    String kernelName = "svm_sigmod";
     int src_step = (int)src.step / src.elemSize();
     int src2_step = (int)src2.step / src2.elemSize();
     int dst_step = (int)dst.step / dst.elemSize();
@@ -447,29 +447,29 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     size_t globalThreads[] = {src2_cols, src_rows, 1};
     int width = var_count;
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src2.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&dst_step));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_rows));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_cols));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&width));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src2.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
-        args.push_back(make_pair(sizeof(cl_float), (void* )&alpha));
-        args.push_back(make_pair(sizeof(cl_float), (void* )&beta));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&alpha));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&beta));
     }
     else
     {
-        args.push_back(make_pair(sizeof(cl_double), (void* )&alpha1));
-        args.push_back(make_pair(sizeof(cl_double), (void* )&beta1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&alpha1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&beta1));
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -477,7 +477,7 @@ static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_row
 static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1, double degree1, bool flag)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "svm_poly";
+    String kernelName = "svm_poly";
     int src_step = (int)src.step / src.elemSize();
     int src2_step = (int)src2.step / src2.elemSize();
     int dst_step = (int)dst.step / dst.elemSize();
@@ -493,16 +493,16 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
     {
         sprintf(build_options, "-D ADDPOW");
     }
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src2.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&dst_step));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_rows));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_cols));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&width));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src2.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f, degree = 0.0f;
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
@@ -510,15 +510,15 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
         alpha = (float)alpha1;
         beta = (float)beta1;
         degree = (float)degree1;
-        args.push_back(make_pair(sizeof(cl_float), (void* )&alpha));
-        args.push_back(make_pair(sizeof(cl_float), (void* )&beta));
-        args.push_back(make_pair(sizeof(cl_float), (void* )&degree));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&alpha));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&beta));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&degree));
     }
     else
     {
-        args.push_back(make_pair(sizeof(cl_double), (void* )&alpha1));
-        args.push_back(make_pair(sizeof(cl_double), (void* )&beta1));
-        args.push_back(make_pair(sizeof(cl_double), (void* )&degree1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&alpha1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&beta1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&degree1));
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -526,7 +526,7 @@ static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows,
 static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
-    string kernelName = "svm_linear";
+    String kernelName = "svm_linear";
     int src_step = (int)src.step / src.elemSize();
     int src2_step = (int)src2.step / src2.elemSize();
     int dst_step = (int)dst.step / dst.elemSize();
@@ -536,29 +536,29 @@ static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_row
     size_t globalThreads[] = {src2_cols, src_rows, 1};
     int width = var_count;
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src2.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&dst_step));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_rows));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_cols));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&width));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src2.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
 
     float alpha = 0.0f, beta = 0.0f;
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         alpha = (float)alpha1;
         beta = (float)beta1;
-        args.push_back(make_pair(sizeof(cl_float), (void* )&alpha));
-        args.push_back(make_pair(sizeof(cl_float), (void* )&beta));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&alpha));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&beta));
     }
     else
     {
-        args.push_back(make_pair(sizeof(cl_double), (void* )&alpha1));
-        args.push_back(make_pair(sizeof(cl_double), (void* )&beta1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&alpha1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&beta1));
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
@@ -570,7 +570,7 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
 
     Context *clCxt = Context::getContext();
 
-    string kernelName = "svm_rbf";
+    String kernelName = "svm_rbf";
 
     int width = var_count;
     int src_step = (int)src.step / src.elemSize();
@@ -586,24 +586,24 @@ static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, in
     if(flag)
         sprintf(build_options, "-D ADDEXP");
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&src_e.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_e_step));
-    args.push_back(make_pair(sizeof(cl_mem), (void* )&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&dst_step));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src_rows));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&src2_cols));
-    args.push_back(make_pair(sizeof(cl_int), (void* )&width));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&src_e.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_e_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void* )&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src_rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&src2_cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void* )&width));
     float gamma = 0.0f;
     if(!Context::getContext()->supportsFeature(FEATURE_CL_DOUBLE))
     {
         gamma = (float)gamma1;
-        args.push_back(make_pair(sizeof(cl_float), (void* )&gamma));
+        args.push_back(std::make_pair(sizeof(cl_float), (void* )&gamma));
     }
     else
-        args.push_back(make_pair(sizeof(cl_double), (void* )&gamma1));
+        args.push_back(std::make_pair(sizeof(cl_double), (void* )&gamma1));
 
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -620,7 +620,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
 
     for(int i = 0; i < samples->rows; i++)
     {
-        __BEGIN__;
+        __CV_BEGIN__;
         CvMat sample;
         float* row_sample = 0;
         cvGetRow( samples, &sample, i );
@@ -637,7 +637,7 @@ float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
                                       class_count, 0, &row_sample ));
         for(int j = 0; j < var_count; ++j)
             src_temp.at<float>(i, j) = row_sample[j];
-        __END__;
+        __CV_END__;
     }
 
     Mat dst1;

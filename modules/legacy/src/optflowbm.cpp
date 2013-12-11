@@ -75,11 +75,10 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     if( !CV_ARE_TYPES_EQ( velx, vely ))
         CV_Error( CV_StsUnmatchedFormats, "Destination images have different formats" );
 
-    CvSize velSize =
-    {
+    CvSize velSize(
         (srcA->width - blockSize.width + shiftSize.width)/shiftSize.width,
         (srcA->height - blockSize.height + shiftSize.height)/shiftSize.height
-    };
+    );
 
     if( !CV_ARE_SIZES_EQ( srcA, srcB ) ||
         !CV_ARE_SIZES_EQ( velx, vely ) ||
@@ -99,7 +98,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
     const int BIG_DIFF=128;
 
     // scanning scheme coordinates
-    cv::vector<CvPoint> _ss((2 * maxRange.width + 1) * (2 * maxRange.height + 1));
+    std::vector<CvPoint> _ss((2 * maxRange.width + 1) * (2 * maxRange.height + 1));
     CvPoint* ss = &_ss[0];
     int ss_count = 0;
 
@@ -110,7 +109,7 @@ cvCalcOpticalFlowBM( const void* srcarrA, const void* srcarrB,
 
     int i, j;
 
-    cv::vector<uchar> _blockA(cvAlign(blSize + 16, 16));
+    std::vector<uchar> _blockA(cvAlign(blSize + 16, 16));
     uchar* blockA = (uchar*)cvAlignPtr(&_blockA[0], 16);
 
     // Calculate scanning scheme

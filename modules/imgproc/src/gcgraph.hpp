@@ -241,7 +241,7 @@ TWeight GCGraph<TWeight>::maxFlow()
 
         // find the minimum edge weight along the path
         minWeight = edgePtr[e0].weight;
-        assert( minWeight > 0 );
+        CV_Assert( minWeight > 0 );
         // k = 1: source tree, k = 0: destination tree
         for( int k = 1; k >= 0; k-- )
         {
@@ -251,11 +251,11 @@ TWeight GCGraph<TWeight>::maxFlow()
                     break;
                 weight = edgePtr[ei^k].weight;
                 minWeight = MIN(minWeight, weight);
-                assert( minWeight > 0 );
+                CV_Assert( minWeight > 0 );
             }
             weight = fabs(v->weight);
             minWeight = MIN(minWeight, weight);
-            assert( minWeight > 0 );
+            CV_Assert( minWeight > 0 );
         }
 
         // modify weights of the edges along the path and collect orphans

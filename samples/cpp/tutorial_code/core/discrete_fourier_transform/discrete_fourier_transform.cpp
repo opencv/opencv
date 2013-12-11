@@ -22,7 +22,7 @@ int main(int argc, char ** argv)
 
     const char* filename = argc >=2 ? argv[1] : "lena.jpg";
 
-    Mat I = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+    Mat I = imread(filename, IMREAD_GRAYSCALE);
     if( I.empty())
         return -1;
 
@@ -67,7 +67,7 @@ int main(int argc, char ** argv)
     q2.copyTo(q1);
     tmp.copyTo(q2);
 
-    normalize(magI, magI, 0, 1, CV_MINMAX); // Transform the matrix with float values into a
+    normalize(magI, magI, 0, 1, NORM_MINMAX); // Transform the matrix with float values into a
                                             // viewable image form (float between values 0 and 1).
 
     imshow("Input Image"       , I   );    // Show the result

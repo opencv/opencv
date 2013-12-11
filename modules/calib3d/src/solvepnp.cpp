@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "epnp.h"
 #include "p3p.h"
+#include "opencv2/calib3d/calib3d_c.h"
+
 #include <iostream>
 using namespace cv;
 
@@ -57,7 +59,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
     _tvec.create(3, 1, CV_64F);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
-    if (flags == CV_EPNP)
+    if (flags == EPNP)
     {
         cv::Mat undistortedPoints;
         cv::undistortPoints(ipoints, undistortedPoints, cameraMatrix, distCoeffs);
@@ -68,7 +70,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
         cv::Rodrigues(R, rvec);
         return true;
     }
-    else if (flags == CV_P3P)
+    else if (flags == P3P)
     {
         CV_Assert( npoints == 4);
         cv::Mat undistortedPoints;
@@ -81,7 +83,7 @@ bool cv::solvePnP( InputArray _opoints, InputArray _ipoints,
             cv::Rodrigues(R, rvec);
         return result;
     }
-    else if (flags == CV_ITERATIVE)
+    else if (flags == ITERATIVE)
     {
         CvMat c_objectPoints = opoints, c_imagePoints = ipoints;
         CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
@@ -137,8 +139,8 @@ namespace cv
             CameraParameters camera;
         };
 
-        static void pnpTask(const vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
-                     const Parameters& params, vector<int>& inliers, Mat& rvec, Mat& tvec,
+        static void pnpTask(const std::vector<char>& pointsMask, const Mat& objectPoints, const Mat& imagePoints,
+                     const Parameters& params, std::vector<int>& inliers, Mat& rvec, Mat& tvec,
                      const Mat& rvecInit, const Mat& tvecInit, Mutex& resultsMutex)
         {
             Mat modelObjectPoints(1, MIN_POINTS_COUNT, CV_32FC3), modelImagePoints(1, MIN_POINTS_COUNT, CV_32FC2);
@@ -174,14 +176,14 @@ namespace cv
                      params.useExtrinsicGuess, params.flags);
 
 
-            vector<Point2f> projected_points;
+            std::vector<Point2f> projected_points;
             projected_points.resize(objectPoints.cols);
             projectPoints(objectPoints, localRvec, localTvec, params.camera.intrinsics, params.camera.distortion, projected_points);
 
             Mat rotatedPoints;
             project3dPoints(objectPoints, localRvec, localTvec, rotatedPoints);
 
-            vector<int> localInliers;
+            std::vector<int> localInliers;
             for (int i = 0; i < objectPoints.cols; i++)
             {
                 Point2f p(imagePoints.at<Vec2f>(0, i)[0], imagePoints.at<Vec2f>(0, i)[1]);
@@ -211,7 +213,7 @@ namespace cv
         public:
             void operator()( const BlockedRange& r ) const
             {
-                vector<char> pointsMask(objectPoints.cols, 0);
+                std::vector<char> pointsMask(objectPoints.cols, 0);
                 memset(&pointsMask[0], 1, MIN_POINTS_COUNT );
                 for( int i=r.begin(); i!=r.end(); ++i )
                 {
@@ -229,7 +231,7 @@ namespace cv
                 }
             }
             PnPSolver(const Mat& _objectPoints, const Mat& _imagePoints, const Parameters& _parameters,
-                      Mat& _rvec, Mat& _tvec, vector<int>& _inliers):
+                      Mat& _rvec, Mat& _tvec, std::vector<int>& _inliers):
             objectPoints(_objectPoints), imagePoints(_imagePoints), parameters(_parameters),
             rvec(_rvec), tvec(_tvec), inliers(_inliers)
             {
@@ -245,13 +247,13 @@ namespace cv
             const Mat& imagePoints;
             const Parameters& parameters;
             Mat &rvec, &tvec;
-            vector<int>& inliers;
+            std::vector<int>& inliers;
             Mat initRvec, initTvec;
 
             static RNG generator;
             static Mutex syncMutex;
 
-            void generateVar(vector<char>& mask) const
+            void generateVar(std::vector<char>& mask) const
             {
                 int size = (int)mask.size();
                 for (int i = 0; i < size; i++)
@@ -304,7 +306,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     params.camera.init(cameraMatrix, distCoeffs);
     params.flags = flags;
 
-    vector<int> localInliers;
+    std::vector<int> localInliers;
     Mat localRvec, localTvec;
     rvec.copyTo(localRvec);
     tvec.copyTo(localTvec);
@@ -317,7 +319,7 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     if (localInliers.size() >= (size_t)pnpransac::MIN_POINTS_COUNT)
     {
-        if (flags != CV_P3P)
+        if (flags != P3P)
         {
             int i, pointsCount = (int)localInliers.size();
             Mat inlierObjectPoints(1, pointsCount, CV_32FC3), inlierImagePoints(1, pointsCount, CV_32FC2);

@@ -62,14 +62,14 @@ int LOOP_TIMES = 1;
 void readLoopTimes(int argc, char ** argv)
 {
     const char * const command_line_keys =
-            "{   |test_loop_times             |1        |count of iterations per each test}"
-            "{h  |help                        |false    |print help info}";
+            "{   test_loop_times             |1        |count of iterations per each test}"
+            "{h  help                        |false    |print help info}";
 
     cv::CommandLineParser parser(argc, argv, command_line_keys);
-    if (parser.get<bool>("help"))
+    if (parser.has("help"))
     {
         std::cout << "\nAvailable options besides google test option: \n";
-        parser.printParams();
+        parser.printMessage();
     }
 
     LOOP_TIMES = parser.get<int>("test_loop_times");

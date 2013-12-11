@@ -44,6 +44,10 @@
 //
 //M*/
 #include "precomp.hpp"
+
+#include "opencv2/imgproc/types_c.h"
+#include "opencv2/imgproc/imgproc_c.h"
+
 #include "opencl_kernels.hpp"
 
 #if defined _MSC_VER
@@ -137,12 +141,12 @@ namespace cv
                 int llength = std::min(lpt,128);
                 size_t localThreads[3]  = { llength, 1, 1};
                 size_t globalThreads[3] = { lpt, 1, 1};
-                vector<pair<size_t , const void *> > args;
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&contour->total ));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&reader_oclmat.data ));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_a.data ));
+                std::vector<std::pair<size_t , const void *> > args;
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&contour->total ));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&reader_oclmat.data ));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_a.data ));
                 cl_int dst_step = (cl_int)dst_a.step;
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
                 char builOption[128];
                 snprintf(builOption, 128, "-D CV_8UC1");
@@ -266,21 +270,21 @@ namespace cv
             int src_step = (int)(src.step/src.elemSize());
             int dstm_step = (int)(dst_m.step/dst_m.elemSize());
 
-            vector<pair<size_t , const void *> > args,args_sum;
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
-            args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&dstm_step ));
+            std::vector<std::pair<size_t , const void *> > args,args_sum;
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.rows ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_step ));
+            args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_m.cols ));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dstm_step ));
 
             int binary_;
             if(binary)
                 binary_ = 1;
             else
                 binary_ = 0;
-            args.push_back( make_pair( sizeof(cl_int) , (void *)&binary_));
+            args.push_back( std::make_pair( sizeof(cl_int) , (void *)&binary_));
 
             char builOption[128];
             if(binary || src.type() == CV_8UC1)

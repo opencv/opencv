@@ -225,31 +225,31 @@ static void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, ocl
     }
 
     String kernel_name = "mog_withoutLearning_kernel";
-    vector< pair<size_t, const void*> > args;
+    std::vector<std::pair<size_t, const void*> > args;
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&frame.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&fgmask.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&mean.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&var.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&frame.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&fgmask.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&weight.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&mean.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&var.data));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.cols));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&weight_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&var_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&weight_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&mean_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&var_step));
 
-    args.push_back(make_pair(sizeof(cl_float), (void*)&varThreshold));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&varThreshold));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&backgroundRatio));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_y));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }
@@ -290,35 +290,35 @@ static void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask_raw, oc
     }
 
     String kernel_name = "mog_withLearning_kernel";
-    vector< pair<size_t, const void*> > args;
+    std::vector<std::pair<size_t, const void*> > args;
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&frame.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&fgmask.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&sortKey.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&mean.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&var.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&frame.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&fgmask.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&weight.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&sortKey.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&mean.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&var.data));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.cols));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&weight_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&sortKey_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&var_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&weight_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&sortKey_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&mean_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&var_step));
 
-    args.push_back(make_pair(sizeof(cl_float), (void*)&varThreshold));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&learningRate));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&minVar));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&varThreshold));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&backgroundRatio));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&learningRate));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&minVar));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_y));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
     fgmask.convertTo(fgmask, CV_8U);
@@ -358,20 +358,20 @@ void cv::ocl::device::mog::getBackgroundImage_ocl(int cn, const oclMat& weight, 
     }
 
     String kernel_name = "getBackgroundImage_kernel";
-    vector< pair<size_t, const void*> > args;
+    std::vector<std::pair<size_t, const void*> > args;
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&mean.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&weight.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&mean.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&dst.data));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst.cols));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&weight_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&weight_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&mean_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst_step));
 
-    args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&backgroundRatio));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }
@@ -429,7 +429,7 @@ void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmaskR
     frame_offset_x = frame_offset_x/(int)frame.elemSize();
 
     String kernel_name = "mog2_kernel";
-    vector< pair<size_t, const void*> > args;
+    std::vector<std::pair<size_t, const void*> > args;
 
     char build_option[50];
     if(cn == 1)
@@ -440,35 +440,35 @@ void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmaskR
         snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
     }
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&frame.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&fgmask.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&mean.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&modesUsed.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&variance.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&frame.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&fgmask.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&weight.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&mean.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&modesUsed.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&variance.data));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame.cols));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&weight_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&modesUsed_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&var_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&weight_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&mean_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&modesUsed_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&var_step));
 
-    args.push_back(make_pair(sizeof(cl_float), (void*)&alphaT));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&alpha1));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&prune));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&alphaT));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&alpha1));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&prune));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&detectShadows_flag));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&detectShadows_flag));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&fgmask_offset_y));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_y));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&cl_constants));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&frame_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&cl_constants));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 
@@ -493,7 +493,7 @@ void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUs
     dst_x = dst_x/(int)dst.elemSize();
 
     String kernel_name = "getBackgroundImage2_kernel";
-    vector< pair<size_t, const void*> > args;
+    std::vector<std::pair<size_t, const void*> > args;
 
     char build_option[50];
     if(cn == 1)
@@ -504,22 +504,22 @@ void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUs
         snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
     }
 
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&modesUsed.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&mean.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void*)&dst.data));
-    args.push_back(make_pair(sizeof(cl_float), (void*)&c_TB));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&modesUsed.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&weight.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&mean.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void*)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_float), (void*)&c_TB));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&modesUsed.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&modesUsed.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&modesUsed.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&modesUsed.cols));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&modesUsed_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&weight_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&modesUsed_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&weight_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&mean_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst_step));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst_x));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&dst_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void*)&dst_y));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }

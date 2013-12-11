@@ -1,10 +1,10 @@
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/objdetect.hpp>
 #include "opencv2/contrib/detection_based_tracker.hpp"
 
 #include <vector>
@@ -43,8 +43,6 @@
 #define LOGE(...) do{} while(0)
 #endif
 
-
-
 using namespace cv;
 using namespace std;
 
@@ -63,9 +61,31 @@ static void usage()
     LOGE0("\t       (e.g.\"opencv/data/lbpcascades/lbpcascade_frontalface.xml\" ");
 }
 
+class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
+{
+    public:
+        CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector):
+            Detector(detector)
+        {
+            CV_Assert(detector);
+        }
+
+        void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
+        {
+            Detector->detectMultiScale(Image, objects, 1.1, 3, 0, minObjSize, maxObjSize);
+        }
+        virtual ~CascadeDetectorAdapter()
+        {}
+
+    private:
+        CascadeDetectorAdapter();
+        cv::Ptr<cv::CascadeClassifier> Detector;
+ };
+
 static int test_FaceDetector(int argc, char *argv[])
 {
-    if (argc < 4) {
+    if (argc < 4)
+    {
         usage();
         return -1;
     }
@@ -80,12 +100,14 @@ static int test_FaceDetector(int argc, char *argv[])
     vector<Mat> images;
     {
         char filename[256];
-        for(int n=1; ; n++) {
+        for(int n=1; ; n++)
+        {
             snprintf(filename, sizeof(filename), filepattern, n);
             LOGD("filename='%s'", filename);
             Mat m0;
             m0=imread(filename);
-            if (m0.empty()) {
+            if (m0.empty())
+            {
                 LOGI0("Cannot read the file --- break");
                 break;
             }
@@ -94,10 +116,15 @@ static int test_FaceDetector(int argc, char *argv[])
         LOGD("read %d images", (int)images.size());
     }
 
-    DetectionBasedTracker::Parameters params;
     std::string cascadeFrontalfilename=cascadefile;
+    cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
-    DetectionBasedTracker fd(cascadeFrontalfilename, params);
+    cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
+
+    DetectionBasedTracker::Parameters params;
+    DetectionBasedTracker fd(MainDetector, TrackingDetector, params);
 
     fd.run();
 
@@ -108,12 +135,13 @@ static int test_FaceDetector(int argc, char *argv[])
     double freq=getTickFrequency();
 
     int num_images=images.size();
-    for(int n=1; n <= num_images; n++) {
+    for(int n=1; n <= num_images; n++)
+    {
         int64 tcur=getTickCount();
         int64 dt=tcur-tprev;
         tprev=tcur;
         double t_ms=((double)dt)/freq * 1000.0;
-        LOGD("\n\nSTEP n=%d        from prev step %f ms\n\n", n, t_ms);
+        LOGD("\n\nSTEP n=%d        from prev step %f ms\n", n, t_ms);
         m=images[n-1];
         CV_Assert(! m.empty());
         cvtColor(m, gray, COLOR_BGR2GRAY);
@@ -123,11 +151,8 @@ static int test_FaceDetector(int argc, char *argv[])
         vector<Rect> result;
         fd.getObjects(result);
 
-
-
-
-
-        for(size_t i=0; i < result.size(); i++) {
+        for(size_t i=0; i < result.size(); i++)
+        {
             Rect r=result[i];
             CV_Assert(r.area() > 0);
             Point tl=r.tl();
@@ -136,22 +161,20 @@ static int test_FaceDetector(int argc, char *argv[])
             rectangle(m, tl, br, color, 3);
         }
     }
+
+    char outfilename[256];
+    for(int n=1; n <= num_images; n++)
     {
-        char outfilename[256];
-        for(int n=1; n <= num_images; n++) {
-            snprintf(outfilename, sizeof(outfilename), outfilepattern, n);
-            LOGD("outfilename='%s'", outfilename);
-            m=images[n-1];
-            imwrite(outfilename, m);
-        }
+        snprintf(outfilename, sizeof(outfilename), outfilepattern, n);
+        LOGD("outfilename='%s'", outfilename);
+        m=images[n-1];
+        imwrite(outfilename, m);
     }
 
     fd.stop();
 
     return 0;
 }
-
-
 
 int main(int argc, char *argv[])
 {

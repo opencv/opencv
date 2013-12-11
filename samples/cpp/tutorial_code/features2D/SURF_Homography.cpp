@@ -12,6 +12,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 
+using namespace std;
 using namespace cv;
 
 void readme();
@@ -25,8 +26,8 @@ int main( int argc, char** argv )
   if( argc != 3 )
   { readme(); return -1; }
 
-  Mat img_object = imread( argv[1], CV_LOAD_IMAGE_GRAYSCALE );
-  Mat img_scene = imread( argv[2], CV_LOAD_IMAGE_GRAYSCALE );
+  Mat img_object = imread( argv[1], IMREAD_GRAYSCALE );
+  Mat img_scene = imread( argv[2], IMREAD_GRAYSCALE );
 
   if( !img_object.data || !img_scene.data )
   { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
@@ -91,7 +92,7 @@ int main( int argc, char** argv )
     scene.push_back( keypoints_scene[ good_matches[i].trainIdx ].pt );
   }
 
-  Mat H = findHomography( obj, scene, CV_RANSAC );
+  Mat H = findHomography( obj, scene, RANSAC );
 
   //-- Get the corners from the image_1 ( the object to be "detected" )
   std::vector<Point2f> obj_corners(4);

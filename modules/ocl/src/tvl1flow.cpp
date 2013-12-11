@@ -217,7 +217,7 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::procOneScale(const oclMat &I0, const ocl
     {
         warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c);
 
-        double error = numeric_limits<double>::max();
+        double error = std::numeric_limits<double>::max();
         double prev_error = 0;
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
@@ -232,7 +232,7 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::procOneScale(const oclMat &I0, const ocl
             }
             else
             {
-                error = numeric_limits<double>::max();
+                error = std::numeric_limits<double>::max();
                 prev_error -= scaledEpsilon;
             }
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);
@@ -281,15 +281,15 @@ void ocl_tvl1flow::centeredGradient(const oclMat &src, oclMat &dx, oclMat &dy)
     int dElememntSize = dx.elemSize();
     int dx_step = dx.step/dElememntSize;
 
-    string kernelName = "centeredGradientKernel";
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&src.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&src_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&dx.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&dy.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&dx_step));
+    String kernelName = "centeredGradientKernel";
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&src_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&dx.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&dy.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&dx_step));
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThreads, localThreads, args, -1, -1);
 
 }
@@ -323,24 +323,24 @@ void ocl_tvl1flow::estimateDualVariables(oclMat &u1, oclMat &u2, oclMat &p11, oc
     int u2_offset_x = u2.offset%u2.step;
     u2_offset_x = u2_offset_x/u2.elemSize();
 
-    string kernelName = "estimateDualVariablesKernel";
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u1.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u2.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p11.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&p11_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p12.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p21.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p22.data));
-    args.push_back( make_pair( sizeof(cl_float), (void*)&taut));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_step));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_y));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
+    String kernelName = "estimateDualVariablesKernel";
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u1.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u2.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p11.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&p11_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p12.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p21.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p22.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void*)&taut));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_y));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_y));
 
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
 }
@@ -377,31 +377,31 @@ void ocl_tvl1flow::estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
     int u2_offset_x = u2.offset%u2.step;
     u2_offset_x = u2_offset_x/u2.elemSize();
 
-    string kernelName = "estimateUKernel";
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1wx.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I1wx.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I1wx.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I1wx_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1wy.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&grad.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&rho_c.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p11.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p12.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p21.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&p22.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u1.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u2.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&error.data));
-    args.push_back( make_pair( sizeof(cl_float), (void*)&l_t));
-    args.push_back( make_pair( sizeof(cl_float), (void*)&theta));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_step));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_y));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
-    args.push_back( make_pair( sizeof(cl_char), (void*)&calc_error));
+    String kernelName = "estimateUKernel";
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1wx.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I1wx.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I1wx.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I1wx_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1wy.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&grad.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&rho_c.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p11.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p12.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p21.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&p22.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u1.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u2.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&error.data));
+    args.push_back( std::make_pair( sizeof(cl_float), (void*)&l_t));
+    args.push_back( std::make_pair( sizeof(cl_float), (void*)&theta));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_y));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_y));
+    args.push_back( std::make_pair( sizeof(cl_char), (void*)&calc_error));
 
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
 }
@@ -445,29 +445,29 @@ void ocl_tvl1flow::warpBackward(const oclMat &I0, const oclMat &I1, oclMat &I1x,
     I1x_tex = bindTexture(I1x);
     I1y_tex = bindTexture(I1y);
 
-    string kernelName = "warpBackwardKernel";
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I0.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I0Step));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I0.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I0.rows));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1_tex));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1x_tex));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1y_tex));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u1.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1Step));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&u2.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1w.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1wx.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&I1wy.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&grad.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void*)&rho.data));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&I1w_step));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2Step));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_y));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_x));
-    args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
+    String kernelName = "warpBackwardKernel";
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I0.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I0Step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I0.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I0.rows));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1_tex));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1x_tex));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1y_tex));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u1.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1Step));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&u2.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1w.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1wx.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&I1wy.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&grad.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void*)&rho.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&I1w_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2Step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u1_offset_y));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_x));
+    args.push_back( std::make_pair( sizeof(cl_int), (void*)&u2_offset_y));
 
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
 

@@ -60,16 +60,9 @@ namespace cv
             {
                 return (total + grain - 1) / grain;
             }
-            static string get_kernel_name(string kernel_name, int data_type)
+            static String get_kernel_name(String kernel_name, int data_type)
             {
-                stringstream idxStr;
-                if(data_type == CV_16S)
-                    idxStr << "0";
-                else
-                    idxStr << "1";
-                kernel_name += idxStr.str();
-
-                return kernel_name;
+                return kernel_name + (data_type == CV_16S ? "0" : "1");
             }
             using cv::ocl::StereoConstantSpaceBP;
             //////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +76,7 @@ namespace cv
                 int data_type = rthis.msg_type;
                 int channels = left.oclchannels();
 
-                string kernelName = get_kernel_name("init_data_cost_", data_type);
+                String kernelName = get_kernel_name("init_data_cost_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -127,7 +120,7 @@ namespace cv
                 int channels = left.oclchannels();
                 int win_size = (int)std::pow(2.f, level);
 
-                string kernelName = get_kernel_name("init_data_cost_reduce_", data_type);
+                String kernelName = get_kernel_name("init_data_cost_reduce_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -173,7 +166,7 @@ namespace cv
                 Context  *clCxt = temp.clCxt;
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("get_first_k_initial_local_", data_type);
+                String kernelName = get_kernel_name("get_first_k_initial_local_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -205,7 +198,7 @@ namespace cv
                 Context  *clCxt = temp.clCxt;
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("get_first_k_initial_global_", data_type);
+                String kernelName = get_kernel_name("get_first_k_initial_global_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -267,7 +260,7 @@ namespace cv
                 int channels = left.oclchannels();
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("compute_data_cost_", data_type);
+                String kernelName = get_kernel_name("compute_data_cost_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -310,7 +303,7 @@ namespace cv
                 int channels = left.oclchannels();
                 int win_size = (int)std::pow(2.f, level);
 
-                string kernelName = get_kernel_name("compute_data_cost_reduce_", data_type);
+                String kernelName = get_kernel_name("compute_data_cost_reduce_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -375,7 +368,7 @@ namespace cv
                 Context  *clCxt = temp.clCxt;
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("init_message_", data_type);
+                String kernelName = get_kernel_name("init_message_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
@@ -425,7 +418,7 @@ namespace cv
                 Context  *clCxt = temp.clCxt;
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("compute_message_", data_type);
+                String kernelName = get_kernel_name("compute_message_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
                 size_t localThreads[]  = {32, 8, 1};
@@ -476,7 +469,7 @@ namespace cv
                 Context  *clCxt = disp.clCxt;
                 int data_type = rthis.msg_type;
 
-                string kernelName = get_kernel_name("compute_disp_", data_type);
+                String kernelName = get_kernel_name("compute_disp_", data_type);
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 

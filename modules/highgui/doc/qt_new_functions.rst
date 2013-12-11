@@ -61,7 +61,7 @@ setWindowProperty
 ---------------------
 Changes parameters of a window dynamically.
 
-.. ocv:function:: void setWindowProperty( const string& winname, int prop_id, double prop_value )
+.. ocv:function:: void setWindowProperty( const String& winname, int prop_id, double prop_value )
 
 .. ocv:pyfunction:: cv2.setWindowProperty(winname, prop_id, prop_value) -> None
 
@@ -97,7 +97,7 @@ getWindowProperty
 ---------------------
 Provides parameters of a window.
 
-.. ocv:function:: double getWindowProperty( const string& winname, int prop_id )
+.. ocv:function:: double getWindowProperty( const String& winname, int prop_id )
 
 .. ocv:pyfunction:: cv2.getWindowProperty(winname, prop_id) -> retval
 
@@ -123,7 +123,7 @@ fontQt
 ----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: CvFont fontQt(const string& nameFont, int pointSize  = -1, Scalar color = Scalar::all(0), int weight = CV_FONT_NORMAL,  int style = CV_STYLE_NORMAL, int spacing = 0)
+.. ocv:function:: QtFont fontQt( const String& nameFont, int pointSize=-1, Scalar color=Scalar::all(0), int weight=QT_FONT_NORMAL, int style=QT_STYLE_NORMAL, int spacing=0 )
 
 .. ocv:cfunction:: CvFont cvFontQt(const char* nameFont, int pointSize=-1, CvScalar color=cvScalarAll(0), int weight=CV_FONT_NORMAL, int style=CV_STYLE_NORMAL, int spacing=0)
 
@@ -169,7 +169,7 @@ addText
 -----------
 Creates the font to draw a text on an image.
 
-.. ocv:function:: void addText( const Mat& img, const string& text, Point org, CvFont font )
+.. ocv:function:: void addText( const Mat& img, const String& text, Point org, const QtFont& font )
 
 .. ocv:cfunction:: void cvAddText( const CvArr* img, const char* text, CvPoint org, CvFont * arg2 )
 
@@ -195,7 +195,7 @@ displayOverlay
 ------------------
 Displays a  text on a window image as an overlay for a specified duration.
 
-.. ocv:function:: void displayOverlay( const string& winname, const string& text, int delayms=0 )
+.. ocv:function:: void displayOverlay( const String& winname, const String& text, int delayms=0 )
 
 .. ocv:cfunction:: void cvDisplayOverlay(const char* name, const char* text, int delayms = 0)
 
@@ -212,7 +212,7 @@ displayStatusBar
 --------------------
 Displays a text on the window statusbar during the specified period of time.
 
-.. ocv:function:: void displayStatusBar( const string& winname, const string& text, int delayms=0 )
+.. ocv:function:: void displayStatusBar( const String& winname, const String& text, int delayms=0 )
 
 .. ocv:cfunction:: void cvDisplayStatusBar(const char* name, const char* text, int delayms = 0)
 
@@ -230,7 +230,7 @@ setOpenGlDrawCallback
 ------------------------
 Sets a callback function to be called to draw on top of displayed image.
 
-.. ocv:function:: void setOpenGlDrawCallback( const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata=0 )
+.. ocv:function:: void setOpenGlDrawCallback( const String& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata=0 )
 
 .. ocv:cfunction:: void cvSetOpenGlDrawCallback( const char* window_name, CvOpenGlDrawCallback callback, void* userdata=NULL )
 
@@ -276,7 +276,7 @@ saveWindowParameters
 ------------------------
 Saves parameters of the specified window.
 
-.. ocv:function:: void saveWindowParameters( const string& windowName )
+.. ocv:function:: void saveWindowParameters( const String& windowName )
 
 .. ocv:cfunction:: void cvSaveWindowParameters(const char* name)
 
@@ -289,7 +289,7 @@ loadWindowParameters
 ------------------------
 Loads parameters of the specified window.
 
-.. ocv:function:: void loadWindowParameters( const string& windowName )
+.. ocv:function:: void loadWindowParameters( const String& windowName )
 
 .. ocv:cfunction:: void cvLoadWindowParameters(const char* name)
 
@@ -302,7 +302,7 @@ createButton
 ----------------
 Attaches a button to the control panel.
 
-.. ocv:function:: int createButton( const string& bar_name, ButtonCallback on_change, void* userdata=NULL, int type=CV_PUSH_BUTTON, bool initial_button_state=0 )
+.. ocv:function:: int createButton( const String& bar_name, ButtonCallback on_change, void* userdata=0, int type=QT_PUSH_BUTTON, bool initial_button_state=false )
 
 .. ocv:cfunction:: int cvCreateButton( const char* button_name=NULL, CvButtonCallback on_change=NULL, void* userdata=NULL, int button_type=CV_PUSH_BUTTON, int initial_button_state=0 )
 

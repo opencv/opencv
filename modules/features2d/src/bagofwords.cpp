@@ -41,8 +41,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 namespace cv
 {
 
@@ -69,7 +67,7 @@ void BOWTrainer::add( const Mat& _descriptors )
     descriptors.push_back(_descriptors);
 }
 
-const vector<Mat>& BOWTrainer::getDescriptors() const
+const std::vector<Mat>& BOWTrainer::getDescriptors() const
 {
     return descriptors;
 }
@@ -130,7 +128,7 @@ void BOWImgDescriptorExtractor::setVocabulary( const Mat& _vocabulary )
 {
     dmatcher->clear();
     vocabulary = _vocabulary;
-    dmatcher->add( vector<Mat>(1, vocabulary) );
+    dmatcher->add( std::vector<Mat>(1, vocabulary) );
 }
 
 const Mat& BOWImgDescriptorExtractor::getVocabulary() const
@@ -138,8 +136,8 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
     return vocabulary;
 }
 
-void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor,
-                                         vector<vector<int> >* pointIdxsOfClusters, Mat* _descriptors )
+void BOWImgDescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
+                                         std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* _descriptors )
 {
     imgDescriptor.release();
 
@@ -153,7 +151,7 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& key
     dextractor->compute( image, keypoints, descriptors );
 
     // Match keypoint descriptors to cluster center (to vocabulary)
-    vector<DMatch> matches;
+    std::vector<DMatch> matches;
     dmatcher->match( descriptors, matches );
 
     // Compute image descriptor

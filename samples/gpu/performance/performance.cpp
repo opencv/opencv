@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 void TestSystem::run()
 {
@@ -144,7 +144,7 @@ string abspath(const string& relpath)
 }
 
 
-static int CV_CDECL cvErrorCallback(int /*status*/, const char* /*func_name*/,
+static int cvErrorCallback(int /*status*/, const char* /*func_name*/,
                              const char* err_msg, const char* /*file_name*/,
                              int /*line*/, void* /*userdata*/)
 {
@@ -158,28 +158,29 @@ int main(int argc, const char* argv[])
     int num_devices = getCudaEnabledDeviceCount();
     if (num_devices == 0)
     {
-        cerr << "No GPU found or the library was compiled without GPU support";
+        cerr << "No GPU found or the library was compiled without CUDA support";
         return -1;
     }
 
     redirectError(cvErrorCallback);
 
     const char* keys =
-       "{ h | help    | false | print help message }"
-       "{ f | filter  |       | filter for test }"
-       "{ w | workdir |       | set working directory }"
-       "{ l | list    | false | show all tests }"
-       "{ d | device  | 0     | device id }"
-       "{ i | iters   | 10    | iteration count }";
+       "{ h  help    |       | print help message }"
+       "{ f  filter  |       | filter for test }"
+       "{ w  workdir |       | set working directory }"
+       "{ l  list    |       | show all tests }"
+       "{ d  device  | 0     | device id }"
+       "{ i  iters   | 10    | iteration count }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help") || !cmd.check())
     {
-        cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
+        cmd.printErrors();
         return 0;
     }
+
 
     int device = cmd.get<int>("device");
     if (device < 0 || device >= num_devices)
@@ -190,7 +191,7 @@ int main(int argc, const char* argv[])
     DeviceInfo dev_info(device);
     if (!dev_info.isCompatible())
     {
-        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
+        cerr << "CUDA module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
         return -1;
     }
     setDevice(device);
@@ -198,7 +199,7 @@ int main(int argc, const char* argv[])
 
     string filter = cmd.get<string>("filter");
     string workdir = cmd.get<string>("workdir");
-    bool list = cmd.get<bool>("list");
+    bool list = cmd.has("list");
     int iters = cmd.get<int>("iters");
 
     if (!filter.empty())

@@ -2161,7 +2161,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         Mat _data(static_cast<int>(src.size()), size.area(), type);
 
         int i = 0;
-        for(vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
+        for(std::vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
         {
             CV_Assert( (*each).size() == size && (*each).type() == type );
             Mat dataRow(size.height, size.width, type, _data.ptr(i));
@@ -2316,11 +2316,6 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         CV_Error( CV_StsUnsupportedFormat, "" );
 
     return std::sqrt(result);
-}
-
-double cv::Mahalonobis( InputArray _v1, InputArray _v2, InputArray _icovar )
-{
-    return Mahalanobis(_v1, _v2, _icovar);
 }
 
 /****************************************************************************************\
@@ -2828,7 +2823,7 @@ PCA::PCA(InputArray data, InputArray _mean, int flags, int maxComponents)
 
 PCA::PCA(InputArray data, InputArray _mean, int flags, double retainedVariance)
 {
-    computeVar(data, _mean, flags, retainedVariance);
+    operator()(data, _mean, flags, retainedVariance);
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComponents)
@@ -2916,6 +2911,27 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     return *this;
 }
 
+void PCA::write(FileStorage& fs ) const
+{
+    CV_Assert( fs.isOpened() );
+
+    fs << "name" << "PCA";
+    fs << "vectors" << eigenvectors;
+    fs << "values" << eigenvalues;
+    fs << "mean" << mean;
+}
+
+void PCA::read(const FileNode& fs)
+{
+    CV_Assert( !fs.empty() );
+    String name = (String)fs["name"];
+    CV_Assert( name == "PCA" );
+
+    cv::read(fs["vectors"], eigenvectors);
+    cv::read(fs["values"], eigenvalues);
+    cv::read(fs["mean"], mean);
+}
+
 template <typename T>
 int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
 {
@@ -2946,7 +2962,7 @@ int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
     return L;
 }
 
-PCA& PCA::computeVar(InputArray _data, InputArray __mean, int flags, double retainedVariance)
+PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double retainedVariance)
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
     int covar_flags = CV_COVAR_SCALE;
@@ -3104,11 +3120,11 @@ void cv::PCACompute(InputArray data, InputOutputArray mean,
     pca.eigenvectors.copyTo(eigenvectors);
 }
 
-void cv::PCAComputeVar(InputArray data, InputOutputArray mean,
+void cv::PCACompute(InputArray data, InputOutputArray mean,
                     OutputArray eigenvectors, double retainedVariance)
 {
     PCA pca;
-    pca.computeVar(data, mean, 0, retainedVariance);
+    pca(data, mean, 0, retainedVariance);
     pca.mean.copyTo(mean);
     pca.eigenvectors.copyTo(eigenvectors);
 }

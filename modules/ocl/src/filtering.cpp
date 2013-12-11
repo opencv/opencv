@@ -111,7 +111,7 @@ public:
 
 Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D)
 {
-    return Ptr<FilterEngine_GPU>(new Filter2DEngine_GPU(filter2D));
+    return makePtr<Filter2DEngine_GPU>(filter2D);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -183,7 +183,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    string kernelName;
+    String kernelName;
 #ifdef ANDROID
     size_t localThreads[3] = {16, 8, 1};
 #else
@@ -222,27 +222,28 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         sprintf(s, "-D VAL=FLT_MAX -D GENTYPE=float4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unsupported type");
+        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
     }
 
     char compile_option[128];
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D ERODE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
-        s, rectKernel?"-D RECTKERNEL":"");
+        rectKernel?"-D RECTKERNEL":"",
+        s);
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstOffset));
 
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
@@ -267,7 +268,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    string kernelName;
+    String kernelName;
 #ifdef ANDROID
     size_t localThreads[3] = {16, 10, 1};
 #else
@@ -307,26 +308,26 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         sprintf(s, "-D VAL=-FLT_MAX -D GENTYPE=float4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unsupported type");
+        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
     }
 
     char compile_option[128];
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
         s, rectKernel?"-D RECTKERNEL":"");
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstOffset));
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
@@ -391,7 +392,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, cons
 
     Ptr<BaseFilter_GPU> filter2D = getMorphologyFilter_GPU(op, type, kernel, ksize, anchor);
 
-    return Ptr<FilterEngine_GPU>(new MorphologyFilterEngine_GPU(filter2D, iterations));
+    return makePtr<MorphologyFilterEngine_GPU>(filter2D, iterations);
 }
 
 namespace
@@ -400,7 +401,7 @@ void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point a
 {
     if ((borderType != cv::BORDER_CONSTANT) || (borderValue != morphologyDefaultBorderValue()))
     {
-        CV_Error(CV_StsBadArg, "unsupported border type");
+        CV_Error(Error::StsBadArg, "unsupported border type");
     }
 
     Mat kernel;
@@ -432,7 +433,8 @@ void morphOp(int op, const oclMat &src, oclMat &dst, const Mat &_kernel, Point a
     else
         kernel = _kernel;
 
-    Ptr<MorphologyFilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations);
+    Ptr<MorphologyFilterEngine_GPU> f = createMorphologyFilter_GPU(op, src.type(), kernel, anchor, iterations)
+            .staticCast<MorphologyFilterEngine_GPU>();
 
     f->apply(src, dst);
 }
@@ -476,27 +478,27 @@ void cv::ocl::morphologyEx(const oclMat &src, oclMat &dst, int op, const Mat &ke
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_CLOSE:
+    case MORPH_CLOSE:
         dilate(src, temp, kernel, anchor, iterations, borderType, borderValue);
         erode(temp, dst, kernel, anchor, iterations, borderType, borderValue);
         break;
-    case CV_MOP_GRADIENT:
+    case MORPH_GRADIENT:
         erode(src, temp, kernel, anchor, iterations, borderType, borderValue);
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         subtract(dst, temp, dst);
         break;
-    case CV_MOP_TOPHAT:
+    case MORPH_TOPHAT:
         erode(src, dst, kernel, anchor, iterations, borderType, borderValue);
         dilate(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(src, temp, dst);
         break;
-    case CV_MOP_BLACKHAT:
+    case MORPH_BLACKHAT:
         dilate(src, dst, kernel, anchor, iterations, borderType, borderValue);
         erode(dst, temp, kernel, anchor, iterations, borderType, borderValue);
         subtract(temp, src, dst);
         break;
     default:
-        CV_Error(CV_StsBadArg, "unknown morphological operation");
+        CV_Error(Error::StsBadArg, "unknown morphological operation");
     }
 }
 
@@ -604,11 +606,11 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const Mat &kernel,
 
         bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
 
-        vector<pair<size_t , const void *> > args;
+        std::vector<std::pair<size_t , const void *> > args;
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
         cl_uint stepBytes = src.step;
-        args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
+        args.push_back( std::make_pair( sizeof(cl_uint), (void *)&stepBytes));
         int offsetXBytes = src.offset % src.step;
         int offsetX = offsetXBytes / src.elemSize();
         CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
@@ -621,11 +623,11 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const Mat &kernel,
             rect[2] = src.wholecols;
             rect[3] = src.wholerows;
         }
-        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
+        args.push_back( std::make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
         cl_uint _stepBytes = dst.step;
-        args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
+        args.push_back( std::make_pair( sizeof(cl_uint), (void *)&_stepBytes));
         int _offsetXBytes = dst.offset % dst.step;
         int _offsetX = _offsetXBytes / dst.elemSize();
         CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
@@ -633,19 +635,19 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const Mat &kernel,
         int _endX = (_offsetX + dst.cols);
         int _endY = (_offsetY + dst.rows);
         cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
-        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
+        args.push_back( std::make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
 
         float borderValue[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
         double borderValueDouble[4] = {0, 0, 0, 0}; // DON'T move into 'if' body
         if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
         {
             if (useDouble)
-                args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
+                args.push_back( std::make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
             else
-                args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
+                args.push_back( std::make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
         }
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&oclKernelParameter.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&oclKernelParameter.data));
 
         const char* btype = NULL;
 
@@ -785,7 +787,7 @@ public:
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
         const Ptr<BaseColumnFilter_GPU> &columnFilter)
 {
-    return Ptr<FilterEngine_GPU>(new SeparableFilterEngine_GPU(rowFilter, columnFilter));
+    return makePtr<SeparableFilterEngine_GPU>(rowFilter, columnFilter);
 }
 
 static void GPUFilterBox(const oclMat &src, oclMat &dst,
@@ -812,11 +814,11 @@ static void GPUFilterBox(const oclMat &src, oclMat &dst,
 
         bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
 
-        vector<pair<size_t , const void *> > args;
+        std::vector<std::pair<size_t , const void *> > args;
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
         cl_uint stepBytes = src.step;
-        args.push_back( make_pair( sizeof(cl_uint), (void *)&stepBytes));
+        args.push_back( std::make_pair( sizeof(cl_uint), (void *)&stepBytes));
         int offsetXBytes = src.offset % src.step;
         int offsetX = offsetXBytes / src.elemSize();
         CV_Assert((int)(offsetX * src.elemSize()) == offsetXBytes);
@@ -829,11 +831,11 @@ static void GPUFilterBox(const oclMat &src, oclMat &dst,
             rect[2] = src.wholecols;
             rect[3] = src.wholerows;
         }
-        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
+        args.push_back( std::make_pair( sizeof(cl_int)*4, (void *)&rect[0]));
 
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
+        args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
         cl_uint _stepBytes = dst.step;
-        args.push_back( make_pair( sizeof(cl_uint), (void *)&_stepBytes));
+        args.push_back( std::make_pair( sizeof(cl_uint), (void *)&_stepBytes));
         int _offsetXBytes = dst.offset % dst.step;
         int _offsetX = _offsetXBytes / dst.elemSize();
         CV_Assert((int)(_offsetX * dst.elemSize()) == _offsetXBytes);
@@ -841,7 +843,7 @@ static void GPUFilterBox(const oclMat &src, oclMat &dst,
         int _endX = (_offsetX + dst.cols);
         int _endY = (_offsetY + dst.rows);
         cl_int _rect[4] = {_offsetX, _offsetY, _endX, _endY};
-        args.push_back( make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
+        args.push_back( std::make_pair( sizeof(cl_int)*4, (void *)&_rect[0]));
 
         bool useDouble = src.depth() == CV_64F;
 
@@ -850,16 +852,16 @@ static void GPUFilterBox(const oclMat &src, oclMat &dst,
         if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
         {
             if (useDouble)
-                args.push_back( make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
+                args.push_back( std::make_pair( sizeof(double) * src.oclchannels(), (void *)&borderValue[0]));
             else
-                args.push_back( make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
+                args.push_back( std::make_pair( sizeof(float) * src.oclchannels(), (void *)&borderValueDouble[0]));
         }
 
         double alphaDouble = alpha; // DON'T move into 'if' body
         if (useDouble)
-            args.push_back( make_pair( sizeof(double), (void *)&alphaDouble));
+            args.push_back( std::make_pair( sizeof(double), (void *)&alphaDouble));
         else
-            args.push_back( make_pair( sizeof(float), (void *)&alpha));
+            args.push_back( std::make_pair( sizeof(float), (void *)&alpha));
 
         const char* btype = NULL;
 
@@ -1040,19 +1042,19 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     int dst_pix_per_row = dst.step / dst.elemSize();
     int ridusy = (dst.rows - src.rows) >> 1;
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&ridusy));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&ridusy));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
     openCLExecuteKernel(src.clCxt, &filter_sep_row, "row_filter", globalThreads, localThreads,
                         args, channels, src.depth(), buildOptions.c_str());
@@ -1080,8 +1082,8 @@ Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufTyp
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, mat_kernel,
-                                  gpuFilter1D_callers[CV_MAT_DEPTH(srcType)], bordertype));
+    return makePtr<GpuLinearRowFilter>(ksize, anchor, mat_kernel,
+        gpuFilter1D_callers[CV_MAT_DEPTH(srcType)], bordertype);
 }
 
 namespace
@@ -1113,7 +1115,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
 #else
     size_t localThreads[3] = {16, 16, 1};
 #endif
-    string kernelName = "col_filter";
+    String kernelName = "col_filter";
 
     char btype[30];
 
@@ -1203,17 +1205,17 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     dst_pix_per_row = dst.step / dst.elemSize();
     dst_offset_in_pixel = dst.offset / dst.elemSize();
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
     openCLExecuteKernel(clCxt, &filter_sep_col, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
@@ -1236,8 +1238,8 @@ Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int /*bufType*/, in
     int ksize = temp.cols;
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, mat_kernel,
-                                     gpuFilter1D_callers[CV_MAT_DEPTH(dstType)], bordertype));
+    return makePtr<GpuLinearColumnFilter>(ksize, anchor, mat_kernel,
+        gpuFilter1D_callers[CV_MAT_DEPTH(dstType)], bordertype);
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int dstType,
@@ -1265,7 +1267,7 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
             if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(Error::StsBadArg, "unsupported border type");
             }
         }
     }
@@ -1332,7 +1334,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
 
     if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.type() == CV_64F)
     {
-        CV_Error(CV_OpenCLDoubleNotSupported, "Selected device doesn't support double");
+        CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
         return;
     }
 
@@ -1410,7 +1412,7 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
             if ((bordertype != cv::BORDER_CONSTANT) &&
                     (bordertype != cv::BORDER_REPLICATE))
             {
-                CV_Error(CV_StsBadArg, "unsupported border type");
+                CV_Error(Error::StsBadArg, "unsupported border type");
             }
         }
     }
@@ -1483,7 +1485,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
         sprintf(btype, "BORDER_REFLECT_101");
         break;
     default:
-        CV_Error(CV_StsBadArg, "This border type is not supported");
+        CV_Error(Error::StsBadArg, "This border type is not supported");
         break;
     }
 
@@ -1514,7 +1516,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
         static_cast<int>(EXTRA), static_cast<float>(maxSigmaColor*maxSigmaColor), static_cast<int>(ABF_GAUSSIAN_ocl),
         static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
 
-    std::vector<pair<size_t , const void *> > args;
+    std::vector<std::pair<size_t , const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
     args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
     args.push_back(std::make_pair(sizeof(cl_float), (void *)&alpha));

@@ -73,9 +73,9 @@ PERF_TEST(StereoMatchBMFixture, StereoMatchBM)
     }
     else if (RUN_PLAIN_IMPL)
     {
-        StereoBM bm(0, n_disp, winSize);
+        Ptr<StereoBM> bm = createStereoBM(n_disp, winSize);
 
-        TEST_CYCLE() bm(left_image, right_image, disp);
+        TEST_CYCLE() bm->compute(left_image, right_image, disp);
     }
     else
         OCL_PERF_ELSE

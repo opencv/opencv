@@ -70,7 +70,7 @@ static const char * impls[] =
 
 int main(int argc, char ** argv)
 {
-    ::perf::TestBase::setPerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
+    ::perf::TestBase::setModulePerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
 
     CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, dumpOpenCLDevice())
 }

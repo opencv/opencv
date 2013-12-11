@@ -2,6 +2,7 @@
 #include <vector>
 #include <iomanip>
 
+#include "opencv2/core/utility.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/video/video.hpp"
@@ -88,34 +89,34 @@ static void drawArrows(Mat& frame, const vector<Point2f>& prevPts, const vector<
 int main(int argc, const char* argv[])
 {
     const char* keys =
-        "{ h   | help     | false           | print help message }"
-        "{ l   | left     |                 | specify left image }"
-        "{ r   | right    |                 | specify right image }"
-        "{ c   | camera   | 0               | specify camera id }"
-        "{ s   | use_cpu  | false           | use cpu or gpu to process the image }"
-        "{ v   | video    |                 | use video as input }"
-        "{ o   | output   | pyrlk_output.jpg| specify output save path when input is images }"
-        "{ p   | points   | 1000            | specify points count [GoodFeatureToTrack] }"
-        "{ m   | min_dist | 0               | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ help h           | false           | print help message }"
+        "{ left l           |                 | specify left image }"
+        "{ right r          |                 | specify right image }"
+        "{ camera c         | 0               | enable camera capturing }"
+        "{ use_cpu s        | false           | use cpu or gpu to process the image }"
+        "{ video v          |                 | use video as input }"
+        "{ output o         | pyrlk_output.jpg| specify output save path when input is images }"
+        "{ points           | 1000            | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist         | 0               | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
     bool defaultPicturesFail = false;
-    string fname0 = cmd.get<string>("l");
-    string fname1 = cmd.get<string>("r");
-    string vdofile = cmd.get<string>("v");
-    string outfile = cmd.get<string>("o");
-    int points = cmd.get<int>("p");
-    double minDist = cmd.get<double>("m");
-    bool useCPU = cmd.get<bool>("s");
+    string fname0 = cmd.get<string>("left");
+    string fname1 = cmd.get<string>("right");
+    string vdofile = cmd.get<string>("video");
+    string outfile = cmd.get<string>("output");
+    int points = cmd.get<int>("points");
+    double minDist = cmd.get<double>("min_dist");
+    bool useCPU = cmd.has("s");
     int inputName = cmd.get<int>("c");
 
     oclMat d_nextPts, d_status;
@@ -132,18 +133,18 @@ int main(int argc, const char* argv[])
 
     if (frame0.empty() || frame1.empty())
     {
-        CvCapture* capture = 0;
+        VideoCapture capture;
         Mat frame, frameCopy;
         Mat frame0Gray, frame1Gray;
         Mat ptr0, ptr1;
 
         if(vdofile.empty())
-            capture = cvCaptureFromCAM( inputName );
+            capture.open( inputName );
         else
-            capture = cvCreateFileCapture(vdofile.c_str());
+            capture.open(vdofile.c_str());
 
         int c = inputName ;
-        if(!capture)
+        if(!capture.isOpened())
         {
             if(vdofile.empty())
                 cout << "Capture from CAM " << c << " didn't work" << endl;
@@ -157,8 +158,7 @@ int main(int argc, const char* argv[])
         cout << "In capture ..." << endl;
         for(int i = 0;; i++)
         {
-            frame = cvQueryFrame( capture );
-            if( frame.empty() )
+            if( !capture.read(frame) )
                 break;
 
             if (i == 0)
@@ -214,7 +214,7 @@ int main(int argc, const char* argv[])
                 break;
         }
 
-        cvReleaseCapture( &capture );
+        capture.release();
     }
     else
     {

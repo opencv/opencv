@@ -144,7 +144,7 @@ By default the following constructor is used:
 
 .. code-block:: cpp
 
-    CvGBTreesParams(CvGBTrees::SQUARED_LOSS, 200, 0.8f, 0.01f, 3, false)
+    CvGBTreesParams(CvGBTrees::SQUARED_LOSS, 200, 0.01f, 0.8f, 3, false)
         : CvDTreeParams( 3, 10, 0, false, 10, 0, false, false, 0 )
 
 CvGBTrees

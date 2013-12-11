@@ -6,10 +6,10 @@
  */
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/highgui/highgui_c.h"
 #include "opencv2/legacy/legacy.hpp"
 #include "opencv2/legacy/compat.hpp"
 
@@ -231,17 +231,17 @@ int main(int argc, char** argv)
     cvNamedWindow("Object", 1);
     cvNamedWindow("Object Correspond", 1);
 
-    static CvScalar colors[] =
+    static cv::Scalar colors[] =
     {
-        {{0,0,255}},
-        {{0,128,255}},
-        {{0,255,255}},
-        {{0,255,0}},
-        {{255,128,0}},
-        {{255,255,0}},
-        {{255,0,0}},
-        {{255,0,255}},
-        {{255,255,255}}
+        cv::Scalar(0,0,255),
+        cv::Scalar(0,128,255),
+        cv::Scalar(0,255,255),
+        cv::Scalar(0,255,0),
+        cv::Scalar(255,128,0),
+        cv::Scalar(255,255,0),
+        cv::Scalar(255,0,0),
+        cv::Scalar(255,0,255),
+        cv::Scalar(255,255,255)
     };
 
     IplImage* object_color = cvCreateImage(cvGetSize(object), 8, 3);
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
 
     printf( "Extraction time = %gms\n", tt/(cvGetTickFrequency()*1000.));
 
-    CvPoint src_corners[4] = {{0,0}, {object->width,0}, {object->width, object->height}, {0, object->height}};
+    CvPoint src_corners[4] = {CvPoint(0,0), CvPoint(object->width,0), CvPoint(object->width, object->height), CvPoint(0, object->height)};
     CvPoint dst_corners[4];
     IplImage* correspond = cvCreateImage( cvSize(image->width, object->height+image->height), 8, 1 );
     cvSetImageROI( correspond, cvRect( 0, 0, object->width, object->height ) );

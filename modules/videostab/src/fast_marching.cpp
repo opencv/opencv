@@ -42,8 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/videostab/fast_marching.hpp"
-
-using namespace std;
+#include "opencv2/videostab/ring_buffer.hpp"
 
 namespace cv
 {
@@ -59,7 +58,7 @@ float FastMarchingMethod::solve(int x1, int y1, int x2, int y2) const
         if (y2 >=0 && y2 < flag_.rows && x2 >= 0 && x2 < flag_.cols && flag_(y2,x2) == KNOWN)
         {
             float t2 = dist_(y2,x2);
-            float r = sqrt(2 - sqr(t1 - t2));
+            float r = std::sqrt(2 - sqr(t1 - t2));
             float s = (t1 + t2 - r) / 2;
 
             if (s >= t1 && s >= t2)

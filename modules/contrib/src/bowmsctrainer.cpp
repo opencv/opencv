@@ -90,7 +90,7 @@ Mat BOWMSCTrainer::cluster(const Mat& _descriptors) const {
 
     Mat icovar = Mat::eye(_descriptors.cols,_descriptors.cols,_descriptors.type());
 
-    vector<Mat> initialCentres;
+    std::vector<Mat> initialCentres;
     initialCentres.push_back(_descriptors.row(0));
     for (int i = 1; i < _descriptors.rows; i++) {
         double minDist = DBL_MAX;

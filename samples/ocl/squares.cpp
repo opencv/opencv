@@ -2,7 +2,8 @@
 // It loads several images sequentially and tries to find squares in
 // each image
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
@@ -110,7 +111,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
 
@@ -197,7 +198,7 @@ static void findSquares_ocl( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
             // test each contour
@@ -244,7 +245,7 @@ static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
-        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA);
+        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, LINE_AA);
     }
 }
 
@@ -288,12 +289,12 @@ int main(int argc, char** argv)
     {
         cout << "Usage : squares [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
     int iterations = 10;
-    namedWindow( wndname, CV_WINDOW_AUTOSIZE );
+    namedWindow( wndname, WINDOW_AUTOSIZE );
     vector<vector<Point> > squares_cpu, squares_ocl;
 
     Mat image = imread(inputName, 1);
@@ -334,7 +335,7 @@ int main(int argc, char** argv)
     Mat result = drawSquaresBoth(image, squares_cpu, squares_ocl);
     imshow(wndname, result);
     imwrite(outfile, result);
-    cvWaitKey(0);
+    waitKey(0);
 
     return EXIT_SUCCESS;
 }

@@ -87,10 +87,41 @@
 
 #ifdef HAVE_WINRT
 #include <wrl/client.h>
+#ifndef __cplusplus_winrt
+#include <windows.storage.h>
+#pragma comment(lib, "runtimeobject.lib")
+#endif
 
 std::wstring GetTempPathWinRT()
 {
+#ifdef __cplusplus_winrt
     return std::wstring(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path->Data());
+#else
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationDataStatics> appdataFactory;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationData> appdataRef;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageFolder> storagefolderRef;
+    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageItem> storageitemRef;
+    HSTRING str;
+    HSTRING_HEADER hstrHead;
+    std::wstring wstr;
+    if (FAILED(WindowsCreateStringReference(RuntimeClass_Windows_Storage_ApplicationData,
+                                            (UINT32)wcslen(RuntimeClass_Windows_Storage_ApplicationData), &hstrHead, &str)))
+        return wstr;
+    if (FAILED(RoGetActivationFactory(str, IID_PPV_ARGS(appdataFactory.ReleaseAndGetAddressOf()))))
+        return wstr;
+    if (FAILED(appdataFactory->get_Current(appdataRef.ReleaseAndGetAddressOf())))
+        return wstr;
+    if (FAILED(appdataRef->get_TemporaryFolder(storagefolderRef.ReleaseAndGetAddressOf())))
+        return wstr;
+    if (FAILED(storagefolderRef.As(&storageitemRef)))
+        return wstr;
+    str = NULL;
+    if (FAILED(storageitemRef->get_Path(&str)))
+        return wstr;
+    wstr = WindowsGetStringRawBuffer(str, NULL);
+    WindowsDeleteString(str);
+    return wstr;
+#endif
 }
 
 std::wstring GetTempFileNameWinRT(std::wstring prefix)
@@ -146,7 +177,7 @@ namespace cv
 
 Exception::Exception() { code = 0; line = 0; }
 
-Exception::Exception(int _code, const string& _err, const string& _func, const string& _file, int _line)
+Exception::Exception(int _code, const String& _err, const String& _func, const String& _file, int _line)
 : code(_code), err(_err), func(_func), file(_file), line(_line)
 {
     formatMessage();
@@ -373,24 +404,36 @@ int64 getCPUTickCount(void)
 
 #endif
 
-const std::string& getBuildInformation()
+const String& getBuildInformation()
 {
-    static std::string build_info =
+    static String build_info =
 #include "version_string.inc"
     ;
     return build_info;
 }
 
-string format( const char* fmt, ... )
+String format( const char* fmt, ... )
 {
-    char buf[1 << 16];
-    va_list args;
-    va_start( args, fmt );
-    vsprintf( buf, fmt, args );
-    return string(buf);
+    char buf[1024];
+
+    va_list va;
+    va_start(va, fmt);
+    int len = vsnprintf(buf, sizeof(buf), fmt, va);
+    va_end(va);
+
+    if (len >= (int)sizeof(buf))
+    {
+        String s(len, '\0');
+        va_start(va, fmt);
+        len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
+        va_end(va);
+        return s;
+    }
+
+    return String(buf, len);
 }
 
-string tempfile( const char* suffix )
+String tempfile( const char* suffix )
 {
 #ifdef HAVE_WINRT
     std::wstring temp_dir = L"";
@@ -399,8 +442,8 @@ string tempfile( const char* suffix )
         temp_dir = std::wstring(opencv_temp_dir);
 #else
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
+    String fname;
 #endif
-    string fname;
 
 #if defined WIN32 || defined _WIN32
 #ifdef HAVE_WINRT
@@ -432,7 +475,7 @@ string tempfile( const char* suffix )
         temp_dir = temp_dir2;
     }
     if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
-        return string();
+        return String();
 
     DeleteFileA(temp_file);
 
@@ -453,12 +496,12 @@ string tempfile( const char* suffix )
         fname = temp_dir;
         char ech = fname[fname.size() - 1];
         if(ech != '/' && ech != '\\')
-            fname += "/";
-        fname += "__opencv_temp.XXXXXX";
+            fname = fname + "/";
+        fname = fname + "__opencv_temp.XXXXXX";
     }
 
     const int fd = mkstemp((char*)fname.c_str());
-    if (fd == -1) return string();
+    if (fd == -1) return String();
 
     close(fd);
     remove(fname.c_str());
@@ -512,6 +555,11 @@ void error( const Exception& exc )
     }
 
     throw exc;
+}
+
+void error(int _code, const String& _err, const char* _func, const char* _file, int _line)
+{
+    error(cv::Exception(_code, _err, _func, _file, _line));
 }
 
 CvErrorCallback
@@ -617,7 +665,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsNotImplemented :      return "The function/feature is not implemented";
     case CV_StsBadMemBlock :         return "Memory block has been corrupted";
     case CV_StsAssert :              return "Assertion failed";
-    case CV_GpuNotSupported :        return "No GPU support";
+    case CV_GpuNotSupported :        return "No CUDA support";
     case CV_GpuApiCallError :        return "Gpu API call";
     case CV_OpenGlNotSupported :     return "No OpenGL support";
     case CV_OpenGlApiCallError :     return "OpenGL API call";
@@ -686,125 +734,6 @@ cvErrorFromIppStatus( int status )
     }
 }
 
-static CvModuleInfo cxcore_info = { 0, "cxcore", CV_VERSION, 0 };
-
-CvModuleInfo* CvModule::first = 0, *CvModule::last = 0;
-
-CvModule::CvModule( CvModuleInfo* _info )
-{
-    cvRegisterModule( _info );
-    info = last;
-}
-
-CvModule::~CvModule(void)
-{
-    if( info )
-    {
-        CvModuleInfo* p = first;
-        for( ; p != 0 && p->next != info; p = p->next )
-            ;
-
-        if( p )
-            p->next = info->next;
-
-        if( first == info )
-            first = info->next;
-
-        if( last == info )
-            last = p;
-
-        free( info );
-        info = 0;
-    }
-}
-
-CV_IMPL int
-cvRegisterModule( const CvModuleInfo* module )
-{
-    CV_Assert( module != 0 && module->name != 0 && module->version != 0 );
-
-    size_t name_len = strlen(module->name);
-    size_t version_len = strlen(module->version);
-
-    CvModuleInfo* module_copy = (CvModuleInfo*)malloc( sizeof(*module_copy) +
-                                name_len + 1 + version_len + 1 );
-
-    *module_copy = *module;
-    module_copy->name = (char*)(module_copy + 1);
-    module_copy->version = (char*)(module_copy + 1) + name_len + 1;
-
-    memcpy( (void*)module_copy->name, module->name, name_len + 1 );
-    memcpy( (void*)module_copy->version, module->version, version_len + 1 );
-    module_copy->next = 0;
-
-    if( CvModule::first == 0 )
-        CvModule::first = module_copy;
-    else
-        CvModule::last->next = module_copy;
-
-    CvModule::last = module_copy;
-
-    return 0;
-}
-
-CvModule cxcore_module( &cxcore_info );
-
-CV_IMPL void
-cvGetModuleInfo( const char* name, const char **version, const char **plugin_list )
-{
-    static char joint_verinfo[1024]   = "";
-    static char plugin_list_buf[1024] = "";
-
-    if( version )
-        *version = 0;
-
-    if( plugin_list )
-        *plugin_list = 0;
-
-    CvModuleInfo* module;
-
-    if( version )
-    {
-        if( name )
-        {
-            size_t i, name_len = strlen(name);
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                if( strlen(module->name) == name_len )
-                {
-                    for( i = 0; i < name_len; i++ )
-                    {
-                        int c0 = toupper(module->name[i]), c1 = toupper(name[i]);
-                        if( c0 != c1 )
-                            break;
-                    }
-                    if( i == name_len )
-                        break;
-                }
-            }
-            if( !module )
-                CV_Error( CV_StsObjectNotFound, "The module is not found" );
-
-            *version = module->version;
-        }
-        else
-        {
-            char* ptr = joint_verinfo;
-
-            for( module = CvModule::first; module != 0; module = module->next )
-            {
-                sprintf( ptr, "%s: %s%s", module->name, module->version, module->next ? ", " : "" );
-                ptr += strlen(ptr);
-            }
-
-            *version = joint_verinfo;
-        }
-    }
-
-    if( plugin_list )
-        *plugin_list = plugin_list_buf;
-}
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 #ifdef HAVE_WINRT
@@ -818,7 +747,7 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
     if( fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH )
     {
         cv::deleteThreadAllocData();
-        cv::deleteThreadRNGData();
+        cv::deleteThreadData();
     }
     return TRUE;
 }
@@ -850,61 +779,27 @@ struct Mutex::Impl
     int refcount;
 };
 
-#ifndef __GNUC__
-int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
-
-#elif defined __APPLE__
-
-#include <libkern/OSAtomic.h>
-
-struct Mutex::Impl
-{
-    Impl() { sl = OS_SPINLOCK_INIT; refcount = 1; }
-    ~Impl() {}
-
-    void lock() { OSSpinLockLock(&sl); }
-    bool trylock() { return OSSpinLockTry(&sl); }
-    void unlock() { OSSpinLockUnlock(&sl); }
-
-    OSSpinLock sl;
-    int refcount;
-};
-
-#elif defined __linux__ && !defined ANDROID
-
-struct Mutex::Impl
-{
-    Impl() { pthread_spin_init(&sl, 0); refcount = 1; }
-    ~Impl() { pthread_spin_destroy(&sl); }
-
-    void lock() { pthread_spin_lock(&sl); }
-    bool trylock() { return pthread_spin_trylock(&sl) == 0; }
-    void unlock() { pthread_spin_unlock(&sl); }
-
-    pthread_spinlock_t sl;
-    int refcount;
-};
-
 #else
 
 struct Mutex::Impl
 {
-    Impl() { pthread_mutex_init(&sl, 0); refcount = 1; }
-    ~Impl() { pthread_mutex_destroy(&sl); }
+    Impl()
+    {
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&mt, &attr);
+        pthread_mutexattr_destroy(&attr);
 
-    void lock() { pthread_mutex_lock(&sl); }
-    bool trylock() { return pthread_mutex_trylock(&sl) == 0; }
-    void unlock() { pthread_mutex_unlock(&sl); }
+        refcount = 1;
+    }
+    ~Impl() { pthread_mutex_destroy(&mt); }
 
-    pthread_mutex_t sl;
+    void lock() { pthread_mutex_lock(&mt); }
+    bool trylock() { return pthread_mutex_trylock(&mt) == 0; }
+    void unlock() { pthread_mutex_unlock(&mt); }
+
+    pthread_mutex_t mt;
     int refcount;
 };
 
@@ -941,6 +836,94 @@ void Mutex::lock() { impl->lock(); }
 void Mutex::unlock() { impl->unlock(); }
 bool Mutex::trylock() { return impl->trylock(); }
 
+}
+
+//////////////////////////////// thread-local storage ////////////////////////////////
+
+namespace cv
+{
+
+TLSData::TLSData()
+{
+    device = 0;
+    useOpenCL = -1;
+}
+
+#ifdef WIN32
+
+#ifdef HAVE_WINRT
+    // using C++11 thread attribute for local thread data
+    static __declspec( thread ) TLSData* g_tlsdata = NULL;
+
+    static void deleteThreadRNGData()
+    {
+        if (g_tlsdata)
+            delete g_tlsdata;
+    }
+
+    TLSData* TLSData::get()
+    {
+        if (!g_tlsdata)
+        {
+            g_tlsdata = new TLSData;
+        }
+        return g_tlsdata;
+    }
+#else
+#ifdef WINCE
+#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#endif
+    static DWORD tlsKey = TLS_OUT_OF_INDEXES;
+
+    void deleteThreadData()
+    {
+        if( tlsKey != TLS_OUT_OF_INDEXES )
+            delete (TLSData*)TlsGetValue( tlsKey );
+    }
+
+    TLSData* TLSData::get()
+    {
+        if( tlsKey == TLS_OUT_OF_INDEXES )
+        {
+            tlsKey = TlsAlloc();
+            CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
+        }
+        TLSData* d = (TLSData*)TlsGetValue( tlsKey );
+        if( !d )
+        {
+            d = new TLSData;
+            TlsSetValue( tlsKey, d );
+        }
+        return d;
+    }
+#endif //HAVE_WINRT
+#else
+    static pthread_key_t tlsKey = 0;
+    static pthread_once_t tlsKeyOnce = PTHREAD_ONCE_INIT;
+
+    static void deleteTLSData(void* data)
+    {
+        delete (TLSData*)data;
+    }
+
+    static void makeKey()
+    {
+        int errcode = pthread_key_create(&tlsKey, deleteTLSData);
+        CV_Assert(errcode == 0);
+    }
+
+    TLSData* TLSData::get()
+    {
+        pthread_once(&tlsKeyOnce, makeKey);
+        TLSData* d = (TLSData*)pthread_getspecific(tlsKey);
+        if( !d )
+        {
+            d = new TLSData;
+            pthread_setspecific(tlsKey, d);
+        }
+        return d;
+    }
+#endif
 }
 
 /* End of file. */

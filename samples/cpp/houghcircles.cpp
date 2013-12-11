@@ -30,15 +30,15 @@ int main(int argc, char** argv)
     cvtColor(img, cimg, COLOR_GRAY2BGR);
 
     vector<Vec3f> circles;
-    HoughCircles(img, circles, CV_HOUGH_GRADIENT, 1, 10,
+    HoughCircles(img, circles, HOUGH_GRADIENT, 1, 10,
                  100, 30, 1, 30 // change the last two parameters
                                 // (min_radius & max_radius) to detect larger circles
                  );
     for( size_t i = 0; i < circles.size(); i++ )
     {
         Vec3i c = circles[i];
-        circle( cimg, Point(c[0], c[1]), c[2], Scalar(0,0,255), 3, CV_AA);
-        circle( cimg, Point(c[0], c[1]), 2, Scalar(0,255,0), 3, CV_AA);
+        circle( cimg, Point(c[0], c[1]), c[2], Scalar(0,0,255), 3, LINE_AA);
+        circle( cimg, Point(c[0], c[1]), 2, Scalar(0,255,0), 3, LINE_AA);
     }
 
     imshow("detected circles", cimg);

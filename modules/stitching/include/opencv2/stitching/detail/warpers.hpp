@@ -43,12 +43,10 @@
 #ifndef __OPENCV_STITCHING_WARPERS_HPP__
 #define __OPENCV_STITCHING_WARPERS_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
-#ifdef HAVE_OPENCV_GPU
-# include "opencv2/gpu/gpu.hpp"
-#endif
 
 namespace cv {
 namespace detail {
@@ -70,8 +68,8 @@ public:
 
     virtual Rect warpRoi(Size src_size, const Mat &K, const Mat &R) = 0;
 
-    float getScale() const { return 1.f; }
-    void setScale(float) {}
+    virtual float getScale() const { return 1.f; }
+    virtual void setScale(float) {}
 };
 
 
@@ -133,8 +131,6 @@ class CV_EXPORTS PlaneWarper : public RotationWarperBase<PlaneProjector>
 {
 public:
     PlaneWarper(float scale = 1.f) { projector_.scale = scale; }
-
-    void setScale(float scale) { projector_.scale = scale; }
 
     Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 
@@ -331,7 +327,7 @@ public:
 };
 
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDAWARPING
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
@@ -371,18 +367,18 @@ public:
         return result;
     }
 
-    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap);
 
-    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, cuda::GpuMat &xmap, cuda::GpuMat &ymap);
 
-    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               gpu::GpuMat &dst);
+    Point warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               cuda::GpuMat &dst);
 
-    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-               gpu::GpuMat &dst);
+    Point warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+               cuda::GpuMat &dst);
 
 private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+    cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 
 
@@ -408,13 +404,13 @@ public:
         return result;
     }
 
-    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap);
 
-    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               gpu::GpuMat &dst);
+    Point warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               cuda::GpuMat &dst);
 
 private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+    cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 
 
@@ -440,13 +436,13 @@ public:
         return result;
     }
 
-    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, gpu::GpuMat &xmap, gpu::GpuMat &ymap);
+    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap);
 
-    Point warp(const gpu::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-               gpu::GpuMat &dst);
+    Point warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
+               cuda::GpuMat &dst);
 
 private:
-    gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+    cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 #endif
 

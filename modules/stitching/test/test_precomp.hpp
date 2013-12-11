@@ -11,9 +11,9 @@
 
 #include <iostream>
 #include <string>
-#include <opencv2/ts/ts.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/stitching/stitcher.hpp>
+#include <opencv2/ts.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/stitching.hpp>
 #include <opencv2/stitching/detail/matchers.hpp>
 #include <opencv2/stitching/detail/blenders.hpp>
 

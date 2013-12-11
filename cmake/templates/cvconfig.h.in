@@ -31,6 +31,9 @@
 /* AMD's OpenCL Fast Fourier Transform Library*/
 #cmakedefine HAVE_CLAMDFFT
 
+/* Clp support */
+#cmakedefine HAVE_CLP
+
 /* Cocoa API */
 #cmakedefine HAVE_COCOA
 
@@ -73,17 +76,11 @@
 /* GTK+ 2.0 Thread support */
 #cmakedefine HAVE_GTHREAD
 
-/* Windows Runtime support */
-#cmakedefine HAVE_WINRT
-
-/* Win32 UI */
-#cmakedefine HAVE_WIN32UI
-
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
-/* Apple ImageIO Framework */
-#cmakedefine HAVE_IMAGEIO
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine HAVE_INTTYPES_H 1
 
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
@@ -151,6 +148,9 @@
 
 /* Win32 UI */
 #cmakedefine HAVE_WIN32UI
+
+/* Windows Runtime support */
+#cmakedefine HAVE_WINRT
 
 /* XIMEA camera support */
 #cmakedefine HAVE_XIMEA

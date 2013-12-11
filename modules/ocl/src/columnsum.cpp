@@ -57,15 +57,15 @@ void cv::ocl::columnSum(const oclMat &src, oclMat &dst)
     int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
     int dst_step = dst.step / dst.elemSize(), dst_offset = dst.offset / dst.elemSize();
 
-    std::vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset));
 
     size_t globalThreads[3] = {dst.cols, 1, 1};
     size_t localThreads[3]  = {256, 1, 1};

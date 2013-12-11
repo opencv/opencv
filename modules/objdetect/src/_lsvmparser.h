@@ -1,5 +1,6 @@
 #ifndef LSVM_PARSER
 #define LSVM_PARSER
+#include "opencv2/objdetect/objdetect_c.h"
 
 #include "_lsvm_types.h"
 

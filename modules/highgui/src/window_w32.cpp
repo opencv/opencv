@@ -75,7 +75,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 #include <GL\gl.h>
 #endif
 
@@ -1102,8 +1102,7 @@ cvShowImage( const char* name, const CvArr* arr )
 #ifdef HAVE_OPENGL
     if (window->useGl)
     {
-        cv::Mat im(image);
-        cv::imshow(name, im);
+        cv::imshow(name, cv::cvarrToMat(image));
         return;
     }
 #endif

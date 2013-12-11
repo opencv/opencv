@@ -1,5 +1,5 @@
-#include "opencv2/legacy/legacy.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/legacy.hpp"
 
 using namespace cv;
 
@@ -45,7 +45,7 @@ int main( int /*argc*/, char** /*argv*/ )
     params.start_step         = CvEM::START_AUTO_STEP;
     params.term_crit.max_iter = 300;
     params.term_crit.epsilon  = 0.1;
-    params.term_crit.type     = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
+    params.term_crit.type     = TermCriteria::COUNT|TermCriteria::EPS;
 
     // cluster the data
     em_model.train( samples, Mat(), params, &labels );
@@ -76,7 +76,7 @@ int main( int /*argc*/, char** /*argv*/ )
             int response = cvRound(em_model.predict( sample ));
             Scalar c = colors[response];
 
-            circle( img, Point(j, i), 1, c*0.75, CV_FILLED );
+            circle( img, Point(j, i), 1, c*0.75, FILLED );
         }
     }
 
@@ -84,7 +84,7 @@ int main( int /*argc*/, char** /*argv*/ )
     for( i = 0; i < nsamples; i++ )
     {
         Point pt(cvRound(samples.at<float>(i, 0)), cvRound(samples.at<float>(i, 1)));
-        circle( img, pt, 1, colors[labels.at<int>(i)], CV_FILLED );
+        circle( img, pt, 1, colors[labels.at<int>(i)], FILLED );
     }
 
     imshow( "EM-clustering result", img );

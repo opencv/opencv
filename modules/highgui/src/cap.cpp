@@ -49,10 +49,10 @@
 namespace cv
 {
 
-template<> void Ptr<CvCapture>::delete_obj()
+template<> void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const
 { cvReleaseCapture(&obj); }
 
-template<> void Ptr<CvVideoWriter>::delete_obj()
+template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const
 { cvReleaseVideoWriter(&obj); }
 
 }
@@ -341,6 +341,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break; // CV_CAP_GIGANETIX
 #endif
+
         }
     }
 
@@ -473,7 +474,7 @@ namespace cv
 VideoCapture::VideoCapture()
 {}
 
-VideoCapture::VideoCapture(const string& filename)
+VideoCapture::VideoCapture(const String& filename)
 {
     open(filename);
 }
@@ -488,17 +489,17 @@ VideoCapture::~VideoCapture()
     cap.release();
 }
 
-bool VideoCapture::open(const string& filename)
+bool VideoCapture::open(const String& filename)
 {
     if (isOpened()) release();
-    cap = cvCreateFileCapture(filename.c_str());
+    cap.reset(cvCreateFileCapture(filename.c_str()));
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
     if (isOpened()) release();
-    cap = cvCreateCameraCapture(device);
+    cap.reset(cvCreateCameraCapture(device));
     return isOpened();
 }
 
@@ -514,7 +515,7 @@ bool VideoCapture::grab()
     return cvGrabFrame(cap) != 0;
 }
 
-bool VideoCapture::retrieve(Mat& image, int channel)
+bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     IplImage* _img = cvRetrieveFrame(cap, channel);
     if( !_img )
@@ -523,16 +524,16 @@ bool VideoCapture::retrieve(Mat& image, int channel)
         return false;
     }
     if(_img->origin == IPL_ORIGIN_TL)
-        Mat(_img).copyTo(image);
+        cv::cvarrToMat(_img).copyTo(image);
     else
     {
-        Mat temp(_img);
+        Mat temp = cv::cvarrToMat(_img);
         flip(temp, image, 0);
     }
     return true;
 }
 
-bool VideoCapture::read(Mat& image)
+bool VideoCapture::read(OutputArray image)
 {
     if(grab())
         retrieve(image);
@@ -542,6 +543,12 @@ bool VideoCapture::read(Mat& image)
 }
 
 VideoCapture& VideoCapture::operator >> (Mat& image)
+{
+    read(image);
+    return *this;
+}
+
+VideoCapture& VideoCapture::operator >> (UMat& image)
 {
     read(image);
     return *this;
@@ -560,9 +567,9 @@ double VideoCapture::get(int propId)
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    open(filename, fourcc, fps, frameSize, isColor);
+    open(filename, _fourcc, fps, frameSize, isColor);
 }
 
 void VideoWriter::release()
@@ -575,9 +582,9 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const string& filename, int fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    writer = cvCreateVideoWriter(filename.c_str(), fourcc, fps, frameSize, isColor);
+    writer.reset(cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor));
     return isOpened();
 }
 
@@ -596,6 +603,11 @@ VideoWriter& VideoWriter::operator << (const Mat& image)
 {
     write(image);
     return *this;
+}
+
+int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
 }

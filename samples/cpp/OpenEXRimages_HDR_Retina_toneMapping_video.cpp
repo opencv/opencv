@@ -14,7 +14,9 @@
 #include <stdio.h>
 #include <cstring>
 
-#include "opencv2/opencv.hpp"
+#include "opencv2/bioinspired.hpp" // retina based algorithms
+#include "opencv2/imgproc.hpp" // cvCvtcolor function
+#include "opencv2/highgui.hpp" // display
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 # define _CRT_SECURE_NO_WARNINGS
@@ -42,7 +44,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
     cv::Mat displayedCurveImage = cv::Mat::ones(200, curve.size().height, CV_8U);
 
     cv::Mat windowNormalizedCurve;
-    normalize(curve, windowNormalizedCurve, 0, 200, CV_MINMAX, CV_32F);
+    normalize(curve, windowNormalizedCurve, 0, 200, cv::NORM_MINMAX, CV_32F);
 
     displayedCurveImage = cv::Scalar::all(255); // set a white background
     int binW = cvRound((double)displayedCurveImage.cols/curve.size().height);
@@ -163,7 +165,7 @@ static void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, con
 
  }
 
- cv::Ptr<cv::Retina> retina;
+ cv::Ptr<cv::bioinspired::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -283,10 +285,10 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
           */
          if (useLogSampling)
                 {
-                     retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = cv::bioinspired::createRetina(inputImage.size(),true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = new cv::Retina(inputImage.size());
+             retina = cv::bioinspired::createRetina(inputImage.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         retina->write("RetinaDefaultParameters.xml");

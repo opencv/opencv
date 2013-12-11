@@ -16,6 +16,8 @@ The SIFT constructors.
 
 .. ocv:function:: SIFT::SIFT( int nfeatures=0, int nOctaveLayers=3, double contrastThreshold=0.04, double edgeThreshold=10, double sigma=1.6)
 
+.. ocv:pyfunction:: cv2.SIFT([, nfeatures[, nOctaveLayers[, contrastThreshold[, edgeThreshold[, sigma]]]]]) -> <SIFT object>
+
     :param nfeatures: The number of best features to retain. The features are ranked by their scores (measured in SIFT algorithm as the local contrast)
 
     :param nOctaveLayers: The number of layers in each octave. 3 is the value used in D. Lowe paper. The number of octaves is computed automatically from the image resolution.
@@ -33,6 +35,12 @@ Extract features and computes their descriptors using SIFT algorithm
 
 .. ocv:function:: void SIFT::operator()(InputArray img, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false)
 
+.. ocv:pyfunction:: cv2.SIFT.detect(image[, mask]) -> keypoints
+
+.. ocv:pyfunction:: cv2.SIFT.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+
+.. ocv:pyfunction:: cv2.SIFT.detectAndCompute(image, mask[, descriptors[, useProvidedKeypoints]]) -> keypoints, descriptors
+
     :param img: Input 8-bit grayscale image
 
     :param mask: Optional input mask that marks the regions where we should detect features.
@@ -43,6 +51,7 @@ Extract features and computes their descriptors using SIFT algorithm
 
     :param useProvidedKeypoints: Boolean flag. If it is true, the keypoint detector is not run. Instead, the provided vector of keypoints is used and the algorithm just computes their descriptors.
 
+.. note:: Python API provides three functions. First one finds keypoints only. Second function computes the descriptors based on the keypoints we provide. Third function detects the keypoints and computes their descriptors. If you want both keypoints and descriptors, directly use third function as ``kp, des = cv2.SIFT.detectAndCompute(image, None)``
 
 SURF
 ----
@@ -109,10 +118,10 @@ Detects keypoints and computes SURF descriptors for them.
 .. ocv:function:: void SURF::operator()(InputArray img, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false)
 
 .. ocv:pyfunction:: cv2.SURF.detect(image[, mask]) -> keypoints
+.. ocv:pyfunction:: cv2.SURF.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+.. ocv:pyfunction:: cv2.SURF.detectAndCompute(image, mask[, descriptors[, useProvidedKeypoints]]) -> keypoints, descriptors
 
 .. ocv:cfunction:: void cvExtractSURF( const CvArr* image, const CvArr* mask, CvSeq** keypoints, CvSeq** descriptors, CvMemStorage* storage, CvSURFParams params )
-
-.. ocv:pyoldfunction:: cv.ExtractSURF(image, mask, storage, params)-> (keypoints, descriptors)
 
     :param image: Input 8-bit grayscale image
 
@@ -133,13 +142,13 @@ The function is parallelized with the TBB library.
 If you are using the C version, make sure you call ``cv::initModule_nonfree()`` from ``nonfree/nonfree.hpp``.
 
 
-gpu::SURF_GPU
--------------
-.. ocv:class:: gpu::SURF_GPU
+cuda::SURF_CUDA
+---------------
+.. ocv:class:: cuda::SURF_CUDA
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
-    class SURF_GPU
+    class SURF_CUDA
     {
     public:
         enum KeypointLayout
@@ -155,9 +164,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
         };
 
         //! the default constructor
-        SURF_GPU();
+        SURF_CUDA();
         //! the full constructor taking all the necessary parameters
-        explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
+        explicit SURF_CUDA(double _hessianThreshold, int _nOctaves=4,
              int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f);
 
         //! returns the descriptor size in float's (64 or 128)
@@ -216,9 +225,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
     };
 
 
-The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
+The class ``SURF_CUDA`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
 
-The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
+The class ``SURF_CUDA`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
 
 * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i-th feature.
 * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i-th feature.
@@ -230,7 +239,7 @@ The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides 
 
 The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
-The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
+The class ``SURF_CUDA`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
 
 .. seealso:: :ocv:class:`SURF`
 

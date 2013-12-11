@@ -43,30 +43,28 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "cvconfig.h"
+#include "opencv2/nonfree.hpp"
+#include "opencv2/imgproc.hpp"
+
+#include "opencv2/core/utility.hpp"
+#include "opencv2/core/private.hpp"
+
+#include "opencv2/nonfree/cuda.hpp"
+#include "opencv2/core/private.cuda.hpp"
+
+#include "opencv2/core/ocl.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/nonfree/nonfree.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/core/internal.hpp"
-
-#if defined(HAVE_OPENCV_GPU)
-    #include "opencv2/nonfree/gpu.hpp"
-
-    #if defined(HAVE_CUDA)
-        #include "opencv2/gpu/stream_accessor.hpp"
-        #include "opencv2/gpu/device/common.hpp"
-
-        static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
-    #else
-        static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-    #endif
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
 #  include "opencv2/ocl/private/util.hpp"
 #endif
+
+#include "opencv2/core/private.hpp"
 
 #endif

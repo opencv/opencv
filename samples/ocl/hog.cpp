@@ -4,8 +4,9 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
-#include "opencv2/ocl/ocl.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/ocl.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -72,11 +73,11 @@ int main(int argc, char** argv)
         "{ l |larger_win| false          | use 64x128 window}"
         "{ o |  output  |                | specify output path when input is images}";
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage : hog [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
@@ -205,8 +206,8 @@ void App::run()
             workBegin();
 
             // Change format of the image
-            if (make_gray) cvtColor(frame, img_aux, CV_BGR2GRAY);
-            else if (use_gpu) cvtColor(frame, img_aux, CV_BGR2BGRA);
+            if (make_gray) cvtColor(frame, img_aux, COLOR_BGR2GRAY);
+            else if (use_gpu) cvtColor(frame, img_aux, COLOR_BGR2BGRA);
             else frame.copyTo(img_aux);
 
             // Resize image
@@ -233,7 +234,7 @@ void App::run()
                     // verify if GPU output same objects with CPU at 1st run
                     verify = true;
                     vector<Rect> ref_rst;
-                    cvtColor(img, img, CV_BGRA2BGR);
+                    cvtColor(img, img, COLOR_BGRA2BGR);
                     cpu_hog.detectMultiScale(img, ref_rst, hit_threshold, win_stride,
                                              Size(0, 0), scale, gr_threshold-2);
                     double accuracy = checkRectSimilarity(img.size(), ref_rst, found);
@@ -249,7 +250,7 @@ void App::run()
             for (size_t i = 0; i < found.size(); i++)
             {
                 Rect r = found[i];
-                rectangle(img_to_show, r.tl(), r.br(), CV_RGB(0, 255, 0), 3);
+                rectangle(img_to_show, r.tl(), r.br(), Scalar(0, 255, 0), 3);
             }
 
             if (use_gpu)
@@ -274,14 +275,14 @@ void App::run()
                 {
                     if (!video_writer.isOpened())
                     {
-                        video_writer.open(output, CV_FOURCC('x','v','i','d'), 24,
+                        video_writer.open(output, VideoWriter::fourcc('x','v','i','d'), 24,
                                           img_to_show.size(), true);
                         if (!video_writer.isOpened())
                             throw std::runtime_error("can't create video writer");
                     }
 
-                    if (make_gray) cvtColor(img_to_show, img, CV_GRAY2BGR);
-                    else cvtColor(img_to_show, img, CV_BGRA2BGR);
+                    if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
+                    else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
                     video_writer << img;
                 }

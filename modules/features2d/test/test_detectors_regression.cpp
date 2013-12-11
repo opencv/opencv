@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -230,7 +230,7 @@ void CV_FeatureDetectorTest::regressionTest()
 
 void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
-    if( fdetector.empty() )
+    if( !fdetector )
     {
         ts->printf( cvtest::TS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );

@@ -19,7 +19,7 @@
             </intent-filter>
         </activity>
     </application>
-    
+
     <supports-screens android:resizeable="true"
                       android:smallScreens="true"
                       android:normalScreens="true"

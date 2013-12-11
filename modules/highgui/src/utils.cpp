@@ -641,13 +641,13 @@ cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
         uchar *s = src->data.ptr, *d = dst->data.ptr;
         int s_step = src->step, d_step = dst->step;
         int code = src_cn*10 + dst_cn;
-        CvSize size = { src->cols, src->rows };
+        CvSize size(src->cols, src->rows);
 
         if( CV_IS_MAT_CONT(src->type & dst->type) )
         {
             size.width *= size.height;
             size.height = 1;
-            s_step = d_step = CV_STUB_STEP;
+            s_step = d_step = /*CV_STUB_STEP*/ (1 << 30);
         }
 
         switch( code )

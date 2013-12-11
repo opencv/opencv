@@ -77,19 +77,19 @@ void cv::ocl::buildWarpPlaneMaps(Size /*src_size*/, Rect dst_roi, const Mat &K, 
     int xmap_step = xmap.step / xmap.elemSize(), xmap_offset = xmap.offset / xmap.elemSize();
     int ymap_step = ymap.step / ymap.elemSize(), ymap_offset = ymap.offset / ymap.elemSize();
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KRT_mat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_offset));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KRT_mat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
 #ifdef ANDROID
@@ -123,19 +123,19 @@ void cv::ocl::buildWarpCylindricalMaps(Size /*src_size*/, Rect dst_roi, const Ma
     int xmap_step = xmap.step / xmap.elemSize(), xmap_offset = xmap.offset / xmap.elemSize();
     int ymap_step = ymap.step / ymap.elemSize(), ymap_offset = ymap.offset / ymap.elemSize();
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_offset));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
 #ifdef ANDROID
@@ -169,19 +169,19 @@ void cv::ocl::buildWarpSphericalMaps(Size /*src_size*/, Rect dst_roi, const Mat 
     int xmap_step = xmap.step / xmap.elemSize(), xmap_offset = xmap.offset / xmap.elemSize();
     int ymap_step = ymap.step / ymap.elemSize(), ymap_offset = ymap.offset / ymap.elemSize();
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_u));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&tl_v));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_offset));
-    args.push_back( make_pair( sizeof(cl_float), (void *)&scale));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&KR_oclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_u));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&tl_v));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
+    args.push_back( std::make_pair( sizeof(cl_float), (void *)&scale));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
 #ifdef ANDROID
@@ -220,16 +220,16 @@ void cv::ocl::buildWarpAffineMaps(const Mat &M, bool inverse, Size dsize, oclMat
 
     oclMat coeffsOclMat(coeffsMat.reshape(1, 1));
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_offset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
 #ifdef ANDROID
@@ -268,16 +268,16 @@ void cv::ocl::buildWarpPerspectiveMaps(const Mat &M, bool inverse, Size dsize, o
     int xmap_step = xmap.step / xmap.elemSize(), xmap_offset = xmap.offset / xmap.elemSize();
     int ymap_step = ymap.step / ymap.elemSize(), ymap_offset = ymap.offset / ymap.elemSize();
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&xmap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&ymap.data));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_step));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&xmap_offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&ymap_offset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&xmap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&ymap.data));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&coeffsOclMat.data));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_step));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&xmap_offset));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ymap_offset));
 
     size_t globalThreads[3] = { xmap.cols, xmap.rows, 1 };
 

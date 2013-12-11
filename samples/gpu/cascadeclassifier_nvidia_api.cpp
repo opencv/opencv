@@ -6,12 +6,12 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
-
-#ifdef HAVE_CUDA
-#include "NCVHaarObjectDetection.hpp"
-#endif
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/cudalegacy.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 using namespace std;
 using namespace cv;
@@ -36,7 +36,7 @@ int main( int, const char** )
 
 
 const Size2i preferredVideoFrameSize(640, 480);
-const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
+const cv::String wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
 
 
 static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
@@ -49,15 +49,15 @@ static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss, org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss, org, fontFace, fontScale, Scalar(0,0,0), 5*fontThickness/2, 16);
     putText(img, ss, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
 static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
 {
-    Scalar fontColorRed = CV_RGB(255,0,0);
-    Scalar fontColorNV  = CV_RGB(118,185,0);
+    Scalar fontColorRed(0,0,255);
+    Scalar fontColorNV(0,185,118);
 
     ostringstream ss;
     ss << "FPS = " << setprecision(1) << fixed << fps;
@@ -160,10 +160,10 @@ int main(int argc, const char** argv)
     cout << "Syntax: exename <cascade_file> <image_or_video_or_cameraid>" << endl;
     cout << "=========================================" << endl;
 
-    ncvAssertPrintReturn(cv::gpu::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without GPU support", -1);
+    ncvAssertPrintReturn(cv::cuda::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without CUDA support", -1);
     ncvAssertPrintReturn(argc == 3, "Invalid number of arguments", -1);
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     string cascadeName = argv[1];
     string inputName = argv[2];
@@ -295,7 +295,7 @@ int main(int argc, const char** argv)
     do
     {
         Mat gray;
-        cvtColor((image.empty() ? frame : image), gray, CV_BGR2GRAY);
+        cvtColor((image.empty() ? frame : image), gray, cv::COLOR_BGR2GRAY);
 
         //
         // process
@@ -343,12 +343,12 @@ int main(int argc, const char** argv)
 
         avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
 
-        cvtColor(gray, frameDisp, CV_GRAY2BGR);
+        cvtColor(gray, frameDisp, cv::COLOR_GRAY2BGR);
         displayState(frameDisp, bHelpScreen, bUseGPU, bLargestObject, bFilterRects, 1000.0f / avgTime);
         imshow(wndTitle, frameDisp);
 
         //handle input
-        switch (cvWaitKey(3))
+        switch (cv::waitKey(3))
         {
         case ' ':
             bUseGPU = !bUseGPU;
@@ -381,7 +381,7 @@ int main(int argc, const char** argv)
         }
     } while (!bQuit);
 
-    cvDestroyWindow(wndTitle.c_str());
+    cv::destroyWindow(wndTitle);
 
     return 0;
 }

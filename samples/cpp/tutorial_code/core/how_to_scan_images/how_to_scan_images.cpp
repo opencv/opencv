@@ -1,5 +1,6 @@
-﻿#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+﻿#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <sstream>
 
@@ -35,9 +36,9 @@ int main( int argc, char* argv[])
 
     Mat I, J;
     if( argc == 4 && !strcmp(argv[3],"G") )
-        I = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+        I = imread(argv[1], IMREAD_GRAYSCALE);
     else
-        I = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+        I = imread(argv[1], IMREAD_COLOR);
 
     if (!I.data)
     {

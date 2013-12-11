@@ -4,11 +4,10 @@
 
 #include <iostream>
 #include <vector>
-
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/core_c.h>
+#include <opencv2/calib3d/calib3d_c.h>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/legacy/compat.hpp>
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
@@ -120,12 +119,9 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints, const Mat& source
     normalize(grayImage, grayImage, 0, 255, NORM_MINMAX);
     threshold(grayImage, grayImage, 26, 255, THRESH_BINARY_INV); //25
 
-    Mat MgrayImage = grayImage;
-    //For debug
-    //MgrayImage = MgrayImage.clone();//deep copy
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-    findContours(MgrayImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    findContours(grayImage, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
 
     Point p;
     vector<CvPoint2D32f> srcImagePoints_temp(4,cvPoint2D32f(0,0));
@@ -233,8 +229,8 @@ int main(void)
 
     video >> source;
 
-    namedWindow("original", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    namedWindow("POSIT", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+    namedWindow("original", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
+    namedWindow("POSIT", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
     displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear). This demo is only to illustrate how to use OpenGL callback.\n -- Press ESC to exit.", 10000);
 
     float OpenGLMatrix[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -258,14 +254,14 @@ int main(void)
         video >> source;
         imshow("original",source);
 
-        foundCorners(&srcImagePoints,source,grayImage);
+        foundCorners(&srcImagePoints, source, grayImage);
         cvPOSIT( positObject, &srcImagePoints[0], FOCAL_LENGTH, criteria, rotation_matrix, translation_vector );
         createOpenGLMatrixFrom(OpenGLMatrix,rotation_matrix,translation_vector);
 
         imshow("POSIT",source);
 
-        if (video.get(CV_CAP_PROP_POS_AVI_RATIO) > 0.99)
-            video.set(CV_CAP_PROP_POS_AVI_RATIO, 0);
+        if (video.get(CAP_PROP_POS_AVI_RATIO) > 0.99)
+            video.set(CAP_PROP_POS_AVI_RATIO, 0);
     }
 
     destroyAllWindows();

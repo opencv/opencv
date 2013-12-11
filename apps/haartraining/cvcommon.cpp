@@ -50,11 +50,6 @@
 #include <direct.h>
 #endif /* _WIN32 */
 
-
-CV_IMPLEMENT_QSORT( icvSort_32f, float, less_than )
-
-CV_IMPLEMENT_QSORT( icvSort_32s, int, less_than )
-
 int icvMkDir( const char* filename )
 {
     char path[PATH_MAX];

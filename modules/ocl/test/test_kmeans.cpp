@@ -113,10 +113,10 @@ OCL_TEST_P(Kmeans, Mat){
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         kmeans(src, K, labels,
-            TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 100, 0),
+            TermCriteria( TermCriteria::EPS + TermCriteria::MAX_ITER, 100, 0),
             1, flags, centers);
         ocl::kmeans(d_src, K, d_labels,
-            TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 100, 0),
+            TermCriteria( TermCriteria::EPS + TermCriteria::MAX_ITER, 100, 0),
             1, flags, d_centers);
         Mat dd_labels(d_labels);
         Mat dd_centers(d_centers);

@@ -75,24 +75,24 @@ void cv::ocl::blendLinear(const oclMat &src1, const oclMat &src2, const oclMat &
                                       typeMap[depth], channelMap[ocn], typeMap[depth], channelMap[ocn],
                                       depth >= CV_32S ? "" : "_sat_rte", channelMap[ocn], channelMap[ocn]);
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1_offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1_step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2_offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2_step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&weights1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&weight1_offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&weight1_step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&weights2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&weight2_offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&weight2_step ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src1.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src1_step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src2.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src2_step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights1.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&weight1_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&weight1_step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&weights2.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&weight2_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&weight2_step ));
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols ));
 
     openCLExecuteKernel(src1.clCxt, &blend_linear, "blendLinear", globalSize, localSize, args,
                         -1, -1, buildOptions.c_str());

@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_CUDA
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/cuda.hpp"
 #endif
 
 #ifdef ANDROID
@@ -19,7 +19,8 @@ static std::vector<std::string> available_impls;
 
 static std::string  param_impl;
 
-static enum PERF_STRATEGY param_strategy = PERF_STRATEGY_BASE;
+static enum PERF_STRATEGY strategyForce = PERF_STRATEGY_DEFAULT;
+static enum PERF_STRATEGY strategyModule = PERF_STRATEGY_BASE;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -640,44 +641,43 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     available_impls = availableImpls;
 
     const std::string command_line_keys =
-        "{   |perf_max_outliers           |8        |percent of allowed outliers}"
-        "{   |perf_min_samples            |10       |minimal required numer of samples}"
-        "{   |perf_force_samples          |100      |force set maximum number of samples for all tests}"
-        "{   |perf_seed                   |809564   |seed for random numbers generator}"
-        "{   |perf_threads                |-1       |the number of worker threads, if parallel execution is enabled}"
-        "{   |perf_write_sanity           |false    |create new records for sanity checks}"
-        "{   |perf_verify_sanity          |false    |fail tests having no regression data for sanity checks}"
-        "{   |perf_impl                   |" + available_impls[0] +
-                                                   "|the implementation variant of functions under test}"
-        "{   |perf_list_impls             |false    |list available implementation variants and exit}"
-        "{   |perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
-        "{   |perf_strategy               |default  |specifies performance measuring strategy: default, base or simple (weak restrictions)}"
+        "{   perf_max_outliers           |8        |percent of allowed outliers}"
+        "{   perf_min_samples            |10       |minimal required numer of samples}"
+        "{   perf_force_samples          |100      |force set maximum number of samples for all tests}"
+        "{   perf_seed                   |809564   |seed for random numbers generator}"
+        "{   perf_threads                |-1       |the number of worker threads, if parallel execution is enabled}"
+        "{   perf_write_sanity           |false    |create new records for sanity checks}"
+        "{   perf_verify_sanity          |false    |fail tests having no regression data for sanity checks}"
+        "{   perf_impl                   |" + available_impls[0] +
+                                                  "|the implementation variant of functions under test}"
+        "{   perf_list_impls             |false    |list available implementation variants and exit}"
+        "{   perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
+        "{   perf_strategy               |default  |specifies performance measuring strategy: default, base or simple (weak restrictions)}"
 #ifdef ANDROID
-        "{   |perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
-        "{   |perf_affinity_mask          |0        |set affinity mask for the main thread}"
-        "{   |perf_log_power_checkpoints  |         |additional xml logging for power measurement}"
+        "{   perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
+        "{   perf_affinity_mask          |0        |set affinity mask for the main thread}"
+        "{   perf_log_power_checkpoints  |         |additional xml logging for power measurement}"
 #else
-        "{   |perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
+        "{   perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
 #endif
-        "{   |perf_max_deviation          |1.0      |}"
-        "{h  |help                        |false    |print help info}"
+        "{   perf_max_deviation          |1.0      |}"
+        "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
-        "{   |perf_cuda_device            |0        |run GPU test suite onto specific CUDA capable device}"
-        "{   |perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
+        "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
+        "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
     ;
 
-    cv::CommandLineParser args(argc, argv, command_line_keys.c_str());
-    if (args.get<bool>("help"))
+    cv::CommandLineParser args(argc, argv, command_line_keys);
+    if (args.has("help"))
     {
-        args.printParams();
-        printf("\n\n");
+        args.printMessage();
         return;
     }
 
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
-    param_impl          = args.get<bool>("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
+    param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
     std::string perf_strategy = args.get<std::string>("perf_strategy");
     if (perf_strategy == "default")
     {
@@ -685,11 +685,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     }
     else if (perf_strategy == "base")
     {
-        param_strategy = PERF_STRATEGY_BASE;
+        strategyForce = PERF_STRATEGY_BASE;
     }
     else if (perf_strategy == "simple")
     {
-        param_strategy = PERF_STRATEGY_SIMPLE;
+        strategyForce = PERF_STRATEGY_SIMPLE;
     }
     else
     {
@@ -699,18 +699,18 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
-    param_seed          = args.get<uint64>("perf_seed");
+    param_seed          = args.get<unsigned int>("perf_seed");
     param_time_limit    = std::max(0., args.get<double>("perf_time_limit"));
     param_force_samples = args.get<unsigned int>("perf_force_samples");
-    param_write_sanity  = args.get<bool>("perf_write_sanity");
-    param_verify_sanity = args.get<bool>("perf_verify_sanity");
+    param_write_sanity  = args.has("perf_write_sanity");
+    param_verify_sanity = args.has("perf_verify_sanity");
     param_threads  = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
-    log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
+    log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
-    bool param_list_impls = args.get<bool>("perf_list_impls");
+    bool param_list_impls = args.has("perf_list_impls");
 
     if (param_list_impls)
     {
@@ -731,7 +731,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
 #ifdef HAVE_CUDA
 
-    bool printOnly        = args.get<bool>("perf_cuda_info_only");
+    bool printOnly        = args.has("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
@@ -742,28 +742,28 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
 #ifdef HAVE_CUDA
 
-    param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
+    param_cuda_device      = std::max(0, std::min(cv::cuda::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
 
     if (param_impl == "cuda")
     {
-        cv::gpu::DeviceInfo info(param_cuda_device);
+        cv::cuda::DeviceInfo info(param_cuda_device);
         if (!info.isCompatible())
         {
-            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name().c_str()), fflush(stdout);
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current CUDA module build.\n[----------]\n", info.name()), fflush(stdout);
             exit(-1);
         }
 
-        cv::gpu::setDevice(param_cuda_device);
+        cv::cuda::setDevice(param_cuda_device);
 
-        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name().c_str()), fflush(stdout);
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name()), fflush(stdout);
     }
 #endif
 
-//    if (!args.check())
-//    {
-//        args.printErrors();
-//        return;
-//    }
+    if (!args.check())
+    {
+        args.printErrors();
+        return;
+    }
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;
@@ -778,7 +778,7 @@ void TestBase::RecordRunParameters()
 #ifdef HAVE_CUDA
     if (param_impl == "cuda")
     {
-        cv::gpu::DeviceInfo info(param_cuda_device);
+        cv::cuda::DeviceInfo info(param_cuda_device);
         ::testing::Test::RecordProperty("cv_cuda_gpu", info.name());
     }
 #endif
@@ -789,16 +789,16 @@ std::string TestBase::getSelectedImpl()
     return param_impl;
 }
 
-enum PERF_STRATEGY TestBase::getPerformanceStrategy()
+enum PERF_STRATEGY TestBase::setModulePerformanceStrategy(enum PERF_STRATEGY strategy)
 {
-    return param_strategy;
+    enum PERF_STRATEGY ret = strategyModule;
+    strategyModule = strategy;
+    return ret;
 }
 
-enum PERF_STRATEGY TestBase::setPerformanceStrategy(enum PERF_STRATEGY strategy)
+enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 {
-    enum PERF_STRATEGY ret = param_strategy;
-    param_strategy = strategy;
-    return ret;
+    return strategyForce == PERF_STRATEGY_DEFAULT ? strategyModule : strategyForce;
 }
 
 
@@ -831,7 +831,7 @@ int64 TestBase::_calibrate()
     _helper h;
     h.PerfTestBody();
     double compensation = h.getMetrics().min;
-    if (param_strategy == PERF_STRATEGY_SIMPLE)
+    if (getCurrentModulePerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         CV_Assert(compensation < 0.01 * cv::getTickFrequency());
         compensation = 0.0f; // simple strategy doesn't require any compensation
@@ -844,7 +844,7 @@ int64 TestBase::_calibrate()
 # pragma warning(push)
 # pragma warning(disable:4355)  // 'this' : used in base member initializer list
 #endif
-TestBase::TestBase(): declare(this)
+TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
 }
 #ifdef _MSC_VER
@@ -852,7 +852,7 @@ TestBase::TestBase(): declare(this)
 #endif
 
 
-void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype)
+void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpType wtype)
 {
     if (!a.empty())
     {
@@ -863,11 +863,20 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, int wtype
         ADD_FAILURE() << "  Uninitialized input/output parameters are not allowed for performance tests";
 }
 
-void TestBase::warmup(cv::InputOutputArray a, int wtype)
+void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
-    if (a.empty()) return;
-    if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    if (a.empty())
+    {
+        return;
+    }
+    else if (a.isUMat())
+    {
+        return; // TODO current warmup_impl is not useful for GPU-based data
+    }
+    else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
+    {
         warmup_impl(a.getMat(), wtype);
+    }
     else
     {
         size_t total = a.total();
@@ -895,6 +904,14 @@ cv::Size TestBase::getSize(cv::InputArray a)
     if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
         return a.size();
     return cv::Size();
+}
+
+PERF_STRATEGY TestBase::getCurrentPerformanceStrategy() const
+{
+    if (strategyForce == PERF_STRATEGY_DEFAULT)
+        return (testStrategy == PERF_STRATEGY_DEFAULT) ? strategyModule : testStrategy;
+    else
+        return strategyForce;
 }
 
 bool TestBase::next()
@@ -925,13 +942,13 @@ bool TestBase::next()
             break;
         }
 
-        if (param_strategy == PERF_STRATEGY_BASE)
+        if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
         {
             has_next = currentIter < nIters && totalTime < timeLimit;
         }
         else
         {
-            assert(param_strategy == PERF_STRATEGY_SIMPLE);
+            assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
                 std::cout << '.' << std::endl;
@@ -975,7 +992,7 @@ bool TestBase::next()
     return has_next;
 }
 
-void TestBase::warmup_impl(cv::Mat m, int wtype)
+void TestBase::warmup_impl(cv::Mat m, WarmUpType wtype)
 {
     switch(wtype)
     {
@@ -1054,7 +1071,7 @@ performance_metrics& TestBase::calcMetrics()
     TimeVector::const_iterator start = times.begin();
     TimeVector::const_iterator end = times.end();
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         //estimate mean and stddev for log(time)
         double gmean = 0;
@@ -1085,7 +1102,7 @@ performance_metrics& TestBase::calcMetrics()
             ++end, --metrics.outliers;
         }
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         metrics.outliers = static_cast<int>(times.size() * param_max_outliers / 100);
         for (unsigned int i = 0; i < metrics.outliers; i++)
@@ -1144,7 +1161,7 @@ void TestBase::validateMetrics()
     ASSERT_GE(m.samples, 1u)
       << "  No time measurements was performed.\nstartTimer() and stopTimer() commands are required for performance tests.";
 
-    if (param_strategy == PERF_STRATEGY_BASE)
+    if (getCurrentPerformanceStrategy() == PERF_STRATEGY_BASE)
     {
         EXPECT_GE(m.samples, param_min_samples)
           << "  Only a few samples are collected.\nPlease increase number of iterations or/and time limit to get reliable performance measurements.";
@@ -1158,7 +1175,7 @@ void TestBase::validateMetrics()
         EXPECT_LE(m.outliers, std::max((unsigned int)cvCeil(m.samples * param_max_outliers / 100.), 1u))
           << "  Test results are not reliable (too many outliers).";
     }
-    else if (param_strategy == PERF_STRATEGY_SIMPLE)
+    else if (getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE)
     {
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
@@ -1361,8 +1378,8 @@ void TestBase::RunPerfTestBody()
     {
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         #ifdef HAVE_CUDA
-            if (e.code == CV_GpuApiCallError)
-                cv::gpu::resetDevice();
+            if (e.code == cv::Error::GpuApiCallError)
+                cv::cuda::resetDevice();
         #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }
@@ -1412,14 +1429,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::runs(unsigned int runsNumber
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1427,7 +1444,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1436,7 +1453,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->inputData, a1, wtype);
@@ -1446,14 +1463,14 @@ TestBase::_declareHelper& TestBase::_declareHelper::in(cv::InputOutputArray a1, 
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1461,7 +1478,7 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
@@ -1470,13 +1487,19 @@ TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1,
     return *this;
 }
 
-TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, int wtype)
+TestBase::_declareHelper& TestBase::_declareHelper::out(cv::InputOutputArray a1, cv::InputOutputArray a2, cv::InputOutputArray a3, cv::InputOutputArray a4, WarmUpType wtype)
 {
     if (!test->times.empty()) return *this;
     TestBase::declareArray(test->outputData, a1, wtype);
     TestBase::declareArray(test->outputData, a2, wtype);
     TestBase::declareArray(test->outputData, a3, wtype);
     TestBase::declareArray(test->outputData, a4, wtype);
+    return *this;
+}
+
+TestBase::_declareHelper& TestBase::_declareHelper::strategy(enum PERF_STRATEGY s)
+{
+    test->testStrategy = s;
     return *this;
 }
 

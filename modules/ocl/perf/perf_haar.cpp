@@ -45,6 +45,8 @@
 //M*/
 #include "perf_precomp.hpp"
 
+#include "opencv2/objdetect/objdetect_c.h"
+
 using namespace perf;
 
 ///////////// Haar ////////////////////////
@@ -52,7 +54,7 @@ PERF_TEST(HaarFixture, Haar)
 {
     vector<Rect> faces;
 
-    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), IMREAD_GRAYSCALE);
     ASSERT_TRUE(!img.empty()) << "can't open basketball1.png";
     declare.in(img);
 

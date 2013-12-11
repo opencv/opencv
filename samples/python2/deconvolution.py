@@ -32,6 +32,8 @@ Examples:
 
 import numpy as np
 import cv2
+
+# local module
 from common import nothing
 
 
@@ -55,7 +57,7 @@ def motion_kernel(angle, d, sz=65):
 
 def defocus_kernel(d, sz=65):
     kern = np.zeros((sz, sz), np.uint8)
-    cv2.circle(kern, (sz, sz), d, 255, -1, cv2.CV_AA, shift=1)
+    cv2.circle(kern, (sz, sz), d, 255, -1, cv2.LINE_AA, shift=1)
     kern = np.float32(kern) / 255.0
     return kern
 
@@ -65,12 +67,18 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
     opts = dict(opts)
-    try: fn = args[0]
-    except: fn = 'data/licenseplate_motion.jpg'
+    try:
+        fn = args[0]
+    except:
+        fn = 'data/licenseplate_motion.jpg'
 
     win = 'deconvolution'
 
     img = cv2.imread(fn, 0)
+    if img is None:
+        print 'Failed to load fn1:', fn1
+        sys.exit(1)
+
     img = np.float32(img)/255.0
     cv2.imshow('input', img)
 

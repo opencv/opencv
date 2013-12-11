@@ -56,7 +56,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 {
     int k, x, y;
 
-    assert( src.type() == CV_32FC1 );
+    CV_Assert( src.type() == CV_32FC1 );
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
@@ -395,8 +395,8 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
     double sigma = m*0.3, s = 1;
 
     AutoBuffer<float> _vsum((width+m*2+2)*5 + 16), _hsum(width*5 + 16);
-    AutoBuffer<float, 4096> _kernel((m+1)*5 + 16);
-    AutoBuffer<float*, 1024> _srow(m*2+1);
+    AutoBuffer<float> _kernel((m+1)*5 + 16);
+    AutoBuffer<float*> _srow(m*2+1);
     float *vsum = alignPtr((float*)_vsum + (m+1)*5, 16), *hsum = alignPtr((float*)_hsum, 16);
     float* kernel = (float*)_kernel;
     const float** srow = (const float**)&_srow[0];
@@ -564,7 +564,7 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 }
 
 void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
-                               OutputArray _flow0, double pyr_scale, int levels, int winsize,
+                               InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
@@ -627,7 +627,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         {
             img[i]->convertTo(fimg, CV_32F);
             GaussianBlur(fimg, fimg, Size(smooth_sz, smooth_sz), sigma, sigma);
-            resize( fimg, I, Size(width, height), CV_INTER_LINEAR );
+            resize( fimg, I, Size(width, height), INTER_LINEAR );
             FarnebackPolyExp( I, R[i], poly_n, poly_sigma );
         }
 
@@ -643,18 +643,4 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
 
         prevFlow = flow;
     }
-}
-
-
-CV_IMPL void cvCalcOpticalFlowFarneback(
-            const CvArr* _prev, const CvArr* _next,
-            CvArr* _flow, double pyr_scale, int levels,
-            int winsize, int iterations, int poly_n,
-            double poly_sigma, int flags )
-{
-    cv::Mat prev = cv::cvarrToMat(_prev), next = cv::cvarrToMat(_next);
-    cv::Mat flow = cv::cvarrToMat(_flow);
-    CV_Assert( flow.size() == prev.size() && flow.type() == CV_32FC2 );
-    cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
-        winsize, iterations, poly_n, poly_sigma, flags );
 }

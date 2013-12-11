@@ -1,8 +1,9 @@
 // This sample shows the difference of adaptive bilateral filter and bilateral filter.
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/ocl.hpp"
 
 using namespace cv;
 using namespace std;
@@ -11,18 +12,18 @@ using namespace std;
 int main( int argc, const char** argv )
 {
     const char* keys =
-        "{ i | input   |          | specify input image }"
-        "{ k | ksize   |     11   | specify kernel size }"
-        "{ s | sSpace  |     3    | specify sigma space }"
-        "{ c | sColor  |     30   | specify max color }"
-        "{ h | help    | false    | print help message }";
+        "{ i input   |          | specify input image }"
+        "{ k ksize   |     11   | specify kernel size }"
+        "{ s sSpace  |     3    | specify sigma space }"
+        "{ c sColor  |     30   | specify max color }"
+        "{ h help    | false    | print help message }";
 
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage : adaptive_bilateral_filter [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 

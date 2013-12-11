@@ -294,7 +294,7 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
 
     cv::Mat eigen_values, eigen_vectors;
 
-    cv::eigen(src, true, eigen_values, eigen_vectors);
+    cv::eigen(src, eigen_values, eigen_vectors);
 
     if (!check_pair_count(src, eigen_values, eigen_vectors)) return false;
 
@@ -362,8 +362,8 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
 
     if (!test_pairs(src)) return false;
 
-    cv::eigen(src, true, eigen_values_1, eigen_vectors);
-    cv::eigen(src, false, eigen_values_2, eigen_vectors);
+    cv::eigen(src, eigen_values_1, eigen_vectors);
+    cv::eigen(src, eigen_values_2);
 
     if (!check_pair_count(src, eigen_values_2)) return false;
 

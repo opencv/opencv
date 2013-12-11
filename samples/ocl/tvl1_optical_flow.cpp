@@ -2,6 +2,7 @@
 #include <vector>
 #include <iomanip>
 
+#include "opencv2/core/utility.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/video/video.hpp"
@@ -95,7 +96,7 @@ int main(int argc, const char* argv[])
     {
         cout << "Usage: pyrlk_optical_flow [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
@@ -119,17 +120,17 @@ int main(int argc, const char* argv[])
 
     if (useCamera)
     {
-        CvCapture* capture = 0;
+        VideoCapture capture;
         Mat frame, frameCopy;
         Mat frame0Gray, frame1Gray;
         Mat ptr0, ptr1;
 
         if(vdofile.empty())
-            capture = cvCaptureFromCAM( inputName );
+            capture.open( inputName );
         else
-            capture = cvCreateFileCapture(vdofile.c_str());
+            capture.open(vdofile.c_str());
 
-        if(!capture)
+        if(!capture.isOpened())
         {
             if(vdofile.empty())
                 cout << "Capture from CAM " << inputName << " didn't work" << endl;
@@ -141,8 +142,7 @@ int main(int argc, const char* argv[])
         cout << "In capture ..." << endl;
         for(int i = 0;; i++)
         {
-            frame = cvQueryFrame( capture );
-            if( frame.empty() )
+            if( !capture.read(frame) )
                 break;
 
             if (i == 0)
@@ -191,7 +191,7 @@ int main(int argc, const char* argv[])
                 break;
         }
 
-        cvReleaseCapture( &capture );
+        capture.release();
     }
     else
     {

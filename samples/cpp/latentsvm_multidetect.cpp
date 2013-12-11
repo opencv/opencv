@@ -9,14 +9,6 @@
 #include <dirent.h>
 #endif
 
-#ifdef HAVE_CVCONFIG_H
-#include <cvconfig.h>
-#endif
-
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
-#endif
-
 using namespace std;
 using namespace cv;
 
@@ -47,7 +39,7 @@ static void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const
 
     cout << "Detection time = " << tm.getTimeSec() << " sec" << endl;
 
-    const vector<string> classNames = detector.getClassNames();
+    const vector<String> classNames = detector.getClassNames();
     CV_Assert( colors.size() == classNames.size() );
 
     for( size_t i = 0; i < detections.size(); i++ )
@@ -63,7 +55,7 @@ static void detectAndDrawObjects( Mat& image, LatentSvmDetector& detector, const
     }
 }
 
-static void readDirectory( const string& directoryName, vector<string>& filenames, bool addDirectoryName=true )
+static void readDirectory( const string& directoryName, vector<String>& filenames, bool addDirectoryName=true )
 {
     filenames.clear();
 
@@ -125,7 +117,7 @@ int main(int argc, char* argv[])
         if( argc > 4 ) numThreads = atoi(argv[4]);
     }
 
-    vector<string> images_filenames, models_filenames;
+    vector<String> images_filenames, models_filenames;
     readDirectory( images_folder, images_filenames );
     readDirectory( models_folder, models_filenames );
 
@@ -136,7 +128,7 @@ int main(int argc, char* argv[])
         exit(-1);
     }
 
-    const vector<string>& classNames = detector.getClassNames();
+    const vector<String>& classNames = detector.getClassNames();
     cout << "Loaded " << classNames.size() << " models:" << endl;
     for( size_t i = 0; i < classNames.size(); i++ )
     {

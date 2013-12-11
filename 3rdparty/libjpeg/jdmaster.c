@@ -2,6 +2,7 @@
  * jdmaster.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Modified 2002-2011 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -61,9 +62,12 @@ use_merged_upsample (j_decompress_ptr cinfo)
       cinfo->comp_info[2].v_samp_factor != 1)
     return FALSE;
   /* furthermore, it doesn't work if we've scaled the IDCTs differently */
-  if (cinfo->comp_info[0].DCT_scaled_size != cinfo->min_DCT_scaled_size ||
-      cinfo->comp_info[1].DCT_scaled_size != cinfo->min_DCT_scaled_size ||
-      cinfo->comp_info[2].DCT_scaled_size != cinfo->min_DCT_scaled_size)
+  if (cinfo->comp_info[0].DCT_h_scaled_size != cinfo->min_DCT_h_scaled_size ||
+      cinfo->comp_info[1].DCT_h_scaled_size != cinfo->min_DCT_h_scaled_size ||
+      cinfo->comp_info[2].DCT_h_scaled_size != cinfo->min_DCT_h_scaled_size ||
+      cinfo->comp_info[0].DCT_v_scaled_size != cinfo->min_DCT_v_scaled_size ||
+      cinfo->comp_info[1].DCT_v_scaled_size != cinfo->min_DCT_v_scaled_size ||
+      cinfo->comp_info[2].DCT_v_scaled_size != cinfo->min_DCT_v_scaled_size)
     return FALSE;
   /* ??? also need to test for upsample-time rescaling, when & if supported */
   return TRUE;			/* by golly, it'll work... */
@@ -82,7 +86,9 @@ use_merged_upsample (j_decompress_ptr cinfo)
 
 GLOBAL(void)
 jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
-/* Do computations that are needed before master selection phase */
+/* Do computations that are needed before master selection phase.
+ * This function is used for full decompression.
+ */
 {
 #ifdef IDCT_SCALING_SUPPORTED
   int ci;
@@ -93,52 +99,38 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
   if (cinfo->global_state != DSTATE_READY)
     ERREXIT1(cinfo, JERR_BAD_STATE, cinfo->global_state);
 
+  /* Compute core output image dimensions and DCT scaling choices. */
+  jpeg_core_output_dimensions(cinfo);
+
 #ifdef IDCT_SCALING_SUPPORTED
 
-  /* Compute actual output image dimensions and DCT scaling choices. */
-  if (cinfo->scale_num * 8 <= cinfo->scale_denom) {
-    /* Provide 1/8 scaling */
-    cinfo->output_width = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_width, 8L);
-    cinfo->output_height = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_height, 8L);
-    cinfo->min_DCT_scaled_size = 1;
-  } else if (cinfo->scale_num * 4 <= cinfo->scale_denom) {
-    /* Provide 1/4 scaling */
-    cinfo->output_width = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_width, 4L);
-    cinfo->output_height = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_height, 4L);
-    cinfo->min_DCT_scaled_size = 2;
-  } else if (cinfo->scale_num * 2 <= cinfo->scale_denom) {
-    /* Provide 1/2 scaling */
-    cinfo->output_width = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_width, 2L);
-    cinfo->output_height = (JDIMENSION)
-      jdiv_round_up((long) cinfo->image_height, 2L);
-    cinfo->min_DCT_scaled_size = 4;
-  } else {
-    /* Provide 1/1 scaling */
-    cinfo->output_width = cinfo->image_width;
-    cinfo->output_height = cinfo->image_height;
-    cinfo->min_DCT_scaled_size = DCTSIZE;
-  }
   /* In selecting the actual DCT scaling for each component, we try to
    * scale up the chroma components via IDCT scaling rather than upsampling.
    * This saves time if the upsampler gets to use 1:1 scaling.
-   * Note this code assumes that the supported DCT scalings are powers of 2.
+   * Note this code adapts subsampling ratios which are powers of 2.
    */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
-    int ssize = cinfo->min_DCT_scaled_size;
-    while (ssize < DCTSIZE &&
-       (compptr->h_samp_factor * ssize * 2 <=
-        cinfo->max_h_samp_factor * cinfo->min_DCT_scaled_size) &&
-       (compptr->v_samp_factor * ssize * 2 <=
-        cinfo->max_v_samp_factor * cinfo->min_DCT_scaled_size)) {
+    int ssize = 1;
+    while (cinfo->min_DCT_h_scaled_size * ssize <=
+           (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
+           (cinfo->max_h_samp_factor % (compptr->h_samp_factor * ssize * 2)) == 0) {
       ssize = ssize * 2;
     }
-    compptr->DCT_scaled_size = ssize;
+    compptr->DCT_h_scaled_size = cinfo->min_DCT_h_scaled_size * ssize;
+    ssize = 1;
+    while (cinfo->min_DCT_v_scaled_size * ssize <=
+           (cinfo->do_fancy_upsampling ? DCTSIZE : DCTSIZE / 2) &&
+           (cinfo->max_v_samp_factor % (compptr->v_samp_factor * ssize * 2)) == 0) {
+      ssize = ssize * 2;
+    }
+    compptr->DCT_v_scaled_size = cinfo->min_DCT_v_scaled_size * ssize;
+
+    /* We don't support IDCT ratios larger than 2. */
+    if (compptr->DCT_h_scaled_size > compptr->DCT_v_scaled_size * 2)
+        compptr->DCT_h_scaled_size = compptr->DCT_v_scaled_size * 2;
+    else if (compptr->DCT_v_scaled_size > compptr->DCT_h_scaled_size * 2)
+        compptr->DCT_v_scaled_size = compptr->DCT_h_scaled_size * 2;
   }
 
   /* Recompute downsampled dimensions of components;
@@ -149,22 +141,13 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     /* Size in samples, after IDCT scaling */
     compptr->downsampled_width = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_width *
-            (long) (compptr->h_samp_factor * compptr->DCT_scaled_size),
-            (long) (cinfo->max_h_samp_factor * DCTSIZE));
+                    (long) (compptr->h_samp_factor * compptr->DCT_h_scaled_size),
+                    (long) (cinfo->max_h_samp_factor * cinfo->block_size));
     compptr->downsampled_height = (JDIMENSION)
       jdiv_round_up((long) cinfo->image_height *
-            (long) (compptr->v_samp_factor * compptr->DCT_scaled_size),
-            (long) (cinfo->max_v_samp_factor * DCTSIZE));
+                    (long) (compptr->v_samp_factor * compptr->DCT_v_scaled_size),
+                    (long) (cinfo->max_v_samp_factor * cinfo->block_size));
   }
-
-#else /* !IDCT_SCALING_SUPPORTED */
-
-  /* Hardwire it to "no scaling" */
-  cinfo->output_width = cinfo->image_width;
-  cinfo->output_height = cinfo->image_height;
-  /* jdinput.c has already initialized DCT_scaled_size to DCTSIZE,
-   * and has computed unscaled downsampled_width and downsampled_height.
-   */
 
 #endif /* IDCT_SCALING_SUPPORTED */
 
@@ -175,10 +158,8 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     cinfo->out_color_components = 1;
     break;
   case JCS_RGB:
-#if RGB_PIXELSIZE != 3
     cinfo->out_color_components = RGB_PIXELSIZE;
     break;
-#endif /* else share code with YCbCr */
   case JCS_YCbCr:
     cinfo->out_color_components = 3;
     break;
@@ -191,7 +172,7 @@ jpeg_calc_output_dimensions (j_decompress_ptr cinfo)
     break;
   }
   cinfo->output_components = (cinfo->quantize_colors ? 1 :
-                  cinfo->out_color_components);
+                              cinfo->out_color_components);
 
   /* See if upsampler will want to emit more than one row at a time */
   if (use_merged_upsample(cinfo))
@@ -253,7 +234,7 @@ prepare_range_limit_table (j_decompress_ptr cinfo)
 
   table = (JSAMPLE *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-        (5 * (MAXJSAMPLE+1) + CENTERJSAMPLE) * SIZEOF(JSAMPLE));
+                (5 * (MAXJSAMPLE+1) + CENTERJSAMPLE) * SIZEOF(JSAMPLE));
   table += (MAXJSAMPLE+1);	/* allow negative subscripts of simple table */
   cinfo->sample_range_limit = table;
   /* First segment of "simple" table: limit[x] = 0 for x < 0 */
@@ -267,9 +248,9 @@ prepare_range_limit_table (j_decompress_ptr cinfo)
     table[i] = MAXJSAMPLE;
   /* Second half of post-IDCT table */
   MEMZERO(table + (2 * (MAXJSAMPLE+1)),
-      (2 * (MAXJSAMPLE+1) - CENTERJSAMPLE) * SIZEOF(JSAMPLE));
+          (2 * (MAXJSAMPLE+1) - CENTERJSAMPLE) * SIZEOF(JSAMPLE));
   MEMCOPY(table + (4 * (MAXJSAMPLE+1) - CENTERJSAMPLE),
-      cinfo->sample_range_limit, CENTERJSAMPLE * SIZEOF(JSAMPLE));
+          cinfo->sample_range_limit, CENTERJSAMPLE * SIZEOF(JSAMPLE));
 }
 
 
@@ -372,17 +353,10 @@ master_selection (j_decompress_ptr cinfo)
   /* Inverse DCT */
   jinit_inverse_dct(cinfo);
   /* Entropy decoding: either Huffman or arithmetic coding. */
-  if (cinfo->arith_code) {
-    ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
-  } else {
-    if (cinfo->progressive_mode) {
-#ifdef D_PROGRESSIVE_SUPPORTED
-      jinit_phuff_decoder(cinfo);
-#else
-      ERREXIT(cinfo, JERR_NOT_COMPILED);
-#endif
-    } else
-      jinit_huff_decoder(cinfo);
+  if (cinfo->arith_code)
+    jinit_arith_decoder(cinfo);
+  else {
+    jinit_huff_decoder(cinfo);
   }
 
   /* Initialize principal buffer controllers. */
@@ -453,24 +427,24 @@ prepare_for_output_pass (j_decompress_ptr cinfo)
     if (cinfo->quantize_colors && cinfo->colormap == NULL) {
       /* Select new quantization method */
       if (cinfo->two_pass_quantize && cinfo->enable_2pass_quant) {
-    cinfo->cquantize = master->quantizer_2pass;
-    master->pub.is_dummy_pass = TRUE;
+        cinfo->cquantize = master->quantizer_2pass;
+        master->pub.is_dummy_pass = TRUE;
       } else if (cinfo->enable_1pass_quant) {
-    cinfo->cquantize = master->quantizer_1pass;
+        cinfo->cquantize = master->quantizer_1pass;
       } else {
-    ERREXIT(cinfo, JERR_MODE_CHANGE);
+        ERREXIT(cinfo, JERR_MODE_CHANGE);
       }
     }
     (*cinfo->idct->start_pass) (cinfo);
     (*cinfo->coef->start_output_pass) (cinfo);
     if (! cinfo->raw_data_out) {
       if (! master->using_merged_upsample)
-    (*cinfo->cconvert->start_pass) (cinfo);
+        (*cinfo->cconvert->start_pass) (cinfo);
       (*cinfo->upsample->start_pass) (cinfo);
       if (cinfo->quantize_colors)
-    (*cinfo->cquantize->start_pass) (cinfo, master->pub.is_dummy_pass);
+        (*cinfo->cquantize->start_pass) (cinfo, master->pub.is_dummy_pass);
       (*cinfo->post->start_pass) (cinfo,
-        (master->pub.is_dummy_pass ? JBUF_SAVE_AND_PASS : JBUF_PASS_THRU));
+            (master->pub.is_dummy_pass ? JBUF_SAVE_AND_PASS : JBUF_PASS_THRU));
       (*cinfo->main->start_pass) (cinfo, JBUF_PASS_THRU);
     }
   }
@@ -479,7 +453,7 @@ prepare_for_output_pass (j_decompress_ptr cinfo)
   if (cinfo->progress != NULL) {
     cinfo->progress->completed_passes = master->pass_number;
     cinfo->progress->total_passes = master->pass_number +
-                    (master->pub.is_dummy_pass ? 2 : 1);
+                                    (master->pub.is_dummy_pass ? 2 : 1);
     /* In buffered-image mode, we assume one more output pass if EOI not
      * yet reached, but no more passes if EOI has been reached.
      */
@@ -546,7 +520,7 @@ jinit_master_decompress (j_decompress_ptr cinfo)
 
   master = (my_master_ptr)
       (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                  SIZEOF(my_decomp_master));
+                                  SIZEOF(my_decomp_master));
   cinfo->master = (struct jpeg_decomp_master *) master;
   master->pub.prepare_for_output_pass = prepare_for_output_pass;
   master->pub.finish_output_pass = finish_output_pass;

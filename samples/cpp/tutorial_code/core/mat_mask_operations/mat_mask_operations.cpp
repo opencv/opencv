@@ -1,6 +1,7 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace std;
@@ -26,9 +27,9 @@ int main( int argc, char* argv[])
     Mat I, J, K;
 
     if (argc >= 3 && !strcmp("G", argv[2]))
-        I = imread( filename, CV_LOAD_IMAGE_GRAYSCALE);
+        I = imread( filename, IMREAD_GRAYSCALE);
     else
-        I = imread( filename, CV_LOAD_IMAGE_COLOR);
+        I = imread( filename, IMREAD_COLOR);
 
     namedWindow("Input", WINDOW_AUTOSIZE);
     namedWindow("Output", WINDOW_AUTOSIZE);

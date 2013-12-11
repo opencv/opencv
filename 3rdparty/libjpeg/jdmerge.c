@@ -46,8 +46,8 @@ typedef struct {
 
   /* Pointer to routine to do actual upsampling/conversion of one row group */
   JMETHOD(void, upmethod, (j_decompress_ptr cinfo,
-               JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
-               JSAMPARRAY output_buf));
+                           JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
+                           JSAMPARRAY output_buf));
 
   /* Private state for YCC->RGB conversion */
   int * Cr_r_tab;		/* => table for Cr to R conversion */
@@ -89,26 +89,26 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
 
   upsample->Cr_r_tab = (int *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                (MAXJSAMPLE+1) * SIZEOF(int));
+                                (MAXJSAMPLE+1) * SIZEOF(int));
   upsample->Cb_b_tab = (int *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                (MAXJSAMPLE+1) * SIZEOF(int));
+                                (MAXJSAMPLE+1) * SIZEOF(int));
   upsample->Cr_g_tab = (INT32 *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                (MAXJSAMPLE+1) * SIZEOF(INT32));
+                                (MAXJSAMPLE+1) * SIZEOF(INT32));
   upsample->Cb_g_tab = (INT32 *)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                (MAXJSAMPLE+1) * SIZEOF(INT32));
+                                (MAXJSAMPLE+1) * SIZEOF(INT32));
 
   for (i = 0, x = -CENTERJSAMPLE; i <= MAXJSAMPLE; i++, x++) {
     /* i is the actual input pixel value, in the range 0..MAXJSAMPLE */
     /* The Cb or Cr value we are thinking of is x = i - CENTERJSAMPLE */
     /* Cr=>R value is nearest int to 1.40200 * x */
     upsample->Cr_r_tab[i] = (int)
-            RIGHT_SHIFT(FIX(1.40200) * x + ONE_HALF, SCALEBITS);
+                    RIGHT_SHIFT(FIX(1.40200) * x + ONE_HALF, SCALEBITS);
     /* Cb=>B value is nearest int to 1.77200 * x */
     upsample->Cb_b_tab[i] = (int)
-            RIGHT_SHIFT(FIX(1.77200) * x + ONE_HALF, SCALEBITS);
+                    RIGHT_SHIFT(FIX(1.77200) * x + ONE_HALF, SCALEBITS);
     /* Cr=>G value is scaled-up -0.71414 * x */
     upsample->Cr_g_tab[i] = (- FIX(0.71414)) * x;
     /* Cb=>G value is scaled-up -0.34414 * x */
@@ -142,10 +142,10 @@ start_pass_merged_upsample (j_decompress_ptr cinfo)
 
 METHODDEF(void)
 merged_2v_upsample (j_decompress_ptr cinfo,
-            JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
-            JDIMENSION in_row_groups_avail,
-            JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-            JDIMENSION out_rows_avail)
+                    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
+                    JDIMENSION in_row_groups_avail,
+                    JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+                    JDIMENSION out_rows_avail)
 /* 2:1 vertical sampling case: may need a spare row. */
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
@@ -155,7 +155,7 @@ merged_2v_upsample (j_decompress_ptr cinfo,
   if (upsample->spare_full) {
     /* If we have a spare row saved from a previous cycle, just return it. */
     jcopy_sample_rows(& upsample->spare_row, 0, output_buf + *out_row_ctr, 0,
-              1, upsample->out_row_width);
+                      1, upsample->out_row_width);
     num_rows = 1;
     upsample->spare_full = FALSE;
   } else {
@@ -191,17 +191,17 @@ merged_2v_upsample (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 merged_1v_upsample (j_decompress_ptr cinfo,
-            JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
-            JDIMENSION in_row_groups_avail,
-            JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
-            JDIMENSION out_rows_avail)
+                    JSAMPIMAGE input_buf, JDIMENSION *in_row_group_ctr,
+                    JDIMENSION in_row_groups_avail,
+                    JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
+                    JDIMENSION out_rows_avail)
 /* 1:1 vertical sampling case: much easier, never need a spare row. */
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
 
   /* Just do the upsampling. */
   (*upsample->upmethod) (cinfo, input_buf, *in_row_group_ctr,
-             output_buf + *out_row_ctr);
+                         output_buf + *out_row_ctr);
   /* Adjust counts */
   (*out_row_ctr)++;
   (*in_row_group_ctr)++;
@@ -224,8 +224,8 @@ merged_1v_upsample (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 h2v1_merged_upsample (j_decompress_ptr cinfo,
-              JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
-              JSAMPARRAY output_buf)
+                      JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
+                      JSAMPARRAY output_buf)
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
   register int y, cred, cgreen, cblue;
@@ -286,8 +286,8 @@ h2v1_merged_upsample (j_decompress_ptr cinfo,
 
 METHODDEF(void)
 h2v2_merged_upsample (j_decompress_ptr cinfo,
-              JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
-              JSAMPARRAY output_buf)
+                      JSAMPIMAGE input_buf, JDIMENSION in_row_group_ctr,
+                      JSAMPARRAY output_buf)
 {
   my_upsample_ptr upsample = (my_upsample_ptr) cinfo->upsample;
   register int y, cred, cgreen, cblue;
@@ -373,7 +373,7 @@ jinit_merged_upsampler (j_decompress_ptr cinfo)
 
   upsample = (my_upsample_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                SIZEOF(my_upsampler));
+                                SIZEOF(my_upsampler));
   cinfo->upsample = (struct jpeg_upsampler *) upsample;
   upsample->pub.start_pass = start_pass_merged_upsample;
   upsample->pub.need_context_rows = FALSE;
@@ -386,7 +386,7 @@ jinit_merged_upsampler (j_decompress_ptr cinfo)
     /* Allocate a spare row buffer */
     upsample->spare_row = (JSAMPROW)
       (*cinfo->mem->alloc_large) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-        (size_t) (upsample->out_row_width * SIZEOF(JSAMPLE)));
+                (size_t) (upsample->out_row_width * SIZEOF(JSAMPLE)));
   } else {
     upsample->pub.upsample = merged_1v_upsample;
     upsample->upmethod = h2v1_merged_upsample;

@@ -4,11 +4,12 @@
  *  Created on: Oct 17, 2010
  *      Author: ethan
  */
-#include "opencv2/core/core.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/calib3d.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 #include <vector>
 #include <iostream>
 
@@ -53,8 +54,8 @@ static void help()
 
 const char* keys =
 {
-    "{1|  |box.png               |the first image}"
-    "{2|  |box_in_scene.png|the second image}"
+    "{@first_image  | box.png          | the first image}"
+    "{@second_image | box_in_scene.png | the second image}"
 };
 
 int main(int argc, const char ** argv)
@@ -62,17 +63,17 @@ int main(int argc, const char ** argv)
 
   help();
   CommandLineParser parser(argc, argv, keys);
-  string im1_name = parser.get<string>("1");
-  string im2_name = parser.get<string>("2");
+  string im1_name = parser.get<string>(0);
+  string im2_name = parser.get<string>(1);
 
-  Mat im1 = imread(im1_name, CV_LOAD_IMAGE_GRAYSCALE);
-  Mat im2 = imread(im2_name, CV_LOAD_IMAGE_GRAYSCALE);
+  Mat im1 = imread(im1_name, IMREAD_GRAYSCALE);
+  Mat im2 = imread(im2_name, IMREAD_GRAYSCALE);
 
   if (im1.empty() || im2.empty())
   {
     cout << "could not open one of the images..." << endl;
     cout << "the cmd parameters have next current value: " << endl;
-    parser.printParams();
+    parser.printMessage();
     return 1;
   }
 

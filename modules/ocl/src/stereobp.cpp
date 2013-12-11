@@ -102,19 +102,19 @@ namespace cv
                 int channels = left.oclchannels();
                 int data_type = data.type();
 
-                string kernelName = "comp_data";
+                String kernelName = "comp_data";
 
-                vector<pair<size_t , const void *> > args;
+                std::vector<std::pair<size_t , const void *> > args;
 
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&left.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&left.rows));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&left.cols));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&left.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&right.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&right.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&data.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&data.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&cl_con_struct));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&left.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&left.rows));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&left.cols));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&left.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&right.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&right.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&data.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&data.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&cl_con_struct));
 
                 size_t gt[3] = {left.cols, left.rows, 1}, lt[3] = {16, 16, 1};
 
@@ -135,18 +135,18 @@ namespace cv
                 Context  *clCxt = src.clCxt;
                 int data_type = src.type();
 
-                string kernelName = "data_step_down";
+                String kernelName = "data_step_down";
 
-                vector<pair<size_t , const void *> > args;
+                std::vector<std::pair<size_t , const void *> > args;
 
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&src_rows));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_rows));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_cols));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&disp));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_rows));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_rows));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_cols));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&disp));
 
                 size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
@@ -161,17 +161,17 @@ namespace cv
                 Context  *clCxt = src.clCxt;
                 int data_type = src.type();
 
-                string kernelName = "level_up_message";
-                vector<pair<size_t , const void *> > args;
+                String kernelName = "level_up_message";
+                std::vector<std::pair<size_t , const void *> > args;
 
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&src_rows));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&src.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_rows));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_cols));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src_rows));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_rows));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_cols));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.step));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&ndisp));
 
                 size_t gt[3] = {dst_cols, dst_rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
@@ -206,22 +206,22 @@ namespace cv
                 Context  *clCxt = l.clCxt;
                 int data_type = u.type();
 
-                string kernelName = "one_iteration";
+                String kernelName = "one_iteration";
 
-                vector<pair<size_t , const void *> > args;
+                std::vector<std::pair<size_t , const void *> > args;
 
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&u.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&u.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&data.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&data.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&d.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&l.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&r.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&t));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&cols));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&rows));
-                args.push_back( make_pair( sizeof(cl_float) , (void *)&cmax_disc_term));
-                args.push_back( make_pair( sizeof(cl_float) , (void *)&cdisc_single_jump));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&u.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&u.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&data.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&data.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&d.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&l.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&r.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&cols));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&rows));
+                args.push_back( std::make_pair( sizeof(cl_float) , (void *)&cmax_disc_term));
+                args.push_back( std::make_pair( sizeof(cl_float) , (void *)&cdisc_single_jump));
 
                 size_t gt[3] = {cols, rows, 1}, lt[3] = {16, 16, 1};
                 char opt[80] = "";
@@ -247,21 +247,21 @@ namespace cv
                 Context  *clCxt = u.clCxt;
                 int data_type = u.type();
 
-                string kernelName = "output";
+                String kernelName = "output";
 
-                vector<pair<size_t , const void *> > args;
+                std::vector<std::pair<size_t , const void *> > args;
 
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&u.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&u.step));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&d.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&l.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&r.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&data.data));
-                args.push_back( make_pair( sizeof(cl_mem) , (void *)&disp.data));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&disp.rows));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&disp.cols));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&disp.step));
-                args.push_back( make_pair( sizeof(cl_int) , (void *)&ndisp));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&u.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&u.step));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&d.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&l.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&r.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&data.data));
+                args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&disp.data));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&disp.rows));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&disp.cols));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&disp.step));
+                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&ndisp));
 
                 size_t gt[3] = {disp.cols, disp.rows, 1}, lt[3] = {16, 16, 1};
                 const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
@@ -315,13 +315,13 @@ namespace
         StereoBeliefPropagationImpl(StereoBeliefPropagation &rthis_,
                                     oclMat &u_, oclMat &d_, oclMat &l_, oclMat &r_,
                                     oclMat &u2_, oclMat &d2_, oclMat &l2_, oclMat &r2_,
-                                    vector<oclMat> &datas_, oclMat &out_)
+                                    std::vector<oclMat> &datas_, oclMat &out_)
             : rthis(rthis_), u(u_), d(d_), l(l_), r(r_), u2(u2_), d2(d2_), l2(l2_), r2(r2_), datas(datas_), out(out_),
               zero(Scalar::all(0)), scale(rthis_.msg_type == CV_32F ? 1.0f : 10.0f)
         {
             CV_Assert(0 < rthis.ndisp && 0 < rthis.iters && 0 < rthis.levels);
             CV_Assert(rthis.msg_type == CV_32F || rthis.msg_type == CV_16S);
-            CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < numeric_limits<short>::max());
+            CV_Assert(rthis.msg_type == CV_32F || (1 << (rthis.levels - 1)) * scale * rthis.max_data_term < std::numeric_limits<short>::max());
         }
 
         void operator()(const oclMat &left, const oclMat &right, oclMat &disp)
@@ -477,7 +477,7 @@ namespace
         oclMat &l2;
         oclMat &r2;
 
-        vector<oclMat> &datas;
+        std::vector<oclMat> &datas;
         oclMat &out;
 
         const Scalar zero;
@@ -485,7 +485,7 @@ namespace
 
         int rows, cols;
 
-        vector<int> cols_all, rows_all;
+        std::vector<int> cols_all, rows_all;
     };
 }
 

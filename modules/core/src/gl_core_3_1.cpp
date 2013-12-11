@@ -40,10 +40,7 @@
 //
 //M*/
 
-#include <string>
-#include <sstream>
-#include "cvconfig.h"
-#include "opencv2/core/core.hpp"
+#include "precomp.hpp"
 #include "gl_core_3_1.hpp"
 
 #ifdef HAVE_OPENGL
@@ -57,8 +54,8 @@
                 image = NSAddImage("/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL", NSADDIMAGE_OPTION_RETURN_ON_ERROR);
 
             // prepend a '_' for the Unix C symbol mangling convention
-            std::string symbolName = "_";
-            symbolName += std::string(name);
+            String symbolName = "_";
+            symbolName += String(name);
 
             NSSymbol symbol = image ? NSLookupSymbolInImage(image, &symbolName[0], NSLOOKUPSYMBOLINIMAGE_OPTION_BIND | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR) : 0;
 
@@ -136,16 +133,14 @@
         void* func =  (void*) CV_GL_GET_PROC_ADDRESS(name);
         if (!func)
         {
-            std::ostringstream msg;
-            msg << "Can't load OpenGL extension [" << name << "]";
-            CV_Error(CV_OpenGlApiCallError, msg.str());
+            CV_Error(cv::Error::OpenGlApiCallError, cv::format("Can't load OpenGL extension [%s]", name) );
         }
         return func;
     }
 #else
     static void* IntGetProcAddress(const char*)
     {
-        CV_Error(CV_OpenGlNotSupported, "The library is compiled without OpenGL support");
+        CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
         return 0;
     }
 #endif

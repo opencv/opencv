@@ -1192,9 +1192,9 @@ cvCalcCovarMatrixEx( int  nObjects, void*  input, int  ioFlags,
 
     cvGetImageRawData( avg, (uchar **) & avg_data, &avg_step, &avg_size );
     if( avg->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( avg->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     if( ioFlags == CV_EIGOBJ_NO_CALLBACK )
     {
@@ -1213,11 +1213,11 @@ cvCalcCovarMatrixEx( int  nObjects, void*  input, int  ioFlags,
 
             cvGetImageRawData( img, &img_data, &img_step, &img_size );
             if( img->depth != IPL_DEPTH_8U )
-                CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                CV_ERROR( CV_BadDepth, "Unsupported format" );
             if( img_size != avg_size || img_size != old_size )
                 CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
             if( img->nChannels != 1 )
-                CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                CV_ERROR( CV_BadNumChannels, "Unsupported format" );
             if( i > 0 && img_step != old_step )
                 CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1327,9 +1327,9 @@ cvCalcEigenObjects( int       nObjects,
 
     cvGetImageRawData( avg, (uchar **) & avg_data, &avg_step, &avg_size );
     if( avg->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( avg->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     if( nEigens > calcLimit->max_iter && calcLimit->type != CV_TERMCRIT_EPS )
         nEigens = calcLimit->max_iter;
@@ -1358,11 +1358,11 @@ cvCalcEigenObjects( int       nObjects,
 
                 cvGetImageRawData( img, &obj_data, &obj_step, &obj_size );
                 if( img->depth != IPL_DEPTH_8U )
-                    CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadDepth, "Unsupported format" );
                 if( obj_size != avg_size || obj_size != old_size )
                     CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
                 if( img->nChannels != 1 )
-                    CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadNumChannels, "Unsupported format" );
                 if( i > 0 && obj_step != old_step )
                     CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1377,11 +1377,11 @@ cvCalcEigenObjects( int       nObjects,
 
                 cvGetImageRawData( eig, (uchar **) & eig_data, &eig_step, &eig_size );
                 if( eig->depth != IPL_DEPTH_32F )
-                    CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadDepth, "Unsupported format" );
                 if( eig_size != avg_size || eig_size != oldeig_size )
                     CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
                 if( eig->nChannels != 1 )
-                    CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadNumChannels, "Unsupported format" );
                 if( i > 0 && eig_step != oldeig_step )
                     CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1415,11 +1415,11 @@ cvCalcEigenObjects( int       nObjects,
 
                 cvGetImageRawData( img, &obj_data, &obj_step, &obj_size );
                 if( img->depth != IPL_DEPTH_8U )
-                    CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadDepth, "Unsupported format" );
                 if( obj_size != avg_size || obj_size != old_size )
                     CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
                 if( img->nChannels != 1 )
-                    CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadNumChannels, "Unsupported format" );
                 if( i > 0 && obj_step != old_step )
                     CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1461,11 +1461,11 @@ cvCalcEigenObjects( int       nObjects,
 
                 cvGetImageRawData( eig, (uchar **) & eig_data, &eig_step, &eig_size );
                 if( eig->depth != IPL_DEPTH_32F )
-                    CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadDepth, "Unsupported format" );
                 if( eig_size != avg_size || eig_size != oldeig_size )
                     CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
                 if( eig->nChannels != 1 )
-                    CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                    CV_ERROR( CV_BadNumChannels, "Unsupported format" );
                 if( i > 0 && eig_step != oldeig_step )
                     CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1545,21 +1545,21 @@ cvCalcDecompCoeff( IplImage * obj, IplImage * eigObj, IplImage * avg )
 
     cvGetImageRawData( obj, &obj_data, &obj_step, &obj_size );
     if( obj->depth != IPL_DEPTH_8U )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( obj->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     cvGetImageRawData( eigObj, (uchar **) & eig_data, &eig_step, &eig_size );
     if( eigObj->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( eigObj->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     cvGetImageRawData( avg, (uchar **) & avg_data, &avg_step, &avg_size );
     if( avg->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( avg->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     if( obj_size != eig_size || obj_size != avg_size )
         CV_ERROR( CV_StsBadArg, "different sizes of images" );
@@ -1614,15 +1614,15 @@ cvEigenDecomposite( IplImage* obj,
 
     cvGetImageRawData( avg, (uchar **) & avg_data, &avg_step, &avg_size );
     if( avg->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( avg->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     cvGetImageRawData( obj, &obj_data, &obj_step, &obj_size );
     if( obj->depth != IPL_DEPTH_8U )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( obj->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     if( obj_size != avg_size )
         CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
@@ -1644,11 +1644,11 @@ cvEigenDecomposite( IplImage* obj,
 
             cvGetImageRawData( eig, (uchar **) & eig_data, &eig_step, &eig_size );
             if( eig->depth != IPL_DEPTH_32F )
-                CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                CV_ERROR( CV_BadDepth, "Unsupported format" );
             if( eig_size != avg_size || eig_size != old_size )
                 CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
             if( eig->nChannels != 1 )
-                CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                CV_ERROR( CV_BadNumChannels, "Unsupported format" );
             if( i > 0 && eig_step != old_step )
                 CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 
@@ -1731,15 +1731,15 @@ cvEigenProjection( void*     eigInput,
 
     cvGetImageRawData( avg, (uchar **) & avg_data, &avg_step, &avg_size );
     if( avg->depth != IPL_DEPTH_32F )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( avg->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     cvGetImageRawData( proj, &proj_data, &proj_step, &proj_size );
     if( proj->depth != IPL_DEPTH_8U )
-        CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+        CV_ERROR( CV_BadDepth, "Unsupported format" );
     if( proj->nChannels != 1 )
-        CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+        CV_ERROR( CV_BadNumChannels, "Unsupported format" );
 
     if( proj_size != avg_size )
         CV_ERROR( CV_StsBadArg, "Different sizes of projects" );
@@ -1761,11 +1761,11 @@ cvEigenProjection( void*     eigInput,
 
             cvGetImageRawData( eig, (uchar **) & eig_data, &eig_step, &eig_size );
             if( eig->depth != IPL_DEPTH_32F )
-                CV_ERROR( CV_BadDepth, cvUnsupportedFormat );
+                CV_ERROR( CV_BadDepth, "Unsupported format" );
             if( eig_size != avg_size || eig_size != old_size )
                 CV_ERROR( CV_StsBadArg, "Different sizes of objects" );
             if( eig->nChannels != 1 )
-                CV_ERROR( CV_BadNumChannels, cvUnsupportedFormat );
+                CV_ERROR( CV_BadNumChannels, "Unsupported format" );
             if( i > 0 && eig_step != old_step )
                 CV_ERROR( CV_StsBadArg, "Different steps of objects" );
 

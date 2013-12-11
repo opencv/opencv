@@ -333,7 +333,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: RotatedRect::RotatedRect()
     .. ocv:function:: RotatedRect::RotatedRect(const Point2f& center, const Size2f& size, float angle)
-    .. ocv:function:: RotatedRect::RotatedRect(const CvBox2D& box)
 
         :param center: The rectangle mass center.
         :param size: Width and height of the rectangle.
@@ -342,7 +341,6 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
 
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
-    .. ocv:function:: RotatedRect::operator CvBox2D() const
 
         :param pts: The points array for storing rectangle vertices.
 
@@ -413,8 +411,6 @@ The constructors.
 
 .. ocv:function:: TermCriteria::TermCriteria(int type, int maxCount, double epsilon)
 
-.. ocv:function:: TermCriteria::TermCriteria(const CvTermCriteria& criteria)
-
     :param type: The type of termination criteria: ``TermCriteria::COUNT``, ``TermCriteria::EPS`` or ``TermCriteria::COUNT`` + ``TermCriteria::EPS``.
 
     :param maxCount: The maximum number of iterations or elements to compute.
@@ -423,11 +419,6 @@ The constructors.
 
     :param criteria: Termination criteria in the deprecated ``CvTermCriteria`` format.
 
-TermCriteria::operator CvTermCriteria
--------------------------------------
-Converts to the deprecated ``CvTermCriteria`` format.
-
-.. ocv:function:: TermCriteria::operator CvTermCriteria() const
 
 Matx
 ----
@@ -588,186 +579,459 @@ The static method ``Range::all()`` returns a special variable that means "the wh
     }
 
 
-.. _Ptr:
+KeyPoint
+--------
+.. ocv:class:: KeyPoint
+
+  Data structure for salient point detectors.
+
+  .. ocv:member:: Point2f pt
+
+     coordinates of the keypoint
+
+  .. ocv:member:: float size
+
+     diameter of the meaningful keypoint neighborhood
+
+  .. ocv:member:: float angle
+
+     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
+
+  .. ocv:member:: float response
+
+     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
+
+  .. ocv:member:: int octave
+
+     octave (pyramid layer) from which the keypoint has been extracted
+
+  .. ocv:member:: int class_id
+
+     object id that can be used to clustered keypoints by an object they belong to
+
+KeyPoint::KeyPoint
+------------------
+The keypoint constructors
+
+.. ocv:function:: KeyPoint::KeyPoint()
+
+.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
+
+    :param x: x-coordinate of the keypoint
+
+    :param y: y-coordinate of the keypoint
+
+    :param _pt: x & y coordinates of the keypoint
+
+    :param _size: keypoint diameter
+
+    :param _angle: keypoint orientation
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+KeyPoint::convert
+--------------------
+
+This method converts vector of keypoints to vector of points or the reverse, where each keypoint is assigned the same size and the same orientation.
+
+.. ocv:function:: void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f, const std::vector<int>& keypointIndexes=std::vector<int>())
+
+.. ocv:function:: void KeyPoint::convert(const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints, float size=1, float response=1, int octave=0, int class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint_convert(keypoints[, keypointIndexes]) -> points2f
+
+.. ocv:pyfunction:: cv2.KeyPoint_convert(points2f[, size[, response[, octave[, class_id]]]]) -> keypoints
+
+    :param keypoints: Keypoints obtained from any feature detection algorithm like SIFT/SURF/ORB
+
+    :param points2f: Array of (x,y) coordinates of each keypoint
+
+    :param keypointIndexes: Array of indexes of keypoints to be converted to points. (Acts like a mask to convert only specified keypoints)
+
+    :param _size: keypoint diameter
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+KeyPoint::overlap
+--------------------
+
+This method computes overlap for pair of keypoints. Overlap is the ratio between area of keypoint regions' intersection and area of keypoint regions' union (considering keypoint region as circle). If they don't overlap, we get zero. If they coincide at same location with same size, we get 1.
+
+.. ocv:function:: float KeyPoint::overlap(const KeyPoint& kp1, const KeyPoint& kp2)
+
+.. ocv:pyfunction:: cv2.KeyPoint_overlap(kp1, kp2) -> retval
+
+    :param kp1: First keypoint
+
+    :param kp2: Second keypoint
+
+
+DMatch
+------
+.. ocv:class:: DMatch
+
+Class for matching keypoint descriptors: query descriptor index,
+train descriptor index, train image index, and distance between descriptors. ::
+
+    class DMatch
+    {
+    public:
+        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
+                   distance(std::numeric_limits<float>::max()) {}
+        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
+                distance(_distance) {}
+        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
+                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
+                distance(_distance) {}
+
+        int queryIdx; // query descriptor index
+        int trainIdx; // train descriptor index
+        int imgIdx;   // train image index
+
+        float distance;
+
+        // less is better
+        bool operator<( const DMatch &m ) const;
+    };
+
 
 Ptr
 ---
 .. ocv:class:: Ptr
 
-Template class for smart reference-counting pointers ::
+Template class for smart pointers with shared ownership. ::
 
-    template<typename _Tp> class Ptr
+    template<typename T>
+    struct Ptr
     {
-    public:
-        // default constructor
+        typedef T element_type;
+
         Ptr();
-        // constructor that wraps the object pointer
-        Ptr(_Tp* _obj);
-        // destructor: calls release()
+
+        template<typename Y>
+        explicit Ptr(Y* p);
+        template<typename Y, typename D>
+        Ptr(Y* p, D d);
+
+        Ptr(const Ptr& o);
+        template<typename Y>
+        Ptr(const Ptr<Y>& o);
+        template<typename Y>
+        Ptr(const Ptr<Y>& o, T* p);
+
         ~Ptr();
-        // copy constructor; increments ptr's reference counter
-        Ptr(const Ptr& ptr);
-        // assignment operator; decrements own reference counter
-        // (with release()) and increments ptr's reference counter
-        Ptr& operator = (const Ptr& ptr);
-        // increments reference counter
-        void addref();
-        // decrements reference counter; when it becomes 0,
-        // delete_obj() is called
+
+        Ptr& operator = (const Ptr& o);
+        template<typename Y>
+        Ptr& operator = (const Ptr<Y>& o);
+
         void release();
-        // user-specified custom object deletion operation.
-        // by default, "delete obj;" is called
-        void delete_obj();
-        // returns true if obj == 0;
+
+        template<typename Y>
+        void reset(Y* p);
+        template<typename Y, typename D>
+        void reset(Y* p, D d);
+
+        void swap(Ptr& o);
+
+        T* get() const;
+
+        T& operator * () const;
+        T* operator -> () const;
+        operator T* () const;
+
         bool empty() const;
 
-        // provide access to the object fields and methods
-        _Tp* operator -> ();
-        const _Tp* operator -> () const;
-
-        // return the underlying object pointer;
-        // thanks to the methods, the Ptr<_Tp> can be
-        // used instead of _Tp*
-        operator _Tp* ();
-        operator const _Tp*() const;
-    protected:
-        // the encapsulated object pointer
-        _Tp* obj;
-        // the associated reference counter
-        int* refcount;
+        template<typename Y>
+        Ptr<Y> staticCast() const;
+        template<typename Y>
+        Ptr<Y> constCast() const;
+        template<typename Y>
+        Ptr<Y> dynamicCast() const;
     };
 
 
-The ``Ptr<_Tp>`` class is a template class that wraps pointers of the corresponding type. It is
-similar to ``shared_ptr`` that is part of the Boost library
-(http://www.boost.org/doc/libs/1_40_0/libs/smart_ptr/shared_ptr.htm) and also part of the
-`C++0x <http://en.wikipedia.org/wiki/C++0x>`_ standard.
+A ``Ptr<T>`` pretends to be a pointer to an object of type T.
+Unlike an ordinary pointer, however, the object will be automatically
+cleaned up once all ``Ptr`` instances pointing to it are destroyed.
 
-This class provides the following options:
+``Ptr`` is similar to ``boost::shared_ptr`` that is part of the Boost library
+(http://www.boost.org/doc/libs/release/libs/smart_ptr/shared_ptr.htm)
+and ``std::shared_ptr`` from the `C++11 <http://en.wikipedia.org/wiki/C++11>`_ standard.
+
+This class provides the following advantages:
 
 *
     Default constructor, copy constructor, and assignment operator for an arbitrary C++ class
-    or a C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy
+    or C structure. For some objects, like files, windows, mutexes, sockets, and others, a copy
     constructor or an assignment operator are difficult to define. For some other objects, like
     complex classifiers in OpenCV, copy constructors are absent and not easy to implement. Finally,
     some of complex OpenCV and your own data structures may be written in C.
-    However, copy constructors and default constructors can simplify programming a lot.Besides,
-    they are often required (for example, by STL containers). By wrapping a pointer to such a
-    complex object ``TObj`` to ``Ptr<TObj>``, you automatically get all of the necessary
+    However, copy constructors and default constructors can simplify programming a lot. Besides,
+    they are often required (for example, by STL containers). By using a ``Ptr`` to such an
+    object instead of the object itself, you automatically get all of the necessary
     constructors and the assignment operator.
 
 *
     *O(1)* complexity of the above-mentioned operations. While some structures, like ``std::vector``,
     provide a copy constructor and an assignment operator, the operations may take a considerable
-    amount of time if the data structures are large. But if the structures are put into ``Ptr<>``,
+    amount of time if the data structures are large. But if the structures are put into a ``Ptr``,
     the overhead is small and independent of the data size.
 
 *
-    Automatic destruction, even for C structures. See the example below with ``FILE*``.
+    Automatic and customizable cleanup, even for C structures. See the example below with ``FILE*``.
 
 *
     Heterogeneous collections of objects. The standard STL and most other C++ and OpenCV containers
     can store only objects of the same type and the same size. The classical solution to store objects
-    of different types in the same container is to store pointers to the base class ``base_class_t*``
-    instead but then you loose the automatic memory management. Again, by using ``Ptr<base_class_t>()``
-    instead of the raw pointers, you can solve the problem.
+    of different types in the same container is to store pointers to the base class (``Base*``)
+    instead but then you lose the automatic memory management. Again, by using ``Ptr<Base>``
+    instead of raw pointers, you can solve the problem.
 
-The ``Ptr`` class treats the wrapped object as a black box. The reference counter is allocated and
-managed separately. The only thing the pointer class needs to know about the object is how to
-deallocate it. This knowledge is encapsulated in the ``Ptr::delete_obj()`` method that is called when
-the reference counter becomes 0. If the object is a C++ class instance, no additional coding is
-needed, because the default implementation of this method calls ``delete obj;``. However, if the
-object is deallocated in a different way, the specialized method should be created. For example,
-if you want to wrap ``FILE``, the ``delete_obj`` may be implemented as follows: ::
+A ``Ptr`` is said to *own* a pointer - that is, for each ``Ptr`` there is a pointer that will be deleted
+once all ``Ptr`` instances that own it are destroyed. The owned pointer may be null, in which case nothing is deleted.
+Each ``Ptr`` also *stores* a pointer. The stored pointer is the pointer the ``Ptr`` pretends to be;
+that is, the one you get when you use :ocv:func:`Ptr::get` or the conversion to ``T*``. It's usually
+the same as the owned pointer, but if you use casts or the general shared-ownership constructor, the two may diverge:
+the ``Ptr`` will still own the original pointer, but will itself point to something else.
 
-    template<> inline void Ptr<FILE>::delete_obj()
-    {
-        fclose(obj); // no need to clear the pointer afterwards,
-                     // it is done externally.
-    }
-    ...
+The owned pointer is treated as a black box. The only thing ``Ptr`` needs to know about it is how to
+delete it. This knowledge is encapsulated in the *deleter* - an auxiliary object that is associated
+with the owned pointer and shared between all ``Ptr`` instances that own it. The default deleter is
+an instance of ``DefaultDeleter``, which uses the standard C++ ``delete`` operator; as such it
+will work with any pointer allocated with the standard ``new`` operator.
 
-    // now use it:
-    Ptr<FILE> f(fopen("myfile.txt", "r"));
-    if(f.empty())
-        throw ...;
+However, if the pointer must be deleted in a different way, you must specify a custom deleter upon
+``Ptr`` construction. A deleter is simply a callable object that accepts the pointer as its sole argument.
+For example, if you want to wrap ``FILE``, you may do so as follows::
+
+    Ptr<FILE> f(fopen("myfile.txt", "w"), fclose);
+    if(!f) throw ...;
     fprintf(f, ....);
     ...
-    // the file will be closed automatically by the Ptr<FILE> destructor.
+    // the file will be closed automatically by f's destructor.
 
+Alternatively, if you want all pointers of a particular type to be deleted the same way,
+you can specialize ``DefaultDeleter<T>::operator()`` for that type, like this::
 
-.. note:: The reference increment/decrement operations are implemented as atomic operations,
-          and therefore it is normally safe to use the classes in multi-threaded applications.
-          The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that operate on
-          the reference counters.
+    namespace cv {
+    template<> void DefaultDeleter<FILE>::operator ()(FILE * obj) const
+    {
+        fclose(obj);
+    }
+    }
 
-Ptr::Ptr
---------
-Various Ptr constructors.
+For convenience, the following types from the OpenCV C API already have such a specialization
+that calls the appropriate release function:
+
+* ``CvCapture``
+* :ocv:struct:`CvDTreeSplit`
+* :ocv:struct:`CvFileStorage`
+* ``CvHaarClassifierCascade``
+* :ocv:struct:`CvMat`
+* :ocv:struct:`CvMatND`
+* :ocv:struct:`CvMemStorage`
+* :ocv:struct:`CvSparseMat`
+* ``CvVideoWriter``
+* :ocv:struct:`IplImage`
+
+.. note:: The shared ownership mechanism is implemented with reference counting. As such,
+          cyclic ownership (e.g. when object ``a`` contains a ``Ptr`` to object ``b``, which
+          contains a ``Ptr`` to object ``a``) will lead to all involved objects never being
+          cleaned up. Avoid such situations.
+
+.. note:: It is safe to concurrently read (but not write) a ``Ptr`` instance from multiple threads
+          and therefore it is normally safe to use it in multi-threaded applications.
+          The same is true for :ocv:class:`Mat` and other C++ OpenCV classes that use internal
+          reference counts.
+
+Ptr::Ptr (null)
+------------------
 
 .. ocv:function:: Ptr::Ptr()
-.. ocv:function:: Ptr::Ptr(_Tp* _obj)
-.. ocv:function:: Ptr::Ptr(const Ptr& ptr)
 
-    :param _obj: Object for copy.
-    :param ptr: Object for copy.
+    The default constructor creates a null ``Ptr`` - one that owns and stores a null pointer.
+
+Ptr::Ptr (assuming ownership)
+-----------------------------
+
+.. ocv:function:: template<typename Y> Ptr::Ptr(Y* p)
+.. ocv:function:: template<typename Y, typename D> Ptr::Ptr(Y* p, D d)
+
+    :param d: Deleter to use for the owned pointer.
+    :param p: Pointer to own.
+
+    If ``p`` is null, these are equivalent to the default constructor.
+
+    Otherwise, these constructors assume ownership of ``p`` - that is, the created ``Ptr`` owns
+    and stores ``p`` and assumes it is the sole owner of it. Don't use them if ``p`` is already
+    owned by another ``Ptr``, or else ``p`` will get deleted twice.
+
+    With the first constructor, ``DefaultDeleter<Y>()`` becomes the associated deleter (so ``p``
+    will eventually be deleted with the standard ``delete`` operator). ``Y`` must be a complete
+    type at the point of invocation.
+
+    With the second constructor, ``d`` becomes the associated deleter.
+
+    ``Y*`` must be convertible to ``T*``.
+
+    .. note:: It is often easier to use :ocv:func:`makePtr` instead.
+
+Ptr::Ptr (sharing ownership)
+----------------------------
+
+.. ocv:function:: Ptr::Ptr(const Ptr& o)
+.. ocv:function:: template<typename Y> Ptr::Ptr(const Ptr<Y>& o)
+.. ocv:function:: template<typename Y> Ptr::Ptr(const Ptr<Y>& o, T* p)
+
+    :param o: ``Ptr`` to share ownership with.
+    :param p: Pointer to store.
+
+    These constructors create a ``Ptr`` that shares ownership with another ``Ptr`` - that is,
+    own the same pointer as ``o``.
+
+    With the first two, the same pointer is stored, as well; for the second, ``Y*`` must be convertible to ``T*``.
+
+    With the third, ``p`` is stored, and ``Y`` may be any type. This constructor allows to have completely
+    unrelated owned and stored pointers, and should be used with care to avoid confusion. A relatively
+    benign use is to create a non-owning ``Ptr``, like this::
+
+        ptr = Ptr<T>(Ptr<T>(), dont_delete_me); // owns nothing; will not delete the pointer.
 
 Ptr::~Ptr
 ---------
-The Ptr destructor.
 
 .. ocv:function:: Ptr::~Ptr()
 
+    The destructor is equivalent to calling :ocv:func:`Ptr::release`.
+
 Ptr::operator =
 ----------------
-Assignment operator.
 
-.. ocv:function:: Ptr& Ptr::operator = (const Ptr& ptr)
+.. ocv:function:: Ptr& Ptr::operator = (const Ptr& o)
+.. ocv:function:: template<typename Y> Ptr& Ptr::operator = (const Ptr<Y>& o)
 
-    :param ptr: Object for assignment.
+    :param o: ``Ptr`` to share ownership with.
 
-Decrements own reference counter (with ``release()``) and increments ptr's reference counter.
+    Assignment replaces the current ``Ptr`` instance with one that owns and stores same
+    pointers as ``o`` and then destroys the old instance.
 
-Ptr::addref
------------
-Increments reference counter.
-
-.. ocv:function:: void Ptr::addref()
 
 Ptr::release
 ------------
-Decrements reference counter; when it becomes 0, ``delete_obj()`` is called.
 
 .. ocv:function:: void Ptr::release()
 
-Ptr::delete_obj
----------------
-User-specified custom object deletion operation. By default, ``delete obj;`` is called.
+    If no other ``Ptr`` instance owns the owned pointer, deletes it with the associated deleter.
+    Then sets both the owned and the stored pointers to ``NULL``.
 
-.. ocv:function:: void Ptr::delete_obj()
+
+Ptr::reset
+----------
+
+.. ocv:function:: template<typename Y> void Ptr::reset(Y* p)
+.. ocv:function:: template<typename Y, typename D> void Ptr::reset(Y* p, D d)
+
+    :param d: Deleter to use for the owned pointer.
+    :param p: Pointer to own.
+
+    ``ptr.reset(...)`` is equivalent to ``ptr = Ptr<T>(...)``.
+
+Ptr::swap
+---------
+
+.. ocv:function:: void Ptr::swap(Ptr& o)
+
+    :param o: ``Ptr`` to swap with.
+
+    Swaps the owned and stored pointers (and deleters, if any) of this and ``o``.
+
+Ptr::get
+--------
+
+.. ocv:function:: T* Ptr::get() const
+
+    Returns the stored pointer.
+
+Ptr pointer emulation
+---------------------
+
+.. ocv:function:: T& Ptr::operator * () const
+.. ocv:function:: T* Ptr::operator -> () const
+.. ocv:function:: Ptr::operator T* () const
+
+    These operators are what allows ``Ptr`` to pretend to be a pointer.
+
+    If ``ptr`` is a ``Ptr<T>``, then ``*ptr`` is equivalent to ``*ptr.get()``
+    and ``ptr->foo`` is equivalent to ``ptr.get()->foo``. In addition, ``ptr``
+    is implicitly convertible to ``T*``, and such conversion is equivalent to
+    ``ptr.get()``. As a corollary, ``if (ptr)`` is equivalent to ``if (ptr.get())``.
+    In other words, a ``Ptr`` behaves as if it was its own stored pointer.
 
 Ptr::empty
 ----------
-Returns true if obj == 0;
 
-bool empty() const;
+.. ocv:function:: bool Ptr::empty() const
 
-Ptr::operator ->
-----------------
-Provide access to the object fields and methods.
+    ``ptr.empty()`` is equivalent to ``!ptr.get()``.
 
-.. ocv:function:: template<typename _Tp> _Tp* Ptr::operator -> ()
-.. ocv:function:: template<typename _Tp> const _Tp* Ptr::operator -> () const
+Ptr casts
+---------
 
+.. ocv:function:: template<typename Y> Ptr<Y> Ptr::staticCast() const
+.. ocv:function:: template<typename Y> Ptr<Y> Ptr::constCast() const
+.. ocv:function:: template<typename Y> Ptr<Y> Ptr::dynamicCast() const
 
-Ptr::operator _Tp*
-------------------
-Returns the underlying object pointer. Thanks to the methods, the ``Ptr<_Tp>`` can be used instead
-of ``_Tp*``.
+    If ``ptr`` is a ``Ptr``, then ``ptr.fooCast<Y>()`` is equivalent to
+    ``Ptr<Y>(ptr, foo_cast<Y>(ptr.get()))``. That is, these functions create
+    a new ``Ptr`` with the same owned pointer and a cast stored pointer.
 
-.. ocv:function:: template<typename _Tp> Ptr::operator _Tp* ()
-.. ocv:function:: template<typename _Tp> Ptr::operator const _Tp*() const
+Ptr global swap
+---------------
 
+.. ocv:function:: template<typename T> void swap(Ptr<T>& ptr1, Ptr<T>& ptr2)
+
+    Equivalent to ``ptr1.swap(ptr2)``. Provided to help write generic algorithms.
+
+Ptr comparisons
+---------------
+
+.. ocv:function:: template<typename T> bool operator == (const Ptr<T>& ptr1, const Ptr<T>& ptr2)
+.. ocv:function:: template<typename T> bool operator != (const Ptr<T>& ptr1, const Ptr<T>& ptr2)
+
+    Return whether ``ptr1.get()`` and ``ptr2.get()`` are equal and not equal, respectively.
+
+makePtr
+-------
+
+.. ocv:function:: template<typename T> Ptr<T> makePtr()
+.. ocv:function:: template<typename T, typename A1> Ptr<T> makePtr(const A1& a1)
+.. ocv:function:: template<typename T, typename A1, typename A2> Ptr<T> makePtr(const A1& a1, const A2& a2)
+.. ocv:function:: template<typename T, typename A1, typename A2, typename A3> Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3)
+
+    (and so on...)
+
+    ``makePtr<T>(...)`` is equivalent to ``Ptr<T>(new T(...))``. It is shorter than the latter, and
+    it's marginally safer than using a constructor or :ocv:func:`Ptr::reset`, since it ensures that
+    the owned pointer is new and thus not owned by any other ``Ptr`` instance.
+
+    Unfortunately, perfect forwarding is impossible to implement in C++03, and so ``makePtr`` is limited
+    to constructors of ``T`` that have up to 10 arguments, none of which are non-const references.
 
 Mat
 ---
@@ -1138,10 +1402,6 @@ Various Mat constructors
 .. ocv:function:: Mat::Mat( const Mat& m, const Range& rowRange, const Range& colRange=Range::all() )
 
 .. ocv:function:: Mat::Mat(const Mat& m, const Rect& roi)
-
-.. ocv:function:: Mat::Mat(const CvMat* m, bool copyData=false)
-
-.. ocv:function:: Mat::Mat(const IplImage* img, bool copyData=false)
 
 .. ocv:function:: template<typename T, int n> explicit Mat::Mat(const Vec<T, n>& vec, bool copyData=true)
 
@@ -1626,7 +1886,7 @@ Such a scheme makes the memory management robust and efficient at the same time 
     Mat color;
     ...
     Mat gray(color.rows, color.cols, color.depth());
-    cvtColor(color, gray, CV_BGR2GRAY);
+    cvtColor(color, gray, COLOR_BGR2GRAY);
 
 
 you can simply write: ::
@@ -1634,7 +1894,7 @@ you can simply write: ::
     Mat color;
     ...
     Mat gray;
-    cvtColor(color, gray, CV_BGR2GRAY);
+    cvtColor(color, gray, COLOR_BGR2GRAY);
 
 
 because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::create()`` for the output array internally.
@@ -1780,33 +2040,6 @@ The operators make a new header for the specified sub-array of ``*this`` . They 
 :ocv:func:`Mat::rowRange`, and
 :ocv:func:`Mat::colRange` . For example, ``A(Range(0, 10), Range::all())`` is equivalent to ``A.rowRange(0, 10)`` . Similarly to all of the above, the operators are O(1) operations, that is, no matrix data is copied.
 
-
-Mat::operator CvMat
--------------------
-Creates the ``CvMat`` header for the matrix.
-
-.. ocv:function:: Mat::operator CvMat() const
-
-
-The operator creates the ``CvMat`` header for the matrix without copying the underlying data. The reference counter is not taken into account by this operation. Thus, you should make sure than the original matrix is not deallocated while the ``CvMat`` header is used. The operator is useful for intermixing the new and the old OpenCV API's, for example: ::
-
-    Mat img(Size(320, 240), CV_8UC3);
-    ...
-
-    CvMat cvimg = img;
-    mycvOldFunc( &cvimg, ...);
-
-
-where ``mycvOldFunc`` is a function written to work with OpenCV 1.x data structures.
-
-
-Mat::operator IplImage
-----------------------
-Creates the ``IplImage`` header for the matrix.
-
-.. ocv:function:: Mat::operator IplImage() const
-
-The operator creates the ``IplImage`` header for the matrix without copying the underlying data. You should make sure than the original matrix is not deallocated while the ``IplImage`` header is used. Similarly to ``Mat::operator CvMat`` , the operator is useful for intermixing the new and the old OpenCV API's.
 
 Mat::total
 ----------
@@ -2382,7 +2615,6 @@ Various SparseMat constructors.
 .. ocv:function:: SparseMat::SparseMat( int dims, const int* _sizes, int _type )
 .. ocv:function:: SparseMat::SparseMat( const SparseMat& m )
 .. ocv:function:: SparseMat::SparseMat( const Mat& m )
-.. ocv:function:: SparseMat::SparseMat( const CvSparseMat* m )
 
 
     :param m: Source matrix for copy constructor. If m is dense matrix (ocv:class:`Mat`) then it will be converted to sparse representation.
@@ -2751,7 +2983,7 @@ The class provides the following features for all derived classes:
 Here is example of SIFT use in your application via Algorithm interface: ::
 
     #include "opencv2/opencv.hpp"
-    #include "opencv2/nonfree/nonfree.hpp"
+    #include "opencv2/nonfree.hpp"
 
     ...
 
@@ -2783,13 +3015,13 @@ Algorithm::name
 ---------------
 Returns the algorithm name
 
-.. ocv:function:: string Algorithm::name() const
+.. ocv:function:: String Algorithm::name() const
 
 Algorithm::get
 --------------
 Returns the algorithm parameter
 
-.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const string& name) const
+.. ocv:function:: template<typename _Tp> typename ParamType<_Tp>::member_type Algorithm::get(const String& name) const
 
     :param name: The parameter name.
 
@@ -2798,7 +3030,7 @@ The method returns value of the particular parameter. Since the compiler can not
     * myalgo.get<int>("param_name")
     * myalgo.get<double>("param_name")
     * myalgo.get<bool>("param_name")
-    * myalgo.get<string>("param_name")
+    * myalgo.get<String>("param_name")
     * myalgo.get<Mat>("param_name")
     * myalgo.get<vector<Mat> >("param_name")
     * myalgo.get<Algorithm>("param_name") (it returns Ptr<Algorithm>).
@@ -2810,13 +3042,13 @@ Algorithm::set
 --------------
 Sets the algorithm parameter
 
-.. ocv:function:: void Algorithm::set(const string& name, int value)
-.. ocv:function:: void Algorithm::set(const string& name, double value)
-.. ocv:function:: void Algorithm::set(const string& name, bool value)
-.. ocv:function:: void Algorithm::set(const string& name, const string& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Mat& value)
-.. ocv:function:: void Algorithm::set(const string& name, const vector<Mat>& value)
-.. ocv:function:: void Algorithm::set(const string& name, const Ptr<Algorithm>& value)
+.. ocv:function:: void Algorithm::set(const String& name, int value)
+.. ocv:function:: void Algorithm::set(const String& name, double value)
+.. ocv:function:: void Algorithm::set(const String& name, bool value)
+.. ocv:function:: void Algorithm::set(const String& name, const String& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Mat& value)
+.. ocv:function:: void Algorithm::set(const String& name, const vector<Mat>& value)
+.. ocv:function:: void Algorithm::set(const String& name, const Ptr<Algorithm>& value)
 
     :param name: The parameter name.
     :param value: The parameter value.
@@ -2855,13 +3087,13 @@ Algorithm::getList
 ------------------
 Returns the list of registered algorithms
 
-.. ocv:function:: void Algorithm::getList(vector<string>& algorithms)
+.. ocv:function:: void Algorithm::getList(vector<String>& algorithms)
 
     :param algorithms: The output vector of algorithm names.
 
 This static method returns the list of registered algorithms in alphabetical order. Here is how to use it ::
 
-    vector<string> algorithms;
+    vector<String> algorithms;
     Algorithm::getList(algorithms);
     cout << "Algorithms: " << algorithms.size() << endl;
     for (size_t i=0; i < algorithms.size(); i++)
@@ -2872,11 +3104,11 @@ Algorithm::create
 -----------------
 Creates algorithm instance by name
 
-.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const string& name)
+.. ocv:function:: template<typename _Tp> Ptr<_Tp> Algorithm::create(const String& name)
 
     :param name: The algorithm name, one of the names returned by ``Algorithm::getList()``.
 
-This static method creates a new instance of the specified algorithm. If there is no such algorithm, the method will silently return null pointer (that can be checked by ``Ptr::empty()`` method). Also, you should specify the particular ``Algorithm`` subclass as ``_Tp`` (or simply ``Algorithm`` if you do not know it at that point). ::
+This static method creates a new instance of the specified algorithm. If there is no such algorithm, the method will silently return a null pointer. Also, you should specify the particular ``Algorithm`` subclass as ``_Tp`` (or simply ``Algorithm`` if you do not know it at that point). ::
 
     Ptr<BackgroundSubtractor> bgfg = Algorithm::create<BackgroundSubtractor>("BackgroundSubtractor.MOG2");
 

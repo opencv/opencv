@@ -49,7 +49,7 @@
 using namespace cv;
 using namespace cv::ocl;
 
-static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
+static void generateRandomCenter(const std::vector<Vec2f>& box, float* center, RNG& rng)
 {
     size_t j, dims = box.size();
     float margin = 1.f/dims;
@@ -105,9 +105,9 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     int i, j, k, dims = _data.cols, N = _data.rows;
     const float* data = (float*)_data.data;
     size_t step = _data.step/sizeof(data[0]);
-    vector<int> _centers(K);
+    std::vector<int> _centers(K);
     int* centers = &_centers[0];
-    vector<float> _dist(N*3);
+    std::vector<float> _dist(N*3);
     float* dist = &_dist[0], *tdist = dist + N, *tdist2 = tdist + N;
     double sum0 = 0;
 
@@ -181,19 +181,19 @@ void cv::ocl::distanceToCenters(const oclMat &src, const oclMat &centers, Mat &d
     int all_dist_count = src.rows * centers.rows;
     oclMat all_dist(1, all_dist_count, CV_32FC1);
 
-    vector<pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&centers.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&all_dist.data));
+    std::vector<std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&centers.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&all_dist.data));
 
-    args.push_back(make_pair(sizeof(cl_int), (void *)&feature_width));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&centers_step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&centers.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&feature_width));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers_step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers.rows));
 
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&centers_offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&centers_offset));
 
     size_t globalThreads[3] = { all_dist_count, 1, 1 };
 
@@ -234,7 +234,7 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
     CV_Assert( N >= K );
 
     Mat _labels;
-    if( flags & CV_KMEANS_USE_INITIAL_LABELS )
+    if( flags & KMEANS_USE_INITIAL_LABELS )
     {
         CV_Assert( (_bestLabels.cols == 1 || _bestLabels.rows == 1) &&
                    _bestLabels.cols * _bestLabels.rows == N &&
@@ -255,8 +255,8 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
     Mat data;
     _src.download(data);
     Mat centers(K, dims, type), old_centers(K, dims, type), temp(1, dims, type);
-    vector<int> counters(K);
-    vector<Vec2f> _box(dims);
+    std::vector<int> counters(K);
+    std::vector<Vec2f> _box(dims);
     Vec2f* box = &_box[0];
     double best_compactness = DBL_MAX, compactness = 0;
     RNG& rng = theRNG();

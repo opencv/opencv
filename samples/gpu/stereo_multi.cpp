@@ -12,15 +12,15 @@
 #include <iostream>
 #include <iomanip>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/contrib/contrib.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/cudastereo.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 ///////////////////////////////////////////////////////////
 // Thread
@@ -132,18 +132,18 @@ private:
     GpuMat d_leftFrame;
     GpuMat d_rightFrame;
     GpuMat d_disparity;
-    Ptr<StereoBM_GPU> d_alg;
+    Ptr<cuda::StereoBM> d_alg;
 };
 
 StereoSingleGpu::StereoSingleGpu(int deviceId) : deviceId_(deviceId)
 {
-    gpu::setDevice(deviceId_);
-    d_alg = new StereoBM_GPU(StereoBM_GPU::BASIC_PRESET, 256);
+    cuda::setDevice(deviceId_);
+    d_alg = cuda::createStereoBM(256);
 }
 
 StereoSingleGpu::~StereoSingleGpu()
 {
-    gpu::setDevice(deviceId_);
+    cuda::setDevice(deviceId_);
     d_leftFrame.release();
     d_rightFrame.release();
     d_disparity.release();
@@ -152,10 +152,10 @@ StereoSingleGpu::~StereoSingleGpu()
 
 void StereoSingleGpu::compute(const Mat& leftFrame, const Mat& rightFrame, Mat& disparity)
 {
-    gpu::setDevice(deviceId_);
+    cuda::setDevice(deviceId_);
     d_leftFrame.upload(leftFrame);
     d_rightFrame.upload(rightFrame);
-    (*d_alg)(d_leftFrame, d_rightFrame, d_disparity);
+    d_alg->compute(d_leftFrame, d_rightFrame, d_disparity);
     d_disparity.download(disparity);
 }
 
@@ -175,7 +175,7 @@ private:
     GpuMat d_leftFrames[2];
     GpuMat d_rightFrames[2];
     GpuMat d_disparities[2];
-    Ptr<StereoBM_GPU> d_algs[2];
+    Ptr<cuda::StereoBM> d_algs[2];
 
     struct StereoLaunchData
     {
@@ -186,7 +186,7 @@ private:
         GpuMat* d_leftFrame;
         GpuMat* d_rightFrame;
         GpuMat* d_disparity;
-        Ptr<StereoBM_GPU> d_alg;
+        Ptr<cuda::StereoBM> d_alg;
     };
 
     static void launchGpuStereoAlg(void* userData);
@@ -194,22 +194,22 @@ private:
 
 StereoMultiGpuThread::StereoMultiGpuThread()
 {
-    gpu::setDevice(0);
-    d_algs[0] = new StereoBM_GPU(StereoBM_GPU::BASIC_PRESET, 256);
+    cuda::setDevice(0);
+    d_algs[0] = cuda::createStereoBM(256);
 
-    gpu::setDevice(1);
-    d_algs[1] = new StereoBM_GPU(StereoBM_GPU::BASIC_PRESET, 256);
+    cuda::setDevice(1);
+    d_algs[1] = cuda::createStereoBM(256);
 }
 
 StereoMultiGpuThread::~StereoMultiGpuThread()
 {
-    gpu::setDevice(0);
+    cuda::setDevice(0);
     d_leftFrames[0].release();
     d_rightFrames[0].release();
     d_disparities[0].release();
     d_algs[0].release();
 
-    gpu::setDevice(1);
+    cuda::setDevice(1);
     d_leftFrames[1].release();
     d_rightFrames[1].release();
     d_disparities[1].release();
@@ -256,10 +256,10 @@ void StereoMultiGpuThread::launchGpuStereoAlg(void* userData)
 {
     StereoLaunchData* data = static_cast<StereoLaunchData*>(userData);
 
-    gpu::setDevice(data->deviceId);
+    cuda::setDevice(data->deviceId);
     data->d_leftFrame->upload(data->leftFrame);
     data->d_rightFrame->upload(data->rightFrame);
-    (*data->d_alg)(*data->d_leftFrame, *data->d_rightFrame, *data->d_disparity);
+    data->d_alg->compute(*data->d_leftFrame, *data->d_rightFrame, *data->d_disparity);
 
     if (data->deviceId == 0)
         data->d_disparity->rowRange(0, data->d_disparity->rows - 32).download(data->disparity);
@@ -283,31 +283,31 @@ private:
     GpuMat d_leftFrames[2];
     GpuMat d_rightFrames[2];
     GpuMat d_disparities[2];
-    Ptr<StereoBM_GPU> d_algs[2];
+    Ptr<cuda::StereoBM> d_algs[2];
     Ptr<Stream> streams[2];
 };
 
 StereoMultiGpuStream::StereoMultiGpuStream()
 {
-    gpu::setDevice(0);
-    d_algs[0] = new StereoBM_GPU(StereoBM_GPU::BASIC_PRESET, 256);
-    streams[0] = new Stream;
+    cuda::setDevice(0);
+    d_algs[0] = cuda::createStereoBM(256);
+    streams[0] = makePtr<Stream>();
 
-    gpu::setDevice(1);
-    d_algs[1] = new StereoBM_GPU(StereoBM_GPU::BASIC_PRESET, 256);
-    streams[1] = new Stream;
+    cuda::setDevice(1);
+    d_algs[1] = cuda::createStereoBM(256);
+    streams[1] = makePtr<Stream>();
 }
 
 StereoMultiGpuStream::~StereoMultiGpuStream()
 {
-    gpu::setDevice(0);
+    cuda::setDevice(0);
     d_leftFrames[0].release();
     d_rightFrames[0].release();
     d_disparities[0].release();
     d_algs[0].release();
     streams[0].release();
 
-    gpu::setDevice(1);
+    cuda::setDevice(1);
     d_leftFrames[1].release();
     d_rightFrames[1].release();
     d_disparities[1].release();
@@ -330,22 +330,22 @@ void StereoMultiGpuStream::compute(const CudaMem& leftFrame, const CudaMem& righ
     Mat disparityPart0 = disparityHdr.rowRange(0, leftFrame.rows / 2);
     Mat disparityPart1 = disparityHdr.rowRange(leftFrame.rows / 2, leftFrame.rows);
 
-    gpu::setDevice(0);
-    streams[0]->enqueueUpload(leftFrameHdr.rowRange(0, leftFrame.rows / 2 + 32), d_leftFrames[0]);
-    streams[0]->enqueueUpload(rightFrameHdr.rowRange(0, leftFrame.rows / 2 + 32), d_rightFrames[0]);
-    (*d_algs[0])(d_leftFrames[0], d_rightFrames[0], d_disparities[0], *streams[0]);
-    streams[0]->enqueueDownload(d_disparities[0].rowRange(0, leftFrame.rows / 2), disparityPart0);
+    cuda::setDevice(0);
+    d_leftFrames[0].upload(leftFrameHdr.rowRange(0, leftFrame.rows / 2 + 32), *streams[0]);
+    d_rightFrames[0].upload(rightFrameHdr.rowRange(0, leftFrame.rows / 2 + 32), *streams[0]);
+    d_algs[0]->compute(d_leftFrames[0], d_rightFrames[0], d_disparities[0], *streams[0]);
+    d_disparities[0].rowRange(0, leftFrame.rows / 2).download(disparityPart0, *streams[0]);
 
-    gpu::setDevice(1);
-    streams[1]->enqueueUpload(leftFrameHdr.rowRange(leftFrame.rows / 2 - 32, leftFrame.rows), d_leftFrames[1]);
-    streams[1]->enqueueUpload(rightFrameHdr.rowRange(leftFrame.rows / 2 - 32, leftFrame.rows), d_rightFrames[1]);
-    (*d_algs[1])(d_leftFrames[1], d_rightFrames[1], d_disparities[1], *streams[1]);
-    streams[1]->enqueueDownload(d_disparities[1].rowRange(32, d_disparities[1].rows), disparityPart1);
+    cuda::setDevice(1);
+    d_leftFrames[1].upload(leftFrameHdr.rowRange(leftFrame.rows / 2 - 32, leftFrame.rows), *streams[1]);
+    d_rightFrames[1].upload(rightFrameHdr.rowRange(leftFrame.rows / 2 - 32, leftFrame.rows), *streams[1]);
+    d_algs[1]->compute(d_leftFrames[1], d_rightFrames[1], d_disparities[1], *streams[1]);
+    d_disparities[1].rowRange(32, d_disparities[1].rows).download(disparityPart1, *streams[1]);
 
-    gpu::setDevice(0);
+    cuda::setDevice(0);
     streams[0]->waitForCompletion();
 
-    gpu::setDevice(1);
+    cuda::setDevice(1);
     streams[1]->waitForCompletion();
 }
 
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
         DeviceInfo devInfo(i);
         if (!devInfo.isCompatible())
         {
-            cerr << "GPU module was't built for GPU #" << i << " ("
+            cerr << "CUDA module was't built for GPU #" << i << " ("
                  << devInfo.name() << ", CC " << devInfo.majorVersion()
                  << devInfo.minorVersion() << endl;
             return -1;
@@ -446,19 +446,22 @@ int main(int argc, char** argv)
         cvtColor(rightFrame, rightGrayFrame.createMatHeader(), COLOR_BGR2GRAY);
 
         tm.reset(); tm.start();
-        gpu0Alg.compute(leftGrayFrame, rightGrayFrame, disparityGpu0);
+        gpu0Alg.compute(leftGrayFrame.createMatHeader(), rightGrayFrame.createMatHeader(),
+                        disparityGpu0);
         tm.stop();
 
         const double gpu0Time = tm.getTimeMilli();
 
         tm.reset(); tm.start();
-        gpu1Alg.compute(leftGrayFrame, rightGrayFrame, disparityGpu1);
+        gpu1Alg.compute(leftGrayFrame.createMatHeader(), rightGrayFrame.createMatHeader(),
+                        disparityGpu1);
         tm.stop();
 
         const double gpu1Time = tm.getTimeMilli();
 
         tm.reset(); tm.start();
-        multiThreadAlg.compute(leftGrayFrame, rightGrayFrame, disparityMultiThread);
+        multiThreadAlg.compute(leftGrayFrame.createMatHeader(), rightGrayFrame.createMatHeader(),
+                               disparityMultiThread);
         tm.stop();
 
         const double multiThreadTime = tm.getTimeMilli();

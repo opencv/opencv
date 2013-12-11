@@ -90,8 +90,10 @@
 \**********************************************************************************/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <limits>
-#include <iostream>
+
+#define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 #define MAX_IPP8u   255
@@ -1559,8 +1561,8 @@ static void initLabTabs()
         for(i = 0; i <= GAMMA_TAB_SIZE; i++)
         {
             float x = i*scale;
-            g[i] = x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4);
-            ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*pow((double)x, 1./2.4) - 0.055);
+            g[i] = x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4);
+            ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
         }
         splineBuild(g, GAMMA_TAB_SIZE, sRGBGammaTab);
         splineBuild(ig, GAMMA_TAB_SIZE, sRGBInvGammaTab);
@@ -1568,7 +1570,7 @@ static void initLabTabs()
         for(i = 0; i < 256; i++)
         {
             float x = i*(1.f/255.f);
-            sRGBGammaTab_b[i] = saturate_cast<ushort>(255.f*(1 << gamma_shift)*(x <= 0.04045f ? x*(1.f/12.92f) : (float)pow((double)(x + 0.055)*(1./1.055), 2.4)));
+            sRGBGammaTab_b[i] = saturate_cast<ushort>(255.f*(1 << gamma_shift)*(x <= 0.04045f ? x*(1.f/12.92f) : (float)std::pow((double)(x + 0.055)*(1./1.055), 2.4)));
             linearGammaTab_b[i] = (ushort)(i*(1 << gamma_shift));
         }
 
@@ -1711,9 +1713,9 @@ struct RGB2Lab_f
             float Y = R*C3 + G*C4 + B*C5;
             float Z = R*C6 + G*C7 + B*C8;
 
-            float FX = X > 0.008856f ? pow(X, _1_3) : (7.787f * X + _a);
-            float FY = Y > 0.008856f ? pow(Y, _1_3) : (7.787f * Y + _a);
-            float FZ = Z > 0.008856f ? pow(Z, _1_3) : (7.787f * Z + _a);
+            float FX = X > 0.008856f ? std::pow(X, _1_3) : (7.787f * X + _a);
+            float FY = Y > 0.008856f ? std::pow(Y, _1_3) : (7.787f * Y + _a);
+            float FZ = Z > 0.008856f ? std::pow(Z, _1_3) : (7.787f * Z + _a);
 
             float L = Y > 0.008856f ? (116.f * FY - 16.f) : (903.3f * Y);
             float a = 500.f * (FX - FY);
@@ -2095,947 +2097,6 @@ struct Luv2RGB_b
     Luv2RGB_f cvt;
 };
 
-
-//////////////////////////// Bayer Pattern -> RGB conversion /////////////////////////////
-
-template<typename T>
-class SIMDBayerStubInterpolator_
-{
-public:
-    int bayer2Gray(const T*, int, T*, int, int, int, int) const
-    {
-        return 0;
-    }
-
-    int bayer2RGB(const T*, int, T*, int, int) const
-    {
-        return 0;
-    }
-};
-
-#if CV_SSE2
-class SIMDBayerInterpolator_8u
-{
-public:
-    SIMDBayerInterpolator_8u()
-    {
-        use_simd = checkHardwareSupport(CV_CPU_SSE2);
-    }
-
-    int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
-                   int width, int bcoeff, int gcoeff, int rcoeff) const
-    {
-        if( !use_simd )
-            return 0;
-
-        __m128i _b2y = _mm_set1_epi16((short)(rcoeff*2));
-        __m128i _g2y = _mm_set1_epi16((short)(gcoeff*2));
-        __m128i _r2y = _mm_set1_epi16((short)(bcoeff*2));
-        const uchar* bayer_end = bayer + width;
-
-        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
-        {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
-            __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
-            __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
-
-            __m128i b1 = _mm_add_epi16(_mm_srli_epi16(_mm_slli_epi16(r0, 8), 7),
-                                       _mm_srli_epi16(_mm_slli_epi16(r2, 8), 7));
-            __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
-            b1 = _mm_slli_epi16(_mm_srli_si128(b1, 2), 1);
-
-            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 7), _mm_srli_epi16(r2, 7));
-            __m128i g1 = _mm_srli_epi16(_mm_slli_epi16(r1, 8), 7);
-            g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
-            g1 = _mm_slli_epi16(_mm_srli_si128(g1, 2), 2);
-
-            r0 = _mm_srli_epi16(r1, 8);
-            r1 = _mm_slli_epi16(_mm_add_epi16(r0, _mm_srli_si128(r0, 2)), 2);
-            r0 = _mm_slli_epi16(r0, 3);
-
-            g0 = _mm_add_epi16(_mm_mulhi_epi16(b0, _b2y), _mm_mulhi_epi16(g0, _g2y));
-            g1 = _mm_add_epi16(_mm_mulhi_epi16(b1, _b2y), _mm_mulhi_epi16(g1, _g2y));
-            g0 = _mm_add_epi16(g0, _mm_mulhi_epi16(r0, _r2y));
-            g1 = _mm_add_epi16(g1, _mm_mulhi_epi16(r1, _r2y));
-            g0 = _mm_srli_epi16(g0, 2);
-            g1 = _mm_srli_epi16(g1, 2);
-            g0 = _mm_packus_epi16(g0, g0);
-            g1 = _mm_packus_epi16(g1, g1);
-            g0 = _mm_unpacklo_epi8(g0, g1);
-            _mm_storeu_si128((__m128i*)dst, g0);
-        }
-
-        return (int)(bayer - (bayer_end - width));
-    }
-
-    int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
-    {
-        if( !use_simd )
-            return 0;
-        /*
-         B G B G | B G B G | B G B G | B G B G
-         G R G R | G R G R | G R G R | G R G R
-         B G B G | B G B G | B G B G | B G B G
-         */
-        __m128i delta1 = _mm_set1_epi16(1), delta2 = _mm_set1_epi16(2);
-        __m128i mask = _mm_set1_epi16(blue < 0 ? -1 : 0), z = _mm_setzero_si128();
-        __m128i masklo = _mm_set1_epi16(0x00ff);
-        const uchar* bayer_end = bayer + width;
-
-        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
-        {
-            __m128i r0 = _mm_loadu_si128((const __m128i*)bayer);
-            __m128i r1 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step));
-            __m128i r2 = _mm_loadu_si128((const __m128i*)(bayer+bayer_step*2));
-
-            __m128i b1 = _mm_add_epi16(_mm_and_si128(r0, masklo), _mm_and_si128(r2, masklo));
-            __m128i b0 = _mm_add_epi16(b1, _mm_srli_si128(b1, 2));
-            b1 = _mm_srli_si128(b1, 2);
-            b1 = _mm_srli_epi16(_mm_add_epi16(b1, delta1), 1);
-            b0 = _mm_srli_epi16(_mm_add_epi16(b0, delta2), 2);
-            b0 = _mm_packus_epi16(b0, b1);
-
-            __m128i g0 = _mm_add_epi16(_mm_srli_epi16(r0, 8), _mm_srli_epi16(r2, 8));
-            __m128i g1 = _mm_and_si128(r1, masklo);
-            g0 = _mm_add_epi16(g0, _mm_add_epi16(g1, _mm_srli_si128(g1, 2)));
-            g1 = _mm_srli_si128(g1, 2);
-            g0 = _mm_srli_epi16(_mm_add_epi16(g0, delta2), 2);
-            g0 = _mm_packus_epi16(g0, g1);
-
-            r0 = _mm_srli_epi16(r1, 8);
-            r1 = _mm_add_epi16(r0, _mm_srli_si128(r0, 2));
-            r1 = _mm_srli_epi16(_mm_add_epi16(r1, delta1), 1);
-            r0 = _mm_packus_epi16(r0, r1);
-
-            b1 = _mm_and_si128(_mm_xor_si128(b0, r0), mask);
-            b0 = _mm_xor_si128(b0, b1);
-            r0 = _mm_xor_si128(r0, b1);
-
-            // b1 g1 b1 g1 ...
-            b1 = _mm_unpackhi_epi8(b0, g0);
-            // b0 g0 b2 g2 b4 g4 ....
-            b0 = _mm_unpacklo_epi8(b0, g0);
-
-            // r1 0 r3 0 ...
-            r1 = _mm_unpackhi_epi8(r0, z);
-            // r0 0 r2 0 r4 0 ...
-            r0 = _mm_unpacklo_epi8(r0, z);
-
-            // 0 b0 g0 r0 0 b2 g2 r2 0 ...
-            g0 = _mm_slli_si128(_mm_unpacklo_epi16(b0, r0), 1);
-            // 0 b8 g8 r8 0 b10 g10 r10 0 ...
-            g1 = _mm_slli_si128(_mm_unpackhi_epi16(b0, r0), 1);
-
-            // b1 g1 r1 0 b3 g3 r3 ....
-            r0 = _mm_unpacklo_epi16(b1, r1);
-            // b9 g9 r9 0 ...
-            r1 = _mm_unpackhi_epi16(b1, r1);
-
-            b0 = _mm_srli_si128(_mm_unpacklo_epi32(g0, r0), 1);
-            b1 = _mm_srli_si128(_mm_unpackhi_epi32(g0, r0), 1);
-
-            _mm_storel_epi64((__m128i*)(dst-1+0), b0);
-            _mm_storel_epi64((__m128i*)(dst-1+6*1), _mm_srli_si128(b0, 8));
-            _mm_storel_epi64((__m128i*)(dst-1+6*2), b1);
-            _mm_storel_epi64((__m128i*)(dst-1+6*3), _mm_srli_si128(b1, 8));
-
-            g0 = _mm_srli_si128(_mm_unpacklo_epi32(g1, r1), 1);
-            g1 = _mm_srli_si128(_mm_unpackhi_epi32(g1, r1), 1);
-
-            _mm_storel_epi64((__m128i*)(dst-1+6*4), g0);
-            _mm_storel_epi64((__m128i*)(dst-1+6*5), _mm_srli_si128(g0, 8));
-
-            _mm_storel_epi64((__m128i*)(dst-1+6*6), g1);
-        }
-
-        return (int)(bayer - (bayer_end - width));
-    }
-
-    bool use_simd;
-};
-#else
-typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
-#endif
-
-template<typename T, class SIMDInterpolator>
-static void Bayer2Gray_( const Mat& srcmat, Mat& dstmat, int code )
-{
-    SIMDInterpolator vecOp;
-    const int R2Y = 4899;
-    const int G2Y = 9617;
-    const int B2Y = 1868;
-    const int SHIFT = 14;
-
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int bcoeff = B2Y, rcoeff = R2Y;
-    int start_with_green = code == CV_BayerGB2GRAY || code == CV_BayerGR2GRAY;
-    bool brow = true;
-
-    if( code != CV_BayerBG2GRAY && code != CV_BayerGB2GRAY )
-    {
-        brow = false;
-        std::swap(bcoeff, rcoeff);
-    }
-
-    dst0 += dst_step + 1;
-    size.height -= 2;
-    size.width -= 2;
-
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
-    {
-        unsigned t0, t1, t2;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
-
-        if( size.width <= 0 )
-        {
-            dst[-1] = dst[size.width] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1])*rcoeff;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2])*bcoeff;
-            t2 = bayer[bayer_step+1]*(2*G2Y);
-
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-            bayer++;
-            dst++;
-        }
-
-        int delta = vecOp.bayer2Gray(bayer, bayer_step, dst, size.width, bcoeff, G2Y, rcoeff);
-        bayer += delta;
-        dst += delta;
-
-        for( ; bayer <= bayer_end - 2; bayer += 2, dst += 2 )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-
-            t0 = (bayer[2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[bayer_step+1] + bayer[bayer_step+3])*bcoeff;
-            t2 = bayer[bayer_step+2]*(2*G2Y);
-            dst[1] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+1);
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2])*rcoeff;
-            t1 = (bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1])*G2Y;
-            t2 = bayer[bayer_step+1]*(4*bcoeff);
-            dst[0] = (T)CV_DESCALE(t0 + t1 + t2, SHIFT+2);
-            bayer++;
-            dst++;
-        }
-
-        dst0[-1] = dst0[0];
-        dst0[size.width] = dst0[size.width-1];
-
-        brow = !brow;
-        std::swap(bcoeff, rcoeff);
-        start_with_green = !start_with_green;
-    }
-
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
-    if( size.height > 2 )
-        for( int i = 0; i < size.width; i++ )
-        {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
-        }
-    else
-        for( int i = 0; i < size.width; i++ )
-        {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
-        }
-}
-
-template<typename T, class SIMDInterpolator>
-static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
-{
-    SIMDInterpolator vecOp;
-    const T* bayer0 = (const T*)srcmat.data;
-    int bayer_step = (int)(srcmat.step/sizeof(T));
-    T* dst0 = (T*)dstmat.data;
-    int dst_step = (int)(dstmat.step/sizeof(T));
-    Size size = srcmat.size();
-    int blue = code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ? -1 : 1;
-    int start_with_green = code == CV_BayerGB2BGR || code == CV_BayerGR2BGR;
-
-    dst0 += dst_step + 3 + 1;
-    size.height -= 2;
-    size.width -= 2;
-
-    for( ; size.height-- > 0; bayer0 += bayer_step, dst0 += dst_step )
-    {
-        int t0, t1;
-        const T* bayer = bayer0;
-        T* dst = dst0;
-        const T* bayer_end = bayer + size.width;
-
-        if( size.width <= 0 )
-        {
-            dst[-4] = dst[-3] = dst[-2] = dst[size.width*3-1] =
-            dst[size.width*3] = dst[size.width*3+1] = 0;
-            continue;
-        }
-
-        if( start_with_green )
-        {
-            t0 = (bayer[1] + bayer[bayer_step*2+1] + 1) >> 1;
-            t1 = (bayer[bayer_step] + bayer[bayer_step+2] + 1) >> 1;
-            dst[-blue] = (T)t0;
-            dst[0] = bayer[bayer_step+1];
-            dst[blue] = (T)t1;
-            bayer++;
-            dst += 3;
-        }
-
-        int delta = vecOp.bayer2RGB(bayer, bayer_step, dst, size.width, blue);
-        bayer += delta;
-        dst += delta*3;
-
-        if( blue > 0 )
-        {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-            {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[-1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[2] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[4] = (T)t1;
-            }
-        }
-        else
-        {
-            for( ; bayer <= bayer_end - 2; bayer += 2, dst += 6 )
-            {
-                t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                      bayer[bayer_step*2+2] + 2) >> 2;
-                t1 = (bayer[1] + bayer[bayer_step] +
-                      bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-                dst[1] = (T)t0;
-                dst[0] = (T)t1;
-                dst[-1] = bayer[bayer_step+1];
-
-                t0 = (bayer[2] + bayer[bayer_step*2+2] + 1) >> 1;
-                t1 = (bayer[bayer_step+1] + bayer[bayer_step+3] + 1) >> 1;
-                dst[4] = (T)t0;
-                dst[3] = bayer[bayer_step+2];
-                dst[2] = (T)t1;
-            }
-        }
-
-        if( bayer < bayer_end )
-        {
-            t0 = (bayer[0] + bayer[2] + bayer[bayer_step*2] +
-                  bayer[bayer_step*2+2] + 2) >> 2;
-            t1 = (bayer[1] + bayer[bayer_step] +
-                  bayer[bayer_step+2] + bayer[bayer_step*2+1]+2) >> 2;
-            dst[-blue] = (T)t0;
-            dst[0] = (T)t1;
-            dst[blue] = bayer[bayer_step+1];
-            bayer++;
-            dst += 3;
-        }
-
-        dst0[-4] = dst0[-1];
-        dst0[-3] = dst0[0];
-        dst0[-2] = dst0[1];
-        dst0[size.width*3-1] = dst0[size.width*3-4];
-        dst0[size.width*3] = dst0[size.width*3-3];
-        dst0[size.width*3+1] = dst0[size.width*3-2];
-
-        blue = -blue;
-        start_with_green = !start_with_green;
-    }
-
-    size = dstmat.size();
-    dst0 = (T*)dstmat.data;
-    if( size.height > 2 )
-        for( int i = 0; i < size.width*3; i++ )
-        {
-            dst0[i] = dst0[i + dst_step];
-            dst0[i + (size.height-1)*dst_step] = dst0[i + (size.height-2)*dst_step];
-        }
-    else
-        for( int i = 0; i < size.width*3; i++ )
-        {
-            dst0[i] = dst0[i + (size.height-1)*dst_step] = 0;
-        }
-}
-
-
-/////////////////// Demosaicing using Variable Number of Gradients ///////////////////////
-
-static void Bayer2RGB_VNG_8u( const Mat& srcmat, Mat& dstmat, int code )
-{
-    const uchar* bayer = srcmat.data;
-    int bstep = (int)srcmat.step;
-    uchar* dst = dstmat.data;
-    int dststep = (int)dstmat.step;
-    Size size = srcmat.size();
-
-    int blueIdx = code == CV_BayerBG2BGR_VNG || code == CV_BayerGB2BGR_VNG ? 0 : 2;
-    bool greenCell0 = code != CV_BayerBG2BGR_VNG && code != CV_BayerRG2BGR_VNG;
-
-    // for too small images use the simple interpolation algorithm
-    if( MIN(size.width, size.height) < 8 )
-    {
-        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( srcmat, dstmat, code );
-        return;
-    }
-
-    const int brows = 3, bcn = 7;
-    int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;
-    int i, bufstep = N7*bcn;
-    cv::AutoBuffer<ushort> _buf(bufstep*brows);
-    ushort* buf = (ushort*)_buf;
-
-    bayer += bstep*2;
-
-#if CV_SSE2
-    bool haveSSE = cv::checkHardwareSupport(CV_CPU_SSE2);
-    #define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
-#endif
-
-    for( int y = 2; y < size.height - 4; y++ )
-    {
-        uchar* dstrow = dst + dststep*y + 6;
-        const uchar* srow;
-
-        for( int dy = (y == 2 ? -1 : 1); dy <= 1; dy++ )
-        {
-            ushort* brow = buf + ((y + dy - 1)%brows)*bufstep + 1;
-            srow = bayer + (y+dy)*bstep + 1;
-
-            for( i = 0; i < bcn; i++ )
-                brow[N*i-1] = brow[(N-2) + N*i] = 0;
-
-            i = 1;
-
-#if CV_SSE2
-            if( haveSSE )
-            {
-                __m128i z = _mm_setzero_si128();
-                for( ; i <= N-9; i += 8, srow += 8, brow += 8 )
-                {
-                    __m128i s1, s2, s3, s4, s6, s7, s8, s9;
-
-                    s1 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1-bstep)),z);
-                    s2 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-bstep)),z);
-                    s3 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1-bstep)),z);
-
-                    s4 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1)),z);
-                    s6 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1)),z);
-
-                    s7 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow-1+bstep)),z);
-                    s8 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+bstep)),z);
-                    s9 = _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)(srow+1+bstep)),z);
-
-                    __m128i b0, b1, b2, b3, b4, b5, b6;
-
-                    b0 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s2,s8),1),
-                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s7),
-                                                       _mm_absdiff_epu16(s3, s9)));
-                    b1 = _mm_adds_epu16(_mm_slli_epi16(_mm_absdiff_epu16(s4,s6),1),
-                                        _mm_adds_epu16(_mm_absdiff_epu16(s1, s3),
-                                                       _mm_absdiff_epu16(s7, s9)));
-                    b2 = _mm_slli_epi16(_mm_absdiff_epu16(s3,s7),1);
-                    b3 = _mm_slli_epi16(_mm_absdiff_epu16(s1,s9),1);
-
-                    _mm_storeu_si128((__m128i*)brow, b0);
-                    _mm_storeu_si128((__m128i*)(brow + N), b1);
-                    _mm_storeu_si128((__m128i*)(brow + N2), b2);
-                    _mm_storeu_si128((__m128i*)(brow + N3), b3);
-
-                    b4 = _mm_adds_epu16(b2,_mm_adds_epu16(_mm_absdiff_epu16(s2, s4),
-                                                          _mm_absdiff_epu16(s6, s8)));
-                    b5 = _mm_adds_epu16(b3,_mm_adds_epu16(_mm_absdiff_epu16(s2, s6),
-                                                          _mm_absdiff_epu16(s4, s8)));
-                    b6 = _mm_adds_epu16(_mm_adds_epu16(s2, s4), _mm_adds_epu16(s6, s8));
-                    b6 = _mm_srli_epi16(b6, 1);
-
-                    _mm_storeu_si128((__m128i*)(brow + N4), b4);
-                    _mm_storeu_si128((__m128i*)(brow + N5), b5);
-                    _mm_storeu_si128((__m128i*)(brow + N6), b6);
-                }
-            }
-#endif
-
-            for( ; i < N-1; i++, srow++, brow++ )
-            {
-                brow[0] = (ushort)(std::abs(srow[-1-bstep] - srow[-1+bstep]) +
-                                   std::abs(srow[-bstep] - srow[+bstep])*2 +
-                                   std::abs(srow[1-bstep] - srow[1+bstep]));
-                brow[N] = (ushort)(std::abs(srow[-1-bstep] - srow[1-bstep]) +
-                                   std::abs(srow[-1] - srow[1])*2 +
-                                   std::abs(srow[-1+bstep] - srow[1+bstep]));
-                brow[N2] = (ushort)(std::abs(srow[+1-bstep] - srow[-1+bstep])*2);
-                brow[N3] = (ushort)(std::abs(srow[-1-bstep] - srow[1+bstep])*2);
-                brow[N4] = (ushort)(brow[N2] + std::abs(srow[-bstep] - srow[-1]) +
-                                    std::abs(srow[+bstep] - srow[1]));
-                brow[N5] = (ushort)(brow[N3] + std::abs(srow[-bstep] - srow[1]) +
-                                    std::abs(srow[+bstep] - srow[-1]));
-                brow[N6] = (ushort)((srow[-bstep] + srow[-1] + srow[1] + srow[+bstep])>>1);
-            }
-        }
-
-        const ushort* brow0 = buf + ((y - 2) % brows)*bufstep + 2;
-        const ushort* brow1 = buf + ((y - 1) % brows)*bufstep + 2;
-        const ushort* brow2 = buf + (y % brows)*bufstep + 2;
-        static const float scale[] = { 0.f, 0.5f, 0.25f, 0.1666666666667f, 0.125f, 0.1f, 0.08333333333f, 0.0714286f, 0.0625f };
-        srow = bayer + y*bstep + 2;
-        bool greenCell = greenCell0;
-
-        i = 2;
-#if CV_SSE2
-        int limit = !haveSSE ? N-2 : greenCell ? std::min(3, N-2) : 2;
-#else
-        int limit = N - 2;
-#endif
-
-        do
-        {
-            for( ; i < limit; i++, srow++, brow0++, brow1++, brow2++, dstrow += 3 )
-            {
-                int gradN = brow0[0] + brow1[0];
-                int gradS = brow1[0] + brow2[0];
-                int gradW = brow1[N-1] + brow1[N];
-                int gradE = brow1[N] + brow1[N+1];
-                int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
-                int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
-                int R, G, B;
-
-                if( !greenCell )
-                {
-                    int gradNE = brow0[N4+1] + brow1[N4];
-                    int gradSW = brow1[N4] + brow2[N4-1];
-                    int gradNW = brow0[N5-1] + brow1[N5];
-                    int gradSE = brow1[N5] + brow2[N5+1];
-
-                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + MAX(maxGrad/2, 1);
-
-                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-                    if( gradN < T )
-                    {
-                        Rs += srow[-bstep*2] + srow[0];
-                        Gs += srow[-bstep]*2;
-                        Bs += srow[-bstep-1] + srow[-bstep+1];
-                        ng++;
-                    }
-                    if( gradS < T )
-                    {
-                        Rs += srow[bstep*2] + srow[0];
-                        Gs += srow[bstep]*2;
-                        Bs += srow[bstep-1] + srow[bstep+1];
-                        ng++;
-                    }
-                    if( gradW < T )
-                    {
-                        Rs += srow[-2] + srow[0];
-                        Gs += srow[-1]*2;
-                        Bs += srow[-bstep-1] + srow[bstep-1];
-                        ng++;
-                    }
-                    if( gradE < T )
-                    {
-                        Rs += srow[2] + srow[0];
-                        Gs += srow[1]*2;
-                        Bs += srow[-bstep+1] + srow[bstep+1];
-                        ng++;
-                    }
-                    if( gradNE < T )
-                    {
-                        Rs += srow[-bstep*2+2] + srow[0];
-                        Gs += brow0[N6+1];
-                        Bs += srow[-bstep+1]*2;
-                        ng++;
-                    }
-                    if( gradSW < T )
-                    {
-                        Rs += srow[bstep*2-2] + srow[0];
-                        Gs += brow2[N6-1];
-                        Bs += srow[bstep-1]*2;
-                        ng++;
-                    }
-                    if( gradNW < T )
-                    {
-                        Rs += srow[-bstep*2-2] + srow[0];
-                        Gs += brow0[N6-1];
-                        Bs += srow[-bstep+1]*2;
-                        ng++;
-                    }
-                    if( gradSE < T )
-                    {
-                        Rs += srow[bstep*2+2] + srow[0];
-                        Gs += brow2[N6+1];
-                        Bs += srow[-bstep+1]*2;
-                        ng++;
-                    }
-                    R = srow[0];
-                    G = R + cvRound((Gs - Rs)*scale[ng]);
-                    B = R + cvRound((Bs - Rs)*scale[ng]);
-                }
-                else
-                {
-                    int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
-                    int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
-                    int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
-                    int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
-
-                    minGrad = std::min(std::min(std::min(std::min(minGrad, gradNE), gradSW), gradNW), gradSE);
-                    maxGrad = std::max(std::max(std::max(std::max(maxGrad, gradNE), gradSW), gradNW), gradSE);
-                    int T = minGrad + MAX(maxGrad/2, 1);
-
-                    int Rs = 0, Gs = 0, Bs = 0, ng = 0;
-                    if( gradN < T )
-                    {
-                        Rs += srow[-bstep*2-1] + srow[-bstep*2+1];
-                        Gs += srow[-bstep*2] + srow[0];
-                        Bs += srow[-bstep]*2;
-                        ng++;
-                    }
-                    if( gradS < T )
-                    {
-                        Rs += srow[bstep*2-1] + srow[bstep*2+1];
-                        Gs += srow[bstep*2] + srow[0];
-                        Bs += srow[bstep]*2;
-                        ng++;
-                    }
-                    if( gradW < T )
-                    {
-                        Rs += srow[-1]*2;
-                        Gs += srow[-2] + srow[0];
-                        Bs += srow[-bstep-2]+srow[bstep-2];
-                        ng++;
-                    }
-                    if( gradE < T )
-                    {
-                        Rs += srow[1]*2;
-                        Gs += srow[2] + srow[0];
-                        Bs += srow[-bstep+2]+srow[bstep+2];
-                        ng++;
-                    }
-                    if( gradNE < T )
-                    {
-                        Rs += srow[-bstep*2+1] + srow[1];
-                        Gs += srow[-bstep+1]*2;
-                        Bs += srow[-bstep] + srow[-bstep+2];
-                        ng++;
-                    }
-                    if( gradSW < T )
-                    {
-                        Rs += srow[bstep*2-1] + srow[-1];
-                        Gs += srow[bstep-1]*2;
-                        Bs += srow[bstep] + srow[bstep-2];
-                        ng++;
-                    }
-                    if( gradNW < T )
-                    {
-                        Rs += srow[-bstep*2-1] + srow[-1];
-                        Gs += srow[-bstep-1]*2;
-                        Bs += srow[-bstep-2]+srow[-bstep];
-                        ng++;
-                    }
-                    if( gradSE < T )
-                    {
-                        Rs += srow[bstep*2+1] + srow[1];
-                        Gs += srow[bstep+1]*2;
-                        Bs += srow[bstep+2]+srow[bstep];
-                        ng++;
-                    }
-                    G = srow[0];
-                    R = G + cvRound((Rs - Gs)*scale[ng]);
-                    B = G + cvRound((Bs - Gs)*scale[ng]);
-                }
-                dstrow[blueIdx] = CV_CAST_8U(B);
-                dstrow[1] = CV_CAST_8U(G);
-                dstrow[blueIdx^2] = CV_CAST_8U(R);
-                greenCell = !greenCell;
-            }
-
-#if CV_SSE2
-            if( !haveSSE )
-                break;
-
-            __m128i emask    = _mm_set1_epi32(0x0000ffff),
-                    omask    = _mm_set1_epi32(0xffff0000),
-                    z        = _mm_setzero_si128(),
-                    one      = _mm_set1_epi16(1);
-            __m128 _0_5      = _mm_set1_ps(0.5f);
-
-            #define _mm_merge_epi16(a, b) _mm_or_si128(_mm_and_si128(a, emask), _mm_and_si128(b, omask)) //(aA_aA_aA_aA) * (bB_bB_bB_bB) => (bA_bA_bA_bA)
-            #define _mm_cvtloepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpacklo_epi16(a,a), 16))   //(1,2,3,4,5,6,7,8) => (1f,2f,3f,4f)
-            #define _mm_cvthiepi16_ps(a)  _mm_cvtepi32_ps(_mm_srai_epi32(_mm_unpackhi_epi16(a,a), 16))   //(1,2,3,4,5,6,7,8) => (5f,6f,7f,8f)
-            #define _mm_loadl_u8_s16(ptr, offset) _mm_unpacklo_epi8(_mm_loadl_epi64((__m128i*)((ptr) + (offset))), z) //load 8 uchars to 8 shorts
-
-            // process 8 pixels at once
-            for( ; i <= N - 10; i += 8, srow += 8, brow0 += 8, brow1 += 8, brow2 += 8 )
-            {
-                //int gradN = brow0[0] + brow1[0];
-                __m128i gradN = _mm_adds_epi16(_mm_loadu_si128((__m128i*)brow0), _mm_loadu_si128((__m128i*)brow1));
-
-                //int gradS = brow1[0] + brow2[0];
-                __m128i gradS = _mm_adds_epi16(_mm_loadu_si128((__m128i*)brow1), _mm_loadu_si128((__m128i*)brow2));
-
-                //int gradW = brow1[N-1] + brow1[N];
-                __m128i gradW = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N-1)), _mm_loadu_si128((__m128i*)(brow1+N)));
-
-                //int gradE = brow1[N+1] + brow1[N];
-                __m128i gradE = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N+1)), _mm_loadu_si128((__m128i*)(brow1+N)));
-
-                //int minGrad = std::min(std::min(std::min(gradN, gradS), gradW), gradE);
-                //int maxGrad = std::max(std::max(std::max(gradN, gradS), gradW), gradE);
-                __m128i minGrad = _mm_min_epi16(_mm_min_epi16(gradN, gradS), _mm_min_epi16(gradW, gradE));
-                __m128i maxGrad = _mm_max_epi16(_mm_max_epi16(gradN, gradS), _mm_max_epi16(gradW, gradE));
-
-                __m128i grad0, grad1;
-
-                //int gradNE = brow0[N4+1] + brow1[N4];
-                //int gradNE = brow0[N2] + brow0[N2+1] + brow1[N2] + brow1[N2+1];
-                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N4+1)), _mm_loadu_si128((__m128i*)(brow1+N4)));
-                grad1 = _mm_adds_epi16( _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N2)), _mm_loadu_si128((__m128i*)(brow0+N2+1))),
-                                        _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N2)), _mm_loadu_si128((__m128i*)(brow1+N2+1))));
-                __m128i gradNE = _mm_merge_epi16(grad0, grad1);
-
-                //int gradSW = brow1[N4] + brow2[N4-1];
-                //int gradSW = brow1[N2] + brow1[N2-1] + brow2[N2] + brow2[N2-1];
-                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N4-1)), _mm_loadu_si128((__m128i*)(brow1+N4)));
-                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N2)), _mm_loadu_si128((__m128i*)(brow2+N2-1))),
-                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N2)), _mm_loadu_si128((__m128i*)(brow1+N2-1))));
-                __m128i gradSW = _mm_merge_epi16(grad0, grad1);
-
-                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNE), gradSW);
-                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNE), gradSW);
-
-                //int gradNW = brow0[N5-1] + brow1[N5];
-                //int gradNW = brow0[N3] + brow0[N3-1] + brow1[N3] + brow1[N3-1];
-                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N5-1)), _mm_loadu_si128((__m128i*)(brow1+N5)));
-                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow0+N3)), _mm_loadu_si128((__m128i*)(brow0+N3-1))),
-                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N3)), _mm_loadu_si128((__m128i*)(brow1+N3-1))));
-                __m128i gradNW = _mm_merge_epi16(grad0, grad1);
-
-                //int gradSE = brow1[N5] + brow2[N5+1];
-                //int gradSE = brow1[N3] + brow1[N3+1] + brow2[N3] + brow2[N3+1];
-                grad0 = _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N5+1)), _mm_loadu_si128((__m128i*)(brow1+N5)));
-                grad1 = _mm_adds_epi16(_mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow2+N3)), _mm_loadu_si128((__m128i*)(brow2+N3+1))),
-                                       _mm_adds_epi16(_mm_loadu_si128((__m128i*)(brow1+N3)), _mm_loadu_si128((__m128i*)(brow1+N3+1))));
-                __m128i gradSE = _mm_merge_epi16(grad0, grad1);
-
-                minGrad = _mm_min_epi16(_mm_min_epi16(minGrad, gradNW), gradSE);
-                maxGrad = _mm_max_epi16(_mm_max_epi16(maxGrad, gradNW), gradSE);
-
-                //int T = minGrad + maxGrad/2;
-                __m128i T = _mm_adds_epi16(_mm_max_epi16(_mm_srli_epi16(maxGrad, 1), one), minGrad);
-
-                __m128i RGs = z, GRs = z, Bs = z, ng = z;
-
-                __m128i x0  = _mm_loadl_u8_s16(srow, +0          );
-                __m128i x1  = _mm_loadl_u8_s16(srow, -1 - bstep  );
-                __m128i x2  = _mm_loadl_u8_s16(srow, -1 - bstep*2);
-                __m128i x3  = _mm_loadl_u8_s16(srow,    - bstep  );
-                __m128i x4  = _mm_loadl_u8_s16(srow, +1 - bstep*2);
-                __m128i x5  = _mm_loadl_u8_s16(srow, +1 - bstep  );
-                __m128i x6  = _mm_loadl_u8_s16(srow, +2 - bstep  );
-                __m128i x7  = _mm_loadl_u8_s16(srow, +1          );
-                __m128i x8  = _mm_loadl_u8_s16(srow, +2 + bstep  );
-                __m128i x9  = _mm_loadl_u8_s16(srow, +1 + bstep  );
-                __m128i x10 = _mm_loadl_u8_s16(srow, +1 + bstep*2);
-                __m128i x11 = _mm_loadl_u8_s16(srow,    + bstep  );
-                __m128i x12 = _mm_loadl_u8_s16(srow, -1 + bstep*2);
-                __m128i x13 = _mm_loadl_u8_s16(srow, -1 + bstep  );
-                __m128i x14 = _mm_loadl_u8_s16(srow, -2 + bstep  );
-                __m128i x15 = _mm_loadl_u8_s16(srow, -1          );
-                __m128i x16 = _mm_loadl_u8_s16(srow, -2 - bstep  );
-
-                __m128i t0, t1, mask;
-
-                // gradN ***********************************************
-                mask = _mm_cmpgt_epi16(T, gradN); // mask = T>gradN
-                ng = _mm_sub_epi16(ng, mask);     // ng += (T>gradN)
-
-                t0 = _mm_slli_epi16(x3, 1);                                 // srow[-bstep]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -bstep*2), x0);  // srow[-bstep*2] + srow[0]
-
-                // RGs += (srow[-bstep*2] + srow[0]) * (T>gradN)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
-                // GRs += {srow[-bstep]*2; (srow[-bstep*2-1] + srow[-bstep*2+1])} * (T>gradN)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epi16(x2,x4)), mask));
-                // Bs  += {(srow[-bstep-1]+srow[-bstep+1]); srow[-bstep]*2 } * (T>gradN)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x1,x5), t0), mask));
-
-                // gradNE **********************************************
-                mask = _mm_cmpgt_epi16(T, gradNE); // mask = T>gradNE
-                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradNE)
-
-                t0 = _mm_slli_epi16(x5, 1);                                    // srow[-bstep+1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -bstep*2+2), x0);   // srow[-bstep*2+2] + srow[0]
-
-                // RGs += {(srow[-bstep*2+2] + srow[0]); srow[-bstep+1]*2} * (T>gradNE)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                // GRs += {brow0[N6+1]; (srow[-bstep*2+1] + srow[1])} * (T>gradNE)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6+1)), _mm_adds_epi16(x4,x7)), mask));
-                // Bs  += {srow[-bstep+1]*2; (srow[-bstep] + srow[-bstep+2])}  * (T>gradNE)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epi16(x3,x6)), mask));
-
-                // gradE ***********************************************
-                mask = _mm_cmpgt_epi16(T, gradE);  // mask = T>gradE
-                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradE)
-
-                t0 = _mm_slli_epi16(x7, 1);                         // srow[1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, 2), x0); // srow[2] + srow[0]
-
-                // RGs += (srow[2] + srow[0]) * (T>gradE)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
-                // GRs += (srow[1]*2) * (T>gradE)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(t0, mask));
-                // Bs  += {(srow[-bstep+1]+srow[bstep+1]); (srow[-bstep+2]+srow[bstep+2])} * (T>gradE)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x5,x9), _mm_adds_epi16(x6,x8)), mask));
-
-                // gradSE **********************************************
-                mask = _mm_cmpgt_epi16(T, gradSE);  // mask = T>gradSE
-                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradSE)
-
-                t0 = _mm_slli_epi16(x9, 1);                                 // srow[bstep+1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, bstep*2+2), x0); // srow[bstep*2+2] + srow[0]
-
-                // RGs += {(srow[bstep*2+2] + srow[0]); srow[bstep+1]*2} * (T>gradSE)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                // GRs += {brow2[N6+1]; (srow[1]+srow[bstep*2+1])} * (T>gradSE)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6+1)), _mm_adds_epi16(x7,x10)), mask));
-                // Bs  += {srow[-bstep+1]*2; (srow[bstep+2]+srow[bstep])} * (T>gradSE)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1), _mm_adds_epi16(x8,x11)), mask));
-
-                // gradS ***********************************************
-                mask = _mm_cmpgt_epi16(T, gradS);  // mask = T>gradS
-                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradS)
-
-                t0 = _mm_slli_epi16(x11, 1);                             // srow[bstep]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow,bstep*2), x0); // srow[bstep*2]+srow[0]
-
-                // RGs += (srow[bstep*2]+srow[0]) * (T>gradS)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
-                // GRs += {srow[bstep]*2; (srow[bstep*2+1]+srow[bstep*2-1])} * (T>gradS)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(t0, _mm_adds_epi16(x10,x12)), mask));
-                // Bs  += {(srow[bstep+1]+srow[bstep-1]); srow[bstep]*2} * (T>gradS)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x9,x13), t0), mask));
-
-                // gradSW **********************************************
-                mask = _mm_cmpgt_epi16(T, gradSW);  // mask = T>gradSW
-                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradSW)
-
-                t0 = _mm_slli_epi16(x13, 1);                                // srow[bstep-1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, bstep*2-2), x0); // srow[bstep*2-2]+srow[0]
-
-                // RGs += {(srow[bstep*2-2]+srow[0]); srow[bstep-1]*2} * (T>gradSW)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                // GRs += {brow2[N6-1]; (srow[bstep*2-1]+srow[-1])} * (T>gradSW)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow2+N6-1)), _mm_adds_epi16(x12,x15)), mask));
-                // Bs  += {srow[bstep-1]*2; (srow[bstep]+srow[bstep-2])} * (T>gradSW)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(t0,_mm_adds_epi16(x11,x14)), mask));
-
-                // gradW ***********************************************
-                mask = _mm_cmpgt_epi16(T, gradW);  // mask = T>gradW
-                ng = _mm_sub_epi16(ng, mask);      // ng += (T>gradW)
-
-                t0 = _mm_slli_epi16(x15, 1);                         // srow[-1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow, -2), x0); // srow[-2]+srow[0]
-
-                // RGs += (srow[-2]+srow[0]) * (T>gradW)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(t1, mask));
-                // GRs += (srow[-1]*2) * (T>gradW)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(t0, mask));
-                // Bs  += {(srow[-bstep-1]+srow[bstep-1]); (srow[bstep-2]+srow[-bstep-2])} * (T>gradW)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_adds_epi16(x1,x13), _mm_adds_epi16(x14,x16)), mask));
-
-                // gradNW **********************************************
-                mask = _mm_cmpgt_epi16(T, gradNW);  // mask = T>gradNW
-                ng = _mm_sub_epi16(ng, mask);       // ng += (T>gradNW)
-
-                t0 = _mm_slli_epi16(x1, 1);                                 // srow[-bstep-1]*2
-                t1 = _mm_adds_epi16(_mm_loadl_u8_s16(srow,-bstep*2-2), x0); // srow[-bstep*2-2]+srow[0]
-
-                // RGs += {(srow[-bstep*2-2]+srow[0]); srow[-bstep-1]*2} * (T>gradNW)
-                RGs = _mm_adds_epi16(RGs, _mm_and_si128(_mm_merge_epi16(t1, t0), mask));
-                // GRs += {brow0[N6-1]; (srow[-bstep*2-1]+srow[-1])} * (T>gradNW)
-                GRs = _mm_adds_epi16(GRs, _mm_and_si128(_mm_merge_epi16(_mm_loadu_si128((__m128i*)(brow0+N6-1)), _mm_adds_epi16(x2,x15)), mask));
-                // Bs  += {srow[-bstep-1]*2; (srow[-bstep]+srow[-bstep-2])} * (T>gradNW)
-                Bs  = _mm_adds_epi16(Bs, _mm_and_si128(_mm_merge_epi16(_mm_slli_epi16(x5, 1),_mm_adds_epi16(x3,x16)), mask));
-
-                __m128 ngf0 = _mm_div_ps(_0_5, _mm_cvtloepi16_ps(ng));
-                __m128 ngf1 = _mm_div_ps(_0_5, _mm_cvthiepi16_ps(ng));
-
-                // now interpolate r, g & b
-                t0 = _mm_subs_epi16(GRs, RGs);
-                t1 = _mm_subs_epi16(Bs, RGs);
-
-                t0 = _mm_add_epi16(x0, _mm_packs_epi32(
-                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t0), ngf0)),
-                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t0), ngf1))));
-
-                t1 = _mm_add_epi16(x0, _mm_packs_epi32(
-                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvtloepi16_ps(t1), ngf0)),
-                                                       _mm_cvtps_epi32(_mm_mul_ps(_mm_cvthiepi16_ps(t1), ngf1))));
-
-                x1 = _mm_merge_epi16(x0, t0);
-                x2 = _mm_merge_epi16(t0, x0);
-
-                uchar R[8], G[8], B[8];
-
-                _mm_storel_epi64(blueIdx ? (__m128i*)B : (__m128i*)R, _mm_packus_epi16(x1, z));
-                _mm_storel_epi64((__m128i*)G, _mm_packus_epi16(x2, z));
-                _mm_storel_epi64(blueIdx ? (__m128i*)R : (__m128i*)B, _mm_packus_epi16(t1, z));
-
-                for( int j = 0; j < 8; j++, dstrow += 3 )
-                {
-                    dstrow[0] = B[j]; dstrow[1] = G[j]; dstrow[2] = R[j];
-                }
-            }
-#endif
-
-            limit = N - 2;
-        }
-        while( i < N - 2 );
-
-        for( i = 0; i < 6; i++ )
-        {
-            dst[dststep*y + 5 - i] = dst[dststep*y + 8 - i];
-            dst[dststep*y + (N - 2)*3 + i] = dst[dststep*y + (N - 3)*3 + i];
-        }
-
-        greenCell0 = !greenCell0;
-        blueIdx ^= 2;
-    }
-
-    for( i = 0; i < size.width*3; i++ )
-    {
-        dst[i] = dst[i + dststep] = dst[i + dststep*2];
-        dst[i + dststep*(size.height-4)] =
-        dst[i + dststep*(size.height-3)] =
-        dst[i + dststep*(size.height-2)] =
-        dst[i + dststep*(size.height-1)] = dst[i + dststep*(size.height-5)];
-    }
-}
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
@@ -3627,6 +2688,353 @@ struct mRGBA2RGBA
     }
 };
 
+
+static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
+{
+    bool ok = false;
+    UMat src = _src.getUMat(), dst;
+    Size sz = src.size(), dstSz = sz;
+    int scn = src.channels(), depth = src.depth(), bidx;
+    int dims = 2, stripeSize = 1;
+    size_t globalsize[] = { src.cols, src.rows };
+    ocl::Kernel k;
+
+    if(depth != CV_8U && depth != CV_16U && depth != CV_32F)
+        return false;
+
+    switch (code)
+    {
+    case COLOR_BGR2BGRA: case COLOR_RGB2BGRA: case COLOR_BGRA2BGR:
+    case COLOR_RGBA2BGR: case COLOR_RGB2BGR: case COLOR_BGRA2RGBA:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        dcn = code == COLOR_BGR2BGRA || code == COLOR_RGB2BGRA || code == COLOR_BGRA2RGBA ? 4 : 3;
+        bool reverse = !(code == COLOR_BGR2BGRA || code == COLOR_BGRA2BGR);
+        k.create("RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=0 -D %s", depth, scn, dcn,
+                        reverse ? "REVERSE" : "ORDER"));
+        break;
+    }
+    case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
+    case COLOR_BGR5652BGRA: case COLOR_BGR5552BGRA: case COLOR_BGR5652RGBA: case COLOR_BGR5552RGBA:
+    {
+        dcn = code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA || code == COLOR_BGR5652RGBA || code == COLOR_BGR5552RGBA ? 4 : 3;
+        CV_Assert((dcn == 3 || dcn == 4) && scn == 2 && depth == CV_8U);
+        bidx = code == COLOR_BGR5652BGR || code == COLOR_BGR5552BGR ||
+            code == COLOR_BGR5652BGRA || code == COLOR_BGR5552BGRA ? 0 : 2;
+        int greenbits = code == COLOR_BGR5652BGR || code == COLOR_BGR5652RGB ||
+            code == COLOR_BGR5652BGRA || code == COLOR_BGR5652RGBA ? 6 : 5;
+        k.create("RGB5x52RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=2 -D dcn=%d -D bidx=%d -D greenbits=%d", depth, dcn, bidx, greenbits));
+        break;
+    }
+    case COLOR_BGR2BGR565: case COLOR_BGR2BGR555: case COLOR_RGB2BGR565: case COLOR_RGB2BGR555:
+    case COLOR_BGRA2BGR565: case COLOR_BGRA2BGR555: case COLOR_RGBA2BGR565: case COLOR_RGBA2BGR555:
+    {
+        CV_Assert((scn == 3 || scn == 4) && depth == CV_8U );
+        bidx = code == COLOR_BGR2BGR565 || code == COLOR_BGR2BGR555 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_BGRA2BGR555 ? 0 : 2;
+        int greenbits = code == COLOR_BGR2BGR565 || code == COLOR_RGB2BGR565 ||
+            code == COLOR_BGRA2BGR565 || code == COLOR_RGBA2BGR565 ? 6 : 5;
+        dcn = 2;
+        k.create("RGB2RGB5x5", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=2 -D bidx=%d -D greenbits=%d", depth, scn, bidx, greenbits));
+        break;
+    }
+    case COLOR_BGR5652GRAY: case COLOR_BGR5552GRAY:
+    {
+        CV_Assert(scn == 2 && depth == CV_8U);
+        dcn = 1;
+        int greenbits = code == COLOR_BGR5652GRAY ? 6 : 5;
+        k.create("BGR5x52Gray", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=2 -D dcn=1 -D bidx=0 -D greenbits=%d", depth, greenbits));
+        break;
+    }
+    case COLOR_GRAY2BGR565: case COLOR_GRAY2BGR555:
+    {
+        CV_Assert(scn == 1 && depth == CV_8U);
+        dcn = 2;
+        int greenbits = code == COLOR_GRAY2BGR565 ? 6 : 5;
+        k.create("Gray2BGR5x5", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=1 -D dcn=2 -D bidx=0 -D greenbits=%d", depth, greenbits));
+        break;
+    }
+    case COLOR_BGR2GRAY: case COLOR_BGRA2GRAY:
+    case COLOR_RGB2GRAY: case COLOR_RGBA2GRAY:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2GRAY || code == COLOR_BGRA2GRAY ? 0 : 2;
+        dcn = 1;
+        k.create("RGB2Gray", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=1 -D bidx=%d -D STRIPE_SIZE=%d",
+                        depth, scn, bidx, stripeSize));
+        globalsize[0] = (src.cols + stripeSize-1)/stripeSize;
+        break;
+    }
+    case COLOR_GRAY2BGR:
+    case COLOR_GRAY2BGRA:
+    {
+        CV_Assert(scn == 1);
+        dcn = code == COLOR_GRAY2BGRA ? 4 : 3;
+        k.create("Gray2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D bidx=0 -D scn=1 -D dcn=%d", depth, dcn));
+        break;
+    }
+    case COLOR_BGR2YUV:
+    case COLOR_RGB2YUV:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_RGB2YUV ? 0 : 2;
+        dcn = 3;
+        k.create("RGB2YUV", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        break;
+    }
+    case COLOR_YUV2BGR:
+    case COLOR_YUV2RGB:
+    {
+        if(dcn < 0) dcn = 3;
+        CV_Assert(dcn == 3 || dcn == 4);
+        bidx = code == COLOR_YUV2RGB ? 0 : 2;
+        k.create("YUV2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
+        break;
+    }
+    case COLOR_YUV2RGB_NV12: case COLOR_YUV2BGR_NV12:
+    case COLOR_YUV2RGBA_NV12: case COLOR_YUV2BGRA_NV12:
+    {
+        CV_Assert( scn == 1 );
+        CV_Assert( sz.width % 2 == 0 && sz.height % 3 == 0 && depth == CV_8U );
+        dcn  = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2RGBA_NV12 ? 4 : 3;
+        bidx = code == COLOR_YUV2BGRA_NV12 || code == COLOR_YUV2BGR_NV12 ? 0 : 2;
+
+        dstSz = Size(sz.width, sz.height * 2 / 3);
+        k.create("YUV2RGB_NV12", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=0 -D scn=1 -D dcn=%d -D bidx=%d", dcn, bidx));
+        break;
+    }
+    case COLOR_BGR2YCrCb:
+    case COLOR_RGB2YCrCb:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2YCrCb ? 0 : 2;
+        dcn = 3;
+        k.create("RGB2YCrCb", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        break;
+    }
+    case COLOR_YCrCb2BGR:
+    case COLOR_YCrCb2RGB:
+    {
+        if( dcn <= 0 )
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+        bidx = code == COLOR_YCrCb2BGR ? 0 : 2;
+        k.create("YCrCb2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=%d -D bidx=%d", depth, scn, dcn, bidx));
+        break;
+    }
+    case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
+    {
+        CV_Assert(scn == 3 || scn == 4);
+        bidx = code == COLOR_BGR2XYZ ? 0 : 2;
+
+        UMat c;
+        if (depth == CV_32F)
+        {
+            float coeffs[] =
+            {
+                0.412453f, 0.357580f, 0.180423f,
+                0.212671f, 0.715160f, 0.072169f,
+                0.019334f, 0.119193f, 0.950227f
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[2]);
+                std::swap(coeffs[3], coeffs[5]);
+                std::swap(coeffs[6], coeffs[8]);
+            }
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+        }
+        else
+        {
+            int coeffs[] =
+            {
+                1689,    1465,    739,
+                871,     2929,    296,
+                79,      488,     3892
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[2]);
+                std::swap(coeffs[3], coeffs[5]);
+                std::swap(coeffs[6], coeffs[8]);
+            }
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+        }
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, 3));
+        dst = _dst.getUMat();
+
+        k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+        return k.run(2, globalsize, 0, false);
+    }
+    case COLOR_XYZ2BGR: case COLOR_XYZ2RGB:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4));
+        bidx = code == COLOR_XYZ2BGR ? 0 : 2;
+
+        UMat c;
+        if (depth == CV_32F)
+        {
+            float coeffs[] =
+            {
+                3.240479f, -1.53715f, -0.498535f,
+                -0.969256f, 1.875991f, 0.041556f,
+                0.055648f, -0.204043f, 1.057311f
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[6]);
+                std::swap(coeffs[1], coeffs[7]);
+                std::swap(coeffs[2], coeffs[8]);
+            }
+            Mat(1, 9, CV_32FC1, &coeffs[0]).copyTo(c);
+        }
+        else
+        {
+            int coeffs[] =
+            {
+                13273,  -6296,  -2042,
+                -3970,   7684,    170,
+                  228,   -836,   4331
+            };
+            if (bidx == 0)
+            {
+                std::swap(coeffs[0], coeffs[6]);
+                std::swap(coeffs[1], coeffs[7]);
+                std::swap(coeffs[2], coeffs[8]);
+            }
+            Mat(1, 9, CV_32SC1, &coeffs[0]).copyTo(c);
+        }
+
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+
+        k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
+        return k.run(2, globalsize, 0, false);
+    }
+    case COLOR_BGR2HSV: case COLOR_RGB2HSV: case COLOR_BGR2HSV_FULL: case COLOR_RGB2HSV_FULL:
+    case COLOR_BGR2HLS: case COLOR_RGB2HLS: case COLOR_BGR2HLS_FULL: case COLOR_RGB2HLS_FULL:
+    {
+        CV_Assert((scn == 3 || scn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_BGR2HSV || code == COLOR_BGR2HLS ||
+            code == COLOR_BGR2HSV_FULL || code == COLOR_BGR2HLS_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_BGR2HSV || code == COLOR_RGB2HSV ||
+            code == COLOR_BGR2HLS || code == COLOR_RGB2HLS ? 180 : 256;
+        bool is_hsv = code == COLOR_BGR2HSV || code == COLOR_RGB2HSV || code == COLOR_BGR2HSV_FULL || code == COLOR_RGB2HSV_FULL;
+        String kernelName = String("RGB2") + (is_hsv ? "HSV" : "HLS");
+        dcn = 3;
+
+        if (is_hsv && depth == CV_8U)
+        {
+            static UMat sdiv_data;
+            static UMat hdiv_data180;
+            static UMat hdiv_data256;
+            static int sdiv_table[256];
+            static int hdiv_table180[256];
+            static int hdiv_table256[256];
+            static volatile bool initialized180 = false, initialized256 = false;
+            volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+
+            if (!initialized)
+            {
+                int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
+                UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
+
+                sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
+
+                int v = 255 << hsv_shift;
+                if (!initialized180 && !initialized256)
+                {
+                    for(int i = 1; i < 256; i++ )
+                        sdiv_table[i] = saturate_cast<int>(v/(1.*i));
+                    Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
+                }
+
+                v = hrange << hsv_shift;
+                for (int i = 1; i < 256; i++ )
+                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
+
+                Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
+                initialized = true;
+            }
+
+            _dst.create(dstSz, CV_8UC3);
+            dst = _dst.getUMat();
+
+            k.create("RGB2HSV", ocl::imgproc::cvtcolor_oclsrc, format("-D depth=%d -D hrange=%d -D bidx=%d -D dcn=3 -D scn=%d",
+                                                                      depth, hrange, bidx, scn));
+
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
+                   ocl::KernelArg::PtrReadOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
+                                                                       ocl::KernelArg::PtrReadOnly(hdiv_data180));
+
+            return k.run(2, globalsize, NULL, false);
+        }
+        else
+            k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                     format("-D depth=%d -D hscale=%f -D bidx=%d -D scn=%d -D dcn=3", depth, hrange*(1.f/360.f), bidx, scn));
+        break;
+    }
+    case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
+    case COLOR_HLS2BGR: case COLOR_HLS2RGB: case COLOR_HLS2BGR_FULL: case COLOR_HLS2RGB_FULL:
+    {
+        if (dcn <= 0)
+            dcn = 3;
+        CV_Assert(scn == 3 && (dcn == 3 || dcn == 4) && (depth == CV_8U || depth == CV_32F));
+        bidx = code == COLOR_HSV2BGR || code == COLOR_HLS2BGR ||
+            code == COLOR_HSV2BGR_FULL || code == COLOR_HLS2BGR_FULL ? 0 : 2;
+        int hrange = depth == CV_32F ? 360 : code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+            code == COLOR_HLS2BGR || code == COLOR_HLS2RGB ? 180 : 255;
+        bool is_hsv = code == COLOR_HSV2BGR || code == COLOR_HSV2RGB ||
+                code == COLOR_HSV2BGR_FULL || code == COLOR_HSV2RGB_FULL;
+
+        String kernelName = String(is_hsv ? "HSV" : "HLS") + "2RGB";
+        k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d -D hrange=%d -D hscale=%f",
+                        depth, dcn, bidx, hrange, 6.f/hrange));
+        break;
+    }
+    case COLOR_RGBA2mRGBA: case COLOR_mRGBA2RGBA:
+    {
+        CV_Assert(scn == 4 && depth == CV_8U);
+        dcn = 4;
+
+        k.create(code == COLOR_RGBA2mRGBA ? "RGBA2mRGBA" : "mRGBA2RGBA", ocl::imgproc::cvtcolor_oclsrc,
+                 format("-D depth=%d -D dcn=4 -D scn=4 -D bidx=3", depth));
+        break;
+    }
+    default:
+        ;
+    }
+
+    if( !k.empty() )
+    {
+        _dst.create(dstSz, CV_MAKETYPE(depth, dcn));
+        dst = _dst.getUMat();
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
+        ok = k.run(dims, globalsize, 0, false);
+    }
+    return ok;
+}
+
 }//namespace cv
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -3635,9 +3043,15 @@ struct mRGBA2RGBA
 
 void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
+    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
+    int stype = _src.type();
+    int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
+
+    if( use_opencl && ocl_cvtColor(_src, _dst, code, dcn) )
+        return;
+
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
-    int scn = src.channels(), depth = src.depth(), bidx;
 
     CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32F );
 
@@ -4172,47 +3586,12 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             break;
 
         case CV_BayerBG2GRAY: case CV_BayerGB2GRAY: case CV_BayerRG2GRAY: case CV_BayerGR2GRAY:
-            if(dcn <= 0) dcn = 1;
-            CV_Assert( scn == 1 && dcn == 1 );
-
-            _dst.create(sz, CV_MAKETYPE(depth, dcn));
-            dst = _dst.getMat();
-
-            if( depth == CV_8U )
-                Bayer2Gray_<uchar, SIMDBayerInterpolator_8u>(src, dst, code);
-            else if( depth == CV_16U )
-                Bayer2Gray_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst, code);
-            else
-                CV_Error(CV_StsUnsupportedFormat, "Bayer->Gray demosaicing only supports 8u and 16u types");
-            break;
-
         case CV_BayerBG2BGR: case CV_BayerGB2BGR: case CV_BayerRG2BGR: case CV_BayerGR2BGR:
         case CV_BayerBG2BGR_VNG: case CV_BayerGB2BGR_VNG: case CV_BayerRG2BGR_VNG: case CV_BayerGR2BGR_VNG:
-            {
-                if (dcn <= 0)
-                    dcn = 3;
-                CV_Assert( scn == 1 && dcn == 3 );
-
-                _dst.create(sz, CV_MAKE_TYPE(depth, dcn));
-                Mat dst_ = _dst.getMat();
-
-                if( code == CV_BayerBG2BGR || code == CV_BayerGB2BGR ||
-                    code == CV_BayerRG2BGR || code == CV_BayerGR2BGR )
-                {
-                    if( depth == CV_8U )
-                        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>(src, dst_, code);
-                    else if( depth == CV_16U )
-                        Bayer2RGB_<ushort, SIMDBayerStubInterpolator_<ushort> >(src, dst_, code);
-                    else
-                        CV_Error(CV_StsUnsupportedFormat, "Bayer->RGB demosaicing only supports 8u and 16u types");
-                }
-                else
-                {
-                    CV_Assert( depth == CV_8U );
-                    Bayer2RGB_VNG_8u(src, dst_, code);
-                }
-            }
+        case CV_BayerBG2BGR_EA: case CV_BayerGB2BGR_EA: case CV_BayerRG2BGR_EA: case CV_BayerGR2BGR_EA:
+            demosaicing(src, _dst, code, dcn);
             break;
+
         case CV_YUV2BGR_NV21:  case CV_YUV2RGB_NV21:  case CV_YUV2BGR_NV12:  case CV_YUV2RGB_NV12:
         case CV_YUV2BGRA_NV21: case CV_YUV2RGBA_NV21: case CV_YUV2BGRA_NV12: case CV_YUV2RGBA_NV12:
             {

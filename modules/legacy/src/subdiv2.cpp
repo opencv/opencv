@@ -833,7 +833,7 @@ draw_subdiv_facet( CvSubdiv2D * subdiv, IplImage * dst, IplImage * src, CvSubdiv
     {
         CvSubdiv2DPoint *pt = cvSubdiv2DEdgeDst( cvSubdiv2DRotateEdge( edge, 1 ));
         CvPoint ip = cvPoint( cvRound( pt->pt.x ), cvRound( pt->pt.y ));
-        CvScalar color = {{0,0,0,0}};
+        CvScalar color(0);
 
         //printf("count = %d, (%d,%d)\n", ip.x, ip.y );
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include "opencv2/core/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
@@ -26,25 +27,25 @@ static void Clip_Callback(int)
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ i | input   |                    | specify input image }"
-        "{ c | camera  |    0               | specify camera id   }"
-        "{ s | use_cpu |    false           | use cpu algorithm   }"
-        "{ o | output  | clahe_output.jpg   | specify output save path}"
-        "{ h | help    | false              | print help message }";
+        "{ i input   |                    | specify input image }"
+        "{ c camera  |    0               | specify camera id   }"
+        "{ s use_cpu |    false           | use cpu algorithm   }"
+        "{ o output  | clahe_output.jpg   | specify output save path}"
+        "{ h help    | false              | print help message }";
 
     cv::CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Usage : clahe [options]" << endl;
         cout << "Available options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return EXIT_SUCCESS;
     }
 
     string infile = cmd.get<string>("i"), outfile = cmd.get<string>("o");
     int camid = cmd.get<int>("c");
     bool use_cpu = cmd.get<bool>("s");
-    CvCapture* capture = 0;
+    VideoCapture capture;
 
     namedWindow("CLAHE");
     createTrackbar("Tile Size", "CLAHE", &tilesize, 32, (TrackbarCallback)TSize_Callback);
@@ -72,7 +73,7 @@ int main(int argc, char** argv)
         }
     }
     else
-        capture = cvCaptureFromCAM(camid);
+        capture.open(camid);
 
     cout << "\nControls:\n"
          << "\to - save output image\n"
@@ -80,8 +81,8 @@ int main(int argc, char** argv)
 
     for (;;)
     {
-        if(capture)
-            frame = cvQueryFrame(capture);
+        if(capture.isOpened())
+            capture.read(frame);
         else
             frame = imread(infile);
         if(frame.empty())
@@ -101,7 +102,7 @@ int main(int argc, char** argv)
 
         imshow("CLAHE", outframe);
 
-        char key = (char)cvWaitKey(3);
+        char key = (char)waitKey(3);
         if(key == 'o')
             imwrite(outfile, outframe);
         else if(key == 27)

@@ -1,11 +1,12 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/contrib/contrib.hpp"
-#include "opencv2/superres/superres.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 #include "opencv2/opencv_modules.hpp"
 
@@ -31,7 +32,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     if (name == "farneback")
     {
         if (useGpu)
-            return createOptFlow_Farneback_GPU();
+            return createOptFlow_Farneback_CUDA();
         else
             return createOptFlow_Farneback();
     }
@@ -40,19 +41,19 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     else if (name == "tvl1")
     {
         if (useGpu)
-            return createOptFlow_DualTVL1_GPU();
+            return createOptFlow_DualTVL1_CUDA();
         else
             return createOptFlow_DualTVL1();
     }
     else if (name == "brox")
-        return createOptFlow_Brox_GPU();
+        return createOptFlow_Brox_CUDA();
     else if (name == "pyrlk")
-        return createOptFlow_PyrLK_GPU();
+        return createOptFlow_PyrLK_CUDA();
     else
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
-        exit(-1);
     }
+    return Ptr<DenseOpticalFlowExt>();
 }
 #if defined(HAVE_OPENCV_OCL)
 static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
@@ -72,7 +73,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
     else if (name == "brox")
     {
         std::cout<<"brox has not been implemented!\n";
-        return NULL;
+        return Ptr<DenseOpticalFlowExt>();
     }
     else if (name == "pyrlk")
         return createOptFlow_PyrLK_OCL();
@@ -80,27 +81,27 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
     }
-    return 0;
+    return Ptr<DenseOpticalFlowExt>();
 }
 #endif
 int main(int argc, const char* argv[])
 {
     useOclChanged = false;
     CommandLineParser cmd(argc, argv,
-        "{ v   | video      |           | Input video }"
-        "{ o   | output     |           | Output video }"
-        "{ s   | scale      | 4         | Scale factor }"
-        "{ i   | iterations | 180       | Iteration count }"
-        "{ t   | temporal   | 4         | Radius of the temporal search area }"
-        "{ f   | flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
-        "{ g   | gpu        |           | CPU as default device, cuda for CUDA and ocl for OpenCL }"
-        "{ h   | help       | false     | Print help message }"
+        "{ v video      |           | Input video }"
+        "{ o output     |           | Output video }"
+        "{ s scale      | 4         | Scale factor }"
+        "{ i iterations | 180       | Iteration count }"
+        "{ t temporal   | 4         | Radius of the temporal search area }"
+        "{ f flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
+        "{ g            | false     | CPU as default device, cuda for CUDA and ocl for OpenCL }"
+        "{ h help       | false     | Print help message }"
     );
 
     if (cmd.get<bool>("help"))
     {
         cout << "This sample demonstrates Super Resolution algorithms for video sequence" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -158,7 +159,7 @@ int main(int argc, const char* argv[])
 #endif
     {
         if (useCuda)
-            superRes = createSuperResolution_BTVL1_GPU();
+            superRes = createSuperResolution_BTVL1_CUDA();
         else
             superRes = createSuperResolution_BTVL1();
 
@@ -179,7 +180,7 @@ int main(int argc, const char* argv[])
         // Try to use gpu Video Decoding
         try
         {
-            frameSource = createFrameSource_Video_GPU(inputVideoName);
+            frameSource = createFrameSource_Video_CUDA(inputVideoName);
             Mat frame;
             frameSource->nextFrame(frame);
         }
@@ -188,7 +189,7 @@ int main(int argc, const char* argv[])
             frameSource.release();
         }
     }
-    if (frameSource.empty())
+    if (!frameSource)
         frameSource = createFrameSource_Video(inputVideoName);
 
     // skip first frame, it is usually corrupted
@@ -253,7 +254,7 @@ int main(int argc, const char* argv[])
         if (!outputVideoName.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputVideoName, CV_FOURCC('X', 'V', 'I', 'D'), 25.0, result.size());
+                writer.open(outputVideoName, VideoWriter::fourcc('X', 'V', 'I', 'D'), 25.0, result.size());
             writer << result;
         }
     }

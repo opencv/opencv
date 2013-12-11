@@ -6,7 +6,6 @@
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
 //
-//
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
@@ -47,6 +46,7 @@
 // */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -217,6 +217,21 @@ void Mat::copyTo( OutputArray _dst ) const
     if( empty() )
     {
         _dst.release();
+        return;
+    }
+
+    if( _dst.isUMat() )
+    {
+        _dst.create( dims, size.p, type() );
+        UMat dst = _dst.getUMat();
+
+        size_t i, sz[CV_MAX_DIM], dstofs[CV_MAX_DIM], esz = elemSize();
+        for( i = 0; i < (size_t)dims; i++ )
+            sz[i] = size.p[i];
+        sz[dims-1] *= esz;
+        dst.ndoffset(dstofs);
+        dstofs[dims-1] *= esz;
+        dst.u->currAllocator->upload(dst.u, data, dims, sz, dstofs, dst.step.p, step.p);
         return;
     }
 
@@ -462,11 +477,59 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     }
 }
 
+enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
+
+static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+
+    if (cn > 4 || cn == 3)
+        return false;
+
+    const char * kernelName;
+    int flipType;
+
+    if (flipCode == 0)
+        kernelName = "arithm_flip_rows", flipType = FLIP_ROWS;
+    else if (flipCode > 0)
+        kernelName = "arithm_flip_cols", flipType = FLIP_COLS;
+    else
+        kernelName = "arithm_flip_rows_cols", flipType = FLIP_BOTH;
+
+    Size size = _src.size();
+    int cols = size.width, rows = size.height;
+    if ((cols == 1 && flipType == FLIP_COLS) ||
+            (rows == 1 && flipType == FLIP_ROWS) ||
+            (rows == 1 && cols == 1 && flipType == FLIP_BOTH))
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
+
+    ocl::Kernel k(kernelName, ocl::core::flip_oclsrc,
+        format( "-D type=%s", ocl::memopTypeToStr(type)));
+    if (k.empty())
+        return false;
+
+    _dst.create(size, type);
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+    cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
+    rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
+
+    size_t globalsize[2] = { cols, rows };
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), rows, cols).run(2, globalsize, NULL, false);
+}
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
-    Mat src = _src.getMat();
+    CV_Assert( _src.dims() <= 2 );
 
-    CV_Assert( src.dims <= 2 );
+    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
+    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
+        return;
+
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
     size_t esz = src.elemSize();
@@ -513,6 +576,292 @@ Mat repeat(const Mat& src, int ny, int nx)
     return dst;
 }
 
+
+} // cv
+
+
+/*
+ Various border types, image boundaries are denoted with '|'
+
+ * BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
+ * BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
+ * BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
+ * BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
+ * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
+ */
+int cv::borderInterpolate( int p, int len, int borderType )
+{
+    if( (unsigned)p < (unsigned)len )
+        ;
+    else if( borderType == BORDER_REPLICATE )
+        p = p < 0 ? 0 : len - 1;
+    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    {
+        int delta = borderType == BORDER_REFLECT_101;
+        if( len == 1 )
+            return 0;
+        do
+        {
+            if( p < 0 )
+                p = -p - 1 + delta;
+            else
+                p = len - 1 - (p - len) - delta;
+        }
+        while( (unsigned)p >= (unsigned)len );
+    }
+    else if( borderType == BORDER_WRAP )
+    {
+        if( p < 0 )
+            p -= ((p-len+1)/len)*len;
+        if( p >= len )
+            p %= len;
+    }
+    else if( borderType == BORDER_CONSTANT )
+        p = -1;
+    else
+        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+    return p;
+}
+
+namespace
+{
+
+void copyMakeBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
+                        uchar* dst, size_t dststep, cv::Size dstroi,
+                        int top, int left, int cn, int borderType )
+{
+    const int isz = (int)sizeof(int);
+    int i, j, k, elemSize = 1;
+    bool intMode = false;
+
+    if( (cn | srcstep | dststep | (size_t)src | (size_t)dst) % isz == 0 )
+    {
+        cn /= isz;
+        elemSize = isz;
+        intMode = true;
+    }
+
+    cv::AutoBuffer<int> _tab((dstroi.width - srcroi.width)*cn);
+    int* tab = _tab;
+    int right = dstroi.width - srcroi.width - left;
+    int bottom = dstroi.height - srcroi.height - top;
+
+    for( i = 0; i < left; i++ )
+    {
+        j = cv::borderInterpolate(i - left, srcroi.width, borderType)*cn;
+        for( k = 0; k < cn; k++ )
+            tab[i*cn + k] = j + k;
+    }
+
+    for( i = 0; i < right; i++ )
+    {
+        j = cv::borderInterpolate(srcroi.width + i, srcroi.width, borderType)*cn;
+        for( k = 0; k < cn; k++ )
+            tab[(i+left)*cn + k] = j + k;
+    }
+
+    srcroi.width *= cn;
+    dstroi.width *= cn;
+    left *= cn;
+    right *= cn;
+
+    uchar* dstInner = dst + dststep*top + left*elemSize;
+
+    for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
+    {
+        if( dstInner != src )
+            memcpy(dstInner, src, srcroi.width*elemSize);
+
+        if( intMode )
+        {
+            const int* isrc = (int*)src;
+            int* idstInner = (int*)dstInner;
+            for( j = 0; j < left; j++ )
+                idstInner[j - left] = isrc[tab[j]];
+            for( j = 0; j < right; j++ )
+                idstInner[j + srcroi.width] = isrc[tab[j + left]];
+        }
+        else
+        {
+            for( j = 0; j < left; j++ )
+                dstInner[j - left] = src[tab[j]];
+            for( j = 0; j < right; j++ )
+                dstInner[j + srcroi.width] = src[tab[j + left]];
+        }
+    }
+
+    dstroi.width *= elemSize;
+    dst += dststep*top;
+
+    for( i = 0; i < top; i++ )
+    {
+        j = cv::borderInterpolate(i - top, srcroi.height, borderType);
+        memcpy(dst + (i - top)*dststep, dst + j*dststep, dstroi.width);
+    }
+
+    for( i = 0; i < bottom; i++ )
+    {
+        j = cv::borderInterpolate(i + srcroi.height, srcroi.height, borderType);
+        memcpy(dst + (i + srcroi.height)*dststep, dst + j*dststep, dstroi.width);
+    }
+}
+
+
+void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
+                             uchar* dst, size_t dststep, cv::Size dstroi,
+                             int top, int left, int cn, const uchar* value )
+{
+    int i, j;
+    cv::AutoBuffer<uchar> _constBuf(dstroi.width*cn);
+    uchar* constBuf = _constBuf;
+    int right = dstroi.width - srcroi.width - left;
+    int bottom = dstroi.height - srcroi.height - top;
+
+    for( i = 0; i < dstroi.width; i++ )
+    {
+        for( j = 0; j < cn; j++ )
+            constBuf[i*cn + j] = value[j];
+    }
+
+    srcroi.width *= cn;
+    dstroi.width *= cn;
+    left *= cn;
+    right *= cn;
+
+    uchar* dstInner = dst + dststep*top + left;
+
+    for( i = 0; i < srcroi.height; i++, dstInner += dststep, src += srcstep )
+    {
+        if( dstInner != src )
+            memcpy( dstInner, src, srcroi.width );
+        memcpy( dstInner - left, constBuf, left );
+        memcpy( dstInner + srcroi.width, constBuf, right );
+    }
+
+    dst += dststep*top;
+
+    for( i = 0; i < top; i++ )
+        memcpy(dst + (i - top)*dststep, constBuf, dstroi.width);
+
+    for( i = 0; i < bottom; i++ )
+        memcpy(dst + (i + srcroi.height)*dststep, constBuf, dstroi.width);
+}
+
+}
+
+namespace cv {
+
+static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
+                                int left, int right, int borderType, const Scalar& value )
+{
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    borderType &= ~cv::BORDER_ISOLATED;
+
+    if ( !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE || borderType == BORDER_REFLECT ||
+           borderType == BORDER_WRAP || borderType == BORDER_REFLECT_101) ||
+         cn == 3 || cn > 4)
+        return false;
+
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" };
+    ocl::Kernel k("copyMakeBorder", ocl::core::copymakeborder_oclsrc,
+                  format("-D T=%s -D %s", ocl::memopTypeToStr(type), borderMap[borderType]));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    if( src.isSubmatrix() && !isolated )
+    {
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        int dtop = std::min(ofs.y, top);
+        int dbottom = std::min(wholeSize.height - src.rows - ofs.y, bottom);
+        int dleft = std::min(ofs.x, left);
+        int dright = std::min(wholeSize.width - src.cols - ofs.x, right);
+        src.adjustROI(dtop, dbottom, dleft, dright);
+        top -= dtop;
+        left -= dleft;
+        bottom -= dbottom;
+        right -= dright;
+    }
+
+    _dst.create(src.rows + top + bottom, src.cols + left + right, type);
+    UMat dst = _dst.getUMat();
+
+    if (top == 0 && left == 0 && bottom == 0 && right == 0)
+    {
+        if(src.u != dst.u || src.step != dst.step)
+            src.copyTo(dst);
+        return true;
+    }
+
+    k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst),
+           top, left, ocl::KernelArg::Constant(Mat(1, 1, type, value)));
+
+    size_t globalsize[2] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
+void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
+                         int left, int right, int borderType, const Scalar& value )
+{
+    CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
+
+    if (ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 &&
+            ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
+        return;
+
+    Mat src = _src.getMat();
+
+    if( src.isSubmatrix() && (borderType & BORDER_ISOLATED) == 0 )
+    {
+        Size wholeSize;
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+        int dtop = std::min(ofs.y, top);
+        int dbottom = std::min(wholeSize.height - src.rows - ofs.y, bottom);
+        int dleft = std::min(ofs.x, left);
+        int dright = std::min(wholeSize.width - src.cols - ofs.x, right);
+        src.adjustROI(dtop, dbottom, dleft, dright);
+        top -= dtop;
+        left -= dleft;
+        bottom -= dbottom;
+        right -= dright;
+    }
+
+    _dst.create( src.rows + top + bottom, src.cols + left + right, src.type() );
+    Mat dst = _dst.getMat();
+
+    if(top == 0 && left == 0 && bottom == 0 && right == 0)
+    {
+        if(src.data != dst.data || src.step != dst.step)
+            src.copyTo(dst);
+        return;
+    }
+
+    borderType &= ~BORDER_ISOLATED;
+
+    if( borderType != BORDER_CONSTANT )
+        copyMakeBorder_8u( src.data, src.step, src.size(),
+                           dst.data, dst.step, dst.size(),
+                           top, left, (int)src.elemSize(), borderType );
+    else
+    {
+        int cn = src.channels(), cn1 = cn;
+        AutoBuffer<double> buf(cn);
+        if( cn > 4 )
+        {
+            CV_Assert( value[0] == value[1] && value[0] == value[2] && value[0] == value[3] );
+            cn1 = 1;
+        }
+        scalarToRawData(value, buf, CV_MAKETYPE(src.depth(), cn1), cn);
+        copyMakeConstBorder_8u( src.data, src.step, src.size(),
+                                dst.data, dst.step, dst.size(),
+                                top, left, (int)src.elemSize(), (uchar*)(double*)buf );
+    }
 }
 
 /* dst = src */

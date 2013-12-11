@@ -22,7 +22,7 @@ Wrapping class for computing descriptors by using the
     class CalonderDescriptorExtractor : public DescriptorExtractor
     {
     public:
-        CalonderDescriptorExtractor( const string& classifierFile );
+        CalonderDescriptorExtractor( const String& classifierFile );
 
         virtual void read( const FileNode &fn );
         virtual void write( FileStorage &fs ) const;

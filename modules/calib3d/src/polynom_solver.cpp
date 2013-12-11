@@ -1,9 +1,8 @@
+#include "precomp.hpp"
+#include "polynom_solver.h"
+
 #include <math.h>
 #include <iostream>
-using namespace std;
-#include "precomp.hpp"
-
-#include "polynom_solver.h"
 
 int solve_deg2(double a, double b, double c, double & x1, double & x2)
 {

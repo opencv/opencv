@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "opencv2/core/opengl_interop.hpp"
+#include "opencv2/core/opengl.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/cudaimgproc.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 int main()
 {

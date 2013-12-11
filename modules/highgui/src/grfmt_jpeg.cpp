@@ -208,7 +208,7 @@ void  JpegDecoder::close()
 
 ImageDecoder JpegDecoder::newDecoder() const
 {
-    return new JpegDecoder;
+    return makePtr<JpegDecoder>();
 }
 
 bool  JpegDecoder::readHeader()
@@ -483,7 +483,7 @@ bool  JpegDecoder::readData( Mat& img )
 struct JpegDestination
 {
     struct jpeg_destination_mgr pub;
-    vector<uchar> *buf, *dst;
+    std::vector<uchar> *buf, *dst;
 };
 
 METHODDEF(void)
@@ -539,10 +539,10 @@ JpegEncoder::~JpegEncoder()
 
 ImageEncoder JpegEncoder::newEncoder() const
 {
-    return new JpegEncoder;
+    return makePtr<JpegEncoder>();
 }
 
-bool JpegEncoder::write( const Mat& img, const vector<int>& params )
+bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     m_last_error.clear();
 
@@ -557,7 +557,7 @@ bool JpegEncoder::write( const Mat& img, const vector<int>& params )
     fileWrapper fw;
     int width = img.cols, height = img.rows;
 
-    vector<uchar> out_buf(1 << 12);
+    std::vector<uchar> out_buf(1 << 12);
     AutoBuffer<uchar> _buffer;
     uchar* buffer;
 

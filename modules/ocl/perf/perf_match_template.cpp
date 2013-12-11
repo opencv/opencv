@@ -72,7 +72,7 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_32F);
 
-        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, CV_TM_CCORR);
+        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR);
 
         oclDst.download(dst);
 
@@ -80,7 +80,7 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR);
+        TEST_CYCLE() cv::matchTemplate(src, templ, dst, TM_CCORR);
 
         SANITY_CHECK(dst, 1e-4);
     }
@@ -104,7 +104,7 @@ PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_8UC1);
 
-        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, CV_TM_CCORR_NORMED);
+        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR_NORMED);
 
         oclDst.download(dst);
 
@@ -112,7 +112,7 @@ PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
+        TEST_CYCLE() cv::matchTemplate(src, templ, dst, TM_CCORR_NORMED);
 
         SANITY_CHECK(dst, 3e-2);
     }

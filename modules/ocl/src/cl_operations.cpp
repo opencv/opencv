@@ -319,12 +319,12 @@ void openCLFree(void *devPtr)
 #endif // MEMORY_CORRUPTION_GUARD
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName)
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName)
 {
     return openCLGetKernelFromSource(ctx, source, kernelName, NULL);
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                                     const char *build_options)
 {
     cl_kernel kernel;
@@ -376,13 +376,13 @@ static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
     return opt;
 }
 
-cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, int channels,
+cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
     //for example split_C2_D3, represent the split kernel with channels = 2 and dataType Depth = 3(Data type is short)
-    stringstream idxStr;
+    std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
     if(depth != -1)
@@ -395,7 +395,7 @@ cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* s
 }
 
 void openCLExecuteKernel(Context *ctx, cl_kernel kernel, size_t globalThreads[3],
-                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args)
+                          size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args)
 {
     if ( localThreads != NULL)
     {
@@ -442,8 +442,8 @@ void openCLExecuteKernel(Context *ctx, cl_kernel kernel, size_t globalThreads[3]
     openCLSafeCall(clReleaseKernel(kernel));
 }
 
-void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                           int depth, const char *build_options)
 {
     cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, channels, depth, build_options);
@@ -451,56 +451,56 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
     openCLExecuteKernel(ctx, kernel, globalThreads, localThreads, args);
 }
 
-void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
 {
     openCLExecuteKernel(ctx, source, kernelName, globalThreads, localThreads, args,
                         channels, depth, NULL);
 }
-void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
 {
 #ifndef PRINT_KERNEL_RUN_TIME
     openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                          build_options);
 #else
-    string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
-    cout << endl;
-    cout << "Function Name: " << kernelName;
+    String data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+    std::cout << std::endl;
+    std::cout << "Function Name: " << kernelName;
     if(depth >= 0)
-        cout << " |data type: " << data_type[depth];
-    cout << " |channels: " << channels;
-    cout << " |Time Unit: " << "ms" << endl;
+        std::cout << " |data type: " << data_type[depth];
+    std::cout << " |channels: " << channels;
+    std::cout << " |Time Unit: " << "ms" << std::endl;
 
     total_execute_time = 0;
     total_kernel_time = 0;
-    cout << "-------------------------------------" << endl;
+    std::cout << "-------------------------------------" << std::endl;
 
-    cout << setiosflags(ios::left) << setw(15) << "execute time";
-    cout << setiosflags(ios::left) << setw(15) << "launch time";
-    cout << setiosflags(ios::left) << setw(15) << "kernel time" << endl;
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "execute time";
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "launch time";
+    std::cout << std::setiosflags(std::ios::left) << std::setw(15) << "kernel time" << std::endl;
     int i = 0;
     for(i = 0; i < RUN_TIMES; i++)
         openCLExecuteKernel_(ctx, source, kernelName, globalThreads, localThreads, args, channels, depth,
                              build_options);
 
-    cout << "average kernel execute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
-    cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << endl; // "ms" << endl;
+    std::cout << "average kernel execute time: " << total_execute_time / RUN_TIMES << std::endl; // "ms" << std::endl;
+    std::cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << std::endl; // "ms" << std::endl;
 #endif
 }
 
-void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& source, string kernelName,
+void openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramSource& source, String kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
-                         vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                         std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
 {
     //construct kernel name
     //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
     //for example split_C2_D2, represent the split kernel with channels = 2 and dataType Depth = 2 (Data type is char)
-    stringstream idxStr;
+    std::stringstream idxStr;
     if(channels != -1)
         idxStr << "_C" << channels;
     if(depth != -1)

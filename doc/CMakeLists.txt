@@ -33,7 +33,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     endif()
   endforeach()
 
-  set(FIXED_ORDER_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy)
+  set(FIXED_ORDER_MODULES core imgproc highgui video calib3d features2d objdetect ml flann photo stitching nonfree contrib legacy bioinspired)
 
   list(REMOVE_ITEM BASE_MODULES ${FIXED_ORDER_MODULES})
 
@@ -95,9 +95,14 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/platforms/android")
   ocv_doc_add_to_fake_root("${OpenCV_SOURCE_DIR}/samples")
 
+  set(BUILD_PLANTUML "")
+  if(PLANTUML)
+    set(BUILD_PLANTUML "-tplantuml")
+  endif()
+
   if(PDFLATEX_COMPILER)
     add_custom_target(docs
-      COMMAND ${SPHINX_BUILD} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
+      COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" .
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
@@ -131,7 +136,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   endif()
 
   add_custom_target(html_docs
-    COMMAND "${SPHINX_BUILD}" -b html -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" ./_html
+    COMMAND "${SPHINX_BUILD}" ${BUILD_PLANTUML} -b html -c "${CMAKE_CURRENT_SOURCE_DIR}" "${DOC_FAKE_ROOT}" ./_html
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${DOC_FAKE_ROOT_FILES}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

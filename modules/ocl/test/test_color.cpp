@@ -44,6 +44,9 @@
 //M*/
 
 #include "test_precomp.hpp"
+
+using namespace cv;
+
 #ifdef HAVE_OPENCL
 
 using namespace testing;
@@ -288,10 +291,10 @@ struct CvtColor_YUV420 :
     }
 };
 
-OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_NV12) { doTest(1, 4, CV_YUV2RGBA_NV12); }
-OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_NV12) { doTest(1, 4, CV_YUV2BGRA_NV12); }
-OCL_TEST_P(CvtColor_YUV420, YUV2RGB_NV12) { doTest(1, 3, CV_YUV2RGB_NV12); }
-OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12) { doTest(1, 3, CV_YUV2BGR_NV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGBA_NV12) { doTest(1, 4, COLOR_YUV2RGBA_NV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGRA_NV12) { doTest(1, 4, COLOR_YUV2BGRA_NV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2RGB_NV12) { doTest(1, 3, COLOR_YUV2RGB_NV12); }
+OCL_TEST_P(CvtColor_YUV420, YUV2BGR_NV12) { doTest(1, 3, COLOR_YUV2BGR_NV12); }
 
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor8u,

@@ -20,6 +20,8 @@
 #  define LOGD(...)
 #endif
 
+#include "opencv2/core/utility.hpp"
+
 #include "converters.h"
 
 #include "core_manual.hpp"

@@ -78,7 +78,7 @@ void _cvWorkEast     (int i, int j, _CvWork** W, CvPoint2D32f* edges1, CvPoint2D
 void _cvWorkSouthEast(int i, int j, _CvWork** W, CvPoint2D32f* edges1, CvPoint2D32f* edges2);
 void _cvWorkSouth    (int i, int j, _CvWork** W, CvPoint2D32f* edges1, CvPoint2D32f* edges2);
 
-static CvPoint2D32f null_edge = {0,0};
+static CvPoint2D32f null_edge;
 
 double _cvStretchingWork(CvPoint2D32f* P1,
                          CvPoint2D32f* P2)
@@ -106,7 +106,7 @@ double _cvBendingWork(  CvPoint2D32f* B0,
                         CvPoint* K*/)
 {
     CvPoint2D32f Q0, Q1, Q2;
-    CvPoint2D32f Q1_nm = { 0, 0 }, Q2_nm = { 0, 0 };
+    CvPoint2D32f Q1_nm, Q2_nm;
     double d0, d1, d2, des, t_zero;
     double k_zero, k_nonmon;
     CvPoint2D32f center;

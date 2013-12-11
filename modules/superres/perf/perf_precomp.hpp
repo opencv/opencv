@@ -51,14 +51,11 @@
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
-#include "cvconfig.h"
-
-#include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
-
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/superres/superres.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
+#include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

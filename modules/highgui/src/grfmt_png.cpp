@@ -101,7 +101,7 @@ PngDecoder::~PngDecoder()
 
 ImageDecoder PngDecoder::newDecoder() const
 {
-    return new PngDecoder;
+    return makePtr<PngDecoder>();
 }
 
 void  PngDecoder::close()
@@ -317,7 +317,7 @@ bool  PngEncoder::isFormatSupported( int depth ) const
 
 ImageEncoder PngEncoder::newEncoder() const
 {
-    return new PngEncoder;
+    return makePtr<PngEncoder>();
 }
 
 
@@ -338,7 +338,7 @@ void PngEncoder::flushBuf(void*)
 {
 }
 
-bool  PngEncoder::write( const Mat& img, const vector<int>& params )
+bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;

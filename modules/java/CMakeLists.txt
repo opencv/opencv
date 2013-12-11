@@ -41,8 +41,6 @@ file(GLOB handwrittren_aidl_sources  "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/
 if(NOT ANDROID)
   ocv_list_filterout(handwrittren_java_sources "/(engine|android)\\\\+")
   ocv_list_filterout(handwrittren_aidl_sources "/(engine|android)\\\\+")
-  ocv_list_filterout(handwrittren_java_sources "VideoCapture")
-  ocv_list_filterout(handwrittren_cpp_sources "VideoCapture")
 else()
   file(GLOB_RECURSE handwrittren_lib_project_files_rel RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/" "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/*")
   list(REMOVE_ITEM handwrittren_lib_project_files_rel "${ANDROID_MANIFEST_FILE}")
@@ -102,15 +100,9 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  if (ANDROID)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" "-android" ${module} ${opencv_public_headers_${module}}
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
-  else()
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
-                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
-                  OUTPUT_QUIET ERROR_QUIET)
-  endif()
   unset(generated_java_sources_${module})
   file(GLOB_RECURSE generated_java_sources_${module} RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
   ocv_list_add_prefix(generated_java_sources_${module} "${CMAKE_CURRENT_BINARY_DIR}/")
@@ -131,19 +123,11 @@ endforeach()
 set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers})
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
-  if (ANDROID)
-    add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
-                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" "-android" ${module} ${opencv_public_headers_${module}}
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
-                    )
-  else()
-    add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
+  add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
                      COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
                     )
-  endif()
 endforeach()
 
 # step 2: generate javadoc comments
@@ -286,9 +270,15 @@ else(ANDROID)
 endif(ANDROID)
 
 # step 5: build native part
+
+# workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
+string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
+set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   foreach(m ${OPENCV_MODULES_BUILD}) # filterout INTERNAL (like opencv_ts) and BINDINGS (like opencv_python) modules

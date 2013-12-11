@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 using namespace cv;
 using namespace std;
@@ -85,14 +85,14 @@ const VideoFormat g_specific_fmt_list[] =
 #else
 const VideoFormat g_specific_fmt_list[] =
 {
-    VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("avi", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
-    //VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
-    VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
-    VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
+    VideoFormat("avi", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'J', 'P', 'G')),
+    //VideoFormat("avi", VideoWriter::fourcc('I', 'Y', 'U', 'V')),
+    VideoFormat("mkv", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'J', 'P', 'G')),
+    VideoFormat("mov", VideoWriter::fourcc('m', 'p', '4', 'v')),
     VideoFormat()
 };
 #endif
@@ -276,7 +276,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         if (!img)
             break;
 
-        frames.push_back(Mat(img).clone());
+        frames.push_back(cv::cvarrToMat(img, true));
 
         if (writer == NULL)
         {
@@ -314,7 +314,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
             break;
 
         Mat img = frames[i];
-        Mat img1(ipl1);
+        Mat img1 = cv::cvarrToMat(ipl1);
 
         double psnr = PSNR(img1, img);
         if (psnr < thresDbell)
@@ -452,7 +452,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     for( size_t i = 0; i < IMAGE_COUNT; ++i )
     {
         string file_path = format("%s../python/images/QCIF_%02d.bmp", dir.c_str(), i);
-        Mat img = imread(file_path, CV_LOAD_IMAGE_COLOR);
+        Mat img = imread(file_path, IMREAD_COLOR);
 
         if (img.empty())
         {
@@ -478,7 +478,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     writer.release();
     VideoCapture cap(video_file);
 
-    size_t FRAME_COUNT = (size_t)cap.get(CV_CAP_PROP_FRAME_COUNT);
+    size_t FRAME_COUNT = (size_t)cap.get(CAP_PROP_FRAME_COUNT);
 
     size_t allowed_extra_frames = 0;
 
@@ -489,7 +489,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     // (to correctly report frame count for such files), but I don't know
     // how to do either, so this is a workaround for now.
     // See also the same hack in CV_PositioningTest::run.
-    if (fourcc == CV_FOURCC('M', 'P', 'E', 'G') && ext == "mkv")
+    if (fourcc == VideoWriter::fourcc('M', 'P', 'E', 'G') && ext == "mkv")
         allowed_extra_frames = 1;
 
     if (FRAME_COUNT < IMAGE_COUNT || FRAME_COUNT > IMAGE_COUNT + allowed_extra_frames)

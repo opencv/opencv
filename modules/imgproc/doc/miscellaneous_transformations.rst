@@ -14,8 +14,6 @@ Applies an adaptive threshold to an array.
 
 .. ocv:cfunction:: void cvAdaptiveThreshold( const CvArr* src, CvArr* dst, double max_value, int adaptive_method=CV_ADAPTIVE_THRESH_MEAN_C, int threshold_type=CV_THRESH_BINARY, int block_size=3, double param1=5 )
 
-.. ocv:pyoldfunction:: cv.AdaptiveThreshold(src, dst, maxValue, adaptive_method=CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=CV_THRESH_BINARY, blockSize=3, param1=5)-> None
-
     :param src: Source 8-bit single-channel image.
 
     :param dst: Destination image of the same size and the same type as  ``src`` .
@@ -79,7 +77,6 @@ Converts an image from one color space to another.
 .. ocv:pyfunction:: cv2.cvtColor(src, code[, dst[, dstCn]]) -> dst
 
 .. ocv:cfunction:: void cvCvtColor( const CvArr* src, CvArr* dst, int code )
-.. ocv:pyoldfunction:: cv.CvtColor(src, dst, code)-> None
 
     :param src: input image: 8-bit unsigned, 16-bit unsigned ( ``CV_16UC...`` ), or single-precision floating-point.
 
@@ -109,7 +106,7 @@ But in case of a non-linear transformation, an input RGB image should be normali
 :math:`\rightarrow` L*u*v* transformation. For example, if you have a 32-bit floating-point image directly converted from an 8-bit image without any scaling, then it will have the 0..255 value range instead of 0..1 assumed by the function. So, before calling ``cvtColor`` , you need first to scale the image down: ::
 
     img *= 1./255;
-    cvtColor(img, img, CV_BGR2Luv);
+    cvtColor(img, img, COLOR_BGR2Luv);
 
 If you use ``cvtColor`` with 8-bit images, the conversion will have some information lost. For many applications, this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
 
@@ -133,7 +130,7 @@ The function can do the following transformations:
 
     ::
 
-        cvtColor(src, bwsrc, CV_RGB2GRAY);
+        cvtColor(src, bwsrc, COLOR_RGB2GRAY);
 
     ..
 
@@ -142,7 +139,7 @@ The function can do the following transformations:
 
 *
     RGB
-    :math:`\leftrightarrow`     CIE XYZ.Rec 709 with D65 white point ( ``CV_BGR2XYZ, CV_RGB2XYZ, CV_XYZ2BGR, CV_XYZ2RGB``     ):
+    :math:`\leftrightarrow`     CIE XYZ.Rec 709 with D65 white point ( ``COLOR_BGR2XYZ, COLOR_RGB2XYZ, COLOR_XYZ2BGR, COLOR_XYZ2RGB``     ):
 
     .. math::
 
@@ -164,7 +161,7 @@ The function can do the following transformations:
 
 *
     RGB
-    :math:`\leftrightarrow`     YCrCb JPEG (or YCC) ( ``CV_BGR2YCrCb, CV_RGB2YCrCb, CV_YCrCb2BGR, CV_YCrCb2RGB``     )
+    :math:`\leftrightarrow`     YCrCb JPEG (or YCC) ( ``COLOR_BGR2YCrCb, COLOR_RGB2YCrCb, COLOR_YCrCb2BGR, COLOR_YCrCb2RGB``     )
 
     .. math::
 
@@ -199,7 +196,7 @@ The function can do the following transformations:
     Y, Cr, and Cb cover the whole value range.
 
 *
-    RGB :math:`\leftrightarrow` HSV ( ``CV_BGR2HSV, CV_RGB2HSV, CV_HSV2BGR, CV_HSV2RGB``     )
+    RGB :math:`\leftrightarrow` HSV ( ``COLOR_BGR2HSV, COLOR_RGB2HSV, COLOR_HSV2BGR, COLOR_HSV2RGB``     )
       In case of 8-bit and 16-bit images,
       R, G, and B are converted to the floating-point format and scaled to fit the 0 to 1 range.
 
@@ -238,7 +235,7 @@ The function can do the following transformations:
         H, S, and V are left as is
 
 *
-    RGB :math:`\leftrightarrow` HLS ( ``CV_BGR2HLS, CV_RGB2HLS, CV_HLS2BGR, CV_HLS2RGB`` ).
+    RGB :math:`\leftrightarrow` HLS ( ``COLOR_BGR2HLS, COLOR_RGB2HLS, COLOR_HLS2BGR, COLOR_HLS2RGB`` ).
       In case of 8-bit and 16-bit images,
       R, G, and B are converted to the floating-point format and scaled to fit the 0 to 1 range.
 
@@ -288,7 +285,7 @@ The function can do the following transformations:
         H, S, V are left as is
 
 *
-    RGB :math:`\leftrightarrow` CIE L*a*b* ( ``CV_BGR2Lab, CV_RGB2Lab, CV_Lab2BGR, CV_Lab2RGB`` ).
+    RGB :math:`\leftrightarrow` CIE L*a*b* ( ``COLOR_BGR2Lab, COLOR_RGB2Lab, COLOR_Lab2BGR, COLOR_Lab2RGB`` ).
       In case of 8-bit and 16-bit images,
       R, G, and B are converted to the floating-point format and scaled to fit the 0 to 1 range.
 
@@ -344,7 +341,7 @@ The function can do the following transformations:
         L, a, and b are left as is
 
 *
-    RGB :math:`\leftrightarrow` CIE L*u*v* ( ``CV_BGR2Luv, CV_RGB2Luv, CV_Luv2BGR, CV_Luv2RGB`` ).
+    RGB :math:`\leftrightarrow` CIE L*u*v* ( ``COLOR_BGR2Luv, COLOR_RGB2Luv, COLOR_Luv2BGR, COLOR_Luv2RGB`` ).
       In case of 8-bit and 16-bit images,
       R, G, and B are converted to the floating-point format and scaled to fit 0 to 1 range.
 
@@ -393,7 +390,7 @@ The function can do the following transformations:
     http://www.poynton.com/ColorFAQ.html
 
 *
-    Bayer :math:`\rightarrow`     RGB ( ``CV_BayerBG2BGR, CV_BayerGB2BGR, CV_BayerRG2BGR, CV_BayerGR2BGR, CV_BayerBG2RGB, CV_BayerGB2RGB, CV_BayerRG2RGB, CV_BayerGR2RGB``     ). The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get color pictures from a single plane where R,G, and B pixels (sensors of a particular component) are interleaved as follows:
+    Bayer :math:`\rightarrow`     RGB ( ``COLOR_BayerBG2BGR, COLOR_BayerGB2BGR, COLOR_BayerRG2BGR, COLOR_BayerGR2BGR, COLOR_BayerBG2RGB, COLOR_BayerGB2RGB, COLOR_BayerRG2RGB, COLOR_BayerGR2RGB``     ). The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get color pictures from a single plane where R,G, and B pixels (sensors of a particular component) are interleaved as follows:
 
     .. image:: pics/bayer.png
 
@@ -419,8 +416,6 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 .. ocv:pyfunction:: cv2.distanceTransform(src, distanceType, maskSize[, dst]) -> dst
 
 .. ocv:cfunction:: void cvDistTransform( const CvArr* src, CvArr* dst, int distance_type=CV_DIST_L2, int mask_size=3, const float* mask=NULL, CvArr* labels=NULL, int labelType=CV_DIST_LABEL_CCOMP )
-
-.. ocv:pyoldfunction:: cv.DistTransform(src, dst, distance_type=CV_DIST_L2, mask_size=3, mask=None, labels=None) -> None
 
     :param src: 8-bit, single-channel (binary) source image.
 
@@ -495,10 +490,9 @@ Fills a connected component with the given color.
 
 .. ocv:function:: int floodFill( InputOutputArray image, InputOutputArray mask, Point seedPoint, Scalar newVal, Rect* rect=0, Scalar loDiff=Scalar(), Scalar upDiff=Scalar(), int flags=4 )
 
-.. ocv:pyfunction:: cv2.floodFill(image, mask, seedPoint, newVal[, loDiff[, upDiff[, flags]]]) -> retval, rect
+.. ocv:pyfunction:: cv2.floodFill(image, mask, seedPoint, newVal[, loDiff[, upDiff[, flags]]]) -> retval, image, mask, rect
 
 .. ocv:cfunction:: void cvFloodFill( CvArr* image, CvPoint seed_point, CvScalar new_val, CvScalar lo_diff=cvScalarAll(0), CvScalar up_diff=cvScalarAll(0), CvConnectedComp* comp=NULL, int flags=4, CvArr* mask=NULL )
-.. ocv:pyoldfunction:: cv.FloodFill(image, seed_point, new_val, lo_diff=(0, 0, 0, 0), up_diff=(0, 0, 0, 0), flags=4, mask=None)-> comp
 
     :param image: Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the  ``FLOODFILL_MASK_ONLY``  flag is set in the second variant of the function. See the details below.
 
@@ -520,7 +514,7 @@ Fills a connected component with the given color.
 
             * **FLOODFILL_FIXED_RANGE** If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference between neighbor pixels is considered (that is, the range is floating).
 
-            * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), but fills the mask.  The flag can be used for the second variant only.
+            * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), but fills the mask with the value in bits 8-16 of ``flags`` (that is, the fill value is set to newValue by adding (newValue << 8) to the ``flags``).  The flag can be used for the second variant only.
 
 The functions ``floodFill`` fill a connected component starting from the seed point with the specified color. The connectivity is determined by the color/brightness closeness of the neighbor pixels. The pixel at
 :math:`(x,y)` is considered to belong to the repainted domain if:
@@ -602,19 +596,17 @@ Calculates the integral of an image.
 
 .. ocv:function:: void integral( InputArray src, OutputArray sum, int sdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth=-1, int sqdepth=-1 )
 
-.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1 )
+.. ocv:function:: void integral( InputArray src, OutputArray sum, OutputArray sqsum, OutputArray tilted, int sdepth=-1, int sqdepth=-1 )
 
 .. ocv:pyfunction:: cv2.integral(src[, sum[, sdepth]]) -> sum
 
-.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth]]]) -> sum, sqsum
+.. ocv:pyfunction:: cv2.integral2(src[, sum[, sqsum[, sdepth[, sqdepth]]]]) -> sum, sqsum
 
-.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth]]]]) -> sum, sqsum, tilted
+.. ocv:pyfunction:: cv2.integral3(src[, sum[, sqsum[, tilted[, sdepth[, sqdepth]]]]]) -> sum, sqsum, tilted
 
 .. ocv:cfunction:: void cvIntegral( const CvArr* image, CvArr* sum, CvArr* sqsum=NULL, CvArr* tilted_sum=NULL )
-
-.. ocv:pyoldfunction:: cv.Integral(image, sum, sqsum=None, tiltedSum=None)-> None
 
     :param image: input image as :math:`W \times H`, 8-bit or floating-point (32f or 64f).
 
@@ -625,6 +617,8 @@ Calculates the integral of an image.
     :param tilted: integral for the image rotated by 45 degrees; it is :math:`(W+1)\times (H+1)` array  with the same data type as ``sum``.
 
     :param sdepth: desired depth of the integral and the tilted integral images,  ``CV_32S``, ``CV_32F``,  or  ``CV_64F``.
+
+    :param sqdepth: desired depth of the integral image of squared pixel values, ``CV_32F``  or  ``CV_64F``.
 
 The functions calculate one or more integral images for the source image as follows:
 
@@ -665,8 +659,6 @@ Applies a fixed-level threshold to each array element.
 .. ocv:pyfunction:: cv2.threshold(src, thresh, maxval, type[, dst]) -> retval, dst
 
 .. ocv:cfunction:: double cvThreshold( const CvArr* src, CvArr* dst, double threshold, double max_value, int threshold_type )
-
-.. ocv:pyoldfunction:: cv.Threshold(src, dst, threshold, maxValue, thresholdType)-> None
 
     :param src: input array (single-channel, 8-bit or 32-bit floating point).
 
@@ -742,7 +734,7 @@ Performs a marker-based image segmentation using the watershed algorithm.
 
 .. ocv:cfunction:: void cvWatershed( const CvArr* image, CvArr* markers )
 
-.. ocv:pyfunction:: cv2.watershed(image, markers) -> None
+.. ocv:pyfunction:: cv2.watershed(image, markers) -> markers
 
     :param image: Input 8-bit 3-channel image.
 
@@ -770,7 +762,7 @@ Runs the GrabCut algorithm.
 
 .. ocv:function:: void grabCut( InputArray img, InputOutputArray mask, Rect rect, InputOutputArray bgdModel, InputOutputArray fgdModel, int iterCount, int mode=GC_EVAL )
 
-.. ocv:pyfunction:: cv2.grabCut(img, mask, rect, bgdModel, fgdModel, iterCount[, mode]) -> None
+.. ocv:pyfunction:: cv2.grabCut(img, mask, rect, bgdModel, fgdModel, iterCount[, mode]) -> mask, bgdModel, fgdModel
 
     :param img: Input 8-bit 3-channel image.
 
@@ -809,7 +801,6 @@ See the sample ``grabcut.cpp`` to learn how to use the function.
 
 .. [Meyer92] Meyer, F. *Color Image Segmentation*, ICIP92, 1992
 
-.. [Telea04] Alexandru Telea, *An Image Inpainting Technique Based on the Fast Marching Method*. Journal of Graphics, GPU, and Game Tools 9 1, pp 23-34 (2004)
 
 .. note::
 

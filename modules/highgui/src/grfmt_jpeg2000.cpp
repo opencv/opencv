@@ -76,7 +76,7 @@ static JasperInitializer initialize_jasper;
 
 Jpeg2KDecoder::Jpeg2KDecoder()
 {
-    m_signature = '\0' + string() + '\0' + string() + '\0' + string("\x0cjP  \r\n\x87\n");
+    m_signature = '\0' + String() + '\0' + String() + '\0' + String("\x0cjP  \r\n\x87\n");
     m_stream = 0;
     m_image = 0;
 }
@@ -88,7 +88,7 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 
 ImageDecoder Jpeg2KDecoder::newDecoder() const
 {
-    return new Jpeg2KDecoder;
+    return makePtr<Jpeg2KDecoder>();
 }
 
 void  Jpeg2KDecoder::close()
@@ -291,26 +291,26 @@ bool  Jpeg2KDecoder::readComponent8u( uchar *data, void *_buffer,
                 for( x = 0; x < xend - xstart; x++ )
                 {
                     int pix = pix_row[x];
-                    dst[x*ncmpts] = CV_CAST_8U(pix);
+                    dst[x*ncmpts] = cv::saturate_cast<uchar>(pix);
                 }
             else
                 for( x = 0; x < xend - xstart; x++ )
                 {
                     int pix = ((pix_row[x] + delta) >> rshift) << lshift;
-                    dst[x*ncmpts] = CV_CAST_8U(pix);
+                    dst[x*ncmpts] = cv::saturate_cast<uchar>(pix);
                 }
         }
         else if( xstep == 2 && offset == 0 )
             for( x = 0, j = 0; x < xend - xstart; x += 2, j++ )
             {
                 int pix = ((pix_row[j] + delta) >> rshift) << lshift;
-                dst[x*ncmpts] = dst[(x+1)*ncmpts] = CV_CAST_8U(pix);
+                dst[x*ncmpts] = dst[(x+1)*ncmpts] = cv::saturate_cast<uchar>(pix);
             }
         else
             for( x = 0, j = 0; x < xend - xstart; j++ )
             {
                 int pix = ((pix_row[j] + delta) >> rshift) << lshift;
-                pix = CV_CAST_8U(pix);
+                pix = cv::saturate_cast<uchar>(pix);
                 for( x1 = x + xstep; x < x1; x++ )
                     dst[x*ncmpts] = (uchar)pix;
             }
@@ -355,26 +355,26 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
                 for( x = 0; x < xend - xstart; x++ )
                 {
                     int pix = pix_row[x];
-                    dst[x*ncmpts] = CV_CAST_16U(pix);
+                    dst[x*ncmpts] = cv::saturate_cast<ushort>(pix);
                 }
             else
                 for( x = 0; x < xend - xstart; x++ )
                 {
                     int pix = ((pix_row[x] + delta) >> rshift) << lshift;
-                    dst[x*ncmpts] = CV_CAST_16U(pix);
+                    dst[x*ncmpts] = cv::saturate_cast<ushort>(pix);
                 }
         }
         else if( xstep == 2 && offset == 0 )
             for( x = 0, j = 0; x < xend - xstart; x += 2, j++ )
             {
                 int pix = ((pix_row[j] + delta) >> rshift) << lshift;
-                dst[x*ncmpts] = dst[(x+1)*ncmpts] = CV_CAST_16U(pix);
+                dst[x*ncmpts] = dst[(x+1)*ncmpts] = cv::saturate_cast<ushort>(pix);
             }
         else
             for( x = 0, j = 0; x < xend - xstart; j++ )
             {
                 int pix = ((pix_row[j] + delta) >> rshift) << lshift;
-                pix = CV_CAST_16U(pix);
+                pix = cv::saturate_cast<ushort>(pix);
                 for( x1 = x + xstep; x < x1; x++ )
                     dst[x*ncmpts] = (ushort)pix;
             }
@@ -403,7 +403,7 @@ Jpeg2KEncoder::~Jpeg2KEncoder()
 
 ImageEncoder Jpeg2KEncoder::newEncoder() const
 {
-    return new Jpeg2KEncoder;
+    return makePtr<Jpeg2KEncoder>();
 }
 
 bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
@@ -412,7 +412,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 {
     int width = _img.cols, height = _img.rows;
     int depth = _img.depth(), channels = _img.channels();

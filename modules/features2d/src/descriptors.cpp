@@ -40,8 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-
-using namespace std;
+#include <limits>
 
 namespace cv
 {
@@ -55,7 +54,7 @@ namespace cv
 DescriptorExtractor::~DescriptorExtractor()
 {}
 
-void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void DescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
 {
     if( image.empty() || keypoints.empty() )
     {
@@ -69,7 +68,7 @@ void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints
     computeImpl( image, keypoints, descriptors );
 }
 
-void DescriptorExtractor::compute( const vector<Mat>& imageCollection, vector<vector<KeyPoint> >& pointCollection, vector<Mat>& descCollection ) const
+void DescriptorExtractor::compute( const std::vector<Mat>& imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection, std::vector<Mat>& descCollection ) const
 {
     CV_Assert( imageCollection.size() == pointCollection.size() );
     descCollection.resize( imageCollection.size() );
@@ -88,19 +87,19 @@ bool DescriptorExtractor::empty() const
     return false;
 }
 
-void DescriptorExtractor::removeBorderKeypoints( vector<KeyPoint>& keypoints,
+void DescriptorExtractor::removeBorderKeypoints( std::vector<KeyPoint>& keypoints,
                                                  Size imageSize, int borderSize )
 {
     KeyPointsFilter::runByImageBorder( keypoints, imageSize, borderSize );
 }
 
-Ptr<DescriptorExtractor> DescriptorExtractor::create(const string& descriptorExtractorType)
+Ptr<DescriptorExtractor> DescriptorExtractor::create(const String& descriptorExtractorType)
 {
     if( descriptorExtractorType.find("Opponent") == 0 )
     {
-        size_t pos = string("Opponent").size();
-        string type = descriptorExtractorType.substr(pos);
-        return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
+        size_t pos = String("Opponent").size();
+        String type = descriptorExtractorType.substr(pos);
+        return makePtr<OpponentColorDescriptorExtractor>(DescriptorExtractor::create(type));
     }
 
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
@@ -120,13 +119,13 @@ CV_WRAP void Feature2D::compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<
 OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _descriptorExtractor ) :
         descriptorExtractor(_descriptorExtractor)
 {
-    CV_Assert( !descriptorExtractor.empty() );
+    CV_Assert( descriptorExtractor );
 }
 
-static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat>& opponentChannels )
+static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, std::vector<Mat>& opponentChannels )
 {
     if( bgrImage.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
+        CV_Error( Error::StsBadArg, "input image must be an BGR image of type CV_8UC3" );
 
     // Prepare opponent color space storage matrices.
     opponentChannels.resize( 3 );
@@ -150,23 +149,23 @@ static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, vector<Mat
 
 struct KP_LessThan
 {
-    KP_LessThan(const vector<KeyPoint>& _kp) : kp(&_kp) {}
+    KP_LessThan(const std::vector<KeyPoint>& _kp) : kp(&_kp) {}
     bool operator()(int i, int j) const
     {
         return (*kp)[i].class_id < (*kp)[j].class_id;
     }
-    const vector<KeyPoint>* kp;
+    const std::vector<KeyPoint>* kp;
 };
 
-void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
 {
-    vector<Mat> opponentChannels;
+    std::vector<Mat> opponentChannels;
     convertBGRImageToOpponentColorSpace( bgrImage, opponentChannels );
 
     const int N = 3; // channels count
-    vector<KeyPoint> channelKeypoints[N];
+    std::vector<KeyPoint> channelKeypoints[N];
     Mat channelDescriptors[N];
-    vector<int> idxs[N];
+    std::vector<int> idxs[N];
 
     // Compute descriptors three times, once for each Opponent channel to concatenate into a single color descriptor
     int maxKeypointsCount = 0;
@@ -187,7 +186,7 @@ void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, vector<
         maxKeypointsCount = std::max( maxKeypointsCount, (int)channelKeypoints[ci].size());
     }
 
-    vector<KeyPoint> outKeypoints;
+    std::vector<KeyPoint> outKeypoints;
     outKeypoints.reserve( keypoints.size() );
 
     int dSize = descriptorExtractor->descriptorSize();
@@ -250,7 +249,7 @@ int OpponentColorDescriptorExtractor::descriptorType() const
 
 bool OpponentColorDescriptorExtractor::empty() const
 {
-    return descriptorExtractor.empty() || (DescriptorExtractor*)(descriptorExtractor)->empty();
+    return !descriptorExtractor || descriptorExtractor->empty();
 }
 
 }

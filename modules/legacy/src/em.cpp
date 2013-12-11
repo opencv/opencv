@@ -85,13 +85,12 @@ void CvEM::read( CvFileStorage* fs, CvFileNode* node )
 
 void CvEM::write( CvFileStorage* _fs, const char* name ) const
 {
-    FileStorage fs = _fs;
+    FileStorage fs(_fs, false);
     if(name)
         fs << name << "{";
     emObj.write(fs);
     if(name)
         fs << "}";
-    fs.fs.obj = 0;
 }
 
 double CvEM::calcLikelihood( const Mat &input_sample ) const
@@ -103,7 +102,8 @@ float
 CvEM::predict( const CvMat* _sample, CvMat* _probs ) const
 {
     Mat prbs0 = cvarrToMat(_probs), prbs = prbs0, sample = cvarrToMat(_sample);
-    int cls = static_cast<int>(emObj.predict(sample, _probs ? _OutputArray(prbs) : cv::noArray())[1]);
+    int cls = static_cast<int>(emObj.predict(sample, _probs ? _OutputArray(prbs) :
+                                             (OutputArray)cv::noArray())[1]);
     if(_probs)
     {
         if( prbs.data != prbs0.data )
@@ -123,7 +123,7 @@ void CvEM::set_mat_hdrs()
         int K = emObj.get<int>("nclusters");
         covsHdrs.resize(K);
         covsPtrs.resize(K);
-        const std::vector<Mat>& covs = emObj.get<vector<Mat> >("covs");
+        const std::vector<Mat>& covs = emObj.get<std::vector<Mat> >("covs");
         for(size_t i = 0; i < covsHdrs.size(); i++)
         {
             covsHdrs[i] = covs[i];
@@ -137,17 +137,17 @@ void CvEM::set_mat_hdrs()
 static
 void init_params(const CvEMParams& src,
                  Mat& prbs, Mat& weights,
-                 Mat& means, vector<Mat>& covsHdrs)
+                 Mat& means, std::vector<Mat>& covsHdrs)
 {
-    prbs = src.probs;
-    weights = src.weights;
-    means = src.means;
+    prbs = cv::cvarrToMat(src.probs);
+    weights = cv::cvarrToMat(src.weights);
+    means = cv::cvarrToMat(src.means);
 
     if(src.covs)
     {
         covsHdrs.resize(src.nclusters);
         for(size_t i = 0; i < covsHdrs.size(); i++)
-            covsHdrs[i] = src.covs[i];
+            covsHdrs[i] = cv::cvarrToMat(src.covs[i]);
     }
 }
 
@@ -209,13 +209,16 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
     bool isOk = false;
     if( _params.start_step == EM::START_AUTO_STEP )
         isOk = emObj.train(_samples,
-                           logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                           logLikelihoods, _labels ? _OutputArray(*_labels) :
+                           (OutputArray)cv::noArray(), probs);
     else if( _params.start_step == EM::START_E_STEP )
         isOk = emObj.trainE(_samples, means, covshdrs, weights,
-                            logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                            logLikelihoods, _labels ? _OutputArray(*_labels) :
+                            (OutputArray)cv::noArray(), probs);
     else if( _params.start_step == EM::START_M_STEP )
         isOk = emObj.trainM(_samples, prbs,
-                            logLikelihoods, _labels ? _OutputArray(*_labels) : cv::noArray(), probs);
+                            logLikelihoods, _labels ? _OutputArray(*_labels) :
+                            (OutputArray)cv::noArray(), probs);
     else
         CV_Error(CV_StsBadArg, "Bad start type of EM algorithm");
 
@@ -231,7 +234,9 @@ bool CvEM::train( const Mat& _samples, const Mat& _sample_idx,
 float
 CvEM::predict( const Mat& _sample, Mat* _probs ) const
 {
-    return static_cast<float>(emObj.predict(_sample, _probs ? _OutputArray(*_probs) : cv::noArray())[1]);
+    return static_cast<float>(emObj.predict(_sample, _probs ?
+                                            _OutputArray(*_probs) :
+                                            (OutputArray)cv::noArray())[1]);
 }
 
 int CvEM::getNClusters() const
@@ -244,9 +249,9 @@ Mat CvEM::getMeans() const
     return emObj.get<Mat>("means");
 }
 
-void CvEM::getCovs(vector<Mat>& _covs) const
+void CvEM::getCovs(std::vector<Mat>& _covs) const
 {
-    _covs = emObj.get<vector<Mat> >("covs");
+    _covs = emObj.get<std::vector<Mat> >("covs");
 }
 
 Mat CvEM::getWeights() const
