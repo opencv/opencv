@@ -60,7 +60,7 @@ namespace ocl {
 PARAM_TEST_CASE(FilterTestBase, MatType,
                 int, // kernel size
                 Size, // dx, dy
-                int, // border type
+                BorderType, // border type
                 double, // optional parameter
                 bool) // roi or not
 {
@@ -145,29 +145,143 @@ OCL_TEST_P(Bilateral, Mat)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Laplacian
+
+typedef FilterTestBase LaplacianTest;
+
+OCL_TEST_P(LaplacianTest, Accuracy)
+{
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Laplacian(src_roi, dst_roi, -1, ksize, scale, 0, borderType));
+        OCL_ON(cv::Laplacian(usrc_roi, udst_roi, -1, ksize, scale, 0, borderType));
+
+        Near();
+    }
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Sobel
+
+typedef FilterTestBase SobelTest;
+
+OCL_TEST_P(SobelTest, Mat)
+{
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Sobel(src_roi, dst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+        OCL_ON(cv::Sobel(usrc_roi, udst_roi, -1, dx, dy, ksize, scale, /* delta */0, borderType));
+
+        Near();
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Scharr
+
+typedef FilterTestBase ScharrTest;
+
+OCL_TEST_P(ScharrTest, Mat)
+{
+    int dx = size.width, dy = size.height;
+    double scale = param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::Scharr(src_roi, dst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+        OCL_ON(cv::Scharr(usrc_roi, udst_roi, -1, dx, dy, scale, /* delta */ 0, borderType));
+
+        Near();
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// GaussianBlur
+
+typedef FilterTestBase GaussianBlurTest;
+
+OCL_TEST_P(GaussianBlurTest, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        double sigma1 = rng.uniform(0.1, 1.0);
+        double sigma2 = rng.uniform(0.1, 1.0);
+
+        OCL_OFF(cv::GaussianBlur(src_roi, dst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
+        OCL_ON(cv::GaussianBlur(usrc_roi, udst_roi, Size(ksize, ksize), sigma1, sigma2, borderType));
+
+        Near(CV_MAT_DEPTH(type) == CV_8U ? 3 : 5e-5, false);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FILTER_BORDER_SET_NO_ISOLATED \
-    Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, (int)BORDER_WRAP, (int)BORDER_REFLECT_101/*, \
+    Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE, (BorderType)BORDER_REFLECT, (BorderType)BORDER_WRAP, (BorderType)BORDER_REFLECT_101/*, \
             (int)BORDER_CONSTANT|BORDER_ISOLATED, (int)BORDER_REPLICATE|BORDER_ISOLATED, \
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
 #define FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED \
-    Values((int)BORDER_CONSTANT, (int)BORDER_REPLICATE, (int)BORDER_REFLECT, /*(int)BORDER_WRAP,*/ (int)BORDER_REFLECT_101/*, \
+    Values((BorderType)BORDER_CONSTANT, (BorderType)BORDER_REPLICATE, (BorderType)BORDER_REFLECT, /*(int)BORDER_WRAP,*/ (BorderType)BORDER_REFLECT_101/*, \
             (int)BORDER_CONSTANT|BORDER_ISOLATED, (int)BORDER_REPLICATE|BORDER_ISOLATED, \
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
-#define FILTER_DATATYPES Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4, \
-                                CV_32FC1, CV_32FC3, CV_32FC4, \
-                                CV_64FC1, CV_64FC3, CV_64FC4)
+#define FILTER_TYPES Values(CV_8UC1, CV_8UC2, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4)
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values((MatType)CV_8UC1),
-                            Values(5, 9),
+                            Values(5, 9), // kernel size
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_ISOLATED,
+                            Values(0.0), // not used
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, LaplacianTest, Combine(
+                            FILTER_TYPES,
+                            Values(1, 3), // kernel size
+                            Values(Size(0, 0)), // not used
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2, 3.0), // kernel scale
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, SobelTest, Combine(
+                            FILTER_TYPES,
+                            Values(3, 5), // kernel size
+                            Values(Size(1, 0), Size(1, 1), Size(2, 0), Size(2, 1)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(0.0), // not used
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, ScharrTest, Combine(
+                            FILTER_TYPES,
+                            Values(0), // not used
+                            Values(Size(0, 1), Size(1, 0)), // dx, dy
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
+                            Values(1.0, 0.2), // kernel scale
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
+                            FILTER_TYPES,
+                            Values(3, 5), // kernel size
+                            Values(Size(0, 0)), // not used
+                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
                             Bool()));
 
