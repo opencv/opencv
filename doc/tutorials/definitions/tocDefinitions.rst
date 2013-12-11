@@ -11,4 +11,5 @@
 .. |Author_EricCh| unicode:: Eric U+0020 Christiansen
 .. |Author_AndreyP| unicode:: Andrey U+0020 Pavlenko
 .. |Author_AlexS| unicode:: Alexander U+0020 Smorkalov
+.. |Author_MimmoC| unicode:: Mimmo U+0020 Cosenza
 .. |Author_BarisD| unicode:: Bar U+0131 U+015F U+0020 Evrim U+0020 Demir U+00F6 z
