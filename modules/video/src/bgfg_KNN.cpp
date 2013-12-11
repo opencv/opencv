@@ -294,7 +294,8 @@ _cvUpdatePixelBackgroundNP(	long pixel,
 	};
 	if (m_nLongCounter == (m_nLongUpdate-1))
 	{
-		m_nNextLongUpdate[pixel] = (uchar)(((m_nLongUpdate)*rand())/(RAND_MAX+1));//0,...m_nLongUpdate-1;
+		//m_nNextLongUpdate[pixel] = (uchar)(((m_nLongUpdate)*(rand()-1))/RAND_MAX);//0,...m_nLongUpdate-1;
+		m_nNextLongUpdate[pixel] = (uchar)( rand() % m_nLongUpdate );//0,...m_nLongUpdate-1;
 	};
 
 	// Mid update?
@@ -307,7 +308,7 @@ _cvUpdatePixelBackgroundNP(	long pixel,
 	};
 	if (m_nMidCounter == (m_nMidUpdate-1))
 	{
-		m_nNextMidUpdate[pixel] = (uchar)(((m_nMidUpdate)*rand())/(RAND_MAX+1));
+		m_nNextMidUpdate[pixel] = (uchar)( rand() % m_nMidUpdate );
 	};
 
 	// Short update?
@@ -322,9 +323,9 @@ _cvUpdatePixelBackgroundNP(	long pixel,
 	};
 	if (m_nShortCounter == (m_nShortUpdate-1))
 	{
-		m_nNextShortUpdate[pixel] = (uchar)(((m_nShortUpdate)*rand())/(RAND_MAX+1));
+		m_nNextShortUpdate[pixel] = (uchar)( rand() % m_nShortUpdate );
 	};
-}
+};
 
 CV_INLINE int 
 _cvCheckPixelBackgroundNP(long pixel, 
@@ -446,7 +447,8 @@ _cvCheckPixelBackgroundNP(long pixel,
 };
 
 
-void icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
+CV_INLINE void 
+icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
 								Mat& _bgmodel,
 								Mat& _nNextLongUpdate,
 								Mat& _nNextMidUpdate,
@@ -561,7 +563,7 @@ void icvUpdatePixelBackgroundNP(const Mat& _src, Mat& _dst,
 		}
 		pDataOutput++;
 	}
-}
+};
 
 
 
@@ -603,7 +605,7 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
 								nShadowDetection
 							   );
 
-}
+};
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
@@ -651,13 +653,13 @@ void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage
     default:
         CV_Error(Error::StsUnsupportedFormat, "");
     }
-}
+};
 
 
 Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN(int _history, double _threshold2,
                                                              bool _bShadowDetection)
 {
-    return new BackgroundSubtractorKNNImpl(_history, (float)_threshold2, _bShadowDetection);
-}
+    return makePtr<BackgroundSubtractorKNNImpl>(_history, (float)_threshold2, _bShadowDetection);
+};
 
 };//namespace cv
