@@ -196,7 +196,7 @@ static void detectFaces(std::string fileName)
     d_img.upload(img);
 
     std::vector<Rect> oclfaces;
-    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30), Size(0, 0));
 
     for(unsigned int i = 0; i<oclfaces.size(); i++)
         rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), colors[i%8], 3);
