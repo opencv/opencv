@@ -58,6 +58,9 @@ enum
 // boxFilter
 PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool)
 {
+    static const int kernelMinSize = 2;
+    static const int kernelMaxSize = 10;
+
     int type;
     Size ksize;
     Size dsize;
@@ -71,7 +74,7 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool)
     virtual void SetUp()
     {
         type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
-        borderType = GET_PARAM(2);
+        borderType = GET_PARAM(2); // only not isolated border tested, because CPU module doesn't support isolated border case.
         useRoi = GET_PARAM(3);
     }
 
@@ -79,16 +82,17 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool)
     {
         dsize = randomSize(1, MAX_VALUE);
 
-        ksize = randomSize(1, dsize.width, 1, dsize.height);
+        ksize = randomSize(kernelMinSize, kernelMaxSize);
 
-        Size roiSize = randomSize(1, MAX_VALUE);
+        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = anchor.y = -1;
+        anchor.x = randomInt(-1, ksize.width);
+        anchor.y = randomInt(-1, ksize.height);
 
         UMAT_UPLOAD_INPUT_PARAMETER(src)
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
@@ -123,7 +127,8 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
                                        (BorderType)BORDER_REFLECT_101),
-                                Bool())
+                                Bool()  // ROI
+                                )
                            );
 
 
