@@ -15,7 +15,8 @@ opencv_hdr_list = [
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect.hpp",
 "../../contrib/include/opencv2/contrib.hpp",
-"../../highgui/include/opencv2/highgui.hpp"
+"../../highgui/include/opencv2/highgui.hpp",
+"../../ocl/include/opencv2/ocl.hpp"
 ]
 
 """
@@ -208,6 +209,8 @@ class CppHeaderParser(object):
         prev_val_delta = -1
         decl = []
         for pair in ll:
+            if pair.strip() == '':
+                continue
             pv = pair.split("=")
             if len(pv) == 1:
                 prev_val_delta += 1

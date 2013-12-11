@@ -769,7 +769,8 @@ class PythonWrapperGenerator(object):
         classname = bareclassname = ""
         name = decl[0]
         dpos = name.rfind(".")
-        if dpos >= 0 and name[:dpos] != "cv":
+        cv_namespaces = ['cv', 'cv.ocl', 'cv.cuda']
+        if dpos >= 0 and name[:dpos] not in cv_namespaces:
             classname = bareclassname = re.sub(r"^cv\.", "", name[:dpos])
             name = name[dpos+1:]
             dpos = classname.rfind(".")
@@ -778,6 +779,7 @@ class PythonWrapperGenerator(object):
                 classname = classname.replace(".", "_")
         cname = name
         name = re.sub(r"^cv\.", "", name)
+        name = name.replace(".", "_")
         isconstructor = cname == bareclassname
         cname = cname.replace(".", "::")
         isclassmethod = False
