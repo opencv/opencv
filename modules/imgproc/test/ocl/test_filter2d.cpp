@@ -81,8 +81,7 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
         Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
 
-        //Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
-        Size roiSize(1024, 1024);
+        Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
