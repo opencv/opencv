@@ -105,7 +105,7 @@
             do \
             { \
                 if (x < minX) \
-                    x = -(x - minX) - 1 + delta; \
+                    x = minX - (x - minX) - 1 + delta; \
                 else \
                     x = maxX - 1 - (x - maxX) - delta; \
             } \
@@ -117,7 +117,7 @@
             do \
             { \
                 if (y < minY) \
-                    y = -(y - minY) - 1 + delta; \
+                    y = minY - (y - minY) - 1 + delta; \
                 else \
                     y = maxY - 1 - (y - maxY) - delta; \
             } \
@@ -227,7 +227,7 @@ struct RectCoords
 #endif
 
 
-inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, int srcstep, int srcoffset, const struct RectCoords srcCoords
+inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, int srcstep, const struct RectCoords srcCoords
 #ifdef BORDER_CONSTANT
                , SCALAR_TYPE borderValue
 #endif
@@ -239,7 +239,7 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, in
     if(pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
 #endif
     {
-        __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + srcoffset + pos.x * TYPE_SIZE/*sizeof(TYPE)*/);
+        __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * sizeof(TYPE));
         return CONVERT_TO_FPTYPE(*ptr);
     }
     else
@@ -265,7 +265,7 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, in
         pos = (int2)(selected_col, selected_row);
         if(pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
         {
-            __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + srcoffset + pos.x * TYPE_SIZE/*sizeof(TYPE)*/);
+            __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * sizeof(TYPE));
             return CONVERT_TO_FPTYPE(*ptr);
         }
         else
@@ -282,8 +282,8 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, in
 
 __kernel
 __attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
-void boxFilter(__global const uchar* srcptr, int srcstep, int srcoffset,
-               __global uchar* dstptr, int dststep, int dstoffset,
+void boxFilter(__global const uchar* srcptr, int srcstep, int srcOffsetX, int srcOffsetY, int srcEndX, int srcEndY,
+                __global uchar* dstptr, int dststep, int dstoffset,
                int rows, int cols,
 #ifdef BORDER_CONSTANT
                SCALAR_TYPE borderValue,
@@ -291,8 +291,7 @@ void boxFilter(__global const uchar* srcptr, int srcstep, int srcoffset,
                FPTYPE alpha
                )
 {
-    const struct RectCoords srcCoords = {0, 0, cols, rows}; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
-    const struct RectCoords dstCoords = {0, 0, cols, rows};
+    const struct RectCoords srcCoords = {srcOffsetX, srcOffsetY, srcEndX, srcEndY}; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
 
     const int x = get_local_id(0) + (LOCAL_SIZE - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
     const int y = get_global_id(1) * BLOCK_SIZE_Y;
@@ -305,7 +304,7 @@ void boxFilter(__global const uchar* srcptr, int srcstep, int srcoffset,
     int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
     for(int sy = 0; sy < KERNEL_SIZE_Y; sy++, srcPos.y++)
     {
-        data[sy] = readSrcPixel(srcPos, srcptr, srcstep, srcoffset, srcCoords
+        data[sy] = readSrcPixel(srcPos, srcptr, srcstep, srcCoords
 #ifdef BORDER_CONSTANT
                 , borderValue
 #endif
@@ -321,20 +320,20 @@ void boxFilter(__global const uchar* srcptr, int srcstep, int srcoffset,
     sumOfCols[local_id] = tmp_sum;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int2 pos = (int2)(dstCoords.x1 + x, dstCoords.y1 + y);
+    int2 pos = (int2)(x, y);
     __global TYPE* dstPtr = (__global TYPE*)(dstptr + pos.y * dststep + dstoffset + pos.x * TYPE_SIZE/*sizeof(TYPE)*/); // Pointer can be out of bounds!
 
     int sy_index = 0; // current index in data[] array
-    int stepsY = min(dstCoords.y2 - pos.y, BLOCK_SIZE_Y);
+    int stepsY = min(rows - pos.y, BLOCK_SIZE_Y);
     ASSERT(stepsY > 0);
     for (; ;)
     {
-        ASSERT(pos.y < dstCoords.y2);
+        ASSERT(pos.y < rows);
 
         if(local_id >= ANCHOR_X && local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
-            pos.x >= dstCoords.x1 && pos.x < dstCoords.x2)
+            pos.x >= 0 && pos.x < cols)
         {
-            ASSERT(pos.y >= dstCoords.y1 && pos.y < dstCoords.y2);
+            ASSERT(pos.y >= 0 && pos.y < rows);
 
             INTERMEDIATE_TYPE total_sum = 0;
 #pragma unroll
@@ -357,7 +356,7 @@ void boxFilter(__global const uchar* srcptr, int srcstep, int srcoffset,
         // only works with scalars: ASSERT(fabs(tmp_sum - sumOfCols[local_id]) < (INTERMEDIATE_TYPE)1e-6);
         tmp_sum -= data[sy_index];
 
-        data[sy_index] = readSrcPixel(srcPos, srcptr, srcstep, srcoffset, srcCoords
+        data[sy_index] = readSrcPixel(srcPos, srcptr, srcstep, srcCoords
 #ifdef BORDER_CONSTANT
                 , borderValue
 #endif
