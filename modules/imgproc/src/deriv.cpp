@@ -413,15 +413,15 @@ static bool IPPDeriv(const Mat& src, Mat& dst, int ddepth, int dx, int dy, int k
 void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 3 && tegra::sobel3x3(src, dst, dx, dy, borderType))
             return;
         if (ksize == -1 && tegra::scharr(src, dst, dx, dy, borderType))
@@ -430,13 +430,14 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if(dx < 3 && dy < 3 && src.channels() == 1 && borderType == 1)
+    if(dx < 3 && dy < 3 && cn == 1 && borderType == BORDER_REPLICATE)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDeriv(src, dst, ddepth, dx, dy, ksize,scale))
             return;
     }
 #endif
-    int ktype = std::max(CV_32F, std::max(ddepth, src.depth()));
+    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
     getDerivKernels( kx, ky, dx, dy, ksize, false, ktype );
@@ -449,33 +450,36 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
-    sepFilter2D( src, dst, ddepth, kx, ky, Point(-1,-1), delta, borderType );
+    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 
 void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
+    {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (tegra::scharr(src, dst, dx, dy, borderType))
             return;
+    }
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     if(dx < 2 && dy < 2 && src.channels() == 1 && borderType == 1)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDerivScharr(src, dst, ddepth, dx, dy, scale))
             return;
     }
 #endif
-    int ktype = std::max(CV_32F, std::max(ddepth, src.depth()));
+    int ktype = std::max(CV_32F, std::max(ddepth, sdepth));
 
     Mat kx, ky;
     getScharrKernels( kx, ky, dx, dy, false, ktype );
@@ -488,22 +492,22 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
         else
             ky *= scale;
     }
-    sepFilter2D( src, dst, ddepth, kx, ky, Point(-1,-1), delta, borderType );
+    sepFilter2D( _src, _dst, ddepth, kx, ky, Point(-1, -1), delta, borderType );
 }
 
 
 void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
-    Mat src = _src.getMat();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
-        ddepth = src.depth();
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, src.channels()) );
-    Mat dst = _dst.getMat();
+        ddepth = sdepth;
+    _dst.create( _src.size(), CV_MAKETYPE(ddepth, cn) );
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (scale == 1.0 && delta == 0)
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         if (ksize == 1 && tegra::laplace1(src, dst, borderType))
             return;
         if (ksize == 3 && tegra::laplace3(src, dst, borderType))
@@ -516,15 +520,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     if( ksize == 1 || ksize == 3 )
     {
         float K[2][9] =
-        {{0, 1, 0, 1, -4, 1, 0, 1, 0},
-         {2, 0, 2, 0, -8, 0, 2, 0, 2}};
+        {
+            { 0, 1, 0, 1, -4, 1, 0, 1, 0 },
+            { 2, 0, 2, 0, -8, 0, 2, 0, 2 }
+        };
         Mat kernel(3, 3, CV_32F, K[ksize == 3]);
         if( scale != 1 )
             kernel *= scale;
-        filter2D( src, dst, ddepth, kernel, Point(-1,-1), delta, borderType );
+        filter2D( _src, _dst, ddepth, kernel, Point(-1, -1), delta, borderType );
     }
     else
     {
+        Mat src = _src.getMat(), dst = _dst.getMat();
         const size_t STRIPE_SIZE = 1 << 14;
 
         int depth = src.depth();
