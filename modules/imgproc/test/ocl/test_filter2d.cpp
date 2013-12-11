@@ -49,17 +49,11 @@
 namespace cvtest {
 namespace ocl {
 
-enum
-{
-    noType = -1,
-};
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // Filter2D
-PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool)
+PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
 {
-    static const int kernelMinSize = 1;
+    static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
     int type;
@@ -75,8 +69,8 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool)
     virtual void SetUp()
     {
         type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
-        borderType = GET_PARAM(2);
-        useRoi = GET_PARAM(3);
+        borderType = GET_PARAM(2) | (GET_PARAM(3) ? BORDER_ISOLATED : 0);
+        useRoi = GET_PARAM(4);
     }
 
     void random_roi()
@@ -84,16 +78,19 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool)
         dsize = randomSize(1, MAX_VALUE);
 
         Size ksize = randomSize(kernelMinSize, kernelMaxSize);
-        kernel = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
+        Mat temp = randomMat(ksize, CV_MAKE_TYPE(((CV_64F == CV_MAT_DEPTH(type)) ? CV_64F : CV_32F), 1), -MAX_VALUE, MAX_VALUE);
+        cv::normalize(temp, kernel, 1.0, 0.0, NORM_L1);
 
-        Size roiSize = randomSize(1, MAX_VALUE);
+        //Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
+        Size roiSize(1024, 1024);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = anchor.y = -1;
+        anchor.x = randomInt(-1, ksize.width);
+        anchor.y = randomInt(-1, ksize.height);
 
         UMAT_UPLOAD_INPUT_PARAMETER(src)
         UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
@@ -128,7 +125,9 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
                                        (BorderType)BORDER_REFLECT_101),
-                                Bool())
+                                Bool(), // BORDER_ISOLATED
+                                Bool()  // ROI
+                                )
                            );
 
 

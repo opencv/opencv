@@ -3210,6 +3210,13 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t localsize[2] = {0, 1};
 
     ocl::Kernel kernel;
+    UMat src; Size wholeSize;
+    if (!isIsolatedBorder)
+    {
+        src = _src.getUMat();
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+    }
 
     size_t maxWorkItemSizes[32]; device.maxWorkItemSizes(maxWorkItemSizes);
     size_t tryWorkItems = maxWorkItemSizes[0];
@@ -3233,8 +3240,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
         int requiredBottom = ksize.height - 1 - anchor.y;
         int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
-        int h = sz.height;
-        int w = sz.width;
+        int h = isIsolatedBorder ? sz.height : wholeSize.height;
+        int w = isIsolatedBorder ? sz.width : wholeSize.width;
         bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
 
         if ((w < ksize.width) || (h < ksize.height))
@@ -3268,10 +3275,22 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     _dst.create(sz, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
-    UMat src = _src.getUMat();
+    if (src.empty())
+        src = _src.getUMat();
 
     int idxArg = 0;
-    idxArg = kernel.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(src));
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+
+    int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
+    int srcOffsetY = (int)(src.offset / src.step);
+    int srcEndX = (isIsolatedBorder ? (srcOffsetX + sz.width) : wholeSize.width);
+    int srcEndY = (isIsolatedBorder ? (srcOffsetY + sz.height) : wholeSize.height);
+    idxArg = kernel.set(idxArg, srcOffsetX);
+    idxArg = kernel.set(idxArg, srcOffsetY);
+    idxArg = kernel.set(idxArg, srcEndX);
+    idxArg = kernel.set(idxArg, srcEndY);
+
     idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
     float borderValue[4] = {0, 0, 0, 0};
     double borderValueDouble[4] = {0, 0, 0, 0};
