@@ -249,6 +249,9 @@ namespace ocl
     MatAllocator* getOpenCLAllocator();
 }
 
+extern bool __termination; // skip some cleanups, because process is terminating
+                           // (for example, if ExitProcess() was already called)
+
 }
 
 #endif /*_CXCORE_INTERNAL_H_*/

@@ -143,8 +143,8 @@ namespace cv
         class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
-            WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+            WPlane(const Vec4f& coefs, float size = 1.f, const Color &color = Color::white());
+            WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.f, const Color &color = Color::white());
         private:
             struct SetSizeImpl;
         };
@@ -158,19 +158,19 @@ namespace cv
         class CV_EXPORTS WArrow : public Widget3D
         {
         public:
-            WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
+            WArrow(const Point3f& pt1, const Point3f& pt2, float thickness = 0.03f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+            WCircle(const Point3f& pt, float radius, float thickness = 0.01f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
-            WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+            WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides = 30, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCube : public Widget3D
@@ -182,7 +182,7 @@ namespace cv
         class CV_EXPORTS WCoordinateSystem : public Widget3D
         {
         public:
-            WCoordinateSystem(double scale = 1.0);
+            WCoordinateSystem(float scale = 1.f);
         };
 
         class CV_EXPORTS WPolyLine : public Widget3D
@@ -210,7 +210,7 @@ namespace cv
         class CV_EXPORTS WText3D : public Widget3D
         {
         public:
-            WText3D(const String &text, const Point3f &position, double text_scale = 1.0, bool face_camera = true, const Color &color = Color::white());
+            WText3D(const String &text, const Point3f &position, float text_scale = 1.f, bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
@@ -248,15 +248,15 @@ namespace cv
         {
         public:
             //! Creates camera coordinate frame (axes) at the origin
-            WCameraPosition(double scale = 1.0);
+            WCameraPosition(float scale = 1.f);
             //! Creates frustum based on the intrinsic marix K at the origin
-            WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
 
         private:
             struct ProjectImage;
@@ -268,11 +268,11 @@ namespace cv
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
 
             //! Displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.f);
             //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
 
         private:
             struct ApplyPath;
@@ -281,8 +281,8 @@ namespace cv
         class CV_EXPORTS WSpheresTrajectory: public Widget3D
         {
         public:
-            WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021,
-                                    double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
+                                    float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
         class CV_EXPORTS WCloud: public Widget3D

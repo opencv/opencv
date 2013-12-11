@@ -104,7 +104,7 @@ struct cv::viz::WPlane::SetSizeImpl
     }
 };
 
-cv::viz::WPlane::WPlane(const Vec4f& coefs, double size, const Color &color)
+cv::viz::WPlane::WPlane(const Vec4f& coefs, float size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
     plane->SetNormal(coefs[0], coefs[1], coefs[2]);
@@ -124,7 +124,7 @@ cv::viz::WPlane::WPlane(const Vec4f& coefs, double size, const Color &color)
     setColor(color);
 }
 
-cv::viz::WPlane::WPlane(const Vec4f& coefs, const Point3f& pt, double size, const Color &color)
+cv::viz::WPlane::WPlane(const Vec4f& coefs, const Point3f& pt, float size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
     Point3f coefs3(coefs[0], coefs[1], coefs[2]);
@@ -183,7 +183,7 @@ template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// arrow widget implementation
 
-cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, double thickness, const Color &color)
+cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, float thickness, const Color &color)
 {
     vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New();
     arrowSource->SetShaftRadius(thickness);
@@ -256,7 +256,7 @@ template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
-cv::viz::WCircle::WCircle(const Point3f& pt, double radius, double thickness, const Color& color)
+cv::viz::WCircle::WCircle(const Point3f& pt, float radius, float thickness, const Color& color)
 {
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New();
     // Maybe the resolution should be lower e.g. 50 or 25
@@ -292,7 +292,7 @@ template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-cv::viz::WCylinder::WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides, const Color &color)
+cv::viz::WCylinder::WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides, const Color &color)
 {
     const Point3f pt2 = pt_on_axis + axis_direction;
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
@@ -355,7 +355,7 @@ template<> cv::viz::WCube cv::viz::Widget::cast<cv::viz::WCube>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// coordinate system widget implementation
 
-cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
+cv::viz::WCoordinateSystem::WCoordinateSystem(float scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
     axes->SetOrigin(0, 0, 0);
@@ -593,7 +593,7 @@ template<> cv::viz::WGrid cv::viz::Widget::cast<cv::viz::WGrid>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text3D widget implementation
 
-cv::viz::WText3D::WText3D(const String &text, const Point3f &position, double text_scale, bool face_camera, const Color &color)
+cv::viz::WText3D::WText3D(const String &text, const Point3f &position, float text_scale, bool face_camera, const Color &color)
 {
     vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New();
     textSource->SetText(text.c_str());
@@ -1032,7 +1032,7 @@ struct cv::viz::WCameraPosition::ProjectImage
     }
 };
 
-cv::viz::WCameraPosition::WCameraPosition(double scale)
+cv::viz::WCameraPosition::WCameraPosition(float scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
     axes->SetOrigin(0, 0, 0);
@@ -1074,7 +1074,7 @@ cv::viz::WCameraPosition::WCameraPosition(double scale)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
     float f_x = K(0,0);
@@ -1116,7 +1116,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, double scale, const 
 }
 
 
-cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
@@ -1154,7 +1154,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, double scale, const 
     setColor(color);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, const Mat &image, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, const Mat &image, float scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     float f_y = K(1,1);
@@ -1168,7 +1168,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, const Mat &image, do
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, const Mat &image, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, const Mat &image, float scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     float fovy = fov[1] * 180.0f / CV_PI;
@@ -1220,7 +1220,7 @@ struct cv::viz::WTrajectory::ApplyPath
     }
 };
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display_mode, const Color &color, double scale)
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display_mode, const Color &color, float scale)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
@@ -1316,7 +1316,7 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale, const Color &color)
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
     float f_x = K(0,0);
@@ -1360,7 +1360,7 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Matx3
     setColor(color);
 }
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale, const Color &color)
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
@@ -1409,7 +1409,7 @@ template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// spheres trajectory widget implementation
 
-cv::viz::WSpheresTrajectory::WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius, double sphere_radius,
+cv::viz::WSpheresTrajectory::WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length, float init_sphere_radius, float sphere_radius,
                                                           const Color &line_color, const Color &sphere_color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();

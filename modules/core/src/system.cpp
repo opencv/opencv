@@ -734,18 +734,23 @@ cvErrorFromIppStatus( int status )
     }
 }
 
+namespace cv {
+bool __termination = false;
+}
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 #ifdef HAVE_WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
+BOOL WINAPI DllMain( HINSTANCE, DWORD, LPVOID );
 
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
+BOOL WINAPI DllMain( HINSTANCE, DWORD fdwReason, LPVOID lpReserved )
 {
     if( fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH )
     {
+        if (lpReserved != NULL) // called after ExitProcess() call
+            cv::__termination = true;
         cv::deleteThreadAllocData();
         cv::deleteThreadData();
     }

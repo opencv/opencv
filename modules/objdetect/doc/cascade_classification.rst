@@ -221,44 +221,6 @@ The function is parallelized with the TBB library.
    * (Python) A face detection example using cascade classifiers can be found at opencv_source_code/samples/python2/facedetect.py
 
 
-CascadeClassifier::setImage
--------------------------------
-Sets an image for detection.
-
-.. ocv:function:: bool CascadeClassifier::setImage( Ptr<FeatureEvaluator>& feval, const Mat& image )
-
-.. ocv:cfunction:: void cvSetImagesForHaarClassifierCascade( CvHaarClassifierCascade* cascade, const CvArr* sum, const CvArr* sqsum, const CvArr* tilted_sum, double scale )
-
-    :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
-
-    :param feval: Pointer to the feature evaluator used for computing features.
-
-    :param image: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
-
-The function is automatically called by :ocv:func:`CascadeClassifier::detectMultiScale` at every image scale. But if you want to test various locations manually using :ocv:func:`CascadeClassifier::runAt`, you need to call the function before, so that the integral images are computed.
-
-.. note:: in the old API you need to supply integral images (that can be obtained using :ocv:cfunc:`Integral`) instead of the original image.
-
-
-CascadeClassifier::runAt
-----------------------------
-Runs the detector at the specified point.
-
-.. ocv:function:: int CascadeClassifier::runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight )
-
-.. ocv:cfunction:: int cvRunHaarClassifierCascade( const CvHaarClassifierCascade* cascade, CvPoint pt, int start_stage=0 )
-
-    :param cascade: Haar classifier cascade (OpenCV 1.x API only). See :ocv:func:`CascadeClassifier::detectMultiScale` for more information.
-
-    :param feval: Feature evaluator used for computing features.
-
-    :param pt: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
-
-The function returns 1 if the cascade classifier detects an object in the given location.
-Otherwise, it returns negated index of the stage at which the candidate has been rejected.
-
-Use :ocv:func:`CascadeClassifier::setImage` to set the image for the detector to work with.
-
 groupRectangles
 -------------------
 Groups the object candidate rectangles.
