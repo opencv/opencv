@@ -57,6 +57,10 @@
 namespace cv {
 namespace ocl {
 
+#if defined(WIN32)
+static bool __termination = false;
+#endif
+
 struct __Module
 {
     __Module();
@@ -494,6 +498,38 @@ PlatformInfo::PlatformInfo()
     // nothing
 }
 
+class ContextImpl;
+
+struct CommandQueue
+{
+    ContextImpl* context_;
+    cl_command_queue clQueue_;
+
+    CommandQueue() : context_(NULL), clQueue_(NULL) { }
+    ~CommandQueue() { release(); }
+
+    void create(ContextImpl* context_);
+    void release()
+    {
+#ifdef WIN32
+        // if process is on termination stage (ExitProcess was called and other threads were terminated)
+        // then disable command queue release because it may cause program hang
+        if (!__termination)
+#endif
+        {
+            if(clQueue_)
+            {
+                openCLSafeCall(clReleaseCommandQueue(clQueue_)); // some cleanup problems are here
+            }
+
+        }
+        clQueue_ = NULL;
+        context_ = NULL;
+    }
+};
+
+cv::TLSData<CommandQueue> commandQueueTLSData;
+
 //////////////////////////////// OpenCL context ////////////////////////
 //This is a global singleton class used to represent a OpenCL context.
 class ContextImpl : public Context
@@ -501,12 +537,11 @@ class ContextImpl : public Context
 public:
     const cl_device_id clDeviceID;
     cl_context clContext;
-    cl_command_queue clCmdQueue;
     const DeviceInfo& deviceInfo;
 
 protected:
     ContextImpl(const DeviceInfo& deviceInfo, cl_device_id clDeviceID)
-        : clDeviceID(clDeviceID), clContext(NULL), clCmdQueue(NULL), deviceInfo(deviceInfo)
+        : clDeviceID(clDeviceID), clContext(NULL), deviceInfo(deviceInfo)
     {
         // nothing
     }
@@ -581,7 +616,13 @@ const void* Context::getOpenCLContextPtr() const
 
 const void* Context::getOpenCLCommandQueuePtr() const
 {
-    return &(((ContextImpl*)this)->clCmdQueue);
+    ContextImpl* pThis = (ContextImpl*)this;
+    CommandQueue* commandQueue = commandQueueTLSData.get();
+    if (commandQueue->context_ != pThis)
+    {
+        commandQueue->create(pThis);
+    }
+    return &commandQueue->clQueue_;
 }
 
 const void* Context::getOpenCLDeviceIDPtr() const
@@ -607,10 +648,6 @@ bool ContextImpl::supportsFeature(FEATURE_TYPE featureType) const
     return false;
 }
 
-#if defined(WIN32)
-static bool __termination = false;
-#endif
-
 ContextImpl::~ContextImpl()
 {
 #ifdef WIN32
@@ -619,17 +656,11 @@ ContextImpl::~ContextImpl()
     if (!__termination)
 #endif
     {
-        if(clCmdQueue)
-        {
-            openCLSafeCall(clReleaseCommandQueue(clCmdQueue)); // some cleanup problems are here
-        }
-
         if(clContext)
         {
             openCLSafeCall(clReleaseContext(clContext));
         }
     }
-    clCmdQueue = NULL;
     clContext = NULL;
 }
 
@@ -667,12 +698,8 @@ void ContextImpl::setContext(const DeviceInfo* deviceInfo)
     cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(infoImpl.platform_id), 0 };
     cl_context clContext = clCreateContext(cps, 1, &infoImpl.device_id, NULL, NULL, &status);
     openCLVerifyCall(status);
-    // TODO add CL_QUEUE_PROFILING_ENABLE
-    cl_command_queue clCmdQueue = clCreateCommandQueue(clContext, infoImpl.device_id, 0, &status);
-    openCLVerifyCall(status);
 
     ContextImpl* ctx = new ContextImpl(infoImpl.info, infoImpl.device_id);
-    ctx->clCmdQueue = clCmdQueue;
     ctx->clContext = clContext;
 
     ContextImpl* old = NULL;
@@ -685,6 +712,17 @@ void ContextImpl::setContext(const DeviceInfo* deviceInfo)
     {
         delete old;
     }
+}
+
+void CommandQueue::create(ContextImpl* context)
+{
+    release();
+    cl_int status = 0;
+    // TODO add CL_QUEUE_PROFILING_ENABLE
+    cl_command_queue clCmdQueue = clCreateCommandQueue(context->clContext, context->clDeviceID, 0, &status);
+    openCLVerifyCall(status);
+    context_ = context;
+    clQueue_ = clCmdQueue;
 }
 
 int getOpenCLPlatforms(PlatformsInfo& platforms)
