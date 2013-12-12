@@ -76,6 +76,8 @@ protected:
         destroyWindow("equalized gray");
 #endif
         ts->set_failed_test_info(cvtest::TS::OK);
+
+        (void)uresult.getMat(ACCESS_READ);
     }
 };
 
