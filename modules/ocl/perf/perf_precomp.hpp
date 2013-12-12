@@ -116,6 +116,7 @@ using namespace cv;
 #define OCL_TEST_CYCLE() for(; startTimer(), next(); cv::ocl::finish(), stopTimer())
 #define OCL_TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; cv::ocl::finish(), ++r)
 
+// TODO: Move to the ts module
 namespace cvtest {
 namespace ocl {
 inline void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor = 1)
@@ -133,6 +134,60 @@ inline void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor
         throw perf::TestBase::PerfSkipTestException();
     }
 }
+
+struct KeypointIdxCompare
+{
+    std::vector<cv::KeyPoint>* keypoints;
+
+    explicit KeypointIdxCompare(std::vector<cv::KeyPoint>* _keypoints) : keypoints(_keypoints) {}
+
+    bool operator ()(size_t i1, size_t i2) const
+    {
+        cv::KeyPoint kp1 = (*keypoints)[i1];
+        cv::KeyPoint kp2 = (*keypoints)[i2];
+        if (kp1.pt.x != kp2.pt.x)
+            return kp1.pt.x < kp2.pt.x;
+        if (kp1.pt.y != kp2.pt.y)
+            return kp1.pt.y < kp2.pt.y;
+        if (kp1.response != kp2.response)
+            return kp1.response < kp2.response;
+        return kp1.octave < kp2.octave;
+    }
+};
+
+inline void sortKeyPoints(std::vector<cv::KeyPoint>& keypoints, cv::InputOutputArray _descriptors = cv::noArray())
+{
+    std::vector<size_t> indexies(keypoints.size());
+    for (size_t i = 0; i < indexies.size(); ++i)
+        indexies[i] = i;
+
+    std::sort(indexies.begin(), indexies.end(), KeypointIdxCompare(&keypoints));
+
+    std::vector<cv::KeyPoint> new_keypoints;
+    cv::Mat new_descriptors;
+
+    new_keypoints.resize(keypoints.size());
+
+    cv::Mat descriptors;
+    if (_descriptors.needed())
+    {
+        descriptors = _descriptors.getMat();
+        new_descriptors.create(descriptors.size(), descriptors.type());
+    }
+
+    for (size_t i = 0; i < indexies.size(); ++i)
+    {
+        size_t new_idx = indexies[i];
+        new_keypoints[i] = keypoints[new_idx];
+        if (!new_descriptors.empty())
+            descriptors.row((int) new_idx).copyTo(new_descriptors.row((int) i));
+    }
+
+    keypoints.swap(new_keypoints);
+    if (_descriptors.needed())
+        new_descriptors.copyTo(_descriptors);
+}
+
 } // namespace cvtest::ocl
 } // namespace cvtest
 
