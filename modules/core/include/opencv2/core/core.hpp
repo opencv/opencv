@@ -4821,6 +4821,32 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
+class TLSDataContainer
+{
+private:
+    int key_;
+protected:
+    CV_EXPORTS TLSDataContainer();
+    CV_EXPORTS ~TLSDataContainer(); // virtual is not required
+public:
+    virtual void* createDataInstance() const = 0;
+    virtual void deleteDataInstance(void* data) const = 0;
+
+    CV_EXPORTS void* getData() const;
+};
+
+template <typename T>
+class TLSData : protected TLSDataContainer
+{
+public:
+    inline TLSData() {}
+    inline ~TLSData() {}
+    inline T* get() const { return (T*)getData(); }
+private:
+    virtual void* createDataInstance() const { return new T; }
+    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
+};
+
 }
 
 #endif // __cplusplus
