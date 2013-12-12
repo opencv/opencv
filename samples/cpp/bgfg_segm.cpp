@@ -38,7 +38,7 @@ int main(int argc, const char** argv)
         cap.open(0);
     else
         cap.open(file.c_str());
-
+	
     parser.printMessage();
 
     if( !cap.isOpened() )
