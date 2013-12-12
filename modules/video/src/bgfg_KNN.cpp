@@ -660,6 +660,10 @@ Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN(int _history, double 
                                                              bool _bShadowDetection)
 {
     return makePtr<BackgroundSubtractorKNNImpl>(_history, (float)_threshold2, _bShadowDetection);
+<<<<<<< HEAD
 };
+=======
+}
+>>>>>>> origin/bgfg_KNN_new_code
 
 };//namespace cv
