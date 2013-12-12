@@ -244,6 +244,18 @@ struct TLSData
     static TLSData* get();
 };
 
+#if defined(BUILD_SHARED_LIBS)
+#if defined WIN32 || defined _WIN32 || defined WINCE
+#define CL_RUNTIME_EXPORT __declspec(dllexport)
+#elif defined __GNUC__ && __GNUC__ >= 4
+#define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+
 namespace ocl
 {
     MatAllocator* getOpenCLAllocator();

@@ -46,7 +46,7 @@
 #ifndef __OPENCV_OCL_PRIVATE_UTIL__
 #define __OPENCV_OCL_PRIVATE_UTIL__
 
-#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencv2/core/ocl_genbase.hpp"
 
 #include "opencv2/ocl.hpp"

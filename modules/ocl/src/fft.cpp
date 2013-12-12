@@ -57,7 +57,7 @@ namespace cv { namespace ocl {
 }}
 void cv::ocl::fft_teardown(){}
 #else
-#include "opencv2/ocl/cl_runtime/clamdfft_runtime.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 namespace cv
 {
     namespace ocl
