@@ -557,6 +557,18 @@ Returns void
 
 The functions split split multi-channel array into separate single-channel arrays. Supports all data types.
 
+ocl::sqrt
+------------------
+Returns void
+
+.. ocv:function:: void ocl::sqrt(const oclMat &src, oclMat &dst)
+
+    :param src: the first source array.
+
+    :param dst: the dst array; must have the same size and same type as ``src``.
+
+The function ``sqrt`` calculates the square root of each input array element. Supports only ``CV_32FC1`` and ``CV_64F`` data types.
+
 ocl::subtract
 ------------------
 Returns void
