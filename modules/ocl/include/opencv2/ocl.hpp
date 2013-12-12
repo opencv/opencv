@@ -559,6 +559,10 @@ namespace cv
         // supports only CV_32FC1, CV_64FC1 type
         CV_EXPORTS void log(const oclMat &src, oclMat &dst);
 
+        //! computes square root of each matrix element
+        // supports only CV_32FC1, CV_64FC1 type
+        CV_EXPORTS void sqrt(const oclMat &src, oclMat &dst);
+
         //! computes magnitude of each (x(i), y(i)) vector
         // supports only CV_32F, CV_64F type
         CV_EXPORTS void magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude);

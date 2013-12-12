@@ -162,6 +162,40 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
     SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
+///////////// SQRT ///////////////////////
+
+typedef TestBaseWithParam<Size> SqrtFixture;
+
+PERF_TEST_P(SqrtFixture, Sqrt, OCL_TYPICAL_MAT_SIZES)
+{
+    // getting params
+    const Size srcSize = GetParam();
+    const double eps = 1e-6;
+
+    // creating src data
+    Mat src(srcSize, CV_32F), dst(srcSize, src.type());
+    randu(src, 0, 10);
+    declare.in(src).out(dst);
+
+    // select implementation
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
+
+        OCL_TEST_CYCLE() cv::ocl::sqrt(oclSrc, oclDst);
+
+        oclDst.download(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::sqrt(src, dst);
+    }
+    else
+        OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
+}
+
 ///////////// Add ////////////////////////
 
 typedef Size_MatType AddFixture;
