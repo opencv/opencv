@@ -49,11 +49,17 @@ public:
     Ptr<MaskGenerator> getMaskGenerator();
 
 protected:
-    bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-                           int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
-                           std::vector<int>& rejectLevels, std::vector<double>& levelWeights, bool outputRejectLevels = false );
+    bool detectSingleScale( InputArray image, Size processingRectSize,
+                            int yStep, double factor, std::vector<Rect>& candidates,
+                            std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
+                            bool outputRejectLevels = false );
+    bool ocl_detectSingleScale( InputArray image, Size processingRectSize,
+                           int yStep, double factor, std::vector<Rect>& candidates,
+                           std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
+                           bool outputRejectLevels = false );
+    
 
-    void detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
+    void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                     bool outputRejectLevels = false );
@@ -127,6 +133,12 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 
     Ptr<MaskGenerator> maskGenerator;
+    UMat ugrayImage, uimageBuffer;
+    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets;
+    ocl::Kernel cascadeKernel;
+    bool tryOpenCL;
+    
+    Mutex mtx;
 };
 
 #define CC_CASCADE_PARAMS "cascadeParams"
@@ -212,6 +224,10 @@ protected:
 
 #define CALC_SUM(rect,offset) CALC_SUM_((rect)[0], (rect)[1], (rect)[2], (rect)[3], offset)
 
+#define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
+((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
+    
+#define CALC_SUM_OFS(rect, ptr) CALC_SUM_OFS_((rect)[0], (rect)[1], (rect)[2], (rect)[3], ptr)
 
 //----------------------------------------------  HaarEvaluator ---------------------------------------
 class HaarEvaluator : public FeatureEvaluator
@@ -241,10 +257,10 @@ public:
         enum { RECT_NUM = Feature::RECT_NUM };
         float calc( const int* pwin ) const;
 
-        void setPtrs( const Mat& sum, const Feature& f );
+        void setOffsets( const Feature& _f, int step, int tofs );
 
         int ofs[RECT_NUM][4];
-        float weight[RECT_NUM];
+        float weight[4];
     };
 
     HaarEvaluator();
@@ -254,8 +270,11 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(const Mat&, Size origWinSize);
+    virtual bool setImage(InputArray, Size origWinSize);
     virtual bool setWindow(Point pt);
+    
+    virtual bool setUMat(InputArray, Size origWinSize, Size origImgSize);
+    virtual void getUMats(std::vector<UMat>& bufs);
 
     double operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
@@ -263,22 +282,22 @@ public:
     { return (*this)(featureIdx); }
 
 protected:
-    Size origWinSize;
-    std::vector<Feature> features;
-    std::vector<OptFeature> optfeatures;
+    Size origWinSize, origImgSize;
+    Ptr<std::vector<Feature> > features;
+    Ptr<std::vector<OptFeature> > optfeatures;
     OptFeature* optfeaturesPtr; // optimization
     bool hasTiltedFeatures;
 
-    Mat sum0, sqsum0, tilted0;
+    Mat sum0, sqsum0;
     Mat sum, sqsum, tilted;
+    UMat usum, usqsum, fbuf;
 
     Rect normrect;
-    int p[4];
-    int pq[4];
+    int nofs[4];
+    int nqofs[4];
 
     const int* pwin;
     const double* pqwin;
-    int offset;
     double varianceNormFactor;
 };
 
@@ -298,34 +317,35 @@ inline HaarEvaluator::OptFeature :: OptFeature()
     ofs[2][0] = ofs[2][1] = ofs[2][2] = ofs[2][3] = 0;
 }
 
-/*inline float HaarEvaluator::Feature :: calc( int _offset ) const
+inline float HaarEvaluator::OptFeature :: calc( const int* ptr ) const
 {
-    float ret = rect[0].weight * CALC_SUM(p[0], _offset) + rect[1].weight * CALC_SUM(p[1], _offset);
+    float ret = weight[0] * CALC_SUM_OFS(ofs[0], ptr) +
+                weight[1] * CALC_SUM_OFS(ofs[1], ptr);
 
-    if( rect[2].weight != 0.0f )
-        ret += rect[2].weight * CALC_SUM(p[2], _offset);
+    if( weight[2] != 0.0f )
+        ret += weight[2] * CALC_SUM_OFS(ofs[2], ptr);
 
     return ret;
-}*/
+}
 
-inline void HaarEvaluator::OptFeature :: setPtrs( const Mat& _sum, const Feature& _f )
+inline void HaarEvaluator::OptFeature :: setOffsets( const Feature& _f, int step, int tofs )
 {
-    const int* ptr = (const int*)_sum.data;
-    size_t step = _sum.step/sizeof(ptr[0]);
-    size_t tiltedofs =
-    if (tilted)
+    weight[0] = _f.rect[0].weight;
+    weight[1] = _f.rect[1].weight;
+    weight[2] = _f.rect[2].weight;
+    if (_f.tilted)
     {
-        CV_TILTED_PTRS( p[0][0], p[0][1], p[0][2], p[0][3], ptr, rect[0].r, step );
-        CV_TILTED_PTRS( p[1][0], p[1][1], p[1][2], p[1][3], ptr, rect[1].r, step );
-        if (rect[2].weight)
-            CV_TILTED_PTRS( p[2][0], p[2][1], p[2][2], p[2][3], ptr, rect[2].r, step );
+        CV_TILTED_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], tofs, _f.rect[0].r, step );
+        CV_TILTED_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], tofs, _f.rect[1].r, step );
+        if (weight[2])
+            CV_TILTED_PTRS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, _f.rect[2].r, step );
     }
     else
     {
-        CV_SUM_PTRS( p[0][0], p[0][1], p[0][2], p[0][3], ptr, rect[0].r, step );
-        CV_SUM_PTRS( p[1][0], p[1][1], p[1][2], p[1][3], ptr, rect[1].r, step );
-        if (rect[2].weight)
-            CV_SUM_PTRS( p[2][0], p[2][1], p[2][2], p[2][3], ptr, rect[2].r, step );
+        CV_SUM_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], 0, _f.rect[0].r, step );
+        CV_SUM_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], 0, _f.rect[1].r, step );
+        if (weight[2])
+            CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, _f.rect[2].r, step );
     }
 }
 
@@ -356,7 +376,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
-    virtual bool setImage(const Mat& image, Size _origWinSize);
+    virtual bool setImage(InputArray image, Size _origWinSize);
     virtual bool setWindow(Point pt);
 
     int operator()(int featureIdx) const
@@ -433,7 +453,7 @@ public:
     virtual bool read( const FileNode& node );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
-    virtual bool setImage( const Mat& image, Size winSize );
+    virtual bool setImage( InputArray image, Size winSize );
     virtual bool setWindow( Point pt );
     double operator()(int featureIdx) const
     {
