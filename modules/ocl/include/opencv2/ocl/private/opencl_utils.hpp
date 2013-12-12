@@ -42,7 +42,7 @@
 #ifndef __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
 #define __OPENCV_OCL_PRIVATE_OPENCL_UTILS_HPP__
 
-#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include <vector>
 #include <string>
 

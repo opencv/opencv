@@ -42,6 +42,11 @@
 #include "precomp.hpp"
 #include <map>
 
+#ifdef HAVE_OPENCL
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#else
+// TODO FIXIT: This file can't be build without OPENCL
+
 /*
   Part of the file is an extract from the standard OpenCL headers from Khronos site.
   Below is the original copyright.
@@ -1220,6 +1225,12 @@ OCL_FUNC(cl_int, clReleaseEvent, (cl_event event), (event))
 
 #endif
 
+#ifndef CL_VERSION_1_2
+#define CL_VERSION_1_2
+#endif
+
+#endif
+
 namespace cv { namespace ocl {
 
 struct UMat2D
@@ -1298,10 +1309,31 @@ inline bool operator < (const HashKey& h1, const HashKey& h2)
     return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
 }
 
+static bool g_isInitialized = false;
+static bool g_isOpenCLAvailable = false;
 bool haveOpenCL()
 {
-    initOpenCLAndLoad(0);
-    return g_haveOpenCL;
+    if (!g_isInitialized)
+    {
+        if (!g_isInitialized)
+        {
+            try
+            {
+                cl_uint n = 0;
+                cl_int err = ::clGetPlatformIDs(0, NULL, &n);
+                if (err != CL_SUCCESS)
+                    g_isOpenCLAvailable = false;
+                else
+                    g_isOpenCLAvailable = true;
+            }
+            catch (...)
+            {
+                g_isOpenCLAvailable = false;
+            }
+            g_isInitialized = true;
+        }
+    }
+    return g_isOpenCLAvailable;
 }
 
 bool useOpenCL()
@@ -1549,7 +1581,11 @@ bool Device::compilerAvailable() const
 { return p ? p->getBoolProp(CL_DEVICE_COMPILER_AVAILABLE) : false; }
 
 bool Device::linkerAvailable() const
+#ifdef CL_VERSION_1_2
 { return p ? p->getBoolProp(CL_DEVICE_LINKER_AVAILABLE) : false; }
+#else
+{ CV_REQUIRE_OPENCL_1_2_ERROR; }
+#endif
 
 int Device::doubleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG) : 0; }
@@ -1558,7 +1594,11 @@ int Device::singleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
 
 int Device::halfFPConfig() const
+#ifdef CL_VERSION_1_2
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
+#else
+{ CV_REQUIRE_OPENCL_1_2_ERROR; }
+#endif
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
@@ -1609,10 +1649,18 @@ size_t Device::image3DMaxDepth() const
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE3D_MAX_DEPTH) : 0; }
 
 size_t Device::imageMaxBufferSize() const
+#ifdef CL_VERSION_1_2
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE_MAX_BUFFER_SIZE) : 0; }
+#else
+{ CV_REQUIRE_OPENCL_1_2_ERROR; }
+#endif
 
 size_t Device::imageMaxArraySize() const
+#ifdef CL_VERSION_1_2
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_IMAGE_MAX_ARRAY_SIZE) : 0; }
+#else
+{ CV_REQUIRE_OPENCL_1_2_ERROR; }
+#endif
 
 int Device::maxClockFrequency() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CLOCK_FREQUENCY) : 0; }
@@ -1704,7 +1752,12 @@ int Device::preferredVectorWidthHalf() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF) : 0; }
 
 size_t Device::printfBufferSize() const
+#ifdef CL_VERSION_1_2
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_PRINTF_BUFFER_SIZE) : 0; }
+#else
+{ CV_REQUIRE_OPENCL_1_2_ERROR; }
+#endif
+
 
 size_t Device::profilingTimerResolution() const
 { return p ? p->getProp<size_t, size_t>(CL_DEVICE_PROFILING_TIMER_RESOLUTION) : 0; }
