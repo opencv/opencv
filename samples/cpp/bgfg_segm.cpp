@@ -38,7 +38,7 @@ int main(int argc, const char** argv)
         cap.open(0);
     else
         cap.open(file.c_str());
-
+	
     parser.printMessage();
 
     if( !cap.isOpened() )
@@ -52,7 +52,8 @@ int main(int argc, const char** argv)
     namedWindow("foreground image", WINDOW_NORMAL);
     namedWindow("mean background image", WINDOW_NORMAL);
 
-    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
+    //Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorKNN();
 
     Mat img, fgmask, fgimg;
 
