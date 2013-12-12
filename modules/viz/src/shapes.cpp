@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -63,7 +60,6 @@ cv::viz::WLine::WLine(const Point3f &pt1, const Point3f &pt2, const Color &color
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
     line->SetPoint1(pt1.x, pt1.y, pt1.z);
     line->SetPoint2(pt2.x, pt2.y, pt2.z);
-    line->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(line->GetOutputPort());
@@ -165,7 +161,6 @@ cv::viz::WSphere::WSphere(const Point3f &center, float radius, int sphere_resolu
     sphere->SetPhiResolution(sphere_resolution);
     sphere->SetThetaResolution(sphere_resolution);
     sphere->LatLongTessellationOff();
-    sphere->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(sphere->GetOutputPort());
@@ -194,44 +189,27 @@ cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, float thickness,
     arrowSource->SetTipRadius(thickness * 3.0);
     arrowSource->SetTipLength(thickness * 10.0);
 
-    float startPoint[3], endPoint[3];
-    startPoint[0] = pt1.x;
-    startPoint[1] = pt1.y;
-    startPoint[2] = pt1.z;
-    endPoint[0] = pt2.x;
-    endPoint[1] = pt2.y;
-    endPoint[2] = pt2.z;
-    float normalizedX[3], normalizedY[3], normalizedZ[3];
+    Vec3f startPoint(pt1.x, pt1.y, pt1.z), endPoint(pt2.x, pt2.y, pt2.z);
+    Vec3f arbitrary(theRNG().uniform(-10.f, 10.f), theRNG().uniform(-10.f, 10.f), theRNG().uniform(-10.f, 10.f));
+    double length = cv::norm(endPoint - startPoint);
 
-    // The X axis is a vector from start to end
-    vtkMath::Subtract(endPoint, startPoint, normalizedX);
-    float length = vtkMath::Norm(normalizedX);
-    vtkMath::Normalize(normalizedX);
-
-    // The Z axis is an arbitrary vecotr cross X
-    float arbitrary[3];
-    arbitrary[0] = vtkMath::Random(-10,10);
-    arbitrary[1] = vtkMath::Random(-10,10);
-    arbitrary[2] = vtkMath::Random(-10,10);
-    vtkMath::Cross(normalizedX, arbitrary, normalizedZ);
-    vtkMath::Normalize(normalizedZ);
-
-    // The Y axis is Z cross X
-    vtkMath::Cross(normalizedZ, normalizedX, normalizedY);
-    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    Vec3f xvec = normalized(endPoint - startPoint);
+    Vec3f zvec = normalized(xvec.cross(arbitrary));
+    Vec3f yvec = zvec.cross(xvec);
 
     // Create the direction cosine matrix
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
     matrix->Identity();
-    for (unsigned int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; ++i)
     {
-        matrix->SetElement(i, 0, normalizedX[i]);
-        matrix->SetElement(i, 1, normalizedY[i]);
-        matrix->SetElement(i, 2, normalizedZ[i]);
+        matrix->SetElement(i, 0, xvec[i]);
+        matrix->SetElement(i, 1, yvec[i]);
+        matrix->SetElement(i, 2, zvec[i]);
     }
 
     // Apply the transforms
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Translate(startPoint);
+    transform->Translate(startPoint.val);
     transform->Concatenate(matrix);
     transform->Scale(length, length, length);
 

@@ -48,6 +48,13 @@
 
 #include "precomp.hpp"
 
+
+namespace cv { namespace viz
+{
+    vtkStandardNewMacro(InteractorStyle)
+}}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::Initialize()
 {
@@ -173,10 +180,6 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::InteractorStyle::getAltKey() { return Interactor->GetAltKey() != 0; }
-bool cv::viz::InteractorStyle::getShiftKey() { return Interactor->GetShiftKey()!= 0; }
-bool cv::viz::InteractorStyle::getControlKey() { return Interactor->GetControlKey()!= 0; }
-
 int cv::viz::InteractorStyle::getModifiers()
 {
     int modifiers = KeyboardEvent::NONE;
@@ -212,7 +215,7 @@ cv::viz::InteractorStyle::OnKeyDown()
     if (win_size_[0] == -1 || win_size_[1] == -1)
         win_size_ = Vec2i(Interactor->GetRenderWindow()->GetSize());
 
-    bool alt = getAltKey();
+    bool alt = Interactor->GetAltKey() != 0;
 
     std::string key(Interactor->GetKeySym());
     if (key.find("XF86ZoomIn") != std::string::npos)
@@ -245,7 +248,7 @@ cv::viz::InteractorStyle::OnKeyDown()
                      "    ALT + s, S   : turn stereo mode on/off\n"
                      "    ALT + f, F   : switch between maximized window mode and original size\n"
                      "\n"
-                     << std::endl;
+                  << std::endl;
         break;
     }
 
@@ -287,8 +290,8 @@ cv::viz::InteractorStyle::OnKeyDown()
         double angle = cam->GetViewAngle () / 180.0 * CV_PI;
 
         String data = cv::format("clip(%f,%f) focal(%f,%f,%f) pos(%f,%f,%f) view(%f,%f,%f) angle(%f) winsz(%d,%d) winpos(%d,%d)",
-            clip[0], clip[1], focal[0], focal[1], focal[2], pos[0], pos[1], pos[2], view[0], view[1], view[2],
-                angle, win_size[0], win_size[1], win_pos[0], win_pos[1]);
+                                 clip[0], clip[1], focal[0], focal[1], focal[2], pos[0], pos[1], pos[2], view[0], view[1], view[2],
+                                 angle, win_size[0], win_size[1], win_pos[0], win_pos[1]);
 
         std::cout << data.c_str() << std::endl;
 
@@ -416,7 +419,7 @@ cv::viz::InteractorStyle::OnKeyDown()
         break;
     }
 
-    // Overwrite the camera reset
+        // Overwrite the camera reset
     case 'r': case 'R':
     {
         if (!alt)
@@ -424,8 +427,6 @@ cv::viz::InteractorStyle::OnKeyDown()
             Superclass::OnKeyDown();
             break;
         }
-
-        vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
 
         static WidgetActorMap::iterator it = widget_actor_map_->begin();
         // it might be that some actors don't have a valid transformation set -> we skip them to avoid a seg fault.
@@ -443,6 +444,8 @@ cv::viz::InteractorStyle::OnKeyDown()
                 break;
             }
         }
+
+        vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
 
         // if a valid transformation was found, use it otherwise fall back to default view point.
         if (found_transformation)
@@ -487,11 +490,10 @@ cv::viz::InteractorStyle::OnKeyDown()
     }
     }
 
-
     KeyboardEvent event(KeyboardEvent::KEY_DOWN, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
-      keyboardCallback_(event, keyboard_callback_cookie_);
+        keyboardCallback_(event, keyboard_callback_cookie_);
 
     renderer_->Render();
     Interactor->Render();
@@ -503,7 +505,7 @@ void cv::viz::InteractorStyle::OnKeyUp()
     KeyboardEvent event(KeyboardEvent::KEY_UP, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
-      keyboardCallback_(event, keyboard_callback_cookie_);
+        keyboardCallback_(event, keyboard_callback_cookie_);
 
     Superclass::OnKeyUp();
 }
@@ -514,7 +516,7 @@ void cv::viz::InteractorStyle::OnMouseMove()
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMouseMove();
 }
 
@@ -525,7 +527,7 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
     MouseEvent event(type, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonDown();
 }
 
@@ -535,7 +537,7 @@ void cv::viz::InteractorStyle::OnLeftButtonUp()
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonUp();
 }
 
@@ -547,7 +549,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
     MouseEvent event(type, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonDown();
 }
 
@@ -557,7 +559,7 @@ void cv::viz::InteractorStyle::OnMiddleButtonUp()
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonUp();
 }
 
@@ -569,7 +571,7 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
     MouseEvent event(type, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonDown();
 }
 
@@ -579,7 +581,7 @@ void cv::viz::InteractorStyle::OnRightButtonUp()
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonUp();
 }
 
@@ -590,9 +592,9 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
     MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getModifiers());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     if (Interactor->GetRepeatCount() && mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetAltKey())
     {
@@ -622,10 +624,10 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
     MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getModifiers());
     // If a mouse callback registered, call it!
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetRepeatCount() && mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetAltKey())
     {
@@ -656,9 +658,3 @@ void cv::viz::InteractorStyle::OnTimer()
     renderer_->Render();
     Interactor->Render();
 }
-
-namespace cv { namespace viz
-{
-    //Standard VTK macro for *New()
-    vtkStandardNewMacro(InteractorStyle)
-}}

@@ -112,10 +112,7 @@ namespace cv
             Mat polygons;
 
             //! Loads mesh from a given ply file
-            static cv::viz::Mesh3d loadMesh(const String& file);
-
-        private:
-            struct loadMeshImpl;
+            static Mesh3d loadMesh(const String& file);
         };
 
         class CV_EXPORTS Camera
@@ -123,8 +120,8 @@ namespace cv
         public:
             Camera(float fx, float fy, float cx, float cy, const Size &window_size);
             explicit Camera(const Vec2f &fov, const Size &window_size);
-            explicit Camera(const cv::Matx33f &K, const Size &window_size);
-            explicit Camera(const cv::Matx44f &proj, const Size &window_size);
+            explicit Camera(const Matx33f &K, const Size &window_size);
+            explicit Camera(const Matx44f &proj, const Size &window_size);
 
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }

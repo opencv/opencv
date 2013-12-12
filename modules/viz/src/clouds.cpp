@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -61,6 +58,8 @@ namespace cv
 
 cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
 {
+    CV_Assert(!_cloud.empty() && !_colors.empty());
+
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
 
@@ -74,7 +73,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     cloud_source->SetCloud(cloud);
     cloud_source->SetColors(colors, cloud);
 
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(cloud_source->GetOutputPort());
     mapper->SetScalarModeToUsePointData();
     mapper->ImmediateModeRenderingOff();
@@ -96,7 +95,7 @@ cv::viz::WCloud::WCloud(InputArray _cloud, const Color &color)
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetCloud(cloud);
 
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(cloud_source->GetOutputPort());
     mapper->ImmediateModeRenderingOff();
     mapper->ScalarVisibilityOff();
@@ -213,7 +212,7 @@ namespace cv { namespace viz { namespace
             if (!mapper)
             {
                 // This is the first cloud
-                vtkSmartPointer<vtkDataSetMapper> mapper_new = vtkSmartPointer<vtkDataSetMapper>::New();
+                vtkSmartPointer<vtkPolyDataMapper> mapper_new = vtkSmartPointer<vtkPolyDataMapper>::New();
 #if VTK_MAJOR_VERSION <= 5
                 mapper_new->SetInputConnection(poly_data->GetProducerPort());
 #else
@@ -309,7 +308,6 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     CV_Assert("Incompatible widget type." && actor);
 
     CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput());
-
 }
 
 void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)

@@ -245,13 +245,13 @@ namespace cv
             //! Creates camera coordinate frame (axes) at the origin
             WCameraPosition(float scale = 1.f);
             //! Creates frustum based on the intrinsic marix K at the origin
-            explicit WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            explicit WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            explicit WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            explicit WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
@@ -270,9 +270,9 @@ namespace cv
         {
         public:
             //! Displays trajectory of the given path by frustums
-            explicit WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            explicit WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
