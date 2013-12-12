@@ -839,7 +839,7 @@ void cv::ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 //////////////////////////////// exp log /////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, String kernelName, const cv::ocl::ProgramEntry* source)
+static void arithmetic_exp_log_sqrt_run(const oclMat &src, oclMat &dst, String kernelName, const cv::ocl::ProgramEntry* source)
 {
     Context  *clCxt = src.clCxt;
     if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
@@ -882,12 +882,17 @@ static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, String kernel
 
 void cv::ocl::exp(const oclMat &src, oclMat &dst)
 {
-    arithmetic_exp_log_run(src, dst, "arithm_exp", &arithm_exp);
+    arithmetic_exp_log_sqrt_run(src, dst, "arithm_exp", &arithm_exp);
 }
 
 void cv::ocl::log(const oclMat &src, oclMat &dst)
 {
-    arithmetic_exp_log_run(src, dst, "arithm_log", &arithm_log);
+    arithmetic_exp_log_sqrt_run(src, dst, "arithm_log", &arithm_log);
+}
+
+void cv::ocl::sqrt(const oclMat &src, oclMat &dst)
+{
+    arithmetic_exp_log_sqrt_run(src, dst, "arithm_sqrt", &arithm_sqrt);
 }
 
 //////////////////////////////////////////////////////////////////////////////
