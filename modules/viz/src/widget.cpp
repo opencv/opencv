@@ -102,7 +102,7 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
     vtkSmartPointer<vtkDataArray> scalars = data->GetPointData()->GetScalars();
     if (scalars)
     {
-        cv::Vec3d minmax(scalars->GetRange());
+        cv::Vec2d minmax(scalars->GetRange());
         mapper->SetScalarRange(minmax.val);
         mapper->SetScalarModeToUsePointData();
 
