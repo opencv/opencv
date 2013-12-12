@@ -278,6 +278,22 @@ OCL_TEST_P(Log, Mat)
     }
 }
 
+//////////////////////////////// Sqrt ////////////////////////////////////////////////
+
+typedef ArithmTestBase Sqrt;
+
+OCL_TEST_P(Sqrt, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::sqrt(src1_roi, dst1_roi);
+        cv::ocl::sqrt(gsrc1_roi, gdst1_roi);
+        Near(1);
+    }
+}
+
 //////////////////////////////// Add /////////////////////////////////////////////////
 
 typedef ArithmTestBase Add;
@@ -1569,6 +1585,7 @@ OCL_TEST_P(Repeat, Mat)
 INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool(), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(testing::Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
