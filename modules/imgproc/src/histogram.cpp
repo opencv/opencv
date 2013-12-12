@@ -38,7 +38,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -3129,16 +3131,79 @@ CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
     cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
 
+namespace cv {
+
+enum
+{
+    BINS = 256
+};
+
+static bool ocl_calcHist(InputArray _src, OutputArray _hist)
+{
+    int compunits = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, wgs));
+    if (k1.empty())
+        return false;
+
+    _hist.create(1, BINS, CV_32SC1);
+    UMat src = _src.getUMat(), hist = _hist.getUMat(), ghist(1, BINS * compunits, CV_32SC1);
+
+    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist),
+            (int)src.total());
+
+    size_t globalsize = compunits * wgs;
+    if (!k1.run(1, &globalsize, &wgs, false))
+        return false;
+
+    ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+    if (k2.empty())
+        return false;
+
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
+    return k2.run(1, &wgs, &wgs, false);
+}
+
+static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
+{
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    // calculation of histogram
+    UMat hist;
+    if (!ocl_calcHist(_src, hist))
+        return false;
+
+    UMat lut(1, 256, CV_8UC1);
+    ocl::Kernel k("calcLUT", ocl::imgproc::histogram_oclsrc, format("-D BINS=%d -D HISTS_COUNT=1 -D WGS=%d", BINS, (int)wgs));
+    k.args(ocl::KernelArg::PtrWriteOnly(lut), ocl::KernelArg::PtrReadOnly(hist), (int)_src.total());
+
+    // calculation of LUT
+    if (!k.run(1, &wgs, &wgs, false))
+        return false;
+
+    // execute LUT transparently
+    LUT(_src, lut, _dst);
+    return true;
+}
+
+}
+
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
-    Mat src = _src.getMat();
-    CV_Assert( src.type() == CV_8UC1 );
+    CV_Assert( _src.type() == CV_8UC1 );
 
+    if (_src.empty())
+        return;
+
+    if (ocl::useOpenCL() && _dst.isUMat() && ocl_equalizeHist(_src, _dst))
+        return;
+
+    Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
-
-    if(src.empty())
-        return;
 
     Mutex histogramLockInstance;
 
