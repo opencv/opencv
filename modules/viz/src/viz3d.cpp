@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -131,10 +128,10 @@ void cv::viz::Viz3d::convertToWindowCoordinates(const Point3d &pt, Point3d &wind
 void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction) { impl_->converTo3DRay(window_coord, origin, direction); }
 
 cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
-void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }
+void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size); }
 cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName(); }
 void cv::viz::Viz3d::saveScreenshot(const String &file) { impl_->saveScreenshot(file); }
-void cv::viz::Viz3d::setWindowPosition(int x, int y) { impl_->setWindowPosition(x,y); }
+void cv::viz::Viz3d::setWindowPosition(const Point& window_position) { impl_->setWindowPosition(window_position); }
 void cv::viz::Viz3d::setFullScreen(bool mode) { impl_->setFullScreen(mode); }
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 

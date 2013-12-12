@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -60,77 +57,80 @@ cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, c
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::Mesh3d
 
-struct cv::viz::Mesh3d::loadMeshImpl
+namespace cv { namespace viz { namespace
 {
-    static cv::viz::Mesh3d loadMesh(const String &file)
+    struct MeshUtils
     {
-        Mesh3d mesh;
-
-        vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
-        reader->SetFileName(file.c_str());
-        reader->Update();
-
-        vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
-        CV_Assert("File does not exist or file format is not supported." && poly_data);
-
-        vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
-        vtkIdType nr_points = mesh_points->GetNumberOfPoints();
-
-        mesh.cloud.create(1, nr_points, CV_32FC3);
-
-        Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
-        for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
+        static Mesh3d loadMesh(const String &file)
         {
-            Vec3d point;
-            mesh_points->GetPoint(i, point.val);
-            mesh_cloud[i] = point;
-        }
+            Mesh3d mesh;
 
-        // Then the color information, if any
-        vtkUnsignedCharArray* poly_colors = 0;
-        if (poly_data->GetPointData())
-            poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
+            vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
+            reader->SetFileName(file.c_str());
+            reader->Update();
 
-        if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
-        {
-            mesh.colors.create(1, nr_points, CV_8UC3);
-            Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
+            vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
+            CV_Assert("File does not exist or file format is not supported." && poly_data);
 
+            vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
+            vtkIdType nr_points = mesh_points->GetNumberOfPoints();
+
+            mesh.cloud.create(1, nr_points, CV_32FC3);
+
+            Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
             for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
             {
-                Vec3b point_color;
-                poly_colors->GetTupleValue(i, point_color.val);
-
-                std::swap(point_color[0], point_color[2]); // RGB -> BGR
-                mesh_colors[i] = point_color;
+                Vec3d point;
+                mesh_points->GetPoint(i, point.val);
+                mesh_cloud[i] = point;
             }
+
+            // Then the color information, if any
+            vtkUnsignedCharArray* poly_colors = 0;
+            if (poly_data->GetPointData())
+                poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
+
+            if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
+            {
+                mesh.colors.create(1, nr_points, CV_8UC3);
+                Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
+
+                for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
+                {
+                    Vec3b point_color;
+                    poly_colors->GetTupleValue(i, point_color.val);
+
+                    std::swap(point_color[0], point_color[2]); // RGB -> BGR
+                    mesh_colors[i] = point_color;
+                }
+            }
+            else
+                mesh.colors.release();
+
+            // Now handle the polygons
+            vtkIdType* cell_points;
+            vtkIdType nr_cell_points;
+            vtkCellArray * mesh_polygons = poly_data->GetPolys();
+            mesh_polygons->InitTraversal();
+
+            mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
+
+            int* polygons = mesh.polygons.ptr<int>();
+            while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
+            {
+                *polygons++ = nr_cell_points;
+                for (int i = 0; i < nr_cell_points; ++i)
+                    *polygons++ = static_cast<int>(cell_points[i]);
+            }
+
+            return mesh;
         }
-        else
-            mesh.colors.release();
-
-        // Now handle the polygons
-        vtkIdType* cell_points;
-        vtkIdType nr_cell_points;
-        vtkCellArray * mesh_polygons = poly_data->GetPolys();
-        mesh_polygons->InitTraversal();
-
-        mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
-
-        int* polygons = mesh.polygons.ptr<int>();
-        while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
-        {
-            *polygons++ = nr_cell_points;
-            for (int i = 0; i < nr_cell_points; ++i)
-                *polygons++ = static_cast<int>(cell_points[i]);
-        }
-
-        return mesh;
-    }
-};
+    };
+}}}
 
 cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 {
-    return loadMeshImpl::loadMesh(file);
+    return MeshUtils::loadMesh(file);
 }
 
 ////////////////////////////////////////////////////////////////////
