@@ -334,7 +334,7 @@ namespace cv { namespace viz { namespace
             return polydata;
         }
 
-        static void createMapper(vtkSmartPointer<vtkLODActor> actor, vtkSmartPointer<vtkPolyData> poly_data, Vec3d& minmax)
+        static void createMapper(vtkSmartPointer<vtkLODActor> actor, vtkSmartPointer<vtkPolyData> poly_data)
         {
             vtkDataSetMapper *mapper = vtkDataSetMapper::SafeDownCast(actor->GetMapper());
             if (!mapper)
@@ -347,7 +347,7 @@ namespace cv { namespace viz { namespace
                 mapper_new->SetInputData(poly_data);
 #endif
 
-                mapper_new->SetScalarRange(minmax.val);
+                mapper_new->SetScalarRange(0, 255);
                 mapper_new->SetScalarModeToUsePointData();
 
                 bool interpolation = (poly_data && poly_data->GetNumberOfCells() != poly_data->GetNumberOfVerts());
@@ -435,8 +435,8 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Incompatible widget type." && actor);
 
-    Vec3d minmax(scalars->GetRange());
-    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput(), minmax);
+
+    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput());
 }
 
 void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)
@@ -474,8 +474,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, 
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Incompatible widget type." && actor);
 
-    Vec3d minmax(scalars->GetRange());
-    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput(), minmax);
+    CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput());
 }
 
 template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
