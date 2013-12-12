@@ -7,10 +7,10 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2008-2013, Itseez Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,13 +23,13 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of Itseez Inc. may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// In no event shall the copyright holders or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -434,7 +434,7 @@ FeatureEvaluator::~FeatureEvaluator() {}
 bool FeatureEvaluator::read(const FileNode&) {return true;}
 Ptr<FeatureEvaluator> FeatureEvaluator::clone() const { return Ptr<FeatureEvaluator>(); }
 int FeatureEvaluator::getFeatureType() const {return -1;}
-bool FeatureEvaluator::setImage(const Mat&, Size) {return true;}
+bool FeatureEvaluator::setImage(InputArray, Size) {return true;}
 bool FeatureEvaluator::setWindow(Point) { return true; }
 double FeatureEvaluator::calcOrd(int) const { return 0.; }
 int FeatureEvaluator::calcCat(int) const { return 0; }
@@ -466,7 +466,9 @@ bool HaarEvaluator::Feature :: read( const FileNode& node )
 
 HaarEvaluator::HaarEvaluator()
 {
-    features = makePtr<std::vector<Feature> >();
+    optfeaturesPtr = 0;
+    pwin = 0;
+    pqwin = 0;
 }
 HaarEvaluator::~HaarEvaluator()
 {
@@ -476,16 +478,16 @@ bool HaarEvaluator::read(const FileNode& node)
 {
     size_t i, n = node.size();
     CV_Assert(n > 0);
-    features.resize(n);
-    featuresPtr = &features[0];
+    features->resize(n);
     FileNodeIterator it = node.begin();
     hasTiltedFeatures = false;
+    std::vector<Feature> ff = *features;
 
     for(i = 0; i < n; i++, ++it)
     {
-        if(!features[i].read(*it))
+        if(!ff[i].read(*it))
             return false;
-        if( features[i].tilted )
+        if( ff[i].tilted )
             hasTiltedFeatures = true;
     }
     return true;
@@ -496,55 +498,60 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     Ptr<HaarEvaluator> ret = makePtr<HaarEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
+    ret->optfeatures = optfeatures;
+    ret->optfeaturesPtr = optfeatures->empty() ? 0 : &(*(ret->optfeatures))[0];
     ret->hasTiltedFeatures = hasTiltedFeatures;
-    ret->sum0 = sum0, ret->sqsum0 = sqsum0, ret->tilted0 = tilted0;
-    ret->sum = sum, ret->sqsum = sqsum, ret->tilted = tilted;
+    ret->sum0 = sum0; ret->sqsum0 = sqsum0;
+    ret->sum = sum; ret->sqsum = sqsum; ret->tilted = tilted;
     ret->normrect = normrect;
-    memcpy( ret->p, p, 4*sizeof(p[0]) );
-    memcpy( ret->pq, pq, 4*sizeof(pq[0]) );
-    ret->offset = offset;
+    memcpy( ret->nofs, nofs, 4*sizeof(nofs[0]) );
+    memcpy( ret->nqofs, nqofs, 4*sizeof(nqofs[0]) );
+    ret->pwin = pwin; ret->pqwin = pqwin;
     ret->varianceNormFactor = varianceNormFactor;
     return ret;
 }
 
-bool HaarEvaluator::setImage( const Mat &image, Size _origWinSize )
+bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize )
 {
-    int rn = image.rows+1, cn = image.cols+1;
+    Size imgsz = _image.size();
+    int rn = imgsz.height+1, cn = imgsz.width+1, rnt = rn;
     origWinSize = _origWinSize;
     normrect = Rect(1, 1, origWinSize.width-2, origWinSize.height-2);
 
-    if (image.cols < origWinSize.width || image.rows < origWinSize.height)
+    if (imgsz.width < origWinSize.width || imgsz.height < origWinSize.height)
         return false;
 
-    if( sum0.rows < rn || sum0.cols < cn )
+    if( hasTiltedFeatures )
+        rnt = rn*2;
+    
+    if( sum0.rows < rnt || sum0.cols < cn )
     {
-        sum0.create(rn, cn, CV_32S);
+        sum0.create(rnt, cn, CV_32S);
         sqsum0.create(rn, cn, CV_64F);
-        if (hasTiltedFeatures)
-            tilted0.create( rn, cn, CV_32S);
     }
     sum = Mat(rn, cn, CV_32S, sum0.data);
     sqsum = Mat(rn, cn, CV_64F, sqsum0.data);
-
     if( hasTiltedFeatures )
     {
-        tilted = Mat(rn, cn, CV_32S, tilted0.data);
-        integral(image, sum, sqsum, tilted);
+        tilted = Mat(rn, cn, CV_32S, sum0.data + rn*sum.step);
+        integral(_image, sum, sqsum, tilted);
     }
     else
-        integral(image, sum, sqsum);
-    const int* sdata = (const int*)sum.data;
-    const double* sqdata = (const double*)sqsum.data;
-    size_t sumStep = sum.step/sizeof(sdata[0]);
-    size_t sqsumStep = sqsum.step/sizeof(sqdata[0]);
+        integral(_image, sum, sqsum);
+    int sumStep = (int)(sum.step/sum.elemSize());
+    int sqsumStep = (int)(sqsum.step/sqsum.elemSize());
+    int tofs = hasTiltedFeatures ? sumStep*rn : 0;
 
-    CV_SUM_PTRS( p[0], p[1], p[2], p[3], sdata, normrect, sumStep );
-    CV_SUM_PTRS( pq[0], pq[1], pq[2], pq[3], sqdata, normrect, sqsumStep );
+    CV_SUM_OFS( nofs[0], nofs[1], nofs[2], nofs[3], 0, normrect, sumStep );
+    CV_SUM_OFS( nqofs[0], nqofs[1], nqofs[2], nqofs[3], 0, normrect, sqsumStep );
 
-    size_t fi, nfeatures = features.size();
+    size_t fi, nfeatures = features->size();
 
+    optfeatures->resize(nfeatures);
+    optfeaturesPtr = &(*optfeatures)[0];
+    const std::vector<Feature>& ff = *features;
     for( fi = 0; fi < nfeatures; fi++ )
-        optfeaturesPtr[fi].updatePtrs( !featuresPtr[fi].tilted ? sum : tilted );
+        optfeaturesPtr[fi].setOffsets( ff[fi], sumStep, tofs );
     return true;
 }
 
@@ -555,10 +562,10 @@ bool  HaarEvaluator::setWindow( Point pt )
         pt.y + origWinSize.height >= sum.rows )
         return false;
 
-    size_t pOffset = pt.y * (sum.step/sizeof(int)) + pt.x;
-    size_t pqOffset = pt.y * (sqsum.step/sizeof(double)) + pt.x;
-    int valsum = CALC_SUM(p, pOffset);
-    double valsqsum = CALC_SUM(pq, pqOffset);
+    const int* p = &sum.at<int>(pt);
+    const double* pq = &sqsum.at<double>(pt);
+    int valsum = CALC_SUM_OFS(nofs, p);
+    double valsqsum = CALC_SUM_OFS(nqofs, pq);
 
     double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
@@ -566,7 +573,7 @@ bool  HaarEvaluator::setWindow( Point pt )
     else
         nf = 1.;
     varianceNormFactor = 1./nf;
-    offset = (int)pOffset;
+    pwin = p;
 
     return true;
 }
@@ -613,8 +620,9 @@ Ptr<FeatureEvaluator> LBPEvaluator::clone() const
     return ret;
 }
 
-bool LBPEvaluator::setImage( const Mat& image, Size _origWinSize )
+bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize )
 {
+    Mat image = _image.getMat();
     int rn = image.rows+1, cn = image.cols+1;
     origWinSize = _origWinSize;
 
@@ -694,8 +702,9 @@ Ptr<FeatureEvaluator> HOGEvaluator::clone() const
     return ret;
 }
 
-bool HOGEvaluator::setImage( const Mat& image, Size winSize )
+bool HOGEvaluator::setImage( InputArray _image, Size winSize )
 {
+    Mat image = _image.getMat();
     int rows = image.rows + 1;
     int cols = image.cols + 1;
     origWinSize = winSize;
@@ -1011,11 +1020,11 @@ struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } }
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
 
-bool CascadeClassifierImpl::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
-                                           int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
+bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processingRectSize,
+                                           int yStep, double factor, std::vector<Rect>& candidates,
                                            std::vector<int>& levels, std::vector<double>& weights, bool outputRejectLevels )
 {
-    if( !featureEvaluator->setImage( image, data.origWinSize ) )
+    if( !featureEvaluator->setImage( _image, data.origWinSize ) )
         return false;
 
 #if defined (LOG_CASCADE_STATISTIC)
@@ -1024,13 +1033,21 @@ bool CascadeClassifierImpl::detectSingleScale( const Mat& image, int stripCount,
 
     Mat currentMask;
     if (maskGenerator) {
+        Mat image = _image.getMat();
         currentMask=maskGenerator->generateMask(image);
     }
 
     std::vector<Rect> candidatesVector;
     std::vector<int> rejectLevels;
     std::vector<double> levelWeights;
-    Mutex mtx;
+    
+    int stripCount, stripSize;
+    
+    const int PTS_PER_THREAD = 1000;
+    stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
+    stripCount = std::min(std::max(stripCount, 1), 100);
+    stripSize = (((processingRectSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
+    
     if( outputRejectLevels )
     {
         parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
@@ -1051,6 +1068,70 @@ bool CascadeClassifierImpl::detectSingleScale( const Mat& image, int stripCount,
 
     return true;
 }
+
+    
+bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
+                                                   int yStep, double factor, std::vector<Rect>& candidates,
+                                                   std::vector<int>&, std::vector<double>&, bool )
+{
+    Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
+    if( haar.empty() )
+        return false;
+    
+    if( cascadeKernel.empty() )
+    {
+        //cascadeKernel.create(")
+        if( cascadeKernel.empty() )
+            return false;
+    }
+    
+    if( ustages.empty() )
+    {
+    #define UPLOAD_CASCADE_PART(NAME) \
+        Mat(1, (int)(data.NAME.size()*sizeof(data.NAME[0])), CV_8U, &data.NAME[0]).copyTo(u##NAME)
+        
+        UPLOAD_CASCADE_PART(stages);
+        UPLOAD_CASCADE_PART(classifiers);
+        UPLOAD_CASCADE_PART(nodes);
+        UPLOAD_CASCADE_PART(leaves);
+        ufacepos.create();
+    }
+    
+    haar->setUMat(_image, data.origWinSize, ugrayImage.size());
+    std::vector<UMat> bufs;
+    haar->getUMats(bufs);
+    CV_Assert(bufs.size() == 5);
+                        
+    size_t globalsize[] = { processingRectSize.width, processingRectSize.height };
+    
+    if(!cascadeKernel.args(ocl::KernelArg::PtrReadOnly(bufs[0]), // sum
+                       ocl::KernelArg::PtrReadOnly(bufs[1]), // sqsum
+                       ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
+                       
+                       // cascade classifier
+                       ocl::KernelArg::PtrReadOnly(ustages),
+                       ocl::KernelArg::PtrReadOnly(uclassifiers),
+                       ocl::KernelArg::PtrReadOnly(unodes),
+                       ocl::KernelArg::PtrReadOnly(uleaves),
+                       
+                       ocl::KernelArg::WriteOnly(ufacepos), // positions
+                       ocl::KernelArg::ReadWrite(umisc),
+                       processingRectSize.width,
+                       processingRectSize.height).run(2, globalsize, 0, false))
+        return false;
+    
+    Mat facepos = ufacepos.getMat(ACCESS_READ);
+    const int* fptr = facepos.ptr<int>();
+    int nfaces = fptr[0];
+    for( i = 0; i < nfaces; i++ )
+    {
+        int pos = fptr[i+1];
+        int x =
+        candidates.push_back(Rect()
+    return false;
+}
+    
+
 
 bool CascadeClassifierImpl::isOldFormatCascade() const
 {
@@ -1097,28 +1178,56 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
 }
 
-void CascadeClassifierImpl::detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
+    
+void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::vector<Rect>& candidates,
                                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
 {
+    Size imgsz = _image.size();
+    int imgtype = _image.type();
+    
+    Mat grayImage, imageBuffer;
+    
     candidates.clear();
-
-    if (maskGenerator)
-        maskGenerator->initializeMask(image);
-
+    rejectLevels.clear();
+    levelWeights.clear();
+    
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
-        maxObjectSize = image.size();
-
-    Mat grayImage = image;
-    if( grayImage.channels() > 1 )
+        maxObjectSize = imgsz;
+    
+    bool use_ocl = ocl::useOpenCL() &&
+        getFeatureType() == FeatureEvaluator::HAAR &&
+        !isOldFormatCascade() &&
+        maskGenerator.empty() &&
+        !outputRejectLevels &&
+        tryOpenCL;
+    
+    if( !use_ocl )
     {
-        Mat temp;
-        cvtColor(grayImage, temp, COLOR_BGR2GRAY);
-        grayImage = temp;
-    }
+        Mat image = _image.getMat();
+        if (maskGenerator)
+            maskGenerator->initializeMask(image);
 
-    Mat imageBuffer(image.rows + 1, image.cols + 1, CV_8U);
+        grayImage = image;
+        if( CV_MAT_CN(imgtype) > 1 )
+        {
+            Mat temp;
+            cvtColor(grayImage, temp, COLOR_BGR2GRAY);
+            grayImage = temp;
+        }
+
+        imageBuffer.create(imgsz.height + 1, imgsz.width + 1, CV_8U);
+    }
+    else
+    {
+        UMat uimage = _image.getUMat();
+        if( CV_MAT_CN(imgtype) > 1 )
+            cvtColor(uimage, ugrayImage, COLOR_BGR2GRAY);
+        else
+            uimage.copyTo(ugrayImage);
+        uimageBuffer.create(imgsz.height + 1, imgsz.width + 1, CV_8U);
+    }
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
@@ -1126,7 +1235,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( const Mat& image, std::v
 
         Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
         Size scaledImageSize( cvRound( grayImage.cols/factor ), cvRound( grayImage.rows/factor ) );
-        Size processingRectSize( scaledImageSize.width - originalWindowSize.width, scaledImageSize.height - originalWindowSize.height );
+        Size processingRectSize( scaledImageSize.width - originalWindowSize.width,
+                                 scaledImageSize.height - originalWindowSize.height );
 
         if( processingRectSize.width <= 0 || processingRectSize.height <= 0 )
             break;
@@ -1134,10 +1244,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( const Mat& image, std::v
             break;
         if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
             continue;
-
-        Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
-        resize( grayImage, scaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
-
+        
         int yStep;
         if( getFeatureType() == cv::FeatureEvaluator::HOG )
         {
@@ -1148,16 +1255,36 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( const Mat& image, std::v
             yStep = factor > 2. ? 1 : 2;
         }
 
-        int stripCount, stripSize;
-
-        const int PTS_PER_THREAD = 1000;
-        stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
-        stripCount = std::min(std::max(stripCount, 1), 100);
-        stripSize = (((processingRectSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
-
-        if( !detectSingleScale( scaledImage, stripCount, processingRectSize, stripSize, yStep, factor, candidates,
-            rejectLevels, levelWeights, outputRejectLevels ) )
-            break;
+        if( use_ocl )
+        {
+            UMat uscaledImage(uimageBuffer, Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
+            resize( ugrayImage, uscaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
+            
+            if( ocl_detectSingleScale( uscaledImage, processingRectSize, yStep, factor, candidates,
+                                       rejectLevels, levelWeights, outputRejectLevels ) )
+                continue;
+            
+            /////// if the OpenCL branch has been executed but failed, fall back to CPU: /////
+            
+            tryOpenCL = false; // for this cascade do not try OpenCL anymore
+            
+            // since we may already have some partial results from OpenCL code (unlikely, but still),
+            // we just recursively call the function again, but with tryOpenCL==false it will
+            // go with CPU route, so there is no infinite recursion
+            detectMultiScaleNoGrouping( _image, candidates, rejectLevels, levelWeights,
+                                       scaleFactor, minObjectSize, maxObjectSize,
+                                       outputRejectLevels);
+            return;
+        }
+        else
+        {
+            Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
+            resize( grayImage, scaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
+            
+            if( !detectSingleScale( scaledImage, processingRectSize, yStep, factor, candidates,
+                rejectLevels, levelWeights, outputRejectLevels ) )
+                break;
+        }
     }
 }
 
@@ -1168,21 +1295,21 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
                                           int flags, Size minObjectSize, Size maxObjectSize,
                                           bool outputRejectLevels )
 {
-    Mat image = _image.getMat();
-    CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
+    CV_Assert( scaleFactor > 1 && _image.depth() == CV_8U );
 
     if( empty() )
         return;
 
     if( isOldFormatCascade() )
     {
+        Mat image = _image.getMat();
         std::vector<CvAvgComp> fakeVecAvgComp;
         detectMultiScaleOldFormat( image, oldCascade, objects, rejectLevels, levelWeights, fakeVecAvgComp, scaleFactor,
                                    minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
     }
     else
     {
-        detectMultiScaleNoGrouping( image, objects, rejectLevels, levelWeights, scaleFactor, minObjectSize, maxObjectSize,
+        detectMultiScaleNoGrouping( _image, objects, rejectLevels, levelWeights, scaleFactor, minObjectSize, maxObjectSize,
                                     outputRejectLevels );
         const double GROUP_EPS = 0.2;
         if( outputRejectLevels )
@@ -1346,8 +1473,15 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     return true;
 }
 
+                       
 bool CascadeClassifierImpl::read_(const FileNode& root)
 {
+    tryOpenCL = true;
+    cascadeKernel = ocl::Kernel();
+    ustages.release();
+    uclassifiers.release();
+    unodes.release();
+    uleaves.release();
     if( !data.read(root) )
         return false;
 
