@@ -259,4 +259,70 @@ void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bo
     }
 }
 
+namespace
+{
+    bool keyPointsEquals(const cv::KeyPoint& p1, const cv::KeyPoint& p2)
+    {
+        const double maxPtDif = 1.0;
+        const double maxSizeDif = 1.0;
+        const double maxAngleDif = 2.0;
+        const double maxResponseDif = 0.1;
+
+        double dist = cv::norm(p1.pt - p2.pt);
+
+        if (dist < maxPtDif &&
+            fabs(p1.size - p2.size) < maxSizeDif &&
+            abs(p1.angle - p2.angle) < maxAngleDif &&
+            abs(p1.response - p2.response) < maxResponseDif &&
+            p1.octave == p2.octave &&
+            p1.class_id == p2.class_id)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    struct KeyPointLess : std::binary_function<cv::KeyPoint, cv::KeyPoint, bool>
+    {
+        bool operator()(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2) const
+        {
+            return kp1.pt.y < kp2.pt.y || (kp1.pt.y == kp2.pt.y && kp1.pt.x < kp2.pt.x);
+        }
+    };
+}
+
+testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
+{
+    if (gold.size() != actual.size())
+    {
+        return testing::AssertionFailure() << "KeyPoints size mistmach\n"
+                                           << "\"" << gold_expr << "\" : " << gold.size() << "\n"
+                                           << "\"" << actual_expr << "\" : " << actual.size();
+    }
+
+    std::sort(actual.begin(), actual.end(), KeyPointLess());
+    std::sort(gold.begin(), gold.end(), KeyPointLess());
+
+    for (size_t i = 0; i < gold.size(); ++i)
+    {
+        const cv::KeyPoint& p1 = gold[i];
+        const cv::KeyPoint& p2 = actual[i];
+
+        if (!keyPointsEquals(p1, p2))
+        {
+            return testing::AssertionFailure() << "KeyPoints differ at " << i << "\n"
+                                               << "\"" << gold_expr << "\" vs \"" << actual_expr << "\" : \n"
+                                               << "pt : " << testing::PrintToString(p1.pt) << " vs " << testing::PrintToString(p2.pt) << "\n"
+                                               << "size : " << p1.size << " vs " << p2.size << "\n"
+                                               << "angle : " << p1.angle << " vs " << p2.angle << "\n"
+                                               << "response : " << p1.response << " vs " << p2.response << "\n"
+                                               << "octave : " << p1.octave << " vs " << p2.octave << "\n"
+                                               << "class_id : " << p1.class_id << " vs " << p2.class_id;
+        }
+    }
+
+    return ::testing::AssertionSuccess();
+}
+
 } // namespace cvtest
