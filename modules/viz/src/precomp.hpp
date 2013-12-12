@@ -114,6 +114,10 @@
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkMergeFilter.h>
 
+#include <vtk/vtkCloudMatSource.h>
+#include <vtk/vtkColorMatSource.h>
+#include <vtk/vtkCloudColorMatSource.h>
+
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
