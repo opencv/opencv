@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
@@ -121,9 +118,6 @@ namespace cv
             void (*mouseCallback_)(const MouseEvent&, void*);
             void *mouse_callback_cookie_;
 
-            bool getAltKey();
-            bool getControlKey();
-            bool getShiftKey();
             int getModifiers();
         };
     }

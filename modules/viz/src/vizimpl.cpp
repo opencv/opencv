@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
@@ -62,14 +59,11 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     :  s_lastDone_(0.0), style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
-
-    // Create a RendererWindow
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
 
     // Set the window size as 1/2 of the screen size
     cv::Vec2i window_size = cv::Vec2i(window_->GetScreenSize()) / 2;
     window_->SetSize(window_size.val);
-
     window_->AddRenderer(renderer_);
 
     // Create the interactor style
@@ -100,11 +94,6 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     interactor_->Initialize();
     timer_id_ = interactor_->CreateRepeatingTimer(5000L);
 
-    // Set a simple PointPicker
-    //vtkSmartPointer<vtkPointPicker> pp = vtkSmartPointer<vtkPointPicker>::New();
-    //pp->SetTolerance(pp->GetTolerance() * 2);
-    //interactor_->SetPicker(pp);
-
     exit_main_loop_timer_callback_ = vtkSmartPointer<ExitMainLoopTimerCallback>::New();
     exit_main_loop_timer_callback_->viz_ = this;
     exit_main_loop_timer_callback_->right_timer_id = -1;
@@ -115,7 +104,6 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
 
     resetStoppedFlag();
-
 
     //////////////////////////////
     String window_name = VizStorage::generateWindowName(name);
@@ -521,6 +509,6 @@ cv::String cv::viz::Viz3d::VizImpl::getWindowName() const
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setWindowPosition(int x, int y) { window_->SetPosition(x, y); }
-void cv::viz::Viz3d::VizImpl::setWindowSize(int xw, int yw) { window_->SetSize(xw, yw); }
+void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_->SetPosition(position.x, position.y); }
+void cv::viz::Viz3d::VizImpl::setWindowSize(const Size& window_size) { window_->SetSize(window_size.width, window_size.height); }
 cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }

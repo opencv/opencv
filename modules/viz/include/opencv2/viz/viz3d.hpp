@@ -94,8 +94,8 @@ namespace cv
             void setWindowSize(const Size &window_size);
             String getWindowName() const;
             void saveScreenshot(const String &file);
-            void setWindowPosition(int x, int y);
-            void setFullScreen(bool mode);
+            void setWindowPosition(const Point& window_position);
+            void setFullScreen(bool mode = true);
             void setBackgroundColor(const Color& color = Color::black());
 
             void spin();

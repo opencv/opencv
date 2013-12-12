@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_VIZ3D_IMPL_HPP__
@@ -105,9 +102,9 @@ public:
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
 
     void saveScreenshot(const String &file);
-    void setWindowPosition(int x, int y);
+    void setWindowPosition(const Point& position);
     Size getWindowSize() const;
-    void setWindowSize(int xw, int yw);
+    void setWindowSize(const Size& window_size);
     void setFullScreen(bool mode);
     String getWindowName() const;
     void setBackgroundColor(const Color& color);
