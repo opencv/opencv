@@ -1,6 +1,7 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
+<<<<<<< HEAD:modules/ts/include/opencv2/ts.hpp
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
@@ -12,6 +13,10 @@
 #endif
 #endif
 
+=======
+#include <stdarg.h> // for va_list
+
+>>>>>>> origin/2.4:modules/ts/include/opencv2/ts/ts.hpp
 #ifdef HAVE_WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
