@@ -1,30 +1,19 @@
-namespace
-{
-#if defined(HAVE_CUDA) && !defined(DYNAMIC_CUDA_SUPPORT)
+#ifndef __GPUMAT_CUDA_HPP__
+#define __GPUMAT_CUDA_HPP__
 
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
-
-    inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+    class DeviceInfoFuncTable
     {
-        if (cudaSuccess != err)
-            cv::gpu::error(cudaGetErrorString(err), file, line, func);
-    }
-
-    inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
-    {
-        if (err < 0)
-        {
-            std::ostringstream msg;
-            msg << "NPP API Call Error: " << err;
-            cv::gpu::error(msg.str().c_str(), file, line, func);
-        }
-    }
-#endif
-}
-
-namespace
-{
+    public:
+        virtual size_t sharedMemPerBlock() const = 0;
+        virtual void queryMemory(size_t&, size_t&) const = 0;
+        virtual size_t freeMemory() const = 0;
+        virtual size_t totalMemory() const = 0;
+        virtual bool supports(FeatureSet) const = 0;
+        virtual bool isCompatible() const = 0;
+        virtual void query() = 0;
+        virtual ~DeviceInfoFuncTable() {};
+    };
+    
     class GpuFuncTable
     {
     public:
@@ -40,6 +29,7 @@ namespace
 
         virtual bool deviceSupports(FeatureSet) const = 0;
 
+        // TargetArchs
         virtual bool builtWith(FeatureSet) const = 0;
         virtual bool has(int, int) const = 0;
         virtual bool hasPtx(int, int) const = 0;
@@ -48,14 +38,6 @@ namespace
         virtual bool hasEqualOrGreater(int, int) const = 0;
         virtual bool hasEqualOrGreaterPtx(int, int) const = 0;
         virtual bool hasEqualOrGreaterBin(int, int) const = 0;
-
-        virtual size_t sharedMemPerBlock() const = 0;
-        virtual void queryMemory(size_t&, size_t&) const = 0;
-        virtual size_t freeMemory() const = 0;
-        virtual size_t totalMemory() const = 0;
-        virtual bool supports(FeatureSet) const = 0;
-        virtual bool isCompatible() const = 0;
-        virtual void query() const = 0;
 
         virtual void printCudaDeviceInfo(int) const = 0;
         virtual void printShortCudaDeviceInfo(int) const = 0;
@@ -72,17 +54,24 @@ namespace
         virtual void convert(const GpuMat& src, GpuMat& dst) const = 0;
 
         // for gpu::device::setTo funcs
-        virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, CUstream_st*) const = 0;
         virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*) const = 0;
         
         virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
         virtual void free(void* devPtr) const = 0;
     };
-}
 
-#if !defined(HAVE_CUDA) || defined(DYNAMIC_CUDA_SUPPORT)
-namespace
-{
+    class EmptyDeviceInfoFuncTable: public DeviceInfoFuncTable
+    {
+    public:
+        size_t sharedMemPerBlock() const { throw_nogpu; return 0; }
+        void queryMemory(size_t&, size_t&) const { throw_nogpu; }
+        size_t freeMemory() const { throw_nogpu; return 0; }
+        size_t totalMemory() const { throw_nogpu; return 0; }
+        bool supports(FeatureSet) const { throw_nogpu; return false; }
+        bool isCompatible() const { throw_nogpu; return false; }
+        void query() { throw_nogpu; }
+    };
+    
     class EmptyFuncTable : public GpuFuncTable
     {
     public:
@@ -105,15 +94,7 @@ namespace
         bool hasEqualOrGreater(int, int) const { throw_nogpu; return false; }
         bool hasEqualOrGreaterPtx(int, int) const { throw_nogpu; return false; }
         bool hasEqualOrGreaterBin(int, int) const { throw_nogpu; return false; }
-        
-        size_t sharedMemPerBlock() const { throw_nogpu; return 0; }
-        void queryMemory(size_t&, size_t&) const { throw_nogpu; }
-        size_t freeMemory() const { throw_nogpu; return 0; }
-        size_t totalMemory() const { throw_nogpu; return 0; }
-        bool supports(FeatureSet) const { throw_nogpu; return false; }
-        bool isCompatible() const { throw_nogpu; return false; }
-        void query() const { throw_nogpu; }
-        
+                
         void printCudaDeviceInfo(int) const { throw_nogpu; }
         void printShortCudaDeviceInfo(int) const { throw_nogpu; }
         
@@ -126,15 +107,32 @@ namespace
         void convert(const GpuMat&, GpuMat&) const { throw_nogpu; }
         void convert(const GpuMat&, GpuMat&, double, double, cudaStream_t stream = 0) const { (void)stream; throw_nogpu; }
 
-        virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, CUstream_st*) const { throw_nogpu; }
         virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*) const { throw_nogpu; }
 
         void mallocPitch(void**, size_t*, size_t, size_t) const { throw_nogpu; }
         void free(void*) const {}
     };
+
+#if defined(USE_CUDA)
+
+#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
+#define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
+
+inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+{
+    if (cudaSuccess != err)
+        cv::gpu::error(cudaGetErrorString(err), file, line, func);
 }
 
-#else
+inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
+{
+    if (err < 0)
+    {
+        std::ostringstream msg;
+        msg << "NPP API Call Error: " << err;
+        cv::gpu::error(msg.str().c_str(), file, line, func);
+    }
+}
 
 namespace cv { namespace gpu { namespace device
 {
@@ -149,8 +147,6 @@ namespace cv { namespace gpu { namespace device
     void convert_gpu(PtrStepSzb src, int sdepth, PtrStepSzb dst, int ddepth, double alpha, double beta, cudaStream_t stream);
 }}}
 
-namespace
-{
     template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, cudaStream_t stream)
     {
         Scalar_<T> sf = s;
@@ -162,10 +158,7 @@ namespace
         Scalar_<T> sf = s;
         cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
     }
-}
 
-namespace
-{
     template<int n> struct NPPTypeTraits;
     template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
     template<> struct NPPTypeTraits<CV_8S>  { typedef Npp8s npp_type; };
@@ -208,6 +201,7 @@ namespace
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
+    
     template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
     {
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
@@ -361,9 +355,8 @@ namespace
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
     }
-}
      
-    namespace cv { namespace gpu { namespace devices
+    namespace cv { namespace gpu { namespace device
     {
         void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
         {
@@ -418,74 +411,52 @@ namespace
         {
             setTo(src, s, mask, 0);
         }
-    }}
+    }}}
 
-namespace
-{
-    class CudaFuncTable : public GpuFuncTable
+
+    class CudaArch
     {
-    protected:
-        
-        class CudaArch
-        {
-        public:
-            CudaArch();
-            
-            bool builtWith(FeatureSet feature_set) const;
-            bool hasPtx(int major, int minor) const;
-            bool hasBin(int major, int minor) const;
-            bool hasEqualOrLessPtx(int major, int minor) const;
-            bool hasEqualOrGreaterPtx(int major, int minor) const;
-            bool hasEqualOrGreaterBin(int major, int minor) const;
-            
-        private:
-            static void fromStr(const string& set_as_str, vector<int>& arr);
-            
-            vector<int> bin;
-            vector<int> ptx;
-            vector<int> features;
-        };
-        
-        const CudaArch cudaArch;
-        
-        CudaArch::CudaArch()
+    public:
+        CudaArch()
         {
             fromStr(CUDA_ARCH_BIN, bin);
             fromStr(CUDA_ARCH_PTX, ptx);
             fromStr(CUDA_ARCH_FEATURES, features);
         }
         
-        bool CudaArch::builtWith(FeatureSet feature_set) const
+        bool builtWith(FeatureSet feature_set) const
         {
             return !features.empty() && (features.back() >= feature_set);
         }
         
-        bool CudaArch::hasPtx(int major, int minor) const
+        bool hasPtx(int major, int minor) const
         {
             return find(ptx.begin(), ptx.end(), major * 10 + minor) != ptx.end();
         }
         
-        bool CudaArch::hasBin(int major, int minor) const
+        bool hasBin(int major, int minor) const
         {
             return find(bin.begin(), bin.end(), major * 10 + minor) != bin.end();
         }
         
-        bool CudaArch::hasEqualOrLessPtx(int major, int minor) const
+        bool hasEqualOrLessPtx(int major, int minor) const
         {
             return !ptx.empty() && (ptx.front() <= major * 10 + minor);
         }
         
-        bool CudaArch::hasEqualOrGreaterPtx(int major, int minor) const
+        bool hasEqualOrGreaterPtx(int major, int minor) const
         {
             return !ptx.empty() && (ptx.back() >= major * 10 + minor);
         }
         
-        bool CudaArch::hasEqualOrGreaterBin(int major, int minor) const
+        bool hasEqualOrGreaterBin(int major, int minor) const
         {
             return !bin.empty() && (bin.back() >= major * 10 + minor);
         }
         
-        void CudaArch::fromStr(const string& set_as_str, vector<int>& arr)
+        
+    private:
+        void fromStr(const string& set_as_str, vector<int>& arr)
         {
             if (set_as_str.find_first_not_of(" ") == string::npos)
                 return;
@@ -501,25 +472,21 @@ namespace
             
             sort(arr.begin(), arr.end());
         }
-
-        class DeviceProps
-        {
-        public:
-            DeviceProps();
-            ~DeviceProps();
-            
-            cudaDeviceProp* get(int devID);
-            
-        private:
-            std::vector<cudaDeviceProp*> props_;
-        };
         
-        DeviceProps::DeviceProps()
+        vector<int> bin;
+        vector<int> ptx;
+        vector<int> features;
+    };
+
+    class DeviceProps
+    {
+    public:
+        DeviceProps()
         {
             props_.resize(10, 0);
         }
         
-        DeviceProps::~DeviceProps()
+        ~DeviceProps()
         {
             for (size_t i = 0; i < props_.size(); ++i)
             {
@@ -529,7 +496,7 @@ namespace
             props_.clear();
         }
         
-        cudaDeviceProp* DeviceProps::get(int devID)
+        cudaDeviceProp* get(int devID)
         {
             if (devID >= (int) props_.size())
                 props_.resize(devID + 5, 0);
@@ -542,10 +509,92 @@ namespace
             
             return props_[devID];
         }
-        
-        DeviceProps deviceProps;
+    private:
+        std::vector<cudaDeviceProp*> props_;
+    };
 
-        int convertSMVer2Cores(int major, int minor)
+    DeviceProps deviceProps;
+    
+    class CudaDeviceInfoFuncTable: DeviceInfoFuncTable
+    {
+    public:
+        size_t sharedMemPerBlock() const
+        {
+            return deviceProps.get(device_id_)->sharedMemPerBlock;
+        }
+        
+        void queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
+        {
+            int prevDeviceID = getDevice();
+            if (prevDeviceID != device_id_)
+                setDevice(device_id_);
+            
+            cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
+            
+            if (prevDeviceID != device_id_)
+                setDevice(prevDeviceID);
+        }
+        
+        size_t freeMemory() const
+        {
+            size_t _totalMemory, _freeMemory;
+            queryMemory(_totalMemory, _freeMemory);
+            return _freeMemory;
+        }
+        
+        size_t totalMemory() const
+        {
+            size_t _totalMemory, _freeMemory;
+            queryMemory(_totalMemory, _freeMemory);
+            return _totalMemory;
+        }
+        
+        bool supports(FeatureSet feature_set) const
+        {
+            int version = majorVersion_ * 10 + minorVersion_;
+            return version >= feature_set;
+        }
+        
+        bool isCompatible() const
+        {
+            // Check PTX compatibility
+            if (TargetArchs::hasEqualOrLessPtx(majorVersion_, minorVersion_))
+                return true;
+            
+            // Check BIN compatibility
+                for (int i = minorVersion_; i >= 0; --i)
+                    if (TargetArchs::hasBin(majorVersion_, i))
+                        return true;
+                    
+                    return false;
+        }
+        
+        void query()
+        {
+            const cudaDeviceProp* prop = deviceProps.get(device_id_);
+            
+            name_ = prop->name;
+            multi_processor_count_ = prop->multiProcessorCount;
+            majorVersion_ = prop->major;
+            minorVersion_ = prop->minor;
+        }
+
+    private:
+        int device_id_;
+        
+        std::string name_;
+        int multi_processor_count_;
+        int majorVersion_;
+        int minorVersion_;
+    };
+    
+    class CudaFuncTable : public GpuFuncTable
+    {
+    protected:
+              
+        const CudaArch cudaArch;
+
+        int convertSMVer2Cores(int major, int minor) const
         {
             // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
             typedef struct {
@@ -600,42 +649,42 @@ namespace
             cudaSafeCall( cudaDeviceReset() );
         }
         
-        bool TargetArchs::builtWith(FeatureSet feature_set) const
+        bool builtWith(FeatureSet feature_set) const
         {
             return cudaArch.builtWith(feature_set);
         }
         
-        bool TargetArchs::has(int major, int minor) const
+        bool has(int major, int minor) const
         {
             return hasPtx(major, minor) || hasBin(major, minor);
         }
         
-        bool TargetArchs::hasPtx(int major, int minor) const
+        bool hasPtx(int major, int minor) const
         {
             return cudaArch.hasPtx(major, minor);
         }
         
-        bool TargetArchs::hasBin(int major, int minor) const
+        bool hasBin(int major, int minor) const
         {
             return cudaArch.hasBin(major, minor);
         }
         
-        bool TargetArchs::hasEqualOrLessPtx(int major, int minor) const
+        bool hasEqualOrLessPtx(int major, int minor) const
         {
             return cudaArch.hasEqualOrLessPtx(major, minor);
         }
         
-        bool TargetArchs::hasEqualOrGreater(int major, int minor) const
+        bool hasEqualOrGreater(int major, int minor) const
         {
             return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
         }
         
-        bool TargetArchs::hasEqualOrGreaterPtx(int major, int minor) const
+        bool hasEqualOrGreaterPtx(int major, int minor) const
         {
             return cudaArch.hasEqualOrGreaterPtx(major, minor);
         }
         
-        bool TargetArchs::hasEqualOrGreaterBin(int major, int minor) const
+        bool hasEqualOrGreaterBin(int major, int minor) const
         {
             return cudaArch.hasEqualOrGreaterBin(major, minor);
         }
@@ -664,68 +713,7 @@ namespace
             
             return TargetArchs::builtWith(feature_set) && (version >= feature_set);
         }
-        
-        size_t sharedMemPerBlock() const
-        {
-            return deviceProps.get(device_id_)->sharedMemPerBlock;
-        }
-        
-        void queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
-        {
-            int prevDeviceID = getDevice();
-            if (prevDeviceID != device_id_)
-                setDevice(device_id_);
-            
-            cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
-            
-            if (prevDeviceID != device_id_)
-                setDevice(prevDeviceID);
-        }
-        
-        size_t freeMemory() const
-        {
-            size_t _totalMemory, _freeMemory;
-            queryMemory(_totalMemory, _freeMemory);
-            return _freeMemory;
-        }
-        
-        size_t totalMemory() const
-        {
-            size_t _totalMemory, _freeMemory;
-            queryMemory(_totalMemory, _freeMemory);
-            return _totalMemory;
-        }
-        
-        bool supports(FeatureSet feature_set) const
-        {
-            int version = majorVersion() * 10 + minorVersion();
-            return version >= feature_set;
-        }
-        
-        bool isCompatible() const
-        {
-            // Check PTX compatibility
-            if (TargetArchs::hasEqualOrLessPtx(majorVersion(), minorVersion()))
-                return true;
-            
-            // Check BIN compatibility
-                for (int i = minorVersion(); i >= 0; --i)
-                    if (TargetArchs::hasBin(majorVersion(), i))
-                        return true;
-                    
-                    return false;
-        }
-        
-        void query() const
-        {
-            const cudaDeviceProp* prop = deviceProps.get(device_id_);
-            
-            name_ = prop->name;
-            multi_processor_count_ = prop->multiProcessorCount;
-            majorVersion_ = prop->major;
-            minorVersion_ = prop->minor;
-        }
-                
+                        
         void printCudaDeviceInfo(int device) const
         {
             int count = getCudaEnabledDeviceCount();
@@ -864,16 +852,16 @@ namespace
             typedef void (*func_t)(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
             static const func_t funcs[7][4] =
             {
-                /*  8U */ {NppCopyMasked<CV_8U , nppiCopy_8u_C1MR >::call, cv::gpu::details::copyWithMask, NppCopyMasked<CV_8U , nppiCopy_8u_C3MR >::call, NppCopyMasked<CV_8U , nppiCopy_8u_C4MR >::call},
-                /*  8S */ {cv::gpu::details::copyWithMask                , cv::gpu::details::copyWithMask, cv::gpu::details::copyWithMask                         , cv::gpu::details::copyWithMask                         },
-                /* 16U */ {NppCopyMasked<CV_16U, nppiCopy_16u_C1MR>::call, cv::gpu::details::copyWithMask, NppCopyMasked<CV_16U, nppiCopy_16u_C3MR>::call, NppCopyMasked<CV_16U, nppiCopy_16u_C4MR>::call},
-                /* 16S */ {NppCopyMasked<CV_16S, nppiCopy_16s_C1MR>::call, cv::gpu::details::copyWithMask, NppCopyMasked<CV_16S, nppiCopy_16s_C3MR>::call, NppCopyMasked<CV_16S, nppiCopy_16s_C4MR>::call},
-                /* 32S */ {NppCopyMasked<CV_32S, nppiCopy_32s_C1MR>::call, cv::gpu::details::copyWithMask, NppCopyMasked<CV_32S, nppiCopy_32s_C3MR>::call, NppCopyMasked<CV_32S, nppiCopy_32s_C4MR>::call},
-                /* 32F */ {NppCopyMasked<CV_32F, nppiCopy_32f_C1MR>::call, cv::gpu::details::copyWithMask, NppCopyMasked<CV_32F, nppiCopy_32f_C3MR>::call, NppCopyMasked<CV_32F, nppiCopy_32f_C4MR>::call},
-                /* 64F */ {cv::gpu::details::copyWithMask                , cv::gpu::details::copyWithMask, cv::gpu::details::copyWithMask                         , cv::gpu::details::copyWithMask                         }
+                /*  8U */ {NppCopyMasked<CV_8U , nppiCopy_8u_C1MR >::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_8U , nppiCopy_8u_C3MR >::call, NppCopyMasked<CV_8U , nppiCopy_8u_C4MR >::call},
+                /*  8S */ {cv::gpu::device::copyWithMask                ,  cv::gpu::device::copyWithMask, cv::gpu::device::copyWithMask                 , cv::gpu::device::copyWithMask                         },
+                /* 16U */ {NppCopyMasked<CV_16U, nppiCopy_16u_C1MR>::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_16U, nppiCopy_16u_C3MR>::call, NppCopyMasked<CV_16U, nppiCopy_16u_C4MR>::call},
+                /* 16S */ {NppCopyMasked<CV_16S, nppiCopy_16s_C1MR>::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_16S, nppiCopy_16s_C3MR>::call, NppCopyMasked<CV_16S, nppiCopy_16s_C4MR>::call},
+                /* 32S */ {NppCopyMasked<CV_32S, nppiCopy_32s_C1MR>::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_32S, nppiCopy_32s_C3MR>::call, NppCopyMasked<CV_32S, nppiCopy_32s_C4MR>::call},
+                /* 32F */ {NppCopyMasked<CV_32F, nppiCopy_32f_C1MR>::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_32F, nppiCopy_32f_C3MR>::call, NppCopyMasked<CV_32F, nppiCopy_32f_C4MR>::call},
+                /* 64F */ {cv::gpu::device::copyWithMask                ,  cv::gpu::device::copyWithMask, cv::gpu::device::copyWithMask                 , cv::gpu::device::copyWithMask                         }
             };
 
-            const func_t func =  mask.channels() == src.channels() ? funcs[src.depth()][src.channels() - 1] : cv::gpu::details::copyWithMask;
+            const func_t func =  mask.channels() == src.channels() ? funcs[src.depth()][src.channels() - 1] : cv::gpu::device::copyWithMask;
 
             func(src, dst, mask, 0);
         }
@@ -971,7 +959,7 @@ namespace
             func(src, dst);
         }
 
-        void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta) const
+        void convert(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream) const
         {
             CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
             CV_Assert(dst.depth() <= CV_64F);
@@ -982,10 +970,10 @@ namespace
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
-            cv::gpu::device::convertTo(src, dst, alpha, beta);
+            cv::gpu::device::convertTo(src, dst, alpha, beta, stream);
         }
 
-        void setTo(GpuMat& m, Scalar s, const GpuMat& mask) const
+        void setTo(GpuMat& m, Scalar s, const GpuMat& mask, cudaStream_t stream) const
         {
             if (mask.empty())
             {
@@ -1016,7 +1004,7 @@ namespace
                     {NppSet<CV_16S, 1, nppiSet_16s_C1R>::call, NppSet<CV_16S, 2, nppiSet_16s_C2R>::call, cv::gpu::device::setTo                        , NppSet<CV_16S, 4, nppiSet_16s_C4R>::call},
                     {NppSet<CV_32S, 1, nppiSet_32s_C1R>::call, cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , NppSet<CV_32S, 4, nppiSet_32s_C4R>::call},
                     {NppSet<CV_32F, 1, nppiSet_32f_C1R>::call, cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , NppSet<CV_32F, 4, nppiSet_32f_C4R>::call},
-                    {cv::gpu::device::setTo                  , cv::gpu::device::setTo                 , cv::gpu::device::setTo                        , cv::gpu::device::setTo                          }
+                    {cv::gpu::device::setTo                  , cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , cv::gpu::device::setTo                          }
                 };
 
                 CV_Assert(m.depth() <= CV_64F && m.channels() <= 4);
@@ -1027,7 +1015,10 @@ namespace
                         CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
                 }
 
-                funcs[m.depth()][m.channels() - 1](m, s);
+                if (stream)
+                    cv::gpu::device::setTo(m, s, stream);
+                else
+                    funcs[m.depth()][m.channels() - 1](m, s);
             }
             else
             {
@@ -1051,7 +1042,10 @@ namespace
                         CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
                 }
 
-                funcs[m.depth()][m.channels() - 1](m, s, mask);
+                if (stream)
+                    cv::gpu::device::setTo(m, s, mask, stream);
+                else
+                    funcs[m.depth()][m.channels() - 1](m, s, mask);
             }
         }
 
@@ -1065,5 +1059,5 @@ namespace
             cudaFree(devPtr);
         }
     };
-}
+#endif
 #endif

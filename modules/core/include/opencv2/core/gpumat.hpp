@@ -137,6 +137,9 @@ namespace cv { namespace gpu
         int deviceID() const { return device_id_; }
 
     private:
+        // Private section is fictive to preserve bin compatibility.
+        // Changes in the private fields there have no effects.
+        // see deligate code.
         void query();
 
         int device_id_;

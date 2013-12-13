@@ -1,6 +1,5 @@
 project(opencv_core_cuda)
-set(HAVE_CUDA FALSE)
-add_definitions("-DHAVE_CUDA")
+add_definitions(-DUSE_CUDA)
 include_directories(${CUDA_INCLUDE_DIRS}
                     "../src/"
                     "../include/opencv2/core/"
