@@ -237,3 +237,17 @@ TEST(Core_UMat, getUMat)
     EXPECT_EQ(err, 0.);
     }
 }
+
+TEST(UMat, Sync)
+{
+    UMat um(10, 10, CV_8UC1);
+
+    {
+        Mat m = um.getMat(ACCESS_WRITE);
+        m.setTo(cv::Scalar::all(17));
+    }
+
+    um.setTo(cv::Scalar::all(19));
+
+    EXPECT_EQ(0, cv::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
+}
