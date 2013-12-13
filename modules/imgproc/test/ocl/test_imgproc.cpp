@@ -184,7 +184,7 @@ OCL_TEST_P(EqualizeHist, Mat)
         OCL_OFF(cv::equalizeHist(src_roi, dst_roi));
         OCL_ON(cv::equalizeHist(usrc_roi, udst_roi));
 
-        Near(1.1);
+        Near(1);
     }
 }
 
