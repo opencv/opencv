@@ -312,7 +312,9 @@ enum
 
     CV_CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
 
-    CV_CAP_GIGANETIX = 1300  // Smartek Giganetix GigEVisionSDK
+    CV_CAP_GIGANETIX = 1300,  // Smartek Giganetix GigEVisionSDK
+
+    CV_CAP_INTELPERC = 1500 // Intel Perceptual Computing SDK
 };
 
 /* start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*) */
@@ -468,6 +470,19 @@ enum
     CV_CAP_PROP_GIGA_FRAME_HEIGH_MAX = 10004,
     CV_CAP_PROP_GIGA_FRAME_SENS_WIDTH = 10005,
     CV_CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
+
+    ,CV_CAP_PROP_INTELPERC_PROFILE_COUNT        = 11001,
+    CV_CAP_PROP_INTELPERC_PROFILE_IDX           = 11002,
+    CV_CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
+    CV_CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE      = 11004,
+    CV_CAP_PROP_INTELPERC_DEPTH_CONFIDENCE_THRESHOLD  = 11005,
+    CV_CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ     = 11006,
+    CV_CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT     = 11007,
+
+    // Intel PerC streams
+    CV_CAP_INTELPERC_DEPTH_STREAM = 1 << 31,
+    CV_CAP_INTELPERC_IMAGE_STREAM = 1 << 30,
+    CV_CAP_INTELPERC_STREAMS_MASK = CV_CAP_INTELPERC_DEPTH_STREAM + CV_CAP_INTELPERC_IMAGE_STREAM,
 };
 
 enum
@@ -546,6 +561,14 @@ enum
     CV_CAP_ANDROID_ANTIBANDING_60HZ,
     CV_CAP_ANDROID_ANTIBANDING_AUTO,
     CV_CAP_ANDROID_ANTIBANDING_OFF
+};
+
+enum
+{
+    CV_CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
+    CV_CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
+    CV_CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
+    CV_CAP_INTELPERC_IMAGE                  = 3,
 };
 
 /* retrieve or set capture properties */
