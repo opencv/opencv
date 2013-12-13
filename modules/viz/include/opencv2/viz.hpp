@@ -93,6 +93,12 @@ namespace cv
 
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
+        /// Read/write clouds. Supported formats: ply, stl, xyz, obj
+
+        CV_EXPORTS void writeCloud(const String& file, InputArray cloud, InputArray colors = noArray());
+        CV_EXPORTS Mat  readCloud (const String& file, OutputArray colors = cv::noArray());
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write poses and trajectories
 
         CV_EXPORTS bool readPose(const String& file, Affine3f& pose, const String& tag = "pose");

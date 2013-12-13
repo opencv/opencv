@@ -42,39 +42,36 @@
 //
 //M*/
 
-#ifndef __vtkColorMatSource_h
-#define __vtkColorMatSource_h
+#ifndef __vtkOBJWriter_h
+#define __vtkOBJWriter_h
 
-#include <opencv2/core/mat.hpp>
-#include <vtkPolyDataAlgorithm.h>
-#include <vtkSmartPointer.h>
+#include <vtkPolyDataWriter.h>
 
 namespace cv
 {
     namespace viz
     {
-        class vtkColorMatSource : public vtkPolyDataAlgorithm
+        class vtkOBJWriter : public vtkPolyDataWriter
         {
         public:
-            static vtkColorMatSource *New();
-            vtkTypeMacro(vtkColorMatSource,vtkPolyDataAlgorithm);
+          static vtkOBJWriter *New();
+          vtkTypeMacro(vtkOBJWriter,vtkPolyDataWriter);
+          void PrintSelf(ostream& os, vtkIndent indent);
 
-            virtual void SetColors(const Mat &colors, const Mat &cloud_mask = Mat());
-
+          vtkGetMacro(DecimalPrecision, int);
+          vtkSetMacro(DecimalPrecision, int);
 
         protected:
-            vtkColorMatSource();
-            ~vtkColorMatSource();
+          vtkOBJWriter();
+          ~vtkOBJWriter();
 
-            int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+          void WriteData();
 
-            vtkSmartPointer<vtkUnsignedCharArray> scalars;
+          int DecimalPrecision;
+
         private:
-            vtkColorMatSource(const vtkColorMatSource&);  // Not implemented.
-            void operator=(const vtkColorMatSource&);  // Not implemented.
-
-            template<typename _Msk, class _NanPred>
-            void filterNanCopy(const Mat& colors, const Mat& mask);
+          vtkOBJWriter(const vtkOBJWriter&);  // Not implemented.
+          void operator=(const vtkOBJWriter&);  // Not implemented.
         };
     }
 }

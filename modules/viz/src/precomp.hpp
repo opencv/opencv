@@ -50,6 +50,7 @@
 #include <ctime>
 #include <list>
 #include <vector>
+#include <iomanip>
 
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
@@ -113,15 +114,30 @@
 #include <vtkObjectFactory.h>
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkMergeFilter.h>
+#include <vtkDataSetWriter.h>
+#include <vtkErrorCode.h>
+#include <vtkPLYWriter.h>
+#include <vtkSTLWriter.h>
+#include <vtkSimplePointsReader.h>
+#include <vtkPLYReader.h>
+#include <vtkOBJReader.h>
+#include <vtkSTLReader.h>
+
+#if !defined(_WIN32) || defined(__CYGWIN__)
+# include <unistd.h> /* unlink */
+#else
+# include <io.h> /* unlink */
+#endif
 
 #include <vtk/vtkCloudMatSource.h>
-#include <vtk/vtkColorMatSource.h>
-#include <vtk/vtkCloudColorMatSource.h>
+#include <vtk/vtkOBJWriter.h>
+#include <vtk/vtkXYZWriter.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include <opencv2/viz/widget_accessor.hpp>
 #include <opencv2/core/utility.hpp>
+
 
 namespace cv
 {

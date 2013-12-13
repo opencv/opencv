@@ -69,9 +69,8 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
         colors = colors.reshape(colors.channels(), 1);
     }
 
-    vtkSmartPointer<vtkCloudColorMatSource> cloud_source = vtkSmartPointer<vtkCloudColorMatSource>::New();
-    cloud_source->SetCloud(cloud);
-    cloud_source->SetColors(colors, cloud);
+    vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
+    cloud_source->SetColorCloud(cloud, colors);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(cloud_source->GetOutputPort());
