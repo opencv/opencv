@@ -250,3 +250,9 @@ if (NOT IOS)
     set(HAVE_QTKIT YES)
   endif()
 endif()
+
+# --- Intel Perceptual Computing SSDK ---
+ocv_clear_vars(HAVE_INTELPERC)
+if(WITH_INTELPERC)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")
+endif(WITH_INTELPERC)

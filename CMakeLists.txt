@@ -163,7 +163,7 @@ OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF
 OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS) )
-
+OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF WIN32 )
 
 # OpenCV build components
 # ===================================================
@@ -828,6 +828,11 @@ endif(DEFINED WITH_XIMEA)
 if(DEFINED WITH_XINE)
   status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
 endif(DEFINED WITH_XINE)
+
+if(DEFINED WITH_INTELPERC)
+  status("    Intel PerC:"     HAVE_INTELPERC      THEN "YES"                                 ELSE NO)
+endif(DEFINED WITH_INTELPERC)
+
 
 # ========================== Other third-party libraries ==========================
 status("")

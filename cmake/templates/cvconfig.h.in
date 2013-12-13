@@ -158,6 +158,9 @@
 /* Xine video library */
 #cmakedefine HAVE_XINE
 
+/* Intel Perceptual Computing SDK library */
+#cmakedefine HAVE_INTELPERC
+
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #cmakedefine WORDS_BIGENDIAN
