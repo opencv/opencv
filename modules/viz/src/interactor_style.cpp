@@ -63,11 +63,6 @@ void cv::viz::InteractorStyle::Initialize()
     win_pos_ = Vec2i(0, 0);
     max_win_size_ = Vec2i(-1, -1);
 
-    // Create the image filter and PNG writer objects
-    wif_ = vtkSmartPointer<vtkWindowToImageFilter>::New();
-    snapshot_writer_ = vtkSmartPointer<vtkPNGWriter>::New();
-    snapshot_writer_->SetInputConnection(wif_->GetOutputPort());
-
     init_ = true;
     stereo_anaglyph_mask_default_ = true;
 
@@ -84,11 +79,14 @@ void cv::viz::InteractorStyle::Initialize()
 void cv::viz::InteractorStyle::saveScreenshot(const String &file)
 {
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
-    wif_->SetInput(Interactor->GetRenderWindow());
-    wif_->Modified(); // Update the WindowToImageFilter
-    snapshot_writer_->Modified();
-    snapshot_writer_->SetFileName(file.c_str());
-    snapshot_writer_->Write();
+
+    vtkSmartPointer<vtkWindowToImageFilter> wif = vtkSmartPointer<vtkWindowToImageFilter>::New();
+    wif->SetInput(Interactor->GetRenderWindow());
+
+    vtkSmartPointer<vtkPNGWriter> snapshot_writer = vtkSmartPointer<vtkPNGWriter>::New();
+    snapshot_writer->SetInputConnection(wif->GetOutputPort());
+    snapshot_writer->SetFileName(file.c_str());
+    snapshot_writer->Write();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -196,20 +194,12 @@ int cv::viz::InteractorStyle::getModifiers()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void
-cv::viz::InteractorStyle::OnKeyDown()
+void cv::viz::InteractorStyle::OnKeyDown()
 {
     CV_Assert("Interactor style not initialized. Please call Initialize() before continuing" && init_);
     CV_Assert("No renderer given! Use SetRendererCollection() before continuing." && renderer_);
 
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
-
-    if (wif_->GetInput() == NULL)
-    {
-        wif_->SetInput(Interactor->GetRenderWindow());
-        wif_->Modified();
-        snapshot_writer_->Modified();
-    }
 
     // Save the initial windows width/height
     if (win_size_[0] == -1 || win_size_[1] == -1)
