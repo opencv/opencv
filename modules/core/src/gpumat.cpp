@@ -43,8 +43,9 @@
 #include "precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include <iostream>
+#include <dlfcn.h>
 
-#if defined(HAVE_CUDA)
+#if defined(HAVE_CUDA) || defined(DYNAMIC_CUDA_SUPPORT)
     #include <cuda_runtime.h>
     #include <npp.h>
 
@@ -66,14 +67,80 @@ using namespace cv::gpu;
 
 #include "gpumat_cuda.hpp"
 
-namespace
+typedef GpuFuncTable* (*GpuFactoryType)();
+typedef DeviceInfoFuncTable* (*DeviceInfoFactoryType)();
+
+static GpuFactoryType gpuFactory = NULL;
+static DeviceInfoFactoryType deviceInfoFactory = NULL;
+
+static const std::string getCudaSupportLibName()
 {
-    const GpuFuncTable* gpuFuncTable()
-    {
-        static EmptyFuncTable funcTable;
-        return &funcTable;
-    }
+    return "libopencv_core_cuda.so";
 }
+
+static bool loadCudaSupportLib()
+{
+    void* handle;
+    const std::string name = getCudaSupportLibName();
+    handle = dlopen(name.c_str(), RTLD_LAZY);
+    if (!handle)
+        return false;
+
+    deviceInfoFactory = (DeviceInfoFactoryType)dlsym(handle, "deviceInfoFactory");
+    if (!deviceInfoFactory)
+    {
+        dlclose(handle);
+        return false;
+    }
+    
+    gpuFactory = (GpuFactoryType)dlsym(handle, "gpuFactory");
+    if (!gpuFactory)
+    {
+        dlclose(handle);
+        return false;
+    }
+
+    dlclose(handle);
+
+    return true;
+}
+
+static GpuFuncTable* gpuFuncTable()
+{
+#ifdef DYNAMIC_CUDA_SUPPORT
+   static EmptyFuncTable stub;
+   static GpuFuncTable* libFuncTable = loadCudaSupportLib() ? gpuFactory(): (GpuFuncTable*)&stub;
+   static GpuFuncTable *funcTable = libFuncTable ? libFuncTable : (GpuFuncTable*)&stub;
+#else
+# ifdef USE_CUDA
+   static CudaFuncTable impl;
+   static GpuFuncTable* funcTable = &impl;
+#else
+   static EmptyFuncTable stub;
+   static GpuFuncTable* funcTable = &stub;
+#endif
+#endif
+   return funcTable;
+}
+
+static DeviceInfoFuncTable* deviceInfoFuncTable()
+{
+#ifdef DYNAMIC_CUDA_SUPPORT
+   static EmptyDeviceInfoFuncTable stub;
+   static DeviceInfoFuncTable* libFuncTable = loadCudaSupportLib() ? deviceInfoFactory(): (DeviceInfoFuncTable*)&stub;
+   static DeviceInfoFuncTable* funcTable = libFuncTable ? libFuncTable : (DeviceInfoFuncTable*)&stub;
+#else
+# ifdef USE_CUDA
+   static CudaDeviceInfoFuncTable impl;
+   static DeviceInfoFuncTable* funcTable = &impl;
+#else
+   static EmptyFuncTable stub;
+   static DeviceInfoFuncTable* funcTable = &stub;
+#endif
+#endif
+   return funcTable;
+}
+
 
 //////////////////////////////// Initialization & Info ////////////////////////
 
@@ -95,13 +162,13 @@ bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor) { return gpuF
 bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor) { return gpuFuncTable()->hasEqualOrGreaterPtx(major, minor); }
 bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor) { return gpuFuncTable()->hasEqualOrGreaterBin(major, minor); }
 
-size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { return gpuFuncTable()->sharedMemPerBlock(); }
-void cv::gpu::DeviceInfo::queryMemory(size_t& total_memory, size_t& free_memory) const { gpuFuncTable()->queryMemory(total_memory, free_memory); }
-size_t cv::gpu::DeviceInfo::freeMemory() const { return gpuFuncTable()->freeMemory(); }
-size_t cv::gpu::DeviceInfo::totalMemory() const { return gpuFuncTable()->totalMemory(); }
-bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const { return gpuFuncTable()->supports(feature_set); }
-bool cv::gpu::DeviceInfo::isCompatible() const { return gpuFuncTable()->isCompatible(); }
-void cv::gpu::DeviceInfo::query() { gpuFuncTable()->query(); }
+size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { return deviceInfoFuncTable()->sharedMemPerBlock(); }
+void cv::gpu::DeviceInfo::queryMemory(size_t& total_memory, size_t& free_memory) const { deviceInfoFuncTable()->queryMemory(total_memory, free_memory); }
+size_t cv::gpu::DeviceInfo::freeMemory() const { return deviceInfoFuncTable()->freeMemory(); }
+size_t cv::gpu::DeviceInfo::totalMemory() const { return deviceInfoFuncTable()->totalMemory(); }
+bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const { return deviceInfoFuncTable()->supports(feature_set); }
+bool cv::gpu::DeviceInfo::isCompatible() const { return deviceInfoFuncTable()->isCompatible(); }
+void cv::gpu::DeviceInfo::query() { deviceInfoFuncTable()->query(); }
 
 void cv::gpu::printCudaDeviceInfo(int device) { gpuFuncTable()->printCudaDeviceInfo(device); }
 void cv::gpu::printShortCudaDeviceInfo(int device) { gpuFuncTable()->printShortCudaDeviceInfo(device); }
@@ -556,7 +623,7 @@ namespace cv { namespace gpu
     
     void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
     {
-        gpuFuncTable()->setTo(src, s, stream);
+        gpuFuncTable()->setTo(src, s, cv::gpu::GpuMat(), stream);
     }
     
     void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)

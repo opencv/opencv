@@ -1,5 +1,9 @@
+#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/gpumat.hpp"
+
+#include <stdio.h>
+#include <iostream>
 
 #ifdef HAVE_CUDA
 #include <cuda_runtime.h>
@@ -17,7 +21,30 @@
 #endif
 #endif
 
+using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
 #include "gpumat_cuda.hpp"
+
+#ifdef HAVE_CUDA
+static CudaDeviceInfoFuncTable deviceInfoTable;
+static CudaFuncTable gpuTable;
+#else
+static EmptyDeviceInfoFuncTable deviceInfoTable;
+static EmptyFuncTable gpuTable;
+#endif
+
+extern "C" {
+   
+DeviceInfoFuncTable* deviceInfoFactory()
+{
+    return (DeviceInfoFuncTable*)&deviceInfoTable;
+}
+
+GpuFuncTable* gpuFactory()
+{
+    return (GpuFuncTable*)&gpuTable;
+}
+
+}
