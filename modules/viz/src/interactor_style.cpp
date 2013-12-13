@@ -87,6 +87,29 @@ void cv::viz::InteractorStyle::saveScreenshot(const String &file)
     snapshot_writer->SetInputConnection(wif->GetOutputPort());
     snapshot_writer->SetFileName(file.c_str());
     snapshot_writer->Write();
+
+    cout << "Screenshot successfully captured (" << file.c_str() << ")" << endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::InteractorStyle::exportScene(const String &file)
+{
+    vtkSmartPointer<vtkExporter> exporter;
+    if (file.size() > 5 && file.substr(file.size() - 5) == ".vrml")
+    {
+        exporter = vtkSmartPointer<vtkVRMLExporter>::New();
+        vtkVRMLExporter::SafeDownCast(exporter)->SetFileName(file.c_str());
+    }
+    else
+    {
+        exporter = vtkSmartPointer<vtkOBJExporter>::New();
+        vtkOBJExporter::SafeDownCast(exporter)->SetFilePrefix(file.c_str());
+    }
+
+    exporter->SetInput(Interactor->GetRenderWindow());
+    exporter->Write();
+
+    cout << "Scene successfully exported (" << file.c_str() << ")" << endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,6 +247,8 @@ void cv::viz::InteractorStyle::OnKeyDown()
                      "          s, S   : switch to a surface-based representation (where available)\n"
                      "\n"
                      "          j, J   : take a .PNG snapshot of the current window view\n"
+                     "          k, K   : export scene to Wavefront .obj format\n"
+                     "    ALT + k, K   : export scene to VRML format\n"
                      "          c, C   : display current camera/window parameters\n"
                      "          f, F   : fly to point mode, hold the key and move mouse where to fly\n"
                      "\n"
@@ -255,15 +280,19 @@ void cv::viz::InteractorStyle::OnKeyDown()
             }
         break;
     }
-        // Save a PNG snapshot with the current screen
+
+        // Save a PNG snapshot
     case 'j': case 'J':
+        saveScreenshot(cv::format("screenshot-%d.png", (unsigned int)time(0))); break;
+
+        // Export scene as in obj or vrml format
+    case 'k': case 'K':
     {
-        unsigned int t = static_cast<unsigned int>(time(0));
-        String png_file = cv::format("screenshot-%d.png", t);
-        saveScreenshot(png_file);
-        cout << "Screenshot (" << png_file.c_str() << ") successfully captured." << endl;
+        String format = alt ? "scene-%d.vrml" : "scene-%d";
+        exportScene(cv::format(format.c_str(), (unsigned int)time(0)));
         break;
     }
+
         // display current camera settings/parameters
     case 'c': case 'C':
     {
