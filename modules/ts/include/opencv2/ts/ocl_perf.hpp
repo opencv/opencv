@@ -52,6 +52,9 @@ namespace ocl {
 
 using namespace perf;
 
+using std::tr1::get;
+using std::tr1::tuple;
+
 #define OCL_PERF_STRATEGY PERF_STRATEGY_SIMPLE
 
 #define OCL_PERF_TEST_P(fixture, name, params) SIMPLE_PERF_TEST_P(fixture, name, params)
@@ -68,21 +71,22 @@ using namespace perf;
     void OCL##_##fixture##_##name::PerfTestBody()
 
 
-#define OCL_SIZE_1000 Size(1000, 1000)
-#define OCL_SIZE_2000 Size(2000, 2000)
-#define OCL_SIZE_4000 Size(4000, 4000)
+#define OCL_SIZE_1 szVGA
+#define OCL_SIZE_2 sz720p
+#define OCL_SIZE_3 sz1080p
+#define OCL_SIZE_4 sz2160p
 
-#define OCL_TEST_SIZES ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000, OCL_SIZE_4000)
+#define OCL_TEST_SIZES ::testing::Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, OCL_SIZE_4)
 #define OCL_TEST_TYPES ::testing::Values(CV_8UC1, CV_32FC1, CV_8UC4, CV_32FC4)
 
 #define OCL_PERF_ENUM ::testing::Values
 
 // TODO Replace finish call to dstUMat.wait()
 #define OCL_TEST_CYCLE() \
-    for (; startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
+    for (cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
 
 #define OCL_TEST_CYCLE_MULTIRUN(runsNum) \
-    for (declare.runs(runsNum); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
+    for (declare.runs(runsNum), cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
         for (int r = 0; r < runsNum; cvtest::ocl::perf::safeFinish(), ++r)
 
 namespace perf {
