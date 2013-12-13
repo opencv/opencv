@@ -67,6 +67,7 @@ namespace cv
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
             void saveScreenshot(const String &file);
+            void exportScene(const String &file);
 
         private:
             /** \brief Set to true after initialization is complete. */
