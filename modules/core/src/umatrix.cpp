@@ -580,7 +580,6 @@ Mat UMat::getMat(int accessFlags) const
     Mat hdr(dims, size.p, type(), u->data + offset, step.p);
     hdr.flags = flags;
     hdr.u = u;
-    hdr.flags = flags;
     hdr.datastart = u->data;
     hdr.data = hdr.datastart + offset;
     hdr.datalimit = hdr.dataend = u->data + u->size;
@@ -588,10 +587,13 @@ Mat UMat::getMat(int accessFlags) const
     return hdr;
 }
 
-void* UMat::handle(int /*accessFlags*/) const
+void* UMat::handle(int accessFlags) const
 {
     if( !u )
         return 0;
+
+    if ((accessFlags & ACCESS_WRITE) != 0)
+        u->markHostCopyObsolete(true);
 
     // check flags: if CPU copy is newer, copy it back to GPU.
     if( u->deviceCopyObsolete() )
