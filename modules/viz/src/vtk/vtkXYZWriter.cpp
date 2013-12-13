@@ -42,47 +42,52 @@
 //
 //M*/
 
-#ifndef __vtkCloudColorMatSource_h
-#define __vtkCloudColorMatSource_h
+#include "precomp.hpp"
 
-#include <opencv2/core/mat.hpp>
-#include <vtkPolyDataAlgorithm.h>
-#include <vtkSmartPointer.h>
-#include <vtkPoints.h>
-#include <vtkCellArray.h>
-
-namespace cv
+namespace cv { namespace viz
 {
-    namespace viz
+    vtkStandardNewMacro(vtkXYZWriter);
+}}
+
+cv::viz::vtkXYZWriter::vtkXYZWriter()
+{
+    std::ofstream fout; // only used to extract the default precision
+    this->DecimalPrecision = fout.precision();
+}
+
+void cv::viz::vtkXYZWriter::WriteData()
+{
+    vtkPolyData *input = this->GetInput();
+    if (!input)
+        return;
+
+    // OpenVTKFile() will report any errors that happen
+    ostream *outfilep = this->OpenVTKFile();
+    if (!outfilep)
+        return;
+
+    ostream &outfile = *outfilep;
+
+    for(vtkIdType i = 0; i < input->GetNumberOfPoints(); ++i)
     {
-        class vtkCloudColorMatSource : public vtkPolyDataAlgorithm
-        {
-        public:
-            static vtkCloudColorMatSource *New();
-            vtkTypeMacro(vtkCloudColorMatSource,vtkPolyDataAlgorithm);
+        Vec3d p;
+        input->GetPoint(i, p.val);
+        outfile << std::setprecision(this->DecimalPrecision) << p[0] << " " << p[1] << " " << p[2] << std::endl;
+    }
 
-            virtual void SetCloud(const Mat& cloud);
-            virtual void SetColors(const Mat &colors, const Mat &cloud_mask);
+    // Close the file
+    this->CloseVTKFile(outfilep);
 
-        protected:
-            vtkCloudColorMatSource();
-            ~vtkCloudColorMatSource();
-
-            int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-
-            vtkSmartPointer<vtkPoints> points;
-            vtkSmartPointer<vtkCellArray> vertices;
-            vtkSmartPointer<vtkUnsignedCharArray> scalars;
-        private:
-            vtkCloudColorMatSource(const vtkCloudColorMatSource&);  // Not implemented.
-            void operator=(const vtkCloudColorMatSource&);  // Not implemented.
-
-            template<typename _Tp> int filterNanCopy(const Mat& source, int dataType);
-
-            template<typename _Msk, class _NanPred>
-            void filterNanCopy(const Mat& colors, const Mat& mask);
-        };
+    // Delete the file if an error occurred
+    if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
+    {
+        vtkErrorMacro("Ran out of disk space; deleting file: " << this->FileName);
+        unlink(this->FileName);
     }
 }
 
-#endif
+void cv::viz::vtkXYZWriter::PrintSelf(ostream& os, vtkIndent indent)
+{
+    this->Superclass::PrintSelf(os,indent);
+    os << indent << "DecimalPrecision: " << this->DecimalPrecision << "\n";
+}

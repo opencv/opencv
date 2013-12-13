@@ -42,47 +42,37 @@
 //
 //M*/
 
-#ifndef __vtkCloudMatSource_h
-#define __vtkCloudMatSource_h
+#ifndef __vtkXYZWriter_h
+#define __vtkXYZWriter_h
 
-#include <opencv2/core/mat.hpp>
-#include <vtkPolyDataAlgorithm.h>
-#include <vtkSmartPointer.h>
-#include <vtkPoints.h>
-#include <vtkCellArray.h>
+#include "vtkPolyDataWriter.h"
 
 namespace cv
 {
     namespace viz
     {
-        class vtkCloudMatSource : public vtkPolyDataAlgorithm
+        class vtkXYZWriter : public vtkPolyDataWriter
         {
         public:
-            static vtkCloudMatSource *New();
-            vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm);
+            static vtkXYZWriter *New();
+            vtkTypeMacro(vtkXYZWriter,vtkPolyDataWriter);
+            void PrintSelf(ostream& os, vtkIndent indent);
 
-            virtual void SetCloud(const Mat& cloud);
-            virtual void SetColorCloud(const Mat &cloud, const Mat &colors = cv::Mat());
+            vtkGetMacro(DecimalPrecision, int);
+            vtkSetMacro(DecimalPrecision, int);
 
         protected:
-            vtkCloudMatSource();
-            ~vtkCloudMatSource();
+            vtkXYZWriter();
+            ~vtkXYZWriter(){}
 
-            int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+            void WriteData();
 
-            vtkSmartPointer<vtkPoints> points;
-            vtkSmartPointer<vtkCellArray> vertices;
-            vtkSmartPointer<vtkUnsignedCharArray> scalars;
+            int DecimalPrecision;
+
         private:
-            vtkCloudMatSource(const vtkCloudMatSource&);  // Not implemented.
-            void operator=(const vtkCloudMatSource&);  // Not implemented.
-
-            template<typename _Tp> int filterNanCopy(const Mat& source, int dataType);
-
-            template<typename _Msk, class _NanPred>
-            void filterNanColorsCopy(const Mat& colors, const Mat& mask);
+            vtkXYZWriter(const vtkXYZWriter&);  // Not implemented.
+            void operator=(const vtkXYZWriter&);  // Not implemented.
         };
     }
 }
-
 #endif
