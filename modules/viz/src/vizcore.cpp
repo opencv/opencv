@@ -161,6 +161,118 @@ cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
 cv::viz::Viz3d cv::viz::get(const String &window_name) { return Viz3d (window_name); }
 void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Read/write clouds. Supported formats: ply, stl, xyz, obj
+
+void cv::viz::writeCloud(const String& file, InputArray _cloud, InputArray _colors)
+{
+    CV_Assert(file.size() > 4 && "Extention is required");
+    String extention = file.substr(file.size()-4);
+
+    Mat cloud = _cloud.getMat();
+    Mat colors = _colors.getMat();
+
+    vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
+    source->SetColorCloud(cloud, colors);
+
+    vtkSmartPointer<vtkWriter> writer;
+    if (extention == ".xyz")
+    {
+        writer = vtkSmartPointer<vtkXYZWriter>::New();
+        vtkPLYWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+    }
+    else if (extention == ".ply")
+    {
+        writer = vtkSmartPointer<vtkPLYWriter>::New();
+        vtkPLYWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+    }
+    else if (extention == ".obj")
+    {
+        writer = vtkSmartPointer<vtkOBJWriter>::New();
+        vtkOBJWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+    }
+    else if (extention == ".stl")
+    {
+        writer = vtkSmartPointer<vtkSTLWriter>::New();
+        vtkSTLWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+    }
+    else
+        CV_Assert(!"Unsupported format");
+
+    writer->SetInputConnection(source->GetOutputPort());
+    writer->Write();
+}
+
+cv::Mat cv::viz::readCloud(const String& file, OutputArray colors)
+{
+    CV_Assert(file.size() > 4 && "Extention is required");
+    String extention = file.substr(file.size()-4);
+
+    vtkSmartPointer<vtkPolyDataAlgorithm> reader;
+    if (extention == ".xyz")
+    {
+        reader = vtkSmartPointer<vtkSimplePointsReader>::New();
+        vtkSimplePointsReader::SafeDownCast(reader)->SetFileName(file.c_str());
+    }
+    else if (extention == ".ply")
+    {
+        reader = vtkSmartPointer<vtkPLYReader>::New();
+        CV_Assert(vtkPLYReader::CanReadFile(file.c_str()));
+        vtkPLYReader::SafeDownCast(reader)->SetFileName(file.c_str());
+    }
+    else if (extention == ".obj")
+    {
+        reader = vtkSmartPointer<vtkOBJReader>::New();
+        vtkOBJReader::SafeDownCast(reader)->SetFileName(file.c_str());
+    }
+    else if (extention == ".stl")
+    {
+        reader = vtkSmartPointer<vtkSTLReader>::New();
+        vtkSTLReader::SafeDownCast(reader)->SetFileName(file.c_str());
+    }
+    else
+        CV_Assert(!"Unsupported format");
+
+    reader->Update();
+    vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
+    vtkSmartPointer<vtkPoints> points = poly_data->GetPoints();
+
+    int vtktype = points->GetDataType();
+    CV_Assert(vtktype == VTK_FLOAT || vtktype == VTK_DOUBLE);
+
+    Mat cloud(1, points->GetNumberOfPoints(), vtktype == VTK_FLOAT ? CV_32FC3 : CV_64FC3);
+    Vec3d *ddata = cloud.ptr<Vec3d>();
+    Vec3f *fdata = cloud.ptr<Vec3f>();
+
+    if (cloud.depth() == CV_32F)
+        for(size_t i = 0; i < cloud.total(); ++i)
+            *fdata++ = Vec3d(points->GetPoint(i));
+
+    if (cloud.depth() == CV_64F)
+        for(size_t i = 0; i < cloud.total(); ++i)
+            *ddata++ = Vec3d(points->GetPoint(i));
+
+    vtkSmartPointer<vtkDataArray> scalars = poly_data->GetPointData() ? poly_data->GetPointData()->GetScalars() : 0;
+
+    if (colors.needed() && scalars)
+    {
+        int channels = scalars->GetNumberOfComponents();
+        int vtktype = scalars->GetDataType();
+
+        CV_Assert((channels == 3 || channels == 4) && "Only 3- or 4-channel color data support is implemented");
+        CV_Assert(cloud.total() == (size_t)scalars->GetNumberOfTuples());
+        Mat buffer(cloud.size(), CV_64FC(channels));
+        Vec3d *cptr = buffer.ptr<Vec3d>();
+        for(size_t i = 0; i < colors.total(); ++i)
+            *cptr++ = Vec3d(scalars->GetTuple(i));
+
+        buffer.convertTo(colors, CV_8U, vtktype == VTK_FLOAT || VTK_FLOAT == VTK_DOUBLE ?  255.0 : 1.0);
+    }
+    else
+        colors.release();
+
+    return cloud;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write poses and trajectories

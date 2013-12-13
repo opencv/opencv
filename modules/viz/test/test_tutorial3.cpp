@@ -4,28 +4,6 @@ using namespace cv;
 using namespace std;
 
 /**
- * @function cvcloud_load
- * @brief load bunny.ply
- */
-Mat cvcloud_load()
-{
-    Mat cloud(1, 20000, CV_32FC3);
-    ifstream ifs("d:/cloud_dragon.ply");
-
-    string str;
-    for(size_t i = 0; i < 12; ++i)
-        getline(ifs, str);
-
-    Point3f* data = cloud.ptr<cv::Point3f>();
-    //float dummy1, dummy2;
-    for(size_t i = 0; i < 20000; ++i)
-        ifs >> data[i].x >> data[i].y >> data[i].z;// >> dummy1 >> dummy2;
-
-    //cloud *= 5.0f;
-    return cloud;
-}
-
-/**
  * @function main
  */
 void tutorial3(bool camera_pov)
@@ -47,7 +25,7 @@ void tutorial3(bool camera_pov)
     Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.0f,-1.0f,0.0f), Vec3f(-1.0f,0.0f,0.0f), Vec3f(0.0f,0.0f,-1.0f), cam_pos);
 
     /// Create a cloud widget.
-    Mat bunny_cloud = cvcloud_load();
+    Mat bunny_cloud = viz::readCloud("d:/cloud_dragon.ply");
     viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
 
     /// Pose of the widget in camera frame

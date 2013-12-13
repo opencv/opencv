@@ -47,6 +47,14 @@
 namespace cv { namespace viz
 {
     vtkStandardNewMacro(vtkCloudMatSource);
+
+    struct IsNotNan
+    {
+        template<typename _Tp> bool operator()(const _Tp* data) const
+        {
+            return !isNan(data[0]) && !isNan(data[1]) && !isNan(data[2]);
+        }
+    };
 }}
 
 cv::viz::vtkCloudMatSource::vtkCloudMatSource() { SetNumberOfInputPorts(0); }
@@ -67,6 +75,22 @@ void cv::viz::vtkCloudMatSource::SetCloud(const Mat& cloud)
         vertices->InsertCellPoint(i);
 }
 
+void cv::viz::vtkCloudMatSource::SetColorCloud(const Mat &cloud, const Mat &colors)
+{
+    vtkCloudMatSource::SetCloud(cloud);
+
+    if (colors.empty())
+        return;
+
+    CV_Assert(colors.depth() == CV_8U && colors.channels() <= 4 && colors.channels() != 2);
+    CV_Assert(colors.size() == cloud.size());
+
+    if (cloud.depth() == CV_32F)
+        filterNanColorsCopy<float, IsNotNan>(colors, cloud);
+    else if (cloud.depth() == CV_64F)
+        filterNanColorsCopy<double, IsNotNan>(colors, cloud);
+}
+
 int cv::viz::vtkCloudMatSource::RequestData(vtkInformation *vtkNotUsed(request), vtkInformationVector **vtkNotUsed(inputVector), vtkInformationVector *outputVector)
 {
     vtkInformation *outInfo = outputVector->GetInformationObject(0);
@@ -74,6 +98,8 @@ int cv::viz::vtkCloudMatSource::RequestData(vtkInformation *vtkNotUsed(request),
 
     output->SetPoints(points);
     output->SetVerts(vertices);
+    if (scalars)
+        output->GetPointData()->SetScalars(scalars);
     return 1;
 }
 
@@ -100,6 +126,48 @@ int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& source, int dataType)
     points->SetNumberOfPoints(total);
     points->Squeeze();
     return total;
+}
+
+
+template<typename _Msk, class _NanPred>
+void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& colors, const Mat& mask)
+{
+    Mat buffer(colors.size(), CV_8UC3);
+    Vec3b* pos = buffer.ptr<Vec3b>();
+
+    int s_chs = colors.channels();
+    int m_chs = mask.channels();
+
+    _NanPred pred;
+
+    for (int y = 0; y < colors.rows; ++y)
+    {
+        const unsigned char* srow = colors.ptr<unsigned char>(y);
+        const unsigned char* send = srow + colors.cols * colors.channels();
+        const _Msk* mrow = mask.empty() ? 0 : mask.ptr<_Msk>(y);
+
+        if (colors.channels() == 1)
+        {
+            for (; srow != send; srow += s_chs, mrow += m_chs)
+                if (pred(mrow))
+                    *pos++ = Vec3b(srow[0], srow[0], srow[0]);
+        }
+        else
+            for (; srow != send; srow += s_chs, mrow += m_chs)
+                if (pred(mrow))
+                    *pos++ = Vec3b(srow[2], srow[1], srow[0]);
+
+    }
+
+    int total = pos - buffer.ptr<Vec3b>();
+    Vec3b* array = new Vec3b[total];
+    std::copy(buffer.ptr<Vec3b>(), pos, array);
+
+    scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    scalars->SetName("colors");
+    scalars->SetNumberOfComponents(3);
+    scalars->SetNumberOfTuples(total);
+    scalars->SetArray(array->val, total * 3, 0);
 }
 
 
