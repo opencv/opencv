@@ -79,12 +79,6 @@ namespace cv
             Vec2i win_pos_;
             Vec2i max_win_size_;
 
-            /** \brief A PNG writer for screenshot captures. */
-            vtkSmartPointer<vtkPNGWriter> snapshot_writer_;
-
-            /** \brief Internal window to image filter. Needed by \a snapshot_writer_. */
-            vtkSmartPointer<vtkWindowToImageFilter> wif_;
-
             /** \brief Interactor style internal method. Gets called whenever a key is pressed. */
             virtual void OnChar();
 
