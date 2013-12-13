@@ -2041,9 +2041,12 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
          (depth == CV_64F && !doubleSupport) )
         return false;
 
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
+    const char * const op = issqrt ? "OP_SQRT" : "OP_POW";
+
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D OP_POW -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
