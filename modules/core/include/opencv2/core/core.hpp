@@ -164,7 +164,7 @@ public:
 
     int code; ///< error code @see CVStatus
     string err; ///< error description
-    string func; ///< function name. Available only when the compiler supports __func__ macro
+    string func; ///< function name. Available only when the compiler supports getting it
     string file; ///< source file name where the error has occured
     int line; ///< line number in the source file where the error has occured
 };
@@ -209,15 +209,18 @@ typedef int (CV_CDECL *ErrorCallback)( int status, const char* func_name,
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback,
                                         void* userdata=0, void** prevUserdata=0);
 
-#ifdef __GNUC__
-#define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, __func__, __FILE__, __LINE__) )
-#define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, __func__, __FILE__, __LINE__) )
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, __func__, __FILE__, __LINE__) )
+
+#if defined __GNUC__
+#define CV_Func __func__
+#elif defined _MSC_VER
+#define CV_Func __FUNCTION__
 #else
-#define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, "", __FILE__, __LINE__) )
-#define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, "", __FILE__, __LINE__) )
-#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, "", __FILE__, __LINE__) )
+#define CV_Func ""
 #endif
+
+#define CV_Error( code, msg ) cv::error( cv::Exception(code, msg, CV_Func, __FILE__, __LINE__) )
+#define CV_Error_( code, args ) cv::error( cv::Exception(code, cv::format args, CV_Func, __FILE__, __LINE__) )
+#define CV_Assert( expr ) if(!!(expr)) ; else cv::error( cv::Exception(CV_StsAssert, #expr, CV_Func, __FILE__, __LINE__) )
 
 #ifdef _DEBUG
 #define CV_DbgAssert(expr) CV_Assert(expr)
@@ -4816,6 +4819,32 @@ protected:
 private:
     AutoLock(const AutoLock&);
     AutoLock& operator = (const AutoLock&);
+};
+
+class TLSDataContainer
+{
+private:
+    int key_;
+protected:
+    CV_EXPORTS TLSDataContainer();
+    CV_EXPORTS ~TLSDataContainer(); // virtual is not required
+public:
+    virtual void* createDataInstance() const = 0;
+    virtual void deleteDataInstance(void* data) const = 0;
+
+    CV_EXPORTS void* getData() const;
+};
+
+template <typename T>
+class TLSData : protected TLSDataContainer
+{
+public:
+    inline TLSData() {}
+    inline ~TLSData() {}
+    inline T* get() const { return (T*)getData(); }
+private:
+    virtual void* createDataInstance() const { return new T; }
+    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
 };
 
 }

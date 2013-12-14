@@ -115,13 +115,13 @@ protected:
  International Conference Pattern Recognition, UK, August, 2004.
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 */
-class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
     //! the default constructor
-    BackgroundSubtractorMOG2();
+    CV_WRAP BackgroundSubtractorMOG2();
     //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
-    BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
+    CV_WRAP BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
     //! the destructor
     virtual ~BackgroundSubtractorMOG2();
     //! the update operator

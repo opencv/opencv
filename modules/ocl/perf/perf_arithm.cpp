@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -99,7 +99,7 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
 {
     // getting params
     const Size srcSize = GetParam();
-    const double eps = 3e-1;
+    const double eps = 1e-6;
 
     // creating src data
     Mat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
@@ -114,17 +114,15 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::exp(oclSrc, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::exp(src, dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// LOG ////////////////////////
@@ -135,7 +133,7 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
 {
     // getting params
     const Size srcSize = GetParam();
-    const double eps = 1e-5;
+    const double eps = 1e-6;
 
     // creating src data
     Mat src(srcSize, CV_32F), dst(srcSize, src.type());
@@ -153,17 +151,15 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::log(oclSrc, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::log(src, dst);
-
-        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// Add ////////////////////////
@@ -346,7 +342,7 @@ PERF_TEST_P(CartToPolarFixture, CartToPolar, OCL_TYPICAL_MAT_SIZES)
     if (srcSize == OCL_SIZE_4000)
         declare.time(3.6);
 
-   if (RUN_OCL_IMPL)
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst1(srcSize, src1.type()), oclDst2(srcSize, src1.type());
@@ -378,7 +374,7 @@ PERF_TEST_P(PolarToCartFixture, PolarToCart, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
-   Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
             dst1(srcSize, CV_32FC1), dst2(srcSize, CV_32FC1);
     declare.in(src1, src2).out(dst1, dst2);
     randu(src1, 0, 256);
@@ -425,7 +421,7 @@ PERF_TEST_P(MagnitudeFixture, Magnitude, OCL_TYPICAL_MAT_SIZES)
     randu(src2, 0, 1);
     declare.in(src1, src2).out(dst);
 
-   if (RUN_OCL_IMPL)
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst(srcSize, src1.type());
@@ -461,7 +457,7 @@ PERF_TEST_P(TransposeFixture, Transpose,
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-   if (RUN_OCL_IMPL)
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -566,7 +562,7 @@ PERF_TEST_P(minMaxLocFixture, minMaxLoc,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
                                OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
 {
-   const Size_MatType_t params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
@@ -611,7 +607,7 @@ PERF_TEST_P(SumFixture, Sum,
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-   Mat src(srcSize, type);
+    Mat src(srcSize, type);
     Scalar result;
     randu(src, 0, 60);
     declare.in(src);
@@ -712,16 +708,16 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_and,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
                                OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
 {
-   const Size_MatType_t params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-   Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2).out(dst);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
-   if (RUN_OCL_IMPL)
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
 
@@ -734,6 +730,80 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_and,
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::bitwise_and(src1, src2, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// bitwise_xor ////////////////////////
+
+typedef Size_MatType BitwiseXorFixture;
+
+PERF_TEST_P(BitwiseXorFixture, bitwise_xor,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2).out(dst);
+    randu(src1, 0, 256);
+    randu(src2, 0, 256);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
+
+        OCL_TEST_CYCLE() cv::ocl::bitwise_xor(oclSrc1, oclSrc2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::bitwise_xor(src1, src2, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// bitwise_or ////////////////////////
+
+typedef Size_MatType BitwiseOrFixture;
+
+PERF_TEST_P(BitwiseOrFixture, bitwise_or,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2).out(dst);
+    randu(src1, 0, 256);
+    randu(src2, 0, 256);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
+
+        OCL_TEST_CYCLE() cv::ocl::bitwise_or(oclSrc1, oclSrc2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::bitwise_or(src1, src2, dst);
 
         SANITY_CHECK(dst);
     }
@@ -818,8 +888,9 @@ typedef TestBaseWithParam<Size> PowFixture;
 PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
+    const double eps = 1e-6;
 
-   Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
+    Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
@@ -829,17 +900,15 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
         OCL_TEST_CYCLE() cv::ocl::pow(oclSrc, -2.0, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst, 5e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::pow(src, -2.0, dst);
-
-        SANITY_CHECK(dst, 5e-2);
     }
     else
         OCL_PERF_ELSE
+
+    SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
 ///////////// AddWeighted////////////////////////
@@ -976,6 +1045,46 @@ PERF_TEST_P(AbsFixture, Abs,
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() dst = cv::abs(src);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// Repeat ////////////////////////
+
+typedef Size_MatType RepeatFixture;
+
+PERF_TEST_P(RepeatFixture, Repeat,
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const int nx = 3, ny = 2;
+    const Size dstSize(srcSize.width * nx, srcSize.height * ny);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
+
+    Mat src(srcSize, type), dst(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::repeat(oclSrc, ny, nx, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::repeat(src, ny, nx, dst);
 
         SANITY_CHECK(dst);
     }

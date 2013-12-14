@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -56,6 +56,7 @@ typedef TestBaseWithParam<Size> equalizeHistFixture;
 PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
+    const double eps = 1 + DBL_EPSILON;
 
     Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -68,13 +69,13 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::equalizeHist(src, dst);
 
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+        SANITY_CHECK(dst, eps);
     }
     else
         OCL_PERF_ELSE
@@ -82,15 +83,20 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
 /////////// CopyMakeBorder //////////////////////
 
-typedef Size_MatType CopyMakeBorderFixture;
+CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,
+        BORDER_WRAP, BORDER_REFLECT_101)
+
+typedef tuple<Size, MatType, Border> CopyMakeBorderParamType;
+typedef TestBaseWithParam<CopyMakeBorderParamType> CopyMakeBorderFixture;
 
 PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
+                               Border::all()))
 {
-    const Size_MatType_t params = GetParam();
+    const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), borderType = BORDER_CONSTANT;
+    const int type = get<1>(params), borderType = get<2>(params);
 
     Mat src(srcSize, type), dst;
     const Size dstSize = srcSize + Size(12, 12);
@@ -225,155 +231,25 @@ PERF_TEST_P(integralFixture, integral, OCL_TYPICAL_MAT_SIZES)
         OCL_PERF_ELSE
 }
 
-///////////// WarpAffine ////////////////////////
-
-typedef Size_MatType WarpAffineFixture;
-
-PERF_TEST_P(WarpAffineFixture, WarpAffine,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
-{
-    static const double coeffs[2][3] =
-    {
-        { cos(CV_PI / 6), -sin(CV_PI / 6), 100.0 },
-        { sin(CV_PI / 6), cos(CV_PI / 6), -100.0 }
-    };
-    Mat M(2, 3, CV_64F, (void *)coeffs);
-    const int interpolation = INTER_NEAREST;
-
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type), dst(srcSize, type);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
-
-        OCL_TEST_CYCLE() cv::ocl::warpAffine(oclSrc, oclDst, M, srcSize, interpolation);
-
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::warpAffine(src, dst, M, srcSize, interpolation);
-
-        SANITY_CHECK(dst);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// WarpPerspective ////////////////////////
-
-typedef Size_MatType WarpPerspectiveFixture;
-
-PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
-{
-    static const double coeffs[3][3] =
-    {
-        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
-        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0},
-        {0.0, 0.0, 1.0}
-    };
-    Mat M(3, 3, CV_64F, (void *)coeffs);
-    const int interpolation = INTER_LINEAR;
-
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type), dst(srcSize, type);
-    declare.in(src, WARMUP_RNG).out(dst)
-            .time(srcSize == OCL_SIZE_4000 ? 18 : srcSize == OCL_SIZE_2000 ? 5 : 2);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
-
-        OCL_TEST_CYCLE() cv::ocl::warpPerspective(oclSrc, oclDst, M, srcSize, interpolation);
-
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::warpPerspective(src, dst, M, srcSize, interpolation);
-
-        SANITY_CHECK(dst);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// resize ////////////////////////
-
-CV_ENUM(resizeInterType, INTER_NEAREST, INTER_LINEAR)
-
-typedef tuple<Size, MatType, resizeInterType, double> resizeParams;
-typedef TestBaseWithParam<resizeParams> resizeFixture;
-
-PERF_TEST_P(resizeFixture, resize,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
-                               resizeInterType::all(),
-                               ::testing::Values(0.5, 2.0)))
-{
-    const resizeParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interType = get<2>(params);
-    double scale = get<3>(params);
-
-    Mat src(srcSize, type), dst;
-    const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
-    dst.create(dstSize, type);
-    declare.in(src, WARMUP_RNG).out(dst);
-    if (interType == INTER_LINEAR && type == CV_8UC4 && OCL_SIZE_4000 == srcSize)
-        declare.time(11);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
-
-        OCL_TEST_CYCLE() cv::ocl::resize(oclSrc, oclDst, Size(), scale, scale, interType);
-
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, interType);
-
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
 ///////////// threshold////////////////////////
 
-CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TRUNC)
+CV_ENUM(ThreshType, THRESH_BINARY, THRESH_TOZERO_INV)
 
-typedef tuple<Size, ThreshType> ThreshParams;
+typedef tuple<Size, MatType, ThreshType> ThreshParams;
 typedef TestBaseWithParam<ThreshParams> ThreshFixture;
 
 PERF_TEST_P(ThreshFixture, threshold,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_16SC1, CV_16SC4, CV_32FC1),
                                ThreshType::all()))
 {
     const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int threshType = get<1>(params);
+    const int srcType = get<1>(params);
+    const int threshType = get<2>(params);
+    const double maxValue = 220.0, threshold = 50;
 
-    Mat src(srcSize, CV_8U), dst(srcSize, CV_8U);
+    Mat src(srcSize, srcType), dst(srcSize, srcType);
     randu(src, 0, 100);
     declare.in(src).out(dst);
 
@@ -381,7 +257,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8U);
 
-        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, 50.0, 0.0, threshType);
+        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, threshold, maxValue, threshType);
 
         oclDst.download(dst);
 
@@ -389,7 +265,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::threshold(src, dst, 50.0, 0.0, threshType);
+        TEST_CYCLE() cv::threshold(src, dst, threshold, maxValue, threshType);
 
         SANITY_CHECK(dst);
     }
@@ -718,67 +594,6 @@ PERF_TEST_P(meanShiftProcFixture, meanShiftProc,
         OCL_PERF_ELSE
 }
 
-///////////// remap////////////////////////
-
-CV_ENUM(RemapInterType, INTER_NEAREST, INTER_LINEAR)
-
-typedef tuple<Size, MatType, RemapInterType> remapParams;
-typedef TestBaseWithParam<remapParams> remapFixture;
-
-PERF_TEST_P(remapFixture, remap,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
-                               RemapInterType::all()))
-{
-    const remapParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params), interpolation = get<2>(params);
-
-    Mat src(srcSize, type), dst(srcSize, type);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000 && interpolation == INTER_LINEAR)
-        declare.time(9);
-
-    Mat xmap, ymap;
-    xmap.create(srcSize, CV_32FC1);
-    ymap.create(srcSize, CV_32FC1);
-
-    for (int i = 0; i < srcSize.height; ++i)
-    {
-        float * const xmap_row = xmap.ptr<float>(i);
-        float * const ymap_row = ymap.ptr<float>(i);
-
-        for (int j = 0; j < srcSize.width; ++j)
-        {
-            xmap_row[j] = (j - srcSize.width * 0.5f) * 0.75f + srcSize.width * 0.5f;
-            ymap_row[j] = (i - srcSize.height * 0.5f) * 0.75f + srcSize.height * 0.5f;
-        }
-    }
-
-    const int borderMode = BORDER_CONSTANT;
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
-        ocl::oclMat oclXMap(xmap), oclYMap(ymap);
-
-        OCL_TEST_CYCLE() cv::ocl::remap(oclSrc, oclDst, oclXMap, oclYMap, interpolation, borderMode);
-
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
-
-        SANITY_CHECK(dst, 1 + DBL_EPSILON);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
 ///////////// CLAHE ////////////////////////
 
 typedef TestBaseWithParam<Size> CLAHEFixture;
@@ -856,6 +671,66 @@ PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
         TEST_CYCLE() columnSumPerfTest(src, dst);
 
         SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+//////////////////////////////distanceToCenters////////////////////////////////////////////////
+
+CV_ENUM(DistType, NORM_L1, NORM_L2SQR)
+
+typedef tuple<Size, DistType> distanceToCentersParameters;
+typedef TestBaseWithParam<distanceToCentersParameters> distanceToCentersFixture;
+
+static void distanceToCentersPerfTest(Mat& src, Mat& centers, Mat& dists, Mat& labels, int distType)
+{
+    Mat batch_dists;
+    cv::batchDistance(src, centers, batch_dists, CV_32FC1, noArray(), distType);
+
+    std::vector<float> dists_v;
+    std::vector<int> labels_v;
+
+    for (int i = 0; i < batch_dists.rows; i++)
+    {
+        Mat r = batch_dists.row(i);
+        double mVal;
+        Point mLoc;
+
+        minMaxLoc(r, &mVal, NULL, &mLoc, NULL);
+        dists_v.push_back(static_cast<float>(mVal));
+        labels_v.push_back(mLoc.x);
+    }
+
+    Mat(dists_v).copyTo(dists);
+    Mat(labels_v).copyTo(labels);
+}
+
+PERF_TEST_P(distanceToCentersFixture, distanceToCenters, ::testing::Combine(::testing::Values(cv::Size(256,256), cv::Size(512,512)), DistType::all()) )
+{
+    Size size = get<0>(GetParam());
+    int distType = get<1>(GetParam());
+
+    Mat src(size, CV_32FC1), centers(size, CV_32FC1);
+    Mat dists(src.rows, 1, CV_32FC1), labels(src.rows, 1, CV_32SC1);
+
+    declare.in(src, centers, WARMUP_RNG).out(dists, labels);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat ocl_src(src), ocl_centers(centers);
+
+        OCL_TEST_CYCLE() ocl::distanceToCenters(ocl_src, ocl_centers, dists, labels, distType);
+
+        SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
+        SANITY_CHECK(labels);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() distanceToCentersPerfTest(src, centers, dists, labels, distType);
+
+        SANITY_CHECK(dists, 1e-6, ERROR_RELATIVE);
+        SANITY_CHECK(labels);
     }
     else
         OCL_PERF_ELSE

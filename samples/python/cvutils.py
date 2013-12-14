@@ -11,7 +11,7 @@ def load_sample(name=None):
         try:
             img0 = cv.LoadImage(name, cv.CV_LOAD_IMAGE_COLOR)
         except IOError:
-            urlbase = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/c/'
+            urlbase = 'https://raw.github.com/Itseez/opencv/master/samples/c/'
             file = name.split('/')[-1]
             filedata = urllib2.urlopen(urlbase+file).read()
             imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)

@@ -2986,8 +2986,8 @@ public:
                             int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
                             int sy = cvRound(sY[x1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = (short)(sx >> INTER_BITS);
-                            XY[x1*2+1] = (short)(sy >> INTER_BITS);
+                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
                             A[x1] = (ushort)v;
                         }
                     }
@@ -3000,8 +3000,8 @@ public:
                             int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
                             int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
-                            XY[x1*2] = (short)(sx >> INTER_BITS);
-                            XY[x1*2+1] = (short)(sy >> INTER_BITS);
+                            XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
+                            XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
                             A[x1] = (ushort)v;
                         }
                     }
@@ -3215,8 +3215,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
-                    dst1[x*2] = (short)(ix >> INTER_BITS);
-                    dst1[x*2+1] = (short)(iy >> INTER_BITS);
+                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
         }
@@ -3233,8 +3233,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 {
                     int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
                     int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
-                    dst1[x*2] = (short)(ix >> INTER_BITS);
-                    dst1[x*2+1] = (short)(iy >> INTER_BITS);
+                    dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
+                    dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
                 }
         }

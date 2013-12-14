@@ -24,7 +24,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -41,6 +41,10 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
+#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 6)
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
@@ -348,7 +352,7 @@ namespace cv
             }
 
             // Sort all graph's edges connecting differnet components (in asceding order)
-            sort(edges.begin(), edges.end());
+            std::sort(edges.begin(), edges.end());
 
             // Exclude small components (starting from the nearest couple)
             for (size_t i = 0; i < edges.size(); ++i)

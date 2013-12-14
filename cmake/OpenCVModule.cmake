@@ -499,7 +499,7 @@ macro(ocv_glob_module_sources)
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 
   file(GLOB cl_kernels "src/opencl/*.cl")
-  if(HAVE_OPENCL AND cl_kernels)
+  if(HAVE_opencv_ocl AND cl_kernels)
     ocv_include_directories(${OPENCL_INCLUDE_DIRS})
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
@@ -535,9 +535,10 @@ macro(ocv_create_module)
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
-    target_link_libraries(${the_module} LINK_PRIVATE ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
+    target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS})
+    target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
     if (HAVE_CUDA)
-      target_link_libraries(${the_module} LINK_PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+      target_link_libraries(${the_module} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
     endif()
   endif()
 

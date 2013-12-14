@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,19 +44,10 @@
 //
 //M*/
 
-
-#ifndef FLT_MAX
-#define FLT_MAX  CL_FLT_MAX
-#endif
-
-#ifndef SHRT_MAX
-#define SHRT_MAX  CL_SHORT_MAX
-#endif
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////get_first_k_initial_global//////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void get_first_k_initial_global_0(__global short *data_cost_selected_, __global short *selected_disp_pyr,
     __global short *ctemp, int h, int w, int nr_plane,
     int cmsg_step1, int cdisp_step1, int cndisp)
@@ -91,6 +82,7 @@ __kernel void get_first_k_initial_global_0(__global short *data_cost_selected_, 
         }
     }
 }
+
 __kernel void get_first_k_initial_global_1(__global  float *data_cost_selected_, __global float *selected_disp_pyr,
     __global  float *ctemp, int h, int w, int nr_plane,
     int cmsg_step1, int cdisp_step1, int cndisp)
@@ -129,6 +121,7 @@ __kernel void get_first_k_initial_global_1(__global  float *data_cost_selected_,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////get_first_k_initial_local////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void get_first_k_initial_local_0(__global  short *data_cost_selected_, __global short *selected_disp_pyr,
     __global  short *ctemp,int h, int w, int nr_plane,
     int cmsg_step1, int cdisp_step1, int cndisp)
@@ -248,7 +241,8 @@ __kernel void get_first_k_initial_local_1(__global float *data_cost_selected_, _
 ///////////////////////////////////////////////////////////////
 /////////////////////// init data cost ////////////////////////
 ///////////////////////////////////////////////////////////////
-float compute_3(__global uchar* left, __global uchar* right,
+
+inline float compute_3(__global uchar* left, __global uchar* right,
     float cdata_weight,  float cmax_data_term)
 {
     float tb = 0.114f * abs((int)left[0] - right[0]);
@@ -257,17 +251,22 @@ float compute_3(__global uchar* left, __global uchar* right,
 
     return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
 }
-float compute_1(__global uchar* left, __global uchar* right,
+
+inline float compute_1(__global uchar* left, __global uchar* right,
     float cdata_weight,  float cmax_data_term)
 {
     return fmin(cdata_weight * abs((int)*left - (int)*right), cdata_weight * cmax_data_term);
 }
-short round_short(float v){
+
+inline short round_short(float v)
+{
     return convert_short_sat_rte(v);
 }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////init_data_cost///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void init_data_cost_0(__global short *ctemp, __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int channels,
     int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1,
@@ -312,6 +311,7 @@ __kernel void init_data_cost_0(__global short *ctemp, __global uchar *cleft, __g
         }
     }
 }
+
 __kernel void init_data_cost_1(__global float *ctemp, __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int channels,
     int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1,
@@ -356,9 +356,11 @@ __kernel void init_data_cost_1(__global float *ctemp, __global uchar *cleft, __g
         }
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////init_data_cost_reduce//////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cleft, __global uchar *cright,
     __local float *smem, int level, int rows, int cols, int h, int winsz, int channels,
     int cndisp,int cimg_step, float cdata_weight, float cmax_data_term, int cth,
@@ -626,6 +628,7 @@ __kernel void init_data_cost_reduce_1(__global float *ctemp, __global uchar *cle
 ///////////////////////////////////////////////////////////////
 ////////////////////// compute data cost //////////////////////
 ///////////////////////////////////////////////////////////////
+
 __kernel void compute_data_cost_0(__global const short *selected_disp_pyr, __global short *data_cost_,
     __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int nr_plane, int channels,
@@ -676,6 +679,7 @@ __kernel void compute_data_cost_0(__global const short *selected_disp_pyr, __glo
         }
     }
 }
+
 __kernel void compute_data_cost_1(__global const float *selected_disp_pyr, __global float *data_cost_,
     __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int nr_plane, int channels,
@@ -725,9 +729,11 @@ __kernel void compute_data_cost_1(__global const float *selected_disp_pyr, __glo
         }
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////compute_data_cost_reduce//////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr, __global short* data_cost_,
     __global uchar *cleft, __global uchar *cright,__local float *smem,
     int level, int rows, int cols, int h, int nr_plane,
@@ -993,7 +999,8 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
 ///////////////////////////////////////////////////////////////
 //////////////////////// init message /////////////////////////
 ///////////////////////////////////////////////////////////////
-void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new,
+
+inline void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new,
     __global short *r_new, __global const short *u_cur, __global const short *d_cur,
     __global const short *l_cur, __global const short *r_cur,
     __global short *data_cost_selected, __global short *disparity_selected_new,
@@ -1027,41 +1034,7 @@ void get_first_k_element_increase_0(__global short* u_new, __global short *d_new
         data_cost_new[id * cdisp_step1] = SHRT_MAX;
     }
 }
-void get_first_k_element_increase_1(__global float *u_new, __global float *d_new, __global float *l_new,
-    __global float *r_new, __global const float *u_cur, __global const float *d_cur,
-    __global const float *l_cur, __global const float *r_cur,
-    __global float *data_cost_selected, __global float *disparity_selected_new,
-    __global float *data_cost_new, __global const float *data_cost_cur,
-    __global const float *disparity_selected_cur,
-    int nr_plane, int nr_plane2,
-    int cdisp_step1, int cdisp_step2)
-{
-    for(int i = 0; i < nr_plane; i++)
-    {
-        float minimum = FLT_MAX;
-        int id = 0;
 
-        for(int j = 0; j < nr_plane2; j++)
-        {
-            float cur = data_cost_new[j * cdisp_step1];
-            if(cur < minimum)
-            {
-                minimum = cur;
-                id = j;
-            }
-        }
-
-        data_cost_selected[i * cdisp_step1] = data_cost_cur[id * cdisp_step1];
-        disparity_selected_new[i * cdisp_step1] = disparity_selected_cur[id * cdisp_step2];
-
-        u_new[i * cdisp_step1] = u_cur[id * cdisp_step2];
-        d_new[i * cdisp_step1] = d_cur[id * cdisp_step2];
-        l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
-        r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
-        data_cost_new[id * cdisp_step1] = FLT_MAX;
-
-    }
-}
 __kernel void init_message_0(__global short *u_new_, __global short *d_new_, __global short *l_new_,
     __global short *r_new_, __global  short *u_cur_, __global const short *d_cur_,
     __global const short *l_cur_, __global const short *r_cur_, __global short *ctemp,
@@ -1112,6 +1085,7 @@ __kernel void init_message_0(__global short *u_new_, __global short *d_new_, __g
             cdisp_step1, cdisp_step2);
     }
 }
+
 __kernel void init_message_1(__global float *u_new_, __global float *d_new_, __global float *l_new_,
     __global float *r_new_, __global const float *u_cur_, __global const float *d_cur_,
     __global const float *l_cur_, __global const float *r_cur_, __global float *ctemp,
@@ -1190,7 +1164,8 @@ __kernel void init_message_1(__global float *u_new_, __global float *d_new_, __g
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
-void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1,
+
+inline void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1,
     __global const short *msg2, __global const short *msg3,
     __global const short *dst_disp, __global const short *src_disp,
     int nr_plane, __global short *temp,
@@ -1226,7 +1201,8 @@ void message_per_pixel_0(__global const short *data, __global short *msg_dst, __
     for(int d = 0; d < nr_plane; d++)
         msg_dst[d * cdisp_step1] = convert_short_sat_rte(temp[d * cdisp_step1] - sum);
 }
-void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1,
+
+inline void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1,
     __global const float *msg2, __global const float *msg3,
     __global const float *dst_disp, __global const float *src_disp,
     int nr_plane, __global float *temp,
@@ -1262,6 +1238,7 @@ void message_per_pixel_1(__global const float *data, __global float *msg_dst, __
     for(int d = 0; d < nr_plane; d++)
         msg_dst[d * cdisp_step1] = temp[d * cdisp_step1] - sum;
 }
+
 __kernel void compute_message_0(__global short *u_, __global short *d_, __global short *l_, __global short *r_,
     __global const short *data_cost_selected, __global const short *selected_disp_pyr_cur,
     __global short *ctemp, int h, int w, int nr_plane, int i,
@@ -1293,6 +1270,7 @@ __kernel void compute_message_0(__global short *u_, __global short *d_, __global
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
     }
 }
+
 __kernel void compute_message_1(__global float *u_, __global float *d_, __global float *l_, __global float *r_,
     __global const float *data_cost_selected, __global const float *selected_disp_pyr_cur,
     __global float *ctemp, int h, int w, int nr_plane, int i,
@@ -1327,6 +1305,7 @@ __kernel void compute_message_1(__global float *u_, __global float *d_, __global
 ///////////////////////////////////////////////////////////////
 /////////////////////////// output ////////////////////////////
 ///////////////////////////////////////////////////////////////
+
 __kernel void compute_disp_0(__global const short *u_, __global const short *d_, __global const short *l_,
     __global const short *r_, __global const short * data_cost_selected,
     __global const short *disp_selected_pyr,
@@ -1364,6 +1343,7 @@ __kernel void compute_disp_0(__global const short *u_, __global const short *d_,
         disp[res_step * y + x] = best;
     }
 }
+
 __kernel void compute_disp_1(__global const float *u_, __global const float *d_, __global const float *l_,
     __global const float *r_, __global const float *data_cost_selected,
     __global const float *disp_selected_pyr,

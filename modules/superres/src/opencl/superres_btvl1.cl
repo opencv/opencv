@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,24 +44,24 @@
 //M*/
 
 __kernel void buildMotionMapsKernel(__global float* forwardMotionX,
-    __global float* forwardMotionY,
-    __global float* backwardMotionX,
-    __global float* backwardMotionY,
-    __global float* forwardMapX,
-    __global float* forwardMapY,
-    __global float* backwardMapX,
-    __global float* backwardMapY,
-    int forwardMotionX_row,
-    int forwardMotionX_col,
-    int forwardMotionX_step,
-    int forwardMotionY_step,
-    int backwardMotionX_step,
-    int backwardMotionY_step,
-    int forwardMapX_step,
-    int forwardMapY_step,
-    int backwardMapX_step,
-    int backwardMapY_step
-    )
+                                    __global float* forwardMotionY,
+                                    __global float* backwardMotionX,
+                                    __global float* backwardMotionY,
+                                    __global float* forwardMapX,
+                                    __global float* forwardMapY,
+                                    __global float* backwardMapX,
+                                    __global float* backwardMapY,
+                                    int forwardMotionX_row,
+                                    int forwardMotionX_col,
+                                    int forwardMotionX_step,
+                                    int forwardMotionY_step,
+                                    int backwardMotionX_step,
+                                    int backwardMotionY_step,
+                                    int forwardMapX_step,
+                                    int forwardMapY_step,
+                                    int backwardMapX_step,
+                                    int backwardMapY_step
+                                   )
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -83,14 +83,14 @@ __kernel void buildMotionMapsKernel(__global float* forwardMotionX,
 }
 
 __kernel void upscaleKernel(__global float* src,
-    __global float* dst,
-    int src_step,
-    int dst_step,
-    int src_row,
-    int src_col,
-    int scale,
-    int channels
-    )
+                            __global float* dst,
+                            int src_step,
+                            int dst_step,
+                            int src_row,
+                            int src_col,
+                            int scale,
+                            int channels
+                           )
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -100,17 +100,10 @@ __kernel void upscaleKernel(__global float* src,
         if(channels == 1)
         {
             dst[y * scale * dst_step + x * scale] = src[y * src_step + x];
-        }else if(channels == 3)
+        }
+        else
         {
-            dst[y * channels * scale * dst_step + 3 * x * scale + 0] = src[y * channels * src_step + 3 * x + 0];
-            dst[y * channels * scale * dst_step + 3 * x * scale + 1] = src[y * channels * src_step + 3 * x + 1];
-            dst[y * channels * scale * dst_step + 3 * x * scale + 2] = src[y * channels * src_step + 3 * x + 2];
-        }else
-        {
-            dst[y * channels * scale * dst_step + 4 * x * scale + 0] = src[y * channels * src_step + 4 * x + 0];
-            dst[y * channels * scale * dst_step + 4 * x * scale + 1] = src[y * channels * src_step + 4 * x + 1];
-            dst[y * channels * scale * dst_step + 4 * x * scale + 2] = src[y * channels * src_step + 4 * x + 2];
-            dst[y * channels * scale * dst_step + 4 * x * scale + 3] = src[y * channels * src_step + 4 * x + 3];
+            vstore4(vload4(0, src + y * channels * src_step + 4 * x), 0, dst + y * channels * scale * dst_step + 4 * x * scale);
         }
     }
 }
@@ -119,15 +112,6 @@ __kernel void upscaleKernel(__global float* src,
 float diffSign(float a, float b)
 {
     return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
-}
-
-float3 diffSign3(float3 a, float3 b)
-{
-    float3 pos;
-    pos.x = a.x > b.x ? 1.0f : a.x < b.x ? -1.0f : 0.0f;
-    pos.y = a.y > b.y ? 1.0f : a.y < b.y ? -1.0f : 0.0f;
-    pos.z = a.z > b.z ? 1.0f : a.z < b.z ? -1.0f : 0.0f;
-    return pos;
 }
 
 float4 diffSign4(float4 a, float4 b)
@@ -141,13 +125,13 @@ float4 diffSign4(float4 a, float4 b)
 }
 
 __kernel void diffSignKernel(__global float* src1,
-    __global float* src2,
-    __global float* dst,
-    int src1_row,
-    int src1_col,
-    int dst_step,
-    int src1_step,
-    int src2_step)
+                             __global float* src2,
+                             __global float* dst,
+                             int src1_row,
+                             int src1_col,
+                             int dst_step,
+                             int src1_step,
+                             int src2_step)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -156,19 +140,18 @@ __kernel void diffSignKernel(__global float* src1,
     {
         dst[y * dst_step + x] = diffSign(src1[y * src1_step + x], src2[y * src2_step + x]);
     }
-    barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 __kernel void calcBtvRegularizationKernel(__global float* src,
-    __global float* dst,
-    int src_step,
-    int dst_step,
-    int src_row,
-    int src_col,
-    int ksize,
-    int channels,
-    __global float* c_btvRegWeights
-    )
+        __global float* dst,
+        int src_step,
+        int dst_step,
+        int src_row,
+        int src_col,
+        int ksize,
+        int channels,
+        __constant float* c_btvRegWeights
+                                         )
 {
     int x = get_global_id(0) + ksize;
     int y = get_global_id(1) + ksize;
@@ -183,54 +166,16 @@ __kernel void calcBtvRegularizationKernel(__global float* src,
             for (int m = 0, count = 0; m <= ksize; ++m)
             {
                 for (int l = ksize; l + m >= 0; --l, ++count)
-                    dstVal = dstVal + c_btvRegWeights[count] * (diffSign(srcVal, src[(y + m) * src_step + (x + l)]) - diffSign(src[(y - m) * src_step + (x - l)], srcVal));
-            }
-            dst[y * dst_step + x] = dstVal;
-        }else if(channels == 3)
-        {
-            float3 srcVal;
-            srcVal.x = src[y * src_step + 3 * x + 0];
-            srcVal.y = src[y * src_step + 3 * x + 1];
-            srcVal.z = src[y * src_step + 3 * x + 2];
-
-            float3 dstVal;
-            dstVal.x = 0.0f;
-            dstVal.y = 0.0f;
-            dstVal.z = 0.0f;
-
-            for (int m = 0, count = 0; m <= ksize; ++m)
-            {
-                for (int l = ksize; l + m >= 0; --l, ++count)
                 {
-                    float3 src1;
-                    src1.x = src[(y + m) * src_step + 3 * (x + l) + 0];
-                    src1.y = src[(y + m) * src_step + 3 * (x + l) + 1];
-                    src1.z = src[(y + m) * src_step + 3 * (x + l) + 2];
-
-                    float3 src2;
-                    src2.x = src[(y - m) * src_step + 3 * (x - l) + 0];
-                    src2.y = src[(y - m) * src_step + 3 * (x - l) + 1];
-                    src2.z = src[(y - m) * src_step + 3 * (x - l) + 2];
-
-                    dstVal = dstVal + c_btvRegWeights[count] * (diffSign3(srcVal, src1) - diffSign3(src2, srcVal));
+                    dstVal = dstVal + c_btvRegWeights[count] * (diffSign(srcVal, src[(y + m) * src_step + (x + l)]) - diffSign(src[(y - m) * src_step + (x - l)], srcVal));
                 }
             }
-            dst[y * dst_step + 3 * x + 0] = dstVal.x;
-            dst[y * dst_step + 3 * x + 1] = dstVal.y;
-            dst[y * dst_step + 3 * x + 2] = dstVal.z;
-        }else
+            dst[y * dst_step + x] = dstVal;
+        }
+        else
         {
-            float4 srcVal;
-            srcVal.x = src[y * src_step + 4 * x + 0];//r type =float
-            srcVal.y = src[y * src_step + 4 * x + 1];//g
-            srcVal.z = src[y * src_step + 4 * x + 2];//b
-            srcVal.w = src[y * src_step + 4 * x + 3];//a
-
-            float4 dstVal;
-            dstVal.x = 0.0f;
-            dstVal.y = 0.0f;
-            dstVal.z = 0.0f;
-            dstVal.w = 0.0f;
+            float4 srcVal = vload4(0, src + y * src_step + 4 * x);
+            float4 dstVal = 0.f;
 
             for (int m = 0, count = 0; m <= ksize; ++m)
             {
@@ -249,13 +194,9 @@ __kernel void calcBtvRegularizationKernel(__global float* src,
                     src2.w = src[(y - m) * src_step + 4 * (x - l) + 3];
 
                     dstVal = dstVal + c_btvRegWeights[count] * (diffSign4(srcVal, src1) - diffSign4(src2, srcVal));
-
                 }
             }
-            dst[y * dst_step + 4 * x + 0] = dstVal.x;
-            dst[y * dst_step + 4 * x + 1] = dstVal.y;
-            dst[y * dst_step + 4 * x + 2] = dstVal.z;
-            dst[y * dst_step + 4 * x + 3] = dstVal.w;
+            vstore4(dstVal, 0, dst + y * dst_step + 4 * x);
         }
     }
 }

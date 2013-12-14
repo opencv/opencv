@@ -16,7 +16,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -33,11 +33,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 #define TYPE double
 #else
@@ -53,8 +54,9 @@
 #else
 #define POW(X,Y) X
 #endif
-#define FLT_MAX   3.402823466e+38F
 #define MAX_VAL   (FLT_MAX*1e-3)
+
+#define BLOCK_SIZE 16
 
 __kernel void svm_linear(__global float* src, int src_step, __global float* src2, int src2_step, __global TYPE* dst, int dst_step, int src_rows, int src2_cols,
                          int width, TYPE alpha, TYPE beta)
@@ -66,7 +68,7 @@ __kernel void svm_linear(__global float* src, int src_step, __global float* src2
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -103,7 +105,7 @@ __kernel void svm_sigmod(__global float* src, int src_step, __global float* src2
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -148,7 +150,7 @@ __kernel void svm_poly(__global float* src, int src_step, __global float* src2, 
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);
@@ -183,7 +185,7 @@ __kernel void svm_rbf(__global float* src, int src_step, __global float* src2, i
     {
         int t = 0;
         TYPE temp = 0.0;
-        for(t = 0; t < width - 16; t += 16)
+        for(t = 0; t < width - BLOCK_SIZE; t += BLOCK_SIZE)
         {
             float16 t0 = vload16(0, src + row * src_step + t);
             float16 t1 = vload16(0, src2 + col * src2_step + t);

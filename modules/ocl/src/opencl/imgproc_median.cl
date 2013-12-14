@@ -16,7 +16,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -106,10 +106,10 @@ __kernel void medianFilter3_C4_D0(__global uchar4 * src, __global uchar4 * dst, 
     op(p3, p6); op(p1, p4); op(p2, p5); op(p4, p7);
     op(p4, p2); op(p6, p4); op(p4, p2);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p4;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter3_C1_D0(__global uchar * src, __global uchar * dst,  int srcOffset, int dstOffset, int cols,
@@ -148,10 +148,10 @@ __kernel void medianFilter3_C1_D0(__global uchar * src, __global uchar * dst,  i
     op(p3, p6); op(p1, p4); op(p2, p5); op(p4, p7);
     op(p4, p2); op(p6, p4); op(p4, p2);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p4;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter3_C1_D5(__global float * src, __global float * dst,  int srcOffset, int dstOffset, int cols,
@@ -190,10 +190,10 @@ __kernel void medianFilter3_C1_D5(__global float * src, __global float * dst,  i
     op(p3, p6); op(p1, p4); op(p2, p5); op(p4, p7);
     op(p4, p2); op(p6, p4); op(p4, p2);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p4;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter3_C4_D5(__global float4 * src, __global float4 * dst,  int srcOffset, int dstOffset, int cols,
@@ -232,10 +232,10 @@ __kernel void medianFilter3_C4_D5(__global float4 * src, __global float4 * dst, 
     op(p3, p6); op(p1, p4); op(p2, p5); op(p4, p7);
     op(p4, p2); op(p6, p4); op(p4, p2);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p4;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter5_C4_D0(__global uchar4 * src, __global uchar4 * dst,  int srcOffset, int dstOffset, int cols,
@@ -294,10 +294,10 @@ __kernel void medianFilter5_C4_D0(__global uchar4 * src, __global uchar4 * dst, 
     op(p13, p17); op(p3, p15); op(p11, p23); op(p11, p15); op(p7, p19);
     op(p7, p11); op(p11, p13); op(p11, p12);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p12;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter5_C1_D0(__global uchar * src, __global uchar * dst,  int srcOffset, int dstOffset, int cols,
@@ -356,10 +356,10 @@ __kernel void medianFilter5_C1_D0(__global uchar * src, __global uchar * dst,  i
     op(p13, p17); op(p3, p15); op(p11, p23); op(p11, p15); op(p7, p19);
     op(p7, p11); op(p11, p13); op(p11, p12);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p12;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter5_C4_D5(__global float4 * src, __global float4 * dst,  int srcOffset, int dstOffset, int cols,
@@ -418,10 +418,10 @@ __kernel void medianFilter5_C4_D5(__global float4 * src, __global float4 * dst, 
     op(p13, p17); op(p3, p15); op(p11, p23); op(p11, p15); op(p7, p19);
     op(p7, p11); op(p11, p13); op(p11, p12);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p12;
 }
-#undef op(a,b)
+#undef op
 
 #define op(a,b) {mid=a; a=min(a,b); b=max(mid,b);}
 __kernel void medianFilter5_C1_D5(__global float * src, __global float * dst,  int srcOffset, int dstOffset, int cols,
@@ -480,7 +480,7 @@ __kernel void medianFilter5_C1_D5(__global float * src, __global float * dst,  i
     op(p13, p17); op(p3, p15); op(p11, p23); op(p11, p15); op(p7, p19);
     op(p7, p11); op(p11, p13); op(p11, p12);
 
-    if(get_global_id(1)<rows && get_global_id(0)<cols)
+    if((int)get_global_id(1)<rows && (int)get_global_id(0)<cols)
         dst[dstOffset + get_global_id(1)*dstStep + get_global_id(0)]=p12;
 }
-#undef op(a,b)
+#undef op

@@ -11,15 +11,6 @@
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
-# --------------------------------------------------------------
-# Indicate CMake 2.7 and above that we don't want to mix relative
-#  and absolute paths in linker lib lists.
-# Run "cmake --help-policy CMP0003" for more information.
-# --------------------------------------------------------------
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
-endif()
-
 # Following block can broke build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
@@ -48,6 +39,14 @@ else()
   cmake_minimum_required(VERSION 2.6.3)
 endif()
 
+if(POLICY CMP0017)
+  cmake_policy(SET CMP0017 NEW)
+endif()
+
+if(POLICY CMP0022)
+  cmake_policy(SET CMP0022 OLD)
+endif()
+
 # must go before the project command
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE AND CMAKE_VERSION VERSION_GREATER "2.8")
@@ -61,6 +60,8 @@ if(MSVC)
 endif()
 
 include(cmake/OpenCVUtils.cmake)
+
+ocv_clear_vars(OpenCVModules_TARGETS)
 
 # ----------------------------------------------------------------------------
 # Break in case of popular CMake configuration mistakes
@@ -126,9 +127,9 @@ endif()
 OCV_OPTION(WITH_1394           "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_AVFOUNDATION   "Use AVFoundation for Video I/O"              ON   IF IOS)
 OCV_OPTION(WITH_CARBON         "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
-OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON   IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
-OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CUDA           "Include NVidia Cuda Runtime support"         ON   IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT IOS) )
+OCV_OPTION(WITH_CUFFT          "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT IOS) )
+OCV_OPTION(WITH_CUBLAS         "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT IOS) )
 OCV_OPTION(WITH_NVCUVID        "Include NVidia Video Decoding library support"                               OFF IF (CMAKE_VERSION VERSION_GREATER "2.8" AND NOT ANDROID AND NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_EIGEN          "Include Eigen2/Eigen3 support"               ON)
 OCV_OPTION(WITH_VFW            "Include Video for Windows support"           ON   IF WIN32 )
@@ -149,6 +150,7 @@ OCV_OPTION(WITH_QT             "Build with Qt Backend support"               OFF
 OCV_OPTION(WITH_WIN32UI        "Build with Win32 UI Backend support"         ON   IF WIN32 )
 OCV_OPTION(WITH_QUICKTIME      "Use QuickTime for Video I/O insted of QTKit" OFF  IF APPLE )
 OCV_OPTION(WITH_TBB            "Include Intel TBB support"                   OFF  IF (NOT IOS) )
+OCV_OPTION(WITH_OPENMP         "Include OpenMP support"                      OFF)
 OCV_OPTION(WITH_CSTRIPES       "Include C= support"                          OFF  IF WIN32 )
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
@@ -158,7 +160,7 @@ OCV_OPTION(WITH_DSHOW          "Build HighGUI with DirectShow support"       ON 
 OCV_OPTION(WITH_MSMF           "Build HighGUI with Media Foundation support" OFF  IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
 OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
-OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON   IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS) )
 
@@ -862,11 +864,10 @@ endif()
 if(HAVE_OPENCL)
   status("")
   status("  OpenCL:")
-  set(__opencl_ver "invalid")
-  if(HAVE_OPENCL12)
-    set(__opencl_ver "1.2")
-  elseif(HAVE_OPENCL11)
-    set(__opencl_ver "1.1")
+  if(HAVE_OPENCL_STATIC)
+    set(__opencl_ver "static")
+  else()
+    set(__opencl_ver "dynamic")
   endif()
   status("    Version:"       ${__opencl_ver})
   if(OPENCL_INCLUDE_DIR)

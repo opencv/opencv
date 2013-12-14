@@ -32,7 +32,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -61,9 +61,14 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
+static bool relativeError(double actual, double expected, double eps)
+{
+    return std::abs(actual - expected) / actual < eps;
+}
+
 //////////////////////////////// LUT /////////////////////////////////////////////////
 
-PARAM_TEST_CASE(Lut, int, int, bool, bool)
+PARAM_TEST_CASE(Lut, MatDepth, MatDepth, bool, bool)
 {
     int lut_depth;
     int cn;
@@ -121,8 +126,12 @@ PARAM_TEST_CASE(Lut, int, int, bool, bool)
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), threshold);
-        EXPECT_MAT_NEAR(dst_roi, Mat(gdst_roi), threshold);
+        Mat whole, roi;
+        gdst_whole.download(whole);
+        gdst_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst, whole, threshold);
+        EXPECT_MAT_NEAR(dst_roi, roi, threshold);
     }
 };
 
@@ -141,7 +150,7 @@ OCL_TEST_P(Lut, Mat)
 
 ///////////////////////// ArithmTestBase ///////////////////////////
 
-PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
+PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 {
     int depth;
     int cn;
@@ -181,18 +190,15 @@ PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
         depth = GET_PARAM(0);
         cn = GET_PARAM(1);
         use_roi = GET_PARAM(2);
-
-        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
-                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
-    void random_roi()
+    virtual void random_roi()
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
         Size roiSize = randomSize(1, MAX_VALUE);
-        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, srcBorder, type, 2, 11);
+        Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, 2, 11);
 
         Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src2, src2_roi, roiSize, src2Border, type, -1540, 1740);
@@ -208,23 +214,34 @@ PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
         cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
 
 
-        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, srcBorder);
+        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, src1Border);
         generateOclMat(gsrc2_whole, gsrc2_roi, src2, roiSize, src2Border);
         generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
         generateOclMat(gdst2_whole, gdst2_roi, dst2, roiSize, dst2Border);
         generateOclMat(gmask_whole, gmask_roi, mask, roiSize, maskBorder);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
     void Near(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
-        EXPECT_MAT_NEAR(dst1_roi, Mat(gdst1_roi), threshold);
+        Mat whole, roi;
+        gdst1_whole.download(whole);
+        gdst1_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst1, whole, threshold);
+        EXPECT_MAT_NEAR(dst1_roi, roi, threshold);
     }
 
     void Near1(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), threshold);
-        EXPECT_MAT_NEAR(dst2_roi, Mat(gdst2_roi), threshold);
+        Mat whole, roi;
+        gdst2_whole.download(whole);
+        gdst2_roi.download(roi);
+
+        EXPECT_MAT_NEAR(dst2, whole, threshold);
+        EXPECT_MAT_NEAR(dst2_roi, roi, threshold);
     }
 };
 
@@ -389,7 +406,7 @@ OCL_TEST_P(Mul, Scalar)
     {
         random_roi();
 
-        cv::multiply(val[0], src1_roi, dst1_roi);
+        cv::multiply(Scalar::all(val[0]), src1_roi, dst1_roi);
         cv::ocl::multiply(val[0], gsrc1_roi, gdst1_roi);
 
         Near(gdst1_roi.depth() >= CV_32F ? 1e-3 : 1);
@@ -719,6 +736,15 @@ OCL_TEST_P(MinMax, MAT)
 
 OCL_TEST_P(MinMax, MASK)
 {
+    enum { MAX_IDX = 0, MIN_IDX };
+    static const double minMaxGolds[2][7] =
+    {
+        { std::numeric_limits<uchar>::min(), std::numeric_limits<char>::min(), std::numeric_limits<ushort>::min(),
+          std::numeric_limits<short>::min(), std::numeric_limits<int>::min(), -std::numeric_limits<float>::max(), -std::numeric_limits<double>::max() },
+        { std::numeric_limits<uchar>::max(), std::numeric_limits<char>::max(), std::numeric_limits<ushort>::max(),
+          std::numeric_limits<short>::max(), std::numeric_limits<int>::max(), std::numeric_limits<float>::max(), std::numeric_limits<double>::max() },
+    };
+
     for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
@@ -745,8 +771,16 @@ OCL_TEST_P(MinMax, MASK)
         double minVal_, maxVal_;
         cv::ocl::minMax(gsrc1_roi, &minVal_, &maxVal_, gmask_roi);
 
-        EXPECT_DOUBLE_EQ(minVal, minVal_);
-        EXPECT_DOUBLE_EQ(maxVal, maxVal_);
+        if (cv::countNonZero(mask_roi) == 0)
+        {
+            EXPECT_DOUBLE_EQ(minMaxGolds[MIN_IDX][depth], minVal_);
+            EXPECT_DOUBLE_EQ(minMaxGolds[MAX_IDX][depth], maxVal_);
+        }
+        else
+        {
+            EXPECT_DOUBLE_EQ(minVal, minVal_);
+            EXPECT_DOUBLE_EQ(maxVal, maxVal_);
+        }
     }
 }
 
@@ -1466,7 +1500,7 @@ OCL_TEST_P(Norm, NORM_L1)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
 }
 
@@ -1484,44 +1518,87 @@ OCL_TEST_P(Norm, NORM_L2)
             const double cpuRes = cv::norm(src1_roi, src2_roi, type);
             const double gpuRes = cv::ocl::norm(gsrc1_roi, gsrc2_roi, type);
 
-            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
+}
+
+//// Repeat
+
+struct RepeatTestCase :
+        public ArithmTestBase
+{
+    int nx, ny;
+
+    virtual void random_roi()
+    {
+        const int type = CV_MAKE_TYPE(depth, cn);
+
+        nx = randomInt(1, 4);
+        ny = randomInt(1, 4);
+
+        Size srcRoiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, srcRoiSize, srcBorder, type, 2, 11);
+
+        Size dstRoiSize(srcRoiSize.width * nx, srcRoiSize.height * ny);
+        Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst1, dst1_roi, dstRoiSize, dst1Border, type, 5, 16);
+
+        generateOclMat(gsrc1_whole, gsrc1_roi, src1, srcRoiSize, srcBorder);
+        generateOclMat(gdst1_whole, gdst1_roi, dst1, dstRoiSize, dst1Border);
+    }
+};
+
+typedef RepeatTestCase Repeat;
+
+OCL_TEST_P(Repeat, Mat)
+{
+    for (int i = 0; i < LOOP_TIMES; ++i)
+    {
+        random_roi();
+
+        cv::repeat(src1_roi, ny, nx, dst1_roi);
+        cv::ocl::repeat(gsrc1_roi, ny, nx, gdst1_roi);
+
+        Near();
+    }
 }
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Min, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Max, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Abs, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
-INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool(), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Min, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Max, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Abs, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(Channels(1)), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(Channels(1)), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(Channels(1)), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(Channels(1)), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Repeat, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 
 #endif // HAVE_OPENCL

@@ -5,9 +5,15 @@
 #include <iostream>
 #include <stdio.h>
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+    # include <thread>
+#endif
+
 using namespace std;
 using namespace cv;
 #define LOOP_NUM 10
+
+///////////////////////////single-threading faces detecting///////////////////////////////
 
 const static Scalar colors[] =  { CV_RGB(0,0,255),
                                   CV_RGB(0,128,255),
@@ -22,33 +28,35 @@ const static Scalar colors[] =  { CV_RGB(0,0,255),
 
 int64 work_begin = 0;
 int64 work_end = 0;
-string outputName;
+string inputName, outputName, cascadeName;
 
 static void workBegin()
 {
     work_begin = getTickCount();
 }
+
 static void workEnd()
 {
     work_end += (getTickCount() - work_begin);
 }
+
 static double getTime()
 {
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
 
-void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+static void detect( Mat& img, vector<Rect>& faces,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime);
 
 
-void detectCPU( Mat& img, vector<Rect>& faces,
+static void detectCPU( Mat& img, vector<Rect>& faces,
                 CascadeClassifier& cascade,
                 double scale, bool calTime);
 
 
-void Draw(Mat& img, vector<Rect>& faces, double scale);
+static void Draw(Mat& img, vector<Rect>& faces, double scale);
 
 
 // This function test if gpu_rst matches cpu_rst.
@@ -56,41 +64,18 @@ void Draw(Mat& img, vector<Rect>& faces, double scale);
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
 
-
-int main( int argc, const char** argv )
+static int facedetect_one_thread(bool useCPU, double scale )
 {
-    const char* keys =
-        "{ h | help       | false       | print help message }"
-        "{ i | input      |             | specify input image }"
-        "{ t | template   | haarcascade_frontalface_alt.xml |"
-        " specify template file path }"
-        "{ c | scale      |   1.0       | scale image }"
-        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
-        "{ o | output     | facedetect_output.jpg  |"
-        " specify output image save path(only works when input is images) }";
-
-    CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
-    {
-        cout << "Available options:" << endl;
-        cmd.printParams();
-        return 0;
-    }
     CvCapture* capture = 0;
     Mat frame, frameCopy, image;
 
-    bool useCPU = cmd.get<bool>("s");
-    string inputName = cmd.get<string>("i");
-    outputName = cmd.get<string>("o");
-    string cascadeName = cmd.get<string>("t");
-    double scale = cmd.get<double>("c");
-    ocl::OclCascadeClassifierBuf cascade;
+    ocl::OclCascadeClassifier cascade;
     CascadeClassifier  cpu_cascade;
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
     {
-        cerr << "ERROR: Could not load classifier cascade" << endl;
-        return -1;
+        cout << "ERROR: Could not load classifier cascade: " << cascadeName << endl;
+        return EXIT_FAILURE;
     }
 
     if( inputName.empty() )
@@ -99,25 +84,17 @@ int main( int argc, const char** argv )
         if(!capture)
             cout << "Capture from CAM 0 didn't work" << endl;
     }
-    else if( inputName.size() )
+    else
     {
-        image = imread( inputName, 1 );
+        image = imread( inputName, CV_LOAD_IMAGE_COLOR );
         if( image.empty() )
         {
             capture = cvCaptureFromAVI( inputName.c_str() );
             if(!capture)
                 cout << "Capture from AVI didn't work" << endl;
-            return -1;
+            return EXIT_FAILURE;
         }
     }
-    else
-    {
-        image = imread( "lena.jpg", 1 );
-        if(image.empty())
-            cout << "Couldn't read lena.jpg" << endl;
-        return -1;
-    }
-
 
     cvNamedWindow( "result", 1 );
     if( capture )
@@ -134,24 +111,16 @@ int main( int argc, const char** argv )
                 frame.copyTo( frameCopy );
             else
                 flip( frame, frameCopy, 0 );
+
             if(useCPU)
-            {
                 detectCPU(frameCopy, faces, cpu_cascade, scale, false);
-            }
             else
-            {
                 detect(frameCopy, faces, cascade, scale, false);
-            }
+
             Draw(frameCopy, faces, scale);
             if( waitKey( 10 ) >= 0 )
-                goto _cleanup_;
+                break;
         }
-
-
-        waitKey(0);
-
-
-_cleanup_:
         cvReleaseCapture( &capture );
     }
     else
@@ -164,9 +133,7 @@ _cleanup_:
         {
             cout << "loop" << i << endl;
             if(useCPU)
-            {
                 detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
-            }
             else
             {
                 detect(image, faces, cascade, scale, i==0?false:true);
@@ -191,11 +158,116 @@ _cleanup_:
     }
 
     cvDestroyWindow("result");
+    std::cout<< "single-threaded sample has finished" <<std::endl;
     return 0;
 }
 
+///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+
+#define MAX_THREADS 10
+
+static void detectFaces(std::string fileName)
+{
+    ocl::OclCascadeClassifier cascade;
+    if(!cascade.load(cascadeName))
+    {
+        std::cout << "ERROR: Could not load classifier cascade: " << cascadeName << std::endl;
+        return;
+    }
+
+    Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
+    if (img.empty())
+    {
+        std::cout << "cann't open file " + fileName <<std::endl;
+        return;
+    }
+
+    ocl::oclMat d_img;
+    d_img.upload(img);
+
+    std::vector<Rect> oclfaces;
+    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+
+    for(unsigned int i = 0; i<oclfaces.size(); i++)
+        rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), colors[i%8], 3);
+
+    std::string::size_type pos = outputName.rfind('.');
+    std::string outputNameTid = outputName + '-' + std::to_string(_threadid);
+    if(pos == std::string::npos)
+    {
+        std::cout << "Invalid output file name: " << outputName << std::endl;
+    }
+    else
+    {
+        outputNameTid = outputName.substr(0, pos) + "_" + std::to_string(_threadid) + outputName.substr(pos);
+        imwrite(outputNameTid, img);
+    }
+    imshow(outputNameTid, img);
+    waitKey(0);
+}
+
+static void facedetect_multithreading(int nthreads)
+{
+    int thread_number = MAX_THREADS < nthreads ? MAX_THREADS : nthreads;
+    std::vector<std::thread> threads;
+    for(int i = 0; i<thread_number; i++)
+        threads.push_back(std::thread(detectFaces, inputName));
+    for(int i = 0; i<thread_number; i++)
+        threads[i].join();
+}
+#endif
+
+int main( int argc, const char** argv )
+{
+
+    const char* keys =
+        "{ h | help       | false       | print help message }"
+        "{ i | input      |             | specify input image }"
+        "{ t | template   | haarcascade_frontalface_alt.xml |"
+        " specify template file path }"
+        "{ c | scale      |   1.0       | scale image }"
+        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ o | output     | facedetect_output.jpg  |"
+        " specify output image save path(only works when input is images) }"
+        "{ n | thread_num |      1      | set number of threads >= 1 }";
+
+    CommandLineParser cmd(argc, argv, keys);
+    if (cmd.get<bool>("help"))
+    {
+        cout << "Usage : facedetect [options]" << endl;
+        cout << "Available options:" << endl;
+        cmd.printParams();
+        return EXIT_SUCCESS;
+    }
+    bool useCPU = cmd.get<bool>("s");
+    inputName = cmd.get<string>("i");
+    outputName = cmd.get<string>("o");
+    cascadeName = cmd.get<string>("t");
+    double scale = cmd.get<double>("c");
+    int n = cmd.get<int>("n");
+
+    if(n > 1)
+    {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+            std::cout<<"multi-threaded sample is running" <<std::endl;
+            facedetect_multithreading(n);
+            std::cout<<"multi-threaded sample has finished" <<std::endl;
+            return 0;
+#else
+            std::cout << "std::thread is not supported, running a single-threaded version" << std::endl;
+#endif
+    }
+    if (n<0)
+        std::cout<<"incorrect number of threads:" << n << ", running a single-threaded version" <<std::endl;
+    else
+        std::cout<<"single-threaded sample is running" <<std::endl;
+    return facedetect_one_thread(useCPU, scale);
+
+}
+
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime)
 {
     ocl::oclMat image(img);

@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -109,6 +109,34 @@ cl_mem openCLCreateBuffer(Context *ctx, size_t flag , size_t size)
     return buffer;
 }
 
+#define MEMORY_CORRUPTION_GUARD
+#ifdef MEMORY_CORRUPTION_GUARD
+//#define CHECK_MEMORY_CORRUPTION
+#define CHECK_MEMORY_CORRUPTION_PRINT_ERROR
+#define CHECK_MEMORY_CORRUPTION_RAISE_ERROR
+static const int __memory_corruption_guard_bytes = 64*1024;
+#ifdef CHECK_MEMORY_CORRUPTION
+static const int __memory_corruption_check_pattern = 0x14326547; // change pattern for sizeof(int)==8
+#endif
+struct CheckBuffers
+{
+    cl_mem mainBuffer;
+    size_t size;
+    size_t widthInBytes, height;
+    CheckBuffers()
+        : mainBuffer(NULL), size(0), widthInBytes(0), height(0)
+    {
+        // nothing
+    }
+    CheckBuffers(cl_mem _mainBuffer, size_t _size, size_t _widthInBytes, size_t _height)
+        : mainBuffer(_mainBuffer), size(_size), widthInBytes(_widthInBytes), height(_height)
+    {
+        // nothing
+    }
+};
+static std::map<cl_mem, CheckBuffers> __check_buffers;
+#endif
+
 void openCLMallocPitch(Context *ctx, void **dev_ptr, size_t *pitch,
                        size_t widthInBytes, size_t height)
 {
@@ -119,9 +147,55 @@ void openCLMallocPitchEx(Context *ctx, void **dev_ptr, size_t *pitch,
                        size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
 {
     cl_int status;
-    *dev_ptr = clCreateBuffer(getClContext(ctx), gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
-                              widthInBytes * height, 0, &status);
-    openCLVerifyCall(status);
+    size_t size = widthInBytes * height;
+    bool useSubBuffers =
+#ifndef MEMORY_CORRUPTION_GUARD
+            false;
+#else
+            true;
+#endif
+    const DeviceInfo& devInfo = ctx->getDeviceInfo();
+    if (useSubBuffers && devInfo.isIntelDevice)
+    {
+        useSubBuffers = false; // TODO FIXIT We observe memory leaks then we working with sub-buffers
+                               // on the CPU device of Intel OpenCL SDK (Linux). We will investigate this later.
+    }
+    if (!useSubBuffers)
+    {
+        *dev_ptr = clCreateBuffer(getClContext(ctx), gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                                  size, 0, &status);
+        openCLVerifyCall(status);
+    }
+#ifdef MEMORY_CORRUPTION_GUARD
+    else
+    {
+        size_t allocSize = size + __memory_corruption_guard_bytes * 2;
+        cl_mem mainBuffer = clCreateBuffer(getClContext(ctx), gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                allocSize, 0, &status);
+        openCLVerifyCall(status);
+        cl_buffer_region r = {__memory_corruption_guard_bytes, size};
+        *dev_ptr = clCreateSubBuffer(mainBuffer,
+                gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                CL_BUFFER_CREATE_TYPE_REGION, &r,
+                &status);
+        openCLVerifyCall(status);
+#ifdef CHECK_MEMORY_CORRUPTION
+        std::vector<int> tmp(__memory_corruption_guard_bytes / sizeof(int),
+                __memory_corruption_check_pattern);
+        CV_Assert(tmp.size() * sizeof(int) == __memory_corruption_guard_bytes);
+        openCLVerifyCall(clEnqueueWriteBuffer(getClCommandQueue(ctx),
+                mainBuffer, CL_FALSE, 0, __memory_corruption_guard_bytes, &tmp[0],
+                0, NULL, NULL));
+        openCLVerifyCall(clEnqueueWriteBuffer(getClCommandQueue(ctx),
+                mainBuffer, CL_FALSE, __memory_corruption_guard_bytes + size, __memory_corruption_guard_bytes, &tmp[0],
+                0, NULL, NULL));
+        clFinish(getClCommandQueue(ctx));
+#endif
+        CheckBuffers data(mainBuffer, size, widthInBytes, height);
+        cv::AutoLock lock(getInitializationMutex());
+        __check_buffers.insert(std::pair<cl_mem, CheckBuffers>((cl_mem)*dev_ptr, data));
+    }
+#endif
     *pitch = widthInBytes;
 }
 
@@ -175,6 +249,74 @@ void openCLCopyBuffer2D(Context *ctx, void *dst, size_t dpitch, int dst_offset,
 void openCLFree(void *devPtr)
 {
     openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
+#ifdef MEMORY_CORRUPTION_GUARD
+#ifdef CHECK_MEMORY_CORRUPTION
+    bool failBefore = false, failAfter = false;
+#endif
+    CheckBuffers data;
+    {
+        cv::AutoLock lock(getInitializationMutex());
+        std::map<cl_mem, CheckBuffers>::iterator i = __check_buffers.find((cl_mem)devPtr);
+        if (i != __check_buffers.end())
+        {
+            data = i->second;
+            __check_buffers.erase(i);
+        }
+    }
+    if (data.mainBuffer != NULL)
+    {
+#ifdef CHECK_MEMORY_CORRUPTION
+        Context* ctx = Context::getContext();
+        std::vector<uchar> checkBefore(__memory_corruption_guard_bytes);
+        std::vector<uchar> checkAfter(__memory_corruption_guard_bytes);
+        openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(ctx),
+                data.mainBuffer, CL_FALSE, 0, __memory_corruption_guard_bytes, &checkBefore[0],
+                0, NULL, NULL));
+        openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(ctx),
+                data.mainBuffer, CL_FALSE, __memory_corruption_guard_bytes + data.size, __memory_corruption_guard_bytes, &checkAfter[0],
+                0, NULL, NULL));
+        clFinish(getClCommandQueue(ctx));
+
+        std::vector<int> tmp(__memory_corruption_guard_bytes / sizeof(int),
+                __memory_corruption_check_pattern);
+
+        if (memcmp(&checkBefore[0], &tmp[0], __memory_corruption_guard_bytes) != 0)
+        {
+            failBefore = true;
+        }
+        if (memcmp(&checkAfter[0], &tmp[0], __memory_corruption_guard_bytes) != 0)
+        {
+            failAfter = true;
+        }
+#else
+        // TODO FIXIT Attach clReleaseMemObject call to event completion callback
+        // TODO 2013/12/04 Disable workaround
+        // Context* ctx = Context::getContext();
+        // clFinish(getClCommandQueue(ctx));
+#endif
+        openCLSafeCall(clReleaseMemObject(data.mainBuffer));
+    }
+#if defined(CHECK_MEMORY_CORRUPTION)
+    if (failBefore)
+    {
+#ifdef CHECK_MEMORY_CORRUPTION_PRINT_ERROR
+        std::cerr << "ERROR: Memory corruption detected: before buffer: " << cv::format("widthInBytes=%d height=%d", (int)data.widthInBytes, (int)data.height) << std::endl;
+#endif
+#ifdef CHECK_MEMORY_CORRUPTION_RAISE_ERROR
+        CV_Error(CV_StsInternal, "Memory corruption detected: before buffer");
+#endif
+    }
+    if (failAfter)
+    {
+#ifdef CHECK_MEMORY_CORRUPTION_PRINT_ERROR
+        std::cerr << "ERROR: Memory corruption detected: after buffer: " << cv::format("widthInBytes=%d height=%d", (int)data.widthInBytes, (int)data.height) << std::endl;
+#endif
+#ifdef CHECK_MEMORY_CORRUPTION_RAISE_ERROR
+        CV_Error(CV_StsInternal, "Memory corruption detected: after buffer");
+#endif
+    }
+#endif // CHECK_MEMORY_CORRUPTION
+#endif // MEMORY_CORRUPTION_GUARD
 }
 
 cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName)
@@ -234,8 +376,7 @@ static std::string removeDuplicatedWhiteSpaces(const char * buildOptions)
     return opt;
 }
 
-void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+cl_kernel openCLGetKernelFromSource(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, int channels,
                           int depth, const char *build_options)
 {
     //construct kernel name
@@ -248,10 +389,14 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
         idxStr << "_D" << depth;
     kernelName += idxStr.str();
 
-    cl_kernel kernel;
     std::string fixedOptions = removeDuplicatedWhiteSpaces(build_options);
-    kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
+    cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, fixedOptions.c_str());
+    return kernel;
+}
 
+void openCLExecuteKernel(Context *ctx, cl_kernel kernel, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args)
+{
     if ( localThreads != NULL)
     {
         globalThreads[0] = roundUp(globalThreads[0], localThreads[0]);
@@ -295,6 +440,15 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, str
 
     clFlush(getClCommandQueue(ctx));
     openCLSafeCall(clReleaseKernel(kernel));
+}
+
+void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
+                          size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+                          int depth, const char *build_options)
+{
+    cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, channels, depth, build_options);
+
+    openCLExecuteKernel(ctx, kernel, globalThreads, localThreads, args);
 }
 
 void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,

@@ -1391,8 +1391,8 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
 
     matA = cvCreateMat( 2*nimages, 2, CV_64F );
     _b = cvCreateMat( 2*nimages, 1, CV_64F );
-    a[2] = (imageSize.width - 1)*0.5;
-    a[5] = (imageSize.height - 1)*0.5;
+    a[2] = (!imageSize.width) ? 0.5 : (imageSize.width - 1)*0.5;
+    a[5] = (!imageSize.height) ? 0.5 : (imageSize.height - 1)*0.5;
     _allH = cvCreateMat( nimages, 9, CV_64F );
 
     // extract vanishing points in order to obtain initial value for the focal length

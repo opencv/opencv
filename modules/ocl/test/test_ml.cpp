@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -125,8 +125,6 @@ OCL_TEST_P(KNN, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(OCL_ML, KNN, Combine(Values(6, 5), Values(Size(200, 400), Size(300, 600)),
     Values(4, 3), Values(false, true)));
-
-#ifdef HAVE_CLAMDBLAS // TODO does not work non-blas version of SVM
 
 ////////////////////////////////SVM/////////////////////////////////////////////////
 
@@ -307,7 +305,5 @@ INSTANTIATE_TEST_CASE_P(OCL_ML, SVM_OCL, testing::Combine(
                             Values((int)CvSVM::C_SVC, (int)CvSVM::NU_SVC, (int)CvSVM::ONE_CLASS, (int)CvSVM::NU_SVR),
                             Values(2, 3, 4)
                         ));
-
-#endif // HAVE_CLAMDBLAS
 
 #endif // HAVE_OPENCL

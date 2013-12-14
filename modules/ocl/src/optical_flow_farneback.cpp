@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -73,7 +73,11 @@ inline void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
 static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("gaussianBlur");
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
     size_t localThreads[3] = { 256, 1, 1 };
+#endif
     size_t globalThreads[3] = { src.cols, src.rows, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
 
@@ -96,7 +100,12 @@ static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 {
     string kernelName("polynomialExpansion");
+
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
     size_t localThreads[3] = { 256, 1, 1 };
+#endif
     size_t globalThreads[3] = { divUp(src.cols, localThreads[0] - 2*polyN) * localThreads[0], src.rows, 1 };
     int smem_size = 3 * localThreads[0] * sizeof(float);
 
@@ -123,7 +132,11 @@ static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
 static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
 {
     string kernelName("updateMatrices");
+#ifdef ANDROID
+    size_t localThreads[3] = { 32, 4, 1 };
+#else
     size_t localThreads[3] = { 32, 8, 1 };
+#endif
     size_t globalThreads[3] = { flowx.cols, flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -148,7 +161,11 @@ static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("boxFilter5");
     int height = src.rows / 5;
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
     size_t localThreads[3] = { 256, 1, 1 };
+#endif
     size_t globalThreads[3] = { src.cols, height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
@@ -170,7 +187,11 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
 {
     string kernelName("updateFlow");
     int cols = divUp(flowx.cols, 4);
+#ifdef ANDROID
+    size_t localThreads[3] = { 32, 4, 1 };
+#else
     size_t localThreads[3] = { 32, 8, 1 };
+#endif
     size_t globalThreads[3] = { cols, flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -191,7 +212,11 @@ static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("gaussianBlur5");
     int height = src.rows / 5;
+#ifdef ANDROID
+    size_t localThreads[3] = { 128, 1, 1 };
+#else
     size_t localThreads[3] = { 256, 1, 1 };
+#endif
     size_t globalThreads[3] = { src.cols, height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
@@ -335,8 +360,6 @@ void cv::ocl::FarnebackOpticalFlow::updateFlow_boxFilter(
     optflow_farneback::boxFilter5Ocl(M, blockSize/2, bufM);
 
     swap(M, bufM);
-
-    finish();
 
     optflow_farneback::updateFlowOcl(M, flowx, flowy);
 

@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -60,8 +60,10 @@ PERF_TEST_P(MergeFixture, Merge,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), channels = 3;
-
     const int dstType = CV_MAKE_TYPE(depth, channels);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, dstType);
+
     Mat dst(srcSize, dstType);
     vector<Mat> src(channels);
     for (vector<Mat>::iterator i = src.begin(), end = src.end(); i != end; ++i)
@@ -105,8 +107,11 @@ PERF_TEST_P(SplitFixture, Split,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), channels = 3;
+    const int type = CV_MAKE_TYPE(depth, channels);
 
-    Mat src(srcSize, CV_MAKE_TYPE(depth, channels));
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    Mat src(srcSize, type);
     declare.in(src, WARMUP_RNG);
 
     if (RUN_OCL_IMPL)

@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -108,13 +108,13 @@ PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 2e-2);
+        SANITY_CHECK(dst, 3e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
 
-        SANITY_CHECK(dst, 2e-2);
+        SANITY_CHECK(dst, 3e-2);
     }
     else
         OCL_PERF_ELSE

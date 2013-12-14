@@ -86,3 +86,21 @@ Finds centers of clusters and groups input samples around the clusters.
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
+
+ocl::distanceToCenters
+----------------------
+For each samples in ``source``, find its closest neighour in ``centers``.
+
+.. ocv:function:: void ocl::distanceToCenters(const oclMat &src, const oclMat &centers, Mat &dists, Mat &labels, int distType = NORM_L2SQR)
+
+    :param src: Floating-point matrix of input samples. One row per sample.
+
+    :param centers: Floating-point matrix of center candidates. One row per center.
+
+    :param distType: Distance metric to calculate distances. Supports ``NORM_L1`` and ``NORM_L2SQR``.
+
+    :param dists: The output distances calculated from each sample to the best matched center.
+
+    :param labels: The output index of best matched center for each row of sample.
+
+The method is a utility function which maybe used for multiple clustering algorithms such as K-means.

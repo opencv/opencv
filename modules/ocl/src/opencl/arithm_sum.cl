@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,11 +43,11 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
 #endif
 
@@ -66,39 +66,39 @@
 __kernel void arithm_op_sum(int cols,int invalid_cols,int offset,int elemnum,int groupnum,
                                 __global srcT *src, __global dstT *dst)
 {
-   unsigned int lid = get_local_id(0);
-   unsigned int gid = get_group_id(0);
-   unsigned int id = get_global_id(0);
-   unsigned int idx = offset + id + (id / cols) * invalid_cols;
+    int lid = get_local_id(0);
+    int gid = get_group_id(0);
+    int id = get_global_id(0);
+    int idx = offset + id + (id / cols) * invalid_cols;
 
-   __local dstT localmem_sum[128];
-   dstT sum = (dstT)(0), temp;
+    __local dstT localmem_sum[128];
+    dstT sum = (dstT)(0), temp;
 
-   for (int grainSize = groupnum << 8; id < elemnum; id += grainSize)
-   {
-       idx = offset + id + (id / cols) * invalid_cols;
-       temp = convertToDstT(src[idx]);
-       FUNC(temp, sum);
-   }
+    for (int grainSize = groupnum << 8; id < elemnum; id += grainSize)
+    {
+        idx = offset + id + (id / cols) * invalid_cols;
+        temp = convertToDstT(src[idx]);
+        FUNC(temp, sum);
+    }
 
-   if (lid > 127)
-       localmem_sum[lid - 128] = sum;
-   barrier(CLK_LOCAL_MEM_FENCE);
+    if (lid > 127)
+        localmem_sum[lid - 128] = sum;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-   if (lid < 128)
-       localmem_sum[lid] = sum + localmem_sum[lid];
-   barrier(CLK_LOCAL_MEM_FENCE);
+    if (lid < 128)
+        localmem_sum[lid] = sum + localmem_sum[lid];
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-   for (int lsize = 64; lsize > 0; lsize >>= 1)
-   {
-       if (lid < lsize)
-       {
-           int lid2 = lsize + lid;
-           localmem_sum[lid] = localmem_sum[lid] + localmem_sum[lid2];
-       }
-       barrier(CLK_LOCAL_MEM_FENCE);
-   }
+    for (int lsize = 64; lsize > 0; lsize >>= 1)
+    {
+        if (lid < lsize)
+        {
+            int lid2 = lsize + lid;
+            localmem_sum[lid] = localmem_sum[lid] + localmem_sum[lid2];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
 
-   if (lid == 0)
-       dst[gid] = localmem_sum[0];
+    if (lid == 0)
+        dst[gid] = localmem_sum[0];
 }

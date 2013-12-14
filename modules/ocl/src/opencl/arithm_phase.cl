@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,16 +44,18 @@
 //
 //
 
-#if defined (DOUBLE_SUPPORT)
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#elif defined (cl_amd_fp64)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+#define CV_PI M_PI
+#define CV_2PI (2 * CV_PI)
+#else
+#define CV_PI M_PI_F
+#define CV_2PI (2 * CV_PI)
 #endif
-
-#define CV_PI 3.1415926535898
-#define CV_2PI 2*3.1415926535898
 
 /**************************************phase inradians**************************************/
 
@@ -157,7 +159,7 @@ __kernel void arithm_phase_indegrees_D6 (__global double *src1, int src1_step1, 
 
         double data1 = src1[src1_index];
         double data2 = src2[src2_index];
-        double tmp = atan2(src2[src2_index], src1[src1_index]);
+        double tmp = atan2(data2, data1);
 
         tmp = 180 * tmp / CV_PI;
         if (tmp < 0)

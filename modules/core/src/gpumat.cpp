@@ -72,13 +72,8 @@ using namespace cv::gpu;
 
 namespace
 {
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-    #define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__)
-#endif
+#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
+#define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
 
     inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
     {
@@ -1366,7 +1361,7 @@ namespace
                 static const func_t funcs[7][4] =
                 {
                     {NppSet<CV_8U , 1, nppiSet_8u_C1R >::call, cv::gpu::setTo                          , cv::gpu::setTo                        , NppSet<CV_8U , 4, nppiSet_8u_C4R >::call},
-                    {NppSet<CV_8S , 1, nppiSet_8s_C1R >::call, NppSet<CV_8S , 2, nppiSet_8s_C2R >::call, NppSet<CV_8S, 3, nppiSet_8s_C3R>::call, NppSet<CV_8S , 4, nppiSet_8s_C4R >::call},
+                    {cv::gpu::setTo                          , cv::gpu::setTo                          , cv::gpu::setTo                        , cv::gpu::setTo                          },
                     {NppSet<CV_16U, 1, nppiSet_16u_C1R>::call, NppSet<CV_16U, 2, nppiSet_16u_C2R>::call, cv::gpu::setTo                        , NppSet<CV_16U, 4, nppiSet_16u_C4R>::call},
                     {NppSet<CV_16S, 1, nppiSet_16s_C1R>::call, NppSet<CV_16S, 2, nppiSet_16s_C2R>::call, cv::gpu::setTo                        , NppSet<CV_16S, 4, nppiSet_16s_C4R>::call},
                     {NppSet<CV_32S, 1, nppiSet_32s_C1R>::call, cv::gpu::setTo                          , cv::gpu::setTo                        , NppSet<CV_32S, 4, nppiSet_32s_C4R>::call},

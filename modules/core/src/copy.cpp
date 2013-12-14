@@ -485,6 +485,7 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 );
+    CV_Assert( ny > 0 && nx > 0 );
 
     _dst.create(src.rows*ny, src.cols*nx, src.type());
     Mat dst = _dst.getMat();

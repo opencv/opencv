@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -45,42 +45,47 @@
 //
 //M*/
 
-
-#ifdef BORDER_REPLICATE
-//BORDER_REPLICATE:     aaaaaa|abcdefgh|hhhhhhh
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (l_edge)   : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (r_edge)-1 : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (t_edge)   :(i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (b_edge)-1 :(addr))
-#endif
-
+#ifdef BORDER_CONSTANT
+#define ELEM(i,l_edge,r_edge,elem1,elem2) (i)<(l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
+#elif defined BORDER_REPLICATE
+#define EXTRAPOLATE(x, maxV) \
+    { \
+        x = max(min(x, maxV - 1), 0); \
+    }
+#elif defined BORDER_WRAP
+#define EXTRAPOLATE(x, maxV) \
+    { \
+        if (x < 0) \
+            x -= ((x - maxV + 1) / maxV) * maxV; \
+        if (x >= maxV) \
+            x %= maxV; \
+    }
+#elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
+#define EXTRAPOLATE_(x, maxV, delta) \
+    { \
+        if (maxV == 1) \
+            x = 0; \
+        else \
+            do \
+            { \
+                if ( x < 0 ) \
+                    x = -x - 1 + delta; \
+                else \
+                    x = maxV - 1 - (x - maxV) - delta; \
+            } \
+            while (x >= maxV || x < 0); \
+    }
 #ifdef BORDER_REFLECT
-//BORDER_REFLECT:       fedcba|abcdefgh|hgfedcb
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)-1               : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-1+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)-1 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-1+((b_edge)<<1) : (addr))
+#define EXTRAPOLATE(x, maxV) EXTRAPOLATE_(x, maxV, 0)
+#else
+#define EXTRAPOLATE(x, maxV) EXTRAPOLATE_(x, maxV, 1)
 #endif
-
-#ifdef BORDER_REFLECT_101
-//BORDER_REFLECT_101:   gfedcb|abcdefgh|gfedcba
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? -(i)                 : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? -(i)-2+((r_edge)<<1) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? -(i)                 : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? -(i)-2+((b_edge)<<1) : (addr))
-#endif
-
-//blur function does not support BORDER_WRAP
-#ifdef BORDER_WRAP
-//BORDER_WRAP:          cdefgh|abcdefgh|abcdefg
-#define ADDR_L(i, l_edge, r_edge)  ((i) <  (l_edge) ? (i)+(r_edge) : (i))
-#define ADDR_R(i, r_edge, addr)    ((i) >= (r_edge) ? (i)-(r_edge) : (addr))
-#define ADDR_H(i, t_edge, b_edge)  ((i) <  (t_edge) ? (i)+(b_edge) : (i))
-#define ADDR_B(i, b_edge, addr)    ((i) >= (b_edge) ? (i)-(b_edge) : (addr))
+#else
+#error No extrapolation method
 #endif
 
 __kernel void
-edgeEnhancingFilter_C4_D0(
+adaptiveBilateralFilter_C4_D0(
     __global const uchar4 * restrict src,
     __global uchar4 *dst,
     float alpha,
@@ -117,9 +122,7 @@ edgeEnhancingFilter_C4_D0(
 
     float4 tmp_sum[1+EXTRA];
     for(int tmpint = 0; tmpint < 1+EXTRA; tmpint++)
-    {
         tmp_sum[tmpint] = (float4)(0,0,0,0);
-    }
 
 #ifdef BORDER_CONSTANT
     bool con;
@@ -127,25 +130,18 @@ edgeEnhancingFilter_C4_D0(
     for(int j = 0;	j < ksY+EXTRA; j++)
     {
         con = (startX+col >= 0 && startX+col < src_whole_cols && startY+j >= 0 && startY+j < src_whole_rows);
-
         int cur_col = clamp(startX + col, 0, src_whole_cols);
-        if(con)
-        {
+        if (con)
             ss = src[(startY+j)*(src_step>>2) + cur_col];
-        }
 
         data[j][col] = con ? ss : (uchar4)0;
     }
 #else
     for(int j= 0; j < ksY+EXTRA; j++)
     {
-        int selected_row;
-        int selected_col;
-        selected_row = ADDR_H(startY+j, 0, src_whole_rows);
-        selected_row = ADDR_B(startY+j, src_whole_rows, selected_row);
-
-        selected_col = ADDR_L(startX+col, 0, src_whole_cols);
-        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
+        int selected_row = startY+j, selected_col = startX+col;
+        EXTRAPOLATE(selected_row, src_whole_rows)
+        EXTRAPOLATE(selected_col, src_whole_cols)
 
         data[j][col] = src[selected_row * (src_step>>2) + selected_col];
     }
@@ -172,33 +168,32 @@ edgeEnhancingFilter_C4_D0(
     if(col < (THREADS-(ksX-1)))
     {
         int4 currVal;
-
         int howManyAll = (2*anX+1)*(ksY);
 
         //find variance of all data
         int startLMj;
         int endLMj ;
-#if CALCVAR
         // Top row: don't sum the very last element
         for(int extraCnt = 0; extraCnt <=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
-            sumVal =0;
-            sumValSqr=0;
+            sumVal = (int4)0;
+            sumValSqr= (int4)0;
             for(int j = startLMj; j < endLMj; j++)
-            {
                 for(int i=-anX; i<=anX; i++)
                 {
-                    currVal	= convert_int4(data[j][col+anX+i])	;
+                    currVal = convert_int4(data[j][col+anX+i]);
 
                     sumVal += currVal;
                     sumValSqr += mul24(currVal, currVal);
                 }
-            }
-            var[extraCnt] = convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+
+            var[extraCnt] = clamp( convert_float4( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ), (float4)(0.1f, 0.1f, 0.1f, 0.1f), (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL)) ;
+
 #else
-        var[extraCnt] = (float4)(900.0, 900.0, 900.0, 0.0);
+            var[extraCnt] = (float4)(MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL, MAX_VAR_VAL);
 #endif
         }
 
@@ -227,36 +222,48 @@ edgeEnhancingFilter_C4_D0(
 #else
                     weight = 1.0f;
 #endif
-#else
-                    currVal	= convert_int4(data[j][col+anX+i])	;
+#else // !FIXED_WEIGHT
+                    currVal = convert_int4(data[j][col+anX+i]);
                     currWRTCenter = currVal-currValCenter;
 
+#if ABF_GAUSSIAN
+
 #if VAR_PER_CHANNEL
-                    weight = var[extraCnt] / (var[extraCnt] + convert_float4(currWRTCenter * currWRTCenter)) * (float4)(lut[lut_j*lut_step+anX+i]);
-                    //weight.x = var[extraCnt].x / ( var[extraCnt].x + (float) mul24(currWRTCenter.x , currWRTCenter.x) ) ;
-                    //weight.y = var[extraCnt].y / ( var[extraCnt].y + (float) mul24(currWRTCenter.y , currWRTCenter.y) ) ;
-                    //weight.z = var[extraCnt].z / ( var[extraCnt].z + (float) mul24(currWRTCenter.z , currWRTCenter.z) ) ;
-                    //weight.w = 0;
+                    weight = exp( (float4)(-0.5f, -0.5f, -0.5f, -0.5f) * convert_float4(currWRTCenter * currWRTCenter) / var[extraCnt] )*
+                        (float4)(lut[lut_j*lut_step+anX+i]);
 #else
-                    weight = 1.0f/(1.0f+( mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +  mul24(currWRTCenter.z, currWRTCenter.z))/(var.x+var.y+var.z));
+                    weight = exp( -0.5f * (mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +
+                        mul24(currWRTCenter.z, currWRTCenter.z) ) / (var[extraCnt].x+var[extraCnt].y+var[extraCnt].z) ) * lut[lut_j*lut_step+anX+i];
 #endif
+
+#else // !ABF_GAUSSIAN
+
+#if VAR_PER_CHANNEL
+                    weight = var[extraCnt] / (var[extraCnt] + convert_float4(currWRTCenter * currWRTCenter)) *
+                        (float4)(lut[lut_j*lut_step+anX+i]);
+#else
+                    weight = ((float)lut[lut_j*lut_step+anX+i]) /(1.0f+( mul24(currWRTCenter.x, currWRTCenter.x) + mul24(currWRTCenter.y, currWRTCenter.y) +
+                        mul24(currWRTCenter.z, currWRTCenter.z))/(var[extraCnt].x+var[extraCnt].y+var[extraCnt].z));
 #endif
+
+#endif //ABF_GAUSSIAN
+
+
+
+#endif  // FIXED_WEIGHT
+
                     tmp_sum[extraCnt] += convert_float4(data[j][col+anX+i]) * weight;
                     totalWeight += weight;
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
-            {
-                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4(tmp_sum[extraCnt]);
-            }
+                dst[(dst_startY+extraCnt) * (dst_step>>2)+ dst_startX + col] = convert_uchar4_rtz( (tmp_sum[extraCnt] / (float4)totalWeight) + (float4)0.5f);
 
 #if VAR_PER_CHANNEL
             totalWeight = (float4)(0,0,0,0);
 #else
-            totalWeight = 0;
+            totalWeight = 0.0f;
 #endif
         }
     }
@@ -264,7 +271,7 @@ edgeEnhancingFilter_C4_D0(
 
 
 __kernel void
-edgeEnhancingFilter_C1_D0(
+adaptiveBilateralFilter_C1_D0(
     __global const uchar * restrict src,
     __global uchar *dst,
     float alpha,
@@ -323,13 +330,9 @@ edgeEnhancingFilter_C1_D0(
 #else
     for(int j= 0; j < ksY+EXTRA; j++)
     {
-        int selected_row;
-        int selected_col;
-        selected_row = ADDR_H(startY+j, 0, src_whole_rows);
-        selected_row = ADDR_B(startY+j, src_whole_rows, selected_row);
-
-        selected_col = ADDR_L(startX+col, 0, src_whole_cols);
-        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
+        int selected_row = startY+j, selected_col = startX+col;
+        EXTRAPOLATE(selected_row, src_whole_rows)
+        EXTRAPOLATE(selected_col, src_whole_cols)
 
         data[j][col] = src[selected_row * (src_step) + selected_col];
     }
@@ -357,10 +360,11 @@ edgeEnhancingFilter_C1_D0(
         //find variance of all data
         int startLMj;
         int endLMj;
-#if CALCVAR
+
         // Top row: don't sum the very last element
         for(int extraCnt=0; extraCnt<=EXTRA; extraCnt++)
         {
+#if CALCVAR
             startLMj = extraCnt;
             endLMj =  ksY+extraCnt-1;
             sumVal = 0;
@@ -375,9 +379,9 @@ edgeEnhancingFilter_C1_D0(
                     sumValSqr += mul24(currVal, currVal);
                 }
             }
-            var[extraCnt] = (float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+            var[extraCnt] =  clamp((float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) , 0.1f, (float)(MAX_VAR_VAL) );
 #else
-        var[extraCnt] = (float)(900.0);
+            var[extraCnt] = (float)(MAX_VAR_VAL);
 #endif
         }
 
@@ -403,19 +407,20 @@ edgeEnhancingFilter_C1_D0(
                     currVal	= (int)(data[j][col+anX+i])	;
                     currWRTCenter = currVal-currValCenter;
 
+#if ABF_GAUSSIAN
+                    weight = exp( -0.5f * (float)mul24(currWRTCenter,currWRTCenter)/var[extraCnt]) * lut[lut_j*lut_step+anX+i] ;
+#else
                     weight = var[extraCnt] / (var[extraCnt] + (float)mul24(currWRTCenter,currWRTCenter)) * lut[lut_j*lut_step+anX+i] ;
+#endif
 #endif
                     tmp_sum[extraCnt] += (float)(data[j][col+anX+i] * weight);
                     totalWeight += weight;
                 }
             }
 
-            tmp_sum[extraCnt] /= totalWeight;
-
-
             if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
             {
-                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = (uchar)(tmp_sum[extraCnt]);
+                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = convert_uchar_rtz(tmp_sum[extraCnt]/totalWeight+0.5f);
             }
 
             totalWeight = 0;

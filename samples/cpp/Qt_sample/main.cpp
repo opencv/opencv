@@ -4,7 +4,12 @@
 
 #include <iostream>
 #include <vector>
-#include <opencv/highgui.h>
+
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/legacy/compat.hpp>
 
 #if defined WIN32 || defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -19,9 +24,6 @@
 #else
     #include <GL/gl.h>
 #endif
-
-#include <opencv/cxcore.h>
-#include <opencv/cv.h>
 
 using namespace std;
 using namespace cv;
@@ -111,12 +113,12 @@ static void initPOSIT(std::vector<CvPoint3D32f> *modelPoints)
     modelPoints->push_back(cvPoint3D32f(0.0f, CUBE_SIZE, 0.0f));
 }
 
-static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, IplImage* grayImage)
+static void foundCorners(vector<CvPoint2D32f> *srcImagePoints, const Mat& source, Mat& grayImage)
 {
-    cvCvtColor(source,grayImage,CV_RGB2GRAY);
-    cvSmooth( grayImage, grayImage,CV_GAUSSIAN,11);
-    cvNormalize(grayImage, grayImage, 0, 255, CV_MINMAX);
-    cvThreshold( grayImage, grayImage, 26, 255, CV_THRESH_BINARY_INV);//25
+    cvtColor(source, grayImage, COLOR_RGB2GRAY);
+    GaussianBlur(grayImage, grayImage, Size(11,11), 0, 0);
+    normalize(grayImage, grayImage, 0, 255, NORM_MINMAX);
+    threshold(grayImage, grayImage, 26, 255, THRESH_BINARY_INV); //25
 
     Mat MgrayImage = grayImage;
     //For debug
@@ -189,12 +191,12 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints,IplImage* source, 
         for(size_t i = 0 ; i<srcImagePoints_temp.size(); i++ )
         {
             ss<<i;
-            circle(Msource,srcImagePoints->at(i),5,CV_RGB(255,0,0));
-            putText( Msource, ss.str(), srcImagePoints->at(i),CV_FONT_HERSHEY_SIMPLEX,1,CV_RGB(255,0,0));
+            circle(Msource,srcImagePoints->at(i),5,Scalar(0,0,255));
+            putText(Msource,ss.str(),srcImagePoints->at(i),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,255));
             ss.str("");
 
             //new coordinate system in the middle of the frame and reversed (camera coordinate system)
-            srcImagePoints->at(i) = cvPoint2D32f(srcImagePoints_temp.at(i).x-source->width/2,source->height/2-srcImagePoints_temp.at(i).y);
+            srcImagePoints->at(i) = cvPoint2D32f(srcImagePoints_temp.at(i).x-source.cols/2,source.rows/2-srcImagePoints_temp.at(i).y);
         }
     }
 
@@ -224,19 +226,19 @@ static void createOpenGLMatrixFrom(float *posePOSIT,const CvMatr32f &rotationMat
 int main(void)
 {
     help();
-    CvCapture* video = cvCaptureFromFile("cube4.avi");
-    CV_Assert(video);
+    VideoCapture video("cube4.avi");
+    CV_Assert(video.isOpened());
 
-    IplImage* source = cvCreateImage(cvGetSize(cvQueryFrame(video)),8,3);
-    IplImage* grayImage = cvCreateImage(cvGetSize(cvQueryFrame(video)),8,1);
+    Mat source, grayImage;
 
-    cvNamedWindow("original",CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    cvNamedWindow("POSIT",CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+    video >> source;
+
+    namedWindow("original", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+    namedWindow("POSIT", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
     displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear). This demo is only to illustrate how to use OpenGL callback.\n -- Press ESC to exit.", 10000);
-    //For debug
-    //cvNamedWindow("tempGray",CV_WINDOW_AUTOSIZE);
+
     float OpenGLMatrix[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    cvSetOpenGlDrawCallback("POSIT",on_opengl,OpenGLMatrix);
+    setOpenGlDrawCallback("POSIT",on_opengl,OpenGLMatrix);
 
     vector<CvPoint3D32f> modelPoints;
     initPOSIT(&modelPoints);
@@ -251,26 +253,22 @@ int main(void)
     vector<CvPoint2D32f> srcImagePoints(4,cvPoint2D32f(0,0));
 
 
-    while(cvWaitKey(33) != 27)
+    while(waitKey(33) != 27)
     {
-        source=cvQueryFrame(video);
-        cvShowImage("original",source);
+        video >> source;
+        imshow("original",source);
 
         foundCorners(&srcImagePoints,source,grayImage);
         cvPOSIT( positObject, &srcImagePoints[0], FOCAL_LENGTH, criteria, rotation_matrix, translation_vector );
         createOpenGLMatrixFrom(OpenGLMatrix,rotation_matrix,translation_vector);
 
-        cvShowImage("POSIT",source);
-        //For debug
-        //cvShowImage("tempGray",grayImage);
+        imshow("POSIT",source);
 
-        if (cvGetCaptureProperty(video,CV_CAP_PROP_POS_AVI_RATIO)>0.99)
-            cvSetCaptureProperty(video,CV_CAP_PROP_POS_AVI_RATIO,0);
+        if (video.get(CV_CAP_PROP_POS_AVI_RATIO) > 0.99)
+            video.set(CV_CAP_PROP_POS_AVI_RATIO, 0);
     }
 
-    cvDestroyAllWindows();
-    cvReleaseImage(&grayImage);
-    cvReleaseCapture(&video);
+    destroyAllWindows();
     cvReleasePOSITObject(&positObject);
 
     return 0;

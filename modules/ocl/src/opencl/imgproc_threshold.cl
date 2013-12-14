@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,110 +43,94 @@
 //
 //M*/
 
-#if defined (DOUBLE_SUPPORT)
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
+#endif
 
-// threshold type:
-// enum { THRESH_BINARY=0, THRESH_BINARY_INV=1, THRESH_TRUNC=2, THRESH_TOZERO=3,
-//       THRESH_TOZERO_INV=4, THRESH_MASK=7, THRESH_OTSU=8 };
+#ifdef VECTORIZED
 
-__kernel void threshold_C1_D0(__global const uchar * restrict src, __global uchar *dst,
-                              int src_offset, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step,
-                              uchar thresh, uchar max_val, int thresh_type
-                              )
+__kernel void threshold(__global const T * restrict src, int src_offset, int src_step,
+                        __global T * dst, int dst_offset, int dst_step,
+                        T thresh, T max_val, int max_index, int rows, int cols)
 {
     int gx = get_global_id(0);
-    const int gy = get_global_id(1);
+    int gy = get_global_id(1);
 
-    int offset = (dst_offset & 15);
-    src_offset -= offset;
-
-    int dstart = (gx << 4) - offset;
-    if(dstart < dst_cols && gy < dst_rows)
+    if (gx < cols && gy < rows)
     {
-        uchar16 sdata = vload16(gx, src+src_offset+gy*src_step);
-        uchar16 ddata;
-        uchar16 zero = 0;
-        switch (thresh_type)
+        gx *= VECSIZE;
+        int src_index = mad24(gy, src_step, src_offset + gx);
+        int dst_index = mad24(gy, dst_step, dst_offset + gx);
+
+#ifdef SRC_ALIGNED
+        VT sdata = *((__global VT *)(src + src_index));
+#else
+        VT sdata = VLOADN(0, src + src_index);
+#endif
+        VT vthresh = (VT)(thresh);
+
+#ifdef THRESH_BINARY
+        VT vecValue = sdata > vthresh ? (VT)max_val : (VT)(0);
+#elif defined THRESH_BINARY_INV
+        VT vecValue = sdata > vthresh ? (VT)(0) : (VT)max_val;
+#elif defined THRESH_TRUNC
+        VT vecValue = sdata > vthresh ? (VT)thresh : sdata;
+#elif defined THRESH_TOZERO
+        VT vecValue = sdata > vthresh ? sdata : (VT)(0);
+#elif defined THRESH_TOZERO_INV
+        VT vecValue = sdata > vthresh ? (VT)(0) : sdata;
+#endif
+
+        if (gx + VECSIZE <= max_index)
+#ifdef DST_ALIGNED
+            *(__global VT*)(dst + dst_index) = vecValue;
+#else
+            VSTOREN(vecValue, 0, dst + dst_index);
+#endif
+        else
         {
-            case 0:
-                ddata = ((sdata > thresh) ) ? (uchar16)(max_val) : (uchar16)(0);
-                break;
-            case 1:
-                ddata = ((sdata > thresh)) ? zero  : (uchar16)(max_val);
-                break;
-            case 2:
-                ddata = ((sdata > thresh)) ? (uchar16)(thresh) : sdata;
-                break;
-            case 3:
-                ddata = ((sdata > thresh)) ? sdata : zero;
-                break;
-            case 4:
-                ddata = ((sdata > thresh)) ? zero : sdata;
-                break;
-            default:
-                ddata = sdata;
-        }
-        int16 dpos = (int16)(dstart, dstart+1, dstart+2, dstart+3, dstart+4, dstart+5, dstart+6, dstart+7, dstart+8,
-                             dstart+9, dstart+10, dstart+11, dstart+12, dstart+13, dstart+14, dstart+15);
-        uchar16 dVal = *(__global uchar16*)(dst+dst_offset+gy*dst_step+dstart);
-        int16 con = dpos >= 0 && dpos < dst_cols;
-        ddata = convert_uchar16(con != 0) ? ddata : dVal;
-        if(dstart < dst_cols)
-        {
-            *(__global uchar16*)(dst+dst_offset+gy*dst_step+dstart) = ddata;
+            __attribute__(( aligned(sizeof(VT)) )) T array[VECSIZE];
+            *((VT*)array) = vecValue;
+            #pragma unroll
+            for (int i = 0; i < VECSIZE; ++i)
+                if (gx + i < max_index)
+                    dst[dst_index + i] = array[i];
         }
     }
 }
 
+#else
 
-__kernel void threshold_C1_D5(__global const float * restrict src, __global float *dst,
-                              int src_offset, int src_step,
-                              int dst_offset, int dst_rows, int dst_cols, int dst_step,
-                              float thresh, float max_val, int thresh_type
-                              )
+__kernel void threshold(__global const T * restrict src, int src_offset, int src_step,
+                        __global T * dst, int dst_offset, int dst_step,
+                        T thresh, T max_val, int rows, int cols)
 {
-    const int gx = get_global_id(0);
-    const int gy = get_global_id(1);
+    int gx = get_global_id(0);
+    int gy = get_global_id(1);
 
-    int offset = (dst_offset & 3);
-    src_offset -= offset;
-
-    int dstart = (gx << 2) - offset;
-    if(dstart < dst_cols && gy < dst_rows)
+    if (gx < cols && gy < rows)
     {
-        float4 sdata = vload4(gx, src+src_offset+gy*src_step);
-        float4 ddata;
-        float4 zero = 0;
-        switch (thresh_type)
-        {
-            case 0:
-                ddata = sdata > thresh ? (float4)(max_val) : (float4)(0.f);
-                break;
-            case 1:
-                ddata = sdata > thresh ? zero : (float4)max_val;
-                break;
-            case 2:
-                ddata = sdata > thresh ? (float4)thresh : sdata;
-                break;
-            case 3:
-                ddata = sdata > thresh ? sdata : (float4)(0.f);
-                break;
-            case 4:
-                ddata = sdata > thresh ? (float4)(0.f) : sdata;
-                break;
-            default:
-                ddata = sdata;
-        }
-        int4 dpos = (int4)(dstart, dstart+1, dstart+2, dstart+3);
-        float4 dVal = *(__global float4*)(dst+dst_offset+gy*dst_step+dstart);
-        int4 con = dpos >= 0 && dpos < dst_cols;
-        ddata = convert_float4(con) != (float4)(0) ? ddata : dVal;
-        if(dstart < dst_cols)
-        {
-            *(__global float4*)(dst+dst_offset+gy*dst_step+dstart) = ddata;
-        }
+        int src_index = mad24(gy, src_step, src_offset + gx);
+        int dst_index = mad24(gy, dst_step, dst_offset + gx);
+
+        T sdata = src[src_index];
+
+#ifdef THRESH_BINARY
+        dst[dst_index] = sdata > thresh ? max_val : (T)(0);
+#elif defined THRESH_BINARY_INV
+        dst[dst_index] = sdata > thresh ? (T)(0) : max_val;
+#elif defined THRESH_TRUNC
+        dst[dst_index] = sdata > thresh ? thresh : sdata;
+#elif defined THRESH_TOZERO
+        dst[dst_index] = sdata > thresh ? sdata : (T)(0);
+#elif defined THRESH_TOZERO_INV
+        dst[dst_index] = sdata > thresh ? (T)(0) : sdata;
+#endif
     }
 }
+
+#endif

@@ -3,14 +3,20 @@
 
 #ifdef HAVE_OPENCL
 
-#if defined(HAVE_OPENCL12)
-#include "cl_runtime_opencl12.hpp"
-#elif defined(HAVE_OPENCL11)
-#include "cl_runtime_opencl11.hpp"
+#if defined(HAVE_OPENCL_STATIC)
+
+#if defined __APPLE__
+#include <OpenCL/cl.h>
 #else
-#error Invalid OpenCL configuration
+#include <CL/cl.h>
 #endif
 
-#endif
+#else // HAVE_OPENCL_STATIC
+
+#include "cl_runtime_opencl.hpp"
+
+#endif // HAVE_OPENCL_STATIC
+
+#endif // HAVE_OPENCL
 
 #endif // __OPENCV_OCL_CL_RUNTIME_HPP__

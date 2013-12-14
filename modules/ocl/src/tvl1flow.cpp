@@ -24,7 +24,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -121,10 +121,8 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::operator()(const oclMat& I0, const oclMa
             ocl::pyrDown(u1s[s - 1], u1s[s]);
             ocl::pyrDown(u2s[s - 1], u2s[s]);
 
-            //ocl::multiply(u1s[s], Scalar::all(0.5), u1s[s]);
-            multiply(0.5, u1s[s], u1s[s]);
-            //ocl::multiply(u2s[s], Scalar::all(0.5), u2s[s]);
-            multiply(0.5, u1s[s], u2s[s]);
+            ocl::multiply(0.5, u1s[s], u1s[s]);
+            ocl::multiply(0.5, u2s[s], u2s[s]);
         }
     }
 

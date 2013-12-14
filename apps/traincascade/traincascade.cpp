@@ -5,11 +5,12 @@
 #include "cascadeclassifier.h"
 
 using namespace std;
+using namespace cv;
 
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
-    String cascadeDirName, vecName, bgName;
+    string cascadeDirName, vecName, bgName;
     int numPos    = 2000;
     int numNeg    = 1000;
     int numStages = 20;

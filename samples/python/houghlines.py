@@ -14,7 +14,7 @@ if __name__ == "__main__":
         filename = sys.argv[1]
         src = cv.LoadImage(filename, cv.CV_LOAD_IMAGE_GRAYSCALE)
     else:
-        url = 'http://code.opencv.org/projects/opencv/repository/revisions/master/raw/doc/pics/building.jpg'
+        url = 'https://raw.github.com/Itseez/opencv/master/samples/cpp/building.jpg'
         filedata = urllib2.urlopen(url).read()
         imagefiledata = cv.CreateMatHeader(1, len(filedata), cv.CV_8UC1)
         cv.SetData(imagefiledata, filedata, len(filedata))

@@ -7,7 +7,10 @@
 #include <iostream>
 #include <fstream>
 
-bool CvCascadeImageReader::create( const String _posFilename, const String _negFilename, Size _winSize )
+using namespace std;
+using namespace cv;
+
+bool CvCascadeImageReader::create( const string _posFilename, const string _negFilename, Size _winSize )
 {
     return posReader.create(_posFilename) && negReader.create(_negFilename, _winSize);
 }
@@ -22,21 +25,21 @@ CvCascadeImageReader::NegReader::NegReader()
     stepFactor  = 0.5F;
 }
 
-bool CvCascadeImageReader::NegReader::create( const String _filename, Size _winSize )
+bool CvCascadeImageReader::NegReader::create( const string _filename, Size _winSize )
 {
-    String dirname, str;
+    string dirname, str;
     std::ifstream file(_filename.c_str());
     if ( !file.is_open() )
         return false;
 
     size_t pos = _filename.rfind('\\');
     char dlmrt = '\\';
-    if (pos == String::npos)
+    if (pos == string::npos)
     {
         pos = _filename.rfind('/');
         dlmrt = '/';
     }
-    dirname = pos == String::npos ? "" : _filename.substr(0, pos) + dlmrt;
+    dirname = pos == string::npos ? "" : _filename.substr(0, pos) + dlmrt;
     while( !file.eof() )
     {
         std::getline(file, str);
@@ -64,10 +67,10 @@ bool CvCascadeImageReader::NegReader::nextImg()
         round = round % (winSize.width * winSize.height);
         last %= count;
 
-        _offset.x = min( (int)round % winSize.width, src.cols - winSize.width );
-        _offset.y = min( (int)round / winSize.width, src.rows - winSize.height );
+        _offset.x = std::min( (int)round % winSize.width, src.cols - winSize.width );
+        _offset.y = std::min( (int)round / winSize.width, src.rows - winSize.height );
         if( !src.empty() && src.type() == CV_8UC1
-                && offset.x >= 0 && offset.y >= 0 )
+                && _offset.x >= 0 && _offset.y >= 0 )
             break;
     }
 
@@ -126,7 +129,7 @@ CvCascadeImageReader::PosReader::PosReader()
     vec = 0;
 }
 
-bool CvCascadeImageReader::PosReader::create( const String _filename )
+bool CvCascadeImageReader::PosReader::create( const string _filename )
 {
     if ( file )
         fclose( file );

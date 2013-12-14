@@ -22,7 +22,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,16 +42,19 @@
 
 #include "perf_precomp.hpp"
 
-#define DUMP_INFO_STDOUT(propertyDisplayName, propertyValue) \
+#define DUMP_PROPERTY_XML(propertyName, propertyValue) \
     do { \
-        std::cout << (propertyDisplayName) << ": " << (propertyValue) << std::endl; \
+        std::stringstream ssName, ssValue;\
+        ssName << propertyName;\
+        ssValue << propertyValue; \
+        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
     } while (false)
 
-#define DUMP_INFO_XML(propertyXMLName, propertyValue) \
+#define DUMP_MESSAGE_STDOUT(msg) \
     do { \
-        std::stringstream ss; ss << propertyValue; \
-        ::testing::Test::RecordProperty((propertyXMLName), ss.str()); \
+        std::cout << msg << std::endl; \
     } while (false)
+
 
 #include "opencv2/ocl/private/opencl_dumpinfo.hpp"
 

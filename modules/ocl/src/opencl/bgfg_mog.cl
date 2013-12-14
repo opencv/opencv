@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -48,31 +48,34 @@
 #define T_MEAN_VAR float
 #define CONVERT_TYPE convert_uchar_sat
 #define F_ZERO (0.0f)
-float cvt(uchar val)
+inline float cvt(uchar val)
 {
     return val;
 }
 
-float sqr(float val)
+inline float sqr(float val)
 {
     return val * val;
 }
 
-float sum(float val)
+inline float sum(float val)
 {
     return val;
 }
 
-float clamp1(float var, float learningRate, float diff, float minVar)
+static float clamp1(float var, float learningRate, float diff, float minVar)
 {
     return fmax(var + learningRate * (diff * diff - var), minVar);
 }
+
 #else
+
 #define T_FRAME uchar4
 #define T_MEAN_VAR float4
 #define CONVERT_TYPE convert_uchar4_sat
 #define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
-float4 cvt(const uchar4 val)
+
+inline float4 cvt(const uchar4 val)
 {
     float4 result;
     result.x = val.x;
@@ -83,17 +86,25 @@ float4 cvt(const uchar4 val)
     return result;
 }
 
-float sqr(const float4 val)
+inline float sqr(const float4 val)
 {
     return val.x * val.x + val.y * val.y + val.z * val.z;
 }
 
-float sum(const float4 val)
+inline float sum(const float4 val)
 {
     return (val.x + val.y + val.z);
 }
 
-float4 clamp1(const float4 var, float learningRate, const float4 diff, float minVar)
+static void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
+{
+    float4 val = ptr[(k * rows + y) * ptr_step + x];
+    ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
+    ptr[((k + 1) * rows + y) * ptr_step + x] = val;
+}
+
+
+static float4 clamp1(const float4 var, float learningRate, const float4 diff, float minVar)
 {
     float4 result;
     result.x = fmax(var.x + learningRate * (diff.x * diff.x - var.x), minVar);
@@ -102,6 +113,7 @@ float4 clamp1(const float4 var, float learningRate, const float4 diff, float min
     result.w = 0.0f;
     return result;
 }
+
 #endif
 
 typedef struct
@@ -114,18 +126,11 @@ typedef struct
     float c_varMax;
     float c_tau;
     uchar c_shadowVal;
-}con_srtuct_t;
+} con_srtuct_t;
 
-void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
+static void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
 {
     float val = ptr[(k * rows + y) * ptr_step + x];
-    ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
-    ptr[((k + 1) * rows + y) * ptr_step + x] = val;
-}
-
-void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
-{
-    float4 val = ptr[(k * rows + y) * ptr_step + x];
     ptr[(k * rows + y) * ptr_step + x] = ptr[((k + 1) * rows + y) * ptr_step + x];
     ptr[((k + 1) * rows + y) * ptr_step + x] = val;
 }
@@ -412,7 +417,7 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
 
             if (_weight < -prune)
             {
-                _weight = 0.0;
+                _weight = 0.0f;
                 nmodes--;
             }
 

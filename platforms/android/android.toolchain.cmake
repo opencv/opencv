@@ -34,7 +34,7 @@
 #  See home page: https://github.com/taka-no-me/android-cmake
 #
 #  The file is mantained by the OpenCV project. The latest version can be get at
-#  http://code.opencv.org/projects/opencv/repository/revisions/master/changes/android/android.toolchain.cmake
+#  https://github.com/Itseez/opencv/tree/master/platforms/android/android.toolchain.cmake
 #
 #  Usage Linux:
 #   $ export ANDROID_NDK=/absolute/path/to/the/android-ndk
@@ -318,7 +318,7 @@ set( CMAKE_SYSTEM_VERSION 1 )
 # rpath makes low sence for Android
 set( CMAKE_SKIP_RPATH TRUE CACHE BOOL "If set, runtime paths are not added when using shared libraries." )
 
-set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r9 -r8e -r8d -r8c -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
+set( ANDROID_SUPPORTED_NDK_VERSIONS ${ANDROID_EXTRA_NDK_VERSIONS} -r9b -r9 -r8e -r8d -r8c -r8b -r8 -r7c -r7b -r7 -r6b -r6 -r5c -r5b -r5 "" )
 if(NOT DEFINED ANDROID_NDK_SEARCH_PATHS)
  if( CMAKE_HOST_WIN32 )
   file( TO_CMAKE_PATH "$ENV{PROGRAMFILES}" ANDROID_NDK_SEARCH_PATHS )
@@ -634,27 +634,30 @@ endif()
 
 macro( __GLOB_NDK_TOOLCHAINS __availableToolchainsVar __availableToolchainsLst __toolchain_subpath )
  foreach( __toolchain ${${__availableToolchainsLst}} )
-  if( "${__toolchain}" MATCHES "-clang3[.][0-9]$" AND NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${__toolchain}${__toolchain_subpath}" )
-   string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" __gcc_toolchain "${__toolchain}" )
-  else()
-   set( __gcc_toolchain "${__toolchain}" )
-  endif()
-  __DETECT_TOOLCHAIN_MACHINE_NAME( __machine "${ANDROID_NDK_TOOLCHAINS_PATH}/${__gcc_toolchain}${__toolchain_subpath}" )
-  if( __machine )
-   string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9x]+)?$" __version "${__gcc_toolchain}" )
-   if( __machine MATCHES i686 )
-    set( __arch "x86" )
-   elseif( __machine MATCHES arm )
-    set( __arch "arm" )
-   elseif( __machine MATCHES mipsel )
-    set( __arch "mipsel" )
+  # Skip renderscript folder. It's not C++ toolchain
+  if (NOT ${__toolchain} STREQUAL "renderscript")
+   if( "${__toolchain}" MATCHES "-clang3[.][0-9]$" AND NOT EXISTS "${ANDROID_NDK_TOOLCHAINS_PATH}/${__toolchain}${__toolchain_subpath}" )
+     string( REGEX REPLACE "-clang3[.][0-9]$" "-4.6" __gcc_toolchain "${__toolchain}" )
+   else()
+     set( __gcc_toolchain "${__toolchain}" )
    endif()
-   list( APPEND __availableToolchainMachines "${__machine}" )
-   list( APPEND __availableToolchainArchs "${__arch}" )
-   list( APPEND __availableToolchainCompilerVersions "${__version}" )
-   list( APPEND ${__availableToolchainsVar} "${__toolchain}" )
+   __DETECT_TOOLCHAIN_MACHINE_NAME( __machine "${ANDROID_NDK_TOOLCHAINS_PATH}/${__gcc_toolchain}${__toolchain_subpath}" )
+   if( __machine )
+    string( REGEX MATCH "[0-9]+[.][0-9]+([.][0-9x]+)?$" __version "${__gcc_toolchain}" )
+    if( __machine MATCHES i686 )
+     set( __arch "x86" )
+    elseif( __machine MATCHES arm )
+     set( __arch "arm" )
+    elseif( __machine MATCHES mipsel )
+     set( __arch "mipsel" )
+    endif()
+    list( APPEND __availableToolchainMachines "${__machine}" )
+    list( APPEND __availableToolchainArchs "${__arch}" )
+    list( APPEND __availableToolchainCompilerVersions "${__version}" )
+    list( APPEND ${__availableToolchainsVar} "${__toolchain}" )
+   endif()
+   unset( __gcc_toolchain )
   endif()
-  unset( __gcc_toolchain )
  endforeach()
 endmacro()
 
@@ -715,7 +718,7 @@ __INIT_VARIABLE( ANDROID_ABI OBSOLETE_ARM_TARGET OBSOLETE_ARM_TARGETS VALUES ${A
 # verify that target ABI is supported
 list( FIND ANDROID_SUPPORTED_ABIS "${ANDROID_ABI}" __androidAbiIdx )
 if( __androidAbiIdx EQUAL -1 )
- string( REPLACE ";" "\", \"", PRINTABLE_ANDROID_SUPPORTED_ABIS  "${ANDROID_SUPPORTED_ABIS}" )
+ string( REPLACE ";" "\", \"" PRINTABLE_ANDROID_SUPPORTED_ABIS  "${ANDROID_SUPPORTED_ABIS}" )
  message( FATAL_ERROR "Specified ANDROID_ABI = \"${ANDROID_ABI}\" is not supported by this cmake toolchain or your NDK/toolchain.
    Supported values are: \"${PRINTABLE_ANDROID_SUPPORTED_ABIS}\"
    " )

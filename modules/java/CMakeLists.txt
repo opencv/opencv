@@ -41,6 +41,8 @@ file(GLOB handwrittren_aidl_sources  "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/
 if(NOT ANDROID)
   ocv_list_filterout(handwrittren_java_sources "/(engine|android)\\\\+")
   ocv_list_filterout(handwrittren_aidl_sources "/(engine|android)\\\\+")
+  ocv_list_filterout(handwrittren_java_sources "VideoCapture")
+  ocv_list_filterout(handwrittren_cpp_sources "VideoCapture")
 else()
   file(GLOB_RECURSE handwrittren_lib_project_files_rel RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/" "${CMAKE_CURRENT_SOURCE_DIR}/android_lib/*")
   list(REMOVE_ITEM handwrittren_lib_project_files_rel "${ANDROID_MANIFEST_FILE}")
@@ -100,9 +102,15 @@ foreach(module ${OPENCV_JAVA_MODULES})
   # first run of gen_java.py (to get list of generated files)
   file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out")
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+  if (ANDROID)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" "-android" ${module} ${opencv_public_headers_${module}}
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
                   OUTPUT_QUIET ERROR_QUIET)
+  else()
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
+                  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out"
+                  OUTPUT_QUIET ERROR_QUIET)
+  endif()
   unset(generated_java_sources_${module})
   file(GLOB_RECURSE generated_java_sources_${module} RELATIVE "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/" "${CMAKE_CURRENT_BINARY_DIR}/gen_java_out/*.java")
   ocv_list_add_prefix(generated_java_sources_${module} "${CMAKE_CURRENT_BINARY_DIR}/")
@@ -123,20 +131,29 @@ endforeach()
 set(step1_depends "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers})
 foreach(module ${OPENCV_JAVA_MODULES})
   # second run of gen_java.py (at build time)
-  add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
+  if (ANDROID)
+    add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
+                     COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" "-android" ${module} ${opencv_public_headers_${module}}
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                     DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
+                    )
+  else()
+    add_custom_command(OUTPUT ${generated_java_sources_${module}} "${CMAKE_CURRENT_BINARY_DIR}/${module}.cpp"
                      COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_java}" "${scripts_hdr_parser}" ${module} ${opencv_public_headers_${module}}
                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                      DEPENDS "${scripts_gen_java}" "${scripts_hdr_parser}" ${opencv_public_headers_${module}}
                     )
+  endif()
 endforeach()
 
 # step 2: generate javadoc comments
 set(step2_depends ${step1_depends} ${scripts_gen_javadoc} ${scripts_rst_parser} ${javadoc_rst_sources} ${generated_java_sources} ${handwrittren_java_sources})
 string(REPLACE ";" "," OPENCV_JAVA_MODULES_STR "${OPENCV_JAVA_MODULES}")
 add_custom_command(OUTPUT ${documented_java_files}
-                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2>"${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
+                   COMMAND ${PYTHON_EXECUTABLE} "${scripts_gen_javadoc}" --modules ${OPENCV_JAVA_MODULES_STR} "${CMAKE_CURRENT_SOURCE_DIR}/generator/src/java" "${CMAKE_CURRENT_BINARY_DIR}" 2> "${CMAKE_CURRENT_BINARY_DIR}/get_javadoc_errors.log"
                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                    DEPENDS ${step2_depends}
+                   VERBATIM
                   )
 
 # step 3: copy files to destination
@@ -274,7 +291,12 @@ add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_so
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
-  list(REMOVE_ITEM __deps ${the_module} opencv_ts)
+  foreach(m ${OPENCV_MODULES_BUILD}) # filterout INTERNAL (like opencv_ts) and BINDINGS (like opencv_python) modules
+    ocv_assert(DEFINED OPENCV_MODULE_${m}_CLASS)
+    if(NOT OPENCV_MODULE_${m}_CLASS STREQUAL "PUBLIC")
+      list(REMOVE_ITEM __deps ${m})
+    endif()
+  endforeach()
   ocv_list_unique(__deps)
   set(__extradeps ${__deps})
   ocv_list_filterout(__extradeps "^opencv_")

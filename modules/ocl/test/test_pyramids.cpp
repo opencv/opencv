@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -50,18 +50,16 @@
 #ifdef HAVE_OPENCL
 
 using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(PyrBase, MatType, int)
+PARAM_TEST_CASE(PyrBase, MatDepth, Channels)
 {
     int depth;
     int channels;
 
     Mat dst_cpu;
-    oclMat gdst;
+    ocl::oclMat gdst;
 
     virtual void SetUp()
     {
@@ -80,10 +78,10 @@ OCL_TEST_P(PyrDown, Mat)
     {
         Size size(MWIDTH, MHEIGHT);
         Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
-        oclMat gsrc(src);
+        ocl::oclMat gsrc(src);
 
         pyrDown(src, dst_cpu);
-        pyrDown(gsrc, gdst);
+        ocl::pyrDown(gsrc, gdst);
 
         EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), depth == CV_32F ? 1e-4f : 1.0f);
     }
@@ -103,10 +101,10 @@ OCL_TEST_P(PyrUp, Accuracy)
     {
         Size size(MWIDTH, MHEIGHT);
         Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
-        oclMat gsrc(src);
+        ocl::oclMat gsrc(src);
 
         pyrUp(src, dst_cpu);
-        pyrUp(gsrc, gdst);
+        ocl::pyrUp(gsrc, gdst);
 
         EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (depth == CV_32F ? 1e-4f : 1.0));
     }

@@ -17,7 +17,7 @@ In this tutorial you will learn how to:
 Source Code
 ===========
 
-Download the source code from `here <http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
+Download the source code from `here <https://github.com/Itseez/opencv/tree/master/samples/cpp/tutorial_code/introduction/display_image/display_image.cpp>`_.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
@@ -36,7 +36,7 @@ You'll almost always end up using the:
    + *core* section, as here are defined the basic building blocks of the library
    + *highgui* module, as this contains the functions for input and output operations
 
-.. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/windows_visual_studio_Opencv/Test.cpp
+.. literalinclude:: ../../../../samples/cpp/tutorial_code/introduction/display_image/display_image.cpp
    :language: cpp
    :tab-width: 4
    :lines:  1-3

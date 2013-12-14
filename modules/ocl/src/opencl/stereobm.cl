@@ -27,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -56,7 +56,7 @@
 #define radius 64
 #endif
 
-unsigned int CalcSSD(__local unsigned int *col_ssd)
+inline unsigned int CalcSSD(__local unsigned int *col_ssd)
 {
     unsigned int cache = col_ssd[0];
 
@@ -67,7 +67,7 @@ unsigned int CalcSSD(__local unsigned int *col_ssd)
     return cache;
 }
 
-uint2 MinSSD(__local unsigned int *col_ssd)
+inline uint2 MinSSD(__local unsigned int *col_ssd)
 {
     unsigned int ssd[N_DISPARITIES];
     const int win_size = (radius << 1);
@@ -95,7 +95,7 @@ uint2 MinSSD(__local unsigned int *col_ssd)
     return (uint2)(mssd, bestIdx);
 }
 
-void StepDown(int idx1, int idx2, __global unsigned char* imageL,
+inline void StepDown(int idx1, int idx2, __global unsigned char* imageL,
               __global unsigned char* imageR, int d,   __local unsigned int *col_ssd)
 {
     uint8 imgR1 = convert_uint8(vload8(0, imageR + (idx1 - d - 7)));
@@ -114,7 +114,7 @@ void StepDown(int idx1, int idx2, __global unsigned char* imageL,
     col_ssd[7 * (BLOCK_W + win_size)] += res.s0;
 }
 
-void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
+inline void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
                 __global unsigned char* imageR, int d,
                  __local unsigned int *col_ssd)
 {
@@ -153,7 +153,7 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
 
     int X = get_group_id(0) * BLOCK_W + get_local_id(0) + maxdisp + radius;
 
-#define Y (get_group_id(1) * ROWSperTHREAD + radius)
+#define Y (int)(get_group_id(1) * ROWSperTHREAD + radius)
 
     __global unsigned int* minSSDImage = cminSSDImage + X + Y * cminSSD_step;
     __global unsigned char* disparImage = disp + X + Y * disp_step;
@@ -241,7 +241,7 @@ __kernel void prefilter_xsobel(__global unsigned char *input, __global unsigned 
 /////////////////////////////////// Textureness filtering ////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
+inline float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
 {
     float conv = 0;
     int y1 = y==0? 0 : y-1;
@@ -256,11 +256,10 @@ float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
     return fabs(conv);
 }
 
-float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
+inline float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
 {
     unsigned int cache = cols[0];
 
-#pragma unroll
     for(int i = 1; i <= winsz; i++)
         cache += cols[i];
 

@@ -30,8 +30,8 @@ int main( int argc, char* argv[])
     else
         I = imread( filename, CV_LOAD_IMAGE_COLOR);
 
-    namedWindow("Input", CV_WINDOW_AUTOSIZE);
-    namedWindow("Output", CV_WINDOW_AUTOSIZE);
+    namedWindow("Input", WINDOW_AUTOSIZE);
+    namedWindow("Output", WINDOW_AUTOSIZE);
 
     imshow("Input", I);
     double t = (double)getTickCount();
@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
     cout << "Hand written function times passed in seconds: " << t << endl;
 
     imshow("Output", J);
-    cvWaitKey(0);
+    waitKey(0);
 
     Mat kern = (Mat_<char>(3,3) <<  0, -1,  0,
                                    -1,  5, -1,
@@ -54,7 +54,7 @@ int main( int argc, char* argv[])
 
     imshow("Output", K);
 
-    cvWaitKey(0);
+    waitKey(0);
     return 0;
 }
 void Sharpen(const Mat& myImage,Mat& Result)

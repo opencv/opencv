@@ -3,57 +3,36 @@ if(APPLE)
   set(OPENCL_LIBRARY "-framework OpenCL" CACHE STRING "OpenCL library")
   set(OPENCL_INCLUDE_DIR "" CACHE STRING "OpenCL include directory")
   mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
+  set(HAVE_OPENCL_STATIC ON)
 else(APPLE)
-  #find_package(OpenCL QUIET)
-
-  if(NOT OPENCL_FOUND)
-    find_path(OPENCL_ROOT_DIR
-              NAMES OpenCL/cl.h CL/cl.h include/CL/cl.h include/nvidia-current/CL/cl.h
-              PATHS ENV OCLROOT ENV AMDAPPSDKROOT ENV CUDA_PATH ENV INTELOCLSDKROOT
-              DOC "OpenCL root directory"
-              NO_DEFAULT_PATH)
-
-    find_path(OPENCL_INCLUDE_DIR
-              NAMES OpenCL/cl.h CL/cl.h
-              HINTS ${OPENCL_ROOT_DIR}
-              PATH_SUFFIXES include include/nvidia-current
-              DOC "OpenCL include directory"
-              NO_DEFAULT_PATH)
-
-    set(OPENCL_LIBRARY "OPENCL_DYNAMIC_LOAD")
-
-    mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
-    include(FindPackageHandleStandardArgs)
-    FIND_PACKAGE_HANDLE_STANDARD_ARGS(OPENCL DEFAULT_MSG OPENCL_LIBRARY OPENCL_INCLUDE_DIR )
-  endif()
+  set(OPENCL_FOUND YES)
+  set(HAVE_OPENCL_STATIC OFF)
+  set(OPENCL_INCLUDE_DIR "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2")
 endif(APPLE)
 
 if(OPENCL_FOUND)
-  try_compile(HAVE_OPENCL11
-    "${OpenCV_BINARY_DIR}"
-    "${OpenCV_SOURCE_DIR}/cmake/checks/opencl11.cpp"
-    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}"
-    )
-  if(NOT HAVE_OPENCL11)
-    message(STATUS "OpenCL 1.1 not found, ignore OpenCL SDK")
-    return()
-  endif()
-  try_compile(HAVE_OPENCL12
-    "${OpenCV_BINARY_DIR}"
-    "${OpenCV_SOURCE_DIR}/cmake/checks/opencl12.cpp"
-    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}"
-    )
-  if(NOT HAVE_OPENCL12)
-    message(STATUS "OpenCL 1.2 not found, will use OpenCL 1.1")
+  if(NOT HAVE_OPENCL_STATIC)
+    try_compile(__VALID_OPENCL
+      "${OpenCV_BINARY_DIR}"
+      "${OpenCV_SOURCE_DIR}/cmake/checks/opencl.cpp"
+      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${OPENCL_INCLUDE_DIR}"
+      OUTPUT_VARIABLE TRY_OUT
+      )
+    if(NOT TRY_OUT MATCHES "OpenCL is valid")
+      message(WARNING "Can't use OpenCL")
+      return()
+    endif()
   endif()
 
   set(HAVE_OPENCL 1)
-  set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
-  if(OPENCL_LIBRARY MATCHES "OPENCL_DYNAMIC_LOAD")
-    unset(OPENCL_LIBRARIES)
-  else()
+
+  if(HAVE_OPENCL_STATIC)
     set(OPENCL_LIBRARIES "${OPENCL_LIBRARY}")
+  else()
+    unset(OPENCL_LIBRARIES)
   endif()
+
+  set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
 
   if(WITH_OPENCLAMDFFT)
     find_path(CLAMDFFT_ROOT_DIR

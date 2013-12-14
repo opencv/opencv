@@ -72,24 +72,24 @@ public:
 
     CvCascadeParams();
     CvCascadeParams( int _stageType, int _featureType );
-    void write( FileStorage &fs ) const;
-    bool read( const FileNode &node );
+    void write( cv::FileStorage &fs ) const;
+    bool read( const cv::FileNode &node );
 
     void printDefaults() const;
     void printAttrs() const;
-    bool scanAttr( const String prmName, const String val );
+    bool scanAttr( const std::string prmName, const std::string val );
 
     int stageType;
     int featureType;
-    Size winSize;
+    cv::Size winSize;
 };
 
 class CvCascadeClassifier
 {
 public:
-    bool train( const String _cascadeDirName,
-                const String _posFilename,
-                const String _negFilename,
+    bool train( const std::string _cascadeDirName,
+                const std::string _posFilename,
+                const std::string _negFilename,
                 int _numPos, int _numNeg,
                 int _precalcValBufSize, int _precalcIdxBufSize,
                 int _numStages,
@@ -99,25 +99,25 @@ public:
                 bool baseFormatSave = false );
 private:
     int predict( int sampleIdx );
-    void save( const String cascadeDirName, bool baseFormat = false );
-    bool load( const String cascadeDirName );
+    void save( const std::string cascadeDirName, bool baseFormat = false );
+    bool load( const std::string cascadeDirName );
     bool updateTrainingSet( double& acceptanceRatio );
     int fillPassedSamples( int first, int count, bool isPositive, int64& consumed );
 
-    void writeParams( FileStorage &fs ) const;
-    void writeStages( FileStorage &fs, const Mat& featureMap ) const;
-    void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
-    bool readParams( const FileNode &node );
-    bool readStages( const FileNode &node );
+    void writeParams( cv::FileStorage &fs ) const;
+    void writeStages( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
+    void writeFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
+    bool readParams( const cv::FileNode &node );
+    bool readStages( const cv::FileNode &node );
 
-    void getUsedFeaturesIdxMap( Mat& featureMap );
+    void getUsedFeaturesIdxMap( cv::Mat& featureMap );
 
     CvCascadeParams cascadeParams;
-    Ptr<CvFeatureParams> featureParams;
-    Ptr<CvCascadeBoostParams> stageParams;
+    cv::Ptr<CvFeatureParams> featureParams;
+    cv::Ptr<CvCascadeBoostParams> stageParams;
 
-    Ptr<CvFeatureEvaluator> featureEvaluator;
-    vector< Ptr<CvCascadeBoost> > stageClassifiers;
+    cv::Ptr<CvFeatureEvaluator> featureEvaluator;
+    std::vector< cv::Ptr<CvCascadeBoost> > stageClassifiers;
     CvCascadeImageReader imgReader;
     int numStages, curNumSamples;
     int numPos, numNeg;

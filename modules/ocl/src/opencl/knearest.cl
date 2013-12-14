@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -42,8 +42,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#if defined (DOUBLE_SUPPORT)
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined (cl_khr_fp64)
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
 #define TYPE double
 #else
 #define TYPE float
@@ -129,58 +134,53 @@ __kernel void knn_find_nearest(__global float* sample, int sample_row, int sampl
     }
     /*! find_nearest_neighbor done!*/
     /*! write_results start!*/
-    switch (regression)
+    if (regression)
     {
-    case true:
-        {
-            TYPE s;
+        TYPE s;
 #ifdef DOUBLE_SUPPORT
-            s = 0.0;
+        s = 0.0;
 #else
-            s = 0.0f;
+        s = 0.0f;
 #endif
-            for(j = 0; j < K1; j++)
-                s += nr[j * nThreads + threadY];
+        for(j = 0; j < K1; j++)
+            s += nr[j * nThreads + threadY];
 
-            _results[y * _results_step] = (float)(s * inv_scale);
-        }
-        break;
-    case false:
+        _results[y * _results_step] = (float)(s * inv_scale);
+    }
+    else
+    {
+        int prev_start = 0, best_count = 0, cur_count;
+        float best_val;
+
+        for(j = K1 - 1; j > 0; j--)
         {
-            int prev_start = 0, best_count = 0, cur_count;
-            float best_val;
-
-            for(j = K1 - 1; j > 0; j--)
+            bool swap_f1 = false;
+            for(j1 = 0; j1 < j; j1++)
             {
-                bool swap_f1 = false;
-                for(j1 = 0; j1 < j; j1++)
+                if(nr[j1 * nThreads + threadY] > nr[(j1 + 1) * nThreads + threadY])
                 {
-                    if(nr[j1 * nThreads + threadY] > nr[(j1 + 1) * nThreads + threadY])
-                    {
-                        int t;
-                        CV_SWAP(nr[j1 * nThreads + threadY], nr[(j1 + 1) * nThreads + threadY], t);
-                        swap_f1 = true;
-                    }
+                    int t;
+                    CV_SWAP(nr[j1 * nThreads + threadY], nr[(j1 + 1) * nThreads + threadY], t);
+                    swap_f1 = true;
                 }
-                if(!swap_f1)
-                    break;
             }
-
-            best_val = 0;
-            for(j = 1; j <= K1; j++)
-                if(j == K1 || nr[j * nThreads + threadY] != nr[(j - 1) * nThreads + threadY])
-                {
-                    cur_count = j - prev_start;
-                    if(best_count < cur_count)
-                    {
-                        best_count = cur_count;
-                        best_val = nr[(j - 1) * nThreads + threadY];
-                    }
-                    prev_start = j;
-                }
-                _results[y * _results_step] = best_val;
+            if(!swap_f1)
+                break;
         }
-        break;
+
+        best_val = 0;
+        for(j = 1; j <= K1; j++)
+            if(j == K1 || nr[j * nThreads + threadY] != nr[(j - 1) * nThreads + threadY])
+            {
+                cur_count = j - prev_start;
+                if(best_count < cur_count)
+                {
+                    best_count = cur_count;
+                    best_val = nr[(j - 1) * nThreads + threadY];
+                }
+                prev_start = j;
+            }
+            _results[y * _results_step] = best_val;
     }
     ///*! write_results done!*/
 }

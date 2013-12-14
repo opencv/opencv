@@ -23,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -111,12 +111,14 @@ namespace cv
 
             bool haveDoubleSupport;
             bool isUnifiedMemory; // 1 means integrated GPU, otherwise this value is 0
+            bool isIntelDevice;
 
             std::string compilationExtraOptions;
 
             const PlatformInfo* platform;
 
             DeviceInfo();
+            ~DeviceInfo();
         };
 
         struct PlatformInfo
@@ -135,6 +137,7 @@ namespace cv
             std::vector<const DeviceInfo*> devices;
 
             PlatformInfo();
+            ~PlatformInfo();
         };
 
         //////////////////////////////// Initialization & Info ////////////////////////
@@ -150,6 +153,10 @@ namespace cv
         // set device you want to use
         CV_EXPORTS void setDevice(const DeviceInfo* info);
 
+        // Initialize from OpenCL handles directly.
+        // Argument types is (pointers): cl_platform_id*, cl_context*, cl_device_id*
+        CV_EXPORTS void initializeContext(void* pClPlatform, void* pClContext, void* pClDevice);
+
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
@@ -157,7 +164,8 @@ namespace cv
         {
             FEATURE_CL_DOUBLE = 1,
             FEATURE_CL_UNIFIED_MEM,
-            FEATURE_CL_VER_1_2
+            FEATURE_CL_VER_1_2,
+            FEATURE_CL_INTEL_DEVICE
         };
 
         // Represents OpenCL context, interface
@@ -306,16 +314,13 @@ namespace cv
             void copyTo( oclMat &m, const oclMat &mask = oclMat()) const;
 
             //! converts oclMatrix to another datatype with optional scalng. See cvConvertScale.
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             void convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const;
 
             void assignTo( oclMat &m, int type = -1 ) const;
 
             //! sets every oclMatrix element to s
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& operator = (const Scalar &s);
             //! sets some of the oclMatrix elements to s, according to the mask
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             oclMat& setTo(const Scalar &s, const oclMat &mask = oclMat());
             //! creates alternative oclMatrix header for the same data, with different
             // number of channels and/or different number of rows. see cvReshape.
@@ -379,14 +384,6 @@ namespace cv
             Size size() const;
             //! returns true if oclMatrix data is NULL
             bool empty() const;
-
-            //! returns pointer to y-th row
-            uchar* ptr(int y = 0);
-            const uchar *ptr(int y = 0) const;
-
-            //! template version of the above method
-            template<typename _Tp> _Tp *ptr(int y = 0);
-            template<typename _Tp> const _Tp *ptr(int y = 0) const;
 
             //! matrix transposition
             oclMat t() const;
@@ -554,11 +551,12 @@ namespace cv
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT);
 
         //! Applies an adaptive bilateral filter to the input image
-        //  This is not truly a bilateral filter. Instead of using user provided fixed parameters,
-        //  the function calculates a constant at each window based on local standard deviation,
-        //  and use this constant to do filtering.
+        //  Unlike the usual bilateral filter that uses fixed value for sigmaColor,
+        //  the adaptive version calculates the local variance in he ksize neighborhood
+        //  and use this as sigmaColor, for the value filtering. However, the local standard deviation is
+        //  clamped to the maxSigmaColor.
         //  supports 8UC1, 8UC3
-        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
+        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double maxSigmaColor=20.0, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
 
         //! computes exponent of each matrix element (dst = e**src)
         // supports only CV_32FC1, CV_64FC1 type
@@ -628,6 +626,9 @@ namespace cv
 
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
+
+        //! fills the output array with repeated copies of the input array
+        CV_EXPORTS void repeat(const oclMat & src, int ny, int nx, oclMat & dst);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 
@@ -718,11 +719,12 @@ namespace cv
         CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
 
         //! applies Laplacian operator to the image
-        // supports only ksize = 1 and ksize = 3 8UC1 8UC4 32FC1 32FC4 data type
-        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1);
+        // supports only ksize = 1 and ksize = 3
+        CV_EXPORTS void Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize = 1, double scale = 1,
+                double delta=0, int borderType=BORDER_DEFAULT);
 
         //! returns 2D box filter
-        // supports CV_8UC1 and CV_8UC4 source type, dst type must be the same as source type
+        // dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getBoxFilter_GPU(int srcType, int dstType,
                 const Size &ksize, Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -731,17 +733,16 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns 2D filter with the specified kernel
-        // supports CV_8UC1 and CV_8UC4 types
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
+        // supports: dst type must be the same as source type
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
                 const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! smooths the image using the normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101,BORDER_WRAP
         CV_EXPORTS void boxFilter(const oclMat &src, oclMat &dst, int ddepth, Size ksize,
                                   Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -757,8 +758,6 @@ namespace cv
                 const Point &anchor = Point(-1, -1), int iterations = 1);
 
         //! a synonym for normalized box filter
-        // supports data type: CV_8UC1, CV_8UC4, CV_32FC1 and CV_32FC4
-        // supports border type: BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT,BORDER_REFLECT_101
         static inline void blur(const oclMat &src, oclMat &dst, Size ksize, Point anchor = Point(-1, -1),
                                 int borderType = BORDER_CONSTANT)
         {
@@ -766,10 +765,8 @@ namespace cv
         }
 
         //! applies non-separable 2D linear filter to the image
-        //  Note, at the moment this function only works when anchor point is in the kernel center
-        //  and kernel size supported is either 3x3 or 5x5; otherwise the function will fail to output valid result
         CV_EXPORTS void filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel,
-                                 Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                                 Point anchor = Point(-1, -1), double delta = 0.0, int borderType = BORDER_DEFAULT);
 
         //! applies separable 2D linear filter to the image
         CV_EXPORTS void sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY,
@@ -839,11 +836,8 @@ namespace cv
         //! Applies a generic geometrical transformation to an image.
 
         // Supports INTER_NEAREST, INTER_LINEAR.
-
         // Map1 supports CV_16SC2, CV_32FC2  types.
-
         // Src supports CV_8UC1, CV_8UC2, CV_8UC4.
-
         CV_EXPORTS void remap(const oclMat &src, oclMat &dst, oclMat &map1, oclMat &map2, int interpolation, int bordertype, const Scalar &value = Scalar());
 
         //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
@@ -851,7 +845,7 @@ namespace cv
         CV_EXPORTS void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int boardtype, const Scalar &value = Scalar());
 
         //! Smoothes image using median filter
-        // The source 1- or 4-channel image. When m is 3 or 5, the image depth should be CV 8U or CV 32F.
+        // The source 1- or 4-channel image. m should be 3 or 5, the image depth should be CV_8U or CV_32F.
         CV_EXPORTS void medianFilter(const oclMat &src, oclMat &dst, int m);
 
         //! warps the image using affine transformation
@@ -865,10 +859,10 @@ namespace cv
         CV_EXPORTS void warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR);
 
         //! computes the integral image and integral for the squared image
-        // sum will have CV_32S type, sqsum - CV32F type
+        // sum will support CV_32S, CV_32F, sqsum - support CV32F, CV_64F
         // supports only CV_8UC1 source type
-        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum);
-        CV_EXPORTS void integral(const oclMat &src, oclMat &sum);
+        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum, int sdepth=-1 );
+        CV_EXPORTS void integral(const oclMat &src, oclMat &sum, int sdepth=-1 );
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
@@ -880,7 +874,10 @@ namespace cv
 
         //! Compute closest centers for each lines in source and lable it after center's index
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
-        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
+        // supports NORM_L1 and NORM_L2 distType
+        // if indices is provided, only the indexed rows will be calculated and their results are in the same
+        // order of indices
+        CV_EXPORTS void distanceToCenters(const oclMat &src, const oclMat &centers, Mat &dists, Mat &labels, int distType = NORM_L2SQR);
 
         //!Does k-means procedure on GPU
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
@@ -900,6 +897,9 @@ namespace cv
 
             CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
                                         int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                Size minSize = Size(), Size maxSize = Size());
         };
 
         class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
@@ -937,7 +937,7 @@ namespace cv
             Size m_maxSize;
             vector<CvSize> sizev;
             vector<float> scalev;
-            oclMat gimg1, gsum, gsqsum;
+            oclMat gimg1, gsum, gsqsum, gsqsum_t;
             void * buffers;
         };
 
@@ -987,12 +987,12 @@ namespace cv
 
         struct CV_EXPORTS CannyBuf
         {
-            CannyBuf() : counter(NULL) {}
+            CannyBuf() : counter(1, 1, CV_32S) { }
             ~CannyBuf()
             {
                 release();
             }
-            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(NULL)
+            explicit CannyBuf(const Size &image_size, int apperture_size = 3) : counter(1, 1, CV_32S)
             {
                 create(image_size, apperture_size);
             }
@@ -1004,7 +1004,7 @@ namespace cv
             oclMat dx_buf, dy_buf;
             oclMat edgeBuf;
             oclMat trackBuf1, trackBuf2;
-            void *counter;
+            oclMat counter;
             Ptr<FilterEngine_GPU> filterDX, filterDY;
         };
 
@@ -1522,7 +1522,12 @@ namespace cv
                                           float pos, oclMat &newFrame, oclMat &buf);
 
         //! computes moments of the rasterized shape or a vector of points
-        CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
+        //! _array should be a vector a points standing for the contour
+        CV_EXPORTS Moments ocl_moments(InputArray contour);
+        //! src should be a general image uploaded to the GPU.
+        //! the supported oclMat type are CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 and CV_64FC1
+        //! to use type of CV_64FC1, the GPU should support CV_64FC1
+        CV_EXPORTS Moments ocl_moments(oclMat& src, bool binary);
 
         class CV_EXPORTS StereoBM_OCL
         {

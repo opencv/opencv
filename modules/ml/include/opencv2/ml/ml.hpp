@@ -548,6 +548,10 @@ protected:
 
     CvSVMSolver* solver;
     CvSVMKernel* kernel;
+
+private:
+    CvSVM(const CvSVM&);
+    CvSVM& operator = (const CvSVM&);
 };
 
 /****************************************************************************************\
