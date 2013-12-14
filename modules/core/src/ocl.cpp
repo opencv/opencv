@@ -42,6 +42,8 @@
 #include "precomp.hpp"
 #include <map>
 
+#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+
 #ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #else
@@ -1309,29 +1311,23 @@ inline bool operator < (const HashKey& h1, const HashKey& h2)
     return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
 }
 
-static bool g_isInitialized = false;
+static bool g_isOpenCLInitialized = false;
 static bool g_isOpenCLAvailable = false;
+
 bool haveOpenCL()
 {
-    if (!g_isInitialized)
+    if (!g_isOpenCLInitialized)
     {
-        if (!g_isInitialized)
+        try
         {
-            try
-            {
-                cl_uint n = 0;
-                cl_int err = ::clGetPlatformIDs(0, NULL, &n);
-                if (err != CL_SUCCESS)
-                    g_isOpenCLAvailable = false;
-                else
-                    g_isOpenCLAvailable = true;
-            }
-            catch (...)
-            {
-                g_isOpenCLAvailable = false;
-            }
-            g_isInitialized = true;
+            cl_uint n = 0;
+            g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
         }
+        catch (...)
+        {
+            g_isOpenCLAvailable = false;
+        }
+        g_isOpenCLInitialized = true;
     }
     return g_isOpenCLAvailable;
 }
@@ -1352,6 +1348,80 @@ void setUseOpenCL(bool flag)
         data->useOpenCL = flag ? 1 : 0;
     }
 }
+
+#ifdef HAVE_CLAMDBLAS
+
+class AmdBlasHelper
+{
+public:
+    static AmdBlasHelper & getInstance()
+    {
+        static AmdBlasHelper amdBlas;
+        return amdBlas;
+    }
+
+    bool isAvailable() const
+    {
+        return g_isAmdBlasAvailable;
+    }
+
+    ~AmdBlasHelper()
+    {
+        try
+        {
+            clAmdBlasTeardown();
+        }
+        catch (...) { }
+    }
+
+protected:
+    AmdBlasHelper()
+    {
+        if (!g_isAmdBlasInitialized)
+        {
+            AutoLock lock(m);
+
+            if (!g_isAmdBlasInitialized && haveOpenCL())
+            {
+                try
+                {
+                    g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                }
+                catch (...)
+                {
+                    g_isAmdBlasAvailable = false;
+                }
+            }
+            else
+                g_isAmdBlasAvailable = false;
+
+            g_isAmdBlasInitialized = true;
+        }
+    }
+
+private:
+    static Mutex m;
+    static bool g_isAmdBlasInitialized;
+    static bool g_isAmdBlasAvailable;
+};
+
+bool AmdBlasHelper::g_isAmdBlasAvailable = false;
+bool AmdBlasHelper::g_isAmdBlasInitialized = false;
+Mutex AmdBlasHelper::m;
+
+bool haveAmdBlas()
+{
+    return AmdBlasHelper::getInstance().isAvailable();
+}
+
+#else
+
+bool haveAmdBlas()
+{
+    return false;
+}
+
+#endif
 
 void finish2()
 {
