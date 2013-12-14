@@ -75,9 +75,31 @@
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
 
+#include <mferror.h>
+
+#ifdef HAVE_WINRT
+#ifdef __cplusplus_winrt
+#include <agile.h>
+#include <vccorlib.h>
+#endif
+
+#include <wrl\async.h>
+#include <wrl\implements.h>
+#include <wrl\module.h>
+#include <wrl\wrappers\corewrappers.h>
+#include <windows.media.capture.h>
+#include <windows.devices.enumeration.h>
+#include <concrt.h>
+#include <ppltasks.h>
+
+using namespace Microsoft::WRL::Wrappers;
+#endif
+
 struct IMFMediaType;
+#ifndef HAVE_WINRT
 struct IMFActivate;
 struct IMFMediaSource;
+#endif
 struct IMFAttributes;
 
 namespace
@@ -104,6 +126,8 @@ public:
 private:
     DebugPrintOut(void);
 };
+
+#include "cap_msmf.hpp"
 
 // Structure for collecting info about types of video, which are supported by current video device
 struct MediaType
@@ -171,45 +195,12 @@ private:
     RawImage(unsigned int size);
 };
 
-// Class for grabbing image from video stream
-class ImageGrabber : public IMFSampleGrabberSinkCallback
+class ImageGrabberCallback : public IMFSampleGrabberSinkCallback
 {
 public:
-    ~ImageGrabber(void);
-    HRESULT initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat);
-    HRESULT startGrabbing(void);
     void pauseGrabbing();
     void resumeGrabbing();
-    void stopGrabbing();
     RawImage *getRawImage();
-    // Function of creation of the instance of the class
-    static HRESULT CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronous = false);
-
-    const HANDLE ig_hFrameReady;
-    const HANDLE ig_hFrameGrabbed;
-    const HANDLE ig_hFinish;
-
-private:
-    bool ig_RIE;
-    bool ig_Close;
-    bool ig_Synchronous;
-    long m_cRef;
-    unsigned int ig_DeviceID;
-    IMFMediaSource *ig_pSource;
-    IMFMediaSession *ig_pSession;
-    IMFTopology *ig_pTopology;
-    RawImage *ig_RIFirst;
-    RawImage *ig_RISecond;
-    RawImage *ig_RIOut;
-    ImageGrabber(unsigned int deviceID, bool synchronous);
-    HRESULT CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo);
-    HRESULT AddSourceNode(IMFTopology *pTopology, IMFMediaSource *pSource,
-        IMFPresentationDescriptor *pPD, IMFStreamDescriptor *pSD, IMFTopologyNode **ppNode);
-    HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
-    // IUnknown methods
-    STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
-    STDMETHODIMP_(ULONG) AddRef();
-    STDMETHODIMP_(ULONG) Release();
     // IMFClockStateSink methods
     STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset);
     STDMETHODIMP OnClockStop(MFTIME hnsSystemTime);
@@ -222,6 +213,85 @@ private:
         LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
         DWORD dwSampleSize);
     STDMETHODIMP OnShutdown();
+
+    const HANDLE ig_hFrameReady;
+    const HANDLE ig_hFrameGrabbed;
+    const HANDLE ig_hFinish;
+protected:
+    ImageGrabberCallback(bool synchronous);
+    bool ig_RIE;
+    bool ig_Close;
+    bool ig_Synchronous;
+    long m_cRef;
+
+    RawImage *ig_RIFirst;
+    RawImage *ig_RISecond;
+    RawImage *ig_RIOut;
+};
+
+#ifdef HAVE_WINRT
+extern const __declspec(selectany) WCHAR RuntimeClass_CV_ImageGrabberWinRT[] = L"cv.ImageGrabberWinRT";
+
+class ImageGrabberWinRT :
+    public Microsoft::WRL::RuntimeClass<
+    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix>,
+    IMFSampleGrabberSinkCallback>, public ImageGrabberCallback
+{
+    InspectableClass(RuntimeClass_CV_ImageGrabberWinRT, BaseTrust)
+public:
+    ImageGrabberWinRT(bool synchronous);
+    ~ImageGrabberWinRT(void);
+
+    HRESULT initImageGrabber(MAKE_WRL_REF(_MediaCapture) pSource,
+        GUID VideoFormat);
+    HRESULT startGrabbing(MAKE_WRL_REF(_AsyncAction)* action);
+    HRESULT stopGrabbing(MAKE_WRL_REF(_AsyncAction)* action);
+    // IMFClockStateSink methods
+    STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset) { return ImageGrabberCallback::OnClockStart(hnsSystemTime, llClockStartOffset); }
+    STDMETHODIMP OnClockStop(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockStop(hnsSystemTime); }
+    STDMETHODIMP OnClockPause(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockPause(hnsSystemTime); }
+    STDMETHODIMP OnClockRestart(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockRestart(hnsSystemTime); }
+    STDMETHODIMP OnClockSetRate(MFTIME hnsSystemTime, float flRate) { return ImageGrabberCallback::OnClockSetRate(hnsSystemTime, flRate); }
+    // IMFSampleGrabberSinkCallback methods
+    STDMETHODIMP OnSetPresentationClock(IMFPresentationClock* pClock) { return ImageGrabberCallback::OnSetPresentationClock(pClock); }
+    STDMETHODIMP OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
+        LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
+        DWORD dwSampleSize) { return ImageGrabberCallback::OnProcessSample(guidMajorMediaType, dwSampleFlags, llSampleTime, llSampleDuration, pSampleBuffer, dwSampleSize); }
+    STDMETHODIMP OnShutdown() { return ImageGrabberCallback::OnShutdown(); }
+    // Function of creation of the instance of the class
+    static HRESULT CreateInstance(ImageGrabberWinRT **ppIG, bool synchronous = false);
+private:
+    MAKE_WRL_AGILE_REF(_MediaCapture) ig_pMedCapSource;
+    MediaSink* ig_pMediaSink;
+};
+#endif
+
+// Class for grabbing image from video stream
+class ImageGrabber : public ImageGrabberCallback
+{
+public:
+    ~ImageGrabber(void);
+    HRESULT initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat);
+    HRESULT startGrabbing(void);
+    void stopGrabbing();
+    // IUnknown methods
+    STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
+    STDMETHODIMP_(ULONG) AddRef();
+    STDMETHODIMP_(ULONG) Release();
+    // Function of creation of the instance of the class
+    static HRESULT CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronous = false);
+
+private:
+    unsigned int ig_DeviceID;
+
+    IMFMediaSource *ig_pSource;
+    IMFMediaSession *ig_pSession;
+    IMFTopology *ig_pTopology;
+    ImageGrabber(unsigned int deviceID, bool synchronous);
+    HRESULT CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo);
+    HRESULT AddSourceNode(IMFTopology *pTopology, IMFMediaSource *pSource,
+        IMFPresentationDescriptor *pPD, IMFStreamDescriptor *pSD, IMFTopologyNode **ppNode);
+    HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
 };
 
 /// Class for controlling of thread of the grabbing raw data from video device
@@ -298,7 +368,19 @@ public:
     CamParametrs getParametrs();
     void setParametrs(CamParametrs parametrs);
     void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
+#ifdef HAVE_WINRT
+    long readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num);
+    void waitForDevice()
+    {
+        if (vd_pAction) {
+            HRESULT hr;
+            DO_ACTION_SYNCHRONOUSLY(hr, vd_pAction, GET_CURRENT_CONTEXT);
+            vd_pAction = nullptr;
+        }
+    }
+#else
     long readInfoOfDevice(IMFActivate *pActivate, unsigned int Num);
+#endif
     wchar_t *getName();
     int getCountFormats();
     unsigned int getWidth();
@@ -329,15 +411,29 @@ private:
     std::map<UINT64, FrameRateMap> vd_CaptureFormats;
     std::vector<MediaType> vd_CurrentFormats;
     IMFMediaSource *vd_pSource;
+#ifdef HAVE_WINRT
+    MAKE_WRL_AGILE_REF(_MediaCapture) vd_pMedCap;
+    IMedCapFailHandler* vd_pMedCapFail;
+    ImageGrabberWinRT *vd_pImGr;
+    MAKE_WRL_REF(_AsyncAction) vd_pAction;
+    Concurrency::critical_section vd_lock;
+#endif
     emergensyStopEventCallback vd_func;
     void *vd_userData;
     HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
     long setDeviceFormat(IMFMediaSource *pSource, unsigned long dwFormatIndex);
     void buildLibraryofTypes();
     int findType(unsigned int size, unsigned int frameRate = 0);
+#ifdef HAVE_WINRT
+    HRESULT enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource);
+    long setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction);
+    long resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice);
+    long checkDevice(_DeviceClass devClass, DEFINE_TASK<HRESULT>* pTask, MAKE_WRL_REF(_IDeviceInformation)* ppDevice);
+#else
     long resetDevice(IMFActivate *pActivate);
-    long initDevice();
     long checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice);
+#endif
+    long initDevice();
 };
 
 /// Class for managing of list of video devices
@@ -345,13 +441,27 @@ class videoDevices
 {
 public:
     ~videoDevices(void);
+#ifdef HAVE_WINRT
+    long initDevices(_DeviceClass devClass);
+    void waitInit() {
+        if (vds_enumTask) {
+            HRESULT hr;
+            DO_ACTION_SYNCHRONOUSLY(hr, vds_enumTask, GET_CURRENT_CONTEXT);
+            vds_enumTask = nullptr;
+        }
+    }
+#else
     long initDevices(IMFAttributes *pAttributes);
+#endif
     static videoDevices& getInstance();
     videoDevice *getDevice(unsigned int i);
     unsigned int getCount();
     void clearDevices();
 private:
     UINT32 count;
+#ifdef HAVE_WINRT
+    MAKE_WRL_REF(_AsyncAction) vds_enumTask;
+#endif
     std::vector<videoDevice *> vds_Devices;
     videoDevices(void);
 };
@@ -414,6 +524,9 @@ public:
     bool setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate = 30);
     // Checking of recivig of new frame from video device with deviceID
     bool isFrameNew(int deviceID);
+#ifdef HAVE_WINRT
+    void waitForDevice(int deviceID);
+#endif
     // Writing of Raw Data pixels from video device with deviceID with correction of RedAndBlue flipping flipRedAndBlue and vertical flipping flipImage
     bool getPixels(int deviceID, unsigned char * pixels, bool flipRedAndBlue = false, bool flipImage = false);
     static void processPixels(unsigned char * src, unsigned char * dst, unsigned int width, unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
@@ -884,18 +997,22 @@ FormatReader::~FormatReader(void)
 
 #define CHECK_HR(x) if (FAILED(x)) { goto done; }
 
-ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
+ImageGrabberCallback::ImageGrabberCallback(bool synchronous):
     m_cRef(1),
-    ig_DeviceID(deviceID),
-    ig_pSource(NULL),
-    ig_pSession(NULL),
-    ig_pTopology(NULL),
     ig_RIE(true),
     ig_Close(false),
     ig_Synchronous(synchronous),
     ig_hFrameReady(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
     ig_hFrameGrabbed(synchronous ? CreateEvent(NULL, FALSE, TRUE, NULL): 0),
     ig_hFinish(CreateEvent(NULL, TRUE, FALSE, NULL))
+{}
+
+ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
+    ImageGrabberCallback(synchronous),
+    ig_DeviceID(deviceID),
+    ig_pSource(NULL),
+    ig_pSession(NULL),
+    ig_pTopology(NULL)
 {}
 
 ImageGrabber::~ImageGrabber(void)
@@ -917,8 +1034,157 @@ ImageGrabber::~ImageGrabber(void)
     SafeRelease(&ig_pTopology);
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
 
-    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroing instance of the ImageGrabber class\n", ig_DeviceID);
+    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Destroying instance of the ImageGrabber class\n", ig_DeviceID);
 }
+
+#ifdef HAVE_WINRT
+
+ImageGrabberWinRT::ImageGrabberWinRT(bool synchronous):
+    ImageGrabberCallback(synchronous),
+    ig_pMediaSink(NULL)
+{
+    ig_pMedCapSource = nullptr;
+}
+
+ImageGrabberWinRT::~ImageGrabberWinRT(void)
+{
+    //stop must already be performed and complete by object owner
+    if (ig_pMediaSink != NULL) {
+        ((IMFMediaSink*)ig_pMediaSink)->Shutdown();
+    }
+    SafeRelease(&ig_pMediaSink);
+    RELEASE_AGILE_WRL(ig_pMedCapSource)
+
+    CloseHandle(ig_hFinish);
+
+    if (ig_Synchronous)
+    {
+        CloseHandle(ig_hFrameReady);
+        CloseHandle(ig_hFrameGrabbed);
+    }
+
+    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
+
+    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE: Destroying instance of the ImageGrabberWinRT class\n");
+}
+
+HRESULT ImageGrabberWinRT::initImageGrabber(MAKE_WRL_REF(_MediaCapture) pSource,
+    GUID VideoFormat)
+{
+    HRESULT hr;
+    MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
+    WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
+    if (FAILED(hr)) return hr;
+    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
+    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, _VideoPreview)
+    if (FAILED(hr)) return hr;
+    GET_WRL_VIDEO_ENCODING_PROPERTIES(pMedEncProps, pVidProps, hr);
+    if (FAILED(hr)) return hr;
+    ComPtr<IMFMediaType> pType = NULL;
+    hr = MediaSink::ConvertPropertiesToMediaType(DEREF_AS_NATIVE_WRL_OBJ(ABI::Windows::Media::MediaProperties::IMediaEncodingProperties, pMedEncProps), &pType);
+    if (FAILED(hr)) return hr;
+    MediaType MT = FormatReader::Read(pType.Get());
+    unsigned int sizeRawImage = 0;
+    if(VideoFormat == MFVideoFormat_RGB24)
+    {
+        sizeRawImage = MT.MF_MT_FRAME_SIZE * 3;
+    }
+    else if(VideoFormat == MFVideoFormat_RGB32)
+    {
+        sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
+    }
+    sizeRawImage = MT.MF_MT_SAMPLE_SIZE;
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
+    ig_RIOut = ig_RISecond;
+    ig_pMedCapSource = pSource;
+done:
+    return hr;
+}
+
+HRESULT ImageGrabberWinRT::stopGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
+{
+    HRESULT hr = S_OK;
+    if (ig_pMedCapSource != nullptr) {
+        GET_WRL_VIDEO_PREVIEW(DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), imedPrevCap, hr);
+        if (FAILED(hr)) return hr;
+        MAKE_WRL_REF(_AsyncAction) pAction;
+        WRL_METHOD_BASE(imedPrevCap, StopPreviewAsync, pAction, hr)
+        if (SUCCEEDED(hr)) {
+            SAVE_CURRENT_CONTEXT(context);
+            *action = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(pAction, context, this)
+                HRESULT hr;
+                DO_ACTION_SYNCHRONOUSLY(hr, pAction, context);
+                SafeRelease(&ig_pMediaSink);
+                SetEvent(ig_hFinish);
+            END_CREATE_ASYNC(hr));
+        }
+    }
+    return hr;
+}
+
+HRESULT ImageGrabberWinRT::startGrabbing(MAKE_WRL_REF(_AsyncAction)* action)
+{
+    HRESULT hr = S_OK;
+    GET_WRL_VIDEO_PREVIEW(DEREF_AGILE_WRL_OBJ(ig_pMedCapSource), imedPrevCap, hr);
+    if (FAILED(hr)) return hr;
+    ACTIVATE_OBJ(RuntimeClass_Windows_Foundation_Collections_PropertySet, MAKE_WRL_OBJ(_PropertySet), pSet, hr)
+    if (FAILED(hr)) return hr;
+    GET_WRL_MAP(pSet, spSetting, hr)
+    if (FAILED(hr)) return hr;
+    ACTIVATE_STATIC_OBJ(RuntimeClass_Windows_Foundation_PropertyValue, MAKE_WRL_OBJ(_PropertyValueStatics), spPropVal, hr)
+    if (FAILED(hr)) return hr;
+    _ObjectObj pVal;
+    boolean bReplaced;
+    WRL_METHOD(spPropVal, CreateUInt32, pVal, hr, (unsigned int)_VideoPreview)
+    if (FAILED(hr)) return hr;
+    WRL_METHOD(spSetting, Insert, bReplaced, hr, DEREF_WRL_OBJ(_StringReference(MF_PROP_VIDTYPE)), DEREF_WRL_OBJ(pVal))
+    if (FAILED(hr)) return hr;
+    WRL_METHOD(spSetting, Insert, bReplaced, hr, DEREF_WRL_OBJ(_StringReference(MF_PROP_SAMPLEGRABBERCALLBACK)), reinterpret_cast<_Object>(this))
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
+    WRL_PROP_GET(ig_pMedCapSource, VideoDeviceController, pDevCont, hr)
+    if (FAILED(hr)) return hr;
+    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
+    WRL_METHOD(pMedDevCont, GetMediaStreamProperties, pMedEncProps, hr, _VideoPreview)
+    if (FAILED(hr)) return hr;
+    GET_WRL_VIDEO_ENCODING_PROPERTIES(pMedEncProps, pVidProps, hr);
+    if (FAILED(hr)) return hr;
+    ACTIVATE_OBJ(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile, MAKE_WRL_OBJ(_MediaEncodingProfile), pEncProps, hr)
+    if (FAILED(hr)) return hr;
+    WRL_PROP_PUT(pEncProps, Video, DEREF_WRL_OBJ(pVidProps), hr)
+    if (FAILED(hr)) return hr;
+    WRL_METHOD(spSetting, Insert, bReplaced, hr, DEREF_WRL_OBJ(_StringReference(MF_PROP_VIDENCPROPS)), DEREF_WRL_OBJ(pVidProps))
+    if (SUCCEEDED(hr)) {
+        //can start/stop multiple times with same MediaCapture object if using activatable class
+        WRL_METHOD(imedPrevCap, _StartPreviewToCustomSinkIdAsync, *action, hr, DEREF_WRL_OBJ(pEncProps), DEREF_WRL_OBJ(_StringReference(RuntimeClass_CV_MediaSink)), DEREF_WRL_OBJ(pSet))
+        if (FAILED(hr) && hr == REGDB_E_CLASSNOTREG) {
+            hr = Microsoft::WRL::Make<MediaSink>().CopyTo(&ig_pMediaSink);
+            if (FAILED(hr)) return hr;
+            hr = ((ABI::Windows::Media::IMediaExtension*)ig_pMediaSink)->SetProperties(DEREF_AS_NATIVE_WRL_OBJ(ABI::Windows::Foundation::Collections::IPropertySet, pSet));
+            if (FAILED(hr)) return hr;
+            WRL_METHOD(imedPrevCap, StartPreviewToCustomSinkAsync, *action, hr, DEREF_WRL_OBJ(pEncProps), reinterpret_cast<MAKE_WRL_REF(_MediaExtension)>(ig_pMediaSink))
+        }
+    }
+    return hr;
+}
+
+HRESULT ImageGrabberWinRT::CreateInstance(ImageGrabberWinRT **ppIG, bool synchronous)
+{
+    *ppIG = Microsoft::WRL::Make<ImageGrabberWinRT>(synchronous).Detach();
+    if (ppIG == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
+    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
+    DPO->printOut(L"IMAGEGRABBER VIDEODEVICE: Creating instance of ImageGrabberWinRT\n");
+    return S_OK;
+}
+#endif
 
 HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat)
 {
@@ -975,6 +1241,7 @@ err:
     {
         sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
     }
+    //sizeRawImage = MT.MF_MT_SAMPLE_SIZE;
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
     ig_RIOut = ig_RISecond;
@@ -1003,7 +1270,6 @@ done:
         SafeRelease(&ig_pSession);
         SafeRelease(&ig_pTopology);
     }
-
     return hr;
 }
 
@@ -1017,11 +1283,11 @@ void ImageGrabber::stopGrabbing()
 
 HRESULT ImageGrabber::startGrabbing(void)
 {
+    HRESULT hr = S_OK;
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     ComPtr<IMFMediaEvent> pEvent = NULL;
     PROPVARIANT var;
     PropVariantInit(&var);
-    HRESULT hr = S_OK;
     hr = ig_pSession->SetTopology(0, ig_pTopology);
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
     hr = ig_pSession->Start(&GUID_NULL, &var);
@@ -1079,11 +1345,11 @@ done:
     return hr;
 }
 
-void ImageGrabber::pauseGrabbing()
+void ImageGrabberCallback::pauseGrabbing()
 {
 }
 
-void ImageGrabber::resumeGrabbing()
+void ImageGrabberCallback::resumeGrabbing()
 {
 }
 
@@ -1218,45 +1484,45 @@ STDMETHODIMP_(ULONG) ImageGrabber::Release()
     return cRef;
 }
 
-STDMETHODIMP ImageGrabber::OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset)
+STDMETHODIMP ImageGrabberCallback::OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset)
 {
     (void)hnsSystemTime;
     (void)llClockStartOffset;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnClockStop(MFTIME hnsSystemTime)
+STDMETHODIMP ImageGrabberCallback::OnClockStop(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnClockPause(MFTIME hnsSystemTime)
+STDMETHODIMP ImageGrabberCallback::OnClockPause(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnClockRestart(MFTIME hnsSystemTime)
+STDMETHODIMP ImageGrabberCallback::OnClockRestart(MFTIME hnsSystemTime)
 {
     (void)hnsSystemTime;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnClockSetRate(MFTIME hnsSystemTime, float flRate)
+STDMETHODIMP ImageGrabberCallback::OnClockSetRate(MFTIME hnsSystemTime, float flRate)
 {
     (void)flRate;
     (void)hnsSystemTime;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnSetPresentationClock(IMFPresentationClock* pClock)
+STDMETHODIMP ImageGrabberCallback::OnSetPresentationClock(IMFPresentationClock* pClock)
 {
     (void)pClock;
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
+STDMETHODIMP ImageGrabberCallback::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
     LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
     DWORD dwSampleSize)
 {
@@ -1298,13 +1564,13 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     return S_OK;
 }
 
-STDMETHODIMP ImageGrabber::OnShutdown()
+STDMETHODIMP ImageGrabberCallback::OnShutdown()
 {
     SetEvent(ig_hFinish);
     return S_OK;
 }
 
-RawImage *ImageGrabber::getRawImage()
+RawImage *ImageGrabberCallback::getRawImage()
 {
     return ig_RIOut;
 }
@@ -1330,7 +1596,7 @@ HRESULT ImageGrabberThread::CreateInstance(ImageGrabberThread **ppIGT, IMFMediaS
     return S_OK;
 }
 
-ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID, bool synchronious):
+ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int deviceID, bool synchronious) :
     igt_func(NULL),
     igt_Handle(NULL),
     igt_stop(false)
@@ -1352,7 +1618,7 @@ ImageGrabberThread::ImageGrabberThread(IMFMediaSource *pSource, unsigned int dev
     }
     else
     {
-        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
+        DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: There is a problem with creation of the instance of the ImageGrabber class\n", deviceID);
     }
 }
 
@@ -1450,6 +1716,10 @@ Media_Foundation::~Media_Foundation(void)
 bool Media_Foundation::buildListOfDevices()
 {
     HRESULT hr = S_OK;
+#ifdef HAVE_WINRT
+    videoDevices *vDs = &videoDevices::getInstance();
+    hr = vDs->initDevices(_VideoCapture);
+#else
     ComPtr<IMFAttributes> pAttributes = NULL;
     CoInitialize(NULL);
     hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
@@ -1465,7 +1735,8 @@ bool Media_Foundation::buildListOfDevices()
         videoDevices *vDs = &videoDevices::getInstance();
         hr = vDs->initDevices(pAttributes.Get());
     }
-    else
+#endif
+    if (FAILED(hr))
     {
        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
        DPO->printOut(L"MEDIA FOUNDATION: The access to the video cameras denied\n");
@@ -1532,8 +1803,14 @@ unsigned char * RawImage::getpPixels()
 }
 
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
-    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_func(NULL), vd_userData(NULL)
+    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
 {
+#ifdef HAVE_WINRT
+    vd_pMedCap = nullptr;
+    vd_pMedCapFail = NULL;
+    vd_pImGr = NULL;
+    vd_pAction = nullptr;
+#endif
 }
 
 void videoDevice::setParametrs(CamParametrs parametrs)
@@ -1616,13 +1893,60 @@ CamParametrs videoDevice::getParametrs()
     return out;
 }
 
+#ifdef HAVE_WINRT
+long videoDevice::resetDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice)
+#else
 long videoDevice::resetDevice(IMFActivate *pActivate)
+#endif
 {
     HRESULT hr = -1;
     vd_CurrentFormats.clear();
     if(vd_pFriendlyName)
         CoTaskMemFree(vd_pFriendlyName);
     vd_pFriendlyName = NULL;
+#ifdef HAVE_WINRT
+    if (pDevice)
+    {
+        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, MAKE_WRL_OBJ(_MediaCapture), pIMedCap, hr)
+        if (FAILED(hr)) return hr;
+        ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, MAKE_WRL_OBJ(_MediaCaptureInitializationSettings), pCapInitSet, hr)
+        if (FAILED(hr)) return hr;
+        _StringObj str;
+        WRL_PROP_GET(pDevice, Name, *REF_WRL_OBJ(str), hr)
+        if (FAILED(hr)) return hr;
+        unsigned int length = 0;
+        PCWSTR wstr = WindowsGetStringRawBuffer(reinterpret_cast<HSTRING>(DEREF_WRL_OBJ(str)), &length);
+        vd_pFriendlyName = (wchar_t*)CoTaskMemAlloc((length + 1) * sizeof(wchar_t));
+        wcscpy(vd_pFriendlyName, wstr);
+        WRL_PROP_GET(pDevice, Id, *REF_WRL_OBJ(str), hr)
+        if (FAILED(hr)) return hr;
+        WRL_PROP_PUT(pCapInitSet, VideoDeviceId, DEREF_WRL_OBJ(str), hr)
+        if (FAILED(hr)) return hr;
+        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, _Video, hr)
+        if (FAILED(hr)) return hr;
+        MAKE_WRL_REF(_AsyncAction) pAction;
+        WRL_METHOD(DEREF_WRL_OBJ(pIMedCap), _InitializeWithSettingsAsync, pAction, hr, DEREF_WRL_OBJ(pCapInitSet))
+        if (FAILED(hr)) return hr;
+        MAKE_WRL_AGILE_REF(_MediaCapture) pAgileMedCap;
+        pAgileMedCap = PREPARE_TRANSFER_WRL_OBJ(pIMedCap);
+        Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
+        MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
+        SAVE_CURRENT_CONTEXT(context);
+        vd_pAction = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(pAction, pOldAction, context, &pAgileMedCap, this)
+           HRESULT hr;
+           if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
+           DO_ACTION_SYNCHRONOUSLY(hr, pAction, context);
+           if (SUCCEEDED(hr)) {
+                //all camera capture calls only in original context
+                BEGIN_CALL_IN_CONTEXT(hr, context, pAgileMedCap, this)
+                    enumerateCaptureFormats(DEREF_AGILE_WRL_OBJ(pAgileMedCap));
+                END_CALL_IN_CONTEXT(S_OK)
+           }
+           buildLibraryofTypes();
+           RELEASE_AGILE_WRL(pAgileMedCap)
+        END_CREATE_ASYNC(hr));
+    }
+#else
     if(pActivate)
     {
         IMFMediaSource *pSource = NULL;
@@ -1645,9 +1969,19 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
             DPO->printOut(L"VIDEODEVICE %i: IMFMediaSource interface cannot be created \n", vd_CurrentNumber);
         }
     }
+#endif
     return hr;
 }
 
+#ifdef HAVE_WINRT
+long videoDevice::readInfoOfDevice(MAKE_WRL_REF(_IDeviceInformation) pDevice, unsigned int Num)
+{
+    HRESULT hr = -1;
+    vd_CurrentNumber = Num;
+    hr = resetDevice(pDevice);
+    return hr;
+}
+#else
 long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
 {
     HRESULT hr = -1;
@@ -1655,7 +1989,44 @@ long videoDevice::readInfoOfDevice(IMFActivate *pActivate, unsigned int Num)
     hr = resetDevice(pActivate);
     return hr;
 }
+#endif
 
+#ifdef HAVE_WINRT
+long videoDevice::checkDevice(_DeviceClass devClass, DEFINE_TASK<HRESULT>* pTask, MAKE_WRL_REF(_IDeviceInformation)* ppDevice)
+{
+    HRESULT hr = S_OK;
+    ACTIVATE_STATIC_OBJ(RuntimeClass_Windows_Devices_Enumeration_DeviceInformation, MAKE_WRL_OBJ(_DeviceInformationStatics), pDevStat, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_REF(_AsyncOperation<MAKE_WRL_REF(_DeviceInformationCollection)>) pAction;
+    WRL_METHOD(pDevStat, _FindAllAsyncDeviceClass, pAction, hr, devClass)
+    if (SUCCEEDED(hr)) {
+        *pTask = CREATE_TASK([pAction, &ppDevice, this]() -> HRESULT {
+            HRESULT hr;
+            MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_DeviceInformation)>) pVector;
+            DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, pAction, GET_CURRENT_CONTEXT, pVector, _VectorView, _DeviceInformation, _DeviceInformationCollection);
+            UINT32 count = 0;
+            if (SUCCEEDED(hr)) WRL_PROP_GET(pVector, Size, count, hr)
+            if (SUCCEEDED(hr) && count > 0) {
+                for (UINT32 i = 0; i < count; i++) {
+                    MAKE_WRL_OBJ(_IDeviceInformation) pDevice;
+                    WRL_METHOD(pVector, GetAt, pDevice, hr, i)
+                    if (SUCCEEDED(hr)) {
+                        _StringObj str;
+                        unsigned int length = 0;
+                        WRL_PROP_GET(pDevice, Name, *REF_WRL_OBJ(str), hr)
+                        PCWSTR wstr = WindowsGetStringRawBuffer(reinterpret_cast<HSTRING>(DEREF_WRL_OBJ(str)), &length);
+                        if (wcscmp(wstr, vd_pFriendlyName) == 0) {
+                            *ppDevice = PREPARE_TRANSFER_WRL_OBJ(pDevice);
+                        }
+                    }
+                }
+            }
+            return hr;
+        });
+    }
+    return hr;
+}
+#else
 long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
 {
     HRESULT hr = S_OK;
@@ -1714,14 +2085,60 @@ long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
     }
     return hr;
 }
+#endif
 
 long videoDevice::initDevice()
 {
-    HRESULT hr = -1;
+    HRESULT hr = S_OK;
+    CoInitialize(NULL);
+#ifdef HAVE_WINRT
+    Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
+    MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
+    SAVE_CURRENT_CONTEXT(context);
+    vd_pAction = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(pOldAction, context, this)
+        HRESULT hr;
+        if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
+        DEFINE_TASK<HRESULT> pTask;
+        MAKE_WRL_OBJ(_IDeviceInformation) pDevInfo;
+        hr = checkDevice(_VideoCapture, &pTask, REF_WRL_OBJ(pDevInfo));
+        if (SUCCEEDED(hr)) hr = pTask.get();
+        if (SUCCEEDED(hr)) {
+            MAKE_WRL_REF(_AsyncAction) pAction;
+            BEGIN_CALL_IN_CONTEXT(hr, context, pDevInfo, &pAction, context, this)
+                HRESULT hr;
+                ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCapture, MAKE_WRL_OBJ(_MediaCapture), pIMedCap, hr)
+                if (SUCCEEDED(hr)) {
+                    RELEASE_WRL(vd_pMedCap);
+                    vd_pMedCap = PREPARE_TRANSFER_WRL_OBJ(pIMedCap);
+                    ACTIVATE_OBJ(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, MAKE_WRL_OBJ(_MediaCaptureInitializationSettings), pCapInitSet, hr)
+                    _StringObj str;
+                    if (SUCCEEDED(hr)) {
+                        WRL_PROP_GET(pDevInfo, Id, *REF_WRL_OBJ(str), hr)
+                        if (SUCCEEDED(hr)) {
+                            WRL_PROP_PUT(pCapInitSet, VideoDeviceId, DEREF_WRL_OBJ(str), hr)
+                        }
+                    }
+                    if (SUCCEEDED(hr))
+                        WRL_PROP_PUT(pCapInitSet, StreamingCaptureMode, _Video, hr)
+                    if (SUCCEEDED(hr)) {
+                        vd_pMedCapFail = create_medcapfailedhandler([this, context](){
+                            HRESULT hr;
+                            BEGIN_CALL_IN_CONTEXT(hr, context, this)
+                                closeDevice();
+                            END_CALL_IN_CONTEXT(S_OK)
+                        });
+                    }
+                    if (SUCCEEDED(hr)) hr = vd_pMedCapFail->AddHandler(reinterpret_cast<ABI::Windows::Media::Capture::IMediaCapture*>(DEREF_AGILE_WRL_OBJ(vd_pMedCap)));
+                    if (SUCCEEDED(hr)) WRL_METHOD(vd_pMedCap, _InitializeWithSettingsAsync, pAction, hr, DEREF_WRL_OBJ(pCapInitSet))
+                }
+            END_CALL_IN_CONTEXT(hr)
+            DO_ACTION_SYNCHRONOUSLY(hr, pAction, context);
+        }
+    END_CREATE_ASYNC(hr));
+#else
+    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     ComPtr<IMFAttributes> pAttributes = NULL;
     IMFActivate *vd_pActivate = NULL;
-    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
-    CoInitialize(NULL);
     hr = MFCreateAttributes(pAttributes.GetAddressOf(), 1);
     if (SUCCEEDED(hr))
     {
@@ -1754,7 +2171,7 @@ long videoDevice::initDevice()
     {
         DPO->printOut(L"VIDEODEVICE %i: The attribute of video cameras cannot be getting \n", vd_CurrentNumber);
     }
-
+#endif
     return hr;
 }
 
@@ -1768,7 +2185,7 @@ MediaType videoDevice::getFormat(unsigned int id)
 }
 int videoDevice::getCountFormats()
 {
-    return vd_CurrentFormats.size();
+    return (int)vd_CurrentFormats.size();
 }
 void videoDevice::setEmergencyStopEvent(void *userData, void(*func)(int, void *))
 {
@@ -1780,6 +2197,30 @@ void videoDevice::closeDevice()
     if(vd_IsSetuped)
     {
         vd_IsSetuped = false;
+
+#ifdef HAVE_WINRT
+        if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
+            MAKE_WRL_REF(_AsyncAction) action;
+            Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
+            MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
+            vd_pImGr->stopGrabbing(&action);
+            vd_pMedCapFail->RemoveHandler(reinterpret_cast<ABI::Windows::Media::Capture::IMediaCapture*>(DEREF_AGILE_WRL_OBJ(vd_pMedCap)));
+            SafeRelease(&vd_pMedCapFail);
+            vd_pAction = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(action, pOldAction, this)
+                HRESULT hr;
+                if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
+                DO_ACTION_SYNCHRONOUSLY(hr, action, GET_CURRENT_CONTEXT);
+                RELEASE_WRL(vd_pMedCap)
+                if(vd_LockOut == RawDataLock) {
+                    delete vd_pImGr;
+                }
+                vd_pImGr = NULL;
+                vd_LockOut = OpenLock;
+            END_CREATE_ASYNC(hr));
+            return;
+        }
+#endif
+
         vd_pSource->Stop();
         SafeRelease(&vd_pSource);
         if(vd_LockOut == RawDataLock)
@@ -1884,6 +2325,26 @@ void videoDevice::buildLibraryofTypes()
     }
 }
 
+#ifdef HAVE_WINRT
+long videoDevice::setDeviceFormat(MAKE_WRL_REF(_MediaCapture) pSource, unsigned long  dwFormatIndex, MAKE_WRL_REF(_AsyncAction)* pAction)
+{
+    HRESULT hr;
+    MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
+    WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
+    if (FAILED(hr)) return hr;
+    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_MediaEncodingProperties)>) pVector;
+    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, _VideoPreview)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
+    WRL_METHOD(pVector, GetAt, pMedEncProps, hr, dwFormatIndex)
+    if (FAILED(hr)) return hr;
+    WRL_METHOD(pMedDevCont, SetMediaStreamPropertiesAsync, *pAction, hr, _VideoPreview, DEREF_WRL_OBJ(pMedEncProps))
+    return hr;
+}
+#endif
+
 long videoDevice::setDeviceFormat(IMFMediaSource *pSource, unsigned long  dwFormatIndex)
 {
     ComPtr<IMFPresentationDescriptor> pPD = NULL;
@@ -1925,6 +2386,9 @@ bool videoDevice::isDeviceSetup()
 RawImage * videoDevice::getRawImageOut()
 {
     if(!vd_IsSetuped) return NULL;
+#ifdef HAVE_WINRT
+    if(vd_pImGr) return vd_pImGr->getRawImage();
+#endif
     if(vd_pImGrTh)
             return vd_pImGrTh->getImageGrabber()->getRawImage();
     else
@@ -1943,6 +2407,27 @@ bool videoDevice::isFrameNew()
         if(vd_LockOut == OpenLock)
         {
             vd_LockOut = RawDataLock;
+
+            //must already be closed
+#ifdef HAVE_WINRT
+            if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
+                MAKE_WRL_REF(_AsyncAction) action;
+                if (FAILED(ImageGrabberWinRT::CreateInstance(&vd_pImGr))) return false;
+                if (FAILED(vd_pImGr->initImageGrabber(DEREF_AGILE_WRL_OBJ(vd_pMedCap), MFVideoFormat_RGB24)) || FAILED(vd_pImGr->startGrabbing(&action))) {
+                    delete vd_pImGr;
+                    return false;
+                }
+                Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
+                MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
+                SAVE_CURRENT_CONTEXT(context);
+                vd_pAction = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(action, pOldAction, context, this)
+                    HRESULT hr;
+                    if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
+                    DO_ACTION_SYNCHRONOUSLY(hr, action, context);
+                END_CREATE_ASYNC(hr));
+                return true;
+            }
+#endif
             HRESULT hr = ImageGrabberThread::CreateInstance(&vd_pImGrTh, vd_pSource, vd_CurrentNumber);
             if(FAILED(hr))
             {
@@ -1954,6 +2439,10 @@ bool videoDevice::isFrameNew()
             vd_pImGrTh->start();
             return true;
         }
+#ifdef HAVE_WINRT
+        if(vd_pImGr)
+            return vd_pImGr->getRawImage()->isNew();
+#endif
         if(vd_pImGrTh)
             return vd_pImGrTh->getImageGrabber()->getRawImage()->isNew();
     }
@@ -1981,14 +2470,35 @@ bool videoDevice::setupDevice(unsigned int id)
         hr = initDevice();
         if(SUCCEEDED(hr))
         {
+#ifdef HAVE_WINRT
+            Concurrency::critical_section::scoped_lock _LockHolder(vd_lock);
+            MAKE_WRL_REF(_AsyncAction) pOldAction = vd_pAction;
+            SAVE_CURRENT_CONTEXT(context);
+            vd_pAction = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(pOldAction, context, id, DPO, this)
+                HRESULT hr;
+                if (pOldAction) DO_ACTION_SYNCHRONOUSLY(hr, pOldAction, GET_CURRENT_CONTEXT);
+#endif
             vd_Width = vd_CurrentFormats[id].width;
             vd_Height = vd_CurrentFormats[id].height;
+#ifdef HAVE_WINRT
+            if (DEREF_AGILE_WRL_OBJ(vd_pMedCap)) {
+                MAKE_WRL_REF(_AsyncAction) pAction;
+                BEGIN_CALL_IN_CONTEXT(hr, context, id, &pAction, this)
+                END_CALL_IN_CONTEXT(setDeviceFormat(DEREF_AGILE_WRL_OBJ(vd_pMedCap), (DWORD) id, &pAction))
+                if (SUCCEEDED(hr)) DO_ACTION_SYNCHRONOUSLY(hr, pAction, context);
+            } else
+#endif
             hr = setDeviceFormat(vd_pSource, (DWORD) id);
             vd_IsSetuped = (SUCCEEDED(hr));
             if(vd_IsSetuped)
                 DPO->printOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
             vd_PrevParametrs = getParametrs();
+#ifdef HAVE_WINRT
+            END_CREATE_ASYNC(hr));
+            return true;
+#else
             return vd_IsSetuped;
+#endif
         }
         else
         {
@@ -2017,10 +2527,42 @@ wchar_t *videoDevice::getName()
 videoDevice::~videoDevice(void)
 {
     closeDevice();
+#ifdef HAVE_WINRT
+    RELEASE_WRL(vd_pMedCap)
+#endif
     SafeRelease(&vd_pSource);
     if(vd_pFriendlyName)
         CoTaskMemFree(vd_pFriendlyName);
 }
+
+#ifdef HAVE_WINRT
+HRESULT videoDevice::enumerateCaptureFormats(MAKE_WRL_REF(_MediaCapture) pSource)
+{
+    HRESULT hr;
+    MAKE_WRL_OBJ(_VideoDeviceController) pDevCont;
+    WRL_PROP_GET(pSource, VideoDeviceController, pDevCont, hr)
+    if (FAILED(hr)) return hr;
+    GET_WRL_MEDIA_DEVICE_CONTROLLER(pDevCont, pMedDevCont, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_MediaEncodingProperties)>) pVector;
+    WRL_METHOD(pMedDevCont, GetAvailableMediaStreamProperties, pVector, hr, _VideoPreview)
+    if (FAILED(hr)) return hr;
+    UINT32 count;
+    WRL_PROP_GET(pVector, Size, count, hr)
+    if (FAILED(hr)) return hr;
+    for (UINT32 i = 0; i < count; i++) {
+        MAKE_WRL_OBJ(_MediaEncodingProperties) pMedEncProps;
+        WRL_METHOD(pVector, GetAt, pMedEncProps, hr, i)
+        if (FAILED(hr)) return hr;
+        ComPtr<IMFMediaType> pType = NULL;
+        hr = MediaSink::ConvertPropertiesToMediaType(DEREF_AS_NATIVE_WRL_OBJ(ABI::Windows::Media::MediaProperties::IMediaEncodingProperties, pMedEncProps), &pType);
+        if (FAILED(hr)) return hr;
+        MediaType MT = FormatReader::Read(pType.Get());
+        vd_CurrentFormats.push_back(MT);
+    }
+    return hr;
+}
+#endif
 
 HRESULT videoDevice::enumerateCaptureFormats(IMFMediaSource *pSource)
 {
@@ -2066,7 +2608,11 @@ done:
 }
 
 videoDevices::videoDevices(void): count(0)
-{}
+{
+#ifdef HAVE_WINRT
+    vds_enumTask = nullptr;
+#endif
+}
 
 void videoDevices::clearDevices()
 {
@@ -2094,11 +2640,44 @@ videoDevice * videoDevices::getDevice(unsigned int i)
     return vds_Devices[i];
 }
 
+#ifdef HAVE_WINRT
+long videoDevices::initDevices(_DeviceClass devClass)
+{
+    HRESULT hr = S_OK;
+    ACTIVATE_STATIC_OBJ(RuntimeClass_Windows_Devices_Enumeration_DeviceInformation, MAKE_WRL_OBJ(_DeviceInformationStatics), pDevStat, hr)
+    if (FAILED(hr)) return hr;
+    MAKE_WRL_REF(_AsyncOperation<MAKE_WRL_REF(_DeviceInformationCollection)>) pAction;
+    WRL_METHOD(pDevStat, _FindAllAsyncDeviceClass, pAction, hr, devClass)
+    if (SUCCEEDED(hr)) {
+           SAVE_CURRENT_CONTEXT(context);
+           vds_enumTask = reinterpret_cast<MAKE_WRL_REF(_AsyncAction)>(BEGIN_CREATE_ASYNC(pAction, context, this)
+            HRESULT hr;
+            MAKE_WRL_OBJ(_VectorView<MAKE_WRL_REF(_DeviceInformation)>) pVector;
+            DO_OPERATION_SYNCHRONOUSLY_VECTOR(hr, pAction, GET_CURRENT_CONTEXT, pVector, _VectorView, _DeviceInformation, _DeviceInformationCollection);
+            if (SUCCEEDED(hr)) WRL_PROP_GET(pVector, Size, count, hr)
+            if (SUCCEEDED(hr) && count > 0) {
+                for (UINT32 i = 0; i < count; i++) {
+                    videoDevice *vd = new videoDevice;
+                    MAKE_WRL_OBJ(_IDeviceInformation) pDevice;
+                    WRL_METHOD(pVector, GetAt, pDevice, hr, i)
+                    if (SUCCEEDED(hr)) {
+                        BEGIN_CALL_IN_CONTEXT(hr, context, vd, pDevice, i)
+                            vd->readInfoOfDevice(DEREF_WRL_OBJ(pDevice), i);
+                        END_CALL_IN_CONTEXT(S_OK)
+                        vds_Devices.push_back(vd);
+                    }
+                }
+            }
+        END_CREATE_ASYNC(hr));
+    }
+    return hr;
+}
+#else
 long videoDevices::initDevices(IMFAttributes *pAttributes)
 {
     HRESULT hr = S_OK;
-    IMFActivate **ppDevices = NULL;
     clearDevices();
+    IMFActivate **ppDevices = NULL;
     hr = MFEnumDeviceSources(pAttributes, &ppDevices, &count);
     if (SUCCEEDED(hr))
     {
@@ -2123,10 +2702,11 @@ long videoDevices::initDevices(IMFAttributes *pAttributes)
     }
     return hr;
 }
+#endif
 
 unsigned int videoDevices::getCount()
 {
-    return vds_Devices.size();
+    return (unsigned int)vds_Devices.size();
 }
 
 videoDevices& videoDevices::getInstance()
@@ -2192,7 +2772,7 @@ videoInput::videoInput(void): accessToDevices(false)
     DPO->printOut(L"\n***** VIDEOINPUT LIBRARY - 2013 (Author: Evgeny Pereguda) *****\n\n");
     updateListOfDevices();
     if(!accessToDevices)
-        DPO->printOut(L"INITIALIZATION: Ther is not any suitable video device\n");
+        DPO->printOut(L"INITIALIZATION: There is not any suitable video device\n");
 }
 
 void videoInput::updateListOfDevices()
@@ -2201,7 +2781,7 @@ void videoInput::updateListOfDevices()
     Media_Foundation *MF = &Media_Foundation::getInstance();
     accessToDevices = MF->buildListOfDevices();
     if(!accessToDevices)
-        DPO->printOut(L"UPDATING: Ther is not any suitable video device\n");
+        DPO->printOut(L"UPDATING: There is not any suitable video device\n");
 }
 
 videoInput::~videoInput(void)
@@ -2406,6 +2986,37 @@ bool videoInput::isFrameNew(int deviceID)
     return false;
 }
 
+#ifdef HAVE_WINRT
+void videoInput::waitForDevice(int deviceID)
+{
+    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
+    if (deviceID < 0)
+    {
+        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        return;
+    }
+    if(accessToDevices)
+    {
+        if(!isDeviceSetup(deviceID))
+        {
+            if(isDeviceMediaSource(deviceID))
+                return;
+        }
+        videoDevices *VDS = &videoDevices::getInstance();
+        videoDevice * VD = VDS->getDevice(deviceID);
+        if(VD)
+        {
+            VD->waitForDevice();
+        }
+    }
+    else
+    {
+        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+    }
+    return;
+}
+#endif
+
 unsigned int videoInput::getCountFormats(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2573,6 +3184,9 @@ unsigned int videoInput::listDevices(bool silent)
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
+#ifdef HAVE_WINRT
+        VDS->waitInit();
+#endif
         out = VDS->getCount();
         DebugPrintOut *DPO = &DebugPrintOut::getInstance();
         if(!silent)DPO->printOut(L"\nVIDEOINPUT SPY MODE!\n\n");
@@ -2762,6 +3376,10 @@ protected:
     int index, width, height, fourcc;
     IplImage* frame;
     videoInput VI;
+#ifdef HAVE_WINRT
+    DEFINE_TASK<bool> openTask;
+    Concurrency::critical_section lock;
+#endif
 };
 
 struct SuppressVideoInputMessages
@@ -2802,6 +3420,10 @@ void CvCaptureCAM_MSMF::close()
 // Initialize camera input
 bool CvCaptureCAM_MSMF::open( int _index )
 {
+#ifdef HAVE_WINRT
+    SAVE_CURRENT_CONTEXT(context);
+    auto func = [_index, context, this]() -> bool {
+#endif
     int try_index = _index;
     int devices = 0;
     close();
@@ -2809,10 +3431,31 @@ bool CvCaptureCAM_MSMF::open( int _index )
     if (devices == 0)
         return false;
     try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
+#ifdef HAVE_WINRT
+    HRESULT hr;
+    BEGIN_CALL_IN_CONTEXT(hr, context, this, try_index)
+#endif
     VI.setupDevice(try_index);
+#ifdef HAVE_WINRT
+    END_CALL_IN_CONTEXT(S_OK)
+    VI.waitForDevice(try_index);
+    BEGIN_CALL_IN_CONTEXT(hr, context, this, try_index)
+    HRESULT hr = S_OK;
+#endif
     if( !VI.isFrameNew(try_index) )
+#ifdef HAVE_WINRT
+        hr = E_FAIL;
+#else
         return false;
+#endif
     index = try_index;
+#ifdef HAVE_WINRT
+    END_CALL_IN_CONTEXT(hr);
+    return true;
+    };
+    Concurrency::critical_section::scoped_lock _LockHolder(lock);
+    CREATE_OR_CONTINUE_TASK(openTask, bool, func)
+#endif
     return true;
 }
 
@@ -2928,7 +3571,7 @@ bool CvCaptureFile_MSMF::open(const char* filename)
         return false;
 
     wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
-    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, strlen(filename)+1);
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, (int)strlen(filename)+1);
 
     HRESULT hr = S_OK;
 
@@ -3351,7 +3994,7 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     spAttr->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true);
 
     wchar_t* unicodeFileName = new wchar_t[strlen(filename)+1];
-    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, strlen(filename)+1);
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, unicodeFileName, (int)strlen(filename)+1);
 
     HRESULT hr = MFCreateSinkWriterFromURL(unicodeFileName, NULL, spAttr.Get(), &sinkWriter);
 
