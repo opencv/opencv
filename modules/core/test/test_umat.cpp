@@ -43,16 +43,13 @@
 
 #include <string>
 #include <iostream>
-#include <fstream>
-#include <iterator>
-#include <limits>
-#include <numeric>
 #include "opencv2/core/ocl.hpp"
 
 using namespace cv;
 using namespace std;
 
-class CV_UMatTest : public cvtest::BaseTest
+class CV_UMatTest :
+        public cvtest::BaseTest
 {
 public:
     CV_UMatTest() {}
@@ -204,37 +201,37 @@ TEST(Core_UMat, base) { CV_UMatTest test; test.safe_run(); }
 TEST(Core_UMat, getUMat)
 {
     {
-    int a[3] = { 1, 2, 3 };
-    Mat m = Mat(1, 1, CV_32SC3, a);
-    UMat u = m.getUMat(ACCESS_READ);
-    EXPECT_NE((void*)NULL, u.u);
+        int a[3] = { 1, 2, 3 };
+        Mat m = Mat(1, 1, CV_32SC3, a);
+        UMat u = m.getUMat(ACCESS_READ);
+        EXPECT_NE((void*)NULL, u.u);
     }
 
     {
-    Mat m(10, 10, CV_8UC1), ref;
-    for (int y = 0; y < m.rows; ++y)
-    {
-        uchar * const ptr = m.ptr<uchar>(y);
-        for (int x = 0; x < m.cols; ++x)
-            ptr[x] = (uchar)(x + y * 2);
-    }
+        Mat m(10, 10, CV_8UC1), ref;
+        for (int y = 0; y < m.rows; ++y)
+        {
+            uchar * const ptr = m.ptr<uchar>(y);
+            for (int x = 0; x < m.cols; ++x)
+                ptr[x] = (uchar)(x + y * 2);
+        }
 
-    ref = m.clone();
-    Rect r(1, 1, 8, 8);
-    ref(r).setTo(17);
+        ref = m.clone();
+        Rect r(1, 1, 8, 8);
+        ref(r).setTo(17);
 
-    {
-        UMat um = m(r).getUMat(ACCESS_WRITE);
-        um.setTo(17);
-    }
+        {
+            UMat um = m(r).getUMat(ACCESS_WRITE);
+            um.setTo(17);
+        }
 
-    double err = norm(m, ref, NORM_INF);
-    if(err > 0)
-    {
-        std::cout << "m: " << m << std::endl;
-        std::cout << "ref: " << ref << std::endl;
-    }
-    EXPECT_EQ(err, 0.);
+        double err = norm(m, ref, NORM_INF);
+        if (err > 0)
+        {
+            std::cout << "m: " << std::endl << m << std::endl;
+            std::cout << "ref: " << std::endl << ref << std::endl;
+        }
+        EXPECT_EQ(0., err);
     }
 }
 

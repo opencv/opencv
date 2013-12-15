@@ -658,16 +658,56 @@ void UMat::copyTo(OutputArray _dst) const
     }
 }
 
-void UMat::convertTo(OutputArray, int, double, double) const
+void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
-    CV_Error(Error::StsNotImplemented, "");
+    bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
+    int stype = type(), cn = CV_MAT_CN(stype);
+
+    if( _type < 0 )
+        _type = _dst.fixedType() ? _dst.type() : stype;
+    else
+        _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), cn);
+
+    int sdepth = CV_MAT_DEPTH(stype), ddepth = CV_MAT_DEPTH(_type);
+    if( sdepth == ddepth && noScale )
+    {
+        copyTo(_dst);
+        return;
+    }
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool needDouble = sdepth == CV_64F || ddepth == CV_64F;
+    if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
+            ((needDouble && doubleSupport) || !needDouble) )
+    {
+        char cvt[40];
+        ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
+                      format("-D srcT=%s -D dstT=%s -D convertToDT=%s%s", ocl::typeToStr(sdepth),
+                             ocl::typeToStr(ddepth), ocl::convertTypeStr(CV_32F, ddepth, 1, cvt),
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        if (!k.empty())
+        {
+            _dst.create( size(), _type );
+            UMat dst = _dst.getUMat();
+
+            float alphaf = (float)alpha, betaf = (float)beta;
+            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::WriteOnly(dst, cn), alphaf, betaf);
+
+            size_t globalsize[2] = { dst.cols * cn, dst.rows };
+            if (k.run(2, globalsize, NULL, false))
+                return;
+        }
+    }
+
+    Mat m = getMat(ACCESS_READ);
+    m.convertTo(_dst, _type, alpha, beta);
 }
 
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
     int tp = type(), cn = CV_MAT_CN(tp);
-    if( dims <= 2 && cn <= 4 && ocl::useOpenCL() )
+    if( dims <= 2 && cn <= 4 && cn != 3 && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
@@ -707,9 +747,9 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
     return *this;
 }
 
-UMat& UMat::operator = (const Scalar&)
+UMat& UMat::operator = (const Scalar& s)
 {
-    CV_Error(Error::StsNotImplemented, "");
+    setTo(s);
     return *this;
 }
 
