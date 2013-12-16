@@ -46,7 +46,7 @@ __kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOf
 
     int gx= get_global_id(0);
     int gy= get_global_id(1);
-   
+
     int dx = gx - x - 1;
     int dy = gy - y - 1;
 
@@ -59,7 +59,7 @@ __kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOf
 
     int r = clamp(dy+dr, 0, rows-1);
     int index1 = mad24(r, srcStep, srcOffset + c*scnbytes);
-    
+
     r = clamp(dy+dr+9, 0, rows-1);
     int index9 = mad24(r, srcStep, srcOffset + c*scnbytes);
     
@@ -110,15 +110,15 @@ __kernel void medianFilter5(__global const uchar* srcptr, int srcStep, int srcOf
 
     int dr=id/20;
     int dc=id%20;
-   
+
     int c=clamp(dx+dc, 0, cols-1);
 
     int r = clamp(dy+dr, 0, rows-1);
     int index1 = mad24(r, srcStep, srcOffset + c*scnbytes);
-    
+
     r = clamp(dy+dr+10, 0, rows-1);
     int index10 = mad24(r, srcStep, srcOffset + c*scnbytes);
-    
+
     __global DATA_TYPE * src = (__global DATA_TYPE *)(srcptr + index1);
     data[dr][dc] = src[0];
     src = (__global DATA_TYPE *)(srcptr + index10);
@@ -158,7 +158,7 @@ __kernel void medianFilter5(__global const uchar* srcptr, int srcStep, int srcOf
     op(p7, p11); op(p11, p13); op(p11, p12);
 
     int dst_index = mad24( gy, dstStep, dstOffset + gx * scnbytes);
-    
+
     if( gy < rows && gx < cols)
     {
         __global DATA_TYPE* dst = (__global DATA_TYPE *)(dstptr + dst_index);
