@@ -72,7 +72,7 @@ const std::vector<Mat>& BOWTrainer::getDescriptors() const
     return descriptors;
 }
 
-int BOWTrainer::descripotorsCount() const
+int BOWTrainer::descriptorsCount() const
 {
     return descriptors.empty() ? 0 : size;
 }
