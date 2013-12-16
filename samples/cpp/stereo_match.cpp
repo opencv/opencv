@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     const char* algorithm_opt = "--algorithm=";
     const char* maxdisp_opt = "--max-disparity=";
     const char* blocksize_opt = "--blocksize=";
-    const char* nodisplay_opt = "--no-display=";
+    const char* nodisplay_opt = "--no-display";
     const char* scale_opt = "--scale=";
 
     if(argc < 3)
