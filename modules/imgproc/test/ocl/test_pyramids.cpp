@@ -45,73 +45,98 @@
 
 
 #include "test_precomp.hpp"
-#include <iomanip>
+#include "opencv2/ts/ocl_test.hpp"
 
 #ifdef HAVE_OPENCL
 
-using namespace cv;
-using namespace testing;
-using namespace std;
+namespace cvtest {
+namespace ocl {
 
-PARAM_TEST_CASE(PyrBase, MatDepth, Channels)
+PARAM_TEST_CASE(PyrTestBase, MatDepth, Channels, bool)
 {
-    int depth;
-    int channels;
+    int depth, channels;
+    bool use_roi;
 
-    Mat dst_cpu;
-    ocl::oclMat gdst;
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
 
     virtual void SetUp()
     {
         depth = GET_PARAM(0);
         channels = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+    }
+
+    void generateTestData(Size src_roiSize, Size dst_roiSize)
+    {
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, src_roiSize, srcBorder, CV_MAKETYPE(depth, channels), -MAX_VALUE, MAX_VALUE);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, dst_roiSize, dstBorder, CV_MAKETYPE(depth, channels), -MAX_VALUE, MAX_VALUE);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+
+    void Near(double threshold = 0.0)
+    {
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
 /////////////////////// PyrDown //////////////////////////
 
-typedef PyrBase PyrDown;
+typedef PyrTestBase PyrDown;
 
 OCL_TEST_P(PyrDown, Mat)
 {
-    for (int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < test_loop_times; j++)
     {
-        Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
-        ocl::oclMat gsrc(src);
+        Size src_roiSize = randomSize(1, MAX_VALUE);
+        Size dst_roiSize = Size(randomInt((src_roiSize.width - 1) / 2, (src_roiSize.width + 3) / 2),
+                                randomInt((src_roiSize.height - 1) / 2, (src_roiSize.height + 3) / 2));
+        dst_roiSize = dst_roiSize.area() == 0 ? Size((src_roiSize.width + 1) / 2, (src_roiSize.height + 1) / 2) : dst_roiSize;
+        generateTestData(src_roiSize, dst_roiSize);
 
-        pyrDown(src, dst_cpu);
-        ocl::pyrDown(gsrc, gdst);
+        OCL_OFF(pyrDown(src_roi, dst_roi, dst_roiSize));
+        OCL_ON(pyrDown(usrc_roi, udst_roi, dst_roiSize));
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), depth == CV_32F ? 1e-4f : 1.0f);
+        Near(depth == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
-                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
-                            Values(1, 3, 4)));
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrDown, Combine(
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+                            Values(1, 2, 4),
+                            Bool()
+                            ));
 
 /////////////////////// PyrUp //////////////////////////
 
-typedef PyrBase PyrUp;
+typedef PyrTestBase PyrUp;
 
-OCL_TEST_P(PyrUp, Accuracy)
+OCL_TEST_P(PyrUp, Mat)
 {
-    for (int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < test_loop_times; j++)
     {
-        Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(depth, channels), 0, 255);
-        ocl::oclMat gsrc(src);
+        Size src_roiSize = randomSize(1, MAX_VALUE);
+        Size dst_roiSize = Size(2 * src_roiSize.width, 2 * src_roiSize.height);
+        generateTestData(src_roiSize, dst_roiSize);
 
-        pyrUp(src, dst_cpu);
-        ocl::pyrUp(gsrc, gdst);
+        OCL_OFF(pyrUp(src_roi, dst_roi, dst_roiSize));
+        OCL_ON(pyrUp(usrc_roi, udst_roi, dst_roiSize));
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (depth == CV_32F ? 1e-4f : 1.0));
+        Near(depth == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+                            Values(1, 2, 4),
+                            Bool()
+                            ));
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, Combine(
-                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
-                            Values(1, 3, 4)));
+} } // namespace cvtest::ocl
+
 #endif // HAVE_OPENCL
