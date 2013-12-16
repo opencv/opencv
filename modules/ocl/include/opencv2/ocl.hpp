@@ -118,6 +118,7 @@ namespace cv
             const PlatformInfo* platform;
 
             DeviceInfo();
+            ~DeviceInfo();
         };
 
         struct PlatformInfo
@@ -136,6 +137,7 @@ namespace cv
             std::vector<const DeviceInfo*> devices;
 
             PlatformInfo();
+            ~PlatformInfo();
         };
 
         //////////////////////////////// Initialization & Info ////////////////////////
@@ -150,6 +152,10 @@ namespace cv
 
         // set device you want to use
         CV_EXPORTS void setDevice(const DeviceInfo* info);
+
+        // Initialize from OpenCL handles directly.
+        // Argument types is (pointers): cl_platform_id*, cl_context*, cl_device_id*
+        CV_EXPORTS void initializeContext(void* pClPlatform, void* pClContext, void* pClDevice);
 
         enum FEATURE_TYPE
         {
