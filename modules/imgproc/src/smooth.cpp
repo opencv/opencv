@@ -1667,12 +1667,12 @@ namespace cv
     {
         int type = _src.type();
         int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-        
+
         if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 4)))
             return false;
-        
+
         const char * kernelName;
-        
+
         if (m==3)
             kernelName = "medianFilter3";
         else if (m==5)
@@ -1683,7 +1683,7 @@ namespace cv
         ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
         if (k.empty())
             return false;
-      
+
         _dst.create(_src.size(),type);
         UMat src = _src.getUMat(), dst = _dst.getUMat();
 
@@ -1699,20 +1699,18 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
     CV_Assert( ksize % 2 == 1 );
 
     if( ksize <= 1 )
-    {     
+    {
         Mat src0 = _src0.getMat();
         _dst.create( src0.size(), src0.type() );
         Mat dst = _dst.getMat();
         src0.copyTo(dst);
         return;
     }
-    
+
     bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-  //  if ( use_opencl && ocl_medianFilter(_src0,_dst, ksize))
-    if (use_opencl)
-        {  CV_Assert (ocl_medianFilter(_src0,_dst,ksize));
-    return;}
-    
+    if ( use_opencl && ocl_medianFilter(_src0,_dst, ksize))
+        return;
+
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
