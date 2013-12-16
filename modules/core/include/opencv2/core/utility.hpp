@@ -305,18 +305,18 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
-class TLSDataContainer
+class CV_EXPORTS TLSDataContainer
 {
 private:
     int key_;
 protected:
-    CV_EXPORTS TLSDataContainer();
-    CV_EXPORTS ~TLSDataContainer(); // virtual is not required
+    TLSDataContainer();
+    virtual ~TLSDataContainer();
 public:
     virtual void* createDataInstance() const = 0;
     virtual void deleteDataInstance(void* data) const = 0;
 
-    CV_EXPORTS void* getData() const;
+    void* getData() const;
 };
 
 template <typename T>
