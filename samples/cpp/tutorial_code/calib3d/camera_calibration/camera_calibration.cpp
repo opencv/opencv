@@ -449,7 +449,9 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 
     //Find intrinsic and extrinsic camera parameters
     double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
-                                 distCoeffs, rvecs, tvecs, s.flag|CALIB_FIX_K4|CALIB_FIX_K5);
+                                 distCoeffs, rvecs, tvecs,
+                                 TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
+                                 s.flag|CALIB_FIX_K4|CALIB_FIX_K5);
 
     cout << "Re-projection error reported by calibrateCamera: "<< rms << endl;
 

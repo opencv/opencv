@@ -88,6 +88,7 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
 
         double err = calibrateCamera(objpt, imgpt, imageSize, cameraMatrix,
                         distCoeffs, rvecs, tvecs,
+                        TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
                         flags|CALIB_FIX_K3/*|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6*/);
         bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
         if(!ok)

@@ -187,8 +187,9 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                                     int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                     TermCriteria criteria = TermCriteria(
+                                     TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
+                                     int flags = 0 );
 
 //! computes several useful camera characteristics from the camera matrix, camera frame resolution and the physical sensor size.
 CV_EXPORTS_W void calibrationMatrixValues( InputArray cameraMatrix, Size imageSize,

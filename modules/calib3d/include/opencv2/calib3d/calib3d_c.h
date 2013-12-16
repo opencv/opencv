@@ -248,9 +248,9 @@ CVAPI(double) cvCalibrateCamera2( const CvMat* object_points,
                                 CvMat* distortion_coeffs,
                                 CvMat* rotation_vectors CV_DEFAULT(NULL),
                                 CvMat* translation_vectors CV_DEFAULT(NULL),
-                                int flags CV_DEFAULT(0),
                                 CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
-                                    CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
+                                    CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)),
+                                int flags CV_DEFAULT(0) );
 
 /* Computes various useful characteristics of the camera from the data computed by
    cvCalibrateCamera2 */
