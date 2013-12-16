@@ -53,7 +53,7 @@ namespace cv
         //! Speeded up robust features, port from CUDA module.
         ////////////////////////////////// SURF //////////////////////////////////////////
 
-        class CV_EXPORTS SURF_OCL
+        class CV_EXPORTS_W SURF_OCL
         {
         public:
             enum KeypointLayout
@@ -71,17 +71,17 @@ namespace cv
             //! the default constructor
             SURF_OCL();
             //! the full constructor taking all the necessary parameters
-            explicit SURF_OCL(double _hessianThreshold, int _nOctaves = 4,
+            CV_WRAP explicit SURF_OCL(double _hessianThreshold, int _nOctaves = 4,
                               int _nOctaveLayers = 2, bool _extended = false, float _keypointsRatio = 0.01f, bool _upright = false);
 
             //! returns the descriptor size in float's (64 or 128)
             int descriptorSize() const;
             //! upload host keypoints to device memory
-            void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
+            CV_WRAP void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, CV_OUT ocl::oclMat &keypointsocl);
             //! download keypoints from device to host memory
-            void downloadKeypoints(const oclMat &keypointsocl, std::vector<KeyPoint> &keypoints);
+            CV_WRAP void downloadKeypoints(const ocl::oclMat &keypointsocl, CV_OUT std::vector<KeyPoint> &keypoints);
             //! download descriptors from device to host memory
-            void downloadDescriptors(const oclMat &descriptorsocl, std::vector<float> &descriptors);
+            void downloadDescriptors(const ocl::oclMat &descriptorsocl, std::vector<float> &descriptors);
             //! finds the keypoints using fast hessian detector used in SURF
             //! supports CV_8UC1 images
             //! keypoints will have nFeature cols and 6 rows
@@ -95,7 +95,8 @@ namespace cv
             void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints);
             //! finds the keypoints and computes their descriptors.
             //! Optionally it can compute descriptors for the user-provided keypoints and recompute keypoints direction
-            void operator()(const oclMat &img, const oclMat &mask, oclMat &keypoints, oclMat &descriptors,
+            CV_WRAP_AS(detectAndCompute) void operator()(const ocl::oclMat &img, const ocl::oclMat &mask, 
+                            CV_OUT ocl::oclMat &keypoints, CV_OUT ocl::oclMat &descriptors,
                             bool useProvidedKeypoints = false);
             void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints);
             void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, oclMat &descriptors,
@@ -103,7 +104,7 @@ namespace cv
             void operator()(const oclMat &img, const oclMat &mask, std::vector<KeyPoint> &keypoints, std::vector<float> &descriptors,
                             bool useProvidedKeypoints = false);
 
-            void releaseMemory();
+            CV_WRAP void releaseMemory();
 
             // SURF parameters
             float hessianThreshold;

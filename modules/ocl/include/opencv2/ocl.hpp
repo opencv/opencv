@@ -635,7 +635,7 @@ namespace cv
         //! support only CV_32FC2 type
         CV_EXPORTS void mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false);
 
-        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code, int dcn = 0);
+        CV_EXPORTS_W void cvtColor(const ocl::oclMat &src, CV_OUT ocl::oclMat &dst, int code, int dcn = 0);
 
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
@@ -1251,7 +1251,7 @@ namespace cv
 
         ////////////////////////////////// BruteForceMatcher //////////////////////////////////
 
-        class CV_EXPORTS BruteForceMatcher_OCL_base
+        class CV_EXPORTS_W BruteForceMatcher_OCL_base
         {
         public:
             enum DistType {L1Dist = 0, L2Dist, HammingDist};
@@ -1302,9 +1302,9 @@ namespace cv
             void match(const oclMat &query, std::vector<DMatch> &matches, const std::vector<oclMat> &masks = std::vector<oclMat>());
 
             // Find k best matches for each query descriptor (in increasing order of distances)
-            void knnMatchSingle(const oclMat &query, const oclMat &train,
-                                oclMat &trainIdx, oclMat &distance, oclMat &allDist, int k,
-                                const oclMat &mask = oclMat());
+            CV_WRAP void knnMatchSingle(const ocl::oclMat &query, const ocl::oclMat &train,
+                                CV_OUT ocl::oclMat &trainIdx, CV_OUT ocl::oclMat &distance, CV_OUT ocl::oclMat &allDist, int k,
+                                const ocl::oclMat &mask = ocl::oclMat());
 
             // Download trainIdx and distance and convert it to vector with DMatch
             // compactResult is used when mask is not empty. If compactResult is false matches
@@ -1427,10 +1427,10 @@ namespace cv
             explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
         };
 
-        class CV_EXPORTS BFMatcher_OCL : public BruteForceMatcher_OCL_base
+        class CV_EXPORTS_W BFMatcher_OCL : public BruteForceMatcher_OCL_base
         {
         public:
-            explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
+            CV_WRAP explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
         };
 
         class CV_EXPORTS GoodFeaturesToTrackDetector_OCL

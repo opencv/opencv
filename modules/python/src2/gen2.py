@@ -267,6 +267,7 @@ class ClassInfo(object):
                 #return sys.exit(-1)
             if self.bases and self.bases[0].startswith("cv::"):
                 self.bases[0] = self.bases[0][4:]
+            self.bases = [s.replace('::','_') for s in self.bases]
             if self.bases and self.bases[0] == "Algorithm":
                 self.isalgorithm = True
             for m in decl[2]:

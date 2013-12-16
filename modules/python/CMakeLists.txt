@@ -45,6 +45,9 @@ endif()
 
 if(HAVE_opencv_ocl)
   list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_ocl_LOCATION}/include/opencv2/ocl.hpp")
+  if(HAVE_opencv_nonfree)
+    list(APPEND opencv_hdrs     "${OPENCV_MODULE_opencv_nonfree_LOCATION}/include/opencv2/nonfree/ocl.hpp")
+  endif()
 endif()
 
 

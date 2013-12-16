@@ -26,6 +26,9 @@
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/ocl.hpp"
+#  ifdef HAVE_OPENCV_NONFREE
+#    include "opencv2/nonfree/ocl.hpp"
+#  endif
 #endif
 
 
@@ -171,8 +174,7 @@ template<class T>
 struct RefPtr : public Ptr<T>
 {
     RefPtr() : Ptr(new T()) {}
-    RefPtr(T * _obj) : Ptr(_obj) {}
-    RefPtr(T & _obj) : Ptr(&_obj) {}
+    RefPtr(T & _obj) : Ptr(new T(_obj)) {}
 
     operator T& () {return **this;}
     operator T const& () const {return **this;}
