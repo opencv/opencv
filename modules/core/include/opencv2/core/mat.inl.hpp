@@ -617,9 +617,9 @@ inline void Mat::release()
 {
     if( u && CV_XADD(&u->refcount, -1) == 1 )
         deallocate();
+    u = NULL;
     data = datastart = dataend = datalimit = 0;
     size.p[0] = 0;
-    u = 0;
 }
 
 inline
