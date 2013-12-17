@@ -62,7 +62,7 @@ __kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOf
 
     r = clamp(dy+dr+9, 0, rows-1);
     int index9 = mad24(r, srcStep, srcOffset + c*scnbytes);
-    
+
     __global DATA_TYPE * src = (__global DATA_TYPE *)(srcptr + index1);
     data[dr][dc] = src[0];
 
@@ -83,7 +83,7 @@ __kernel void medianFilter3(__global const uchar* srcptr, int srcStep, int srcOf
     op(p4, p2); op(p6, p4); op(p4, p2);
 
     int dst_index = mad24( gy, dstStep, dstOffset + gx * scnbytes);
-    
+
     if( gy < rows && gx < cols)
     {
         __global DATA_TYPE* dst = (__global DATA_TYPE *)(dstptr + dst_index);
