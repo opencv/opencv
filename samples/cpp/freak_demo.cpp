@@ -96,7 +96,7 @@ int main( int argc, char** argv ) {
     // The standard Hamming distance can be used such as
     // BFMatcher matcher(NORM_HAMMING);
     // or the proposed cascade of hamming distance using SSSE3
-    BFMatcher matcher(NORM_HAMMING);
+    BFMatcher matcher(extractor.defaultNorm());
 
     // detect
     double t = (double)getTickCount();
