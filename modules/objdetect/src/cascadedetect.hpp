@@ -42,21 +42,20 @@ public:
     bool isOldFormatCascade() const;
     Size getOriginalWindowSize() const;
     int getFeatureType() const;
-    bool setImage( InputArray );
     void* getOldCascade();
 
     void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();
 
 protected:
+    enum { SUM_ALIGN = 16 };
+    
     bool detectSingleScale( InputArray image, Size processingRectSize,
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
-                            bool outputRejectLevels = false );
+                            Size sumSize0, bool outputRejectLevels = false );
     bool ocl_detectSingleScale( InputArray image, Size processingRectSize,
-                           int yStep, double factor, std::vector<Rect>& candidates,
-                           std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
-                           bool outputRejectLevels = false );
+                                int yStep, double factor, Size sumSize0 );
     
 
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
@@ -86,7 +85,6 @@ protected:
     template<class FEval>
     friend int predictCategoricalStump( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
-    bool setImage( Ptr<FeatureEvaluator>& feval, const Mat& image);
     int runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight );
 
     class Data
@@ -134,7 +132,7 @@ protected:
 
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
-    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets;
+    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets, uparams;
     ocl::Kernel cascadeKernel;
     bool tryOpenCL;
     
@@ -270,10 +268,9 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(InputArray, Size origWinSize);
+    virtual bool setImage(InputArray, Size origWinSize, Size sumSize);
     virtual bool setWindow(Point pt);
-    
-    virtual bool setUMat(InputArray, Size origWinSize, Size origImgSize);
+    virtual Rect getNormRect() const;
     virtual void getUMats(std::vector<UMat>& bufs);
 
     double operator()(int featureIdx) const
@@ -282,22 +279,19 @@ public:
     { return (*this)(featureIdx); }
 
 protected:
-    Size origWinSize, origImgSize;
+    Size origWinSize, sumSize0;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
     OptFeature* optfeaturesPtr; // optimization
     bool hasTiltedFeatures;
 
-    Mat sum0, sqsum0;
-    Mat sum, sqsum, tilted;
-    UMat usum, usqsum, fbuf;
+    Mat sum0, sum, sqsum0, sqsum;
+    UMat usum0, usum, usqsum0, usqsum, ufbuf;
 
     Rect normrect;
     int nofs[4];
-    int nqofs[4];
 
     const int* pwin;
-    const double* pqwin;
     double varianceNormFactor;
 };
 
@@ -376,7 +370,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
-    virtual bool setImage(InputArray image, Size _origWinSize);
+    virtual bool setImage(InputArray image, Size _origWinSize, Size);
     virtual bool setWindow(Point pt);
 
     int operator()(int featureIdx) const
@@ -453,7 +447,7 @@ public:
     virtual bool read( const FileNode& node );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
-    virtual bool setImage( InputArray image, Size winSize );
+    virtual bool setImage( InputArray image, Size winSize, Size );
     virtual bool setWindow( Point pt );
     double operator()(int featureIdx) const
     {
