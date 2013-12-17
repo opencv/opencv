@@ -611,8 +611,157 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
     std::vector<int> sum;
 };
 
+#define DIVUP(total, grain) ((total + grain - 1) / (grain))
+
+static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
+                           Size ksize, Point anchor, int borderType )
+{
+    int type = _src.type();
+    int cn = CV_MAT_CN(type);
+    if ((1 != cn) && (2 != cn) && (4 != cn))
+        return false;//TODO
+
+    int sdepth = CV_MAT_DEPTH(type);
+    if( ddepth < 0 )
+        ddepth = sdepth;
+    else if (ddepth != sdepth)
+        return false;
+    if( anchor.x < 0 )
+        anchor.x = ksize.width / 2;
+    if( anchor.y < 0 )
+        anchor.y = ksize.height / 2;
+
+    ocl::Kernel kernel;
+
+    //Normalize the result by default
+    float alpha = 1.0f / (ksize.height * ksize.width);
+    bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
+    bool useDouble = (CV_64F == sdepth);
+    const cv::ocl::Device &device = cv::ocl::Device::getDefault();
+    int doubleFPConfig = device.doubleFPConfig();
+    if (useDouble && (0 == doubleFPConfig))
+        return false;// may be we have to check is  (0 != (CL_FP_SOFT_FLOAT & doubleFPConfig)) ?
+
+    const char* btype = NULL;
+    switch (borderType & ~BORDER_ISOLATED)
+    {
+    case BORDER_CONSTANT:
+        btype = "BORDER_CONSTANT";
+        break;
+    case BORDER_REPLICATE:
+        btype = "BORDER_REPLICATE";
+        break;
+    case BORDER_REFLECT:
+        btype = "BORDER_REFLECT";
+        break;
+    case BORDER_WRAP:
+        //CV_Error(CV_StsUnsupportedFormat, "BORDER_WRAP is not supported!");
+        return false;
+    case BORDER_REFLECT101:
+        btype = "BORDER_REFLECT_101";
+        break;
+    }
+
+    cv::Size sz = _src.size();
+
+    size_t globalsize[2] = {sz.width, sz.height};
+    size_t localsize[2] = {0, 1};
+
+    UMat src; Size wholeSize;
+    if (!isIsolatedBorder)
+    {
+        src = _src.getUMat();
+        Point ofs;
+        src.locateROI(wholeSize, ofs);
+    }
+
+    size_t maxWorkItemSizes[32]; device.maxWorkItemSizes(maxWorkItemSizes);
+    size_t tryWorkItems = maxWorkItemSizes[0];
+    for (;;)
+    {
+        size_t BLOCK_SIZE = tryWorkItems;
+        while (BLOCK_SIZE > 32 && BLOCK_SIZE >= (size_t)ksize.width * 2 && BLOCK_SIZE > (size_t)sz.width * 2)
+            BLOCK_SIZE /= 2;
+        size_t BLOCK_SIZE_Y = 8; // TODO Check heuristic value on devices
+        while (BLOCK_SIZE_Y < BLOCK_SIZE / 8 && BLOCK_SIZE_Y * device.maxComputeUnits() * 32 < (size_t)sz.height)
+            BLOCK_SIZE_Y *= 2;
+
+        if ((size_t)ksize.width > BLOCK_SIZE)
+            return false;
+
+        int requiredTop = anchor.y;
+        int requiredLeft = (int)BLOCK_SIZE; // not this: anchor.x;
+        int requiredBottom = ksize.height - 1 - anchor.y;
+        int requiredRight = (int)BLOCK_SIZE; // not this: ksize.width - 1 - anchor.x;
+        int h = isIsolatedBorder ? sz.height : wholeSize.height;
+        int w = isIsolatedBorder ? sz.width : wholeSize.width;
+
+        bool extra_extrapolation = h < requiredTop || h < requiredBottom || w < requiredLeft || w < requiredRight;
+
+        if ((w < ksize.width) || (h < ksize.height))
+            return false;
+
+        char build_options[1024];
+        sprintf(build_options, "-D LOCAL_SIZE=%d -D BLOCK_SIZE_Y=%d -D DATA_DEPTH=%d -D DATA_CHAN=%d -D USE_DOUBLE=%d -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s -D %s -D %s",
+                (int)BLOCK_SIZE, (int)BLOCK_SIZE_Y,
+                sdepth, cn, useDouble ? 1 : 0,
+                anchor.x, anchor.y, ksize.width, ksize.height,
+                btype,
+                extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
+                isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
+
+        localsize[0] = BLOCK_SIZE;
+        globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
+        globalsize[1] = DIVUP(sz.height, BLOCK_SIZE_Y);
+
+        cv::String errmsg;
+        kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, build_options);
+
+        size_t kernelWorkGroupSize = kernel.workGroupSize();
+        if (localsize[0] <= kernelWorkGroupSize)
+            break;
+
+        if (BLOCK_SIZE < kernelWorkGroupSize)
+            return false;
+        tryWorkItems = kernelWorkGroupSize;
+    }
+
+    _dst.create(sz, CV_MAKETYPE(ddepth, cn));
+    UMat dst = _dst.getUMat();
+    if (src.empty())
+        src = _src.getUMat();
+    int idxArg = 0;
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+    idxArg = kernel.set(idxArg, (int)src.step);
+    int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
+    int srcOffsetY = (int)(src.offset / src.step);
+    int srcEndX = (isIsolatedBorder ? (srcOffsetX + sz.width) : wholeSize.width);
+    int srcEndY = (isIsolatedBorder ? (srcOffsetY + sz.height) : wholeSize.height);
+    idxArg = kernel.set(idxArg, srcOffsetX);
+    idxArg = kernel.set(idxArg, srcOffsetY);
+    idxArg = kernel.set(idxArg, srcEndX);
+    idxArg = kernel.set(idxArg, srcEndY);
+    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+    float borderValue[4] = {0, 0, 0, 0};
+    double borderValueDouble[4] = {0, 0, 0, 0};
+    if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
+    {
+        int cnocl = (3 == cn) ? 4 : cn;
+        if (useDouble)
+            idxArg = kernel.set(idxArg, (void *)&borderValueDouble[0], sizeof(double) * cnocl);
+        else
+            idxArg = kernel.set(idxArg, (void *)&borderValue[0], sizeof(float) * cnocl);
+    }
+    if (useDouble)
+        idxArg = kernel.set(idxArg, (double)alpha);
+    else
+        idxArg = kernel.set(idxArg, (float)alpha);
+
+    return kernel.run(2, globalsize, localsize, true);
+}
 
 }
+
 
 cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksize, int anchor)
 {
@@ -713,6 +862,10 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 Size ksize, Point anchor,
                 bool normalize, int borderType )
 {
+    bool use_opencl = ocl::useOpenCL() && _dst.isUMat() && normalize;
+    if( use_opencl && ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType) )
+        return;
+
     Mat src = _src.getMat();
     int sdepth = src.depth(), cn = src.channels();
     if( ddepth < 0 )
