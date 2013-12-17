@@ -738,26 +738,6 @@ namespace cv {
 bool __termination = false;
 }
 
-#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#ifdef HAVE_WINRT
-    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
-#endif
-
-BOOL WINAPI DllMain( HINSTANCE, DWORD, LPVOID );
-
-BOOL WINAPI DllMain( HINSTANCE, DWORD fdwReason, LPVOID lpReserved )
-{
-    if( fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH )
-    {
-        if (lpReserved != NULL) // called after ExitProcess() call
-            cv::__termination = true;
-        cv::deleteThreadAllocData();
-        cv::deleteThreadData();
-    }
-    return TRUE;
-}
-#endif
-
 namespace cv
 {
 
@@ -841,36 +821,54 @@ void Mutex::lock() { impl->lock(); }
 void Mutex::unlock() { impl->unlock(); }
 bool Mutex::trylock() { return impl->trylock(); }
 
-}
 
 //////////////////////////////// thread-local storage ////////////////////////////////
 
-namespace cv
+class TLSStorage
 {
+    std::vector<void*> tlsData_;
+public:
+    TLSStorage() { tlsData_.reserve(16); }
+    ~TLSStorage();
+    inline void* getData(int key) const
+    {
+        CV_DbgAssert(key >= 0);
+        return (key < (int)tlsData_.size()) ? tlsData_[key] : NULL;
+    }
+    inline void setData(int key, void* data)
+    {
+        CV_DbgAssert(key >= 0);
+        if (key >= (int)tlsData_.size())
+        {
+            tlsData_.resize(key + 1, NULL);
+        }
+        tlsData_[key] = data;
+    }
 
-TLSData::TLSData()
-{
-    device = 0;
-    useOpenCL = -1;
-}
+    inline static TLSStorage* get();
+};
 
 #ifdef WIN32
+#pragma warning(disable:4505) // unreferenced local function has been removed
 
 #ifdef HAVE_WINRT
     // using C++11 thread attribute for local thread data
-    static __declspec( thread ) TLSData* g_tlsdata = NULL;
+    static __declspec( thread ) TLSStorage* g_tlsdata = NULL;
 
-    static void deleteThreadRNGData()
+    static void deleteThreadData()
     {
         if (g_tlsdata)
+        {
             delete g_tlsdata;
+            g_tlsdata = NULL;
+        }
     }
 
-    TLSData* TLSData::get()
+    inline TLSStorage* TLSStorage::get()
     {
         if (!g_tlsdata)
         {
-            g_tlsdata = new TLSData;
+            g_tlsdata = new TLSStorage;
         }
         return g_tlsdata;
     }
@@ -880,55 +878,169 @@ TLSData::TLSData()
 #endif
     static DWORD tlsKey = TLS_OUT_OF_INDEXES;
 
-    void deleteThreadData()
+    static void deleteThreadData()
     {
-        if( tlsKey != TLS_OUT_OF_INDEXES )
-            delete (TLSData*)TlsGetValue( tlsKey );
+        if(tlsKey != TLS_OUT_OF_INDEXES)
+        {
+            delete (TLSStorage*)TlsGetValue(tlsKey);
+            TlsSetValue(tlsKey, NULL);
+        }
     }
 
-    TLSData* TLSData::get()
+    inline TLSStorage* TLSStorage::get()
     {
-        if( tlsKey == TLS_OUT_OF_INDEXES )
+        if (tlsKey == TLS_OUT_OF_INDEXES)
         {
             tlsKey = TlsAlloc();
             CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
         }
-        TLSData* d = (TLSData*)TlsGetValue( tlsKey );
-        if( !d )
+        TLSStorage* d = (TLSStorage*)TlsGetValue(tlsKey);
+        if (!d)
         {
-            d = new TLSData;
-            TlsSetValue( tlsKey, d );
+            d = new TLSStorage;
+            TlsSetValue(tlsKey, d);
         }
         return d;
     }
 #endif //HAVE_WINRT
+
+#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+#endif
+
+BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID);
+
+BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
+{
+    if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
+    {
+        if (lpReserved != NULL) // called after ExitProcess() call
+            cv::__termination = true;
+        cv::deleteThreadAllocData();
+        cv::deleteThreadData();
+    }
+    return TRUE;
+}
+#endif
+
 #else
     static pthread_key_t tlsKey = 0;
     static pthread_once_t tlsKeyOnce = PTHREAD_ONCE_INIT;
 
-    static void deleteTLSData(void* data)
+    static void deleteTLSStorage(void* data)
     {
-        delete (TLSData*)data;
+        delete (TLSStorage*)data;
     }
 
     static void makeKey()
     {
-        int errcode = pthread_key_create(&tlsKey, deleteTLSData);
+        int errcode = pthread_key_create(&tlsKey, deleteTLSStorage);
         CV_Assert(errcode == 0);
     }
 
-    TLSData* TLSData::get()
+    inline TLSStorage* TLSStorage::get()
     {
         pthread_once(&tlsKeyOnce, makeKey);
-        TLSData* d = (TLSData*)pthread_getspecific(tlsKey);
+        TLSStorage* d = (TLSStorage*)pthread_getspecific(tlsKey);
         if( !d )
         {
-            d = new TLSData;
+            d = new TLSStorage;
             pthread_setspecific(tlsKey, d);
         }
         return d;
     }
 #endif
+
+class TLSContainerStorage
+{
+    cv::Mutex mutex_;
+    std::vector<TLSDataContainer*> tlsContainers_;
+public:
+    TLSContainerStorage() { }
+    ~TLSContainerStorage()
+    {
+        for (size_t i = 0; i < tlsContainers_.size(); i++)
+        {
+            CV_DbgAssert(tlsContainers_[i] == NULL); // not all keys released
+            tlsContainers_[i] = NULL;
+        }
+    }
+
+    int allocateKey(TLSDataContainer* pContainer)
+    {
+        cv::AutoLock lock(mutex_);
+        tlsContainers_.push_back(pContainer);
+        return (int)tlsContainers_.size() - 1;
+    }
+    void releaseKey(int id, TLSDataContainer* pContainer)
+    {
+        cv::AutoLock lock(mutex_);
+        CV_Assert(tlsContainers_[id] == pContainer);
+        tlsContainers_[id] = NULL;
+        // currently, we don't go into thread's TLSData and release data for this key
+    }
+
+    void destroyData(int key, void* data)
+    {
+        cv::AutoLock lock(mutex_);
+        TLSDataContainer* k = tlsContainers_[key];
+        if (!k)
+            return;
+        try
+        {
+            k->deleteDataInstance(data);
+        }
+        catch (...)
+        {
+            CV_DbgAssert(k == NULL); // Debug this!
+        }
+    }
+};
+static TLSContainerStorage tlsContainerStorage;
+
+TLSDataContainer::TLSDataContainer()
+    : key_(-1)
+{
+    key_ = tlsContainerStorage.allocateKey(this);
 }
+
+TLSDataContainer::~TLSDataContainer()
+{
+    tlsContainerStorage.releaseKey(key_, this);
+    key_ = -1;
+}
+
+void* TLSDataContainer::getData() const
+{
+    CV_Assert(key_ >= 0);
+    TLSStorage* tlsData = TLSStorage::get();
+    void* data = tlsData->getData(key_);
+    if (!data)
+    {
+        data = this->createDataInstance();
+        CV_DbgAssert(data != NULL);
+        tlsData->setData(key_, data);
+    }
+    return data;
+}
+
+TLSStorage::~TLSStorage()
+{
+    for (int i = 0; i < (int)tlsData_.size(); i++)
+    {
+        void*& data = tlsData_[i];
+        if (data)
+        {
+            tlsContainerStorage.destroyData(i, data);
+            data = NULL;
+        }
+    }
+    tlsData_.clear();
+}
+
+TLSData<CoreTLSData> coreTlsData;
+
+} // namespace cv
 
 /* End of file. */

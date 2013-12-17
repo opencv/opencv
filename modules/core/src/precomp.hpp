@@ -43,6 +43,9 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
+
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
@@ -106,7 +109,6 @@ extern const uchar g_Saturate8u[];
 
 #if defined WIN32 || defined _WIN32
 void deleteThreadAllocData();
-void deleteThreadData();
 #endif
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
@@ -233,16 +235,18 @@ inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
 
 void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
 
-struct TLSData
+struct CoreTLSData
 {
-    TLSData();
+    CoreTLSData() : device(0), useOpenCL(-1)
+    {}
+
     RNG rng;
     int device;
     ocl::Queue oclQueue;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
-
-    static TLSData* get();
 };
+
+extern TLSData<CoreTLSData> coreTlsData;
 
 #if defined(BUILD_SHARED_LIBS)
 #if defined WIN32 || defined _WIN32 || defined WINCE

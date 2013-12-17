@@ -305,6 +305,32 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
+class CV_EXPORTS TLSDataContainer
+{
+private:
+    int key_;
+protected:
+    TLSDataContainer();
+    virtual ~TLSDataContainer();
+public:
+    virtual void* createDataInstance() const = 0;
+    virtual void deleteDataInstance(void* data) const = 0;
+
+    void* getData() const;
+};
+
+template <typename T>
+class TLSData : protected TLSDataContainer
+{
+public:
+    inline TLSData() {}
+    inline ~TLSData() {}
+    inline T* get() const { return (T*)getData(); }
+private:
+    virtual void* createDataInstance() const { return new T; }
+    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
+};
+
 // The CommandLineParser class is designed for command line arguments parsing
 
 class CV_EXPORTS CommandLineParser

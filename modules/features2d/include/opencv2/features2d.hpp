@@ -169,6 +169,7 @@ public:
 
     CV_WRAP virtual int descriptorSize() const = 0;
     CV_WRAP virtual int descriptorType() const = 0;
+    CV_WRAP virtual int defaultNorm() const = 0;
 
     CV_WRAP virtual bool empty() const;
 
@@ -226,6 +227,8 @@ public:
     int descriptorSize() const;
     // returns the descriptor type
     int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
 
     // Compute the BRISK features on an image
     void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
@@ -320,6 +323,8 @@ public:
     int descriptorSize() const;
     // returns the descriptor type
     int descriptorType() const;
+    // returns the default norm type
+    int defaultNorm() const;
 
     // Compute the ORB features and descriptors on an image
     void operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
@@ -376,6 +381,9 @@ public:
 
     /** returns the descriptor type */
     virtual int descriptorType() const;
+
+    /** returns the default norm type */
+    virtual int defaultNorm() const;
 
     /** select the 512 "best description pairs"
          * @param images grayscale images set
@@ -837,6 +845,7 @@ public:
 
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
+    virtual int defaultNorm() const;
 
     virtual bool empty() const;
 
@@ -863,6 +872,7 @@ public:
 
     virtual int descriptorSize() const;
     virtual int descriptorType() const;
+    virtual int defaultNorm() const;
 
     /// @todo read and write for brief
 
@@ -1453,7 +1463,7 @@ public:
 
     void add( const Mat& descriptors );
     const std::vector<Mat>& getDescriptors() const;
-    int descripotorsCount() const;
+    int descriptorsCount() const;
 
     virtual void clear();
 

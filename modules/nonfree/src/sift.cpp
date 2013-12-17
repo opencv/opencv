@@ -717,6 +717,11 @@ int SIFT::descriptorType() const
     return CV_32F;
 }
 
+int SIFT::defaultNorm() const
+{
+    return NORM_L2;
+}
+
 
 void SIFT::operator()(InputArray _image, InputArray _mask,
                       std::vector<KeyPoint>& keypoints) const

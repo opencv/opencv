@@ -299,6 +299,11 @@ int cv::ocl::SURF_OCL::descriptorSize() const
     return extended ? 128 : 64;
 }
 
+int cv::ocl::SURF_OCL::defaultNorm() const
+{
+    return NORM_L2;
+}
+
 void cv::ocl::SURF_OCL::uploadKeypoints(const std::vector<KeyPoint> &keypoints, oclMat &keypointsGPU)
 {
     if (keypoints.empty())

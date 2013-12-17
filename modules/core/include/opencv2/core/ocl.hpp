@@ -48,6 +48,7 @@ namespace cv { namespace ocl {
 
 CV_EXPORTS bool haveOpenCL();
 CV_EXPORTS bool useOpenCL();
+CV_EXPORTS bool haveAmdBlas();
 CV_EXPORTS void setUseOpenCL(bool flag);
 CV_EXPORTS void finish2();
 
@@ -214,10 +215,33 @@ public:
     Program getProg(const ProgramSource2& prog,
                     const String& buildopt, String& errmsg);
 
-    static Context2& getDefault();
+    static Context2& getDefault(bool initialize = true);
     void* ptr() const;
-protected:
+
     struct Impl;
+    inline struct Impl* _getImpl() const { return p; };
+protected:
+    Impl* p;
+};
+
+
+// TODO Move to internal header
+void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
+
+class CV_EXPORTS Platform
+{
+public:
+    Platform();
+    ~Platform();
+    Platform(const Platform& p);
+    Platform& operator = (const Platform& p);
+
+    void* ptr() const;
+    static Platform& getDefault();
+
+    struct Impl;
+    inline struct Impl* _getImpl() const { return p; };
+protected:
     Impl* p;
 };
 

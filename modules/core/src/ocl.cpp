@@ -42,6 +42,8 @@
 #include "precomp.hpp"
 #include <map>
 
+#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+
 #ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #else
@@ -1309,36 +1311,30 @@ inline bool operator < (const HashKey& h1, const HashKey& h2)
     return h1.a < h2.a || (h1.a == h2.a && h1.b < h2.b);
 }
 
-static bool g_isInitialized = false;
+static bool g_isOpenCLInitialized = false;
 static bool g_isOpenCLAvailable = false;
+
 bool haveOpenCL()
 {
-    if (!g_isInitialized)
+    if (!g_isOpenCLInitialized)
     {
-        if (!g_isInitialized)
+        try
         {
-            try
-            {
-                cl_uint n = 0;
-                cl_int err = ::clGetPlatformIDs(0, NULL, &n);
-                if (err != CL_SUCCESS)
-                    g_isOpenCLAvailable = false;
-                else
-                    g_isOpenCLAvailable = true;
-            }
-            catch (...)
-            {
-                g_isOpenCLAvailable = false;
-            }
-            g_isInitialized = true;
+            cl_uint n = 0;
+            g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
         }
+        catch (...)
+        {
+            g_isOpenCLAvailable = false;
+        }
+        g_isOpenCLInitialized = true;
     }
     return g_isOpenCLAvailable;
 }
 
 bool useOpenCL()
 {
-    TLSData* data = TLSData::get();
+    CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
         data->useOpenCL = (int)haveOpenCL();
     return data->useOpenCL > 0;
@@ -1348,10 +1344,84 @@ void setUseOpenCL(bool flag)
 {
     if( haveOpenCL() )
     {
-        TLSData* data = TLSData::get();
+        CoreTLSData* data = coreTlsData.get();
         data->useOpenCL = flag ? 1 : 0;
     }
 }
+
+#ifdef HAVE_CLAMDBLAS
+
+class AmdBlasHelper
+{
+public:
+    static AmdBlasHelper & getInstance()
+    {
+        static AmdBlasHelper amdBlas;
+        return amdBlas;
+    }
+
+    bool isAvailable() const
+    {
+        return g_isAmdBlasAvailable;
+    }
+
+    ~AmdBlasHelper()
+    {
+        try
+        {
+            clAmdBlasTeardown();
+        }
+        catch (...) { }
+    }
+
+protected:
+    AmdBlasHelper()
+    {
+        if (!g_isAmdBlasInitialized)
+        {
+            AutoLock lock(m);
+
+            if (!g_isAmdBlasInitialized && haveOpenCL())
+            {
+                try
+                {
+                    g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                }
+                catch (...)
+                {
+                    g_isAmdBlasAvailable = false;
+                }
+            }
+            else
+                g_isAmdBlasAvailable = false;
+
+            g_isAmdBlasInitialized = true;
+        }
+    }
+
+private:
+    static Mutex m;
+    static bool g_isAmdBlasInitialized;
+    static bool g_isAmdBlasAvailable;
+};
+
+bool AmdBlasHelper::g_isAmdBlasAvailable = false;
+bool AmdBlasHelper::g_isAmdBlasInitialized = false;
+Mutex AmdBlasHelper::m;
+
+bool haveAmdBlas()
+{
+    return AmdBlasHelper::getInstance().isAvailable();
+}
+
+#else
+
+bool haveAmdBlas()
+{
+    return false;
+}
+
+#endif
 
 void finish2()
 {
@@ -1362,21 +1432,6 @@ void finish2()
     void addref() { CV_XADD(&refcount, 1); } \
     void release() { if( CV_XADD(&refcount, -1) == 1 ) delete this; } \
     int refcount
-
-class Platform
-{
-public:
-    Platform();
-    ~Platform();
-    Platform(const Platform& p);
-    Platform& operator = (const Platform& p);
-
-    void* ptr() const;
-    static Platform& getDefault();
-protected:
-    struct Impl;
-    Impl* p;
-};
 
 struct Platform::Impl
 {
@@ -1765,7 +1820,7 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context2& ctx = Context2::getDefault();
-    int idx = TLSData::get()->device;
+    int idx = coreTlsData.get()->device;
     return ctx.device(idx);
 }
 
@@ -1773,6 +1828,12 @@ const Device& Device::getDefault()
 
 struct Context2::Impl
 {
+    Impl()
+    {
+        refcount = 1;
+        handle = 0;
+    }
+
     Impl(int dtype0)
     {
         refcount = 1;
@@ -1855,7 +1916,6 @@ struct Context2::Impl
 
     cl_context handle;
     std::vector<Device> devices;
-    bool initialized;
 
     typedef ProgramSource2::hash_t hash_t;
 
@@ -1937,22 +1997,29 @@ const Device& Context2::device(size_t idx) const
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context2& Context2::getDefault()
+Context2& Context2::getDefault(bool initialize)
 {
     static Context2 ctx;
-    if( !ctx.p && haveOpenCL() )
+    if(!ctx.p && haveOpenCL())
     {
-        // do not create new Context2 right away.
-        // First, try to retrieve existing context of the same type.
-        // In its turn, Platform::getContext() may call Context2::create()
-        // if there is no such context.
-        ctx.create(Device::TYPE_ACCELERATOR);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_DGPU);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_IGPU);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_CPU);
+        if (initialize)
+        {
+            // do not create new Context2 right away.
+            // First, try to retrieve existing context of the same type.
+            // In its turn, Platform::getContext() may call Context2::create()
+            // if there is no such context.
+            ctx.create(Device::TYPE_ACCELERATOR);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_DGPU);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_IGPU);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_CPU);
+        }
+        else
+        {
+            ctx.p = new Impl();
+        }
     }
 
     return ctx;
@@ -1963,6 +2030,30 @@ Program Context2::getProg(const ProgramSource2& prog,
 {
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
+
+void initializeContextFromHandle(Context2& ctx, void* platform, void* _context, void* _device)
+{
+    cl_context context = (cl_context)_context;
+    cl_device_id device = (cl_device_id)_device;
+
+    // cleanup old context
+    Context2::Impl* impl = ctx._getImpl();
+    if (impl->handle)
+    {
+        cl_int status = clReleaseContext(impl->handle);
+        (void)status;
+    }
+    impl->devices.clear();
+
+    impl->handle = context;
+    impl->devices.resize(1);
+    impl->devices[0].set(device);
+
+    Platform& p = Platform::getDefault();
+    Platform::Impl* pImpl = p._getImpl();
+    pImpl->handle = (cl_platform_id)platform;
+}
+
 
 struct Queue::Impl
 {
@@ -2059,7 +2150,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = TLSData::get()->oclQueue;
+    Queue& q = coreTlsData.get()->oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context2::getDefault());
     return q;

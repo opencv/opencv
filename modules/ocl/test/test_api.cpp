@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/opencl/runtime/opencl_core.hpp" // for OpenCL types: cl_mem
+#include "opencv2/core/opencl/runtime/opencl_core.hpp" // for OpenCL types & functions
 #include "opencv2/core/ocl.hpp"
 
 TEST(TestAPI, openCLExecuteKernelInterop)
@@ -126,4 +126,88 @@ TEST(OCL_TestTAPI, performance)
     }
     t = (double)cv::getTickCount() - t;
     printf("cpu exec time = %gms per iter\n", t*1000./niters/cv::getTickFrequency());
+}
+
+// This test must be DISABLED by default!
+// (We can't restore original context for other tests)
+TEST(TestAPI, DISABLED_InitializationFromHandles)
+{
+#define MAX_PLATFORMS 16
+    cl_platform_id platforms[MAX_PLATFORMS] = { NULL };
+    cl_uint numPlatforms = 0;
+    cl_int status = ::clGetPlatformIDs(MAX_PLATFORMS, &platforms[0], &numPlatforms);
+    ASSERT_EQ(CL_SUCCESS, status) << "clGetPlatformIDs";
+    ASSERT_NE(0, (int)numPlatforms);
+
+    int selectedPlatform = 0;
+    cl_platform_id platform = platforms[selectedPlatform];
+
+    ASSERT_NE((void*)NULL, platform);
+
+    cl_device_id device = NULL;
+    status = ::clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+    ASSERT_EQ(CL_SUCCESS, status) << "clGetDeviceIDs";
+    ASSERT_NE((void*)NULL, device);
+
+    cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platform), 0 };
+    cl_context context = ::clCreateContext(cps, 1, &device, NULL, NULL, &status);
+    ASSERT_EQ(CL_SUCCESS, status) << "clCreateContext";
+    ASSERT_NE((void*)NULL, context);
+
+    ASSERT_NO_THROW(cv::ocl::initializeContext(&platform, &context, &device));
+
+    status = ::clReleaseContext(context);
+    ASSERT_EQ(CL_SUCCESS, status) << "clReleaseContext";
+
+#ifdef CL_VERSION_1_2
+#if 1
+    {
+        cv::ocl::Context* ctx = cv::ocl::Context::getContext();
+        ASSERT_NE((void*)NULL, ctx);
+        if (ctx->supportsFeature(cv::ocl::FEATURE_CL_VER_1_2)) // device supports OpenCL 1.2+
+        {
+            status = ::clReleaseDevice(device);
+            ASSERT_EQ(CL_SUCCESS, status) << "clReleaseDevice";
+        }
+    }
+#else // code below doesn't work on Linux (SEGFAULTs on 1.1- devices are not handled via exceptions)
+    try
+    {
+        status = ::clReleaseDevice(device); // NOTE This works only with !DEVICES! that supports OpenCL 1.2
+        (void)status; // no check
+    }
+    catch (...)
+    {
+        // nothing, there is no problem
+    }
+#endif
+#endif
+
+    // print the name of current device
+    cv::ocl::Context* ctx = cv::ocl::Context::getContext();
+    ASSERT_NE((void*)NULL, ctx);
+    const cv::ocl::DeviceInfo& deviceInfo = ctx->getDeviceInfo();
+    std::cout << "Device name: " << deviceInfo.deviceName << std::endl;
+    std::cout << "Platform name: " << deviceInfo.platform->platformName << std::endl;
+
+    ASSERT_EQ(context, *(cl_context*)ctx->getOpenCLContextPtr());
+    ASSERT_EQ(device, *(cl_device_id*)ctx->getOpenCLDeviceIDPtr());
+
+    // do some calculations and check results
+    cv::RNG rng;
+    Size sz(100, 100);
+    cv::Mat srcMat = cvtest::randomMat(rng, sz, CV_32FC4, -10, 10, false);
+    cv::Mat dstMat;
+
+    cv::ocl::oclMat srcGpuMat(srcMat);
+    cv::ocl::oclMat dstGpuMat;
+
+    cv::Scalar v = cv::Scalar::all(1);
+    cv::add(srcMat, v, dstMat);
+    cv::ocl::add(srcGpuMat, v, dstGpuMat);
+
+    cv::Mat dstGpuMatMap;
+    dstGpuMat.download(dstGpuMatMap);
+
+    EXPECT_LE(checkNorm(dstMat, dstGpuMatMap), 1e-3);
 }
