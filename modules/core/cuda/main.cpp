@@ -25,6 +25,8 @@ using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 
+#define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
+
 #include "gpumat_cuda.hpp"
 
 #ifdef HAVE_CUDA
