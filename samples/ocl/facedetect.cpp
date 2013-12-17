@@ -11,7 +11,10 @@
 
 using namespace std;
 using namespace cv;
+
 #define LOOP_NUM 10
+#define MAX_THREADS 10
+
 
 ///////////////////////////single-threading faces detecting///////////////////////////////
 
@@ -26,23 +29,23 @@ const static Scalar colors[] =  { CV_RGB(0,0,255),
                                 } ;
 
 
-int64 work_begin = 0;
-int64 work_end = 0;
+int64 work_begin[MAX_THREADS] = {0};
+int64 work_end[MAX_THREADS] = {0};
 string inputName, outputName, cascadeName;
 
-static void workBegin()
+static void workBegin(int i = 0)
 {
-    work_begin = getTickCount();
+    work_begin[i] = getTickCount();
 }
 
-static void workEnd()
+static void workEnd(int i = 0)
 {
-    work_end += (getTickCount() - work_begin);
+    work_end[i] += (getTickCount() - work_begin[i]);
 }
 
-static double getTime()
+static double getTime(int i = 0)
 {
-    return work_end /((double)cvGetTickFrequency() * 1000.);
+    return work_end[i] /getTickFrequency() * 1000.;
 }
 
 
@@ -96,7 +99,6 @@ static int facedetect_one_thread(bool useCPU, double scale )
         }
     }
 
-    cvNamedWindow( "result", 1 );
     if( capture )
     {
         cout << "In capture ..." << endl;
@@ -125,34 +127,34 @@ static int facedetect_one_thread(bool useCPU, double scale )
     }
     else
     {
-        cout << "In image read" << endl;
+        cout << "In image read " << image.size() << endl;
         vector<Rect> faces;
         vector<Rect> ref_rst;
         double accuracy = 0.;
-        for(int i = 0; i <= LOOP_NUM; i ++)
+        cout << "loops: ";
+        for(int i = 0; i <= LOOP_NUM; i++)
         {
-            cout << "loop" << i << endl;
+            cout << i << ", ";
             if(useCPU)
-                detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
+                detectCPU(image, faces, cpu_cascade, scale, i!=0);
             else
             {
-                detect(image, faces, cascade, scale, i==0?false:true);
+                detect(image, faces, cascade, scale, i!=0);
                 if(i == 0)
                 {
                     detectCPU(image, ref_rst, cpu_cascade, scale, false);
                     accuracy = checkRectSimilarity(image.size(), ref_rst, faces);
                 }
             }
-            if (i == LOOP_NUM)
-            {
-                if (useCPU)
-                    cout << "average CPU time (noCamera) : ";
-                else
-                    cout << "average GPU time (noCamera) : ";
-                cout << getTime() / LOOP_NUM << " ms" << endl;
-                cout << "accuracy value: " << accuracy <<endl;
-            }
         }
+        cout << "done!" << endl;
+        if (useCPU)
+            cout << "average CPU time (noCamera) : ";
+        else
+            cout << "average GPU time (noCamera) : ";
+        cout << getTime() / LOOP_NUM << " ms" << endl;
+        cout << "accuracy value: " << accuracy <<endl;
+
         Draw(image, faces, scale);
         waitKey(0);
     }
@@ -164,8 +166,6 @@ static int facedetect_one_thread(bool useCPU, double scale )
 
 ///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
-
-#define MAX_THREADS 10
 
 static void detectFaces(std::string fileName)
 {
