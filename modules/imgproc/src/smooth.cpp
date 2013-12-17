@@ -1814,19 +1814,59 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 }
 
+namespace cv
+{
+    static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
+    {
+        int type = _src.type();
+        int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+        if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
+            return false;
+
+        const char * kernelName;
+
+        if (m==3)
+            kernelName = "medianFilter3";
+        else if (m==5)
+            kernelName = "medianFilter5";
+        else
+            return false;
+
+        ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
+        if (k.empty())
+            return false;
+
+        _dst.create(_src.size(),type);
+        UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+        size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
+        size_t localsize[2] = {16, 16};
+
+        return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
+    }
+}
+
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
-    Mat src0 = _src0.getMat();
-    _dst.create( src0.size(), src0.type() );
-    Mat dst = _dst.getMat();
+    CV_Assert( (ksize % 2 == 1) && (_src0.dims() <= 2 ));
 
     if( ksize <= 1 )
     {
+        Mat src0 = _src0.getMat();
+        _dst.create( src0.size(), src0.type() );
+        Mat dst = _dst.getMat();
         src0.copyTo(dst);
         return;
     }
 
-    CV_Assert( ksize % 2 == 1 );
+    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
+    if ( use_opencl && ocl_medianFilter(_src0,_dst, ksize))
+        return;
+
+    Mat src0 = _src0.getMat();
+    _dst.create( src0.size(), src0.type() );
+    Mat dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::medianBlur(src0, dst, ksize))
