@@ -27,7 +27,7 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
         void add( const Mat& descriptors );
         const vector<Mat>& getDescriptors() const;
-        int descripotorsCount() const;
+        int descriptorsCount() const;
 
         virtual void clear();
 
@@ -56,11 +56,11 @@ Returns a training set of descriptors.
 
 
 
-BOWTrainer::descripotorsCount
+BOWTrainer::descriptorsCount
 ---------------------------------
 Returns the count of all descriptors stored in the training set.
 
-.. ocv:function:: int BOWTrainer::descripotorsCount() const
+.. ocv:function:: int BOWTrainer::descriptorsCount() const
 
 
 
