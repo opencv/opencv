@@ -287,7 +287,7 @@ ocl::createSeparableLinearFilter_GPU
 ----------------------------------------
 Creates a separable linear filter engine.
 
-.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat &rowKernel, const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT)
+.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat &rowKernel, const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1) )
 
     :param srcType: Source array type.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -302,6 +302,8 @@ Creates a separable linear filter engine.
     :param delta: default value is 0.0.
 
     :param bordertype: Pixel extrapolation method.
+
+    :param imgSize: Source image size to choose optimal method for processing.
 
 .. seealso:: :ocv:func:`ocl::getLinearRowFilter_GPU`, :ocv:func:`ocl::getLinearColumnFilter_GPU`, :ocv:func:`createSeparableLinearFilter`
 
@@ -334,7 +336,7 @@ ocl::createDerivFilter_GPU
 ------------------------------
 Creates a filter engine for the generalized Sobel operator.
 
-.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT )
+.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT, Size imgSize = Size(-1,-1) )
 
     :param srcType: Source image type.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1``  source types are supported.
 
@@ -347,6 +349,8 @@ Creates a filter engine for the generalized Sobel operator.
     :param ksize: Aperture size. See  :ocv:func:`getDerivKernels` for details.
 
     :param borderType: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`.
+
+    :param imgSize: Source image size to choose optimal method for processing.
 
 .. seealso:: :ocv:func:`ocl::createSeparableLinearFilter_GPU`, :ocv:func:`createDerivFilter`
 
@@ -405,7 +409,7 @@ ocl::createGaussianFilter_GPU
 ---------------------------------
 Creates a Gaussian filter engine.
 
-.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT)
+.. ocv:function:: Ptr<FilterEngine_GPU> ocl::createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1) )
 
     :param type: Source and destination image type.  ``CV_8UC1`` , ``CV_8UC4`` , ``CV_16SC1`` , ``CV_16SC2`` , ``CV_16SC3`` , ``CV_32SC1`` , ``CV_32FC1`` are supported.
 
@@ -416,6 +420,8 @@ Creates a Gaussian filter engine.
     :param sigma2: Gaussian sigma in the vertical direction. If 0, then  :math:`\texttt{sigma2}\leftarrow\texttt{sigma1}` .
 
     :param bordertype: Pixel extrapolation method. For details, see  :ocv:func:`borderInterpolate`.
+
+    :param imgSize: Source image size to choose optimal method for processing.
 
 .. seealso:: :ocv:func:`ocl::createSeparableLinearFilter_GPU`, :ocv:func:`createGaussianFilter`
 
