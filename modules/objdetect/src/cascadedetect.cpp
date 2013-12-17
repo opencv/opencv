@@ -44,6 +44,7 @@
 
 #include "cascadedetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
+#include "opencl_kernels.hpp"
 
 #if defined (LOG_CASCADE_STATISTIC)
 struct Logger
@@ -491,7 +492,7 @@ bool HaarEvaluator::read(const FileNode& node)
     features->resize(n);
     FileNodeIterator it = node.begin();
     hasTiltedFeatures = false;
-    std::vector<Feature> ff = *features;
+    std::vector<Feature>& ff = *features;
     sumSize0 = Size();
     ufbuf.release();
 
@@ -552,30 +553,37 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
             tofs = (int)((utilted.offset - usum.offset)/sizeof(int));
         }
         else
+        {
             integral(_image, usum, noArray(), noArray(), CV_32S);
+        }
+        
         sqrBoxFilter(_image, usqsum, CV_32S,
                      Size(normrect.width, normrect.height),
                      Point(0, 0), false);
+        /*sqrBoxFilter(_image.getMat(), sqsum, CV_32S,
+                     Size(normrect.width, normrect.height),
+                     Point(0, 0), false);
+        sqsum.copyTo(usqsum);*/
         sumStep = (int)(usum.step/usum.elemSize());
     }
     else
     {
         sum0.create(rn*rn_scale, cn, CV_32S);
-        sqsum0.create(rn, cn, CV_64F);
+        sqsum0.create(rn, cn, CV_32S);
         sum = sum0(Rect(0, 0, cols+1, rows+1));
-        sqsum = sqsum0(Rect(0, 0, cols+1, rows+1));
+        sqsum = sqsum0(Rect(0, 0, cols, rows));
         
         if( hasTiltedFeatures )
         {
             Mat tilted = sum0(Rect(0, _sumSize.height, cols+1, rows+1));
-            integral(_image, sum, sqsum, tilted, CV_32S);
+            integral(_image, sum, noArray(), tilted, CV_32S);
             tofs = (int)((tilted.data - sum.data)/sizeof(int));
         }
         else
-            integral(_image, sum, sqsum, noArray(), CV_32S);
-        /*sqrBoxFilter(_image, sqsum, CV_32S,
+            integral(_image, sum, noArray(), noArray(), CV_32S);
+        sqrBoxFilter(_image, sqsum, CV_32S,
                      Size(normrect.width, normrect.height),
-                     Point(0, 0), false);*/
+                     Point(0, 0), false);
         sumStep = (int)(sum.step/sum.elemSize());
     }
 
@@ -592,7 +600,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
             optfeaturesPtr[fi].setOffsets( ff[fi], sumStep, tofs );
     }
     if( _image.isUMat() && (sumSize0 != _sumSize || ufbuf.empty()) )
-		copyVectorToUMat(ff, ufbuf);
+		copyVectorToUMat(*optfeatures, ufbuf);
     sumSize0 = _sumSize;
         
     return true;
@@ -608,13 +616,7 @@ bool  HaarEvaluator::setWindow( Point pt )
 
     const int* p = &sum.at<int>(pt);
     int valsum = CALC_SUM_OFS(nofs, p);
-    
-    int nqofs[4];
-    CV_SUM_OFS( nqofs[0], nqofs[1], nqofs[2], nqofs[3], 0, normrect, (int)(sqsum.step/sizeof(double)) );
-    const double* pq = &sqsum.at<double>(pt);
-    double valsqsum = CALC_SUM_OFS(nqofs, pq);
-    
-    //double valsqsum = sqsum.at<int>(pt.y + normrect.y, pt.x + normrect.x);
+    double valsqsum = sqsum.at<int>(pt.y + normrect.y, pt.x + normrect.x);
 
     double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
@@ -1131,8 +1133,6 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
 bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
                                                    int yStep, double factor, Size sumSize0 )
 {
-    const int MAX_FACES = 10000;
-    
     Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
     if( haar.empty() )
         return false;
@@ -1141,7 +1141,8 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     
     if( cascadeKernel.empty() )
     {
-        //cascadeKernel.create(")
+        cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::haarobjectdetect_oclsrc,
+                             format("-D MAX_FACES=%d", MAX_FACES));
         if( cascadeKernel.empty() )
             return false;
     }
@@ -1152,30 +1153,35 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
 		copyVectorToUMat(data.classifiers, uclassifiers);
 		copyVectorToUMat(data.nodes, unodes);
 		copyVectorToUMat(data.leaves, uleaves);
-        ufacepos.create(1, MAX_FACES*4 + 1, CV_32S);
     }
     
     std::vector<UMat> bufs;
     haar->getUMats(bufs);
     CV_Assert(bufs.size() == 3);
-                        
+    
+    Rect normrect = haar->getNormRect();
+    
+    //processingRectSize = Size(yStep, yStep);
     size_t globalsize[] = { processingRectSize.width/yStep, processingRectSize.height/yStep };
     
-    return cascadeKernel.args(ocl::KernelArg::ReadOnly(bufs[0]), // sum
-                       ocl::KernelArg::ReadOnly(bufs[1]), // sqsum
+    cascadeKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
+                       ocl::KernelArg::ReadOnlyNoSize(bufs[1]), // sqsum
                        ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
                        
                        // cascade classifier
+                       (int)data.stages.size(),
                        ocl::KernelArg::PtrReadOnly(ustages),
                        ocl::KernelArg::PtrReadOnly(uclassifiers),
                        ocl::KernelArg::PtrReadOnly(unodes),
                        ocl::KernelArg::PtrReadOnly(uleaves),
                        
-                       ocl::KernelArg::WriteOnly(ufacepos), // positions
-                       ocl::KernelArg::PtrReadOnly(uparams),
-                       processingRectSize.width,
-                       processingRectSize.height,
-                       yStep, (float)factor, MAX_FACES).run(2, globalsize, 0, false);
+                       ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
+                       processingRectSize,
+                       yStep, (float)factor,
+                       normrect, data.origWinSize);
+    bool ok = cascadeKernel.run(2, globalsize, 0, true);
+    //CV_Assert(ok);
+    return ok;
 }
 
 bool CascadeClassifierImpl::isOldFormatCascade() const
@@ -1234,12 +1240,13 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = imgsz;
     
-    bool use_ocl = false;/*ocl::useOpenCL() &&
+    bool use_ocl = ocl::useOpenCL() &&
         getFeatureType() == FeatureEvaluator::HAAR &&
         !isOldFormatCascade() &&
+        data.isStumpBased &&
         maskGenerator.empty() &&
         !outputRejectLevels &&
-        tryOpenCL;*/
+        tryOpenCL;
     
     if( !use_ocl )
     {
@@ -1268,13 +1275,20 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     }
     
     Size sumSize0((imgsz.width + SUM_ALIGN) & -SUM_ALIGN, imgsz.height+1);
+    
+    if( use_ocl )
+    {
+        ufacepos.create(1, MAX_FACES*4 + 1, CV_32S);
+        UMat ufacecount(ufacepos, Rect(0,0,1,1));
+        ufacecount.setTo(Scalar::all(0));
+    }
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
         Size originalWindowSize = getOriginalWindowSize();
 
         Size windowSize( cvRound(originalWindowSize.width*factor), cvRound(originalWindowSize.height*factor) );
-        Size scaledImageSize( cvRound( grayImage.cols/factor ), cvRound( grayImage.rows/factor ) );
+        Size scaledImageSize( cvRound( imgsz.width/factor ), cvRound( imgsz.height/factor ) );
         Size processingRectSize( scaledImageSize.width - originalWindowSize.width,
                                  scaledImageSize.height - originalWindowSize.height );
 
@@ -1331,6 +1345,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         Mat facepos = ufacepos.getMat(ACCESS_READ);
         const int* fptr = facepos.ptr<int>();
         int i, nfaces = fptr[0];
+        printf("nfaces = %d\n", nfaces);
         for( i = 0; i < nfaces; i++ )
         {
             candidates.push_back(Rect(fptr[i*4+1], fptr[i*4+2], fptr[i*4+3], fptr[i*4+4]));
@@ -1439,8 +1454,6 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     origWinSize.height = (int)root[CC_HEIGHT];
     CV_Assert( origWinSize.height > 0 && origWinSize.width > 0 );
 
-    isStumpBased = (int)(root[CC_STAGE_PARAMS][CC_MAX_DEPTH]) == 1 ? true : false;
-
     // load feature params
     FileNode fn = root[CC_FEATURE_PARAMS];
     if( fn.empty() )
@@ -1460,6 +1473,7 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     nodes.clear();
 
     FileNodeIterator it = fn.begin(), it_end = fn.end();
+    isStumpBased = true;
 
     for( int si = 0; it != it_end; si++, ++it )
     {
@@ -1485,6 +1499,9 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
 
             DTree tree;
             tree.nodeCount = (int)internalNodes.size()/nodeStep;
+            if( tree.nodeCount > 1 )
+                isStumpBased = false;
+                
             classifiers.push_back(tree);
 
             nodes.reserve(nodes.size() + tree.nodeCount);
