@@ -195,6 +195,11 @@ protected:
     int m_frameIdx;
     pxcU64 m_timeStampStartNS;
     double m_timeStamp;
+
+    virtual bool validProfile(const PXCCapture::VideoStream::ProfileInfo& /*pinfo*/)
+    {
+        return true;
+    }
     void enumProfiles()
     {
         m_profiles.clear();
@@ -207,7 +212,8 @@ protected:
             sts = m_stream->QueryProfile(profidx, &pinfo);
             if (PXC_STATUS_NO_ERROR > sts)
                 break;
-            m_profiles.push_back(pinfo);
+            if (validProfile(pinfo))
+                m_profiles.push_back(pinfo);
         }
     }
     virtual bool prepareIplImage(PXCImage *pxcImage) = 0;
@@ -553,6 +559,11 @@ public:
         return m_frameUV.retrieveFrame();
     }
 protected:
+    virtual bool validProfile(const PXCCapture::VideoStream::ProfileInfo& pinfo)
+    {
+        return (PXCImage::COLOR_FORMAT_DEPTH == pinfo.imageInfo.format);
+    }
+protected:
     FrameInternal m_frameDepth;
     FrameInternal m_frameIR;
     FrameInternal m_frameUV;
@@ -609,12 +620,16 @@ public:
     virtual double getProperty(int propIdx)
     {
         double propValue = 0;
-        int purePropIdx = propIdx & ~CV_CAP_INTELPERC_STREAMS_MASK;
-        if (CV_CAP_INTELPERC_IMAGE_STREAM == (propIdx & CV_CAP_INTELPERC_STREAMS_MASK))
+        int purePropIdx = propIdx & ~CV_CAP_INTELPERC_GENERATORS_MASK;
+        if (CV_CAP_INTELPERC_IMAGE_GENERATOR == (propIdx & CV_CAP_INTELPERC_GENERATORS_MASK))
         {
             propValue = m_imageStream.getProperty(purePropIdx);
         }
-        else if (CV_CAP_INTELPERC_DEPTH_STREAM == (propIdx & CV_CAP_INTELPERC_STREAMS_MASK))
+        else if (CV_CAP_INTELPERC_DEPTH_GENERATOR == (propIdx & CV_CAP_INTELPERC_GENERATORS_MASK))
+        {
+            propValue = m_depthStream.getProperty(purePropIdx);
+        }
+        else
         {
             propValue = m_depthStream.getProperty(purePropIdx);
         }
@@ -623,12 +638,16 @@ public:
     virtual bool setProperty(int propIdx, double propVal)
     {
         bool isSet = false;
-        int purePropIdx = propIdx & ~CV_CAP_INTELPERC_STREAMS_MASK;
-        if (CV_CAP_INTELPERC_IMAGE_STREAM == (propIdx & CV_CAP_INTELPERC_STREAMS_MASK))
+        int purePropIdx = propIdx & ~CV_CAP_INTELPERC_GENERATORS_MASK;
+        if (CV_CAP_INTELPERC_IMAGE_GENERATOR == (propIdx & CV_CAP_INTELPERC_GENERATORS_MASK))
         {
             isSet = m_imageStream.setProperty(purePropIdx, propVal);
         }
-        else if (CV_CAP_INTELPERC_DEPTH_STREAM == (propIdx & CV_CAP_INTELPERC_STREAMS_MASK))
+        else if (CV_CAP_INTELPERC_DEPTH_GENERATOR == (propIdx & CV_CAP_INTELPERC_GENERATORS_MASK))
+        {
+            isSet = m_depthStream.setProperty(purePropIdx, propVal);
+        }
+        else
         {
             isSet = m_depthStream.setProperty(purePropIdx, propVal);
         }
