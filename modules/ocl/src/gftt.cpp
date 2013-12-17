@@ -101,7 +101,7 @@ static void sortCorners_caller(oclMat& corners, const int count)
 }
 
 // find corners on matrix and put it into array
-void findCorners_caller(
+static void findCorners_caller(
     const oclMat&   eig_mat,        //input matrix worth eigenvalues
     oclMat&         eigMinMax,      //input with min and max values of eigenvalues
     const float     qualityLevel,
