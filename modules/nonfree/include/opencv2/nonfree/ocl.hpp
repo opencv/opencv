@@ -76,6 +76,8 @@ namespace cv
 
             //! returns the descriptor size in float's (64 or 128)
             int descriptorSize() const;
+            //! returns the default norm type
+            int defaultNorm() const;
             //! upload host keypoints to device memory
             void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
             //! download keypoints from device to host memory

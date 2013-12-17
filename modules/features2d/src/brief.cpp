@@ -125,6 +125,11 @@ int BriefDescriptorExtractor::descriptorType() const
     return CV_8UC1;
 }
 
+int BriefDescriptorExtractor::defaultNorm() const
+{
+    return NORM_HAMMING;
+}
+
 void BriefDescriptorExtractor::read( const FileNode& fn)
 {
     int dSize = fn["descriptorSize"];

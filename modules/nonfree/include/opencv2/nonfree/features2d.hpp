@@ -66,6 +66,9 @@ public:
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
 
+    //! returns the default norm type
+    CV_WRAP int defaultNorm() const;
+
     //! finds the keypoints using SIFT algorithm
     void operator()(InputArray img, InputArray mask,
                     std::vector<KeyPoint>& keypoints) const;
@@ -117,6 +120,9 @@ public:
 
     //! returns the descriptor type
     CV_WRAP int descriptorType() const;
+
+    //! returns the descriptor type
+    CV_WRAP int defaultNorm() const;
 
     //! finds the keypoints using fast hessian detector used in SURF
     void operator()(InputArray img, InputArray mask,

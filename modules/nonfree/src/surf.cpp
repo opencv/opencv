@@ -884,6 +884,7 @@ SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended,
 
 int SURF::descriptorSize() const { return extended ? 128 : 64; }
 int SURF::descriptorType() const { return CV_32F; }
+int SURF::defaultNorm() const { return NORM_L2; }
 
 void SURF::operator()(InputArray imgarg, InputArray maskarg,
                       CV_OUT std::vector<KeyPoint>& keypoints) const
