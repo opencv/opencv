@@ -1668,7 +1668,7 @@ namespace cv
         int type = _src.type();
         int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-        if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 4)))
+        if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 || cn <= 4)))
             return false;
 
         const char * kernelName;
@@ -1696,7 +1696,7 @@ namespace cv
 
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
-    CV_Assert( ksize % 2 == 1 );
+    CV_Assert( (ksize % 2 == 1) &&  (_src0.dims() <= 2 ));
 
     if( ksize <= 1 )
     {
