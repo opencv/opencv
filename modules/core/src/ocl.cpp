@@ -43,6 +43,7 @@
 #include <map>
 
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
@@ -1417,6 +1418,83 @@ bool haveAmdBlas()
 #else
 
 bool haveAmdBlas()
+{
+    return false;
+}
+
+#endif
+
+#ifdef HAVE_CLAMDFFT
+
+class AmdFftHelper
+{
+public:
+    static AmdFftHelper & getInstance()
+    {
+        static AmdFftHelper amdFft;
+        return amdFft;
+    }
+
+    bool isAvailable() const
+    {
+        return g_isAmdFftAvailable;
+    }
+
+    ~AmdFftHelper()
+    {
+        try
+        {
+//            clAmdFftTeardown();
+        }
+        catch (...) { }
+    }
+
+protected:
+    AmdFftHelper()
+    {
+        if (!g_isAmdFftInitialized)
+        {
+            AutoLock lock(m);
+
+            if (!g_isAmdFftInitialized && haveOpenCL())
+            {
+                try
+                {
+                    CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+                    g_isAmdFftAvailable = true;
+                }
+                catch (const Exception &)
+                {
+                    g_isAmdFftAvailable = false;
+                }
+            }
+            else
+                g_isAmdFftAvailable = false;
+
+            g_isAmdFftInitialized = true;
+        }
+    }
+
+private:
+    static clAmdFftSetupData setupData;
+    static Mutex m;
+    static bool g_isAmdFftInitialized;
+    static bool g_isAmdFftAvailable;
+};
+
+clAmdFftSetupData AmdFftHelper::setupData;
+bool AmdFftHelper::g_isAmdFftAvailable = false;
+bool AmdFftHelper::g_isAmdFftInitialized = false;
+Mutex AmdFftHelper::m;
+
+bool haveAmdFft()
+{
+    return AmdFftHelper::getInstance().isAvailable();
+}
+
+#else
+
+bool haveAmdFft()
 {
     return false;
 }
