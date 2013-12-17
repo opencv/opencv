@@ -63,7 +63,7 @@ public:
     }
     int getProfileIDX() const
     {
-        return m_profileIdx;    
+        return m_profileIdx;
     }
 public:
     virtual bool initStream(PXCSession *session)            = 0;
@@ -132,29 +132,29 @@ protected:
             return false;
 
         pxcStatus sts = PXC_STATUS_NO_ERROR;
-	    PXCSession::ImplDesc templat;
-	    memset(&templat,0,sizeof(templat));
-	    templat.group   = PXCSession::IMPL_GROUP_SENSOR;
-	    templat.subgroup= PXCSession::IMPL_SUBGROUP_VIDEO_CAPTURE;
+        PXCSession::ImplDesc templat;
+        memset(&templat,0,sizeof(templat));
+        templat.group   = PXCSession::IMPL_GROUP_SENSOR;
+        templat.subgroup= PXCSession::IMPL_SUBGROUP_VIDEO_CAPTURE;
 
-        for (int modidx = 0; PXC_STATUS_NO_ERROR <= sts; modidx++) 
+        for (int modidx = 0; PXC_STATUS_NO_ERROR <= sts; modidx++)
         {
             PXCSession::ImplDesc desc;
             sts = session->QueryImpl(&templat, modidx, &desc);
-            if (PXC_STATUS_NO_ERROR > sts) 
+            if (PXC_STATUS_NO_ERROR > sts)
                 break;
-        
+
             PXCSmartPtr<PXCCapture> capture;
             sts = session->CreateImpl<PXCCapture>(&desc, &capture);
-            if (!capture.IsValid()) 
+            if (!capture.IsValid())
                 continue;
-        
+
             /* enumerate devices */
-            for (int devidx = 0; PXC_STATUS_NO_ERROR <= sts; devidx++) 
+            for (int devidx = 0; PXC_STATUS_NO_ERROR <= sts; devidx++)
             {
                 PXCSmartPtr<PXCCapture::Device> device;
                 sts = capture->CreateDevice(devidx, &device);
-                if (PXC_STATUS_NO_ERROR <= sts) 
+                if (PXC_STATUS_NO_ERROR <= sts)
                 {
                     m_device = device.ReleasePtr();
                     return true;
@@ -172,19 +172,19 @@ protected:
 
         pxcStatus sts = PXC_STATUS_NO_ERROR;
         /* enumerate streams */
-        for (int streamidx = 0; PXC_STATUS_NO_ERROR <= sts; streamidx++) 
+        for (int streamidx = 0; PXC_STATUS_NO_ERROR <= sts; streamidx++)
         {
             PXCCapture::Device::StreamInfo sinfo;
             sts = m_device->QueryStream(streamidx, &sinfo);
-            if (PXC_STATUS_NO_ERROR > sts) 
+            if (PXC_STATUS_NO_ERROR > sts)
                 break;
-            if (PXCCapture::VideoStream::CUID != sinfo.cuid) 
+            if (PXCCapture::VideoStream::CUID != sinfo.cuid)
                 continue;
-            if (type != sinfo.imageType) 
+            if (type != sinfo.imageType)
                 continue;
-                
+
             sts = m_device->CreateStream<PXCCapture::VideoStream>(streamidx, &m_stream);
-            if (PXC_STATUS_NO_ERROR == sts) 
+            if (PXC_STATUS_NO_ERROR == sts)
                 break;
             m_stream.ReleaseRef();
         }
@@ -206,7 +206,7 @@ protected:
         if (!m_stream.IsValid())
             return;
         pxcStatus sts = PXC_STATUS_NO_ERROR;
-        for (int profidx = 0; PXC_STATUS_NO_ERROR <= sts; profidx++) 
+        for (int profidx = 0; PXC_STATUS_NO_ERROR <= sts; profidx++)
         {
             PXCCapture::VideoStream::ProfileInfo pinfo;
             sts = m_stream->QueryProfile(profidx, &pinfo);
@@ -422,7 +422,7 @@ protected:
             return false;
         PXCImage::ImageInfo info;
         pxcImage->QueryInfo(&info);
-            
+
         PXCImage::ImageData data;
         pxcImage->AcquireAccess(PXCImage::ACCESS_READ, PXCImage::COLOR_FORMAT_RGB24, &data);
 
@@ -574,7 +574,7 @@ protected:
             return false;
         PXCImage::ImageInfo info;
         pxcImage->QueryInfo(&info);
-            
+
         PXCImage::ImageData data;
         pxcImage->AcquireAccess(PXCImage::ACCESS_READ, &data);
 
@@ -610,7 +610,7 @@ public:
         : m_contextOpened(false)
     {
         pxcStatus sts = PXCSession_Create(&m_session);
-        if (PXC_STATUS_NO_ERROR > sts) 
+        if (PXC_STATUS_NO_ERROR > sts)
             return;
         m_contextOpened = m_imageStream.initStream(m_session);
         m_contextOpened &= m_depthStream.initStream(m_session);

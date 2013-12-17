@@ -3,7 +3,6 @@
 
 #include <tchar.h>
 #include "opencv2/highgui/highgui.hpp"
-//#include "opencv2/imgproc/imgproc.hpp"
 
 #include <iostream>
 
@@ -122,11 +121,11 @@ static void printStreamProperties(VideoCapture &capture)
     {
         capture.set(CV_CAP_INTELPERC_IMAGE_GENERATOR | CV_CAP_PROP_INTELPERC_PROFILE_IDX, (double)i);
         cout << "  Profile[" << i << "]: ";
-        cout << "width = " << 
+        cout << "width = " <<
             (int)capture.get(CV_CAP_INTELPERC_IMAGE_GENERATOR | CV_CAP_PROP_FRAME_WIDTH);
-        cout << ", height = " << 
+        cout << ", height = " <<
             (int)capture.get(CV_CAP_INTELPERC_IMAGE_GENERATOR | CV_CAP_PROP_FRAME_HEIGHT);
-        cout << ", fps = " << 
+        cout << ", fps = " <<
             capture.get(CV_CAP_INTELPERC_IMAGE_GENERATOR | CV_CAP_PROP_FPS);
         cout << endl;
     }
@@ -143,11 +142,11 @@ static void printStreamProperties(VideoCapture &capture)
     {
         capture.set(CV_CAP_INTELPERC_DEPTH_GENERATOR | CV_CAP_PROP_INTELPERC_PROFILE_IDX, (double)i);
         cout << "  Profile[" << i << "]: ";
-        cout << "width = " << 
+        cout << "width = " <<
             (int)capture.get(CV_CAP_INTELPERC_DEPTH_GENERATOR | CV_CAP_PROP_FRAME_WIDTH);
-        cout << ", height = " << 
+        cout << ", height = " <<
             (int)capture.get(CV_CAP_INTELPERC_DEPTH_GENERATOR | CV_CAP_PROP_FRAME_HEIGHT);
-        cout << ", fps = " << 
+        cout << ", fps = " <<
             capture.get(CV_CAP_INTELPERC_DEPTH_GENERATOR | CV_CAP_PROP_FPS);
         cout << endl;
     }
@@ -353,7 +352,7 @@ int _tmain(int argc, char* argv[])
         {
             if (g_closedDepthPoint)
             {
-                double minVal = 0.0; double maxVal = 0.0;        
+                double minVal = 0.0; double maxVal = 0.0;
                 minMaxIdx(depthImage, &minVal, &maxVal, g_closedDepthPoint);
             }
             imshowDepth("depth image", depthImage, capture);
@@ -376,4 +375,3 @@ int _tmain(int argc, char* argv[])
 
     return 0;
 }
-

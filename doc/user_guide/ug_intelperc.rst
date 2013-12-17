@@ -12,7 +12,7 @@ Depth sensors compatible with Intel Perceptual Computing SDK are supported throu
 In order to use depth sensor with OpenCV you should do the following preliminary steps:
 
 #.
-    Install Intel Perceptual Computing SDK (from here http://www.intel.com/software/perceptual). 
+    Install Intel Perceptual Computing SDK (from here http://www.intel.com/software/perceptual).
 
 #.
     Configure OpenCV with Intel Perceptual Computing SDK support by setting ``WITH_INTELPERC`` flag in CMake. If Intel Perceptual Computing SDK is found in install folders OpenCV will be built with Intel Perceptual Computing SDK library (see a status ``INTELPERC`` in CMake log). If CMake process doesn't find Intel Perceptual Computing SDK installation folder automatically, the user should change corresponding CMake variables ``INTELPERC_LIB_DIR`` and ``INTELPERC_INCLUDE_DIR`` to the proper value.
@@ -56,7 +56,7 @@ For getting several data maps use ``VideoCapture::grab`` and ``VideoCapture::ret
 
         capture.retrieve( depthMap, CV_CAP_INTELPERC_DEPTH_MAP );
         capture.retrieve(    image, CV_CAP_INTELPERC_IMAGE );
-	capture.retrieve(  irImage, CV_CAP_INTELPERC_IR_MAP);
+        capture.retrieve(  irImage, CV_CAP_INTELPERC_IR_MAP);
 
         if( waitKey( 30 ) >= 0 )
             break;
@@ -77,4 +77,3 @@ Since two types of sensor's data generators are supported (image generator and d
 For more information please refer to the example of usage intelperc_capture.cpp_ in ``opencv/samples/cpp`` folder.
 
 .. _intelperc_capture.cpp: https://github.com/Itseez/opencv/tree/master/samples/cpp/intelperc_capture.cpp
-
