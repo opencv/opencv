@@ -265,6 +265,11 @@ int cv::cuda::SURF_CUDA::descriptorSize() const
     return extended ? 128 : 64;
 }
 
+int cv::cuda::SURF_CUDA::defaultNorm() const
+{
+    return NORM_L2;
+}
+
 void cv::cuda::SURF_CUDA::uploadKeypoints(const std::vector<KeyPoint>& keypoints, GpuMat& keypointsGPU)
 {
     if (keypoints.empty())

@@ -881,9 +881,10 @@ public:
     virtual void readAlgorithm( )
     {
         string classifierFile = data_path + "/features2d/calonder_classifier.rtc";
+        Ptr<DescriptorExtractor> extractor = makePtr<CalonderDescriptorExtractor<float> >( classifierFile );
         defaultDescMatcher = makePtr<VectorDescriptorMatch>(
-            makePtr<CalonderDescriptorExtractor<float> >( classifierFile ),
-            makePtr<BFMatcher>(int(NORM_L2)));
+            extractor,
+            makePtr<BFMatcher>(extractor->defaultNorm()));
         specificDescMatcher = defaultDescMatcher;
     }
 };

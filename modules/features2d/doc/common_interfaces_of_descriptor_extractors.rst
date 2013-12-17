@@ -35,6 +35,7 @@ Abstract base class for computing descriptors for image keypoints. ::
 
         virtual int descriptorSize() const = 0;
         virtual int descriptorType() const = 0;
+        virtual int defaultNorm() const = 0;
 
         static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
@@ -114,6 +115,7 @@ them into a single color descriptor. ::
         virtual void write( FileStorage& ) const;
         virtual int descriptorSize() const;
         virtual int descriptorType() const;
+        virtual int defaultNorm() const;
     protected:
         ...
     };
@@ -141,6 +143,7 @@ Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
         virtual void write( FileStorage& ) const;
         virtual int descriptorSize() const;
         virtual int descriptorType() const;
+        virtual int defaultNorm() const;
     protected:
         ...
     };

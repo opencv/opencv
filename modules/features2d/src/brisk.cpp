@@ -712,6 +712,12 @@ BRISK::descriptorType() const
   return CV_8U;
 }
 
+int
+BRISK::defaultNorm() const
+{
+  return NORM_HAMMING;
+}
+
 BRISK::~BRISK()
 {
   delete[] patternPoints_;
