@@ -561,21 +561,21 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
     else
     {
         sum0.create(rn*rn_scale, cn, CV_32S);
-        sqsum0.create(rn, cn, CV_32S);
+        sqsum0.create(rn, cn, CV_64F);
         sum = sum0(Rect(0, 0, cols+1, rows+1));
-        sqsum = sqsum0(Rect(0, 0, cols, rows));
+        sqsum = sqsum0(Rect(0, 0, cols+1, rows+1));
         
         if( hasTiltedFeatures )
         {
             Mat tilted = sum0(Rect(0, _sumSize.height, cols+1, rows+1));
-            integral(_image, sum, noArray(), tilted, CV_32S);
+            integral(_image, sum, sqsum, tilted, CV_32S);
             tofs = (int)((tilted.data - sum.data)/sizeof(int));
         }
         else
-            integral(_image, sum, noArray(), noArray(), CV_32S);
-        sqrBoxFilter(_image, sqsum, CV_32S,
+            integral(_image, sum, sqsum, noArray(), CV_32S);
+        /*sqrBoxFilter(_image, sqsum, CV_32S,
                      Size(normrect.width, normrect.height),
-                     Point(0, 0), false);
+                     Point(0, 0), false);*/
         sumStep = (int)(sum.step/sum.elemSize());
     }
 
@@ -608,7 +608,13 @@ bool  HaarEvaluator::setWindow( Point pt )
 
     const int* p = &sum.at<int>(pt);
     int valsum = CALC_SUM_OFS(nofs, p);
-    double valsqsum = sqsum.at<int>(pt.y + normrect.y, pt.x + normrect.x);
+    
+    int nqofs[4];
+    CV_SUM_OFS( nqofs[0], nqofs[1], nqofs[2], nqofs[3], 0, normrect, (int)(sqsum.step/sizeof(double)) );
+    const double* pq = &sqsum.at<double>(pt);
+    double valsqsum = CALC_SUM_OFS(nqofs, pq);
+    
+    //double valsqsum = sqsum.at<int>(pt.y + normrect.y, pt.x + normrect.x);
 
     double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
