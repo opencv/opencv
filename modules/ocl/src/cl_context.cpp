@@ -57,6 +57,12 @@
 namespace cv {
 namespace ocl {
 
+using namespace cl_utils;
+
+#if defined(WIN32)
+static bool __termination = false;
+#endif
+
 struct __Module
 {
     __Module();
@@ -71,36 +77,10 @@ cv::Mutex& getInitializationMutex()
     return __module.initializationMutex;
 }
 
-
-struct PlatformInfoImpl
+static cv::Mutex& getCurrentContextMutex()
 {
-    cl_platform_id platform_id;
-
-    std::vector<int> deviceIDs;
-
-    PlatformInfo info;
-
-    PlatformInfoImpl()
-        : platform_id(NULL)
-    {
-    }
-};
-
-struct DeviceInfoImpl
-{
-    cl_platform_id platform_id;
-    cl_device_id device_id;
-
-    DeviceInfo info;
-
-    DeviceInfoImpl()
-        : platform_id(NULL), device_id(NULL)
-    {
-    }
-};
-
-static std::vector<PlatformInfoImpl> global_platforms;
-static std::vector<DeviceInfoImpl> global_devices;
+    return __module.currentContextMutex;
+}
 
 static bool parseOpenCLVersion(const std::string& versionStr, int& major, int& minor)
 {
@@ -130,6 +110,141 @@ static bool parseOpenCLVersion(const std::string& versionStr, int& major, int& m
     minor = atoi(minorStr.c_str());
     return true;
 }
+
+struct PlatformInfoImpl : public PlatformInfo
+{
+    cl_platform_id platform_id;
+
+    std::vector<int> deviceIDs;
+
+    PlatformInfoImpl()
+        : platform_id(NULL)
+    {
+    }
+
+    void init(int id, cl_platform_id platform)
+    {
+        CV_Assert(platform_id == NULL);
+
+        this->_id = id;
+        platform_id = platform;
+
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_PROFILE, this->platformProfile));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VERSION, this->platformVersion));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_NAME, this->platformName));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VENDOR, this->platformVendor));
+        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_EXTENSIONS, this->platformExtensons));
+
+        parseOpenCLVersion(this->platformVersion,
+                this->platformVersionMajor, this->platformVersionMinor);
+    }
+
+};
+
+struct DeviceInfoImpl: public DeviceInfo
+{
+    cl_platform_id platform_id;
+    cl_device_id device_id;
+
+    DeviceInfoImpl()
+        : platform_id(NULL), device_id(NULL)
+    {
+    }
+
+    void init(int id, PlatformInfoImpl& platformInfoImpl, cl_device_id device)
+    {
+        CV_Assert(device_id == NULL);
+
+        this->_id = id;
+        platform_id = platformInfoImpl.platform_id;
+        device_id = device;
+
+        this->platform = &platformInfoImpl;
+
+        cl_device_type type = cl_device_type(-1);
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_TYPE, type));
+        this->deviceType = DeviceType(type);
+
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_PROFILE, this->deviceProfile));
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VERSION, this->deviceVersion));
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_NAME, this->deviceName));
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR, this->deviceVendor));
+        cl_uint vendorID = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR_ID, vendorID));
+        this->deviceVendorId = vendorID;
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DRIVER_VERSION, this->deviceDriverVersion));
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, this->deviceExtensions));
+
+        parseOpenCLVersion(this->deviceVersion,
+                this->deviceVersionMajor, this->deviceVersionMinor);
+
+        size_t maxWorkGroupSize = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_GROUP_SIZE, maxWorkGroupSize));
+        this->maxWorkGroupSize = maxWorkGroupSize;
+
+        cl_uint maxDimensions = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, maxDimensions));
+        std::vector<size_t> maxWorkItemSizes(maxDimensions);
+        openCLSafeCall(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * maxDimensions,
+                (void *)&maxWorkItemSizes[0], 0));
+        this->maxWorkItemSizes = maxWorkItemSizes;
+
+        cl_uint maxComputeUnits = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_COMPUTE_UNITS, maxComputeUnits));
+        this->maxComputeUnits = maxComputeUnits;
+
+        cl_ulong localMemorySize = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMemorySize));
+        this->localMemorySize = (size_t)localMemorySize;
+
+        cl_ulong maxMemAllocSize = 0;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, maxMemAllocSize));
+        this->maxMemAllocSize = (size_t)maxMemAllocSize;
+
+        cl_bool unifiedMemory = false;
+        openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_HOST_UNIFIED_MEMORY, unifiedMemory));
+        this->isUnifiedMemory = unifiedMemory != 0;
+
+        //initialize extra options for compilation. Currently only fp64 is included.
+        //Assume 4KB is enough to store all possible extensions.
+        openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, this->deviceExtensions));
+
+        size_t fp64_khr = this->deviceExtensions.find("cl_khr_fp64");
+        if(fp64_khr != std::string::npos)
+        {
+            this->compilationExtraOptions += "-D DOUBLE_SUPPORT";
+            this->haveDoubleSupport = true;
+        }
+        else
+        {
+            this->haveDoubleSupport = false;
+        }
+
+        size_t intel_platform = platformInfoImpl.platformVendor.find("Intel");
+        if(intel_platform != std::string::npos)
+        {
+            this->compilationExtraOptions += " -D INTEL_DEVICE";
+            this->isIntelDevice = true;
+        }
+        else
+        {
+            this->isIntelDevice = false;
+        }
+
+        if (id < 0)
+        {
+#ifdef CL_VERSION_1_2
+            if (this->deviceVersionMajor > 1 || (this->deviceVersionMajor == 1 && this->deviceVersionMinor >= 2))
+            {
+                ::clRetainDevice(device);
+            }
+#endif
+        }
+    }
+};
+
+static std::vector<PlatformInfoImpl> global_platforms;
+static std::vector<DeviceInfoImpl> global_devices;
 
 static void split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
@@ -329,8 +444,6 @@ not_found:
 static bool __initialized = false;
 static int initializeOpenCLDevices()
 {
-    using namespace cl_utils;
-
     assert(!__initialized);
     __initialized = true;
 
@@ -351,19 +464,9 @@ static int initializeOpenCLDevices()
     for (size_t i = 0; i < platforms.size(); ++i)
     {
         PlatformInfoImpl& platformInfo = global_platforms[i];
-        platformInfo.info._id = i;
 
         cl_platform_id platform = platforms[i];
-
-        platformInfo.platform_id = platform;
-        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_PROFILE, platformInfo.info.platformProfile));
-        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VERSION, platformInfo.info.platformVersion));
-        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_NAME, platformInfo.info.platformName));
-        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_VENDOR, platformInfo.info.platformVendor));
-        openCLSafeCall(getStringInfo(clGetPlatformInfo, platform, CL_PLATFORM_EXTENSIONS, platformInfo.info.platformExtensons));
-
-        parseOpenCLVersion(platformInfo.info.platformVersion,
-                platformInfo.info.platformVersionMajor, platformInfo.info.platformVersionMinor);
+        platformInfo.init(i, platform);
 
         std::vector<cl_device_id> devices;
         cl_int status = getDevices(platform, CL_DEVICE_TYPE_ALL, devices);
@@ -375,89 +478,15 @@ static int initializeOpenCLDevices()
             int baseIndx = global_devices.size();
             global_devices.resize(baseIndx + devices.size());
             platformInfo.deviceIDs.resize(devices.size());
-            platformInfo.info.devices.resize(devices.size());
+            platformInfo.devices.resize(devices.size());
 
             for(size_t j = 0; j < devices.size(); ++j)
             {
                 cl_device_id device = devices[j];
 
                 DeviceInfoImpl& deviceInfo = global_devices[baseIndx + j];
-                deviceInfo.info._id = baseIndx + j;
-                deviceInfo.platform_id = platform;
-                deviceInfo.device_id = device;
-
-                deviceInfo.info.platform = &platformInfo.info;
-                platformInfo.deviceIDs[j] = deviceInfo.info._id;
-
-                cl_device_type type = cl_device_type(-1);
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_TYPE, type));
-                deviceInfo.info.deviceType = DeviceType(type);
-
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_PROFILE, deviceInfo.info.deviceProfile));
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VERSION, deviceInfo.info.deviceVersion));
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_NAME, deviceInfo.info.deviceName));
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR, deviceInfo.info.deviceVendor));
-                cl_uint vendorID = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_VENDOR_ID, vendorID));
-                deviceInfo.info.deviceVendorId = vendorID;
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DRIVER_VERSION, deviceInfo.info.deviceDriverVersion));
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, deviceInfo.info.deviceExtensions));
-
-                parseOpenCLVersion(deviceInfo.info.deviceVersion,
-                        deviceInfo.info.deviceVersionMajor, deviceInfo.info.deviceVersionMinor);
-
-                size_t maxWorkGroupSize = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_GROUP_SIZE, maxWorkGroupSize));
-                deviceInfo.info.maxWorkGroupSize = maxWorkGroupSize;
-
-                cl_uint maxDimensions = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, maxDimensions));
-                std::vector<size_t> maxWorkItemSizes(maxDimensions);
-                openCLSafeCall(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * maxDimensions,
-                        (void *)&maxWorkItemSizes[0], 0));
-                deviceInfo.info.maxWorkItemSizes = maxWorkItemSizes;
-
-                cl_uint maxComputeUnits = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_COMPUTE_UNITS, maxComputeUnits));
-                deviceInfo.info.maxComputeUnits = maxComputeUnits;
-
-                cl_ulong localMemorySize = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_LOCAL_MEM_SIZE, localMemorySize));
-                deviceInfo.info.localMemorySize = (size_t)localMemorySize;
-
-                cl_ulong maxMemAllocSize = 0;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, maxMemAllocSize));
-                deviceInfo.info.maxMemAllocSize = (size_t)maxMemAllocSize;
-
-                cl_bool unifiedMemory = false;
-                openCLSafeCall(getScalarInfo(clGetDeviceInfo, device, CL_DEVICE_HOST_UNIFIED_MEMORY, unifiedMemory));
-                deviceInfo.info.isUnifiedMemory = unifiedMemory != 0;
-
-                //initialize extra options for compilation. Currently only fp64 is included.
-                //Assume 4KB is enough to store all possible extensions.
-                openCLSafeCall(getStringInfo(clGetDeviceInfo, device, CL_DEVICE_EXTENSIONS, deviceInfo.info.deviceExtensions));
-
-                size_t fp64_khr = deviceInfo.info.deviceExtensions.find("cl_khr_fp64");
-                if(fp64_khr != std::string::npos)
-                {
-                    deviceInfo.info.compilationExtraOptions += "-D DOUBLE_SUPPORT";
-                    deviceInfo.info.haveDoubleSupport = true;
-                }
-                else
-                {
-                    deviceInfo.info.haveDoubleSupport = false;
-                }
-
-                size_t intel_platform = platformInfo.info.platformVendor.find("Intel");
-                if(intel_platform != std::string::npos)
-                {
-                    deviceInfo.info.compilationExtraOptions += " -D INTEL_DEVICE";
-                    deviceInfo.info.isIntelDevice = true;
-                }
-                else
-                {
-                    deviceInfo.info.isIntelDevice = false;
-                }
+                platformInfo.deviceIDs[j] = baseIndx + j;
+                deviceInfo.init(baseIndx + j, platformInfo, device);
             }
         }
     }
@@ -468,7 +497,7 @@ static int initializeOpenCLDevices()
         for(size_t j = 0; j < platformInfo.deviceIDs.size(); ++j)
         {
             DeviceInfoImpl& deviceInfo = global_devices[platformInfo.deviceIDs[j]];
-            platformInfo.info.devices[j] = &deviceInfo.info;
+            platformInfo.devices[j] = &deviceInfo;
         }
     }
 
@@ -487,6 +516,8 @@ DeviceInfo::DeviceInfo()
     // nothing
 }
 
+DeviceInfo::~DeviceInfo() { }
+
 PlatformInfo::PlatformInfo()
     : _id(-1),
       platformVersionMajor(0), platformVersionMinor(0)
@@ -494,40 +525,135 @@ PlatformInfo::PlatformInfo()
     // nothing
 }
 
+PlatformInfo::~PlatformInfo() { }
+
+class ContextImpl;
+
+struct CommandQueue
+{
+    ContextImpl* context_;
+    cl_command_queue clQueue_;
+
+    CommandQueue() : context_(NULL), clQueue_(NULL) { }
+    ~CommandQueue() { release(); }
+
+    void create(ContextImpl* context_);
+    void release()
+    {
+#ifdef WIN32
+        // if process is on termination stage (ExitProcess was called and other threads were terminated)
+        // then disable command queue release because it may cause program hang
+        if (!__termination)
+#endif
+        {
+            if(clQueue_)
+            {
+                openCLSafeCall(clReleaseCommandQueue(clQueue_)); // some cleanup problems are here
+            }
+
+        }
+        clQueue_ = NULL;
+        context_ = NULL;
+    }
+};
+
+cv::TLSData<CommandQueue> commandQueueTLSData;
+
 //////////////////////////////// OpenCL context ////////////////////////
 //This is a global singleton class used to represent a OpenCL context.
 class ContextImpl : public Context
 {
 public:
-    const cl_device_id clDeviceID;
+    cl_device_id clDeviceID;
     cl_context clContext;
-    cl_command_queue clCmdQueue;
-    const DeviceInfo& deviceInfo;
+    const DeviceInfoImpl& deviceInfoImpl;
 
 protected:
-    ContextImpl(const DeviceInfo& deviceInfo, cl_device_id clDeviceID)
-        : clDeviceID(clDeviceID), clContext(NULL), clCmdQueue(NULL), deviceInfo(deviceInfo)
+    ContextImpl(const DeviceInfoImpl& _deviceInfoImpl, cl_context context)
+        : clDeviceID(_deviceInfoImpl.device_id), clContext(context), deviceInfoImpl(_deviceInfoImpl)
     {
-        // nothing
+#ifdef CL_VERSION_1_2
+        if (supportsFeature(FEATURE_CL_VER_1_2))
+        {
+            openCLSafeCall(clRetainDevice(clDeviceID));
+        }
+#endif
+        openCLSafeCall(clRetainContext(clContext));
+
+        ContextImpl* old = NULL;
+        {
+            cv::AutoLock lock(getCurrentContextMutex());
+            old = currentContext;
+            currentContext = this;
+        }
+        if (old != NULL)
+        {
+            delete old;
+        }
     }
-    ~ContextImpl();
+    ~ContextImpl()
+    {
+        CV_Assert(this != currentContext);
+
+#ifdef CL_VERSION_1_2
+        if (supportsFeature(FEATURE_CL_VER_1_2))
+        {
+            openCLSafeCall(clReleaseDevice(clDeviceID));
+        }
+#endif
+        if (deviceInfoImpl._id < 0) // not in the global registry, so we should cleanup it
+        {
+#ifdef CL_VERSION_1_2
+            if (supportsFeature(FEATURE_CL_VER_1_2))
+            {
+                openCLSafeCall(clReleaseDevice(deviceInfoImpl.device_id));
+            }
+#endif
+            PlatformInfoImpl* platformImpl = (PlatformInfoImpl*)(deviceInfoImpl.platform);
+            delete platformImpl;
+            delete const_cast<DeviceInfoImpl*>(&deviceInfoImpl);
+        }
+        clDeviceID = NULL;
+
+#ifdef WIN32
+        // if process is on termination stage (ExitProcess was called and other threads were terminated)
+        // then disable command queue release because it may cause program hang
+        if (!__termination)
+#endif
+        {
+            if(clContext)
+            {
+                openCLSafeCall(clReleaseContext(clContext));
+            }
+        }
+        clContext = NULL;
+    }
 public:
     static void setContext(const DeviceInfo* deviceInfo);
+    static void initializeContext(void* pClPlatform, void* pClContext, void* pClDevice);
 
     bool supportsFeature(FEATURE_TYPE featureType) const;
 
     static void cleanupContext(void);
 
+    static ContextImpl* getContext();
 private:
     ContextImpl(const ContextImpl&); // disabled
     ContextImpl& operator=(const ContextImpl&); // disabled
+
+    static ContextImpl* currentContext;
 };
 
-static ContextImpl* currentContext = NULL;
+ContextImpl* ContextImpl::currentContext = NULL;
 
 static bool __deviceSelected = false;
 
 Context* Context::getContext()
+{
+    return ContextImpl::getContext();
+}
+
+ContextImpl* ContextImpl::getContext()
 {
     if (currentContext == NULL)
     {
@@ -571,7 +697,7 @@ bool Context::supportsFeature(FEATURE_TYPE featureType) const
 
 const DeviceInfo& Context::getDeviceInfo() const
 {
-    return ((ContextImpl*)this)->deviceInfo;
+    return ((ContextImpl*)this)->deviceInfoImpl;
 }
 
 const void* Context::getOpenCLContextPtr() const
@@ -581,7 +707,13 @@ const void* Context::getOpenCLContextPtr() const
 
 const void* Context::getOpenCLCommandQueuePtr() const
 {
-    return &(((ContextImpl*)this)->clCmdQueue);
+    ContextImpl* pThis = (ContextImpl*)this;
+    CommandQueue* commandQueue = commandQueueTLSData.get();
+    if (commandQueue->context_ != pThis)
+    {
+        commandQueue->create(pThis);
+    }
+    return &commandQueue->clQueue_;
 }
 
 const void* Context::getOpenCLDeviceIDPtr() const
@@ -595,42 +727,16 @@ bool ContextImpl::supportsFeature(FEATURE_TYPE featureType) const
     switch (featureType)
     {
     case FEATURE_CL_INTEL_DEVICE:
-        return deviceInfo.isIntelDevice;
+        return deviceInfoImpl.isIntelDevice;
     case FEATURE_CL_DOUBLE:
-        return deviceInfo.haveDoubleSupport;
+        return deviceInfoImpl.haveDoubleSupport;
     case FEATURE_CL_UNIFIED_MEM:
-        return deviceInfo.isUnifiedMemory;
+        return deviceInfoImpl.isUnifiedMemory;
     case FEATURE_CL_VER_1_2:
-        return deviceInfo.deviceVersionMajor > 1 || (deviceInfo.deviceVersionMajor == 1 && deviceInfo.deviceVersionMinor >= 2);
+        return deviceInfoImpl.deviceVersionMajor > 1 || (deviceInfoImpl.deviceVersionMajor == 1 && deviceInfoImpl.deviceVersionMinor >= 2);
     }
     CV_Error(CV_StsBadArg, "Invalid feature type");
     return false;
-}
-
-#if defined(WIN32)
-static bool __termination = false;
-#endif
-
-ContextImpl::~ContextImpl()
-{
-#ifdef WIN32
-    // if process is on termination stage (ExitProcess was called and other threads were terminated)
-    // then disable command queue release because it may cause program hang
-    if (!__termination)
-#endif
-    {
-        if(clCmdQueue)
-        {
-            openCLSafeCall(clReleaseCommandQueue(clCmdQueue)); // some cleanup problems are here
-        }
-
-        if(clContext)
-        {
-            openCLSafeCall(clReleaseContext(clContext));
-        }
-    }
-    clCmdQueue = NULL;
-    clContext = NULL;
 }
 
 void fft_teardown();
@@ -641,53 +747,69 @@ void ContextImpl::cleanupContext(void)
     fft_teardown();
     clBlasTeardown();
 
-    cv::AutoLock lock(__module.currentContextMutex);
+    cv::AutoLock lock(getCurrentContextMutex());
     if (currentContext)
-        delete currentContext;
-    currentContext = NULL;
+    {
+        ContextImpl* ctx = currentContext;
+        currentContext = NULL;
+        delete ctx;
+    }
 }
 
 void ContextImpl::setContext(const DeviceInfo* deviceInfo)
 {
-    CV_Assert(deviceInfo->_id >= 0 && deviceInfo->_id < (int)global_devices.size());
+    CV_Assert(deviceInfo->_id >= 0); // we can't specify custom devices
+    CV_Assert(deviceInfo->_id < (int)global_devices.size());
 
     {
-        cv::AutoLock lock(__module.currentContextMutex);
+        cv::AutoLock lock(getCurrentContextMutex());
         if (currentContext)
         {
-            if (currentContext->deviceInfo._id == deviceInfo->_id)
+            if (currentContext->deviceInfoImpl._id == deviceInfo->_id)
                 return;
         }
     }
 
     DeviceInfoImpl& infoImpl = global_devices[deviceInfo->_id];
-    CV_Assert(deviceInfo == &infoImpl.info);
+    CV_Assert(deviceInfo == &infoImpl);
 
     cl_int status = 0;
     cl_context_properties cps[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(infoImpl.platform_id), 0 };
     cl_context clContext = clCreateContext(cps, 1, &infoImpl.device_id, NULL, NULL, &status);
     openCLVerifyCall(status);
-#ifdef PRINT_KERNEL_RUN_TIME
-    cl_command_queue clCmdQueue = clCreateCommandQueue(clContext, infoImpl.device_id, CL_QUEUE_PROFILING_ENABLE, &status);
-#else /*PRINT_KERNEL_RUN_TIME*/
-    cl_command_queue clCmdQueue = clCreateCommandQueue(clContext, infoImpl.device_id, 0, &status);
-#endif /*PRINT_KERNEL_RUN_TIME*/
+
+    ContextImpl* ctx = new ContextImpl(infoImpl, clContext);
+    clReleaseContext(clContext);
+    (void)ctx;
+}
+
+void ContextImpl::initializeContext(void* pClPlatform, void* pClContext, void* pClDevice)
+{
+    CV_Assert(pClPlatform != NULL);
+    CV_Assert(pClContext != NULL);
+    CV_Assert(pClDevice != NULL);
+    cl_platform_id platform = *(cl_platform_id*)pClPlatform;
+    cl_context context = *(cl_context*)pClContext;
+    cl_device_id device = *(cl_device_id*)pClDevice;
+
+    PlatformInfoImpl* platformInfoImpl = new PlatformInfoImpl();
+    platformInfoImpl->init(-1, platform);
+    DeviceInfoImpl* deviceInfoImpl = new DeviceInfoImpl();
+    deviceInfoImpl->init(-1, *platformInfoImpl, device);
+
+    ContextImpl* ctx = new ContextImpl(*deviceInfoImpl, context);
+    (void)ctx;
+}
+
+void CommandQueue::create(ContextImpl* context)
+{
+    release();
+    cl_int status = 0;
+    // TODO add CL_QUEUE_PROFILING_ENABLE
+    cl_command_queue clCmdQueue = clCreateCommandQueue(context->clContext, context->clDeviceID, 0, &status);
     openCLVerifyCall(status);
-
-    ContextImpl* ctx = new ContextImpl(infoImpl.info, infoImpl.device_id);
-    ctx->clCmdQueue = clCmdQueue;
-    ctx->clContext = clContext;
-
-    ContextImpl* old = NULL;
-    {
-        cv::AutoLock lock(__module.currentContextMutex);
-        old = currentContext;
-        currentContext = ctx;
-    }
-    if (old != NULL)
-    {
-        delete old;
-    }
+    context_ = context;
+    clQueue_ = clCmdQueue;
 }
 
 int getOpenCLPlatforms(PlatformsInfo& platforms)
@@ -700,7 +822,7 @@ int getOpenCLPlatforms(PlatformsInfo& platforms)
     for (size_t id = 0; id < global_platforms.size(); ++id)
     {
         PlatformInfoImpl& impl = global_platforms[id];
-        platforms.push_back(&impl.info);
+        platforms.push_back(&impl);
     }
 
     return platforms.size();
@@ -730,9 +852,9 @@ int getOpenCLDevices(std::vector<const DeviceInfo*> &devices, int deviceType, co
         for (size_t id = 0; id < global_devices.size(); ++id)
         {
             DeviceInfoImpl& deviceInfo = global_devices[id];
-            if (((int)deviceInfo.info.deviceType & deviceType) != 0)
+            if (((int)deviceInfo.deviceType & deviceType) != 0)
             {
-                devices.push_back(&deviceInfo.info);
+                devices.push_back(&deviceInfo);
             }
         }
     }
@@ -756,6 +878,20 @@ void setDevice(const DeviceInfo* info)
     try
     {
         ContextImpl::setContext(info);
+        __deviceSelected = true;
+    }
+    catch (...)
+    {
+        __deviceSelected = true;
+        throw;
+    }
+}
+
+void initializeContext(void* pClPlatform, void* pClContext, void* pClDevice)
+{
+    try
+    {
+        ContextImpl::initializeContext(pClPlatform, pClContext, pClDevice);
         __deviceSelected = true;
     }
     catch (...)
