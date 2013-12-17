@@ -5,7 +5,7 @@ HighGUI
 .. highlight:: cpp
 
 Using Creative Senz3D and other Intel Perceptual Computing SDK compatible depth sensors
-======================================================
+=======================================================================================
 
 Depth sensors compatible with Intel Perceptual Computing SDK are supported through ``VideoCapture`` class. Depth map, RGB image and some other formats of output can be retrieved by using familiar interface of ``VideoCapture``.
 
