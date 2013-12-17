@@ -55,6 +55,12 @@
 /* IEEE1394 capturing support - libdc1394 v2.x */
 #cmakedefine HAVE_DC1394_2
 
+/* DirectX */
+#cmakedefine HAVE_DIRECTX
+#cmakedefine HAVE_D3D11
+#cmakedefine HAVE_D3D10
+#cmakedefine HAVE_D3D9
+
 /* DirectShow Video Capture library */
 #cmakedefine HAVE_DSHOW
 
