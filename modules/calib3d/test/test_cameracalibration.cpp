@@ -770,6 +770,7 @@ void CV_CameraCalibrationTest_CPP::calibrate( int imageCount, int* pointCounts,
                      distCoeffs,
                      rvecs,
                      tvecs,
+                     TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON),
                      flags );
 
     assert( cameraMatrix.type() == CV_64FC1 );
@@ -1606,8 +1607,8 @@ void CV_StereoCalibrationTest::run( int )
 
         Mat _M1, _M2, _D1, _D2;
         vector<Mat> _R1, _R2, _T1, _T2;
-        calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1, 0 );
-        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T1, 0 );
+        calibrateCamera( objpt, imgpt1, imgsize, _M1, _D1, _R1, _T1);
+        calibrateCamera( objpt, imgpt2, imgsize, _M2, _D2, _R2, _T1);
         undistortPoints( _imgpt1, _imgpt1, _M1, _D1, Mat(), _M1 );
         undistortPoints( _imgpt2, _imgpt2, _M2, _D2, Mat(), _M2 );
 
