@@ -213,7 +213,7 @@ private:
         // far from previous centers (and this complies to "k-means++: the advantages of careful seeding" article)
         for (int i = 0; i < n; i++) {
             closestDistSq[i] = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
-            closestDistSq[i] *= closestDistSq[i];
+            closestDistSq[i] = ensureSquareDistance<Distance>( closestDistSq[i] );
             currentPot += closestDistSq[i];
         }
 
@@ -241,7 +241,7 @@ private:
                 double newPot = 0;
                 for (int i = 0; i < n; i++) {
                     DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[index]], dataset.cols);
-                    newPot += std::min( dist*dist, closestDistSq[i] );
+                    newPot += std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
                 }
 
                 // Store the best result
@@ -256,7 +256,7 @@ private:
             currentPot = bestNewPot;
             for (int i = 0; i < n; i++) {
                 DistanceType dist = distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols);
-                closestDistSq[i] = std::min( dist*dist, closestDistSq[i] );
+                closestDistSq[i] = std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
             }
         }
 
