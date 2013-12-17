@@ -103,8 +103,26 @@ OCL_TEST_P(ConvertTo, Accuracy)
     }
 }
 
+typedef MatrixTestBase CopyTo;
+
+OCL_TEST_P(CopyTo, Accuracy)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(src_roi.copyTo(dst_roi));
+        OCL_ON(usrc_roi.copyTo(udst_roi));
+
+        OCL_EXPECT_MATS_NEAR(dst, 0);
+    }
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
                             OCL_ALL_DEPTHS, OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
+                                OCL_ALL_DEPTHS, Values((MatDepth)0), OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 
