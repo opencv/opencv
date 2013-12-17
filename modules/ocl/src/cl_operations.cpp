@@ -447,7 +447,6 @@ void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, Str
                           int depth, const char *build_options)
 {
     cl_kernel kernel = openCLGetKernelFromSource(ctx, source, kernelName, channels, depth, build_options);
-
     openCLExecuteKernel(ctx, kernel, globalThreads, localThreads, args);
 }
 
