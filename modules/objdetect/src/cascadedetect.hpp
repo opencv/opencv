@@ -63,8 +63,8 @@ protected:
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                     bool outputRejectLevels = false );
 
-    enum { BOOST = 0
-    };
+    enum { MAX_FACES = 10000 };
+    enum { BOOST = 0 };
     enum { DO_CANNY_PRUNING    = CASCADE_DO_CANNY_PRUNING,
         SCALE_IMAGE         = CASCADE_SCALE_IMAGE,
         FIND_BIGGEST_OBJECT = CASCADE_FIND_BIGGEST_OBJECT,
@@ -132,7 +132,7 @@ protected:
 
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
-    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets, uparams;
+    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets;
     ocl::Kernel cascadeKernel;
     bool tryOpenCL;
     
@@ -327,19 +327,19 @@ inline void HaarEvaluator::OptFeature :: setOffsets( const Feature& _f, int step
     weight[0] = _f.rect[0].weight;
     weight[1] = _f.rect[1].weight;
     weight[2] = _f.rect[2].weight;
+    
+    Rect r2 = weight[2] > 0 ? _f.rect[2].r : Rect(0,0,0,0);
     if (_f.tilted)
     {
         CV_TILTED_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], tofs, _f.rect[0].r, step );
         CV_TILTED_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], tofs, _f.rect[1].r, step );
-        if (weight[2])
-            CV_TILTED_PTRS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, _f.rect[2].r, step );
+        CV_TILTED_PTRS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, r2, step );
     }
     else
     {
         CV_SUM_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], 0, _f.rect[0].r, step );
         CV_SUM_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], 0, _f.rect[1].r, step );
-        if (weight[2])
-            CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, _f.rect[2].r, step );
+        CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, r2, step );
     }
 }
 
