@@ -135,7 +135,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
 
-    virtual bool setImage(InputArray img, Size origWinSize);
+    virtual bool setImage(InputArray img, Size origWinSize, Size sumSize);
     virtual bool setWindow(Point p);
 
     virtual double calcOrd(int featureIdx) const;
