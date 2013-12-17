@@ -53,6 +53,62 @@
 namespace cvflann
 {
 
+template <typename Distance, typename ElementType>
+struct squareDistance
+{
+    typedef typename Distance::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist*dist; }
+};
+
+
+template <typename ElementType>
+struct squareDistance<L2_Simple<ElementType>, ElementType>
+{
+    typedef typename L2_Simple<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+template <typename ElementType>
+struct squareDistance<L2<ElementType>, ElementType>
+{
+    typedef typename L2<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+
+template <typename ElementType>
+struct squareDistance<MinkowskiDistance<ElementType>, ElementType>
+{
+    typedef typename MinkowskiDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+template <typename ElementType>
+struct squareDistance<HellingerDistance<ElementType>, ElementType>
+{
+    typedef typename HellingerDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+template <typename ElementType>
+struct squareDistance<ChiSquareDistance<ElementType>, ElementType>
+{
+    typedef typename ChiSquareDistance<ElementType>::ResultType ResultType;
+    ResultType operator()( ResultType dist ) { return dist; }
+};
+
+
+template <typename Distance>
+typename Distance::ResultType ensureSquareDistance( typename Distance::ResultType dist )
+{
+    typedef typename Distance::ElementType ElementType;
+
+    squareDistance<Distance, ElementType> dummy;
+    return dummy( dist );
+}
+
+
+
 struct KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,
@@ -211,7 +267,7 @@ public:
 
         for (int i = 0; i < n; i++) {
             closestDistSq[i] = distance_(dataset_[indices[i]], dataset_[indices[index]], dataset_.cols);
-            closestDistSq[i] *= closestDistSq[i];
+            closestDistSq[i] = ensureSquareDistance<Distance>( closestDistSq[i] );
             currentPot += closestDistSq[i];
         }
 
@@ -239,7 +295,7 @@ public:
                 double newPot = 0;
                 for (int i = 0; i < n; i++) {
                     DistanceType dist = distance_(dataset_[indices[i]], dataset_[indices[index]], dataset_.cols);
-                    newPot += std::min( dist*dist, closestDistSq[i] );
+                    newPot += std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
                 }
 
                 // Store the best result
@@ -254,7 +310,7 @@ public:
             currentPot = bestNewPot;
             for (int i = 0; i < n; i++) {
                 DistanceType dist = distance_(dataset_[indices[i]], dataset_[indices[bestNewIndex]], dataset_.cols);
-                closestDistSq[i] = std::min( dist*dist, closestDistSq[i] );
+                closestDistSq[i] = std::min( ensureSquareDistance<Distance>(dist), closestDistSq[i] );
             }
         }
 
