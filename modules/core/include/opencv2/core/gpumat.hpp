@@ -48,8 +48,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/cuda_devptrs.hpp"
 
-#define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
-
 namespace cv { namespace gpu
 {
     //////////////////////////////// Initialization & Info ////////////////////////
