@@ -1453,7 +1453,7 @@ public:
 
     void add( const Mat& descriptors );
     const std::vector<Mat>& getDescriptors() const;
-    int descripotorsCount() const;
+    int descriptorsCount() const;
 
     virtual void clear();
 
