@@ -175,7 +175,7 @@ static void sortByRow(oclMat& vals, int row, bool isGreaterThan, bool cmpAll)
         {
             args[2] = std::make_pair(sizeof(cl_int), (void *)&passOfStage);
 #ifdef ANDROID
-            openCLExecuteKernel(cxt, &kernel_sort_by_key, kernelName, globalThreads, NULL, args, -1, -1, build_opt_buf);
+            openCLExecuteKernel(cxt, &sort_by_row, kernelName, globalThreads, NULL, args, -1, -1, build_opt.c_str());
 #else
             size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
             openCLExecuteKernel(cxt, &sort_by_row, kernelName, globalThreads, localThreads, args, -1, -1, build_opt.c_str());
