@@ -1338,7 +1338,7 @@ bool haveOpenCL()
 
 bool useOpenCL()
 {
-    TLSData* data = TLSData::get();
+    CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
         data->useOpenCL = (int)haveOpenCL();
     return data->useOpenCL > 0;
@@ -1348,7 +1348,7 @@ void setUseOpenCL(bool flag)
 {
     if( haveOpenCL() )
     {
-        TLSData* data = TLSData::get();
+        CoreTLSData* data = coreTlsData.get();
         data->useOpenCL = flag ? 1 : 0;
     }
 }
@@ -1765,7 +1765,7 @@ size_t Device::profilingTimerResolution() const
 const Device& Device::getDefault()
 {
     const Context2& ctx = Context2::getDefault();
-    int idx = TLSData::get()->device;
+    int idx = coreTlsData.get()->device;
     return ctx.device(idx);
 }
 
@@ -2059,7 +2059,7 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = TLSData::get()->oclQueue;
+    Queue& q = coreTlsData.get()->oclQueue;
     if( !q.p && haveOpenCL() )
         q.create(Context2::getDefault());
     return q;
