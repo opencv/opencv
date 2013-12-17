@@ -221,7 +221,7 @@ endif()
 if(HAVE_INTELPERC)
   list(APPEND highgui_srcs src/cap_intelperc.cpp)
   ocv_include_directories(${INTELPERC_INCLUDE_DIR})
-  list(APPEND HIGHGUI_LIBRARIES ${INTELPERC_LIBRARY})
+  list(APPEND HIGHGUI_LIBRARIES ${INTELPERC_LIBRARIES})
 endif(HAVE_INTELPERC)
 
 if(IOS)
