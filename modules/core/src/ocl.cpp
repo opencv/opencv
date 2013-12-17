@@ -1433,21 +1433,6 @@ void finish2()
     void release() { if( CV_XADD(&refcount, -1) == 1 ) delete this; } \
     int refcount
 
-class Platform
-{
-public:
-    Platform();
-    ~Platform();
-    Platform(const Platform& p);
-    Platform& operator = (const Platform& p);
-
-    void* ptr() const;
-    static Platform& getDefault();
-protected:
-    struct Impl;
-    Impl* p;
-};
-
 struct Platform::Impl
 {
     Impl()
@@ -1843,6 +1828,12 @@ const Device& Device::getDefault()
 
 struct Context2::Impl
 {
+    Impl()
+    {
+        refcount = 1;
+        handle = 0;
+    }
+
     Impl(int dtype0)
     {
         refcount = 1;
@@ -1925,7 +1916,6 @@ struct Context2::Impl
 
     cl_context handle;
     std::vector<Device> devices;
-    bool initialized;
 
     typedef ProgramSource2::hash_t hash_t;
 
@@ -2007,22 +1997,29 @@ const Device& Context2::device(size_t idx) const
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context2& Context2::getDefault()
+Context2& Context2::getDefault(bool initialize)
 {
     static Context2 ctx;
-    if( !ctx.p && haveOpenCL() )
+    if(!ctx.p && haveOpenCL())
     {
-        // do not create new Context2 right away.
-        // First, try to retrieve existing context of the same type.
-        // In its turn, Platform::getContext() may call Context2::create()
-        // if there is no such context.
-        ctx.create(Device::TYPE_ACCELERATOR);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_DGPU);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_IGPU);
-        if(!ctx.p)
-            ctx.create(Device::TYPE_CPU);
+        if (initialize)
+        {
+            // do not create new Context2 right away.
+            // First, try to retrieve existing context of the same type.
+            // In its turn, Platform::getContext() may call Context2::create()
+            // if there is no such context.
+            ctx.create(Device::TYPE_ACCELERATOR);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_DGPU);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_IGPU);
+            if(!ctx.p)
+                ctx.create(Device::TYPE_CPU);
+        }
+        else
+        {
+            ctx.p = new Impl();
+        }
     }
 
     return ctx;
@@ -2033,6 +2030,30 @@ Program Context2::getProg(const ProgramSource2& prog,
 {
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
+
+void initializeContextFromHandle(Context2& ctx, void* platform, void* _context, void* _device)
+{
+    cl_context context = (cl_context)_context;
+    cl_device_id device = (cl_device_id)_device;
+
+    // cleanup old context
+    Context2::Impl* impl = ctx._getImpl();
+    if (impl->handle)
+    {
+        cl_int status = clReleaseContext(impl->handle);
+        (void)status;
+    }
+    impl->devices.clear();
+
+    impl->handle = context;
+    impl->devices.resize(1);
+    impl->devices[0].set(device);
+
+    Platform& p = Platform::getDefault();
+    Platform::Impl* pImpl = p._getImpl();
+    pImpl->handle = (cl_platform_id)platform;
+}
+
 
 struct Queue::Impl
 {
