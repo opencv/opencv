@@ -25,11 +25,25 @@ Returns the list of devices
 
 ocl::setDevice
 --------------
-Returns void
+Initialize OpenCL computation context
 
 .. ocv:function:: void ocl::setDevice( const DeviceInfo* info )
 
     :param info: device info
+
+ocl::initializeContext
+--------------------------------
+Alternative way to initialize OpenCL computation context.
+
+.. ocv:function:: void ocl::initializeContext(void* pClPlatform, void* pClContext, void* pClDevice)
+
+    :param pClPlatform: selected ``platform_id`` (via pointer, parameter type is ``cl_platform_id*``)
+
+    :param pClContext: selected ``cl_context`` (via pointer, parameter type is ``cl_context*``)
+
+    :param pClDevice: selected ``cl_device_id`` (via pointer, parameter type is ``cl_device_id*``)
+
+This function can be used for context initialization with D3D/OpenGL interoperability.
 
 ocl::setBinaryPath
 ------------------
