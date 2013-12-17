@@ -1180,11 +1180,12 @@ void getMinMaxRes(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &
         {
             int current_minloc = minl.at<int>(0,i);
             int current_maxloc = maxl.at<int>(0,i);
+            if(current_minloc < 0 || current_maxloc < 0) continue;
             minloc = (oldmin == current_min) ? std::min(minloc, current_minloc) : (oldmin < current_min) ? minloc : current_minloc;
             maxloc = (oldmax == current_max) ? std::min(maxloc, current_maxloc) : (oldmax > current_max) ? maxloc : current_maxloc;
         }
     }
-    bool zero_mask = (maxloc%cols == -1);
+    bool zero_mask = (maxloc == INT_MAX) || (minloc == INT_MAX);
     if(minVal)
         *minVal = zero_mask ? 0 : (double)min;
     if(maxVal)
@@ -1223,7 +1224,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d %s -D dstlocT=int",
+    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d %s",
         depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? "-D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
