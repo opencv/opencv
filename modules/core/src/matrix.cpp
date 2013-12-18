@@ -134,11 +134,11 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
     {
         CV_Assert( sz[i] <= (size_t)INT_MAX );
         if( sz[i] == 0 )
-        return;
+            return;
         if( srcofs )
-        srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
+            srcptr += srcofs[i]*(i <= dims-2 ? srcstep[i] : 1);
         if( dstofs )
-        dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
+            dstptr += dstofs[i]*(i <= dims-2 ? dststep[i] : 1);
         isz[i] = (int)sz[i];
     }
 
