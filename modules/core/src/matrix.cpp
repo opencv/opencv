@@ -56,7 +56,10 @@ void MatAllocator::map(UMatData*, int) const
 void MatAllocator::unmap(UMatData* u) const
 {
     if(u->urefcount == 0 && u->refcount == 0)
+    {
         deallocate(u);
+        u = NULL;
+    }
 }
 
 void MatAllocator::download(UMatData* u, void* dstptr,
@@ -179,7 +182,6 @@ public:
         UMatData* u = new UMatData(this);
         u->data = u->origdata = data;
         u->size = total;
-        u->refcount = data0 == 0;
         if(data0)
             u->flags |= UMatData::USER_ALLOCATED;
 
@@ -195,6 +197,8 @@ public:
 
     void deallocate(UMatData* u) const
     {
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
         if(u && u->refcount == 0)
         {
             if( !(u->flags & UMatData::USER_ALLOCATED) )
@@ -392,6 +396,7 @@ void Mat::create(int d, const int* _sizes, int _type)
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
 
+    addref();
     finalizeHdr(*this);
 }
 
@@ -409,6 +414,7 @@ void Mat::deallocate()
 {
     if(u)
         (u->currAllocator ? u->currAllocator : allocator ? allocator : getStdAllocator())->unmap(u);
+    u = NULL;
 }
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
