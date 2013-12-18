@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include <limits.h>
 #include <stdio.h>
+#include "opencl_kernels.hpp"
 
 /****************************************************************************************\
                      Basic Morphological Operations: Erosion & Dilation
@@ -1283,11 +1284,124 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 }
 #endif
 
+static const char* op2str[] = {"ERODE", "DILATE"};
+
+static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _kernel, Size &ksize, const Point anchor, int iterations, int op)
+{
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (_src.depth() == CV_64F && !doubleSupport)
+        return false;
+
+    UMat kernel8U;
+    _kernel.getUMat().convertTo(kernel8U, CV_8U);
+    UMat kernel = kernel8U.reshape(1, 1);
+
+    bool rectKernel = true;
+    for(int i = 0; i < kernel.rows * kernel.cols; ++i)
+        if(kernel.getMat(ACCESS_READ).at<uchar>(i) != 1)
+            rectKernel = false;
+
+    UMat src = _src.getUMat();
+
+#ifdef ANDROID
+    size_t localThreads[3] = {16, 8, 1};
+#else
+    size_t localThreads[3] = {16, 16, 1};
+#endif
+    size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
+
+    if(localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
+        return false;
+
+    char s[64];
+
+    switch (src.type())
+    {
+    case CV_8UC1:
+        sprintf(s, "-D VAL=%s -D GENTYPE=uchar", (op==MORPH_ERODE) ? "255" : "0");
+        break;
+    case CV_8UC4:
+        sprintf(s, "-D VAL=%s -D GENTYPE=uchar4", (op==MORPH_ERODE) ? "255" : "0");
+        break;
+    case CV_32FC1:
+        sprintf(s, "-D VAL=%s -D GENTYPE=float", (op==MORPH_ERODE) ? "FLT_MAX" : "-FLT_MAX");
+        break;
+    case CV_32FC4:
+        sprintf(s, "-D VAL=%s -D GENTYPE=float4", (op==MORPH_ERODE) ? "FLT_MAX" : "-FLT_MAX");
+        break;
+    case CV_64FC1:
+        sprintf(s, "-D VAL=%s -D GENTYPE=double", (op==MORPH_ERODE) ? "DBL_MAX" : "-DBL_MAX");
+        break;
+    case CV_64FC4:
+        sprintf(s, "-D VAL=%s -D GENTYPE=double4", (op==MORPH_ERODE) ? "DBL_MAX" : "-DBL_MAX");
+        break;
+    default:
+        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
+    }
+
+    char compile_option[128];
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s %s %s %s",
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op], doubleSupport?"-D DOUBLE_SUPPORT" :"", rectKernel?"-D RECTKERNEL":"", s);
+
+    ocl::Kernel k( "morph", ocl::imgproc::morph_oclsrc, compile_option);
+    if (k.empty())
+        return false;
+
+    _dst.create(src.size(), src.type());
+    UMat dst = _dst.getUMat();
+
+    for(int i = 0; i< iterations; i++)
+    {
+        UMat source;
+        Size wholesize;
+        Point ofs;
+        if( i == 0)
+            source = src;
+        else
+        {
+            int cols =  dst.cols, rows = dst.rows;
+            dst.locateROI(wholesize,ofs);
+            dst.adjustROI(ofs.y, wholesize.height - rows - ofs.y, ofs.x, wholesize.width - cols - ofs.x);
+            dst.copyTo(source);
+            dst.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
+            source.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
+        }
+
+        source.locateROI(wholesize, ofs);
+        int wholecols = wholesize.width, wholerows = wholesize.height;
+
+        int idxArg = 0;
+        idxArg = k.set(idxArg, ocl::KernelArg::PtrReadOnly(source));
+        idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+        idxArg = k.set(idxArg, (int)( (source.offset / source.elemSize())%(source.step / source.elemSize()) ) );
+        idxArg = k.set(idxArg, (int)( (source.offset / source.elemSize())/(source.step / source.elemSize()) ) );
+        idxArg = k.set(idxArg, source.cols);
+        idxArg = k.set(idxArg, source.rows);
+        idxArg = k.set(idxArg, (int)(source.step / source.elemSize()));
+        idxArg = k.set(idxArg, (int)(dst.step / dst.elemSize()));
+        idxArg = k.set(idxArg, ocl::KernelArg::PtrReadOnly(kernel));
+        idxArg = k.set(idxArg, wholecols);
+        idxArg = k.set(idxArg, wholerows);
+        idxArg = k.set(idxArg, (int)( dst.offset / dst.elemSize() ) );
+
+        if (!k.run(2, globalThreads, localThreads, true))
+            return false;
+    }
+    return true;
+}
+
 static void morphOp( int op, InputArray _src, OutputArray _dst,
                      InputArray _kernel,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
+    bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && _src.channels() == _dst.channels() &&
+        _src.dims()<=2 && (_src.channels() == 1 || _src.channels() == 4) && (anchor.x == -1) && (anchor.y == -1) &&
+        (_src.depth() == CV_8U || _src.depth() == CV_32F || _src.depth() == CV_64F ) &&
+        (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue()) &&
+        (op == MORPH_ERODE || op == MORPH_DILATE);
+
     Mat kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
@@ -1299,13 +1413,11 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         return;
 #endif
 
-    Mat src = _src.getMat();
-
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
-
     if( iterations == 0 || kernel.rows*kernel.cols == 1 )
     {
+        Mat src = _src.getMat();
+        _dst.create( src.size(), src.type() );
+        Mat dst = _dst.getMat();
         src.copyTo(dst);
         return;
     }
@@ -1325,6 +1437,14 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                                        anchor);
         iterations = 1;
     }
+
+    if (useOpenCL && ocl_morphology_op(_src, _dst, kernel, ksize, anchor, iterations, op) )
+        return;
+
+    Mat src = _src.getMat();
+
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
 
     int nStripes = 1;
 #if defined HAVE_TEGRA_OPTIMIZATION
@@ -1362,49 +1482,94 @@ void cv::dilate( InputArray src, OutputArray dst, InputArray kernel,
     morphOp( MORPH_DILATE, src, dst, kernel, anchor, iterations, borderType, borderValue );
 }
 
-
 void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    Mat src = _src.getMat(), temp;
-    _dst.create(src.size(), src.type());
-    Mat dst = _dst.getMat();
+    bool use_opencl = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && _src.channels() == _dst.channels() &&
+        _src.dims()<=2 && (_src.channels() == 1 || _src.channels() == 4) && (anchor.x == -1) && (anchor.y == -1) &&
+        (_src.depth() == CV_8U || _src.depth() == CV_32F || _src.depth() == CV_64F ) &&
+        (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue());
+
+    _dst.create(_src.size(), _src.type());
+    Mat src, dst, temp;
+    UMat usrc, udst, utemp;
 
     switch( op )
     {
     case MORPH_ERODE:
-        erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case MORPH_DILATE:
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case MORPH_OPEN:
-        erode( src, dst, kernel, anchor, iterations, borderType, borderValue );
-        dilate( dst, dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( _dst, _dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case CV_MOP_CLOSE:
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
-        erode( dst, dst, kernel, anchor, iterations, borderType, borderValue );
+        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        erode( _dst, _dst, kernel, anchor, iterations, borderType, borderValue );
         break;
     case CV_MOP_GRADIENT:
-        erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
-        dilate( src, dst, kernel, anchor, iterations, borderType, borderValue );
-        dst -= temp;
+        erode( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( _src, _dst, kernel, anchor, iterations, borderType, borderValue );
+        if(use_opencl)
+        {
+            udst = _dst.getUMat();
+            subtract(udst, utemp, udst);
+        }
+        else
+        {
+            dst = _dst.getMat();
+            dst -= temp;
+        }
         break;
     case CV_MOP_TOPHAT:
-        if( src.data != dst.data )
-            temp = dst;
-        erode( src, temp, kernel, anchor, iterations, borderType, borderValue );
-        dilate( temp, temp, kernel, anchor, iterations, borderType, borderValue );
-        dst = src - temp;
+        if(use_opencl)
+        {
+            usrc = _src.getUMat();
+            udst = _dst.getUMat();
+            if( usrc.u != udst.u )
+                utemp = udst;
+        }
+        else
+        {
+            src = _src.getMat();
+            dst = _dst.getMat();
+            if( src.data != dst.data )
+                temp = dst;
+        }
+        erode( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
+        dilate( use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel,
+            anchor, iterations, borderType, borderValue );
+        if(use_opencl)
+            subtract(usrc, utemp, udst);
+        else
+            dst = src - temp;
         break;
     case CV_MOP_BLACKHAT:
-        if( src.data != dst.data )
-            temp = dst;
-        dilate( src, temp, kernel, anchor, iterations, borderType, borderValue );
-        erode( temp, temp, kernel, anchor, iterations, borderType, borderValue );
-        dst = temp - src;
+        if(use_opencl)
+        {
+            usrc = _src.getUMat();
+            udst = _dst.getUMat();
+            if( usrc.u != udst.u )
+                utemp = udst;
+        }
+        else
+        {
+            src = _src.getMat();
+            dst = _dst.getMat();
+            if( src.data != dst.data )
+                temp = dst;
+        }
+        dilate( _src, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel, anchor, iterations, borderType, borderValue );
+        erode( use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, use_opencl ? (cv::OutputArray)utemp : (cv::OutputArray)temp, kernel,
+            anchor, iterations, borderType, borderValue );
+        if(use_opencl)
+            subtract(utemp, usrc, udst);
+        else
+            dst = temp - src;
         break;
     default:
         CV_Error( CV_StsBadArg, "unknown morphological operation" );
