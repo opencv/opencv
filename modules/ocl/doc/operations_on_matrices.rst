@@ -549,7 +549,7 @@ ocl::sortByRow
 ------------------
 Returns void
 
-.. ocv:function:: void sortByRow(oclMat& values, int row, bool descending = false, int method = SORT_BITONIC, bool cmpAll = false)
+.. ocv:function:: void ocl::sortByRow(oclMat& values, int row, bool descending = false, int method = SORT_BITONIC, bool cmpAll = false)
 
     :param values: the array to sort
     :param row: Row that is used as key for sorting
