@@ -11,6 +11,11 @@
         virtual bool supports(FeatureSet) const = 0;
         virtual bool isCompatible() const = 0;
         virtual void query() = 0;
+        virtual int deviceID() const = 0;
+        virtual std::string name() const = 0;
+        virtual int majorVersion() const = 0;
+        virtual int minorVersion() const = 0;
+        virtual int multiProcessorCount() const = 0;
         virtual ~DeviceInfoFuncTable() {};
     };
     
@@ -70,6 +75,11 @@
         bool supports(FeatureSet) const { throw_nogpu; return false; }
         bool isCompatible() const { throw_nogpu; return false; }
         void query() { throw_nogpu; }
+        int deviceID() const { throw_nogpu; return -1; };
+        std::string name() const { throw_nogpu; return std::string(); }
+        int majorVersion() const { throw_nogpu; return -1; }
+        int minorVersion() const { throw_nogpu; return -1; }
+        int multiProcessorCount() const { throw_nogpu; return -1; }
     };
     
     class EmptyFuncTable : public GpuFuncTable
@@ -577,6 +587,31 @@ namespace cv { namespace gpu { namespace device
             multi_processor_count_ = prop->multiProcessorCount;
             majorVersion_ = prop->major;
             minorVersion_ = prop->minor;
+        }
+
+        int deviceID() const
+        {
+            return device_id_;
+        }
+
+        std::string name() const
+        {
+            return name_;
+        }
+
+        int majorVersion() const
+        {
+            return majorVersion_;
+        }
+
+        int minorVersion() const
+        {
+            return minorVersion_;
+        }
+
+        int multiProcessorCount() const
+        {
+            return multi_processor_count_;
         }
 
     private:
