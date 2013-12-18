@@ -217,6 +217,7 @@ UMat Mat::getUMat(int accessFlags) const
         if(!a)
             a = a0;
         temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags);
+        temp_u->refcount = 1;
     }
     UMat::getStdAllocator()->allocate(temp_u, accessFlags);
     hdr.flags = flags;
@@ -224,6 +225,7 @@ UMat Mat::getUMat(int accessFlags) const
     finalizeHdr(hdr);
     hdr.u = temp_u;
     hdr.offset = data - datastart;
+    hdr.addref();
     return hdr;
 }
 
@@ -271,6 +273,7 @@ void UMat::create(int d, const int* _sizes, int _type)
     }
 
     finalizeHdr(*this);
+    addref();
 }
 
 void UMat::copySize(const UMat& m)
@@ -294,6 +297,7 @@ UMat::~UMat()
 void UMat::deallocate()
 {
     u->currAllocator->deallocate(u);
+    u = NULL;
 }
 
 
