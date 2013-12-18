@@ -20,12 +20,12 @@ static bool g_showClosedPoint           = false;
 
 static int g_closedDepthPoint[2];
 
-static void printUsage(char *arg0)
+static void printUsage(const char *arg0)
 {
-    char *filename = arg0;
+    const char *filename = arg0;
     while (*filename)
         filename++;
-    while ((arg0 <= filename) && ('\\' != *filename) && ('//' != *filename))
+    while ((arg0 <= filename) && ('\\' != *filename) && ('/' != *filename))
         filename--;
     filename++;
 
@@ -95,7 +95,7 @@ static void parseCMDLine(int argc, char* argv[])
                 exit(-1);
             }
         }
-        if (g_closedDepthPoint && (-1 == g_depthStreamProfileIdx))
+        if (g_showClosedPoint && (-1 == g_depthStreamProfileIdx))
         {
             cerr << "For --show-closed depth profile has be selected" << endl;
             exit(-1);
@@ -153,7 +153,7 @@ static void printStreamProperties(VideoCapture &capture)
 
 static void imshowImage(const char *winname, Mat &image, VideoCapture &capture)
 {
-    if (g_closedDepthPoint)
+    if (g_showClosedPoint)
     {
         Mat uvMap;
         if (capture.retrieve(uvMap, CV_CAP_INTELPERC_UVDEPTH_MAP))
@@ -283,7 +283,7 @@ static void imshowDepth(const char *winname, Mat &depth, VideoCapture &capture)
     imshow(winname, image);
 }
 
-int _tmain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     parseCMDLine(argc, argv);
 
@@ -349,7 +349,7 @@ int _tmain(int argc, char* argv[])
 
         if ((-1 != g_depthStreamProfileIdx) && (capture.retrieve(depthImage, CV_CAP_INTELPERC_DEPTH_MAP)))
         {
-            if (g_closedDepthPoint)
+            if (g_showClosedPoint)
             {
                 double minVal = 0.0; double maxVal = 0.0;
                 minMaxIdx(depthImage, &minVal, &maxVal, g_closedDepthPoint);
