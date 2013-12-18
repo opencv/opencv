@@ -30,7 +30,7 @@ const static Scalar colors[] =  { CV_RGB(0,0,255),
 
 
 int64 work_begin[MAX_THREADS] = {0};
-int64 work_end[MAX_THREADS] = {0};
+int64 work_total[MAX_THREADS] = {0};
 string inputName, outputName, cascadeName;
 
 static void workBegin(int i = 0)
@@ -40,12 +40,12 @@ static void workBegin(int i = 0)
 
 static void workEnd(int i = 0)
 {
-    work_end[i] += (getTickCount() - work_begin[i]);
+    work_total[i] += (getTickCount() - work_begin[i]);
 }
 
-static double getTime(int i = 0)
+static double getTotalTime(int i = 0)
 {
-    return work_end[i] /getTickFrequency() * 1000.;
+    return work_total[i] /getTickFrequency() * 1000.;
 }
 
 
@@ -152,7 +152,7 @@ static int facedetect_one_thread(bool useCPU, double scale )
             cout << "average CPU time (noCamera) : ";
         else
             cout << "average GPU time (noCamera) : ";
-        cout << getTime() / LOOP_NUM << " ms" << endl;
+        cout << getTotalTime() / LOOP_NUM << " ms" << endl;
         cout << "accuracy value: " << accuracy <<endl;
 
         Draw(image, faces, scale);
@@ -167,7 +167,7 @@ static int facedetect_one_thread(bool useCPU, double scale )
 ///////////////////////////////////////detectfaces with multithreading////////////////////////////////////////////
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 
-static void detectFaces(std::string fileName)
+static void detectFaces(std::string fileName, int threadNum)
 {
     ocl::OclCascadeClassifier cascade;
     if(!cascade.load(cascadeName))
@@ -179,7 +179,7 @@ static void detectFaces(std::string fileName)
     Mat img = imread(fileName, CV_LOAD_IMAGE_COLOR);
     if (img.empty())
     {
-        std::cout << "cann't open file " + fileName <<std::endl;
+        std::cout << '[' << threadNum << "] " << "can't open file " + fileName <<std::endl;
         return;
     }
 
@@ -187,23 +187,37 @@ static void detectFaces(std::string fileName)
     d_img.upload(img);
 
     std::vector<Rect> oclfaces;
-    cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+    std::thread::id tid = std::this_thread::get_id();
+    std::cout << '[' << threadNum << "] "
+        << "ThreadID = " << tid
+        << ", CommandQueue = " << *(void**)ocl::getClCommandQueuePtr()
+        << endl;
+    for(int i = 0; i <= LOOP_NUM; i++)
+    {
+        if(i>0) workBegin(threadNum);
+        cascade.detectMultiScale(d_img, oclfaces,  1.1, 3, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30), Size(0, 0));
+        if(i>0) workEnd(threadNum);
+    }
+    std::cout << '[' << threadNum << "] " << "Average time = " << getTotalTime(threadNum) / LOOP_NUM << " ms" << endl;
 
     for(unsigned int i = 0; i<oclfaces.size(); i++)
         rectangle(img, Point(oclfaces[i].x, oclfaces[i].y), Point(oclfaces[i].x + oclfaces[i].width, oclfaces[i].y + oclfaces[i].height), colors[i%8], 3);
 
     std::string::size_type pos = outputName.rfind('.');
-    std::string outputNameTid = outputName + '-' + std::to_string(_threadid);
-    if(pos == std::string::npos)
+    std::string strTid = std::to_string(_threadid);
+    if( !outputName.empty() )
     {
-        std::cout << "Invalid output file name: " << outputName << std::endl;
+        if(pos == std::string::npos)
+        {
+            std::cout << "Invalid output file name: " << outputName << std::endl;
+        }
+        else
+        {
+            std::string outputNameTid = outputName.substr(0, pos) + "_" + strTid + outputName.substr(pos);
+            imwrite(outputNameTid, img);
+        }
     }
-    else
-    {
-        outputNameTid = outputName.substr(0, pos) + "_" + std::to_string(_threadid) + outputName.substr(pos);
-        imwrite(outputNameTid, img);
-    }
-    imshow(outputNameTid, img);
+    imshow(strTid, img);
     waitKey(0);
 }
 
@@ -212,7 +226,7 @@ static void facedetect_multithreading(int nthreads)
     int thread_number = MAX_THREADS < nthreads ? MAX_THREADS : nthreads;
     std::vector<std::thread> threads;
     for(int i = 0; i<thread_number; i++)
-        threads.push_back(std::thread(detectFaces, inputName));
+        threads.push_back(std::thread(detectFaces, inputName, i));
     for(int i = 0; i<thread_number; i++)
         threads[i].join();
 }
@@ -228,8 +242,7 @@ int main( int argc, const char** argv )
         " specify template file path }"
         "{ c | scale      |   1.0       | scale image }"
         "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
-        "{ o | output     | facedetect_output.jpg  |"
-        " specify output image save path(only works when input is images) }"
+        "{ o | output     | | specify output image save path(only works when input is images) }"
         "{ n | thread_num |      1      | set number of threads >= 1 }";
 
     CommandLineParser cmd(argc, argv, keys);
@@ -314,8 +327,8 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
         radius = cvRound((r->width + r->height)*0.25*scale);
         circle( img, center, radius, color, 3, 8, 0 );
     }
-    imwrite( outputName, img );
-    if(abs(scale-1.0)>.001)
+    if( !outputName.empty() ) imwrite( outputName, img );
+    if( abs(scale-1.0)>.001 )
     {
         resize(img, img, Size((int)(img.cols/scale), (int)(img.rows/scale)));
     }
