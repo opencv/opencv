@@ -643,11 +643,10 @@ void UMat::copyTo(OutputArray _dst) const
     if( _dst.kind() == _InputArray::UMAT )
     {
         UMat dst = _dst.getUMat();
-        void* srchandle = handle(ACCESS_READ);
-        void* dsthandle = dst.handle(ACCESS_WRITE);
-        if( srchandle == dsthandle && dst.offset == offset )
+        if( u == dst.u && dst.offset == offset )
             return;
         dst.ndoffset(dstofs);
+        dstofs[dims-1] *= esz;
         CV_Assert(u->currAllocator == dst.u->currAllocator);
         u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
     }
