@@ -1405,11 +1405,13 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int 
     int cn = CV_MAT_CN(srcType);
     int bdepth = std::max(std::max(sdepth, ddepth), CV_32F);
     int bufType = CV_MAKETYPE(bdepth, cn);
+    Context* clCxt = Context::getContext();
 
     //if image size is non-degenerate and large enough
     //and if filter support is reasonable to satisfy larger local memory requirements,
     //then we can use single pass routine to avoid extra runtime calls overhead
-    if( rowKernel.rows <= 21 && columnKernel.rows <= 21 &&
+    if( clCxt && clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) &&
+        rowKernel.rows <= 21 && columnKernel.rows <= 21 &&
         (rowKernel.rows & 1) == 1 && (columnKernel.rows & 1) == 1 &&
         imgSize.width > optimizedSepFilterLocalSize + (rowKernel.rows>>1) &&
         imgSize.height > optimizedSepFilterLocalSize + (columnKernel.rows>>1) )
