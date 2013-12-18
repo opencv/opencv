@@ -1524,6 +1524,7 @@ struct Device::Impl
     Impl(void* d)
     {
         handle = (cl_device_id)d;
+        refcount = 1;
     }
 
     template<typename _TpCL, typename _TpOut>
@@ -2784,8 +2785,6 @@ public:
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
         UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags);
-        u->urefcount = 1;
-        u->refcount = 0;
         return u;
     }
 
@@ -2827,7 +2826,6 @@ public:
         u->data = 0;
         u->size = total;
         u->handle = handle;
-        u->urefcount = 1;
         u->flags = flags0;
 
         return u;
@@ -2866,7 +2864,6 @@ public:
         }
         if(accessFlags & ACCESS_WRITE)
             u->markHostCopyObsolete(true);
-        CV_XADD(&u->urefcount, 1);
         return true;
     }
 
@@ -2904,6 +2901,9 @@ public:
     {
         if(!u)
             return;
+
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
 
         // TODO: !!! when we add Shared Virtual Memory Support,
         // this function (as well as the others) should be corrected
