@@ -40,7 +40,7 @@ __kernel void runHaarClassifierStump(
     int2 imgsize, int xyscale, float factor,
     int4 normrect, int2 windowsize, int maxFaces)
 {
-    int ix = get_global_id(0)*xyscale*VECTOR_SIZE;
+    int ix = get_global_id(0)*xyscale;
     int iy = get_global_id(1)*xyscale;
     sumstep /= sizeof(int);
     sqsumstep /= sizeof(int);
@@ -94,7 +94,6 @@ __kernel void runHaarClassifierStump(
         if( stageIdx == nstages )
         {
             int nfaces = atomic_inc(facepos);
-            //printf("detected face #d!!!!\n", nfaces);
             if( nfaces < maxFaces )
             {
                 volatile __global int* face = facepos + 1 + nfaces*4;
