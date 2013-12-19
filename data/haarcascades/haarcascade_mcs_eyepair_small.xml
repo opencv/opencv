@@ -87,7 +87,6 @@ mcastrillon@iusiani.ulpgc.es
   <height>22</height>
   <width>5</width>
   <stageParams>
-    <maxDepth>0</maxDepth>
     <maxWeakCount>133</maxWeakCount></stageParams>
   <featureParams>
     <maxCatCount>0</maxCatCount></featureParams>

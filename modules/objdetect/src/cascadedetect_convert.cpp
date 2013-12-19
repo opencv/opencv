@@ -209,7 +209,6 @@ static bool convert(const String& oldcascade, const String& newcascade)
     << "height" << cascadesize.width
     << "width" << cascadesize.height
     << "stageParams" << "{"
-        << "maxDepth" << maxdepth
         << "maxWeakCount" << (int)maxWeakCount
     << "}"
     << "featureParams" << "{"

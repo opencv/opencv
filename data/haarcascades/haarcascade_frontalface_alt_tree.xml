@@ -49,7 +49,6 @@
   <height>20</height>
   <width>20</width>
   <stageParams>
-    <maxDepth>0</maxDepth>
     <maxWeakCount>406</maxWeakCount></stageParams>
   <featureParams>
     <maxCatCount>0</maxCatCount></featureParams>

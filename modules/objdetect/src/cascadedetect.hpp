@@ -48,7 +48,7 @@ public:
     Ptr<MaskGenerator> getMaskGenerator();
 
 protected:
-    enum { SUM_ALIGN = 16 };
+    enum { SUM_ALIGN = 64 };
     
     bool detectSingleScale( InputArray image, Size processingRectSize,
                             int yStep, double factor, std::vector<Rect>& candidates,
@@ -109,14 +109,29 @@ protected:
             int ntrees;
             float threshold;
         };
+        
+        struct Stump
+        {
+            Stump() {};
+            Stump(int _featureIdx, float _threshold, float _left, float _right)
+            : featureIdx(_featureIdx), threshold(_threshold), left(_left), right(_right) {}
+            
+            int featureIdx;
+            float threshold;
+            float left;
+            float right;
+        };
+        
+        Data();
 
         bool read(const FileNode &node);
 
-        bool isStumpBased;
+        bool isStumpBased() const { return maxNodesPerTree == 1; }
 
         int stageType;
         int featureType;
         int ncategories;
+        int maxNodesPerTree;
         Size origWinSize;
 
         std::vector<Stage> stages;
@@ -124,6 +139,7 @@ protected:
         std::vector<DTreeNode> nodes;
         std::vector<float> leaves;
         std::vector<int> subsets;
+        std::vector<Stump> stumps;
     };
 
     Data data;
@@ -132,7 +148,7 @@ protected:
 
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
-    UMat ufacepos, ustages, uclassifiers, unodes, uleaves, usubsets;
+    UMat ufacepos, ustages, ustumps, usubsets;
     ocl::Kernel cascadeKernel;
     bool tryOpenCL;
     
@@ -592,30 +608,36 @@ template<class FEval>
 inline int predictOrderedStump( CascadeClassifierImpl& cascade,
                                 Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
-    int nodeOfs = 0, leafOfs = 0;
+    CV_Assert(!cascade.data.stumps.empty());
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
-    float* cascadeLeaves = &cascade.data.leaves[0];
-    CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
-    CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
+    const CascadeClassifierImpl::Data::Stump* cascadeStumps = &cascade.data.stumps[0];
+    const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
     int nstages = (int)cascade.data.stages.size();
+    double tmp = 0;
+    
     for( int stageIdx = 0; stageIdx < nstages; stageIdx++ )
     {
-        CascadeClassifierImpl::Data::Stage& stage = cascadeStages[stageIdx];
-        sum = 0.0;
+        const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[stageIdx];
+        tmp = 0;
 
         int ntrees = stage.ntrees;
-        for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
+        for( int i = 0; i < ntrees; i++ )
         {
-            CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[nodeOfs];
-            double value = featureEvaluator(node.featureIdx);
-            sum += cascadeLeaves[ value < node.threshold ? leafOfs : leafOfs + 1 ];
+            const CascadeClassifierImpl::Data::Stump& stump = cascadeStumps[i];
+            double value = featureEvaluator(stump.featureIdx);
+            tmp += value < stump.threshold ? stump.left : stump.right;
         }
 
-        if( sum < stage.threshold )
+        if( tmp < stage.threshold )
+        {
+            sum = (double)tmp;
             return -stageIdx;
+        }
+        cascadeStumps += ntrees;
     }
 
+    sum = (double)tmp;
     return 1;
 }
 
@@ -623,56 +645,44 @@ template<class FEval>
 inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
                                     Ptr<FeatureEvaluator> &_featureEvaluator, double& sum )
 {
+    CV_Assert(!cascade.data.stumps.empty());
     int nstages = (int)cascade.data.stages.size();
-    int nodeOfs = 0, leafOfs = 0;
     FEval& featureEvaluator = (FEval&)*_featureEvaluator;
     size_t subsetSize = (cascade.data.ncategories + 31)/32;
-    int* cascadeSubsets = &cascade.data.subsets[0];
-    float* cascadeLeaves = &cascade.data.leaves[0];
-    CascadeClassifierImpl::Data::DTreeNode* cascadeNodes = &cascade.data.nodes[0];
-    CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
+    const int* cascadeSubsets = &cascade.data.subsets[0];
+    const CascadeClassifierImpl::Data::Stump* cascadeStumps = &cascade.data.stumps[0];
+    const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     float tmp = 0; // float accumulator -- float operations are quicker
+#else
+    double tmp = 0;
 #endif
     for( int si = 0; si < nstages; si++ )
     {
-        CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
+        const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
         int wi, ntrees = stage.ntrees;
-#ifdef HAVE_TEGRA_OPTIMIZATION
         tmp = 0;
-#else
-        sum = 0;
-#endif
 
         for( wi = 0; wi < ntrees; wi++ )
         {
-            CascadeClassifierImpl::Data::DTreeNode& node = cascadeNodes[nodeOfs];
-            int c = featureEvaluator(node.featureIdx);
-            const int* subset = &cascadeSubsets[nodeOfs*subsetSize];
-#ifdef HAVE_TEGRA_OPTIMIZATION
-            tmp += cascadeLeaves[ subset[c>>5] & (1 << (c & 31)) ? leafOfs : leafOfs+1];
-#else
-            sum += cascadeLeaves[ subset[c>>5] & (1 << (c & 31)) ? leafOfs : leafOfs+1];
-#endif
-            nodeOfs++;
-            leafOfs += 2;
+            const CascadeClassifierImpl::Data::Stump& stump = cascadeStumps[wi];
+            int c = featureEvaluator(stump.featureIdx);
+            const int* subset = &cascadeSubsets[wi*subsetSize];
+            tmp += (subset[c>>5] & (1 << (c & 31))) ? stump.left : stump.right;
         }
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        if( tmp < stage.threshold ) {
+
+        if( tmp < stage.threshold )
+        {
             sum = (double)tmp;
             return -si;
         }
-#else
-        if( sum < stage.threshold )
-            return -si;
-#endif
+        
+        cascadeStumps += ntrees;
+        cascadeSubsets += ntrees*subsetSize;
     }
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
     sum = (double)tmp;
-#endif
-
     return 1;
 }
 }
