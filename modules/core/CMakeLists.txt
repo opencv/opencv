@@ -1,12 +1,8 @@
 set(the_description "The Core Functionality")
 
-message(STATUS "ENABLE_DYNAMIC_CUDA ${ENABLE_DYNAMIC_CUDA}")
-
 if (ENABLE_DYNAMIC_CUDA)
-  message(STATUS "Using dynamic cuda approach")
   ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES})
 else()
-  message(STATUS "Link CUDA statically")
   ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 endif()
 
