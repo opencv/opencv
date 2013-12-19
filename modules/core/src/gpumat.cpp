@@ -44,7 +44,7 @@
 #include "opencv2/core/gpumat.hpp"
 #include <iostream>
 
-#if defined(HAVE_CUDA) || defined(DYNAMIC_CUDA_SUPPORT)
+#if defined(HAVE_CUDA)
     #include <cuda_runtime.h>
     #include <npp.h>
 
@@ -273,8 +273,6 @@ void cv::gpu::DeviceInfo::query() { deviceInfoFuncTable()->query(); }
 void cv::gpu::printCudaDeviceInfo(int device) { deviceInfoFuncTable()->printCudaDeviceInfo(device); }
 void cv::gpu::printShortCudaDeviceInfo(int device) { deviceInfoFuncTable()->printShortCudaDeviceInfo(device); }
 
-#ifdef HAVE_CUDA
-
 namespace cv { namespace gpu
 {
     CV_EXPORTS void copyWithMask(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, const cv::gpu::GpuMat&, cudaStream_t);
@@ -285,8 +283,6 @@ namespace cv { namespace gpu
     CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar);
     CV_EXPORTS void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&);
 }}
-
-#endif
 
 //////////////////////////////// GpuMat ///////////////////////////////
 
@@ -707,42 +703,38 @@ void cv::gpu::GpuMat::release()
     refcount = 0;
 }
 
-#ifdef HAVE_CUDA
-
 namespace cv { namespace gpu
 {
     void convertTo(const GpuMat& src, GpuMat& dst)
     {
         gpuFuncTable()->convert(src, dst);
     }
-    
+
     void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream)
     {
         gpuFuncTable()->convert(src, dst, alpha, beta, stream);
     }
-    
+
     void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
     {
         gpuFuncTable()->setTo(src, s, cv::gpu::GpuMat(), stream);
     }
-    
+
     void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
     {
-        gpuFuncTable()->setTo(src, s, mask, stream);        
+        gpuFuncTable()->setTo(src, s, mask, stream);
     }
-    
+
     void setTo(GpuMat& src, Scalar s)
     {
         setTo(src, s, 0);
     }
-    
+
     void setTo(GpuMat& src, Scalar s, const GpuMat& mask)
     {
         setTo(src, s, mask, 0);
     }
 }}
-
-#endif
 
 ////////////////////////////////////////////////////////////////////////
 // Error handling

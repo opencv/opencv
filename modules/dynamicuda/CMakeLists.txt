@@ -1,4 +1,4 @@
-if(NOT ANDROID)
+if(NOT ANDROID OR NOT HAVE_CUDA)
   ocv_module_disable(dynamicuda)
 endif()
 

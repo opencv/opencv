@@ -1,6 +1,10 @@
 #ifndef __GPUMAT_CUDA_HPP__
 #define __GPUMAT_CUDA_HPP__
 
+#ifndef HAVE_CUDA
+typedef void* cudaStream_t;
+#endif
+
 class DeviceInfoFuncTable
 {
 public:
@@ -56,7 +60,7 @@ public:
     virtual void convert(const GpuMat& src, GpuMat& dst) const = 0;
 
     // for gpu::device::setTo funcs
-    virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*) const = 0;
+    virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, cudaStream_t) const = 0;
 
     virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
     virtual void free(void* devPtr) const = 0;
@@ -96,8 +100,15 @@ public:
     bool hasEqualOrGreaterPtx(int, int) const { throw_nogpu; return false; }
     bool hasEqualOrGreaterBin(int, int) const { throw_nogpu; return false; }
 
-    void printCudaDeviceInfo(int) const { throw_nogpu; }
-    void printShortCudaDeviceInfo(int) const { throw_nogpu; }
+    void printCudaDeviceInfo(int) const
+    {
+        printf("The library is compiled without CUDA support\n");
+    }
+
+    void printShortCudaDeviceInfo(int) const
+    {
+        printf("The library is compiled without CUDA support\n");
+    }
 };
 
 class EmptyFuncTable : public GpuFuncTable
@@ -113,7 +124,7 @@ public:
     void convert(const GpuMat&, GpuMat&) const { throw_nogpu; }
     void convert(const GpuMat&, GpuMat&, double, double, cudaStream_t stream = 0) const { (void)stream; throw_nogpu; }
 
-    virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*) const { throw_nogpu; }
+    virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, cudaStream_t) const { throw_nogpu; }
 
     void mallocPitch(void**, size_t*, size_t, size_t) const { throw_nogpu; }
     void free(void*) const {}
