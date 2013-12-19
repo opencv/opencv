@@ -41,15 +41,16 @@
 //
 //M*/
 
-#define X_ROW 0
-#define Y_ROW 1
-
 #ifndef BYTES
  #define BYTES 16
 #endif
 
 #ifndef KERNEL_SIZE
- #define KERNEL_SIZE 32
+ #define KERNEL_SIZE 9
+#endif
+
+#ifndef BORDER
+ #define BORDER 0
 #endif
 
 #define HALF_KERNEL (KERNEL_SIZE/2)
@@ -128,29 +129,45 @@ __constant char tests[32 * BYTES] =
 #endif
 };
 
-inline int smoothedSum(__read_only image2d_t sum, const int2 pt)
+inline int smoothedSum(__read_only image2d_t sum, const int2 kpPos, const int2 pt)
 {
-    return ( read_imagei( sum, sampler, pt + (int2)(  HALF_KERNEL + 1,  HALF_KERNEL + 1 ))
-           - read_imagei( sum, sampler, pt + (int2)( -HALF_KERNEL,      HALF_KERNEL + 1 ))
-           - read_imagei( sum, sampler, pt + (int2)(  HALF_KERNEL + 1, -HALF_KERNEL ))
-           + read_imagei( sum, sampler, pt + (int2)( -HALF_KERNEL,     -HALF_KERNEL ))).x;
+    return ( read_imagei( sum, sampler, kpPos + pt + (int2)(  HALF_KERNEL + 1,  HALF_KERNEL + 1 ))
+           - read_imagei( sum, sampler, kpPos + pt + (int2)( -HALF_KERNEL,      HALF_KERNEL + 1 ))
+           - read_imagei( sum, sampler, kpPos + pt + (int2)(  HALF_KERNEL + 1, -HALF_KERNEL ))
+           + read_imagei( sum, sampler, kpPos + pt + (int2)( -HALF_KERNEL,     -HALF_KERNEL ))).x;
 }
 
 __kernel void extractBriefDescriptors(
-    __read_only image2d_t sumImg, __global float* keypoints, int kpRowStep, __global uchar* descriptors, int dscRowStep)
+    __read_only image2d_t sumImg,
+    __global float* keypoints, int kpRowStep,
+    __global uchar* descriptors, int dscRowStep,
+    __global uchar* mask)
 {
-    const int  byte = get_local_id(0);
-    const int  kpId = get_group_id(0);
-    const int2 kpPos = (int2)(keypoints[X_ROW * (kpRowStep/4) + kpId] + 0.5, keypoints[Y_ROW * (kpRowStep/4) + kpId] + 0.5);
+    const int  byte  = get_local_id(0);
+    const int  kpId  = get_group_id(0);
 
+    if( !mask[kpId])
+    {
+        return;
+    }
+    const float2 kpPos = (float2)(keypoints[kpId], keypoints[kpRowStep/4 + kpId]);
+    if( kpPos.x < BORDER
+     || kpPos.y < BORDER
+     || kpPos.x >= (get_image_width(  sumImg ) - BORDER)
+     || kpPos.y >= (get_image_height( sumImg ) - BORDER) )
+    {
+        if( byte == 0) mask[kpId] = 0;
+        return;
+    }
     uchar descByte = 0;
+    const int2 pt = (int2)( kpPos.x + 0.5f, kpPos.y + 0.5f );
     for(int i = 0; i<8; ++i)
     {
         descByte |= (
-            smoothedSum(sumImg, (int2)( tests[byte * 32 + (i * 4) + 0], tests[byte * 32 + (i * 4) + 1] ))
-          < smoothedSum(sumImg, (int2)( tests[byte * 32 + (i * 4) + 2], tests[byte * 32 + (i * 4) + 3] ))
+            smoothedSum(sumImg, pt, (int2)( tests[byte * 32 + (i * 4) + 1], tests[byte * 32 + (i * 4) + 0] ))
+          < smoothedSum(sumImg, pt, (int2)( tests[byte * 32 + (i * 4) + 3], tests[byte * 32 + (i * 4) + 2] ))
           ) << (7-i);
     }
-
     descriptors[kpId * dscRowStep + byte] = descByte;
+    if( byte == 0) mask[kpId] = 1;
 }
