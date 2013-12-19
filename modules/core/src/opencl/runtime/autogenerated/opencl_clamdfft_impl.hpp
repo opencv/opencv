@@ -33,7 +33,7 @@ enum OPENCLAMDFFT_FN_ID {
     OPENCLAMDFFT_FN_clAmdFftSetPlanInStride = 23,
 //    OPENCLAMDFFT_FN_clAmdFftSetPlanLength = 24,
     OPENCLAMDFFT_FN_clAmdFftSetPlanOutStride = 25,
-//    OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision = 26,
+    OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision = 26,
     OPENCLAMDFFT_FN_clAmdFftSetPlanScale = 27,
 //    OPENCLAMDFFT_FN_clAmdFftSetPlanTransposeResult = 28,
     OPENCLAMDFFT_FN_clAmdFftSetResultLocation = 29,
@@ -334,9 +334,9 @@ clAmdFftStatus (*clAmdFftSetPlanOutStride)(clAmdFftPlanHandle, const clAmdFftDim
         openclamdfft_fn3<OPENCLAMDFFT_FN_clAmdFftSetPlanOutStride, clAmdFftStatus, clAmdFftPlanHandle, const clAmdFftDim, size_t*>::switch_fn;
 static const struct DynamicFnEntry clAmdFftSetPlanOutStride_definition = { "clAmdFftSetPlanOutStride", (void**)&clAmdFftSetPlanOutStride};
 
-//clAmdFftStatus (*clAmdFftSetPlanPrecision)(clAmdFftPlanHandle, clAmdFftPrecision) =
-//        openclamdfft_fn2<OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision, clAmdFftStatus, clAmdFftPlanHandle, clAmdFftPrecision>::switch_fn;
-//static const struct DynamicFnEntry clAmdFftSetPlanPrecision_definition = { "clAmdFftSetPlanPrecision", (void**)&clAmdFftSetPlanPrecision};
+clAmdFftStatus (*clAmdFftSetPlanPrecision)(clAmdFftPlanHandle, clAmdFftPrecision) =
+        openclamdfft_fn2<OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision, clAmdFftStatus, clAmdFftPlanHandle, clAmdFftPrecision>::switch_fn;
+static const struct DynamicFnEntry clAmdFftSetPlanPrecision_definition = { "clAmdFftSetPlanPrecision", (void**)&clAmdFftSetPlanPrecision};
 
 clAmdFftStatus (*clAmdFftSetPlanScale)(clAmdFftPlanHandle, clAmdFftDirection, cl_float) =
         openclamdfft_fn3<OPENCLAMDFFT_FN_clAmdFftSetPlanScale, clAmdFftStatus, clAmdFftPlanHandle, clAmdFftDirection, cl_float>::switch_fn;
@@ -387,7 +387,7 @@ static const struct DynamicFnEntry* openclamdfft_fn[] = {
     &clAmdFftSetPlanInStride_definition,
     NULL/*&clAmdFftSetPlanLength_definition*/,
     &clAmdFftSetPlanOutStride_definition,
-    NULL/*&clAmdFftSetPlanPrecision_definition*/,
+    &clAmdFftSetPlanPrecision_definition,
     &clAmdFftSetPlanScale_definition,
     NULL/*&clAmdFftSetPlanTransposeResult_definition*/,
     &clAmdFftSetResultLocation_definition,
@@ -396,4 +396,4 @@ static const struct DynamicFnEntry* openclamdfft_fn[] = {
     ADDITIONAL_FN_DEFINITIONS // macro for custom functions
 };
 
-// number of enabled functions: 14
+// number of enabled functions: 15

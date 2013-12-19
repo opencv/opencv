@@ -48,43 +48,53 @@ using namespace cv;
 using namespace cv::ocl;
 
 #if !defined HAVE_CLAMDFFT
+
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
     CV_Error(Error::OpenCLNoAMDBlasFft, "OpenCL DFT is not implemented");
 }
+
 namespace cv { namespace ocl {
     void fft_teardown();
-}}
-void cv::ocl::fft_teardown(){}
+} }
+
+void cv::ocl::fft_teardown() { }
+
 #else
+
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+
 namespace cv
 {
     namespace ocl
     {
         void fft_setup();
         void fft_teardown();
+
         enum FftType
         {
             C2R = 1, // complex to complex
             R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
             C2C = 3  // opencl HERMITIAN_INTERLEAVED to real
         };
+
         struct FftPlan
         {
         protected:
             clAmdFftPlanHandle plHandle;
             FftPlan& operator=(const FftPlan&);
         public:
-            FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+            FftPlan(Size _dft_size, int _src_step, int _dst_step, int _depth, int _flags, FftType _type);
             ~FftPlan();
             inline clAmdFftPlanHandle getPlanHandle() { return plHandle; }
 
             const Size dft_size;
             const int src_step, dst_step;
+            const int depth;
             const int flags;
             const FftType type;
         };
+
         class PlanCache
         {
         protected:
@@ -105,10 +115,11 @@ namespace cv
                     planCache = new PlanCache();
                 return planCache;
             }
+
             // return a baked plan->
             // if there is one matched plan, return it
             // if not, bake a new one, put it into the planStore and return it.
-            static FftPlan* getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type);
+            static FftPlan* getPlan(Size _dft_size, int _src_step, int _dst_step, int _depth, int _flags, FftType _type);
 
             // remove a single plan from the store
             // return true if the plan is successfully removed
@@ -117,6 +128,7 @@ namespace cv
         };
     }
 }
+
 PlanCache* PlanCache::planCache = NULL;
 
 void cv::ocl::fft_setup()
@@ -128,9 +140,11 @@ void cv::ocl::fft_setup()
     }
     if (pCache.setupData == NULL)
         pCache.setupData = new clAmdFftSetupData;
+
     openCLSafeCall(clAmdFftInitSetupData( pCache.setupData ));
     pCache.started = true;
 }
+
 void cv::ocl::fft_teardown()
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
@@ -154,8 +168,8 @@ void cv::ocl::fft_teardown()
 }
 
 // bake a new plan
-cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type)
-    : plHandle(0), dft_size(_dft_size), src_step(_src_step), dst_step(_dst_step), flags(_flags), type(_type)
+cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _depth, int _flags, FftType _type)
+    : plHandle(0), dft_size(_dft_size), src_step(_src_step), depth(_depth), dst_step(_dst_step), flags(_flags), type(_type)
 {
     fft_setup();
 
@@ -184,20 +198,20 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     case C2C:
         inLayout        = CLFFT_COMPLEX_INTERLEAVED;
         outLayout       = CLFFT_COMPLEX_INTERLEAVED;
-        clStridesIn[1]  = src_step / (2*sizeof(float));
-        clStridesOut[1] = clStridesIn[1];
+        clStridesIn[1]  = src_step / (2*CV_ELEM_SIZE(_depth));
+        clStridesOut[1] = dst_step / (2*CV_ELEM_SIZE(_depth));
         break;
     case R2C:
         inLayout        = CLFFT_REAL;
         outLayout       = CLFFT_HERMITIAN_INTERLEAVED;
-        clStridesIn[1]  = src_step / sizeof(float);
-        clStridesOut[1] = dst_step / (2*sizeof(float));
+        clStridesIn[1]  = src_step / CV_ELEM_SIZE(_depth);
+        clStridesOut[1] = dst_step / (2*CV_ELEM_SIZE(_depth));
         break;
     case C2R:
         inLayout        = CLFFT_HERMITIAN_INTERLEAVED;
         outLayout       = CLFFT_REAL;
-        clStridesIn[1]  = src_step / (2*sizeof(float));
-        clStridesOut[1] = dst_step / sizeof(float);
+        clStridesIn[1]  = src_step / (2*CV_ELEM_SIZE(_depth));
+        clStridesOut[1] = dst_step / CV_ELEM_SIZE(_depth);
         break;
     default:
         //std::runtime_error("does not support this convertion!");
@@ -211,6 +225,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
 
     openCLSafeCall( clAmdFftCreateDefaultPlan( &plHandle, *(cl_context*)getClContextPtr(), dim, clLengthsIn ) );
 
+    openCLSafeCall( clAmdFftSetPlanPrecision( plHandle, depth == CV_64F ? CLFFT_DOUBLE : CLFFT_SINGLE ) );
     openCLSafeCall( clAmdFftSetResultLocation( plHandle, CLFFT_OUTOFPLACE ) );
     openCLSafeCall( clAmdFftSetLayout( plHandle, inLayout, outLayout ) );
     openCLSafeCall( clAmdFftSetPlanBatchSize( plHandle, batchSize ) );
@@ -225,6 +240,7 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
     //ready to bake
     openCLSafeCall( clAmdFftBakePlan( plHandle, 1, (cl_command_queue*)getClCommandQueuePtr(), NULL, NULL ) );
 }
+
 cv::ocl::FftPlan::~FftPlan()
 {
     openCLSafeCall( clAmdFftDestroyPlan( &plHandle ) );
@@ -242,7 +258,7 @@ cv::ocl::PlanCache::~PlanCache()
     fft_teardown();
 }
 
-FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type)
+FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_step, int _depth, int _flags, FftType _type)
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
     std::vector<FftPlan *>& pStore = pCache.planStore;
@@ -256,6 +272,7 @@ FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_ste
             plan->flags == _flags &&
             plan->src_step == _src_step &&
             plan->dst_step == _dst_step &&
+            plan->depth == _depth &&
             plan->type == _type
             )
         {
@@ -263,7 +280,7 @@ FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_ste
         }
     }
     // no baked plan is found
-    FftPlan *newPlan = new FftPlan(_dft_size, _src_step, _dst_step, _flags, _type);
+    FftPlan *newPlan = new FftPlan(_dft_size, _src_step, _dst_step, _depth, _flags, _type);
     pStore.push_back(newPlan);
     return newPlan;
 }
@@ -286,6 +303,8 @@ bool cv::ocl::PlanCache::removePlan(clAmdFftPlanHandle plHandle)
 
 void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
 {
+    CV_Assert(cv::ocl::haveAmdFft());
+
     if(dft_size == Size(0, 0))
     {
         dft_size = src.size();
@@ -296,9 +315,6 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     // the two flags are not compatible
     CV_Assert( !((flags & DFT_SCALE) && (flags & DFT_ROWS)) );
 
-    // similar assertions with cuda module
-    CV_Assert(src.type() == CV_32F || src.type() == CV_32FC2);
-
     //bool is_1d_input    = (src.rows == 1);
     //int is_row_dft        = flags & DFT_ROWS;
     //int is_scaled_dft        = flags & DFT_SCALE;
@@ -306,6 +322,7 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     bool is_complex_input = src.channels() == 2;
     bool is_complex_output = !(flags & DFT_REAL_OUTPUT);
 
+    int depth = src.depth();
 
     // We don't support real-to-real transform
     CV_Assert(is_complex_input || is_complex_output);
@@ -314,14 +331,17 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     switch(type)
     {
     case C2C:
-        dst.create(src.rows, src.cols, CV_32FC2);
+        dst.create(src.rows, src.cols, CV_MAKE_TYPE(depth, 2));
+        printf("C2C\n");
         break;
     case R2C:
-        dst.create(src.rows, src.cols / 2 + 1, CV_32FC2);
+        dst.create(src.rows, src.cols / 2 + 1, CV_MAKE_TYPE(depth, 2));
+        printf("R2C\n");
         break;
     case C2R:
         CV_Assert(dft_size.width / 2 + 1 == src.cols && dft_size.height == src.rows);
-        dst.create(src.rows, dft_size.width, CV_32FC1);
+        dst.create(src.rows, dft_size.width, CV_MAKE_TYPE(depth, 1));
+        printf("C2R\n");
         break;
     default:
         //std::runtime_error("does not support this convertion!");
@@ -329,7 +349,7 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
         throw std::exception();
         break;
     }
-    clAmdFftPlanHandle plHandle = PlanCache::getPlan(dft_size, src.step, dst.step, flags, type)->getPlanHandle();
+    clAmdFftPlanHandle plHandle = PlanCache::getPlan(dft_size, src.step, dst.step, depth, flags, type)->getPlanHandle();
 
     //get the buffersize
     size_t buffersize = 0;
@@ -356,7 +376,7 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
     {
         openCLFree(clMedBuffer);
     }
-    //fft_teardown();
+    fft_teardown();
 }
 
 #endif
