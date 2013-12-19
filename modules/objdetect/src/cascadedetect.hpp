@@ -49,14 +49,14 @@ public:
 
 protected:
     enum { SUM_ALIGN = 64 };
-    
+
     bool detectSingleScale( InputArray image, Size processingRectSize,
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                             Size sumSize0, bool outputRejectLevels = false );
     bool ocl_detectSingleScale( InputArray image, Size processingRectSize,
                                 int yStep, double factor, Size sumSize0 );
-    
+
 
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
@@ -109,19 +109,19 @@ protected:
             int ntrees;
             float threshold;
         };
-        
+
         struct Stump
         {
             Stump() {};
             Stump(int _featureIdx, float _threshold, float _left, float _right)
             : featureIdx(_featureIdx), threshold(_threshold), left(_left), right(_right) {}
-            
+
             int featureIdx;
             float threshold;
             float left;
             float right;
         };
-        
+
         Data();
 
         bool read(const FileNode &node);
@@ -151,7 +151,7 @@ protected:
     UMat ufacepos, ustages, ustumps, usubsets;
     ocl::Kernel cascadeKernel;
     bool tryOpenCL;
-    
+
     Mutex mtx;
 };
 
@@ -240,7 +240,7 @@ protected:
 
 #define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
 ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
-    
+
 #define CALC_SUM_OFS(rect, ptr) CALC_SUM_OFS_((rect)[0], (rect)[1], (rect)[2], (rect)[3], ptr)
 
 //----------------------------------------------  HaarEvaluator ---------------------------------------
@@ -343,7 +343,7 @@ inline void HaarEvaluator::OptFeature :: setOffsets( const Feature& _f, int step
     weight[0] = _f.rect[0].weight;
     weight[1] = _f.rect[1].weight;
     weight[2] = _f.rect[2].weight;
-    
+
     Rect r2 = weight[2] > 0 ? _f.rect[2].r : Rect(0,0,0,0);
     if (_f.tilted)
     {
@@ -615,7 +615,7 @@ inline int predictOrderedStump( CascadeClassifierImpl& cascade,
 
     int nstages = (int)cascade.data.stages.size();
     double tmp = 0;
-    
+
     for( int stageIdx = 0; stageIdx < nstages; stageIdx++ )
     {
         const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[stageIdx];
@@ -677,7 +677,7 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
             sum = (double)tmp;
             return -si;
         }
-        
+
         cascadeStumps += ntrees;
         cascadeSubsets += ntrees*subsetSize;
     }

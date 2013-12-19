@@ -910,13 +910,13 @@ template<typename T, typename ST> struct SqrRowSum : public BaseRowFilter
         ksize = _ksize;
         anchor = _anchor;
     }
-    
+
     void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
         int i = 0, k, ksz_cn = ksize*cn;
-        
+
         width = (width - 1)*cn;
         for( k = 0; k < cn; k++, S++, D++ )
         {
@@ -941,10 +941,10 @@ static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize
 {
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
     CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(srcType) );
-    
+
     if( anchor < 0 )
         anchor = ksize/2;
-    
+
     if( sdepth == CV_8U && ddepth == CV_32S )
         return makePtr<SqrRowSum<uchar, int> >(ksize, anchor);
     if( sdepth == CV_8U && ddepth == CV_64F )
@@ -957,11 +957,11 @@ static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize
         return makePtr<SqrRowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<SqrRowSum<double, double> >(ksize, anchor);
-    
+
     CV_Error_( CV_StsNotImplemented,
               ("Unsupported combination of source format (=%d), and buffer format (=%d)",
                srcType, sumType));
-    
+
     return Ptr<BaseRowFilter>();
 }
 
@@ -984,19 +984,19 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
         if( src.cols == 1 )
             ksize.width = 1;
     }
-    
+
     int sumType = CV_64F;
     if( sdepth == CV_8U )
         sumType = CV_32S;
     sumType = CV_MAKETYPE( sumType, cn );
     int srcType = CV_MAKETYPE(sdepth, cn);
     int dstType = CV_MAKETYPE(ddepth, cn);
-    
+
     Ptr<BaseRowFilter> rowFilter = getSqrRowSumFilter(srcType, sumType, ksize.width, anchor.x );
     Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,
                                                             dstType, ksize.height, anchor.y,
                                                             normalize ? 1./(ksize.width*ksize.height) : 1);
-    
+
     Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
                                                 srcType, dstType, sumType, borderType );
     f->apply( src, dst );

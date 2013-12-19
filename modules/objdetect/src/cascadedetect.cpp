@@ -113,12 +113,12 @@ struct Logger
 
 namespace cv
 {
-	
+    
 template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um)
 {
-	if(v.empty())
-		um.release();
-	Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+    if(v.empty())
+        um.release();
+    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
 }
 
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights)
@@ -528,24 +528,24 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
 {
     Size imgsz = _image.size();
     int cols = imgsz.width, rows = imgsz.height;
-    
+
     if (imgsz.width < origWinSize.width || imgsz.height < origWinSize.height)
         return false;
-    
+
     origWinSize = _origWinSize;
     normrect = Rect(1, 1, origWinSize.width-2, origWinSize.height-2);
-    
+
     int rn = _sumSize.height, cn = _sumSize.width, rn_scale = hasTiltedFeatures ? 2 : 1;
     int sumStep, tofs = 0;
     CV_Assert(rn >= rows+1 && cn >= cols+1);
-    
+
     if( _image.isUMat() )
     {
         usum0.create(rn*rn_scale, cn, CV_32S);
         usqsum0.create(rn, cn, CV_32S);
         usum = UMat(usum0, Rect(0, 0, cols+1, rows+1));
         usqsum = UMat(usqsum0, Rect(0, 0, cols, rows));
-        
+
         if( hasTiltedFeatures )
         {
             UMat utilted(usum0, Rect(0, _sumSize.height, cols+1, rows+1));
@@ -556,7 +556,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
         {
             integral(_image, usum, noArray(), noArray(), CV_32S);
         }
-        
+
         sqrBoxFilter(_image, usqsum, CV_32S,
                      Size(normrect.width, normrect.height),
                      Point(0, 0), false);
@@ -572,7 +572,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
         sqsum0.create(rn, cn, CV_32S);
         sum = sum0(Rect(0, 0, cols+1, rows+1));
         sqsum = sqsum0(Rect(0, 0, cols, rows));
-        
+
         if( hasTiltedFeatures )
         {
             Mat tilted = sum0(Rect(0, _sumSize.height, cols+1, rows+1));
@@ -591,7 +591,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
 
     size_t fi, nfeatures = features->size();
     const std::vector<Feature>& ff = *features;
-    
+
     if( sumSize0 != _sumSize )
     {
         optfeatures->resize(nfeatures);
@@ -600,13 +600,13 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSiz
             optfeaturesPtr[fi].setOffsets( ff[fi], sumStep, tofs );
     }
     if( _image.isUMat() && (sumSize0 != _sumSize || ufbuf.empty()) )
-		copyVectorToUMat(*optfeatures, ufbuf);
+        copyVectorToUMat(*optfeatures, ufbuf);
     sumSize0 = _sumSize;
-        
+
     return true;
 }
 
-    
+
 bool  HaarEvaluator::setWindow( Point pt )
 {
     if( pt.x < 0 || pt.y < 0 ||
@@ -628,12 +628,12 @@ bool  HaarEvaluator::setWindow( Point pt )
 
     return true;
 }
-    
+
 Rect HaarEvaluator::getNormRect() const
 {
     return normrect;
 }
-    
+
 void HaarEvaluator::getUMats(std::vector<UMat>& bufs)
 {
     bufs.clear();
@@ -1100,14 +1100,14 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
     std::vector<Rect> candidatesVector;
     std::vector<int> rejectLevels;
     std::vector<double> levelWeights;
-    
+
     int stripCount, stripSize;
-    
+
     const int PTS_PER_THREAD = 1000;
     stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
     stripCount = std::min(std::max(stripCount, 1), 100);
     stripSize = (((processingRectSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
-    
+
     if( outputRejectLevels )
     {
         parallel_for_(Range(0, stripCount), CascadeClassifierInvoker( *this, processingRectSize, stripSize, yStep, factor,
@@ -1129,7 +1129,7 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
     return true;
 }
 
-    
+
 bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
                                                    int yStep, double factor, Size sumSize0 )
 {
@@ -1137,9 +1137,9 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
     if( haar.empty() )
         return false;
-    
+
     haar->setImage(_image, data.origWinSize, sumSize0);
-    
+
     if( cascadeKernel.empty() )
     {
         cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc,
@@ -1147,31 +1147,31 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
         if( cascadeKernel.empty() )
             return false;
     }
-    
+
     if( ustages.empty() )
     {
-		copyVectorToUMat(data.stages, ustages);
-		copyVectorToUMat(data.stumps, ustumps);
+        copyVectorToUMat(data.stages, ustages);
+        copyVectorToUMat(data.stumps, ustumps);
     }
-    
+
     std::vector<UMat> bufs;
     haar->getUMats(bufs);
     CV_Assert(bufs.size() == 3);
-    
+
     Rect normrect = haar->getNormRect();
-    
+
     //processingRectSize = Size(yStep, yStep);
     size_t globalsize[] = { (processingRectSize.width/yStep + VECTOR_SIZE-1)/VECTOR_SIZE, processingRectSize.height/yStep };
-    
+
     cascadeKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
                        ocl::KernelArg::ReadOnlyNoSize(bufs[1]), // sqsum
                        ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
-                       
+
                        // cascade classifier
                        (int)data.stages.size(),
                        ocl::KernelArg::PtrReadOnly(ustages),
                        ocl::KernelArg::PtrReadOnly(ustumps),
-                       
+
                        ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
                        processingRectSize,
                        yStep, (float)factor,
@@ -1219,7 +1219,7 @@ static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCas
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
 }
 
-    
+
 void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::vector<Rect>& candidates,
                                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
@@ -1227,16 +1227,16 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
 {
     Size imgsz = _image.size();
     int imgtype = _image.type();
-    
+
     Mat grayImage, imageBuffer;
-    
+
     candidates.clear();
     rejectLevels.clear();
     levelWeights.clear();
-    
+
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = imgsz;
-    
+
     bool use_ocl = ocl::useOpenCL() &&
         getFeatureType() == FeatureEvaluator::HAAR &&
         !isOldFormatCascade() &&
@@ -1244,7 +1244,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         maskGenerator.empty() &&
         !outputRejectLevels &&
         tryOpenCL;
-    
+
     if( !use_ocl )
     {
         Mat image = _image.getMat();
@@ -1270,9 +1270,9 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
             uimage.copyTo(ugrayImage);
         uimageBuffer.create(imgsz.height + 1, imgsz.width + 1, CV_8U);
     }
-    
+
     Size sumSize0((imgsz.width + SUM_ALIGN) & -SUM_ALIGN, imgsz.height+1);
-    
+
     if( use_ocl )
     {
         ufacepos.create(1, MAX_FACES*4 + 1, CV_32S);
@@ -1295,7 +1295,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
             break;
         if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
             continue;
-        
+
         int yStep;
         if( getFeatureType() == cv::FeatureEvaluator::HOG )
         {
@@ -1310,14 +1310,14 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         {
             UMat uscaledImage(uimageBuffer, Rect(0, 0, scaledImageSize.width, scaledImageSize.height));
             resize( ugrayImage, uscaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
-            
+
             if( ocl_detectSingleScale( uscaledImage, processingRectSize, yStep, factor, sumSize0 ) )
                 continue;
-            
+
             /////// if the OpenCL branch has been executed but failed, fall back to CPU: /////
-            
+
             tryOpenCL = false; // for this cascade do not try OpenCL anymore
-            
+
             // since we may already have some partial results from OpenCL code (unlikely, but still),
             // we just recursively call the function again, but with tryOpenCL==false it will
             // go with CPU route, so there is no infinite recursion
@@ -1330,13 +1330,13 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         {
             Mat scaledImage( scaledImageSize, CV_8U, imageBuffer.data );
             resize( grayImage, scaledImage, scaledImageSize, 0, 0, INTER_LINEAR );
-            
+
             if( !detectSingleScale( scaledImage, processingRectSize, yStep, factor, candidates,
                                     rejectLevels, levelWeights, sumSize0, outputRejectLevels ) )
                 break;
         }
     }
-    
+
     if( use_ocl && tryOpenCL )
     {
         Mat facepos = ufacepos.getMat(ACCESS_READ);
@@ -1424,12 +1424,12 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
     }
 }
 
-    
+
 CascadeClassifierImpl::Data::Data()
 {
     stageType = featureType = ncategories = maxNodesPerTree = 0;
 }
-    
+
 bool CascadeClassifierImpl::Data::read(const FileNode &root)
 {
     static const float THRESHOLD_EPS = 1e-5f;
@@ -1503,7 +1503,7 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
             DTree tree;
             tree.nodeCount = (int)internalNodes.size()/nodeStep;
             maxNodesPerTree = std::max(maxNodesPerTree, tree.nodeCount);
-            
+
             classifiers.push_back(tree);
 
             nodes.reserve(nodes.size() + tree.nodeCount);
@@ -1538,7 +1538,7 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
                 leaves.push_back((float)*internalNodesIter);
         }
     }
-    
+
     if( isStumpBased() )
     {
         int nodeOfs = 0, leafOfs = 0;
@@ -1546,7 +1546,7 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
         for( size_t stageIdx = 0; stageIdx < nstages; stageIdx++ )
         {
             const Stage& stage = stages[stageIdx];
-            
+
             int ntrees = stage.ntrees;
             for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
             {
@@ -1560,7 +1560,7 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     return true;
 }
 
-                       
+
 bool CascadeClassifierImpl::read_(const FileNode& root)
 {
     tryOpenCL = true;
