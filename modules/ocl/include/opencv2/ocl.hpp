@@ -1558,10 +1558,12 @@ namespace cv
             /*
              * Compute the descriptors for a set of keypoints in an image.
              * image        The image.
-             * keypoints    The input keypoints. Keypoints for which a descriptor cannot be computed are removed.
+             * keypoints    The input keypoints.
              * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
              */
-            void compute( const oclMat& image, oclMat& keypoints, oclMat& descriptors ) const;
+            void compute( const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors ) const;
+
+            static int getBorderSize();
         protected:
 
             int bytes;

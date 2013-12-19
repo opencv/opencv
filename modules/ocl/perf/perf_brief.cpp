@@ -50,54 +50,64 @@ using namespace ocl;
 using namespace perf;
 
 ///////////// BRIEF ////////////////////////
+typedef TestBaseWithParam<std::tr1::tuple<std::string, int, size_t> > OCL_BRIEF;
 
-typedef TestBaseWithParam<std::tr1::tuple<std::string, int> > OCL_BRIEF;
-
-#define BRIEF_IMAGES \
-    "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
-    "stitching/a3.png"
-
-PERF_TEST_P( OCL_BRIEF, extract, testing::Combine( testing::Values( BRIEF_IMAGES ), testing::Values( 16, 32, 64 ) ) )
+PERF_TEST_P( OCL_BRIEF, extract, testing::Combine(
+                                                   testing::Values( string( "gpu/opticalflow/rubberwhale1.png" ),
+                                                                    string( "gpu/stereobm/aloe-L.png" )
+                                                                    ), testing::Values( 16, 32, 64 ), testing::Values( 250, 500, 1000, 2500, 3000 ) ) )
 {
-    const int threshold = 20;
     const std::string filename = std::tr1::get<0>(GetParam( ));
     const int bytes = std::tr1::get<1>(GetParam( ));
-    const Mat img = imread( getDataPath( filename ), IMREAD_GRAYSCALE );
-    ASSERT_FALSE( img.empty( ) );
+    const size_t numKp = std::tr1::get<2>(GetParam( ));
+
+    Mat img = imread( getDataPath( filename ), IMREAD_GRAYSCALE );
+    ASSERT_TRUE( !img.empty( ) ) << "no input image";
+
+    int threshold = 15;
+    std::vector<KeyPoint> keypoints;
+    while (threshold > 0 && keypoints.size( ) < numKp)
+    {
+        FastFeatureDetector fast( threshold );
+        fast.detect( img, keypoints, Mat( ) );
+        threshold -= 5;
+        KeyPointsFilter::runByImageBorder( keypoints, img.size( ), BRIEF_OCL::getBorderSize( ) );
+    }
+    ASSERT_TRUE( keypoints.size( ) >= numKp ) << "not enough keypoints";
+    keypoints.resize( numKp );
 
     if ( RUN_OCL_IMPL )
     {
-        oclMat d_img( img );
-        oclMat d_keypoints;
-        FAST_OCL fast( threshold );
-        fast( d_img, oclMat( ), d_keypoints );
-
-        BRIEF_OCL brief( bytes );
-
-        OCL_TEST_CYCLE( )
+        Mat kpMat( 2, keypoints.size( ), CV_32FC1 );
+        for ( size_t i = 0; i < keypoints.size( ); ++i )
         {
-            oclMat d_descriptors;
-            brief.compute( d_img, d_keypoints, d_descriptors );
+            kpMat.col( i ).row( 0 ) = keypoints[i].pt.x;
+            kpMat.col( i ).row( 1 ) = keypoints[i].pt.y;
         }
-
-        std::vector<KeyPoint> ocl_keypoints;
-        fast.downloadKeypoints( d_keypoints, ocl_keypoints );
-        SANITY_CHECK_KEYPOINTS( ocl_keypoints );
+        BRIEF_OCL brief( bytes );
+        oclMat imgCL( img ), keypointsCL(kpMat), mask;
+        while (next( ))
+        {
+            startTimer( );
+            oclMat descriptorsCL;
+            brief.compute( imgCL, keypointsCL, mask, descriptorsCL );
+            cv::ocl::finish( );
+            stopTimer( );
+        }
+        SANITY_CHECK_NOTHING( )
     }
     else if ( RUN_PLAIN_IMPL )
     {
-        std::vector<KeyPoint> keypoints;
-        FAST( img, keypoints, threshold );
-
         BriefDescriptorExtractor brief( bytes );
 
-        TEST_CYCLE( )
+        while (next( ))
         {
+            startTimer( );
             Mat descriptors;
             brief.compute( img, keypoints, descriptors );
+            stopTimer( );
         }
-
-        SANITY_CHECK_KEYPOINTS( keypoints );
+        SANITY_CHECK_NOTHING( )
     }
     else
         OCL_PERF_ELSE;

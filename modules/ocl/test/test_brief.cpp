@@ -43,49 +43,73 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include "opencl_kernels.hpp"
+#include "test_precomp.hpp"
 
+using namespace std;
 using namespace cv;
-using namespace cv::ocl;
+using namespace ocl;
 
-BRIEF_OCL::BRIEF_OCL( int _bytes ) : bytes( _bytes )
+#ifdef HAVE_OPENCL
+
+namespace
 {
+IMPLEMENT_PARAM_CLASS( BRIEF_Bytes, int )
 }
 
-void BRIEF_OCL::compute( const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors ) const
+PARAM_TEST_CASE( BRIEF, BRIEF_Bytes )
 {
-    CV_Assert( image.type( ) == CV_8UC1 );
-    if ( keypoints.size( ).area( ) == 0 ) return;
-    descriptors = oclMat( Mat( keypoints.cols, bytes, CV_8UC1 ) );
-    if( mask.cols != keypoints.cols )
+    int bytes;
+
+    virtual void SetUp( )
     {
-        mask = oclMat( Mat::ones( 1, keypoints.cols, CV_8UC1 ) );
+        bytes = GET_PARAM( 0 );
     }
-    oclMat sum;
-    integral( image, sum, CV_32S );
-    cl_mem sumTexture = bindTexture( sum );
-    std::stringstream build_opt;
-    build_opt
-            << " -D BYTES=" << bytes
-            << " -D KERNEL_SIZE=" << KERNEL_SIZE
-            << " -D BORDER=" << getBorderSize();
-    const String kernelname = "extractBriefDescriptors";
-    size_t localThreads[3] = {bytes, 1, 1};
-    size_t globalThreads[3] = {keypoints.cols * bytes, 1, 1};
-    Context* ctx = Context::getContext( );
-    std::vector< std::pair<size_t, const void *> > args;
-    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &sumTexture ) );
-    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &keypoints.data ) );
-    args.push_back( std::make_pair( sizeof (cl_int), (void *) &keypoints.step ) );
-    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &descriptors.data ) );
-    args.push_back( std::make_pair( sizeof (cl_int), (void *) &descriptors.step ) );
-    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &mask.data ) );
-    openCLExecuteKernel( ctx, &brief, kernelname, globalThreads, localThreads, args, -1, -1, build_opt.str( ).c_str( ) );
-    openCLFree( sumTexture );
+};
+
+OCL_TEST_P( BRIEF, Accuracy )
+{
+    Mat img = readImage( "gpu/opticalflow/rubberwhale1.png", IMREAD_GRAYSCALE );
+    ASSERT_TRUE( !img.empty( ) ) << "no input image";
+
+    FastFeatureDetector fast( 20 );
+    std::vector<KeyPoint> keypoints;
+    fast.detect( img, keypoints, Mat( ) );
+
+    Mat descriptorsGold;
+    BriefDescriptorExtractor brief( bytes );
+    brief.compute( img, keypoints, descriptorsGold );
+
+    Mat kpMat( 2, keypoints.size( ), CV_32FC1 );
+    for ( size_t i = 0; i < keypoints.size( ); ++i )
+    {
+        kpMat.col( i ).row( 0 ) = keypoints[i].pt.x;
+        kpMat.col( i ).row( 1 ) = keypoints[i].pt.y;
+    }
+    oclMat imgOcl( img ), keypointsOcl( kpMat ), descriptorsOcl, maskOcl;
+
+    BRIEF_OCL briefOcl( bytes );
+    briefOcl.compute( imgOcl, keypointsOcl, maskOcl, descriptorsOcl );
+    Mat mask, descriptors;
+    maskOcl.download( mask );
+    descriptorsOcl.download( descriptors );
+
+    const int numDesc = cv::countNonZero( mask );
+    if ( numDesc != descriptors.cols )
+    {
+        size_t idx = 0;
+        Mat tmp( numDesc, bytes, CV_8UC1 );
+        for ( int i = 0; i < descriptors.rows; ++i )
+        {
+            if ( mask.at<uchar>(i) )
+            {
+                descriptors.row( i ).copyTo( tmp.row( idx++ ) );
+            }
+        }
+        descriptors = tmp;
+    }
+    ASSERT_TRUE( descriptors.size( ) == descriptorsGold.size( ) ) << "Different number of descriptors";
+    ASSERT_TRUE( 0 == norm( descriptors, descriptorsGold, NORM_HAMMING ) ) << "Descriptors different";
 }
 
-int BRIEF_OCL::getBorderSize( )
-{
-    return PATCH_SIZE / 2 + KERNEL_SIZE / 2;
-}
+INSTANTIATE_TEST_CASE_P( OCL_Features2D, BRIEF, testing::Values( 16, 32, 64 ) );
+#endif
