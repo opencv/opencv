@@ -53,6 +53,65 @@
 namespace cvflann
 {
 
+template <typename ElementType>
+static double prepareRoundingIfIntegerElementType( double value ) {
+    return value;
+};
+
+
+template <>
+double prepareRoundingIfIntegerElementType<char>( double value ) {
+    return (value > 0) ? value + 0.5 : value - 0.5;
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<short>( double value ) {
+    return (value > 0) ? value + 0.5 : value - 0.5;
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<int>( double value ) {
+    return (value > 0) ? value + 0.5 : value - 0.5;
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<long>( double value ) {
+    return (value > 0) ? value + 0.5 : value - 0.5;
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<long long>( double value ) {
+    return (value > 0) ? value + 0.5 : value - 0.5;
+};
+
+
+template <>
+double prepareRoundingIfIntegerElementType<unsigned char>( double value ) {
+    return (value + 0.5);
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<unsigned short>( double value ) {
+    return (value + 0.5);
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<unsigned int>( double value ) {
+    return (value + 0.5);
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<unsigned long>( double value ) {
+    return (value + 0.5);
+};
+
+template <>
+double prepareRoundingIfIntegerElementType<unsigned long long>( double value ) {
+    return (value + 0.5);
+};
+
+
+
 struct KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,
@@ -720,8 +779,10 @@ private:
             }
             for (int i=0; i<branching; ++i) {
                 int cnt = count[i];
+                const double div_factor = 1.0/cnt;
                 for (size_t k=0; k<veclen_; ++k) {
-                    dcenters[i][k] /= cnt;
+                    dcenters[i][k] = prepareRoundingIfIntegerElementType<ElementType>( dcenters[i][k]
+                                                                                      * div_factor );
                 }
             }
 
