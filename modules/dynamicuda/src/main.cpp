@@ -27,7 +27,7 @@ using namespace cv::gpu;
 
 #define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 
-#include "gpumat_cuda.hpp"
+#include "opencv2/dynamicuda/dynamicuda.hpp"
 
 #ifdef HAVE_CUDA
 static CudaDeviceInfoFuncTable deviceInfoTable;
@@ -38,7 +38,7 @@ static EmptyFuncTable gpuTable;
 #endif
 
 extern "C" {
-   
+
 DeviceInfoFuncTable* deviceInfoFactory()
 {
     return (DeviceInfoFuncTable*)&deviceInfoTable;

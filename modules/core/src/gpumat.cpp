@@ -82,7 +82,7 @@ using namespace cv::gpu;
 
 #define throw_nogpu CV_Error(CV_GpuNotSupported, "The library is compiled without CUDA support")
 
-#include "gpumat_cuda.hpp"
+#include "opencv2/dynamicuda/dynamicuda.hpp"
 
 #ifdef DYNAMIC_CUDA_SUPPORT
 
@@ -183,7 +183,7 @@ static bool loadCudaSupportLib()
         dlclose(handle);
         return false;
     }
-    
+
     gpuFactory = (GpuFactoryType)dlsym(handle, "gpuFactory");
     if (!gpuFactory)
     {

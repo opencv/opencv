@@ -1,0 +1,14 @@
+if(NOT ANDROID)
+  ocv_module_disable(dynamicuda)
+endif()
+
+set(the_description "Dynamic CUDA linkage")
+
+add_definitions(-DUSE_CUDA)
+ocv_module_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
+set(OPENCV_MODULE_TYPE SHARED)
+if (BUILD_FAT_JAVA_LIB)
+  ocv_define_module(dynamicuda opencv_java PRIVATE_REQUIRED ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+else()
+  ocv_define_module(dynamicuda opencv_core PRIVATE_REQUIRED q${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+endif()

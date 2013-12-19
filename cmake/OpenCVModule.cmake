@@ -488,7 +488,7 @@ macro(ocv_glob_module_sources)
   file(GLOB lib_cuda_srcs "src/cuda/*.cu")
   set(cuda_objs "")
   set(lib_cuda_hdrs "")
-  if(HAVE_CUDA AND lib_cuda_srcs)
+  if(HAVE_CUDA)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
     file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
