@@ -39,6 +39,9 @@ static EmptyFuncTable gpuTable;
 
 extern "C" {
 
+DeviceInfoFuncTable* deviceInfoFactory();
+GpuFuncTable* gpuFactory();
+
 DeviceInfoFuncTable* deviceInfoFactory()
 {
     return (DeviceInfoFuncTable*)&deviceInfoTable;
