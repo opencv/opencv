@@ -4,6 +4,7 @@
     class DeviceInfoFuncTable
     {
     public:
+        // cv::DeviceInfo
         virtual size_t sharedMemPerBlock() const = 0;
         virtual void queryMemory(size_t&, size_t&) const = 0;
         virtual size_t freeMemory() const = 0;
@@ -16,25 +17,13 @@
         virtual int majorVersion() const = 0;
         virtual int minorVersion() const = 0;
         virtual int multiProcessorCount() const = 0;
-        virtual ~DeviceInfoFuncTable() {};
-    };
-    
-    class GpuFuncTable
-    {
-    public:
-        virtual ~GpuFuncTable() {}
-
-        // DeviceInfo routines
         virtual int getCudaEnabledDeviceCount() const = 0;
-
         virtual void setDevice(int) const = 0;
         virtual int getDevice() const = 0;
-
         virtual void resetDevice() const  = 0;
-
         virtual bool deviceSupports(FeatureSet) const = 0;
 
-        // TargetArchs
+        // cv::TargetArchs
         virtual bool builtWith(FeatureSet) const = 0;
         virtual bool has(int, int) const = 0;
         virtual bool hasPtx(int, int) const = 0;
@@ -46,7 +35,15 @@
 
         virtual void printCudaDeviceInfo(int) const = 0;
         virtual void printShortCudaDeviceInfo(int) const = 0;
-        
+
+        virtual ~DeviceInfoFuncTable() {};
+    };
+
+    class GpuFuncTable
+    {
+    public:
+        virtual ~GpuFuncTable() {}
+
         // GpuMat routines
         virtual void copy(const Mat& src, GpuMat& dst) const = 0;
         virtual void copy(const GpuMat& src, Mat& dst) const = 0;
@@ -60,7 +57,7 @@
 
         // for gpu::device::setTo funcs
         virtual void setTo(cv::gpu::GpuMat&, cv::Scalar, const cv::gpu::GpuMat&, CUstream_st*) const = 0;
-        
+
         virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
         virtual void free(void* devPtr) const = 0;
     };
@@ -80,20 +77,14 @@
         int majorVersion() const { throw_nogpu; return -1; }
         int minorVersion() const { throw_nogpu; return -1; }
         int multiProcessorCount() const { throw_nogpu; return -1; }
-    };
-    
-    class EmptyFuncTable : public GpuFuncTable
-    {
-    public:
-        
-        // DeviceInfo routines
+
         int getCudaEnabledDeviceCount() const { return 0; }
-        
+
         void setDevice(int) const { throw_nogpu; }
         int getDevice() const { throw_nogpu; return 0; }
-        
+
         void resetDevice() const { throw_nogpu; }
-        
+
         bool deviceSupports(FeatureSet) const { throw_nogpu; return false; }
 
         bool builtWith(FeatureSet) const { throw_nogpu; return false; }
@@ -104,10 +95,15 @@
         bool hasEqualOrGreater(int, int) const { throw_nogpu; return false; }
         bool hasEqualOrGreaterPtx(int, int) const { throw_nogpu; return false; }
         bool hasEqualOrGreaterBin(int, int) const { throw_nogpu; return false; }
-                
+
         void printCudaDeviceInfo(int) const { throw_nogpu; }
         void printShortCudaDeviceInfo(int) const { throw_nogpu; }
-        
+    };
+
+    class EmptyFuncTable : public GpuFuncTable
+    {
+    public:
+
         void copy(const Mat&, GpuMat&) const { throw_nogpu; }
         void copy(const GpuMat&, Mat&) const { throw_nogpu; }
         void copy(const GpuMat&, GpuMat&) const { throw_nogpu; }
@@ -185,62 +181,62 @@ namespace cv { namespace gpu { namespace device
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
-        
+
         typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, dst_t* pDst, int nDstStep, NppiSize oSizeROI);
     };
     template<int DDEPTH> struct NppConvertFunc<CV_32F, DDEPTH>
     {
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
-        
+
         typedef NppStatus (*func_ptr)(const Npp32f* pSrc, int nSrcStep, dst_t* pDst, int nDstStep, NppiSize oSizeROI, NppRoundMode eRoundMode);
     };
-    
+
     template<int SDEPTH, int DDEPTH, typename NppConvertFunc<SDEPTH, DDEPTH>::func_ptr func> struct NppCvt
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
-        
+
         static void call(const GpuMat& src, GpuMat& dst)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
-    
+
     template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> struct NppCvt<CV_32F, DDEPTH, func>
     {
         typedef typename NPPTypeTraits<DDEPTH>::npp_type dst_t;
-        
+
         static void call(const GpuMat& src, GpuMat& dst)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             nppSafeCall( func(src.ptr<Npp32f>(), static_cast<int>(src.step), dst.ptr<dst_t>(), static_cast<int>(dst.step), sz, NPP_RND_NEAR) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
-    
+
     //////////////////////////////////////////////////////////////////////////
     // Set
-    
+
     template<int SDEPTH, int SCN> struct NppSetFunc
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         typedef NppStatus (*func_ptr)(const src_t values[], src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
     };
     template<int SDEPTH> struct NppSetFunc<SDEPTH, 1>
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI);
     };
     template<int SCN> struct NppSetFunc<CV_8S, SCN>
@@ -251,172 +247,172 @@ namespace cv { namespace gpu { namespace device
     {
         typedef NppStatus (*func_ptr)(Npp8s val, Npp8s* pSrc, int nSrcStep, NppiSize oSizeROI);
     };
-    
+
     template<int SDEPTH, int SCN, typename NppSetFunc<SDEPTH, SCN>::func_ptr func> struct NppSet
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         static void call(GpuMat& src, Scalar s)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             Scalar_<src_t> nppS = s;
-            
+
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetFunc<SDEPTH, 1>::func_ptr func> struct NppSet<SDEPTH, 1, func>
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         static void call(GpuMat& src, Scalar s)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             Scalar_<src_t> nppS = s;
-            
+
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
-    
+
     template<int SDEPTH, int SCN> struct NppSetMaskFunc
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         typedef NppStatus (*func_ptr)(const src_t values[], src_t* pSrc, int nSrcStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
     };
     template<int SDEPTH> struct NppSetMaskFunc<SDEPTH, 1>
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         typedef NppStatus (*func_ptr)(src_t val, src_t* pSrc, int nSrcStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
     };
-    
+
     template<int SDEPTH, int SCN, typename NppSetMaskFunc<SDEPTH, SCN>::func_ptr func> struct NppSetMask
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         static void call(GpuMat& src, Scalar s, const GpuMat& mask)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             Scalar_<src_t> nppS = s;
-            
+
             nppSafeCall( func(nppS.val, src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
     template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct NppSetMask<SDEPTH, 1, func>
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         static void call(GpuMat& src, Scalar s, const GpuMat& mask)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             Scalar_<src_t> nppS = s;
-            
+
             nppSafeCall( func(nppS[0], src.ptr<src_t>(), static_cast<int>(src.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
-    
+
     //////////////////////////////////////////////////////////////////////////
     // CopyMasked
-    
+
     template<int SDEPTH> struct NppCopyMaskedFunc
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         typedef NppStatus (*func_ptr)(const src_t* pSrc, int nSrcStep, src_t* pDst, int nDstStep, NppiSize oSizeROI, const Npp8u* pMask, int nMaskStep);
     };
-    
+
     template<int SDEPTH, typename NppCopyMaskedFunc<SDEPTH>::func_ptr func> struct NppCopyMasked
     {
         typedef typename NPPTypeTraits<SDEPTH>::npp_type src_t;
-        
+
         static void call(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t /*stream*/)
         {
             NppiSize sz;
             sz.width = src.cols;
             sz.height = src.rows;
-            
+
             nppSafeCall( func(src.ptr<src_t>(), static_cast<int>(src.step), dst.ptr<src_t>(), static_cast<int>(dst.step), sz, mask.ptr<Npp8u>(), static_cast<int>(mask.step)) );
-            
+
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     };
-    
+
     template <typename T> static inline bool isAligned(const T* ptr, size_t size)
     {
         return reinterpret_cast<size_t>(ptr) % size == 0;
     }
-     
+
     namespace cv { namespace gpu { namespace device
     {
         void copyWithMask(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream = 0)
         {
             CV_Assert(src.size() == dst.size() && src.type() == dst.type());
             CV_Assert(src.size() == mask.size() && mask.depth() == CV_8U && (mask.channels() == 1 || mask.channels() == src.channels()));
-            
+
             cv::gpu::device::copyToWithMask_gpu(src.reshape(1), dst.reshape(1), src.elemSize1(), src.channels(), mask.reshape(1), mask.channels() != 1, stream);
         }
-        
+
         void convertTo(const GpuMat& src, GpuMat& dst)
         {
             cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), 1.0, 0.0, 0);
         }
-        
+
         void convertTo(const GpuMat& src, GpuMat& dst, double alpha, double beta, cudaStream_t stream = 0)
         {
             cv::gpu::device::convert_gpu(src.reshape(1), src.depth(), dst.reshape(1), dst.depth(), alpha, beta, stream);
         }
-        
+
         void setTo(GpuMat& src, Scalar s, cudaStream_t stream)
         {
             typedef void (*caller_t)(GpuMat& src, Scalar s, cudaStream_t stream);
-            
+
             static const caller_t callers[] =
             {
                 kernelSetCaller<uchar>, kernelSetCaller<schar>, kernelSetCaller<ushort>, kernelSetCaller<short>, kernelSetCaller<int>,
                 kernelSetCaller<float>, kernelSetCaller<double>
             };
-            
+
             callers[src.depth()](src, s, stream);
         }
-        
+
         void setTo(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream)
         {
             typedef void (*caller_t)(GpuMat& src, Scalar s, const GpuMat& mask, cudaStream_t stream);
-            
+
             static const caller_t callers[] =
             {
                 kernelSetCaller<uchar>, kernelSetCaller<schar>, kernelSetCaller<ushort>, kernelSetCaller<short>, kernelSetCaller<int>,
                 kernelSetCaller<float>, kernelSetCaller<double>
             };
-            
+
             callers[src.depth()](src, s, mask, stream);
         }
-        
+
         void setTo(GpuMat& src, Scalar s)
         {
             setTo(src, s, 0);
         }
-        
+
         void setTo(GpuMat& src, Scalar s, const GpuMat& mask)
         {
             setTo(src, s, mask, 0);
@@ -433,56 +429,56 @@ namespace cv { namespace gpu { namespace device
             fromStr(CUDA_ARCH_PTX, ptx);
             fromStr(CUDA_ARCH_FEATURES, features);
         }
-        
+
         bool builtWith(FeatureSet feature_set) const
         {
             return !features.empty() && (features.back() >= feature_set);
         }
-        
+
         bool hasPtx(int major, int minor) const
         {
             return find(ptx.begin(), ptx.end(), major * 10 + minor) != ptx.end();
         }
-        
+
         bool hasBin(int major, int minor) const
         {
             return find(bin.begin(), bin.end(), major * 10 + minor) != bin.end();
         }
-        
+
         bool hasEqualOrLessPtx(int major, int minor) const
         {
             return !ptx.empty() && (ptx.front() <= major * 10 + minor);
         }
-        
+
         bool hasEqualOrGreaterPtx(int major, int minor) const
         {
             return !ptx.empty() && (ptx.back() >= major * 10 + minor);
         }
-        
+
         bool hasEqualOrGreaterBin(int major, int minor) const
         {
             return !bin.empty() && (bin.back() >= major * 10 + minor);
         }
-        
-        
+
+
     private:
         void fromStr(const string& set_as_str, vector<int>& arr)
         {
             if (set_as_str.find_first_not_of(" ") == string::npos)
                 return;
-            
+
             istringstream stream(set_as_str);
             int cur_value;
-            
+
             while (!stream.eof())
             {
                 stream >> cur_value;
                 arr.push_back(cur_value);
             }
-            
+
             sort(arr.begin(), arr.end());
         }
-        
+
         vector<int> bin;
         vector<int> ptx;
         vector<int> features;
@@ -495,7 +491,7 @@ namespace cv { namespace gpu { namespace device
         {
             props_.resize(10, 0);
         }
-        
+
         ~DeviceProps()
         {
             for (size_t i = 0; i < props_.size(); ++i)
@@ -505,18 +501,18 @@ namespace cv { namespace gpu { namespace device
             }
             props_.clear();
         }
-        
+
         cudaDeviceProp* get(int devID)
         {
             if (devID >= (int) props_.size())
                 props_.resize(devID + 5, 0);
-            
+
             if (!props_[devID])
             {
                 props_[devID] = new cudaDeviceProp;
                 cudaSafeCall( cudaGetDeviceProperties(props_[devID], devID) );
             }
-            
+
             return props_[devID];
         }
     private:
@@ -524,7 +520,7 @@ namespace cv { namespace gpu { namespace device
     };
 
     DeviceProps deviceProps;
-    
+
     class CudaDeviceInfoFuncTable: DeviceInfoFuncTable
     {
     public:
@@ -532,57 +528,57 @@ namespace cv { namespace gpu { namespace device
         {
             return deviceProps.get(device_id_)->sharedMemPerBlock;
         }
-        
+
         void queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
         {
             int prevDeviceID = getDevice();
             if (prevDeviceID != device_id_)
                 setDevice(device_id_);
-            
+
             cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
-            
+
             if (prevDeviceID != device_id_)
                 setDevice(prevDeviceID);
         }
-        
+
         size_t freeMemory() const
         {
             size_t _totalMemory, _freeMemory;
             queryMemory(_totalMemory, _freeMemory);
             return _freeMemory;
         }
-        
+
         size_t totalMemory() const
         {
             size_t _totalMemory, _freeMemory;
             queryMemory(_totalMemory, _freeMemory);
             return _totalMemory;
         }
-        
+
         bool supports(FeatureSet feature_set) const
         {
             int version = majorVersion_ * 10 + minorVersion_;
             return version >= feature_set;
         }
-        
+
         bool isCompatible() const
         {
             // Check PTX compatibility
-            if (TargetArchs::hasEqualOrLessPtx(majorVersion_, minorVersion_))
+            if (hasEqualOrLessPtx(majorVersion_, minorVersion_))
                 return true;
-            
+
             // Check BIN compatibility
                 for (int i = minorVersion_; i >= 0; --i)
-                    if (TargetArchs::hasBin(majorVersion_, i))
+                    if (hasBin(majorVersion_, i))
                         return true;
-                    
+
                     return false;
         }
-        
+
         void query()
         {
             const cudaDeviceProp* prop = deviceProps.get(device_id_);
-            
+
             name_ = prop->name;
             multi_processor_count_ = prop->multiProcessorCount;
             majorVersion_ = prop->major;
@@ -614,116 +610,78 @@ namespace cv { namespace gpu { namespace device
             return multi_processor_count_;
         }
 
-    private:
-        int device_id_;
-        
-        std::string name_;
-        int multi_processor_count_;
-        int majorVersion_;
-        int minorVersion_;
-    };
-    
-    class CudaFuncTable : public GpuFuncTable
-    {
-    protected:
-              
-        const CudaArch cudaArch;
-
-        int convertSMVer2Cores(int major, int minor) const
-        {
-            // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
-            typedef struct {
-                int SM; // 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
-                int Cores;
-            } SMtoCores;
-            
-            SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, {0x35, 192}, { -1, -1 }  };
-            
-            int index = 0;
-            while (gpuArchCoresPerSM[index].SM != -1)
-            {
-                if (gpuArchCoresPerSM[index].SM == ((major << 4) + minor) )
-                    return gpuArchCoresPerSM[index].Cores;
-                index++;
-            }
-            
-            return -1;
-        }
-        
-    public:
-
         int getCudaEnabledDeviceCount() const
         {
             int count;
             cudaError_t error = cudaGetDeviceCount( &count );
-            
+
             if (error == cudaErrorInsufficientDriver)
                 return -1;
-            
+
             if (error == cudaErrorNoDevice)
                 return 0;
-            
+
             cudaSafeCall( error );
             return count;
         }
-        
+
         void setDevice(int device) const
         {
             cudaSafeCall( cudaSetDevice( device ) );
         }
-        
+
         int getDevice() const
         {
             int device;
             cudaSafeCall( cudaGetDevice( &device ) );
             return device;
         }
-        
+
         void resetDevice() const
         {
             cudaSafeCall( cudaDeviceReset() );
         }
-        
+
         bool builtWith(FeatureSet feature_set) const
         {
             return cudaArch.builtWith(feature_set);
         }
-        
+
         bool has(int major, int minor) const
         {
             return hasPtx(major, minor) || hasBin(major, minor);
         }
-        
+
         bool hasPtx(int major, int minor) const
         {
             return cudaArch.hasPtx(major, minor);
         }
-        
+
         bool hasBin(int major, int minor) const
         {
             return cudaArch.hasBin(major, minor);
         }
-        
+
         bool hasEqualOrLessPtx(int major, int minor) const
         {
             return cudaArch.hasEqualOrLessPtx(major, minor);
         }
-        
+
         bool hasEqualOrGreater(int major, int minor) const
         {
             return hasEqualOrGreaterPtx(major, minor) || hasEqualOrGreaterBin(major, minor);
         }
-        
+
         bool hasEqualOrGreaterPtx(int major, int minor) const
         {
             return cudaArch.hasEqualOrGreaterPtx(major, minor);
         }
-        
+
         bool hasEqualOrGreaterBin(int major, int minor) const
         {
             return cudaArch.hasEqualOrGreaterBin(major, minor);
         }
-        
+
         bool deviceSupports(FeatureSet feature_set) const
         {
             static int versions[] =
@@ -731,11 +689,11 @@ namespace cv { namespace gpu { namespace device
                 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
             };
             static const int cache_size = static_cast<int>(sizeof(versions) / sizeof(versions[0]));
-            
+
             const int devId = getDevice();
-            
+
             int version;
-            
+
             if (devId < cache_size && versions[devId] >= 0)
                 version = versions[devId];
             else
@@ -745,25 +703,25 @@ namespace cv { namespace gpu { namespace device
                 if (devId < cache_size)
                     versions[devId] = version;
             }
-            
+
             return TargetArchs::builtWith(feature_set) && (version >= feature_set);
         }
-                        
+
         void printCudaDeviceInfo(int device) const
         {
             int count = getCudaEnabledDeviceCount();
             bool valid = (device >= 0) && (device < count);
-            
+
             int beg = valid ? device   : 0;
             int end = valid ? device+1 : count;
-            
+
             printf("*** CUDA Device Query (Runtime API) version (CUDART static linking) *** \n\n");
             printf("Device count: %d\n", count);
-            
+
             int driverVersion = 0, runtimeVersion = 0;
             cudaSafeCall( cudaDriverGetVersion(&driverVersion) );
             cudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
-            
+
             const char *computeMode[] = {
                 "Default (multiple host threads can use ::cudaSetDevice() with device simultaneously)",
                 "Exclusive (only one host thread in one process is able to use ::cudaSetDevice() with this device)",
@@ -772,30 +730,30 @@ namespace cv { namespace gpu { namespace device
                 "Unknown",
                 NULL
             };
-            
+
             for(int dev = beg; dev < end; ++dev)
             {
                 cudaDeviceProp prop;
                 cudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
-                
+
                 printf("\nDevice %d: \"%s\"\n", dev, prop.name);
                 printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
                 printf("  CUDA Capability Major/Minor version number:    %d.%d\n", prop.major, prop.minor);
                 printf("  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n", (float)prop.totalGlobalMem/1048576.0f, (unsigned long long) prop.totalGlobalMem);
-                
+
                 int cores = convertSMVer2Cores(prop.major, prop.minor);
                 if (cores > 0)
                     printf("  (%2d) Multiprocessors x (%2d) CUDA Cores/MP:     %d CUDA Cores\n", prop.multiProcessorCount, cores, cores * prop.multiProcessorCount);
-                
+
                 printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
-                
+
                 printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
-                prop.maxTexture1D, prop.maxTexture2D[0], prop.maxTexture2D[1],
-                prop.maxTexture3D[0], prop.maxTexture3D[1], prop.maxTexture3D[2]);
+                       prop.maxTexture1D, prop.maxTexture2D[0], prop.maxTexture2D[1],
+                       prop.maxTexture3D[0], prop.maxTexture3D[1], prop.maxTexture3D[2]);
                 printf("  Max Layered Texture Size (dim) x layers        1D=(%d) x %d, 2D=(%d,%d) x %d\n",
-                prop.maxTexture1DLayered[0], prop.maxTexture1DLayered[1],
-                prop.maxTexture2DLayered[0], prop.maxTexture2DLayered[1], prop.maxTexture2DLayered[2]);
-                
+                       prop.maxTexture1DLayered[0], prop.maxTexture1DLayered[1],
+                       prop.maxTexture2DLayered[0], prop.maxTexture2DLayered[1], prop.maxTexture2DLayered[2]);
+
                 printf("  Total amount of constant memory:               %u bytes\n", (int)prop.totalConstMem);
                 printf("  Total amount of shared memory per block:       %u bytes\n", (int)prop.sharedMemPerBlock);
                 printf("  Total number of registers available per block: %d\n", prop.regsPerBlock);
@@ -805,12 +763,12 @@ namespace cv { namespace gpu { namespace device
                 printf("  Maximum sizes of each dimension of a grid:     %d x %d x %d\n", prop.maxGridSize[0], prop.maxGridSize[1],  prop.maxGridSize[2]);
                 printf("  Maximum memory pitch:                          %u bytes\n", (int)prop.memPitch);
                 printf("  Texture alignment:                             %u bytes\n", (int)prop.textureAlignment);
-                
+
                 printf("  Concurrent copy and execution:                 %s with %d copy engine(s)\n", (prop.deviceOverlap ? "Yes" : "No"), prop.asyncEngineCount);
                 printf("  Run time limit on kernels:                     %s\n", prop.kernelExecTimeoutEnabled ? "Yes" : "No");
                 printf("  Integrated GPU sharing Host Memory:            %s\n", prop.integrated ? "Yes" : "No");
                 printf("  Support host page-locked memory mapping:       %s\n", prop.canMapHostMemory ? "Yes" : "No");
-                
+
                 printf("  Concurrent kernel execution:                   %s\n", prop.concurrentKernels ? "Yes" : "No");
                 printf("  Alignment requirement for Surfaces:            %s\n", prop.surfaceAlignment ? "Yes" : "No");
                 printf("  Device has ECC support enabled:                %s\n", prop.ECCEnabled ? "Yes" : "No");
@@ -820,7 +778,7 @@ namespace cv { namespace gpu { namespace device
                 printf("  Compute Mode:\n");
                 printf("      %s \n", computeMode[prop.computeMode]);
             }
-            
+
             printf("\n");
             printf("deviceQuery, CUDA Driver = CUDART");
             printf(", CUDA Driver Version  = %d.%d", driverVersion / 1000, driverVersion % 100);
@@ -828,37 +786,73 @@ namespace cv { namespace gpu { namespace device
             printf(", NumDevs = %d\n\n", count);
             fflush(stdout);
         }
-        
+
         void printShortCudaDeviceInfo(int device) const
         {
             int count = getCudaEnabledDeviceCount();
             bool valid = (device >= 0) && (device < count);
-            
+
             int beg = valid ? device   : 0;
             int end = valid ? device+1 : count;
-            
+
             int driverVersion = 0, runtimeVersion = 0;
             cudaSafeCall( cudaDriverGetVersion(&driverVersion) );
             cudaSafeCall( cudaRuntimeGetVersion(&runtimeVersion) );
-            
+
             for(int dev = beg; dev < end; ++dev)
             {
                 cudaDeviceProp prop;
                 cudaSafeCall( cudaGetDeviceProperties(&prop, dev) );
-                
+
                 const char *arch_str = prop.major < 2 ? " (not Fermi)" : "";
                 printf("Device %d:  \"%s\"  %.0fMb", dev, prop.name, (float)prop.totalGlobalMem/1048576.0f);
                 printf(", sm_%d%d%s", prop.major, prop.minor, arch_str);
-                
+
                 int cores = convertSMVer2Cores(prop.major, prop.minor);
                 if (cores > 0)
                     printf(", %d cores", cores * prop.multiProcessorCount);
-                
+
                 printf(", Driver/Runtime ver.%d.%d/%d.%d\n", driverVersion/1000, driverVersion%100, runtimeVersion/1000, runtimeVersion%100);
             }
             fflush(stdout);
         }
-        
+
+    private:
+        int device_id_;
+
+        std::string name_;
+        int multi_processor_count_;
+        int majorVersion_;
+        int minorVersion_;
+
+        const CudaArch cudaArch;
+
+        int convertSMVer2Cores(int major, int minor) const
+        {
+            // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
+            typedef struct {
+                int SM; // 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
+                int Cores;
+            } SMtoCores;
+
+            SMtoCores gpuArchCoresPerSM[] =  { { 0x10,  8 }, { 0x11,  8 }, { 0x12,  8 }, { 0x13,  8 }, { 0x20, 32 }, { 0x21, 48 }, {0x30, 192}, {0x35, 192}, { -1, -1 }  };
+
+            int index = 0;
+            while (gpuArchCoresPerSM[index].SM != -1)
+            {
+                if (gpuArchCoresPerSM[index].SM == ((major << 4) + minor) )
+                    return gpuArchCoresPerSM[index].Cores;
+                index++;
+            }
+
+            return -1;
+        }
+    };
+
+    class CudaFuncTable : public GpuFuncTable
+    {
+    public:
+
         void copy(const Mat& src, GpuMat& dst) const
         {
             cudaSafeCall( cudaMemcpy2D(dst.data, dst.step, src.data, src.step, src.cols * src.elemSize(), src.rows, cudaMemcpyHostToDevice) );

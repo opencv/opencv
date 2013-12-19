@@ -239,23 +239,23 @@ static DeviceInfoFuncTable* deviceInfoFuncTable()
 
 //////////////////////////////// Initialization & Info ////////////////////////
 
-int cv::gpu::getCudaEnabledDeviceCount() { return gpuFuncTable()->getCudaEnabledDeviceCount(); }
+int cv::gpu::getCudaEnabledDeviceCount() { return deviceInfoFuncTable()->getCudaEnabledDeviceCount(); }
 
-void cv::gpu::setDevice(int device) { gpuFuncTable()->setDevice(device); }
-int cv::gpu::getDevice() { return gpuFuncTable()->getDevice(); }
+void cv::gpu::setDevice(int device) { deviceInfoFuncTable()->setDevice(device); }
+int cv::gpu::getDevice() { return deviceInfoFuncTable()->getDevice(); }
 
-void cv::gpu::resetDevice() { gpuFuncTable()->resetDevice(); }
+void cv::gpu::resetDevice() { deviceInfoFuncTable()->resetDevice(); }
 
-bool cv::gpu::deviceSupports(FeatureSet feature_set) { return gpuFuncTable()->deviceSupports(feature_set); }
+bool cv::gpu::deviceSupports(FeatureSet feature_set) { return deviceInfoFuncTable()->deviceSupports(feature_set); }
 
-bool cv::gpu::TargetArchs::builtWith(FeatureSet feature_set) { return gpuFuncTable()->builtWith(feature_set); }
-bool cv::gpu::TargetArchs::has(int major, int minor) { return gpuFuncTable()->has(major, minor); }
-bool cv::gpu::TargetArchs::hasPtx(int major, int minor) {  return gpuFuncTable()->hasPtx(major, minor); }
-bool cv::gpu::TargetArchs::hasBin(int major, int minor) { return gpuFuncTable()->hasBin(major, minor);  }
-bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor) { return gpuFuncTable()->hasEqualOrLessPtx(major, minor); }
-bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor) { return gpuFuncTable()->hasEqualOrGreater(major, minor); }
-bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor) { return gpuFuncTable()->hasEqualOrGreaterPtx(major, minor); }
-bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor) { return gpuFuncTable()->hasEqualOrGreaterBin(major, minor); }
+bool cv::gpu::TargetArchs::builtWith(FeatureSet feature_set) { return deviceInfoFuncTable()->builtWith(feature_set); }
+bool cv::gpu::TargetArchs::has(int major, int minor) { return deviceInfoFuncTable()->has(major, minor); }
+bool cv::gpu::TargetArchs::hasPtx(int major, int minor) {  return deviceInfoFuncTable()->hasPtx(major, minor); }
+bool cv::gpu::TargetArchs::hasBin(int major, int minor) { return deviceInfoFuncTable()->hasBin(major, minor);  }
+bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor) { return deviceInfoFuncTable()->hasEqualOrLessPtx(major, minor); }
+bool cv::gpu::TargetArchs::hasEqualOrGreater(int major, int minor) { return deviceInfoFuncTable()->hasEqualOrGreater(major, minor); }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor) { return deviceInfoFuncTable()->hasEqualOrGreaterPtx(major, minor); }
+bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor) { return deviceInfoFuncTable()->hasEqualOrGreaterBin(major, minor); }
 
 size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const { return deviceInfoFuncTable()->sharedMemPerBlock(); }
 void cv::gpu::DeviceInfo::queryMemory(size_t& total_memory, size_t& free_memory) const { deviceInfoFuncTable()->queryMemory(total_memory, free_memory); }
@@ -270,8 +270,8 @@ std::string cv::gpu::DeviceInfo::name() const { return deviceInfoFuncTable()->na
 int cv::gpu::DeviceInfo::multiProcessorCount() const { return deviceInfoFuncTable()->multiProcessorCount(); }
 void cv::gpu::DeviceInfo::query() { deviceInfoFuncTable()->query(); }
 
-void cv::gpu::printCudaDeviceInfo(int device) { gpuFuncTable()->printCudaDeviceInfo(device); }
-void cv::gpu::printShortCudaDeviceInfo(int device) { gpuFuncTable()->printShortCudaDeviceInfo(device); }
+void cv::gpu::printCudaDeviceInfo(int device) { deviceInfoFuncTable()->printCudaDeviceInfo(device); }
+void cv::gpu::printShortCudaDeviceInfo(int device) { deviceInfoFuncTable()->printShortCudaDeviceInfo(device); }
 
 #ifdef HAVE_CUDA
 
