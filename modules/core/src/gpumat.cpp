@@ -752,5 +752,5 @@ void cv::gpu::error(const char *error_string, const char *file, const int line, 
         cerr.flush();
     }
     else
-        ::cv::error( ::cv::Exception(code, error_string, func, file, line) );
+        cv::error( cv::Exception(code, error_string, func, file, line) );
 }
