@@ -57,9 +57,39 @@ CV_ENUM(ConversionTypes, CV_RGB2GRAY, CV_RGB2BGR, CV_RGB2YUV, CV_YUV2RGB, CV_RGB
         CV_HLS2RGB, CV_BGR5652BGR, CV_BGR2BGR565, CV_RGBA2mRGBA, CV_mRGBA2RGBA, CV_YUV2RGB_NV12)
 
 typedef tuple<Size, tuple<ConversionTypes, int, int> > cvtColorParams;
-typedef TestBaseWithParam<cvtColorParams> cvtColorFixture;
+typedef TestBaseWithParam<cvtColorParams> cvtColorU8Fixture;
+typedef TestBaseWithParam<cvtColorParams> cvtColorF32Fixture;
+typedef TestBaseWithParam<cvtColorParams> cvtColorU16Fixture;
 
-PERF_TEST_P(cvtColorFixture, cvtColor, testing::Combine(
+#define RUN_CVT_PERF_TEST \
+    cvtColorParams params = GetParam();\
+    const Size srcSize = get<0>(params);\
+    const tuple<int, int, int> conversionParams = get<1>(params);\
+    const int code = get<0>(conversionParams), scn = get<1>(conversionParams),\
+            dcn = get<2>(conversionParams);\
+\
+    Mat src(srcSize, CV_8UC(scn)), dst(srcSize, CV_8UC(scn));\
+    declare.in(src, WARMUP_RNG).out(dst);\
+\
+    if (RUN_OCL_IMPL)\
+    {\
+        ocl::oclMat oclSrc(src), oclDst(src.size(), dst.type());\
+\
+        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, code, dcn);\
+        oclDst.download(dst);\
+\
+        SANITY_CHECK(dst, 1);\
+    }\
+    else if (RUN_PLAIN_IMPL)\
+    {\
+        TEST_CYCLE() cv::cvtColor(src, dst, code, dcn);\
+\
+        SANITY_CHECK(dst);\
+    }\
+    else\
+        OCL_PERF_ELSE\
+
+PERF_TEST_P(cvtColorU8Fixture, cvtColor, testing::Combine(
                 testing::Values(Size(1000, 1002), Size(2000, 2004), Size(4000, 4008)),
                 testing::Values(
                     make_tuple(ConversionTypes(CV_RGB2GRAY), 3, 1),
@@ -81,30 +111,41 @@ PERF_TEST_P(cvtColorFixture, cvtColor, testing::Combine(
                     make_tuple(ConversionTypes(CV_YUV2RGB_NV12), 1, 3)
                     )))
 {
-    cvtColorParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const tuple<int, int, int> conversionParams = get<1>(params);
-    const int code = get<0>(conversionParams), scn = get<1>(conversionParams),
-            dcn = get<2>(conversionParams);
+    RUN_CVT_PERF_TEST
+}
 
-    Mat src(srcSize, CV_8UC(scn)), dst(srcSize, CV_8UC(scn));
-    declare.in(src, WARMUP_RNG).out(dst);
+PERF_TEST_P(cvtColorF32Fixture, cvtColor, testing::Combine(
+                testing::Values(Size(1000, 1002), Size(2000, 2004), Size(4000, 4008)),
+                testing::Values(
+                    make_tuple(ConversionTypes(CV_RGB2GRAY), 3, 1),
+                    make_tuple(ConversionTypes(CV_RGB2BGR), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2YUV), 3, 3),
+                    make_tuple(ConversionTypes(CV_YUV2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2YCrCb), 3, 3),
+                    make_tuple(ConversionTypes(CV_YCrCb2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2XYZ), 3, 3),
+                    make_tuple(ConversionTypes(CV_XYZ2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2HSV), 3, 3),
+                    make_tuple(ConversionTypes(CV_HSV2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2HLS), 3, 3),
+                    make_tuple(ConversionTypes(CV_HLS2RGB), 3, 3)
+                    )))
+{
+    RUN_CVT_PERF_TEST
+}
 
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src), oclDst(src.size(), dst.type());
-
-        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, code, dcn);
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst, 1);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::cvtColor(src, dst, code, dcn);
-
-        SANITY_CHECK(dst);
-    }
-    else
-        OCL_PERF_ELSE
+PERF_TEST_P(cvtColorU16Fixture, cvtColor, testing::Combine(
+                testing::Values(Size(1000, 1002), Size(2000, 2004), Size(4000, 4008)),
+                testing::Values(
+                    make_tuple(ConversionTypes(CV_RGB2GRAY), 3, 1),
+                    make_tuple(ConversionTypes(CV_RGB2BGR), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2YUV), 3, 3),
+                    make_tuple(ConversionTypes(CV_YUV2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2YCrCb), 3, 3),
+                    make_tuple(ConversionTypes(CV_YCrCb2RGB), 3, 3),
+                    make_tuple(ConversionTypes(CV_RGB2XYZ), 3, 3),
+                    make_tuple(ConversionTypes(CV_XYZ2RGB), 3, 3)
+                    )))
+{
+    RUN_CVT_PERF_TEST
 }
