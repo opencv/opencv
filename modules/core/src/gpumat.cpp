@@ -43,7 +43,6 @@
 #include "precomp.hpp"
 #include "opencv2/core/gpumat.hpp"
 #include <iostream>
-#include <dlfcn.h>
 
 #if defined(HAVE_CUDA) || defined(DYNAMIC_CUDA_SUPPORT)
     #include <cuda_runtime.h>
@@ -61,6 +60,22 @@
     #endif
 #endif
 
+#ifdef DYNAMIC_CUDA_SUPPORT
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#endif
+
+#ifdef ANDROID
+# include <android/log.h>
+
+# define LOG_TAG "OpenCV::CUDA"
+# define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+# define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+# define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
+#endif
+
 using namespace std;
 using namespace cv;
 using namespace cv::gpu;
@@ -69,16 +84,90 @@ using namespace cv::gpu;
 
 #include "gpumat_cuda.hpp"
 
+#ifdef DYNAMIC_CUDA_SUPPORT
+
 typedef GpuFuncTable* (*GpuFactoryType)();
 typedef DeviceInfoFuncTable* (*DeviceInfoFactoryType)();
 
 static GpuFactoryType gpuFactory = NULL;
 static DeviceInfoFactoryType deviceInfoFactory = NULL;
 
+# if defined(__linux__) || defined(__APPLE__) || defined (ANDROID)
+#  ifdef ANDROID
+static const std::string getCudaSupportLibName()
+{
+    Dl_info dl_info;
+    if(0 != dladdr((void *)getCudaSupportLibName, &dl_info))
+    {
+        LOGD("Library name: %s", dl_info.dli_fname);
+        LOGD("Library base address: %p", dl_info.dli_fbase);
+
+        const char* libName=dl_info.dli_fname;
+        while( ((*libName)=='/') || ((*libName)=='.') )
+        libName++;
+
+        char lineBuf[2048];
+        FILE* file = fopen("/proc/self/smaps", "rt");
+
+        if(file)
+        {
+            while (fgets(lineBuf, sizeof lineBuf, file) != NULL)
+            {
+                //verify that line ends with library name
+                int lineLength = strlen(lineBuf);
+                int libNameLength = strlen(libName);
+
+                //trim end
+                for(int i = lineLength - 1; i >= 0 && isspace(lineBuf[i]); --i)
+                {
+                    lineBuf[i] = 0;
+                    --lineLength;
+                }
+
+                if (0 != strncmp(lineBuf + lineLength - libNameLength, libName, libNameLength))
+                {
+                //the line does not contain the library name
+                    continue;
+                }
+
+                //extract path from smaps line
+                char* pathBegin = strchr(lineBuf, '/');
+                if (0 == pathBegin)
+                {
+                    LOGE("Strange error: could not find path beginning in lin \"%s\"", lineBuf);
+                    continue;
+                }
+
+                char* pathEnd = strrchr(pathBegin, '/');
+                pathEnd[1] = 0;
+
+                LOGD("Libraries folder found: %s", pathBegin);
+
+                fclose(file);
+                return std::string(pathBegin) + "/libopencv_core_cuda.so";
+            }
+            fclose(file);
+            LOGE("Could not find library path");
+        }
+        else
+        {
+            LOGE("Could not read /proc/self/smaps");
+        }
+    }
+    else
+    {
+        LOGE("Could not get library name and base address");
+    }
+
+    return string();
+}
+
+#  else
 static const std::string getCudaSupportLibName()
 {
     return "libopencv_core_cuda.so";
 }
+#  endif
 
 static bool loadCudaSupportLib()
 {
@@ -102,10 +191,14 @@ static bool loadCudaSupportLib()
         return false;
     }
 
-    dlclose(handle);
-
     return true;
 }
+
+# else
+#  error "Dynamic CUDA support is not implemented for this platform!"
+# endif
+
+#endif
 
 static GpuFuncTable* gpuFuncTable()
 {
