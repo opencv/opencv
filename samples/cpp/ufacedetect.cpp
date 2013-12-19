@@ -98,6 +98,8 @@ int main( int argc, const char** argv )
         return -1;
     }
 
+    cout << "old cascade: " << (cascade.isOldFormatCascade() ? "TRUE" : "FALSE") << endl;
+
     if( inputName.empty() || (isdigit(inputName.c_str()[0]) && inputName.c_str()[1] == '\0') )
     {
         int c = inputName.empty() ? 0 : inputName.c_str()[0] - '0';
@@ -199,13 +201,12 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
 
     t = (double)getTickCount();
 
-    cvtColor( img, gray, COLOR_BGR2GRAY );
-    resize( gray, smallImg, Size(), scale0, scale0, INTER_LINEAR );
-    cvtColor(smallImg, canvas, COLOR_GRAY2BGR);
-    equalizeHist( smallImg, smallImg );
+    resize( img, smallImg, Size(), scale0, scale0, INTER_LINEAR );
+    cvtColor( smallImg, gray, COLOR_BGR2GRAY );
+    equalizeHist( gray, gray );
 
-    cascade.detectMultiScale( smallImg, faces,
-        1.1, 2, 0
+    cascade.detectMultiScale( gray, faces,
+        1.1, 3, 0
         //|CASCADE_FIND_BIGGEST_OBJECT
         //|CASCADE_DO_ROUGH_SEARCH
         |CASCADE_SCALE_IMAGE
@@ -213,8 +214,8 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
         Size(30, 30) );
     if( tryflip )
     {
-        flip(smallImg, smallImg, 1);
-        cascade.detectMultiScale( smallImg, faces2,
+        flip(gray, gray, 1);
+        cascade.detectMultiScale( gray, faces2,
                                  1.1, 2, 0
                                  //|CASCADE_FIND_BIGGEST_OBJECT
                                  //|CASCADE_DO_ROUGH_SEARCH
@@ -227,7 +228,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
         }
     }
     t = (double)getTickCount() - t;
-    cvtColor(smallImg, canvas, COLOR_GRAY2BGR);
+    smallImg.copyTo(canvas);
 
     double fps = getTickFrequency()/t;
 
@@ -255,7 +256,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
                        color, 3, 8, 0);
         if( nestedCascade.empty() )
             continue;
-        UMat smallImgROI = smallImg(*r);
+        UMat smallImgROI = gray(*r);
         nestedCascade.detectMultiScale( smallImgROI, nestedObjects,
             1.1, 2, 0
             //|CASCADE_FIND_BIGGEST_OBJECT
