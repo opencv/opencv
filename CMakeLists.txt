@@ -460,18 +460,6 @@ if(WITH_OPENCL)
 endif()
 
 # ----------------------------------------------------------------------------
-# Add CUDA libraries (needed for apps/tools, samples)
-# ----------------------------------------------------------------------------
-if(HAVE_CUDA)
-  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  if(HAVE_CUBLAS)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
-  endif()
-  if(HAVE_CUFFT)
-    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
-  endif()
-endif()
-# ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
 if(ENABLE_SOLUTION_FOLDERS)

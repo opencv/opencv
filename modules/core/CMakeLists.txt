@@ -33,7 +33,11 @@ macro(ocv_glob_module_sources_no_cuda)
                                  SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_hdrs})
 endmacro()
 
-ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES})
+if (DYNAMIC_CUDA_SUPPORT)
+  ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES})
+else()
+  ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+endif()
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
 if(HAVE_WINRT)
