@@ -544,15 +544,36 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 }
 
 
+static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
+{
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+    for (int y = 0; y < ny; ++y)
+        for (int x = 0; x < nx; ++x)
+        {
+            Rect roi(x * src.cols, y * src.rows, src.cols, src.rows);
+            UMat hdr(dst, roi);
+            src.copyTo(hdr);
+        }
+    return true;
+}
+
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
-    Mat src = _src.getMat();
-    CV_Assert( src.dims <= 2 );
+    CV_Assert( _src.dims() <= 2 );
     CV_Assert( ny > 0 && nx > 0 );
 
-    _dst.create(src.rows*ny, src.cols*nx, src.type());
-    Mat dst = _dst.getMat();
-    Size ssize = src.size(), dsize = dst.size();
+    Size ssize = _src.size();
+    _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
+
+    if (ocl::useOpenCL() && _src.isUMat())
+    {
+        CV_Assert(ocl_repeat(_src, ny, nx, _dst));
+        return;
+    }
+
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    Size dsize = dst.size();
     int esz = (int)src.elemSize();
     int x, y;
     ssize.width *= esz; dsize.width *= esz;
