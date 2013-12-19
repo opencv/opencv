@@ -251,7 +251,7 @@ if (NOT IOS)
   endif()
 endif()
 
-# --- Intel Perceptual Computing SSDK ---
+# --- Intel Perceptual Computing SDK ---
 if(WITH_INTELPERC)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIntelPerCSDK.cmake")
 endif(WITH_INTELPERC)
