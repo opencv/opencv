@@ -61,30 +61,27 @@ BRIEF_OCL::compute( const oclMat& image, oclMat& keypoints, oclMat& descriptors 
 
     oclMat sum;
     integral( grayImage, sum, CV_32S );
-    cl_mem sumTexture = bindTexture(sum);
+    cl_mem sumTexture = bindTexture( sum );
 
     //TODO filter keypoints by border
 
-    oclMat xRow = keypoints.row( 0 );
-    oclMat yRow = keypoints.row( 1 );
     descriptors = oclMat( keypoints.cols, bytes, CV_8U );
 
     std::stringstream build_opt;
     build_opt << " -D BYTES=" << bytes << " -D KERNEL_SIZE=" << KERNEL_SIZE;
 
     const String kernelname = "extractBriefDescriptors";
-    size_t globalThreads[3] = {keypoints.cols, 1, 1};
-    size_t localThreads[3] = {1, 1, 1};
+    size_t localThreads[3]  = {bytes, 1, 1};
+    size_t globalThreads[3] = {keypoints.cols * bytes, 1, 1};
 
     std::vector< std::pair<size_t, const void *> > args;
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&sumTexture));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&xRow.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&yRow.data));
-    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&descriptors.data));
-    Context* ctx = Context::getContext( );
-    openCLExecuteKernel( ctx, &brief, kernelname, globalThreads, localThreads, args, -1, -1, build_opt.str().c_str() );
-    openCLFree(sumTexture);
-}
+    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &sumTexture ) );
+    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &keypoints.data ) );
+    args.push_back( std::make_pair( sizeof (cl_int), (void *) &keypoints.step ) );
+    args.push_back( std::make_pair( sizeof (cl_mem), (void *) &descriptors.data ) );
+    args.push_back( std::make_pair( sizeof (cl_int), (void *) &descriptors.step ) );
 
-//optimiuerungsstrategieen:
-// - vorher ganzes bild blurren (vgl. orb)
+    Context* ctx = Context::getContext( );
+    openCLExecuteKernel( ctx, &brief, kernelname, globalThreads, localThreads, args, -1, -1, build_opt.str( ).c_str( ) );
+    openCLFree( sumTexture );
+}

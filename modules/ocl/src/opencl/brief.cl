@@ -41,6 +41,9 @@
 //
 //M*/
 
+#define X_ROW 0
+#define Y_ROW 1
+
 #ifndef BYTES
  #define BYTES 16
 #endif
@@ -53,6 +56,78 @@
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE | CLK_FILTER_NEAREST;
 
+__constant char tests[32 * BYTES] =
+{
+-2,-1,7,-1,-14,-1,-3,3,1,-2,11,2,1,6,-10,-7,13,2,-1,0,-14,5,5,-3,-2,8,2,4,-11,8,-15,5,
+-6,-23,8,-9,-12,6,-10,8,-3,-1,8,1,3,6,5,6,-7,-6,5,-5,22,-2,-11,-8,14,7,8,5,-1,14,-5,-14,
+-14,9,2,0,7,-3,22,6,-6,6,-8,-5,-5,9,7,-1,-3,-7,-10,-18,4,-5,0,11,2,3,9,10,-10,3,4,9,
+0,12,-3,19,1,15,-11,-5,14,-1,7,8,7,-23,-5,5,0,-6,-10,17,13,-4,-3,-4,-12,1,-12,2,0,8,3,22,
+-13,13,3,-1,-16,17,6,10,7,15,-5,0,2,-12,19,-2,3,-6,-4,-15,8,3,0,14,4,-11,5,5,11,-7,7,1,
+6,12,21,3,-3,2,14,1,5,1,-5,11,3,-17,-6,2,6,8,5,-10,-14,-2,0,4,5,-7,-6,5,10,4,4,-7,
+22,0,7,-18,-1,-3,0,18,-4,22,-5,3,1,-7,2,-3,19,-20,17,-2,3,-10,-8,24,-5,-14,7,5,-2,12,-4,-15,
+4,12,0,-19,20,13,3,5,-8,-12,5,0,-5,6,-7,-11,6,-11,-3,-22,15,4,10,1,-7,-4,15,-6,5,10,0,24,
+3,6,22,-2,-13,14,4,-4,-13,8,-18,-22,-1,-1,-7,3,-19,-12,4,3,8,10,13,-2,-6,-1,-6,-5,2,-21,-3,2,
+4,-7,0,16,-6,-5,-12,-1,1,-1,9,18,-7,10,-11,6,4,3,19,-7,-18,5,-4,5,4,0,-20,4,7,-11,18,12,
+-20,17,-18,7,2,15,19,-11,-18,6,-7,3,-4,1,-14,13,17,3,2,-8,-7,2,1,6,17,-9,-2,8,-8,-6,-1,12,
+-2,4,-1,6,-2,7,6,8,-8,-1,-7,-9,8,-9,15,0,0,22,-4,-15,-14,-1,3,-2,-7,-4,17,-7,-8,-2,9,-4,
+5,-7,7,7,-5,13,-8,11,11,-4,0,8,5,-11,-9,-6,2,-6,3,-20,-6,2,6,10,-6,-6,-15,7,-6,-3,2,1,
+11,0,-3,2,7,-12,14,5,0,-7,-1,-1,-16,0,6,8,22,11,0,-3,19,0,5,-17,-23,-14,-13,-19,-8,10,-11,-2,
+-11,6,-10,13,1,-7,14,0,-12,1,-5,-5,4,7,8,-1,-1,-5,15,2,-3,-1,7,-10,3,-6,10,-18,-7,-13,-13,10,
+1,-1,13,-10,-19,14,8,-14,-4,-13,7,1,1,-2,12,-7,3,-5,1,-5,-2,-2,8,-10,2,14,8,7,3,9,8,2
+#if BYTES > 16
+,-9,1,-18,0,4,0,1,12,0,9,-14,-10,-13,-9,-2,6,1,5,10,10,-3,-6,-16,-5,11,6,-5,0,-23,10,1,2,
+13,-5,-3,9,-4,-1,-13,-5,10,13,-11,8,19,20,-9,2,4,-8,0,-9,-14,10,15,19,-14,-12,-10,-3,-23,-3,17,-2,
+-3,-11,6,-14,19,-2,-4,2,-5,5,3,-13,2,-2,-5,4,17,4,17,-11,-7,-2,1,23,8,13,1,-16,-13,-5,1,-17,
+4,6,-8,-3,-5,-9,-2,-10,-9,0,-7,-2,5,0,5,2,-4,-16,6,3,2,-15,-2,12,4,-1,6,2,1,1,-2,-8,
+-2,12,-5,-2,-8,8,-9,9,2,-10,3,1,-4,10,-9,4,6,12,2,5,-3,-8,0,5,-13,1,-7,2,-1,-10,7,-18,
+-1,8,-9,-10,-23,-1,6,2,-5,-3,3,2,0,11,-4,-7,15,2,-10,-3,-20,-8,-13,3,-19,-12,5,-11,-17,-13,-3,2,
+7,4,-12,0,5,-1,-14,-6,-4,11,0,-4,3,10,7,-3,13,21,-11,6,-12,24,-7,-4,4,16,3,-14,-3,5,-7,-12,
+0,-4,7,-5,-17,-9,13,-7,22,-6,-11,5,2,-8,23,-11,7,-10,-1,14,-3,-10,8,3,-13,1,-6,0,-7,-21,6,-14,
+18,19,-4,-6,10,7,-1,-4,-1,21,1,-5,-10,6,-11,-2,18,-3,-1,7,-3,-9,-5,10,-13,14,17,-3,11,-19,-1,-18,
+8,-2,-18,-23,0,-5,-2,-9,-4,-11,2,-8,14,6,-3,-6,-3,0,-15,0,-9,4,-15,-9,-1,11,3,11,-10,-16,-7,7,
+-2,-10,-10,-2,-5,-3,5,-23,13,-8,-15,-11,-15,11,6,-6,-16,-3,-2,2,6,12,-16,24,-10,0,8,11,-7,7,-19,-7,
+5,16,9,-3,9,7,-7,-16,3,2,-10,9,21,1,8,7,7,0,1,17,-8,12,9,6,11,-7,-8,-6,19,0,9,3,
+1,-7,-5,-11,0,8,-2,14,12,-2,-15,-6,4,12,0,-21,17,-4,-6,-7,-10,-9,-14,-7,-15,-10,-15,-14,-7,-5,5,-12,
+-4,0,15,-4,5,2,-6,-23,-4,-21,-6,4,-10,5,-15,6,4,-3,-1,5,-4,19,-23,-4,-4,17,13,-11,1,12,4,-14,
+-11,-6,-20,10,4,5,3,20,-8,-20,3,1,-19,9,9,-3,18,15,11,-4,12,16,8,7,-14,-8,-3,9,-6,0,2,-4,
+1,-10,-1,2,8,-7,-6,18,9,12,-7,-23,8,-6,5,2,-9,6,-12,-7,-1,-2,-7,2,9,9,7,15,6,2,-6,6
+#endif
+#if BYTES > 32
+,16,12,0,19,4,3,6,0,-2,-1,2,17,8,1,3,1,-12,-1,-11,0,-11,2,7,9,-1,3,-19,4,-1,-11,-1,3,
+1,-10,-10,-4,-2,3,6,11,3,7,-9,-8,24,-14,-2,-10,-3,-3,-18,-6,-13,-10,-7,-1,2,-7,9,-6,2,-4,6,-13,
+4,-4,-2,3,-4,2,9,13,-11,5,-6,-11,4,-2,11,-9,-19,0,-23,-5,-5,-7,-3,-6,-6,-4,12,14,12,-11,-8,-16,
+-21,15,-12,6,-2,-1,-8,16,6,-1,-8,-2,1,-1,-9,8,3,-4,-2,-2,-7,0,4,-8,11,-11,-12,2,2,3,11,7,
+-7,-4,-9,-6,3,-7,-5,0,3,-7,-10,-5,-3,-1,8,-10,0,8,5,1,9,0,1,16,8,4,-11,-3,-15,9,8,17,
+0,2,-9,17,-6,-11,-10,-3,1,1,15,-8,-12,-13,-2,4,-6,4,-6,-10,5,-7,7,-5,10,6,8,9,-5,7,-18,-3,
+-6,3,5,4,-10,-13,-5,-3,-11,2,-16,0,7,-21,-5,-13,-14,-14,-4,-4,4,9,7,-3,4,11,10,-4,6,17,9,17,
+-10,8,0,-11,-6,-16,-6,8,-13,5,10,-5,3,2,12,16,13,-8,0,-6,10,0,4,-11,8,5,10,-2,11,-7,-13,3,
+2,4,-7,-3,-14,-2,-11,16,11,-6,7,6,-3,15,8,-10,-3,8,12,-12,-13,6,-14,7,-11,-5,-8,-6,7,-6,6,3,
+-4,10,5,1,9,16,10,13,-17,10,2,8,-5,1,4,-4,-14,8,-5,2,4,-9,-6,-3,3,-7,-10,0,-2,-8,-10,4,
+-8,5,-9,24,2,-8,8,-9,-4,17,-5,2,14,0,-9,9,11,15,-6,5,-8,1,-3,4,9,-21,10,2,2,-1,4,11,
+24,3,2,-2,-8,17,-14,-10,6,5,-13,7,11,10,0,-1,4,6,-10,6,-12,-2,5,6,3,-1,8,-15,1,-4,-7,11,
+1,11,5,0,6,-12,10,1,-3,-2,-1,4,-2,-11,-1,12,7,-8,-20,-18,2,0,-9,2,-13,-1,-16,2,3,-1,-5,-17,
+15,8,3,-14,-13,-12,6,15,2,-8,2,6,6,22,-3,-23,-2,-7,-6,0,13,-10,-6,6,6,7,-10,12,-6,7,-2,11,
+0,-22,-2,-17,-4,-1,-11,-14,-2,-8,7,12,12,-5,7,-13,2,-2,-7,6,0,8,-3,23,6,12,13,-11,-21,-10,10,8,
+-3,0,7,15,7,-6,-5,-12,-21,-10,12,-11,-5,-11,8,-11,5,0,-11,-1,8,-9,7,-1,11,-23,21,-5,0,-5,-8,6,
+-6,8,8,12,-7,5,3,-2,-5,-20,-12,9,-6,12,-11,3,4,5,13,11,2,12,13,-12,-4,-13,4,7,0,15,-3,-16,
+-3,2,-2,14,4,-14,16,-11,-13,3,23,10,9,-19,2,5,5,3,14,-7,19,-13,-11,15,14,0,-2,-5,11,-4,0,-6,
+-2,5,-13,-8,-11,-15,-7,-17,1,3,-10,-8,-13,-10,7,-12,0,-13,23,-6,2,-17,-7,-3,1,3,4,-10,13,4,14,-6,
+-19,-2,-1,5,9,-8,10,-5,7,-1,5,7,9,-10,19,0,7,5,-4,-7,-11,1,-1,-11,2,-1,-4,11,-1,7,2,-2,
+1,-20,-9,-6,-4,-18,8,-18,-16,-2,7,-6,-3,-6,-1,-4,0,-16,24,-5,-4,-2,-1,9,-8,2,-6,15,11,4,0,-3,
+7,6,2,-10,-7,-9,12,-6,24,15,-8,-1,15,-9,-3,-15,17,-5,11,-10,-2,13,-15,4,-2,-1,4,-23,-16,3,-7,-14,
+-3,-5,-10,-9,-5,3,-2,-1,-1,4,1,8,12,9,9,-14,-9,17,-3,0,5,4,13,-6,-1,-8,19,10,8,-5,-15,2,
+-12,-9,-4,-5,12,0,24,4,8,-2,14,4,8,-4,-7,16,5,-1,-8,-4,-2,18,-5,17,8,-2,-9,-2,3,-7,1,-6,
+-5,-22,-5,-2,-8,-10,14,1,-3,-13,3,9,-4,-1,-1,0,-7,-21,12,-19,-8,8,24,8,12,-6,-2,3,-5,-11,-22,-4,
+-3,5,-4,4,-16,24,7,-9,-10,23,-9,18,1,12,17,21,24,-6,-3,-11,-7,17,1,-6,4,4,2,-7,14,6,-12,3,
+-6,0,-16,13,-10,5,7,12,5,2,6,-3,7,0,-23,1,15,-5,1,14,-3,-1,6,6,6,-9,-9,12,4,-2,-4,7,
+-4,-5,4,4,-13,0,6,-10,2,-12,-6,-3,16,0,-3,3,5,-14,6,11,5,11,0,-13,7,5,-1,-5,12,4,6,10,
+-10,4,-1,-11,4,10,-14,5,11,-14,-13,0,2,8,12,24,-1,3,-1,2,9,-14,-23,3,-8,-6,0,9,-15,14,10,-10,
+-10,-6,-7,-5,11,5,-3,-15,1,0,1,8,-11,-6,-4,-18,9,0,22,-4,-5,-1,-9,4,-20,2,1,6,1,2,-9,-12,
+5,15,4,-6,19,4,4,11,17,-4,-8,-1,-8,-12,7,-3,11,9,8,1,9,22,-15,15,-7,-7,1,-23,-5,13,-8,2,
+3,-5,11,-11,3,-18,14,-5,-20,7,-10,-23,-2,-5,6,0,-17,-13,-3,2,-6,-1,14,-2,-12,-16,15,6,-12,-2,3,-19
+#endif
+};
+
 inline int smoothedSum(__read_only image2d_t sum, const int2 pt)
 {
     return ( read_imagei( sum, sampler, pt + (int2)(  HALF_KERNEL + 1,  HALF_KERNEL + 1 ))
@@ -61,84 +136,21 @@ inline int smoothedSum(__read_only image2d_t sum, const int2 pt)
            + read_imagei( sum, sampler, pt + (int2)( -HALF_KERNEL,     -HALF_KERNEL ))).x;
 }
 
-__kernel void extractBriefDescriptors(__read_only image2d_t sum, __global float* xRow, __global float* yRow, __global uchar* descriptors)
+__kernel void extractBriefDescriptors(
+    __read_only image2d_t sumImg, __global float* keypoints, int kpRowStep, __global uchar* descriptors, int dscRowStep)
 {
-    const size_t id = get_global_id( 0 );
-    uchar desc[BYTES];
+    const int  byte = get_local_id(0);
+    const int  kpId = get_group_id(0);
+    const int2 kpPos = (int2)(keypoints[X_ROW * (kpRowStep/4) + kpId] + 0.5, keypoints[Y_ROW * (kpRowStep/4) + kpId] + 0.5);
 
-const int2 pt = (int2)( xRow[id] + 0.5f, yRow[id] + 0.5f );
-#define SMOOTHED(y,x) smoothedSum(sum, pt + (int2)(x, y))
-    desc[0] = (uchar)(((SMOOTHED(-2, -1) < SMOOTHED(7, -1)) << 7) + ((SMOOTHED(-14, -1) < SMOOTHED(-3, 3)) << 6) + ((SMOOTHED(1, -2) < SMOOTHED(11, 2)) << 5) + ((SMOOTHED(1, 6) < SMOOTHED(-10, -7)) << 4) + ((SMOOTHED(13, 2) < SMOOTHED(-1, 0)) << 3) + ((SMOOTHED(-14, 5) < SMOOTHED(5, -3)) << 2) + ((SMOOTHED(-2, 8) < SMOOTHED(2, 4)) << 1) + ((SMOOTHED(-11, 8) < SMOOTHED(-15, 5)) << 0));
-    desc[1] = (uchar)(((SMOOTHED(-6, -23) < SMOOTHED(8, -9)) << 7) + ((SMOOTHED(-12, 6) < SMOOTHED(-10, 8)) << 6) + ((SMOOTHED(-3, -1) < SMOOTHED(8, 1)) << 5) + ((SMOOTHED(3, 6) < SMOOTHED(5, 6)) << 4) + ((SMOOTHED(-7, -6) < SMOOTHED(5, -5)) << 3) + ((SMOOTHED(22, -2) < SMOOTHED(-11, -8)) << 2) + ((SMOOTHED(14, 7) < SMOOTHED(8, 5)) << 1) + ((SMOOTHED(-1, 14) < SMOOTHED(-5, -14)) << 0));
-    desc[2] = (uchar)(((SMOOTHED(-14, 9) < SMOOTHED(2, 0)) << 7) + ((SMOOTHED(7, -3) < SMOOTHED(22, 6)) << 6) + ((SMOOTHED(-6, 6) < SMOOTHED(-8, -5)) << 5) + ((SMOOTHED(-5, 9) < SMOOTHED(7, -1)) << 4) + ((SMOOTHED(-3, -7) < SMOOTHED(-10, -18)) << 3) + ((SMOOTHED(4, -5) < SMOOTHED(0, 11)) << 2) + ((SMOOTHED(2, 3) < SMOOTHED(9, 10)) << 1) + ((SMOOTHED(-10, 3) < SMOOTHED(4, 9)) << 0));
-    desc[3] = (uchar)(((SMOOTHED(0, 12) < SMOOTHED(-3, 19)) << 7) + ((SMOOTHED(1, 15) < SMOOTHED(-11, -5)) << 6) + ((SMOOTHED(14, -1) < SMOOTHED(7, 8)) << 5) + ((SMOOTHED(7, -23) < SMOOTHED(-5, 5)) << 4) + ((SMOOTHED(0, -6) < SMOOTHED(-10, 17)) << 3) + ((SMOOTHED(13, -4) < SMOOTHED(-3, -4)) << 2) + ((SMOOTHED(-12, 1) < SMOOTHED(-12, 2)) << 1) + ((SMOOTHED(0, 8) < SMOOTHED(3, 22)) << 0));
-    desc[4] = (uchar)(((SMOOTHED(-13, 13) < SMOOTHED(3, -1)) << 7) + ((SMOOTHED(-16, 17) < SMOOTHED(6, 10)) << 6) + ((SMOOTHED(7, 15) < SMOOTHED(-5, 0)) << 5) + ((SMOOTHED(2, -12) < SMOOTHED(19, -2)) << 4) + ((SMOOTHED(3, -6) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(8, 3) < SMOOTHED(0, 14)) << 2) + ((SMOOTHED(4, -11) < SMOOTHED(5, 5)) << 1) + ((SMOOTHED(11, -7) < SMOOTHED(7, 1)) << 0));
-    desc[5] = (uchar)(((SMOOTHED(6, 12) < SMOOTHED(21, 3)) << 7) + ((SMOOTHED(-3, 2) < SMOOTHED(14, 1)) << 6) + ((SMOOTHED(5, 1) < SMOOTHED(-5, 11)) << 5) + ((SMOOTHED(3, -17) < SMOOTHED(-6, 2)) << 4) + ((SMOOTHED(6, 8) < SMOOTHED(5, -10)) << 3) + ((SMOOTHED(-14, -2) < SMOOTHED(0, 4)) << 2) + ((SMOOTHED(5, -7) < SMOOTHED(-6, 5)) << 1) + ((SMOOTHED(10, 4) < SMOOTHED(4, -7)) << 0));
-    desc[6] = (uchar)(((SMOOTHED(22, 0) < SMOOTHED(7, -18)) << 7) + ((SMOOTHED(-1, -3) < SMOOTHED(0, 18)) << 6) + ((SMOOTHED(-4, 22) < SMOOTHED(-5, 3)) << 5) + ((SMOOTHED(1, -7) < SMOOTHED(2, -3)) << 4) + ((SMOOTHED(19, -20) < SMOOTHED(17, -2)) << 3) + ((SMOOTHED(3, -10) < SMOOTHED(-8, 24)) << 2) + ((SMOOTHED(-5, -14) < SMOOTHED(7, 5)) << 1) + ((SMOOTHED(-2, 12) < SMOOTHED(-4, -15)) << 0));
-    desc[7] = (uchar)(((SMOOTHED(4, 12) < SMOOTHED(0, -19)) << 7) + ((SMOOTHED(20, 13) < SMOOTHED(3, 5)) << 6) + ((SMOOTHED(-8, -12) < SMOOTHED(5, 0)) << 5) + ((SMOOTHED(-5, 6) < SMOOTHED(-7, -11)) << 4) + ((SMOOTHED(6, -11) < SMOOTHED(-3, -22)) << 3) + ((SMOOTHED(15, 4) < SMOOTHED(10, 1)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(15, -6)) << 1) + ((SMOOTHED(5, 10) < SMOOTHED(0, 24)) << 0));
-    desc[8] = (uchar)(((SMOOTHED(3, 6) < SMOOTHED(22, -2)) << 7) + ((SMOOTHED(-13, 14) < SMOOTHED(4, -4)) << 6) + ((SMOOTHED(-13, 8) < SMOOTHED(-18, -22)) << 5) + ((SMOOTHED(-1, -1) < SMOOTHED(-7, 3)) << 4) + ((SMOOTHED(-19, -12) < SMOOTHED(4, 3)) << 3) + ((SMOOTHED(8, 10) < SMOOTHED(13, -2)) << 2) + ((SMOOTHED(-6, -1) < SMOOTHED(-6, -5)) << 1) + ((SMOOTHED(2, -21) < SMOOTHED(-3, 2)) << 0));
-    desc[9] = (uchar)(((SMOOTHED(4, -7) < SMOOTHED(0, 16)) << 7) + ((SMOOTHED(-6, -5) < SMOOTHED(-12, -1)) << 6) + ((SMOOTHED(1, -1) < SMOOTHED(9, 18)) << 5) + ((SMOOTHED(-7, 10) < SMOOTHED(-11, 6)) << 4) + ((SMOOTHED(4, 3) < SMOOTHED(19, -7)) << 3) + ((SMOOTHED(-18, 5) < SMOOTHED(-4, 5)) << 2) + ((SMOOTHED(4, 0) < SMOOTHED(-20, 4)) << 1) + ((SMOOTHED(7, -11) < SMOOTHED(18, 12)) << 0));
-    desc[10] = (uchar)(((SMOOTHED(-20, 17) < SMOOTHED(-18, 7)) << 7) + ((SMOOTHED(2, 15) < SMOOTHED(19, -11)) << 6) + ((SMOOTHED(-18, 6) < SMOOTHED(-7, 3)) << 5) + ((SMOOTHED(-4, 1) < SMOOTHED(-14, 13)) << 4) + ((SMOOTHED(17, 3) < SMOOTHED(2, -8)) << 3) + ((SMOOTHED(-7, 2) < SMOOTHED(1, 6)) << 2) + ((SMOOTHED(17, -9) < SMOOTHED(-2, 8)) << 1) + ((SMOOTHED(-8, -6) < SMOOTHED(-1, 12)) << 0));
-    desc[11] = (uchar)(((SMOOTHED(-2, 4) < SMOOTHED(-1, 6)) << 7) + ((SMOOTHED(-2, 7) < SMOOTHED(6, 8)) << 6) + ((SMOOTHED(-8, -1) < SMOOTHED(-7, -9)) << 5) + ((SMOOTHED(8, -9) < SMOOTHED(15, 0)) << 4) + ((SMOOTHED(0, 22) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(-14, -1) < SMOOTHED(3, -2)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(17, -7)) << 1) + ((SMOOTHED(-8, -2) < SMOOTHED(9, -4)) << 0));
-    desc[12] = (uchar)(((SMOOTHED(5, -7) < SMOOTHED(7, 7)) << 7) + ((SMOOTHED(-5, 13) < SMOOTHED(-8, 11)) << 6) + ((SMOOTHED(11, -4) < SMOOTHED(0, 8)) << 5) + ((SMOOTHED(5, -11) < SMOOTHED(-9, -6)) << 4) + ((SMOOTHED(2, -6) < SMOOTHED(3, -20)) << 3) + ((SMOOTHED(-6, 2) < SMOOTHED(6, 10)) << 2) + ((SMOOTHED(-6, -6) < SMOOTHED(-15, 7)) << 1) + ((SMOOTHED(-6, -3) < SMOOTHED(2, 1)) << 0));
-    desc[13] = (uchar)(((SMOOTHED(11, 0) < SMOOTHED(-3, 2)) << 7) + ((SMOOTHED(7, -12) < SMOOTHED(14, 5)) << 6) + ((SMOOTHED(0, -7) < SMOOTHED(-1, -1)) << 5) + ((SMOOTHED(-16, 0) < SMOOTHED(6, 8)) << 4) + ((SMOOTHED(22, 11) < SMOOTHED(0, -3)) << 3) + ((SMOOTHED(19, 0) < SMOOTHED(5, -17)) << 2) + ((SMOOTHED(-23, -14) < SMOOTHED(-13, -19)) << 1) + ((SMOOTHED(-8, 10) < SMOOTHED(-11, -2)) << 0));
-    desc[14] = (uchar)(((SMOOTHED(-11, 6) < SMOOTHED(-10, 13)) << 7) + ((SMOOTHED(1, -7) < SMOOTHED(14, 0)) << 6) + ((SMOOTHED(-12, 1) < SMOOTHED(-5, -5)) << 5) + ((SMOOTHED(4, 7) < SMOOTHED(8, -1)) << 4) + ((SMOOTHED(-1, -5) < SMOOTHED(15, 2)) << 3) + ((SMOOTHED(-3, -1) < SMOOTHED(7, -10)) << 2) + ((SMOOTHED(3, -6) < SMOOTHED(10, -18)) << 1) + ((SMOOTHED(-7, -13) < SMOOTHED(-13, 10)) << 0));
-    desc[15] = (uchar)(((SMOOTHED(1, -1) < SMOOTHED(13, -10)) << 7) + ((SMOOTHED(-19, 14) < SMOOTHED(8, -14)) << 6) + ((SMOOTHED(-4, -13) < SMOOTHED(7, 1)) << 5) + ((SMOOTHED(1, -2) < SMOOTHED(12, -7)) << 4) + ((SMOOTHED(3, -5) < SMOOTHED(1, -5)) << 3) + ((SMOOTHED(-2, -2) < SMOOTHED(8, -10)) << 2) + ((SMOOTHED(2, 14) < SMOOTHED(8, 7)) << 1) + ((SMOOTHED(3, 9) < SMOOTHED(8, 2)) << 0));
-#if BYTES > 16
-    desc[16] = (uchar)(((SMOOTHED(-9, 1) < SMOOTHED(-18, 0)) << 7) + ((SMOOTHED(4, 0) < SMOOTHED(1, 12)) << 6) + ((SMOOTHED(0, 9) < SMOOTHED(-14, -10)) << 5) + ((SMOOTHED(-13, -9) < SMOOTHED(-2, 6)) << 4) + ((SMOOTHED(1, 5) < SMOOTHED(10, 10)) << 3) + ((SMOOTHED(-3, -6) < SMOOTHED(-16, -5)) << 2) + ((SMOOTHED(11, 6) < SMOOTHED(-5, 0)) << 1) + ((SMOOTHED(-23, 10) < SMOOTHED(1, 2)) << 0));
-    desc[17] = (uchar)(((SMOOTHED(13, -5) < SMOOTHED(-3, 9)) << 7) + ((SMOOTHED(-4, -1) < SMOOTHED(-13, -5)) << 6) + ((SMOOTHED(10, 13) < SMOOTHED(-11, 8)) << 5) + ((SMOOTHED(19, 20) < SMOOTHED(-9, 2)) << 4) + ((SMOOTHED(4, -8) < SMOOTHED(0, -9)) << 3) + ((SMOOTHED(-14, 10) < SMOOTHED(15, 19)) << 2) + ((SMOOTHED(-14, -12) < SMOOTHED(-10, -3)) << 1) + ((SMOOTHED(-23, -3) < SMOOTHED(17, -2)) << 0));
-    desc[18] = (uchar)(((SMOOTHED(-3, -11) < SMOOTHED(6, -14)) << 7) + ((SMOOTHED(19, -2) < SMOOTHED(-4, 2)) << 6) + ((SMOOTHED(-5, 5) < SMOOTHED(3, -13)) << 5) + ((SMOOTHED(2, -2) < SMOOTHED(-5, 4)) << 4) + ((SMOOTHED(17, 4) < SMOOTHED(17, -11)) << 3) + ((SMOOTHED(-7, -2) < SMOOTHED(1, 23)) << 2) + ((SMOOTHED(8, 13) < SMOOTHED(1, -16)) << 1) + ((SMOOTHED(-13, -5) < SMOOTHED(1, -17)) << 0));
-    desc[19] = (uchar)(((SMOOTHED(4, 6) < SMOOTHED(-8, -3)) << 7) + ((SMOOTHED(-5, -9) < SMOOTHED(-2, -10)) << 6) + ((SMOOTHED(-9, 0) < SMOOTHED(-7, -2)) << 5) + ((SMOOTHED(5, 0) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-4, -16) < SMOOTHED(6, 3)) << 3) + ((SMOOTHED(2, -15) < SMOOTHED(-2, 12)) << 2) + ((SMOOTHED(4, -1) < SMOOTHED(6, 2)) << 1) + ((SMOOTHED(1, 1) < SMOOTHED(-2, -8)) << 0));
-    desc[20] = (uchar)(((SMOOTHED(-2, 12) < SMOOTHED(-5, -2)) << 7) + ((SMOOTHED(-8, 8) < SMOOTHED(-9, 9)) << 6) + ((SMOOTHED(2, -10) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-4, 10) < SMOOTHED(-9, 4)) << 4) + ((SMOOTHED(6, 12) < SMOOTHED(2, 5)) << 3) + ((SMOOTHED(-3, -8) < SMOOTHED(0, 5)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-7, 2)) << 1) + ((SMOOTHED(-1, -10) < SMOOTHED(7, -18)) << 0));
-    desc[21] = (uchar)(((SMOOTHED(-1, 8) < SMOOTHED(-9, -10)) << 7) + ((SMOOTHED(-23, -1) < SMOOTHED(6, 2)) << 6) + ((SMOOTHED(-5, -3) < SMOOTHED(3, 2)) << 5) + ((SMOOTHED(0, 11) < SMOOTHED(-4, -7)) << 4) + ((SMOOTHED(15, 2) < SMOOTHED(-10, -3)) << 3) + ((SMOOTHED(-20, -8) < SMOOTHED(-13, 3)) << 2) + ((SMOOTHED(-19, -12) < SMOOTHED(5, -11)) << 1) + ((SMOOTHED(-17, -13) < SMOOTHED(-3, 2)) << 0));
-    desc[22] = (uchar)(((SMOOTHED(7, 4) < SMOOTHED(-12, 0)) << 7) + ((SMOOTHED(5, -1) < SMOOTHED(-14, -6)) << 6) + ((SMOOTHED(-4, 11) < SMOOTHED(0, -4)) << 5) + ((SMOOTHED(3, 10) < SMOOTHED(7, -3)) << 4) + ((SMOOTHED(13, 21) < SMOOTHED(-11, 6)) << 3) + ((SMOOTHED(-12, 24) < SMOOTHED(-7, -4)) << 2) + ((SMOOTHED(4, 16) < SMOOTHED(3, -14)) << 1) + ((SMOOTHED(-3, 5) < SMOOTHED(-7, -12)) << 0));
-    desc[23] = (uchar)(((SMOOTHED(0, -4) < SMOOTHED(7, -5)) << 7) + ((SMOOTHED(-17, -9) < SMOOTHED(13, -7)) << 6) + ((SMOOTHED(22, -6) < SMOOTHED(-11, 5)) << 5) + ((SMOOTHED(2, -8) < SMOOTHED(23, -11)) << 4) + ((SMOOTHED(7, -10) < SMOOTHED(-1, 14)) << 3) + ((SMOOTHED(-3, -10) < SMOOTHED(8, 3)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-6, 0)) << 1) + ((SMOOTHED(-7, -21) < SMOOTHED(6, -14)) << 0));
-    desc[24] = (uchar)(((SMOOTHED(18, 19) < SMOOTHED(-4, -6)) << 7) + ((SMOOTHED(10, 7) < SMOOTHED(-1, -4)) << 6) + ((SMOOTHED(-1, 21) < SMOOTHED(1, -5)) << 5) + ((SMOOTHED(-10, 6) < SMOOTHED(-11, -2)) << 4) + ((SMOOTHED(18, -3) < SMOOTHED(-1, 7)) << 3) + ((SMOOTHED(-3, -9) < SMOOTHED(-5, 10)) << 2) + ((SMOOTHED(-13, 14) < SMOOTHED(17, -3)) << 1) + ((SMOOTHED(11, -19) < SMOOTHED(-1, -18)) << 0));
-    desc[25] = (uchar)(((SMOOTHED(8, -2) < SMOOTHED(-18, -23)) << 7) + ((SMOOTHED(0, -5) < SMOOTHED(-2, -9)) << 6) + ((SMOOTHED(-4, -11) < SMOOTHED(2, -8)) << 5) + ((SMOOTHED(14, 6) < SMOOTHED(-3, -6)) << 4) + ((SMOOTHED(-3, 0) < SMOOTHED(-15, 0)) << 3) + ((SMOOTHED(-9, 4) < SMOOTHED(-15, -9)) << 2) + ((SMOOTHED(-1, 11) < SMOOTHED(3, 11)) << 1) + ((SMOOTHED(-10, -16) < SMOOTHED(-7, 7)) << 0));
-    desc[26] = (uchar)(((SMOOTHED(-2, -10) < SMOOTHED(-10, -2)) << 7) + ((SMOOTHED(-5, -3) < SMOOTHED(5, -23)) << 6) + ((SMOOTHED(13, -8) < SMOOTHED(-15, -11)) << 5) + ((SMOOTHED(-15, 11) < SMOOTHED(6, -6)) << 4) + ((SMOOTHED(-16, -3) < SMOOTHED(-2, 2)) << 3) + ((SMOOTHED(6, 12) < SMOOTHED(-16, 24)) << 2) + ((SMOOTHED(-10, 0) < SMOOTHED(8, 11)) << 1) + ((SMOOTHED(-7, 7) < SMOOTHED(-19, -7)) << 0));
-    desc[27] = (uchar)(((SMOOTHED(5, 16) < SMOOTHED(9, -3)) << 7) + ((SMOOTHED(9, 7) < SMOOTHED(-7, -16)) << 6) + ((SMOOTHED(3, 2) < SMOOTHED(-10, 9)) << 5) + ((SMOOTHED(21, 1) < SMOOTHED(8, 7)) << 4) + ((SMOOTHED(7, 0) < SMOOTHED(1, 17)) << 3) + ((SMOOTHED(-8, 12) < SMOOTHED(9, 6)) << 2) + ((SMOOTHED(11, -7) < SMOOTHED(-8, -6)) << 1) + ((SMOOTHED(19, 0) < SMOOTHED(9, 3)) << 0));
-    desc[28] = (uchar)(((SMOOTHED(1, -7) < SMOOTHED(-5, -11)) << 7) + ((SMOOTHED(0, 8) < SMOOTHED(-2, 14)) << 6) + ((SMOOTHED(12, -2) < SMOOTHED(-15, -6)) << 5) + ((SMOOTHED(4, 12) < SMOOTHED(0, -21)) << 4) + ((SMOOTHED(17, -4) < SMOOTHED(-6, -7)) << 3) + ((SMOOTHED(-10, -9) < SMOOTHED(-14, -7)) << 2) + ((SMOOTHED(-15, -10) < SMOOTHED(-15, -14)) << 1) + ((SMOOTHED(-7, -5) < SMOOTHED(5, -12)) << 0));
-    desc[29] = (uchar)(((SMOOTHED(-4, 0) < SMOOTHED(15, -4)) << 7) + ((SMOOTHED(5, 2) < SMOOTHED(-6, -23)) << 6) + ((SMOOTHED(-4, -21) < SMOOTHED(-6, 4)) << 5) + ((SMOOTHED(-10, 5) < SMOOTHED(-15, 6)) << 4) + ((SMOOTHED(4, -3) < SMOOTHED(-1, 5)) << 3) + ((SMOOTHED(-4, 19) < SMOOTHED(-23, -4)) << 2) + ((SMOOTHED(-4, 17) < SMOOTHED(13, -11)) << 1) + ((SMOOTHED(1, 12) < SMOOTHED(4, -14)) << 0));
-    desc[30] = (uchar)(((SMOOTHED(-11, -6) < SMOOTHED(-20, 10)) << 7) + ((SMOOTHED(4, 5) < SMOOTHED(3, 20)) << 6) + ((SMOOTHED(-8, -20) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-19, 9) < SMOOTHED(9, -3)) << 4) + ((SMOOTHED(18, 15) < SMOOTHED(11, -4)) << 3) + ((SMOOTHED(12, 16) < SMOOTHED(8, 7)) << 2) + ((SMOOTHED(-14, -8) < SMOOTHED(-3, 9)) << 1) + ((SMOOTHED(-6, 0) < SMOOTHED(2, -4)) << 0));
-    desc[31] = (uchar)(((SMOOTHED(1, -10) < SMOOTHED(-1, 2)) << 7) + ((SMOOTHED(8, -7) < SMOOTHED(-6, 18)) << 6) + ((SMOOTHED(9, 12) < SMOOTHED(-7, -23)) << 5) + ((SMOOTHED(8, -6) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-9, 6) < SMOOTHED(-12, -7)) << 3) + ((SMOOTHED(-1, -2) < SMOOTHED(-7, 2)) << 2) + ((SMOOTHED(9, 9) < SMOOTHED(7, 15)) << 1) + ((SMOOTHED(6, 2) < SMOOTHED(-6, 6)) << 0));
-#endif
-#if BYTES > 32
-    desc[32] = (uchar)(((SMOOTHED(16, 12) < SMOOTHED(0, 19)) << 7) + ((SMOOTHED(4, 3) < SMOOTHED(6, 0)) << 6) + ((SMOOTHED(-2, -1) < SMOOTHED(2, 17)) << 5) + ((SMOOTHED(8, 1) < SMOOTHED(3, 1)) << 4) + ((SMOOTHED(-12, -1) < SMOOTHED(-11, 0)) << 3) + ((SMOOTHED(-11, 2) < SMOOTHED(7, 9)) << 2) + ((SMOOTHED(-1, 3) < SMOOTHED(-19, 4)) << 1) + ((SMOOTHED(-1, -11) < SMOOTHED(-1, 3)) << 0));
-    desc[33] = (uchar)(((SMOOTHED(1, -10) < SMOOTHED(-10, -4)) << 7) + ((SMOOTHED(-2, 3) < SMOOTHED(6, 11)) << 6) + ((SMOOTHED(3, 7) < SMOOTHED(-9, -8)) << 5) + ((SMOOTHED(24, -14) < SMOOTHED(-2, -10)) << 4) + ((SMOOTHED(-3, -3) < SMOOTHED(-18, -6)) << 3) + ((SMOOTHED(-13, -10) < SMOOTHED(-7, -1)) << 2) + ((SMOOTHED(2, -7) < SMOOTHED(9, -6)) << 1) + ((SMOOTHED(2, -4) < SMOOTHED(6, -13)) << 0));
-    desc[34] = (uchar)(((SMOOTHED(4, -4) < SMOOTHED(-2, 3)) << 7) + ((SMOOTHED(-4, 2) < SMOOTHED(9, 13)) << 6) + ((SMOOTHED(-11, 5) < SMOOTHED(-6, -11)) << 5) + ((SMOOTHED(4, -2) < SMOOTHED(11, -9)) << 4) + ((SMOOTHED(-19, 0) < SMOOTHED(-23, -5)) << 3) + ((SMOOTHED(-5, -7) < SMOOTHED(-3, -6)) << 2) + ((SMOOTHED(-6, -4) < SMOOTHED(12, 14)) << 1) + ((SMOOTHED(12, -11) < SMOOTHED(-8, -16)) << 0));
-    desc[35] = (uchar)(((SMOOTHED(-21, 15) < SMOOTHED(-12, 6)) << 7) + ((SMOOTHED(-2, -1) < SMOOTHED(-8, 16)) << 6) + ((SMOOTHED(6, -1) < SMOOTHED(-8, -2)) << 5) + ((SMOOTHED(1, -1) < SMOOTHED(-9, 8)) << 4) + ((SMOOTHED(3, -4) < SMOOTHED(-2, -2)) << 3) + ((SMOOTHED(-7, 0) < SMOOTHED(4, -8)) << 2) + ((SMOOTHED(11, -11) < SMOOTHED(-12, 2)) << 1) + ((SMOOTHED(2, 3) < SMOOTHED(11, 7)) << 0));
-    desc[36] = (uchar)(((SMOOTHED(-7, -4) < SMOOTHED(-9, -6)) << 7) + ((SMOOTHED(3, -7) < SMOOTHED(-5, 0)) << 6) + ((SMOOTHED(3, -7) < SMOOTHED(-10, -5)) << 5) + ((SMOOTHED(-3, -1) < SMOOTHED(8, -10)) << 4) + ((SMOOTHED(0, 8) < SMOOTHED(5, 1)) << 3) + ((SMOOTHED(9, 0) < SMOOTHED(1, 16)) << 2) + ((SMOOTHED(8, 4) < SMOOTHED(-11, -3)) << 1) + ((SMOOTHED(-15, 9) < SMOOTHED(8, 17)) << 0));
-    desc[37] = (uchar)(((SMOOTHED(0, 2) < SMOOTHED(-9, 17)) << 7) + ((SMOOTHED(-6, -11) < SMOOTHED(-10, -3)) << 6) + ((SMOOTHED(1, 1) < SMOOTHED(15, -8)) << 5) + ((SMOOTHED(-12, -13) < SMOOTHED(-2, 4)) << 4) + ((SMOOTHED(-6, 4) < SMOOTHED(-6, -10)) << 3) + ((SMOOTHED(5, -7) < SMOOTHED(7, -5)) << 2) + ((SMOOTHED(10, 6) < SMOOTHED(8, 9)) << 1) + ((SMOOTHED(-5, 7) < SMOOTHED(-18, -3)) << 0));
-    desc[38] = (uchar)(((SMOOTHED(-6, 3) < SMOOTHED(5, 4)) << 7) + ((SMOOTHED(-10, -13) < SMOOTHED(-5, -3)) << 6) + ((SMOOTHED(-11, 2) < SMOOTHED(-16, 0)) << 5) + ((SMOOTHED(7, -21) < SMOOTHED(-5, -13)) << 4) + ((SMOOTHED(-14, -14) < SMOOTHED(-4, -4)) << 3) + ((SMOOTHED(4, 9) < SMOOTHED(7, -3)) << 2) + ((SMOOTHED(4, 11) < SMOOTHED(10, -4)) << 1) + ((SMOOTHED(6, 17) < SMOOTHED(9, 17)) << 0));
-    desc[39] = (uchar)(((SMOOTHED(-10, 8) < SMOOTHED(0, -11)) << 7) + ((SMOOTHED(-6, -16) < SMOOTHED(-6, 8)) << 6) + ((SMOOTHED(-13, 5) < SMOOTHED(10, -5)) << 5) + ((SMOOTHED(3, 2) < SMOOTHED(12, 16)) << 4) + ((SMOOTHED(13, -8) < SMOOTHED(0, -6)) << 3) + ((SMOOTHED(10, 0) < SMOOTHED(4, -11)) << 2) + ((SMOOTHED(8, 5) < SMOOTHED(10, -2)) << 1) + ((SMOOTHED(11, -7) < SMOOTHED(-13, 3)) << 0));
-    desc[40] = (uchar)(((SMOOTHED(2, 4) < SMOOTHED(-7, -3)) << 7) + ((SMOOTHED(-14, -2) < SMOOTHED(-11, 16)) << 6) + ((SMOOTHED(11, -6) < SMOOTHED(7, 6)) << 5) + ((SMOOTHED(-3, 15) < SMOOTHED(8, -10)) << 4) + ((SMOOTHED(-3, 8) < SMOOTHED(12, -12)) << 3) + ((SMOOTHED(-13, 6) < SMOOTHED(-14, 7)) << 2) + ((SMOOTHED(-11, -5) < SMOOTHED(-8, -6)) << 1) + ((SMOOTHED(7, -6) < SMOOTHED(6, 3)) << 0));
-    desc[41] = (uchar)(((SMOOTHED(-4, 10) < SMOOTHED(5, 1)) << 7) + ((SMOOTHED(9, 16) < SMOOTHED(10, 13)) << 6) + ((SMOOTHED(-17, 10) < SMOOTHED(2, 8)) << 5) + ((SMOOTHED(-5, 1) < SMOOTHED(4, -4)) << 4) + ((SMOOTHED(-14, 8) < SMOOTHED(-5, 2)) << 3) + ((SMOOTHED(4, -9) < SMOOTHED(-6, -3)) << 2) + ((SMOOTHED(3, -7) < SMOOTHED(-10, 0)) << 1) + ((SMOOTHED(-2, -8) < SMOOTHED(-10, 4)) << 0));
-    desc[42] = (uchar)(((SMOOTHED(-8, 5) < SMOOTHED(-9, 24)) << 7) + ((SMOOTHED(2, -8) < SMOOTHED(8, -9)) << 6) + ((SMOOTHED(-4, 17) < SMOOTHED(-5, 2)) << 5) + ((SMOOTHED(14, 0) < SMOOTHED(-9, 9)) << 4) + ((SMOOTHED(11, 15) < SMOOTHED(-6, 5)) << 3) + ((SMOOTHED(-8, 1) < SMOOTHED(-3, 4)) << 2) + ((SMOOTHED(9, -21) < SMOOTHED(10, 2)) << 1) + ((SMOOTHED(2, -1) < SMOOTHED(4, 11)) << 0));
-    desc[43] = (uchar)(((SMOOTHED(24, 3) < SMOOTHED(2, -2)) << 7) + ((SMOOTHED(-8, 17) < SMOOTHED(-14, -10)) << 6) + ((SMOOTHED(6, 5) < SMOOTHED(-13, 7)) << 5) + ((SMOOTHED(11, 10) < SMOOTHED(0, -1)) << 4) + ((SMOOTHED(4, 6) < SMOOTHED(-10, 6)) << 3) + ((SMOOTHED(-12, -2) < SMOOTHED(5, 6)) << 2) + ((SMOOTHED(3, -1) < SMOOTHED(8, -15)) << 1) + ((SMOOTHED(1, -4) < SMOOTHED(-7, 11)) << 0));
-    desc[44] = (uchar)(((SMOOTHED(1, 11) < SMOOTHED(5, 0)) << 7) + ((SMOOTHED(6, -12) < SMOOTHED(10, 1)) << 6) + ((SMOOTHED(-3, -2) < SMOOTHED(-1, 4)) << 5) + ((SMOOTHED(-2, -11) < SMOOTHED(-1, 12)) << 4) + ((SMOOTHED(7, -8) < SMOOTHED(-20, -18)) << 3) + ((SMOOTHED(2, 0) < SMOOTHED(-9, 2)) << 2) + ((SMOOTHED(-13, -1) < SMOOTHED(-16, 2)) << 1) + ((SMOOTHED(3, -1) < SMOOTHED(-5, -17)) << 0));
-    desc[45] = (uchar)(((SMOOTHED(15, 8) < SMOOTHED(3, -14)) << 7) + ((SMOOTHED(-13, -12) < SMOOTHED(6, 15)) << 6) + ((SMOOTHED(2, -8) < SMOOTHED(2, 6)) << 5) + ((SMOOTHED(6, 22) < SMOOTHED(-3, -23)) << 4) + ((SMOOTHED(-2, -7) < SMOOTHED(-6, 0)) << 3) + ((SMOOTHED(13, -10) < SMOOTHED(-6, 6)) << 2) + ((SMOOTHED(6, 7) < SMOOTHED(-10, 12)) << 1) + ((SMOOTHED(-6, 7) < SMOOTHED(-2, 11)) << 0));
-    desc[46] = (uchar)(((SMOOTHED(0, -22) < SMOOTHED(-2, -17)) << 7) + ((SMOOTHED(-4, -1) < SMOOTHED(-11, -14)) << 6) + ((SMOOTHED(-2, -8) < SMOOTHED(7, 12)) << 5) + ((SMOOTHED(12, -5) < SMOOTHED(7, -13)) << 4) + ((SMOOTHED(2, -2) < SMOOTHED(-7, 6)) << 3) + ((SMOOTHED(0, 8) < SMOOTHED(-3, 23)) << 2) + ((SMOOTHED(6, 12) < SMOOTHED(13, -11)) << 1) + ((SMOOTHED(-21, -10) < SMOOTHED(10, 8)) << 0));
-    desc[47] = (uchar)(((SMOOTHED(-3, 0) < SMOOTHED(7, 15)) << 7) + ((SMOOTHED(7, -6) < SMOOTHED(-5, -12)) << 6) + ((SMOOTHED(-21, -10) < SMOOTHED(12, -11)) << 5) + ((SMOOTHED(-5, -11) < SMOOTHED(8, -11)) << 4) + ((SMOOTHED(5, 0) < SMOOTHED(-11, -1)) << 3) + ((SMOOTHED(8, -9) < SMOOTHED(7, -1)) << 2) + ((SMOOTHED(11, -23) < SMOOTHED(21, -5)) << 1) + ((SMOOTHED(0, -5) < SMOOTHED(-8, 6)) << 0));
-    desc[48] = (uchar)(((SMOOTHED(-6, 8) < SMOOTHED(8, 12)) << 7) + ((SMOOTHED(-7, 5) < SMOOTHED(3, -2)) << 6) + ((SMOOTHED(-5, -20) < SMOOTHED(-12, 9)) << 5) + ((SMOOTHED(-6, 12) < SMOOTHED(-11, 3)) << 4) + ((SMOOTHED(4, 5) < SMOOTHED(13, 11)) << 3) + ((SMOOTHED(2, 12) < SMOOTHED(13, -12)) << 2) + ((SMOOTHED(-4, -13) < SMOOTHED(4, 7)) << 1) + ((SMOOTHED(0, 15) < SMOOTHED(-3, -16)) << 0));
-    desc[49] = (uchar)(((SMOOTHED(-3, 2) < SMOOTHED(-2, 14)) << 7) + ((SMOOTHED(4, -14) < SMOOTHED(16, -11)) << 6) + ((SMOOTHED(-13, 3) < SMOOTHED(23, 10)) << 5) + ((SMOOTHED(9, -19) < SMOOTHED(2, 5)) << 4) + ((SMOOTHED(5, 3) < SMOOTHED(14, -7)) << 3) + ((SMOOTHED(19, -13) < SMOOTHED(-11, 15)) << 2) + ((SMOOTHED(14, 0) < SMOOTHED(-2, -5)) << 1) + ((SMOOTHED(11, -4) < SMOOTHED(0, -6)) << 0));
-    desc[50] = (uchar)(((SMOOTHED(-2, 5) < SMOOTHED(-13, -8)) << 7) + ((SMOOTHED(-11, -15) < SMOOTHED(-7, -17)) << 6) + ((SMOOTHED(1, 3) < SMOOTHED(-10, -8)) << 5) + ((SMOOTHED(-13, -10) < SMOOTHED(7, -12)) << 4) + ((SMOOTHED(0, -13) < SMOOTHED(23, -6)) << 3) + ((SMOOTHED(2, -17) < SMOOTHED(-7, -3)) << 2) + ((SMOOTHED(1, 3) < SMOOTHED(4, -10)) << 1) + ((SMOOTHED(13, 4) < SMOOTHED(14, -6)) << 0));
-    desc[51] = (uchar)(((SMOOTHED(-19, -2) < SMOOTHED(-1, 5)) << 7) + ((SMOOTHED(9, -8) < SMOOTHED(10, -5)) << 6) + ((SMOOTHED(7, -1) < SMOOTHED(5, 7)) << 5) + ((SMOOTHED(9, -10) < SMOOTHED(19, 0)) << 4) + ((SMOOTHED(7, 5) < SMOOTHED(-4, -7)) << 3) + ((SMOOTHED(-11, 1) < SMOOTHED(-1, -11)) << 2) + ((SMOOTHED(2, -1) < SMOOTHED(-4, 11)) << 1) + ((SMOOTHED(-1, 7) < SMOOTHED(2, -2)) << 0));
-    desc[52] = (uchar)(((SMOOTHED(1, -20) < SMOOTHED(-9, -6)) << 7) + ((SMOOTHED(-4, -18) < SMOOTHED(8, -18)) << 6) + ((SMOOTHED(-16, -2) < SMOOTHED(7, -6)) << 5) + ((SMOOTHED(-3, -6) < SMOOTHED(-1, -4)) << 4) + ((SMOOTHED(0, -16) < SMOOTHED(24, -5)) << 3) + ((SMOOTHED(-4, -2) < SMOOTHED(-1, 9)) << 2) + ((SMOOTHED(-8, 2) < SMOOTHED(-6, 15)) << 1) + ((SMOOTHED(11, 4) < SMOOTHED(0, -3)) << 0));
-    desc[53] = (uchar)(((SMOOTHED(7, 6) < SMOOTHED(2, -10)) << 7) + ((SMOOTHED(-7, -9) < SMOOTHED(12, -6)) << 6) + ((SMOOTHED(24, 15) < SMOOTHED(-8, -1)) << 5) + ((SMOOTHED(15, -9) < SMOOTHED(-3, -15)) << 4) + ((SMOOTHED(17, -5) < SMOOTHED(11, -10)) << 3) + ((SMOOTHED(-2, 13) < SMOOTHED(-15, 4)) << 2) + ((SMOOTHED(-2, -1) < SMOOTHED(4, -23)) << 1) + ((SMOOTHED(-16, 3) < SMOOTHED(-7, -14)) << 0));
-    desc[54] = (uchar)(((SMOOTHED(-3, -5) < SMOOTHED(-10, -9)) << 7) + ((SMOOTHED(-5, 3) < SMOOTHED(-2, -1)) << 6) + ((SMOOTHED(-1, 4) < SMOOTHED(1, 8)) << 5) + ((SMOOTHED(12, 9) < SMOOTHED(9, -14)) << 4) + ((SMOOTHED(-9, 17) < SMOOTHED(-3, 0)) << 3) + ((SMOOTHED(5, 4) < SMOOTHED(13, -6)) << 2) + ((SMOOTHED(-1, -8) < SMOOTHED(19, 10)) << 1) + ((SMOOTHED(8, -5) < SMOOTHED(-15, 2)) << 0));
-    desc[55] = (uchar)(((SMOOTHED(-12, -9) < SMOOTHED(-4, -5)) << 7) + ((SMOOTHED(12, 0) < SMOOTHED(24, 4)) << 6) + ((SMOOTHED(8, -2) < SMOOTHED(14, 4)) << 5) + ((SMOOTHED(8, -4) < SMOOTHED(-7, 16)) << 4) + ((SMOOTHED(5, -1) < SMOOTHED(-8, -4)) << 3) + ((SMOOTHED(-2, 18) < SMOOTHED(-5, 17)) << 2) + ((SMOOTHED(8, -2) < SMOOTHED(-9, -2)) << 1) + ((SMOOTHED(3, -7) < SMOOTHED(1, -6)) << 0));
-    desc[56] = (uchar)(((SMOOTHED(-5, -22) < SMOOTHED(-5, -2)) << 7) + ((SMOOTHED(-8, -10) < SMOOTHED(14, 1)) << 6) + ((SMOOTHED(-3, -13) < SMOOTHED(3, 9)) << 5) + ((SMOOTHED(-4, -1) < SMOOTHED(-1, 0)) << 4) + ((SMOOTHED(-7, -21) < SMOOTHED(12, -19)) << 3) + ((SMOOTHED(-8, 8) < SMOOTHED(24, 8)) << 2) + ((SMOOTHED(12, -6) < SMOOTHED(-2, 3)) << 1) + ((SMOOTHED(-5, -11) < SMOOTHED(-22, -4)) << 0));
-    desc[57] = (uchar)(((SMOOTHED(-3, 5) < SMOOTHED(-4, 4)) << 7) + ((SMOOTHED(-16, 24) < SMOOTHED(7, -9)) << 6) + ((SMOOTHED(-10, 23) < SMOOTHED(-9, 18)) << 5) + ((SMOOTHED(1, 12) < SMOOTHED(17, 21)) << 4) + ((SMOOTHED(24, -6) < SMOOTHED(-3, -11)) << 3) + ((SMOOTHED(-7, 17) < SMOOTHED(1, -6)) << 2) + ((SMOOTHED(4, 4) < SMOOTHED(2, -7)) << 1) + ((SMOOTHED(14, 6) < SMOOTHED(-12, 3)) << 0));
-    desc[58] = (uchar)(((SMOOTHED(-6, 0) < SMOOTHED(-16, 13)) << 7) + ((SMOOTHED(-10, 5) < SMOOTHED(7, 12)) << 6) + ((SMOOTHED(5, 2) < SMOOTHED(6, -3)) << 5) + ((SMOOTHED(7, 0) < SMOOTHED(-23, 1)) << 4) + ((SMOOTHED(15, -5) < SMOOTHED(1, 14)) << 3) + ((SMOOTHED(-3, -1) < SMOOTHED(6, 6)) << 2) + ((SMOOTHED(6, -9) < SMOOTHED(-9, 12)) << 1) + ((SMOOTHED(4, -2) < SMOOTHED(-4, 7)) << 0));
-    desc[59] = (uchar)(((SMOOTHED(-4, -5) < SMOOTHED(4, 4)) << 7) + ((SMOOTHED(-13, 0) < SMOOTHED(6, -10)) << 6) + ((SMOOTHED(2, -12) < SMOOTHED(-6, -3)) << 5) + ((SMOOTHED(16, 0) < SMOOTHED(-3, 3)) << 4) + ((SMOOTHED(5, -14) < SMOOTHED(6, 11)) << 3) + ((SMOOTHED(5, 11) < SMOOTHED(0, -13)) << 2) + ((SMOOTHED(7, 5) < SMOOTHED(-1, -5)) << 1) + ((SMOOTHED(12, 4) < SMOOTHED(6, 10)) << 0));
-    desc[60] = (uchar)(((SMOOTHED(-10, 4) < SMOOTHED(-1, -11)) << 7) + ((SMOOTHED(4, 10) < SMOOTHED(-14, 5)) << 6) + ((SMOOTHED(11, -14) < SMOOTHED(-13, 0)) << 5) + ((SMOOTHED(2, 8) < SMOOTHED(12, 24)) << 4) + ((SMOOTHED(-1, 3) < SMOOTHED(-1, 2)) << 3) + ((SMOOTHED(9, -14) < SMOOTHED(-23, 3)) << 2) + ((SMOOTHED(-8, -6) < SMOOTHED(0, 9)) << 1) + ((SMOOTHED(-15, 14) < SMOOTHED(10, -10)) << 0));
-    desc[61] = (uchar)(((SMOOTHED(-10, -6) < SMOOTHED(-7, -5)) << 7) + ((SMOOTHED(11, 5) < SMOOTHED(-3, -15)) << 6) + ((SMOOTHED(1, 0) < SMOOTHED(1, 8)) << 5) + ((SMOOTHED(-11, -6) < SMOOTHED(-4, -18)) << 4) + ((SMOOTHED(9, 0) < SMOOTHED(22, -4)) << 3) + ((SMOOTHED(-5, -1) < SMOOTHED(-9, 4)) << 2) + ((SMOOTHED(-20, 2) < SMOOTHED(1, 6)) << 1) + ((SMOOTHED(1, 2) < SMOOTHED(-9, -12)) << 0));
-    desc[62] = (uchar)(((SMOOTHED(5, 15) < SMOOTHED(4, -6)) << 7) + ((SMOOTHED(19, 4) < SMOOTHED(4, 11)) << 6) + ((SMOOTHED(17, -4) < SMOOTHED(-8, -1)) << 5) + ((SMOOTHED(-8, -12) < SMOOTHED(7, -3)) << 4) + ((SMOOTHED(11, 9) < SMOOTHED(8, 1)) << 3) + ((SMOOTHED(9, 22) < SMOOTHED(-15, 15)) << 2) + ((SMOOTHED(-7, -7) < SMOOTHED(1, -23)) << 1) + ((SMOOTHED(-5, 13) < SMOOTHED(-8, 2)) << 0));
-    desc[63] = (uchar)(((SMOOTHED(3, -5) < SMOOTHED(11, -11)) << 7) + ((SMOOTHED(3, -18) < SMOOTHED(14, -5)) << 6) + ((SMOOTHED(-20, 7) < SMOOTHED(-10, -23)) << 5) + ((SMOOTHED(-2, -5) < SMOOTHED(6, 0)) << 4) + ((SMOOTHED(-17, -13) < SMOOTHED(-3, 2)) << 3) + ((SMOOTHED(-6, -1) < SMOOTHED(14, -2)) << 2) + ((SMOOTHED(-12, -16) < SMOOTHED(15, 6)) << 1) + ((SMOOTHED(-12, -2) < SMOOTHED(3, -19)) << 0));
-#endif
-
-    for(int i = 0; i<BYTES; ++i)
+    uchar descByte = 0;
+    for(int i = 0; i<8; ++i)
     {
-        descriptors[id * BYTES + i] = desc[i];
+        descByte |= (
+            smoothedSum(sumImg, (int2)( tests[byte * 32 + (i * 4) + 0], tests[byte * 32 + (i * 4) + 1] ))
+          < smoothedSum(sumImg, (int2)( tests[byte * 32 + (i * 4) + 2], tests[byte * 32 + (i * 4) + 3] ))
+          ) << (7-i);
     }
+
+    descriptors[kpId * dscRowStep + byte] = descByte;
 }
