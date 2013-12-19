@@ -113,7 +113,7 @@ struct Logger
 
 namespace cv
 {
-    
+
 template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um)
 {
     if(v.empty())
