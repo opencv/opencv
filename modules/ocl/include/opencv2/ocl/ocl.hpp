@@ -1380,8 +1380,10 @@ namespace cv
             oclMat Dx_;
             oclMat Dy_;
             oclMat eig_;
+            oclMat eig_minmax_;
             oclMat minMaxbuf_;
             oclMat tmpCorners_;
+            oclMat counter_;
         };
 
         inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,
