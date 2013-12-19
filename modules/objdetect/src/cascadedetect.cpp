@@ -1133,7 +1133,7 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
 bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
                                                    int yStep, double factor, Size sumSize0 )
 {
-    const int VECTOR_SIZE = 4;
+    const int VECTOR_SIZE = 1;
     Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
     if( haar.empty() )
         return false;
@@ -1142,7 +1142,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     
     if( cascadeKernel.empty() )
     {
-        cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::haarobjectdetect_oclsrc,
+        cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc,
                              format("-D VECTOR_SIZE=%d", VECTOR_SIZE));
         if( cascadeKernel.empty() )
             return false;
