@@ -954,7 +954,7 @@ int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, do
 
     if( !evaluator->setWindow(pt) )
         return -1;
-    if( data.isStumpBased )
+    if( data.isStumpBased() )
     {
         if( data.featureType == FeatureEvaluator::HAAR )
             return predictOrderedStump<HaarEvaluator>( *this, evaluator, weight );
@@ -1133,6 +1133,7 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
 bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
                                                    int yStep, double factor, Size sumSize0 )
 {
+    const int VECTOR_SIZE = 4;
     Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
     if( haar.empty() )
         return false;
@@ -1142,7 +1143,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     if( cascadeKernel.empty() )
     {
         cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::haarobjectdetect_oclsrc,
-                             format("-D MAX_FACES=%d", MAX_FACES));
+                             format("-D VECTOR_SIZE=%d", VECTOR_SIZE));
         if( cascadeKernel.empty() )
             return false;
     }
@@ -1150,9 +1151,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     if( ustages.empty() )
     {
 		copyVectorToUMat(data.stages, ustages);
-		copyVectorToUMat(data.classifiers, uclassifiers);
-		copyVectorToUMat(data.nodes, unodes);
-		copyVectorToUMat(data.leaves, uleaves);
+		copyVectorToUMat(data.stumps, ustumps);
     }
     
     std::vector<UMat> bufs;
@@ -1162,7 +1161,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
     Rect normrect = haar->getNormRect();
     
     //processingRectSize = Size(yStep, yStep);
-    size_t globalsize[] = { processingRectSize.width/yStep, processingRectSize.height/yStep };
+    size_t globalsize[] = { (processingRectSize.width/yStep + VECTOR_SIZE-1)/VECTOR_SIZE, processingRectSize.height/yStep };
     
     cascadeKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
                        ocl::KernelArg::ReadOnlyNoSize(bufs[1]), // sqsum
@@ -1171,14 +1170,12 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
                        // cascade classifier
                        (int)data.stages.size(),
                        ocl::KernelArg::PtrReadOnly(ustages),
-                       ocl::KernelArg::PtrReadOnly(uclassifiers),
-                       ocl::KernelArg::PtrReadOnly(unodes),
-                       ocl::KernelArg::PtrReadOnly(uleaves),
+                       ocl::KernelArg::PtrReadOnly(ustumps),
                        
                        ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
                        processingRectSize,
                        yStep, (float)factor,
-                       normrect, data.origWinSize);
+                       normrect, data.origWinSize, MAX_FACES);
     bool ok = cascadeKernel.run(2, globalsize, 0, true);
     //CV_Assert(ok);
     return ok;
@@ -1243,7 +1240,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     bool use_ocl = ocl::useOpenCL() &&
         getFeatureType() == FeatureEvaluator::HAAR &&
         !isOldFormatCascade() &&
-        data.isStumpBased &&
+        data.isStumpBased() &&
         maskGenerator.empty() &&
         !outputRejectLevels &&
         tryOpenCL;
@@ -1345,7 +1342,6 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         Mat facepos = ufacepos.getMat(ACCESS_READ);
         const int* fptr = facepos.ptr<int>();
         int i, nfaces = fptr[0];
-        printf("nfaces = %d\n", nfaces);
         for( i = 0; i < nfaces; i++ )
         {
             candidates.push_back(Rect(fptr[i*4+1], fptr[i*4+2], fptr[i*4+3], fptr[i*4+4]));
@@ -1428,6 +1424,12 @@ void CascadeClassifierImpl::detectMultiScale( InputArray _image, std::vector<Rec
     }
 }
 
+    
+CascadeClassifierImpl::Data::Data()
+{
+    stageType = featureType = ncategories = maxNodesPerTree = 0;
+}
+    
 bool CascadeClassifierImpl::Data::read(const FileNode &root)
 {
     static const float THRESHOLD_EPS = 1e-5f;
@@ -1471,9 +1473,10 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
     stages.reserve(fn.size());
     classifiers.clear();
     nodes.clear();
+    stumps.clear();
 
     FileNodeIterator it = fn.begin(), it_end = fn.end();
-    isStumpBased = true;
+    maxNodesPerTree = 0;
 
     for( int si = 0; it != it_end; si++, ++it )
     {
@@ -1499,9 +1502,8 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
 
             DTree tree;
             tree.nodeCount = (int)internalNodes.size()/nodeStep;
-            if( tree.nodeCount > 1 )
-                isStumpBased = false;
-                
+            maxNodesPerTree = std::max(maxNodesPerTree, tree.nodeCount);
+            
             classifiers.push_back(tree);
 
             nodes.reserve(nodes.size() + tree.nodeCount);
@@ -1536,6 +1538,24 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
                 leaves.push_back((float)*internalNodesIter);
         }
     }
+    
+    if( isStumpBased() )
+    {
+        int nodeOfs = 0, leafOfs = 0;
+        size_t nstages = stages.size();
+        for( size_t stageIdx = 0; stageIdx < nstages; stageIdx++ )
+        {
+            const Stage& stage = stages[stageIdx];
+            
+            int ntrees = stage.ntrees;
+            for( int i = 0; i < ntrees; i++, nodeOfs++, leafOfs+= 2 )
+            {
+                const DTreeNode& node = nodes[nodeOfs];
+                stumps.push_back(Stump(node.featureIdx, node.threshold,
+                                       leaves[leafOfs], leaves[leafOfs+1]));
+            }
+        }
+    }
 
     return true;
 }
@@ -1546,9 +1566,7 @@ bool CascadeClassifierImpl::read_(const FileNode& root)
     tryOpenCL = true;
     cascadeKernel = ocl::Kernel();
     ustages.release();
-    uclassifiers.release();
-    unodes.release();
-    uleaves.release();
+    ustumps.release();
     if( !data.read(root) )
         return false;
 

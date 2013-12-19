@@ -142,7 +142,6 @@ Thanks to Martin Spengler, ETH Zurich, for providing the demo movie.
   <height>22</height>
   <width>18</width>
   <stageParams>
-    <maxDepth>0</maxDepth>
     <maxWeakCount>152</maxWeakCount></stageParams>
   <featureParams>
     <maxCatCount>0</maxCatCount></featureParams>
