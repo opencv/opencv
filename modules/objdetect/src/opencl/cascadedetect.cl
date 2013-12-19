@@ -44,7 +44,7 @@ __kernel void runHaarClassifierStump(
     int iy = get_global_id(1)*xyscale;
     sumstep /= sizeof(int);
     sqsumstep /= sizeof(int);
-    
+
     if( ix < imgsize.x && iy < imgsize.y )
     {
         int ntrees;
@@ -52,7 +52,7 @@ __kernel void runHaarClassifierStump(
         float s = 0.f;
         __global const Stump* stump = stumps;
         __global const OptFeature* f;
-        
+
         __global const int* psum = sum + mad24(iy, sumstep, ix);
         __global const int* pnsum = psum + mad24(normrect.y, sumstep, normrect.x);
         int normarea = normrect.z * normrect.w;
@@ -64,7 +64,7 @@ __kernel void runHaarClassifierStump(
         float4 weight, vsval;
         int4 ofs, ofs0, ofs1, ofs2;
         nf = nf > 0 ? nf : 1.f;
-        
+
         for( stageIdx = 0; stageIdx < nstages; stageIdx++ )
         {
             ntrees = stages[stageIdx].ntrees;
@@ -73,7 +73,7 @@ __kernel void runHaarClassifierStump(
             {
                 f = optfeatures + stump->featureIdx;
                 weight = f->weight;
-                
+
                 ofs = f->ofs[0];
                 sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
                 ofs = f->ofs[1];
@@ -83,14 +83,14 @@ __kernel void runHaarClassifierStump(
                     ofs = f->ofs[2];
                     sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
                 }
-                
+
                 s += (sval < stump->threshold*nf) ? stump->left : stump->right;
             }
-            
+
             if( s < stages[stageIdx].threshold )
                 break;
         }
-        
+
         if( stageIdx == nstages )
         {
             int nfaces = atomic_inc(facepos);
@@ -128,7 +128,7 @@ __kernel void runLBPClassifierStump(
     int iy = get_global_id(1)*xyscale;
     sumstep /= sizeof(int);
     sqsumstep /= sizeof(int);
-    
+
     if( ix < imgsize.x && iy < imgsize.y )
     {
         int ntrees;
@@ -137,7 +137,7 @@ __kernel void runLBPClassifierStump(
         __global const Stump* stump = stumps;
         __global const int* bitset = bitsets;
         __global const OptFeature* f;
-        
+
         __global const int* psum = sum + mad24(iy, sumstep, ix);
         __global const int* pnsum = psum + mad24(normrect.y, sumstep, normrect.x);
         int normarea = normrect.z * normrect.w;
@@ -149,7 +149,7 @@ __kernel void runLBPClassifierStump(
         float4 weight;
         int4 ofs;
         nf = nf > 0 ? nf : 1.f;
-        
+
         for( stageIdx = 0; stageIdx < nstages; stageIdx++ )
         {
             ntrees = stages[stageIdx].ntrees;
@@ -157,17 +157,17 @@ __kernel void runLBPClassifierStump(
             for( i = 0; i < ntrees; i++, stump++, bitset += bitsetSize )
             {
                 f = optfeatures + stump->featureIdx;
-                
+
                 weight = f->weight;
-                
+
                 // compute LBP feature to val
                 s += (bitset[val >> 5] & (1 << (val & 31))) ? stump->left : stump->right;
             }
-            
+
             if( s < stages[stageIdx].threshold )
             break;
         }
-        
+
         if( stageIdx == nstages )
         {
             int nfaces = atomic_inc(facepos);
@@ -183,4 +183,3 @@ __kernel void runLBPClassifierStump(
     }
 }
 #endif
-

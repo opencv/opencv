@@ -121,16 +121,15 @@ static bool convert(const String& oldcascade, const String& newcascade)
     FileNode sznode = oldroot[ICV_HAAR_SIZE_NAME];
     if( sznode.empty() )
         return false;
-    int maxdepth = 0;
     Size cascadesize;
     cascadesize.width = (int)sznode[0];
     cascadesize.height = (int)sznode[1];
     std::vector<HaarFeature> features;
 
-    size_t i, j, k, n;
+    int i, j, k, n;
 
     FileNode stages_seq = oldroot[ICV_HAAR_STAGES_NAME];
-    size_t nstages = stages_seq.size();
+    int nstages = (int)stages_seq.size();
     std::vector<HaarStageClassifier> stages(nstages);
 
     for( i = 0; i < nstages; i++ )
@@ -139,14 +138,14 @@ static bool convert(const String& oldcascade, const String& newcascade)
         HaarStageClassifier& stage = stages[i];
         stage.threshold = (double)stagenode[ICV_HAAR_STAGE_THRESHOLD_NAME];
         FileNode weaks_seq = stagenode[ICV_HAAR_TREES_NAME];
-        size_t nweaks = weaks_seq.size();
+        int nweaks = (int)weaks_seq.size();
         stage.weaks.resize(nweaks);
 
         for( j = 0; j < nweaks; j++ )
         {
             HaarClassifier& weak = stage.weaks[j];
             FileNode weaknode = weaks_seq[j];
-            size_t nnodes = weaknode.size();
+            int nnodes = (int)weaknode.size();
 
             for( n = 0; n < nnodes; n++ )
             {
@@ -157,7 +156,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
                 node.f = (int)features.size();
                 f.tilted = (int)fnode[ICV_HAAR_TILTED_NAME] != 0;
                 FileNode rects_seq = fnode[ICV_HAAR_RECTS_NAME];
-                size_t nrects = rects_seq.size();
+                int nrects = (int)rects_seq.size();
 
                 for( k = 0; k < nrects; k++ )
                 {
@@ -199,9 +198,9 @@ static bool convert(const String& oldcascade, const String& newcascade)
     if( !newfs.isOpened() )
         return false;
 
-    size_t maxWeakCount = 0, nfeatures = features.size();
+    int maxWeakCount = 0, nfeatures = (int)features.size();
     for( i = 0; i < nstages; i++ )
-        maxWeakCount = std::max(maxWeakCount, stages[i].weaks.size());
+        maxWeakCount = std::max(maxWeakCount, (int)stages[i].weaks.size());
 
     newfs << "cascade" << "{:opencv-cascade-classifier"
     << "stageType" << "BOOST"
@@ -219,7 +218,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
 
     for( i = 0; i < nstages; i++ )
     {
-        size_t nweaks = stages[i].weaks.size();
+        int nweaks = (int)stages[i].weaks.size();
         newfs << "{" << "maxWeakCount" << (int)nweaks
             << "stageThreshold" << stages[i].threshold
             << "weakClassifiers" << "[";
@@ -227,7 +226,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
         {
             const HaarClassifier& c = stages[i].weaks[j];
             newfs << "{" << "internalNodes" << "[";
-            size_t nnodes = c.nodes.size(), nleaves = c.leaves.size();
+            int nnodes = (int)c.nodes.size(), nleaves = (int)c.leaves.size();
             for( k = 0; k < nnodes; k++ )
                 newfs << c.nodes[k].left << c.nodes[k].right
                     << c.nodes[k].f << c.nodes[k].threshold;
@@ -246,7 +245,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
     {
         const HaarFeature& f = features[i];
         newfs << "{" << "rects" << "[";
-        for( j = 0; j < (size_t)HaarFeature::RECT_NUM; j++ )
+        for( j = 0; j < HaarFeature::RECT_NUM; j++ )
         {
             if( j >= 2 && fabs(f.rect[j].weight) < FLT_EPSILON )
                 break;
