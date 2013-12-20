@@ -32,13 +32,13 @@ int main()
     for (int i = 0; i < image.rows; ++i)
         for (int j = 0; j < image.cols; ++j)
         {
-            Mat sampleMat = (Mat_<float>(1,2) << i,j);
+            Mat sampleMat = (Mat_<float>(1,2) << j,i);
             float response = SVM.predict(sampleMat);
 
             if (response == 1)
-                image.at<Vec3b>(j, i)  = green;
+                image.at<Vec3b>(i,j)  = green;
             else if (response == -1)
-                 image.at<Vec3b>(j, i)  = blue;
+                 image.at<Vec3b>(i,j)  = blue;
         }
 
     // Show the training data
