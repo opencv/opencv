@@ -53,8 +53,10 @@
 namespace cvflann
 {
 
+namespace {
+
 template <typename ElementType>
-static double prepareRoundingIfIntegerElementType( double value ) {
+double prepareRoundingIfIntegerElementType( double value ) {
     return value;
 };
 
@@ -110,6 +112,7 @@ double prepareRoundingIfIntegerElementType<unsigned long long>( double value ) {
     return (value + 0.5);
 };
 
+}
 
 
 struct KMeansIndexParams : public IndexParams
