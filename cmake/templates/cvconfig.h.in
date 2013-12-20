@@ -85,6 +85,9 @@
 /* Apple ImageIO Framework */
 #cmakedefine HAVE_IMAGEIO
 
+/* Intel Perceptual Computing SDK library */
+#cmakedefine HAVE_INTELPERC
+
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 
