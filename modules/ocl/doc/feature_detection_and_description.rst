@@ -479,7 +479,7 @@ ocl::BRIEF_OCL::BRIEF_OCL
 --------------------------
 Constructor.
 
-.. ocv:function:: ocl::BRIEF_OCL::BRIEF_OCL(int bytes = 32)
+.. ocv:function:: ocl::BRIEF_OCL::BRIEF_OCL(int _bytes = 32)
 
     :param bytes: The length of the descriptor in bytes. Supported values are 16, 32 or 64 bytes.
 
