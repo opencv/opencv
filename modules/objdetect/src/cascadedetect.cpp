@@ -654,6 +654,7 @@ bool LBPEvaluator::Feature :: read(const FileNode& node )
 LBPEvaluator::LBPEvaluator()
 {
     features = makePtr<std::vector<Feature> >();
+    optfeatures = makePtr<std::vector<OptFeature> >();
 }
 LBPEvaluator::~LBPEvaluator()
 {
@@ -662,11 +663,12 @@ LBPEvaluator::~LBPEvaluator()
 bool LBPEvaluator::read( const FileNode& node )
 {
     features->resize(node.size());
-    featuresPtr = &(*features)[0];
+    optfeaturesPtr = &(*optfeatures)[0];
     FileNodeIterator it = node.begin(), it_end = node.end();
+    std::vector<Feature>& ff = *features;
     for(int i = 0; it != it_end; ++it, i++)
     {
-        if(!featuresPtr[i].read(*it))
+        if(!ff[i].read(*it))
             return false;
     }
     return true;
@@ -677,31 +679,58 @@ Ptr<FeatureEvaluator> LBPEvaluator::clone() const
     Ptr<LBPEvaluator> ret = makePtr<LBPEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
-    ret->featuresPtr = &(*ret->features)[0];
+    ret->optfeatures = optfeatures;
+    ret->optfeaturesPtr = ret->optfeatures.empty() ? 0 : &(*ret->optfeatures)[0];
     ret->sum0 = sum0, ret->sum = sum;
-    ret->normrect = normrect;
-    ret->offset = offset;
+    ret->pwin = pwin;
     return ret;
 }
 
-bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, Size )
+bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSize )
 {
-    Mat image = _image.getMat();
-    int rn = image.rows+1, cn = image.cols+1;
-    origWinSize = _origWinSize;
-
-    if( image.cols < origWinSize.width || image.rows < origWinSize.height )
+    Size imgsz = _image.size();
+    int cols = imgsz.width, rows = imgsz.height;
+    
+    if (imgsz.width < origWinSize.width || imgsz.height < origWinSize.height)
         return false;
-
-    if( sum0.rows < rn || sum0.cols < cn )
+    
+    origWinSize = _origWinSize;
+    
+    int rn = _sumSize.height, cn = _sumSize.width;
+    int sumStep;
+    CV_Assert(rn >= rows+1 && cn >= cols+1);
+    
+    if( _image.isUMat() )
+    {
+        usum0.create(rn, cn, CV_32S);
+        usum = UMat(usum0, Rect(0, 0, cols+1, rows+1));
+        
+        integral(_image, usum, noArray(), noArray(), CV_32S);
+        sumStep = (int)(usum.step/usum.elemSize());
+    }
+    else
+    {
         sum0.create(rn, cn, CV_32S);
-    sum = Mat(rn, cn, CV_32S, sum0.data);
-    integral(image, sum);
-
+        sum = sum0(Rect(0, 0, cols+1, rows+1));
+        
+        integral(_image, sum, noArray(), noArray(), CV_32S);
+        sumStep = (int)(sum.step/sum.elemSize());
+    }
+    
     size_t fi, nfeatures = features->size();
-
-    for( fi = 0; fi < nfeatures; fi++ )
-        featuresPtr[fi].updatePtrs( sum );
+    const std::vector<Feature>& ff = *features;
+    
+    if( sumSize0 != _sumSize )
+    {
+        optfeatures->resize(nfeatures);
+        optfeaturesPtr = &(*optfeatures)[0];
+        for( fi = 0; fi < nfeatures; fi++ )
+            optfeaturesPtr[fi].setOffsets( ff[fi], sumStep );
+    }
+    if( _image.isUMat() && (sumSize0 != _sumSize || ufbuf.empty()) )
+        copyVectorToUMat(*optfeatures, ufbuf);
+    sumSize0 = _sumSize;
+    
     return true;
 }
 
@@ -711,7 +740,7 @@ bool LBPEvaluator::setWindow( Point pt )
         pt.x + origWinSize.width >= sum.cols ||
         pt.y + origWinSize.height >= sum.rows )
         return false;
-    offset = pt.y * ((int)sum.step/sizeof(int)) + pt.x;
+    pwin = &sum.at<int>(pt);
     return true;
 }
 
