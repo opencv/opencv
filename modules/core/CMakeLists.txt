@@ -1,6 +1,6 @@
 set(the_description "The Core Functionality")
 
-if (ENABLE_DYNAMIC_CUDA)
+if (NOT HAVE_CUDA OR ENABLE_DYNAMIC_CUDA)
   ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES})
 else()
   ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
@@ -15,7 +15,9 @@ endif()
 if(ENABLE_DYNAMIC_CUDA)
   add_definitions(-DDYNAMIC_CUDA_SUPPORT)
 else()
-  add_definitions(-DUSE_CUDA)
+  if (HAVE_CUDA)
+    add_definitions(-DUSE_CUDA)
+  endif()
 endif()
 
 if(HAVE_CUDA)
@@ -26,18 +28,18 @@ endif()
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
 file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
 
-if (NOT ENABLE_DYNAMIC_CUDA)
-  file(GLOB lib_cuda               "../dynamicuda/src/cuda/*.cu*")
+if (HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
+  file(GLOB lib_cuda           "../dynamicuda/src/cuda/*.cu*")
 endif()
 
 source_group("Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
 
-if (NOT ENABLE_DYNAMIC_CUDA)
+if (HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
   source_group("Src\\Cuda"      FILES ${lib_cuda} ${lib_cuda_hdrs})
 endif()
 
-if (ENABLE_DYNAMIC_CUDA)
+if (NOT HAVE_CUDA OR ENABLE_DYNAMIC_CUDA)
   ocv_glob_module_sources(SOURCES "${opencv_core_BINARY_DIR}/version_string.inc"
                           HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 else()
