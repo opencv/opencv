@@ -263,12 +263,15 @@ size_t cv::gpu::DeviceInfo::freeMemory() const { return deviceInfoFuncTable()->f
 size_t cv::gpu::DeviceInfo::totalMemory() const { return deviceInfoFuncTable()->totalMemory(); }
 bool cv::gpu::DeviceInfo::supports(FeatureSet feature_set) const { return deviceInfoFuncTable()->supports(feature_set); }
 bool cv::gpu::DeviceInfo::isCompatible() const { return deviceInfoFuncTable()->isCompatible(); }
-int cv::gpu::DeviceInfo::deviceID() const { return deviceInfoFuncTable()->deviceID(); };
-int cv::gpu::DeviceInfo::majorVersion() const { return deviceInfoFuncTable()->majorVersion(); }
-int cv::gpu::DeviceInfo::minorVersion() const { return deviceInfoFuncTable()->minorVersion(); }
-std::string cv::gpu::DeviceInfo::name() const { return deviceInfoFuncTable()->name(); }
-int cv::gpu::DeviceInfo::multiProcessorCount() const { return deviceInfoFuncTable()->multiProcessorCount(); }
-void cv::gpu::DeviceInfo::query() { deviceInfoFuncTable()->query(); }
+
+void cv::gpu::DeviceInfo::query()
+{
+    deviceInfoFuncTable()->query();
+    name_ = deviceInfoFuncTable()->name();
+    multi_processor_count_ = deviceInfoFuncTable()->multiProcessorCount();
+    majorVersion_ = deviceInfoFuncTable()->majorVersion();
+    minorVersion_ = deviceInfoFuncTable()->minorVersion();
+}
 
 void cv::gpu::printCudaDeviceInfo(int device) { deviceInfoFuncTable()->printCudaDeviceInfo(device); }
 void cv::gpu::printShortCudaDeviceInfo(int device) { deviceInfoFuncTable()->printShortCudaDeviceInfo(device); }

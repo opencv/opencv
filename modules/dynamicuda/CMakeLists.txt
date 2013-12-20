@@ -1,4 +1,4 @@
-if(NOT ANDROID OR NOT HAVE_CUDA)
+if(NOT DYNAMIC_CUDA_SUPPORT)
   ocv_module_disable(dynamicuda)
 endif()
 
@@ -11,5 +11,5 @@ set(OPENCV_MODULE_TYPE SHARED)
 if (BUILD_FAT_JAVA_LIB)
   ocv_define_module(dynamicuda opencv_java PRIVATE_REQUIRED ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 else()
-  ocv_define_module(dynamicuda opencv_core PRIVATE_REQUIRED q${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  ocv_define_module(dynamicuda opencv_core PRIVATE_REQUIRED ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
 endif()

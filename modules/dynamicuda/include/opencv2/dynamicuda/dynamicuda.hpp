@@ -539,7 +539,7 @@ private:
 
 DeviceProps deviceProps;
 
-class CudaDeviceInfoFuncTable: DeviceInfoFuncTable
+class CudaDeviceInfoFuncTable : public DeviceInfoFuncTable
 {
 public:
     size_t sharedMemPerBlock() const

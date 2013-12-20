@@ -112,13 +112,13 @@ namespace cv { namespace gpu
         // Creates DeviceInfo object for the given GPU
         DeviceInfo(int device_id) : device_id_(device_id) { query(); }
 
-        std::string name() const;
+        std::string name() const { return name_; }
 
         // Return compute capability versions
-        int majorVersion() const;
-        int minorVersion() const;
+        int majorVersion() const { return majorVersion_; }
+        int minorVersion() const { return minorVersion_; }
 
-        int multiProcessorCount() const;
+        int multiProcessorCount() const { return multi_processor_count_; }
 
         size_t sharedMemPerBlock() const;
 
@@ -132,12 +132,9 @@ namespace cv { namespace gpu
         // Checks whether the GPU module can be run on the given device
         bool isCompatible() const;
 
-        int deviceID() const;
+        int deviceID() const { return device_id_; }
 
     private:
-        // Private section is fictive to preserve bin compatibility.
-        // Changes in the private fields there have no effects.
-        // see deligate code.
         void query();
 
         int device_id_;
