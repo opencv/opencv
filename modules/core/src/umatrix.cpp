@@ -661,6 +661,45 @@ void UMat::copyTo(OutputArray _dst) const
     }
 }
 
+void UMat::copyTo(OutputArray _dst, InputArray _mask) const
+{
+    if( _mask.empty() )
+    {
+        copyTo(_dst);
+        return;
+    }
+
+    int cn = channels(), mtype = _mask.type(), mdepth = CV_MAT_DEPTH(mtype), mcn = CV_MAT_CN(mtype);
+    CV_Assert( mdepth == CV_8U && (mcn == 1 || mcn == cn) );
+
+    if (ocl::useOpenCL() && _dst.isUMat() && dims <= 2)
+    {
+        UMatData * prevu = _dst.getUMat().u;
+        _dst.create( dims, size, type() );
+
+        UMat dst = _dst.getUMat();
+
+        if( prevu != dst.u ) // do not leave dst uninitialized
+            dst = Scalar(0);
+
+        ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc,
+                      format("-D COPY_TO_MASK -D T=%s -D scn=%d -D mcn=%d",
+                             ocl::memopTypeToStr(depth()), cn, mcn));
+        if (!k.empty())
+        {
+            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::ReadOnlyNoSize(_mask.getUMat()),
+                   ocl::KernelArg::WriteOnly(dst));
+
+            size_t globalsize[2] = { cols, rows };
+            if (k.run(2, globalsize, NULL, false))
+                return;
+        }
+    }
+
+    Mat src = getMat(ACCESS_READ);
+    src.copyTo(_dst, _mask);
+}
+
 void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
     bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
