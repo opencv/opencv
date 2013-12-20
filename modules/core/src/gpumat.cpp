@@ -229,7 +229,7 @@ static DeviceInfoFuncTable* deviceInfoFuncTable()
    static CudaDeviceInfoFuncTable impl;
    static DeviceInfoFuncTable* funcTable = &impl;
 #else
-   static EmptyFuncTable stub;
+   static EmptyDeviceInfoFuncTable stub;
    static DeviceInfoFuncTable* funcTable = &stub;
 #endif
 #endif
