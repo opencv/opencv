@@ -120,7 +120,7 @@ cv2.moveWindow('input',img.shape[1]+10,90)
 print " Instructions : \n"
 print " Draw a rectangle around the object using right mouse button \n"
 
-while(1):
+while(not 0):
 
     cv2.imshow('output',output)
     cv2.imshow('input',img)
@@ -158,7 +158,7 @@ while(1):
     elif k == ord('n'): # segment the image
         print """ For finer touchups, mark foreground and background after pressing keys 0-3
         and again press 'n' \n"""
-        if (rect_or_mask == 0):         # grabcut with rect
+        if (not rect_or_mask ):         # grabcut with rect
             bgdmodel = np.zeros((1,65),np.float64)
             fgdmodel = np.zeros((1,65),np.float64)
             cv2.grabCut(img2,mask,rect,bgdmodel,fgdmodel,1,cv2.GC_INIT_WITH_RECT)
