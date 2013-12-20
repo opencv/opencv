@@ -201,7 +201,7 @@ OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help wi
 
 # OpenCV build options
 # ===================================================
-OCV_OPTION(ENABLE_DYNAMIC_CUDA        "Enabled dynamic CUDA linkage"                             ON   IF ANDROID OR LINUX)
+OCV_OPTION(ENABLE_DYNAMIC_CUDA        "Enabled dynamic CUDA linkage"                             ON   IF ANDROID )
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON   IF (NOT IOS) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) IF (CMAKE_VERSION VERSION_GREATER "2.8.0") )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CMAKE_COMPILER_IS_GNUCXX )
@@ -457,6 +457,23 @@ endif()
 # --- OpenCL ---
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
+endif()
+
+# ----------------------------------------------------------------------------
+# Add CUDA libraries (needed for apps/tools, samples)
+# ----------------------------------------------------------------------------
+if(NOT HAVE_CUDA)
+  set(ENABLE_DYNAMIC_CUDA OFF)
+endif()
+
+if(HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
+  set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  if(HAVE_CUBLAS)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
+  endif()
+  if(HAVE_CUFFT)
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------

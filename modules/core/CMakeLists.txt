@@ -28,8 +28,10 @@ endif()
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
 file(GLOB lib_cuda_hdrs_detail "include/opencv2/${name}/cuda/detail/*.hpp" "include/opencv2/${name}/cuda/detail/*.h")
 
-if (HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
+if(HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
   file(GLOB lib_cuda           "../dynamicuda/src/cuda/*.cu*")
+  ocv_include_directories(${CUDA_INCLUDE_DIRS})
+  ocv_cuda_compile(cuda_objs ${lib_cuda})
 endif()
 
 source_group("Cuda Headers"         FILES ${lib_cuda_hdrs})
@@ -43,7 +45,7 @@ if (NOT HAVE_CUDA OR ENABLE_DYNAMIC_CUDA)
   ocv_glob_module_sources(SOURCES "${opencv_core_BINARY_DIR}/version_string.inc"
                           HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 else()
-  ocv_glob_module_sources(SOURCES "${opencv_core_BINARY_DIR}/version_string.inc" ${lib_cuda}
+  ocv_glob_module_sources(SOURCES "${opencv_core_BINARY_DIR}/version_string.inc" ${lib_cuda} ${cuda_objs}
                           HEADERS ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 endif()
 
