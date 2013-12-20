@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2013, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -66,8 +67,8 @@ uint read_sumTex(IMAGE_INT32 img, sampler_t sam, int2 coord, int rows, int cols,
 uchar read_imgTex(IMAGE_INT8 img, sampler_t sam, float2 coord, int rows, int cols, int elemPerRow)
 {
 #ifdef DISABLE_IMAGE2D
-    int x = clamp(convert_int_rte(coord.x), 0, cols - 1);
-    int y = clamp(convert_int_rte(coord.y), 0, rows - 1);
+    int x = clamp(round(coord.x), 0, cols - 1);
+    int y = clamp(round(coord.y), 0, rows - 1);
     return img[elemPerRow * y + x];
 #else
     return (uchar)read_imageui(img, sam, coord).x;
@@ -98,6 +99,7 @@ __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAM
 #define CV_PI_F 3.14159265f
 #endif
 
+
 // Use integral image to calculate haar wavelets.
 // N = 2
 // for simple haar paatern
@@ -114,10 +116,10 @@ float icvCalcHaarPatternSum_2(
 
     F d = 0;
 
-    int2 dx1 = convert_int2_rte(ratio * src[0]);
-    int2 dy1 = convert_int2_rte(ratio * src[1]);
-    int2 dx2 = convert_int2_rte(ratio * src[2]);
-    int2 dy2 = convert_int2_rte(ratio * src[3]);
+    int2 dx1 = convert_int2(round(ratio * src[0]));
+    int2 dy1 = convert_int2(round(ratio * src[1]));
+    int2 dx2 = convert_int2(round(ratio * src[2]));
+    int2 dy2 = convert_int2(round(ratio * src[3]));
 
     F t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
@@ -132,109 +134,12 @@ float icvCalcHaarPatternSum_2(
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
     d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
-
-    return (float)d;
-}
-
-// N = 3
-float icvCalcHaarPatternSum_3(
-    IMAGE_INT32 sumTex,
-    __constant float4 *src,
-    int oldSize,
-    int newSize,
-    int y, int x,
-    int rows, int cols, int elemPerRow)
-{
-
-    float ratio = (float)newSize / oldSize;
-
-    F d = 0;
-
-    int4 dx1 = convert_int4_rte(ratio * src[0]);
-    int4 dy1 = convert_int4_rte(ratio * src[1]);
-    int4 dx2 = convert_int4_rte(ratio * src[2]);
-    int4 dy2 = convert_int4_rte(ratio * src[3]);
-
-    F t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy2.x), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
-    d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
-
-    t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
-    d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
-
-    t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy1.z), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy2.z), rows, cols, elemPerRow );
-    d += t * src[4].z / ((dx2.z - dx1.z) * (dy2.z - dy1.z));
-
-    return (float)d;
-}
-
-// N = 4
-float icvCalcHaarPatternSum_4(
-    IMAGE_INT32 sumTex,
-    __constant float4 *src,
-    int oldSize,
-    int newSize,
-    int y, int x,
-    int rows, int cols, int elemPerRow)
-{
-
-    float ratio = (float)newSize / oldSize;
-
-    F d = 0;
-
-    int4 dx1 = convert_int4_rte(ratio * src[0]);
-    int4 dy1 = convert_int4_rte(ratio * src[1]);
-    int4 dx2 = convert_int4_rte(ratio * src[2]);
-    int4 dy2 = convert_int4_rte(ratio * src[3]);
-
-    F t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy2.x), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
-    d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
-
-    t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
-    d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
-
-    t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy1.z), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy2.z), rows, cols, elemPerRow );
-    d += t * src[4].z / ((dx2.z - dx1.z) * (dy2.z - dy1.z));
-
-    t = 0;
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy1.w), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy2.w), rows, cols, elemPerRow );
-    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.w, y + dy1.w), rows, cols, elemPerRow );
-    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.w, y + dy2.w), rows, cols, elemPerRow );
-    d += t * src[4].w / ((dx2.w - dx1.w) * (dy2.w - dy1.w));
 
     return (float)d;
 }
 
 ////////////////////////////////////////////////////////////////////////
 // Hessian
-
-__constant float4 c_DX[5] = { (float4)(0, 3, 6, 0), (float4)(2, 2, 2, 0), (float4)(3, 6, 9, 0), (float4)(7, 7, 7, 0), (float4)(1, -2, 1, 0) };
-__constant float4 c_DY[5] = { (float4)(2, 2, 2, 0), (float4)(0, 3, 6, 0), (float4)(7, 7, 7, 0), (float4)(3, 6, 9, 0), (float4)(1, -2, 1, 0) };
-__constant float4 c_DXY[5] = { (float4)(1, 5, 1, 5), (float4)(1, 1, 5, 5), (float4)(4, 8, 4, 8), (float4)(4, 4, 8, 8), (float4)(1, -1, -1, 1) };// Use integral image to calculate haar wavelets.
 
 __inline int calcSize(int octave, int layer)
 {
@@ -250,6 +155,24 @@ __inline int calcSize(int octave, int layer)
     return (HAAR_SIZE0 + HAAR_SIZE_INC * layer) << octave;
 }
 
+// Calculate a derivative in an axis-aligned direction (x or y).  The "plus1"
+// boxes contribute 1 * (area), and the "minus2" box contributes -2 * (area).
+// So the final computation is plus1a + plus1b - 2 * minus2.  The corners are
+// labeled A, B, C, and D, with A being the top left, B being top right, C
+// being bottom left, and D being bottom right.
+F calcAxisAlignedDerivative(
+        int plus1a_A, int plus1a_B, int plus1a_C, int plus1a_D, F plus1a_scale,
+        int plus1b_A, int plus1b_B, int plus1b_C, int plus1b_D, F plus1b_scale,
+        int minus2_A, int minus2_B, int minus2_C, int minus2_D, F minus2_scale)
+{
+    F plus1a = plus1a_A - plus1a_B - plus1a_C + plus1a_D;
+    F plus1b = plus1b_A - plus1b_B - plus1b_C + plus1b_D;
+    F minus2 = minus2_A - minus2_B - minus2_C + minus2_D;
+
+    return (plus1a / plus1a_scale -
+            2.0f * minus2 / minus2_scale +
+            plus1b / plus1b_scale);
+}
 
 //calculate targeted layer per-pixel determinant and trace with an integral image
 __kernel void icvCalcLayerDetAndTrace(
@@ -264,7 +187,7 @@ __kernel void icvCalcLayerDetAndTrace(
     int c_octave,
     int c_layer_rows,
     int sumTex_step
-)
+    )
 {
     det_step   /= sizeof(*det);
     trace_step /= sizeof(*trace);
@@ -288,15 +211,102 @@ __kernel void icvCalcLayerDetAndTrace(
 
     if (size <= c_img_rows && size <= c_img_cols && i < samples_i && j < samples_j)
     {
-        const float dx  = icvCalcHaarPatternSum_3(sumTex, c_DX , 9, size, i << c_octave, j << c_octave, c_img_rows, c_img_cols, sumTex_step);
-        const float dy  = icvCalcHaarPatternSum_3(sumTex, c_DY , 9, size, i << c_octave, j << c_octave, c_img_rows, c_img_cols, sumTex_step);
-        const float dxy = icvCalcHaarPatternSum_4(sumTex, c_DXY, 9, size, i << c_octave, j << c_octave, c_img_rows, c_img_cols, sumTex_step);
+        int x = j << c_octave;
+        int y = i << c_octave;
+
+        float ratio = (float)size / 9;
+
+        // Precompute some commonly used values, which are used to offset
+        // texture coordinates in the integral image.
+        int r1 = round(ratio);
+        int r2 = round(ratio * 2.0f);
+        int r3 = round(ratio * 3.0f);
+        int r4 = round(ratio * 4.0f);
+        int r5 = round(ratio * 5.0f);
+        int r6 = round(ratio * 6.0f);
+        int r7 = round(ratio * 7.0f);
+        int r8 = round(ratio * 8.0f);
+        int r9 = round(ratio * 9.0f);
+
+        // Calculate the approximated derivative in the x-direction
+        F d = 0;
+        {
+            // Some of the pixels needed to compute the derivative are
+            // repeated, so we only don't duplicate the fetch here.
+            int t02 = read_sumTex( sumTex, sampler, (int2)(x, y + r2), c_img_rows, c_img_cols, sumTex_step );
+            int t07 = read_sumTex( sumTex, sampler, (int2)(x, y + r7), c_img_rows, c_img_cols, sumTex_step );
+            int t32 = read_sumTex( sumTex, sampler, (int2)(x + r3, y + r2), c_img_rows, c_img_cols, sumTex_step );
+            int t37 = read_sumTex( sumTex, sampler, (int2)(x + r3, y + r7), c_img_rows, c_img_cols, sumTex_step );
+            int t62 = read_sumTex( sumTex, sampler, (int2)(x + r6, y + r2), c_img_rows, c_img_cols, sumTex_step );
+            int t67 = read_sumTex( sumTex, sampler, (int2)(x + r6, y + r7), c_img_rows, c_img_cols, sumTex_step );
+            int t92 = read_sumTex( sumTex, sampler, (int2)(x + r9, y + r2), c_img_rows, c_img_cols, sumTex_step );
+            int t97 = read_sumTex( sumTex, sampler, (int2)(x + r9, y + r7), c_img_rows, c_img_cols, sumTex_step );
+
+            d = calcAxisAlignedDerivative(t02, t07, t32, t37, (r3) * (r7 - r2),
+                                          t62, t67, t92, t97, (r9 - r6) * (r7 - r2),
+                                          t32, t37, t62, t67, (r6 - r3) * (r7 - r2));
+        }
+        const float dx  = (float)d;
+
+        // Calculate the approximated derivative in the y-direction
+        d = 0;
+        {
+            // Some of the pixels needed to compute the derivative are
+            // repeated, so we only don't duplicate the fetch here.
+            int t20 = read_sumTex( sumTex, sampler, (int2)(x + r2, y), c_img_rows, c_img_cols, sumTex_step );
+            int t23 = read_sumTex( sumTex, sampler, (int2)(x + r2, y + r3), c_img_rows, c_img_cols, sumTex_step );
+            int t70 = read_sumTex( sumTex, sampler, (int2)(x + r7, y), c_img_rows, c_img_cols, sumTex_step );
+            int t73 = read_sumTex( sumTex, sampler, (int2)(x + r7, y + r3), c_img_rows, c_img_cols, sumTex_step );
+            int t26 = read_sumTex( sumTex, sampler, (int2)(x + r2, y + r6), c_img_rows, c_img_cols, sumTex_step );
+            int t76 = read_sumTex( sumTex, sampler, (int2)(x + r7, y + r6), c_img_rows, c_img_cols, sumTex_step );
+            int t29 = read_sumTex( sumTex, sampler, (int2)(x + r2, y + r9), c_img_rows, c_img_cols, sumTex_step );
+            int t79 = read_sumTex( sumTex, sampler, (int2)(x + r7, y + r9), c_img_rows, c_img_cols, sumTex_step );
+
+            d = calcAxisAlignedDerivative(t20, t23, t70, t73, (r7 - r2) * (r3),
+                                          t26, t29, t76, t79, (r7 - r2) * (r9 - r6),
+                                          t23, t26, t73, t76, (r7 - r2) * (r6 - r3));
+        }
+        const float dy  = (float)d;
+
+        // Calculate the approximated derivative in the xy-direction
+        d = 0;
+        {
+            // There's no saving us here, we just have to get all of the pixels in
+            // separate fetches
+            F t = 0;
+            t += read_sumTex( sumTex, sampler, (int2)(x + r1, y + r1), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r1, y + r4), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r4, y + r1), c_img_rows, c_img_cols, sumTex_step );
+            t += read_sumTex( sumTex, sampler, (int2)(x + r4, y + r4), c_img_rows, c_img_cols, sumTex_step );
+            d += t / ((r4 - r1) * (r4 - r1));
+
+            t = 0;
+            t += read_sumTex( sumTex, sampler, (int2)(x + r5, y + r1), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r5, y + r4), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r8, y + r1), c_img_rows, c_img_cols, sumTex_step );
+            t += read_sumTex( sumTex, sampler, (int2)(x + r8, y + r4), c_img_rows, c_img_cols, sumTex_step );
+            d -= t / ((r8 - r5) * (r4 - r1));
+
+            t = 0;
+            t += read_sumTex( sumTex, sampler, (int2)(x + r1, y + r5), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r1, y + r8), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r4, y + r5), c_img_rows, c_img_cols, sumTex_step );
+            t += read_sumTex( sumTex, sampler, (int2)(x + r4, y + r8), c_img_rows, c_img_cols, sumTex_step );
+            d -= t / ((r4 - r1) * (r8 - r5));
+
+            t = 0;
+            t += read_sumTex( sumTex, sampler, (int2)(x + r5, y + r5), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r5, y + r8), c_img_rows, c_img_cols, sumTex_step );
+            t -= read_sumTex( sumTex, sampler, (int2)(x + r8, y + r5), c_img_rows, c_img_cols, sumTex_step );
+            t += read_sumTex( sumTex, sampler, (int2)(x + r8, y + r8), c_img_rows, c_img_cols, sumTex_step );
+            d += t / ((r8 - r5) * (r8 - r5));
+        }
+        const float dxy = (float)d;
 
         det  [j + margin + det_step   * (layer * c_layer_rows + i + margin)] = dx * dy - 0.81f * dxy * dxy;
         trace[j + margin + trace_step * (layer * c_layer_rows + i + margin)] = dx + dy;
     }
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 // NONMAX
@@ -309,10 +319,10 @@ bool within_check(IMAGE_INT32 maskSumTex, int sum_i, int sum_j, int size, int ro
 
     float d = 0;
 
-    int dx1 = convert_int_rte(ratio * c_DM[0]);
-    int dy1 = convert_int_rte(ratio * c_DM[1]);
-    int dx2 = convert_int_rte(ratio * c_DM[2]);
-    int dy2 = convert_int_rte(ratio * c_DM[3]);
+    int dx1 = round(ratio * c_DM[0]);
+    int dy1 = round(ratio * c_DM[1]);
+    int dx2 = round(ratio * c_DM[2]);
+    int dy2 = round(ratio * c_DM[3]);
 
     float t = 0;
 
@@ -572,7 +582,7 @@ void icvFindMaximaInLayer(
 }
 
 // solve 3x3 linear system Ax=b for floating point input
-inline bool solve3x3_float(volatile __local  const float4 *A, volatile __local  const float *b, volatile __local  float *x)
+inline bool solve3x3_float(const float4 *A, const float *b, float *x)
 {
     float det = A[0].x * (A[1].y * A[2].z - A[1].z * A[2].y)
                 - A[0].y * (A[1].x * A[2].z - A[1].z * A[2].x)
@@ -651,7 +661,7 @@ void icvInterpolateKeypoint(
 
     if (get_local_id(0) == 0 && get_local_id(1) == 0 && get_local_id(2) == 0)
     {
-        volatile __local  float dD[3];
+        float dD[3];
 
         //dx
         dD[0] = -0.5f * (N9[1][1][2] - N9[1][1][0]);
@@ -660,7 +670,7 @@ void icvInterpolateKeypoint(
         //ds
         dD[2] = -0.5f * (N9[2][1][1] - N9[0][1][1]);
 
-        volatile __local  float4 H[3];
+        float4 H[3];
 
         //dxx
         H[0].x = N9[1][1][0] - 2.0f * N9[1][1][1] + N9[1][1][2];
@@ -681,7 +691,7 @@ void icvInterpolateKeypoint(
         //dss
         H[2].z = N9[0][1][1] - 2.0f * N9[1][1][1] + N9[2][1][1];
 
-        volatile __local  float x[3];
+        float x[3];
 
         if (solve3x3_float(H, dD, x))
         {
@@ -711,7 +721,7 @@ void icvInterpolateKeypoint(
                 sampled in a circle of radius 6s using wavelets of size 4s.
                 We ensure the gradient wavelet size is even to ensure the
                 wavelet pattern is balanced and symmetric around its center */
-                const int grad_wav_size = 2 * convert_int_rte(2.0f * s);
+                const int grad_wav_size = 2 * round(2.0f * s);
 
                 // check when grad_wav_size is too big
                 if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
@@ -737,9 +747,12 @@ void icvInterpolateKeypoint(
 ////////////////////////////////////////////////////////////////////////
 // Orientation
 
-#define ORI_SEARCH_INC 5
-#define ORI_WIN        60
-#define ORI_SAMPLES    113
+#define ORI_WIN			 60
+#define ORI_SAMPLES		 113
+
+// The distance between samples in the beginning of the the reduction
+#define ORI_RESPONSE_REDUCTION_WIDTH		 48
+#define ORI_RESPONSE_ARRAY_SIZE			     (ORI_RESPONSE_REDUCTION_WIDTH * 2)
 
 __constant float c_aptX[ORI_SAMPLES] = {-6, -5, -5, -5, -5, -5, -5, -5, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6};
 __constant float c_aptY[ORI_SAMPLES] = {0, -3, -2, -1, 0, 1, 2, 3, -4, -3, -2, -1, 0, 1, 2, 3, 4, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -4, -3, -2, -1, 0, 1, 2, 3, 4, -3, -2, -1, 0, 1, 2, 3, 0};
@@ -833,12 +846,15 @@ void icvCalcOrientation(
     __global float* featureDir  = keypoints + ANGLE_ROW * keypoints_step;
 
 
-    volatile __local  float s_X[128];
-    volatile __local  float s_Y[128];
-    volatile __local  float s_angle[128];
+    __local  float s_X[ORI_SAMPLES];
+    __local  float s_Y[ORI_SAMPLES];
+    __local  float s_angle[ORI_SAMPLES];
 
-    volatile __local  float s_sumx[32 * 4];
-    volatile __local  float s_sumy[32 * 4];
+    // Need to allocate enough to make the reduction work without accessing
+    // past the end of the array.
+    __local  float s_sumx[ORI_RESPONSE_ARRAY_SIZE];
+    __local  float s_sumy[ORI_RESPONSE_ARRAY_SIZE];
+    __local  float s_mod[ORI_RESPONSE_ARRAY_SIZE];
 
     /* The sampling intervals and wavelet sized for selecting an orientation
     and building the keypoint descriptor are defined relative to 's' */
@@ -849,28 +865,60 @@ void icvCalcOrientation(
     sampled in a circle of radius 6s using wavelets of size 4s.
     We ensure the gradient wavelet size is even to ensure the
     wavelet pattern is balanced and symmetric around its center */
-    const int grad_wav_size = 2 * convert_int_rte(2.0f * s);
+    const int grad_wav_size = 2 * round(2.0f * s);
 
     // check when grad_wav_size is too big
     if ((c_img_rows + 1) < grad_wav_size || (c_img_cols + 1) < grad_wav_size)
         return;
 
     // Calc X, Y, angle and store it to shared memory
-    const int tid = get_local_id(1) * get_local_size(0) + get_local_id(0);
+    const int tid = get_local_id(0);
+    // Initialize values that are only used as part of the reduction later.
+    if (tid < ORI_RESPONSE_ARRAY_SIZE - ORI_LOCAL_SIZE) {
+        s_mod[tid + ORI_LOCAL_SIZE] = 0.0f;
+    }
 
-    float X = 0.0f, Y = 0.0f, angle = 0.0f;
+    float ratio = (float)grad_wav_size / 4;
 
-    if (tid < ORI_SAMPLES)
+    int r2 = round(ratio * 2.0);
+    int r4 = round(ratio * 4.0);
+    for (int i = tid; i < ORI_SAMPLES; i += ORI_LOCAL_SIZE )
     {
+        float X = 0.0f, Y = 0.0f, angle = 0.0f;
         const float margin = (float)(grad_wav_size - 1) / 2.0f;
-        const int x = convert_int_rte(featureX[get_group_id(0)] + c_aptX[tid] * s - margin);
-        const int y = convert_int_rte(featureY[get_group_id(0)] + c_aptY[tid] * s - margin);
+        const int x = round(featureX[get_group_id(0)] + c_aptX[i] * s - margin);
+        const int y = round(featureY[get_group_id(0)] + c_aptY[i] * s - margin);
 
         if (y >= 0 && y < (c_img_rows + 1) - grad_wav_size &&
-                x >= 0 && x < (c_img_cols + 1) - grad_wav_size)
+            x >= 0 && x < (c_img_cols + 1) - grad_wav_size)
         {
-            X = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NX, 4, grad_wav_size, y, x, c_img_rows, c_img_cols, sum_step);
-            Y = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NY, 4, grad_wav_size, y, x, c_img_rows, c_img_cols, sum_step);
+
+            float apt = c_aptW[i];
+
+            // Compute the haar sum without fetching duplicate pixels.
+            float t00 = read_sumTex( sumTex, sampler, (int2)(x, y), c_img_rows, c_img_cols, sum_step);
+            float t02 = read_sumTex( sumTex, sampler, (int2)(x, y + r2), c_img_rows, c_img_cols, sum_step);
+            float t04 = read_sumTex( sumTex, sampler, (int2)(x, y + r4), c_img_rows, c_img_cols, sum_step);
+            float t20 = read_sumTex( sumTex, sampler, (int2)(x + r2, y), c_img_rows, c_img_cols, sum_step);
+            float t24 = read_sumTex( sumTex, sampler, (int2)(x + r2, y + r4), c_img_rows, c_img_cols, sum_step);
+            float t40 = read_sumTex( sumTex, sampler, (int2)(x + r4, y), c_img_rows, c_img_cols, sum_step);
+            float t42 = read_sumTex( sumTex, sampler, (int2)(x + r4, y + r2), c_img_rows, c_img_cols, sum_step);
+            float t44 = read_sumTex( sumTex, sampler, (int2)(x + r4, y + r4), c_img_rows, c_img_cols, sum_step);
+
+            F t = t00 - t04 - t20 + t24;
+            X -= t / ((r2) * (r4));
+
+            t = t20 - t24 - t40 + t44;
+            X += t / ((r4 - r2) * (r4));
+
+            t = t00 - t02 - t40 + t42;
+            Y += t / ((r2) * (r4));
+
+            t = t02 - t04 - t42 + t44;
+            Y -= t  / ((r4) * (r4 - r2));
+
+            X = apt*X;
+            Y = apt*Y;
 
             angle = atan2(Y, X);
 
@@ -879,76 +927,61 @@ void icvCalcOrientation(
             angle *= 180.0f / CV_PI_F;
 
         }
+
+        s_X[i] = X;
+        s_Y[i] = Y;
+        s_angle[i] = angle;
     }
-    s_X[tid] = X;
-    s_Y[tid] = Y;
-    s_angle[tid] = angle;
     barrier(CLK_LOCAL_MEM_FENCE);
 
     float bestx = 0, besty = 0, best_mod = 0;
+    float sumx = 0.0f, sumy = 0.0f;
+    const int dir = tid * ORI_SEARCH_INC;
+    #pragma unroll
+    for (int i = 0; i < ORI_SAMPLES; ++i) {
+        int angle = round(s_angle[i]);
 
-#pragma unroll
-    for (int i = 0; i < 18; ++i)
-    {
-        const int dir = (i * 4 + get_local_id(1)) * ORI_SEARCH_INC;
+        int d = abs(angle - dir);
+        if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
+        {
+            sumx += s_X[i];
+            sumy += s_Y[i];
+        }
+    }
+    s_sumx[tid] = sumx;
+    s_sumy[tid] = sumy;
+    s_mod[tid] = sumx*sumx + sumy*sumy;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-        volatile float sumx = 0.0f, sumy = 0.0f;
-        int d = abs(convert_int_rte(s_angle[get_local_id(0)]) - dir);
-        if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
-        {
-            sumx = s_X[get_local_id(0)];
-            sumy = s_Y[get_local_id(0)];
-        }
-        d = abs(convert_int_rte(s_angle[get_local_id(0) + 32]) - dir);
-        if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
-        {
-            sumx += s_X[get_local_id(0) + 32];
-            sumy += s_Y[get_local_id(0) + 32];
-        }
-        d = abs(convert_int_rte(s_angle[get_local_id(0) + 64]) - dir);
-        if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
-        {
-            sumx += s_X[get_local_id(0) + 64];
-            sumy += s_Y[get_local_id(0) + 64];
-        }
-        d = abs(convert_int_rte(s_angle[get_local_id(0) + 96]) - dir);
-        if (d < ORI_WIN / 2 || d > 360 - ORI_WIN / 2)
-        {
-            sumx += s_X[get_local_id(0) + 96];
-            sumy += s_Y[get_local_id(0) + 96];
-        }
-        reduce_32_sum(s_sumx + get_local_id(1) * 32, &sumx, get_local_id(0));
-        reduce_32_sum(s_sumy + get_local_id(1) * 32, &sumy, get_local_id(0));
-
-        const float temp_mod = sumx * sumx + sumy * sumy;
-        if (temp_mod > best_mod)
-        {
-            best_mod = temp_mod;
-            bestx = sumx;
-            besty = sumy;
+    // This reduction searches for the longest wavelet response vector.  The first
+    // step uses all of the work items in the workgroup to narrow the search
+    // down to the three candidates.  It requires s_mod to have a few more
+    // elements alocated past the work-group size, which are pre-initialized to
+    // 0.0f above.
+    for(int t = ORI_RESPONSE_REDUCTION_WIDTH; t >= 3; t /= 2) {
+        if (tid < t) {
+            if (s_mod[tid] < s_mod[tid + t]) {
+                s_mod[tid] = s_mod[tid + t];
+                s_sumx[tid] = s_sumx[tid + t];
+                s_sumy[tid] = s_sumy[tid + t];
+            }
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-    if (get_local_id(0) == 0)
-    {
-        s_X[get_local_id(1)] = bestx;
-        s_Y[get_local_id(1)] = besty;
-        s_angle[get_local_id(1)] = best_mod;
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (get_local_id(1) == 0 && get_local_id(0) == 0)
+    // Do the final reduction and write out the result.
+    if (tid == 0)
     {
         int bestIdx = 0;
 
-        if (s_angle[1] > s_angle[bestIdx])
+        // The loop above narrowed the search of the longest vector to three
+        // possibilities.  Pick the best here.
+        if (s_mod[1] > s_mod[bestIdx])
             bestIdx = 1;
-        if (s_angle[2] > s_angle[bestIdx])
+        if (s_mod[2] > s_mod[bestIdx])
             bestIdx = 2;
-        if (s_angle[3] > s_angle[bestIdx])
-            bestIdx = 3;
 
-        float kp_dir = atan2(s_Y[bestIdx], s_X[bestIdx]);
+        float kp_dir = atan2(s_sumy[bestIdx], s_sumx[bestIdx]);
         if (kp_dir < 0)
             kp_dir += 2.0f * CV_PI_F;
         kp_dir *= 180.0f / CV_PI_F;
@@ -960,7 +993,6 @@ void icvCalcOrientation(
         featureDir[get_group_id(0)] = kp_dir;
     }
 }
-
 
 __kernel
 void icvSetUpright(
@@ -1035,8 +1067,8 @@ inline float linearFilter(
 
     float out = 0.0f;
 
-    const int x1 = convert_int_rtn(x);
-    const int y1 = convert_int_rtn(y);
+    const int x1 = round(x);
+    const int y1 = round(y);
     const int x2 = x1 + 1;
     const int y2 = y1 + 1;
 
