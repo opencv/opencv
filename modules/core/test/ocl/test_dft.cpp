@@ -99,6 +99,57 @@ OCL_TEST_P(Dft, C2C)
     EXPECT_MAT_NEAR(dst, udst, eps);
 }
 
+////////////////////////////////////////////////////////////////////////////
+// MulSpectrums
+
+PARAM_TEST_CASE(MulSpectrums, bool, bool)
+{
+    bool ccorr, useRoi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src1)
+    TEST_DECLARE_INPUT_PARAMETER(src2)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
+    virtual void SetUp()
+    {
+        ccorr = GET_PARAM(0);
+        useRoi = GET_PARAM(1);
+    }
+
+    void generateTestData()
+    {
+        Size srcRoiSize = randomSize(1, MAX_VALUE);
+        Border src1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, srcRoiSize, src1Border, CV_32FC2, -11, 11);
+
+
+        Border src2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src2, src2_roi, srcRoiSize, src2Border, CV_32FC2, -11, 11);
+
+        Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, srcRoiSize, dstBorder, CV_32FC2, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src1)
+        UMAT_UPLOAD_INPUT_PARAMETER(src2)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+};
+
+OCL_TEST_P(MulSpectrums, Mat)
+{
+    for (int i = 0; i < test_loop_times; ++i)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::mulSpectrums(src1_roi, src2_roi, dst_roi, 0, ccorr));
+        OCL_ON(cv::mulSpectrums(usrc1_roi, usrc2_roi, udst_roi, 0, ccorr));
+
+        OCL_EXPECT_MATS_NEAR_RELATIVE(dst, 1e-6);
+    }
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(Bool(), Bool()));
+
 OCL_INSTANTIATE_TEST_CASE_P(Core, Dft, Combine(Values(cv::Size(2, 3), cv::Size(5, 4), cv::Size(25, 20),
                                                        cv::Size(512, 1), cv::Size(1024, 768)),
                                                Values(CV_32F, CV_64F),
