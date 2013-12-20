@@ -2,10 +2,6 @@
 
 #ifdef HAVE_INTELPERC
 
-#if defined TBB_INTERFACE_VERSION && TBB_INTERFACE_VERSION < 5000
-# undef HAVE_TBB
-#endif
-
 #include "pxcsession.h"
 #include "pxcsmartptr.h"
 #include "pxccapture.h"
