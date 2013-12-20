@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -2134,9 +2135,46 @@ void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
+namespace cv {
+
+static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
+                              OutputArray _dst, int flags, bool conjB )
+{
+    int atype = _srcA.type(), btype = _srcB.type();
+    Size asize = _srcA.size(), bsize = _srcB.size();
+    CV_Assert(asize == bsize);
+
+    if ( !(atype == CV_32FC2 && btype == CV_32FC2) || flags != 0 )
+        return false;
+
+    UMat A = _srcA.getUMat(), B = _srcB.getUMat();
+    CV_Assert(A.size() == B.size());
+
+    _dst.create(A.size(), atype);
+    UMat dst = _dst.getUMat();
+
+    ocl::Kernel k("mulAndScaleSpectrums",
+                  ocl::core::mulspectrums_oclsrc,
+                  format("%s", conjB ? "-D CONJ" : ""));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
+           ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = { asize.width, asize.height };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
+        return;
+
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;
