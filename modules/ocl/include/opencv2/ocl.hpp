@@ -1546,22 +1546,20 @@ namespace cv
             int calcKeypointsOCL(const oclMat& img, const oclMat& mask, int maxKeypoints);
             int nonmaxSupressionOCL(oclMat& keypoints);
         };
+
         ////////////////////////////////// BRIEF Feature Descriptor //////////////////////////////////
+
         class CV_EXPORTS BRIEF_OCL
         {
         public:
             static const int PATCH_SIZE = 48;
             static const int KERNEL_SIZE = 9;
 
-            explicit BRIEF_OCL( int _bytes = 32 );
+            explicit BRIEF_OCL(int _bytes = 32);
 
-            /*
-             * Compute the descriptors for a set of keypoints in an image.
-             * image        The image.
-             * keypoints    The input keypoints.
-             * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
-             */
-            void compute( const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors ) const;
+            //!computes the brief descriptor for a set of given keypoints
+            //! supports only CV_8UC1 images
+            void compute(const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors) const;
 
             static int getBorderSize();
         protected:
