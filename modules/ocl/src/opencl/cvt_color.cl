@@ -133,12 +133,14 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
         int dst_idx = mad24(y, dst_step, dst_offset + x);
 
 #ifndef INTEL_DEVICE
+
 #ifdef DEPTH_5
         dst[dst_idx] = src[src_idx + bidx] * 0.114f + src[src_idx + 1] * 0.587f + src[src_idx + (bidx^2)] * 0.299f;
 #else
         dst[dst_idx] = (DATA_TYPE)CV_DESCALE((src[src_idx + bidx] * B2Y + src[src_idx + 1] * G2Y + src[src_idx + (bidx^2)] * R2Y), yuv_shift);
 #endif
-#else
+
+#else   //INTEL_DEVICE
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
@@ -148,7 +150,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
         __constant int * coeffs = c_RGB2GrayCoeffs_i;
 #endif
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
 #ifdef DEPTH_5
             *dst_ptr = src_ptr[bidx] * coeffs[0] + src_ptr[1] * coeffs[1] + src_ptr[(bidx^2)] *coeffs[2];
@@ -156,7 +158,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
             *dst_ptr = (DATA_TYPE)CV_DESCALE((src_ptr[bidx] * coeffs[0] + src_ptr[1] * coeffs[1] + src_ptr[(bidx^2)] * coeffs[2]), yuv_shift);
 #endif
         }
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -177,7 +179,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
 
             vstore2(Y, 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -190,6 +192,7 @@ __kernel void RGB2Gray(int cols, int rows, int src_step, int dst_step,
             vstore4(SAT_CAST4(Y), 0, dst_ptr);
 #endif
         }
+#endif //pixels_per_work_item
 #endif //INTEL_DEVICE
     }
 }
@@ -244,7 +247,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
         const int delta = HALF_MAX * (1 << yuv_shift);
 #endif
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const DATA_TYPE rgb[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
@@ -262,8 +265,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             dst_ptr[1] = SAT_CAST( U );
             dst_ptr[2] = SAT_CAST( V );
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -291,7 +293,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
 
             vstore8((VECTOR8)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0), 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -311,7 +313,7 @@ __kernel void RGB2YUV(int cols, int rows, int src_step, int dst_step,
             vstore16((VECTOR16)(Y.s0, U.s0, V.s0, 0, Y.s1, U.s1, V.s1, 0, Y.s2, U.s2, V.s2, 0, Y.s3, U.s3, V.s3, 0), 0, dst_ptr);
 #endif
         }
-#endif //INTEL_DEVICE
+#endif //pixels_per_work_item
     }
 }
 
@@ -340,7 +342,7 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
         __constant int * coeffs = c_YUV2RGBCoeffs_i;
 #endif
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const DATA_TYPE yuv[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
@@ -361,8 +363,7 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             dst_ptr[3]         = MAX_NUM;
 #endif
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -394,7 +395,7 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
             vstore8((VECTOR8)(c0.s0, c1.s0, c2.s0, 0, c0.s1, c1.s1, c2.s1, 0), 0, dst_ptr);
 #endif
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -418,7 +419,7 @@ __kernel void YUV2RGB(int cols, int rows, int src_step, int dst_step,
 #endif
 #endif
         }
-#endif //INTEL_DEVICE
+#endif  //pixels_per_work_item
     }
 }
 
@@ -509,7 +510,7 @@ __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
         const int delta = HALF_MAX * (1 << yuv_shift);
 #endif
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const DATA_TYPE rgb[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
@@ -527,8 +528,7 @@ __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
             dst_ptr[1] = SAT_CAST( Cr );
             dst_ptr[2] = SAT_CAST( Cb );
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -556,7 +556,7 @@ __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
 
             vstore8((VECTOR8)(Y.s0, Cr.s0, Cb.s0, 0, Y.s1, Cr.s1, Cb.s1, 0), 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -575,7 +575,7 @@ __kernel void RGB2YCrCb(int cols, int rows, int src_step, int dst_step,
             vstore16((VECTOR16)(Y.s0, Cr.s0, Cb.s0, 0, Y.s1, Cr.s1, Cb.s1, 0, Y.s2, Cr.s2, Cb.s2, 0, Y.s3, Cr.s3, Cb.s3, 0), 0, dst_ptr);
 #endif
         }
-#endif //INTEL_DEVICE
+#endif //pixels_per_work_item
     }
 }
 
@@ -604,7 +604,7 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
         __constant int * coeffs = c_YCrCb2RGBCoeffs_i;
 #endif
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const DATA_TYPE ycrcb[] = {src_ptr[0], src_ptr[1], src_ptr[2]};
 
@@ -625,8 +625,7 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
             dst_ptr[3]         = MAX_NUM;
 #endif
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -658,7 +657,7 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
             vstore8((VECTOR8)(c0.s0, c1.s0, c2.s0, 0, c0.s1, c1.s1, c2.s1, 0), 0, dst_ptr);
 #endif
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -682,7 +681,7 @@ __kernel void YCrCb2RGB(int cols, int rows, int src_step, int dst_step,
 #endif
 #endif
         }
-#endif //INTEL_DEVICE
+#endif //pixels_per_work_item
     }
 }
 
@@ -704,7 +703,7 @@ __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             DATA_TYPE R = src_ptr[0], G = src_ptr[1], B = src_ptr[2];
 
@@ -722,8 +721,7 @@ __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
             dst_ptr[1] = SAT_CAST( Y );
             dst_ptr[2] = SAT_CAST( Z );
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -751,7 +749,7 @@ __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
 
             vstore8((VECTOR8)(X.s0, Y.s0, Z.s0, 0, X.s1, Y.s1, Z.s1, 0), 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -771,7 +769,7 @@ __kernel void RGB2XYZ(int cols, int rows, int src_step, int dst_step,
             vstore16((VECTOR16)(X.s0, Y.s0, Z.s0, 0, X.s1, Y.s1, Z.s1, 0, X.s2, Y.s2, Z.s2, 0, X.s3, Y.s3, Z.s3, 0), 0, dst_ptr);
 #endif
         }
-#endif //INTEL_DEVICE
+#endif //pixels_per_work_item
     }
 }
 
@@ -791,7 +789,7 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const DATA_TYPE X = src_ptr[0], Y = src_ptr[1], Z = src_ptr[2];
 
@@ -812,8 +810,7 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
             dst_ptr[3] = MAX_NUM;
 #endif
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const VECTOR8 r0 = vload8(0, src_ptr);
 
@@ -845,7 +842,7 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
             vstore8((VECTOR8)(B.s0, G.s0, R.s0, 0, B.s1, G.s1, R.s1, 0), 0, dst_ptr);
 #endif
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
 #ifndef DEPTH_5
             const VECTOR16 r0 = vload16(0, src_ptr);
@@ -869,7 +866,7 @@ __kernel void XYZ2RGB(int cols, int rows, int src_step, int dst_step,
 #endif
 #endif
         }
-#endif //INTEL_DEVICE
+#endif // pixels_per_work_item
     }
 }
 
@@ -906,7 +903,7 @@ __kernel void RGB(int cols, int rows, int src_step, int dst_step,
         dst[dst_idx + 3] = src[src_idx + 3];
 #endif
 #endif
-#else
+#else //INTEL_DEVICE
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
@@ -936,7 +933,7 @@ __kernel void RGB(int cols, int rows, int src_step, int dst_step,
             vstore4(r0, 0, dst_ptr);
         }
 #endif
-#endif
+#endif //INTEL_DEVICE
     }
 }
 
@@ -1476,7 +1473,7 @@ __kernel void RGBA2mRGBA(int cols, int rows, int src_step, int dst_step,
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const uchar4 r0 = vload4(0, src_ptr);
 
@@ -1485,8 +1482,7 @@ __kernel void RGBA2mRGBA(int cols, int rows, int src_step, int dst_step,
             dst_ptr[2] = (r0.s2 * r0.s3 + HALF_MAX) / MAX_NUM;
             dst_ptr[3] = r0.s3;
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const uchar8 r0 = vload8(0, src_ptr);
 
@@ -1505,7 +1501,7 @@ __kernel void RGBA2mRGBA(int cols, int rows, int src_step, int dst_step,
 
             vstore8((uchar8)(r.s0, g.s0, b.s0, v3.s0, r.s1, g.s1, b.s1, v3.s1), 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
             const uchar16 r0 = vload16(0, src_ptr);
 
@@ -1524,7 +1520,7 @@ __kernel void RGBA2mRGBA(int cols, int rows, int src_step, int dst_step,
 
             vstore16((uchar16)(r.s0, g.s0, b.s0, v3.s0, r.s1, g.s1, b.s1, v3.s1, r.s2, g.s2, b.s2, v3.s2, r.s3, g.s3, b.s3, v3.s3), 0, dst_ptr);
         }
-#endif //INTEL_DEVICE
+#endif // pixels_per_work_item
     }
 }
 
@@ -1544,7 +1540,7 @@ __kernel void mRGBA2RGBA(int cols, int rows, int src_step, int dst_step,
         global DATA_TYPE *src_ptr = (global DATA_TYPE *)(src + src_idx);
         global DATA_TYPE *dst_ptr = (global DATA_TYPE *)(dst + dst_idx);
 
-        if (1 == pixels_per_work_item)
+#if (1 == pixels_per_work_item)
         {
             const uchar4 r0 = vload4(0, src_ptr);
             const uchar v3_half = r0.s3 / 2;
@@ -1555,8 +1551,7 @@ __kernel void mRGBA2RGBA(int cols, int rows, int src_step, int dst_step,
 
             vstore4((uchar4)(r, g, b, r0.s3), 0, dst_ptr);
         }
-#ifdef INTEL_DEVICE
-        else if (2 == pixels_per_work_item)
+#elif (2 == pixels_per_work_item)
         {
             const uchar8 r0 = vload8(0, src_ptr);
 
@@ -1576,7 +1571,7 @@ __kernel void mRGBA2RGBA(int cols, int rows, int src_step, int dst_step,
 
             vstore8((uchar8)(r.s0, g.s0, b.s0, v3.s0, r.s1, g.s1, b.s1, v3.s1), 0, dst_ptr);
         }
-        else if (4 == pixels_per_work_item)
+#elif (4 == pixels_per_work_item)
         {
             const uchar16 r0 = vload16(0, src_ptr);
 
@@ -1597,7 +1592,7 @@ __kernel void mRGBA2RGBA(int cols, int rows, int src_step, int dst_step,
 
             vstore16((uchar16)(r.s0, g.s0, b.s0, v3.s0, r.s1, g.s1, b.s1, v3.s1, r.s2, g.s2, b.s2, v3.s2, r.s3, g.s3, b.s3, v3.s3), 0, dst_ptr);
         }
-#endif //INTEL_DEVICE
+#endif // pixels_per_work_item
     }
 }
 
