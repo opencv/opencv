@@ -10,14 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Guoping Long, longguoping@gmail.com
-//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -43,56 +37,67 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
+// Authors:
+//  * Peter Andreas Entschev, peter@entschev.com
+//
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4127 4267 4324 4244 4251 4710 4711 4514 4996 )
-#endif
+using namespace perf;
 
-#if defined(_WIN32)
-#include <windows.h>
-#endif
+/////////////////// ORB ///////////////////
 
-#include "cvconfig.h"
+typedef std::tr1::tuple<std::string, int> Image_NFeatures_t;
+typedef perf::TestBaseWithParam<Image_NFeatures_t> Image_NFeatures;
 
-#include <map>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <stdio.h>
-
-#undef OPENCV_NOSTL
-
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
-#include "opencv2/ocl.hpp"
-#include "opencv2/features2d.hpp"
-
-#include "opencv2/core/utility.hpp"
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/ocl.hpp"
-
-#define __ATI__
-
-#if defined (HAVE_OPENCL)
-
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
-#include "opencv2/ocl/private/util.hpp"
-#include "safe_call.hpp"
-
-#else /* defined(HAVE_OPENCL) */
-
-static inline void throw_nogpu()
+PERF_TEST_P(Image_NFeatures, ORB,
+            testing::Combine(testing::Values<string>("gpu/perf/aloe.png"),
+                             testing::Values(4000)))
 {
-    CV_Error(CV_GpuNotSupported, "The library is compilled without OpenCL support.\n");
+    declare.time(300.0);
+
+    const Image_NFeatures_t params = GetParam();
+    const std::string imgFile = std::tr1::get<0>(params);
+    const int nFeatures = std::tr1::get<1>(params);
+
+    const cv::Mat img = imread(getDataPath(imgFile), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+
+    if (RUN_OCL_IMPL)
+    {
+        cv::ocl::ORB_OCL d_orb(nFeatures);
+
+        const cv::ocl::oclMat d_img(img);
+        cv::ocl::oclMat d_keypoints, d_descriptors;
+
+        TEST_CYCLE() d_orb(d_img, cv::ocl::oclMat(), d_keypoints, d_descriptors);
+
+        std::vector<cv::KeyPoint> ocl_keypoints;
+        d_orb.downloadKeyPoints(d_keypoints, ocl_keypoints);
+
+        cv::Mat ocl_descriptors(d_descriptors);
+
+        ocl_keypoints.resize(10);
+        ocl_descriptors = ocl_descriptors.rowRange(0, 10);
+
+        sortKeyPoints(ocl_keypoints, ocl_descriptors);
+
+        SANITY_CHECK_KEYPOINTS(ocl_keypoints, 1e-4);
+        SANITY_CHECK(ocl_descriptors);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        cv::ORB orb(nFeatures);
+
+        std::vector<cv::KeyPoint> cpu_keypoints;
+        cv::Mat cpu_descriptors;
+
+        TEST_CYCLE() orb(img, cv::noArray(), cpu_keypoints, cpu_descriptors);
+
+        SANITY_CHECK_KEYPOINTS(cpu_keypoints);
+        SANITY_CHECK(cpu_descriptors);
+    }
+    else
+        OCL_PERF_ELSE;
 }
-
-#endif /* defined(HAVE_OPENCL) */
-
-#endif /* __OPENCV_PRECOMP_H__ */
