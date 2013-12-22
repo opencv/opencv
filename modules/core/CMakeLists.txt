@@ -2,8 +2,11 @@ set(the_description "The Core Functionality")
 ocv_add_module(core PRIVATE_REQUIRED ${ZLIB_LIBRARIES})
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
+if(HAVE_WINRT_CX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
+endif()
 if(HAVE_WINRT)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW /GS /Gm- /AI\"${WINDOWS_SDK_PATH}/References/CommonConfiguration/Neutral\" /AI\"${VISUAL_STUDIO_PATH}/vcpackages\"")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS /Gm- /AI\"${WINDOWS_SDK_PATH}/References/CommonConfiguration/Neutral\" /AI\"${VISUAL_STUDIO_PATH}/vcpackages\"")
 endif()
 
 if(HAVE_CUDA)
