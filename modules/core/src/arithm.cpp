@@ -915,11 +915,12 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
 
 enum { OCL_OP_ADD=0, OCL_OP_SUB=1, OCL_OP_RSUB=2, OCL_OP_ABSDIFF=3, OCL_OP_MUL=4,
        OCL_OP_MUL_SCALE=5, OCL_OP_DIV_SCALE=6, OCL_OP_RECIP_SCALE=7, OCL_OP_ADDW=8,
-       OCL_OP_AND=9, OCL_OP_OR=10, OCL_OP_XOR=11, OCL_OP_NOT=12, OCL_OP_MIN=13, OCL_OP_MAX=14 };
+       OCL_OP_AND=9, OCL_OP_OR=10, OCL_OP_XOR=11, OCL_OP_NOT=12, OCL_OP_MIN=13, OCL_OP_MAX=14,
+       OCL_OP_RDIV_SCALE=15 };
 
 static const char* oclop2str[] = { "OP_ADD", "OP_SUB", "OP_RSUB", "OP_ABSDIFF",
     "OP_MUL", "OP_MUL_SCALE", "OP_DIV_SCALE", "OP_RECIP_SCALE",
-    "OP_ADDW", "OP_AND", "OP_OR", "OP_XOR", "OP_NOT", "OP_MIN", "OP_MAX", 0 };
+    "OP_ADDW", "OP_AND", "OP_OR", "OP_XOR", "OP_NOT", "OP_MIN", "OP_MAX", "OP_RDIV_SCALE", 0 };
 
 static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, bool bitwise, int oclop, bool haveScalar )
@@ -1301,25 +1302,27 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     int kercn = haveMask || haveScalar ? cn : 1;
 
-    char cvtstr[3][32], opts[1024];
+    char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT2=%s "
-            "-D dstT=%s -D workT=%s -D convertToWT1=%s "
+            "-D dstT=%s -D workT=%s -D scaleT=%s -D convertToWT1=%s "
             "-D convertToWT2=%s -D convertToDT=%s%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
             ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
             ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
+            ocl::typeToStr(CV_MAKETYPE(wdepth, 1)),
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
+    size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
     const uchar* usrdata_p = (const uchar*)usrdata;
     const double* usrdata_d = (const double*)usrdata;
     float usrdata_f[3];
     int i, n = oclop == OCL_OP_MUL_SCALE || oclop == OCL_OP_DIV_SCALE ||
-        oclop == OCL_OP_RECIP_SCALE ? 1 : oclop == OCL_OP_ADDW ? 3 : 0;
+        oclop == OCL_OP_RDIV_SCALE || oclop == OCL_OP_RECIP_SCALE ? 1 : oclop == OCL_OP_ADDW ? 3 : 0;
     if( n > 0 && wdepth == CV_32F )
     {
         for( i = 0; i < n; i++ )
@@ -1352,13 +1355,20 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, buf, esz);
 
         if( !haveMask )
-            k.args(src1arg, dstarg, scalararg);
+        {
+            if(n == 0)
+                k.args(src1arg, dstarg, scalararg);
+            else if(n == 1)
+                k.args(src1arg, dstarg, scalararg,
+                       ocl::KernelArg(0, 0, 0, usrdata_p, usrdata_esz));
+            else
+                CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
+        }
         else
             k.args(src1arg, maskarg, dstarg, scalararg);
     }
     else
     {
-        size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
         src2 = _src2.getUMat();
         ocl::KernelArg src2arg = ocl::KernelArg::ReadOnlyNoSize(src2, cscale);
 
@@ -1439,6 +1449,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             swapped12 = true;
             if( oclop == OCL_OP_SUB )
                 oclop = OCL_OP_RSUB;
+            if ( oclop == OCL_OP_DIV_SCALE )
+                oclop = OCL_OP_RDIV_SCALE;
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
             CV_Error( CV_StsUnmatchedSizes,
