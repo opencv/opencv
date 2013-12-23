@@ -223,11 +223,9 @@ public:
     ~ImageGrabberWinRT(void);
 
     HRESULT initImageGrabber(ABI::Windows::Media::Capture::IMediaCapture *pSource,
-        ABI::Windows::Media::MediaProperties::IVideoEncodingProperties* VideoFormat);    
+        GUID VideoFormat);    
     HRESULT startGrabbing(ABI::Windows::Foundation::IAsyncAction** action);
     HRESULT stopGrabbing(ABI::Windows::Foundation::IAsyncAction** action);
-    unsigned int getWidth();
-    unsigned int getHeight();
     // IMFClockStateSink methods
     STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset) { return ImageGrabberCallback::OnClockStart(hnsSystemTime, llClockStartOffset); }
     STDMETHODIMP OnClockStop(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockStop(hnsSystemTime); }
@@ -245,9 +243,6 @@ public:
 private:
     ABI::Windows::Media::Capture::IMediaCapture* ig_pMedCapSource;
     MediaSink* ig_pMediaSink;
-    unsigned int ig_height;
-    unsigned int ig_width;
-    ABI::Windows::Media::MediaProperties::IMediaEncodingProfile* ig_pEncProps;
 };
 #endif
 
@@ -355,6 +350,15 @@ public:
     void setEmergencyStopEvent(void *userData, void(*func)(int, void *));
 #ifdef HAVE_WINRT
     long readInfoOfDevice(ABI::Windows::Devices::Enumeration::IDeviceInformation* pDevice, unsigned int Num);
+    void waitForDevice()
+    {
+#ifdef __cplusplus_winrt
+        if (vd_pAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(vd_pAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
+#else
+        if (vd_pAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(vd_pAction, _ContextCallback::_CaptureCurrent());
+#endif
+        vd_pAction = NULL;
+    }
 #else
     long readInfoOfDevice(IMFActivate *pActivate, unsigned int Num);
 #endif
@@ -401,7 +405,7 @@ private:
     int findType(unsigned int size, unsigned int frameRate = 0);
 #ifdef HAVE_WINRT
     HRESULT enumerateCaptureFormats(ABI::Windows::Media::Capture::IMediaCapture *pSource);
-    long setDeviceFormat(ABI::Windows::Media::Capture::IMediaCapture *pSource, unsigned long dwFormatIndex);
+    long setDeviceFormat(ABI::Windows::Media::Capture::IMediaCapture *pSource, unsigned long dwFormatIndex, ABI::Windows::Foundation::IAsyncAction** pAction);
     long resetDevice(ABI::Windows::Devices::Enumeration::IDeviceInformation* pDevice);
     long checkDevice(ABI::Windows::Devices::Enumeration::DeviceClass devClass, Concurrency::task<HRESULT>* pTask, ABI::Windows::Devices::Enumeration::IDeviceInformation** ppDevice);
 #else
@@ -501,6 +505,9 @@ public:
     bool setupDevice(int deviceID, unsigned int w, unsigned int h, unsigned int idealFramerate = 30);
     // Checking of recivig of new frame from video device with deviceID
     bool isFrameNew(int deviceID);
+#ifdef HAVE_WINRT
+    void waitForDevice(int deviceID);
+#endif
     // Writing of Raw Data pixels from video device with deviceID with correction of RedAndBlue flipping flipRedAndBlue and vertical flipping flipImage
     bool getPixels(int deviceID, unsigned char * pixels, bool flipRedAndBlue = false, bool flipImage = false);
     static void processPixels(unsigned char * src, unsigned char * dst, unsigned int width, unsigned int height, unsigned int bpp, bool bRGB, bool bFlip);
@@ -1016,10 +1023,7 @@ ImageGrabber::~ImageGrabber(void)
 ImageGrabberWinRT::ImageGrabberWinRT(bool synchronous):
     ImageGrabberCallback(synchronous),
     ig_pMedCapSource(NULL),
-    ig_pMediaSink(NULL),
-    ig_pEncProps(NULL),
-    ig_width(0),
-    ig_height(0)
+    ig_pMediaSink(NULL)
 {}
 
 ImageGrabberWinRT::~ImageGrabberWinRT(void)
@@ -1030,7 +1034,6 @@ ImageGrabberWinRT::~ImageGrabberWinRT(void)
     }
     SafeRelease(&ig_pMediaSink);
     SafeRelease(&ig_pMedCapSource);
-    SafeRelease(&ig_pEncProps);
     
     CloseHandle(ig_hFinish);
 
@@ -1045,42 +1048,41 @@ ImageGrabberWinRT::~ImageGrabberWinRT(void)
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE: Destroying instance of the ImageGrabberWinRT class\n");    
 }
 
-unsigned int ImageGrabberWinRT::getWidth()
-{
-    return ig_width;
-}
-
-unsigned int ImageGrabberWinRT::getHeight()
-{
-    return ig_height;
-}
-
 HRESULT ImageGrabberWinRT::initImageGrabber(ABI::Windows::Media::Capture::IMediaCapture *pSource,
-    ABI::Windows::Media::MediaProperties::IVideoEncodingProperties* VideoFormat)
+    GUID VideoFormat)
 {
     HRESULT hr;
-    ComPtr<IActivationFactory> objFactory;
-    HSTRING str;
-    HSTRING_HEADER hstrHead;
-    hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile, (UINT32)wcslen(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile), &hstrHead, &str);
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IVideoDeviceController> pDevCont;
+    hr = pSource->get_VideoDeviceController(&pDevCont);
     if (FAILED(hr)) return hr;
-    hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IMediaDeviceController> pMedDevCont;
+    hr = pDevCont.As(&pMedDevCont);
     if (FAILED(hr)) return hr;
-    ComPtr<IInspectable> medEncProf;
-    hr = objFactory->ActivateInstance(medEncProf.ReleaseAndGetAddressOf());
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
+    hr = pMedDevCont->GetMediaStreamProperties(ABI::Windows::Media::Capture::MediaStreamType_VideoPreview, pMedEncProps.GetAddressOf());
     if (FAILED(hr)) return hr;
-    hr = medEncProf.CopyTo<ABI::Windows::Media::MediaProperties::IMediaEncodingProfile>(&ig_pEncProps);
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IVideoEncodingProperties> pVidProps;
+    hr = pMedEncProps.As(&pVidProps);
     if (FAILED(hr)) return hr;
-    hr = ig_pEncProps->put_Video(VideoFormat);
+    ComPtr<IMFMediaType> pType = NULL;
+    hr = MediaSink::ConvertPropertiesToMediaType(pMedEncProps.Get(), &pType);
     if (FAILED(hr)) return hr;
-    ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> medEncProps;
-    hr = VideoFormat->QueryInterface<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties>(&medEncProps);
-    if (FAILED(hr)) return hr;
-    hr = VideoFormat->get_Height(&ig_height);
-    if (FAILED(hr)) return hr;
-    hr = VideoFormat->get_Width(&ig_width);
-    if (FAILED(hr)) return hr;
+    MediaType MT = FormatReader::Read(pType.Get());
+    unsigned int sizeRawImage = 0;
+    if(VideoFormat == MFVideoFormat_RGB24)
+    {
+        sizeRawImage = MT.MF_MT_FRAME_SIZE * 3;
+    }
+    else if(VideoFormat == MFVideoFormat_RGB32)
+    {
+        sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
+    }    
+    sizeRawImage = MT.MF_MT_SAMPLE_SIZE;
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
+    CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
+    ig_RIOut = ig_RISecond;    
     ig_pMedCapSource = pSource;
+done:
     return hr;
 }
 
@@ -1150,10 +1152,35 @@ HRESULT ImageGrabberWinRT::startGrabbing(ABI::Windows::Foundation::IAsyncAction*
     if (FAILED(hr)) return hr;
     hr = spSetting->Insert(HStringReference(MF_PROP_SAMPLEGRABBERCALLBACK).Get(), this, &bReplaced);
     if (FAILED(hr)) return hr;
-    Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IVideoEncodingProperties> VideoFormat;
-    hr = ig_pEncProps->get_Video(&VideoFormat);
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IVideoDeviceController> pDevCont;
+    hr = ig_pMedCapSource->get_VideoDeviceController(&pDevCont);
     if (FAILED(hr)) return hr;
-    hr = spSetting->Insert(HStringReference(MF_PROP_VIDENCPROPS).Get(), VideoFormat.Get(), &bReplaced);
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IMediaDeviceController> pMedDevCont;
+    hr = pDevCont.As(&pMedDevCont);
+    if (FAILED(hr)) return hr;
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
+    hr = pMedDevCont->GetMediaStreamProperties(ABI::Windows::Media::Capture::MediaStreamType_VideoPreview, pMedEncProps.GetAddressOf());
+    if (FAILED(hr)) return hr;
+    Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IVideoEncodingProperties> pVidProps;
+    hr = pMedEncProps.As(&pVidProps);
+    HSTRING str;
+    HSTRING_HEADER hstrHead;
+    hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile, (UINT32)wcslen(RuntimeClass_Windows_Media_MediaProperties_MediaEncodingProfile), &hstrHead, &str);
+    if (FAILED(hr)) return hr;
+    hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
+    if (FAILED(hr)) return hr;
+    ComPtr<IInspectable> medEncProf;
+    hr = objFactory->ActivateInstance(medEncProf.ReleaseAndGetAddressOf());
+    if (FAILED(hr)) return hr;
+    ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProfile> pEncProps;
+    hr = medEncProf.CopyTo<ABI::Windows::Media::MediaProperties::IMediaEncodingProfile>(&pEncProps);
+    if (FAILED(hr)) return hr;
+    hr = pEncProps->put_Video(pVidProps.Get());
+    if (FAILED(hr)) return hr;
+    ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> medEncProps;
+    hr = pVidProps.As(&medEncProps);
+    if (FAILED(hr)) return hr;
+    hr = spSetting->Insert(HStringReference(MF_PROP_VIDENCPROPS).Get(), pVidProps.Get(), &bReplaced);
     if (SUCCEEDED(hr)) {
 #ifdef HAVE_WINRT_ACTIVATION
         //can start/stop multiple times with same MediaCapture object if using activatable class
@@ -1163,7 +1190,7 @@ HRESULT ImageGrabberWinRT::startGrabbing(ABI::Windows::Foundation::IAsyncAction*
         if (FAILED(hr)) return hr;
         hr = ((ABI::Windows::Media::IMediaExtension*)ig_pMediaSink)->SetProperties(pProps.Get());
         if (FAILED(hr)) return hr;
-        hr = imedPrevCap->StartPreviewToCustomSinkAsync(ig_pEncProps, ig_pMediaSink, action);
+        hr = imedPrevCap->StartPreviewToCustomSinkAsync(pEncProps.Get(), ig_pMediaSink, action);
 #endif
     }
     return hr;
@@ -1237,6 +1264,7 @@ err:
     {
         sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
     }
+    //sizeRawImage = MT.MF_MT_SAMPLE_SIZE;
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
     ig_RIOut = ig_RISecond;
@@ -2131,7 +2159,7 @@ long videoDevice::checkDevice(IMFAttributes *pAttributes, IMFActivate **pDevice)
 
 long videoDevice::initDevice()
 {
-    HRESULT hr = -1;
+    HRESULT hr = S_OK;
     CoInitialize(NULL);
 #ifdef HAVE_WINRT
     ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
@@ -2409,7 +2437,7 @@ void videoDevice::buildLibraryofTypes()
 }
 
 #ifdef HAVE_WINRT
-long videoDevice::setDeviceFormat(ABI::Windows::Media::Capture::IMediaCapture *pSource, unsigned long  dwFormatIndex)
+long videoDevice::setDeviceFormat(ABI::Windows::Media::Capture::IMediaCapture *pSource, unsigned long  dwFormatIndex, ABI::Windows::Foundation::IAsyncAction** pAction)
 {
     HRESULT hr;
     Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IVideoDeviceController> pDevCont;
@@ -2424,8 +2452,7 @@ long videoDevice::setDeviceFormat(ABI::Windows::Media::Capture::IMediaCapture *p
     Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
     hr = pVector->GetAt(dwFormatIndex, pMedEncProps.GetAddressOf());
     if (FAILED(hr)) return hr;
-    Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> pAction;
-    hr = pMedDevCont->SetMediaStreamPropertiesAsync(ABI::Windows::Media::Capture::MediaStreamType_VideoPreview, pMedEncProps.Get(), pAction.GetAddressOf());
+    hr = pMedDevCont->SetMediaStreamPropertiesAsync(ABI::Windows::Media::Capture::MediaStreamType_VideoPreview, pMedEncProps.Get(), pAction);
     return hr;
 }
 #endif
@@ -2496,25 +2523,29 @@ bool videoDevice::isFrameNew()
             //must already be closed
 #ifdef HAVE_WINRT
             if (vd_pMedCap) {
-                HRESULT hr;
-                Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> action;
-                Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IVideoDeviceController> pDevCont;
-                hr = vd_pMedCap->get_VideoDeviceController(&pDevCont);
-                if (FAILED(hr)) return false;
-                Microsoft::WRL::ComPtr<ABI::Windows::Media::Devices::IMediaDeviceController> pMedDevCont;
-                hr = pDevCont.As(&pMedDevCont);
-                if (FAILED(hr)) return false;
-                Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IMediaEncodingProperties> pMedEncProps;
-                hr = pMedDevCont->GetMediaStreamProperties(ABI::Windows::Media::Capture::MediaStreamType_VideoPreview, pMedEncProps.GetAddressOf());
-                if (FAILED(hr)) return false;
-                Microsoft::WRL::ComPtr<ABI::Windows::Media::MediaProperties::IVideoEncodingProperties> pVidProps;
-                hr = pMedEncProps.As(&pVidProps);
-                if (FAILED(hr)) return false;
+                ABI::Windows::Foundation::IAsyncAction* action;
                 if (FAILED(ImageGrabberWinRT::CreateInstance(&vd_pImGr))) return false;
-                if (FAILED(vd_pImGr->initImageGrabber(vd_pMedCap, pVidProps.Get())) || FAILED(vd_pImGr->startGrabbing(action.GetAddressOf()))) {
+                if (FAILED(vd_pImGr->initImageGrabber(vd_pMedCap, MFVideoFormat_RGB24)) || FAILED(vd_pImGr->startGrabbing(&action))) {
                     delete vd_pImGr;
                     return false;
                 }
+                ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
+#ifdef __cplusplus_winrt
+                Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
+                vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([action, pOldAction, context, this]() {
+                    if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
+                    CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action), context);
+                }));
+#else
+                _ContextCallback context = _ContextCallback::_CaptureCurrent();
+                vd_pAction = create_async([action, pOldAction, context, this]() -> HRESULT {
+                    if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
+                    HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, context);
+                    return hr;
+                });
+                vd_pAction->AddRef();
+#endif
+                
                 return true;
             }
 #endif
@@ -2563,16 +2594,37 @@ bool videoDevice::setupDevice(unsigned int id)
 #ifdef HAVE_WINRT
             ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
 #ifdef __cplusplus_winrt
-            vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pOldAction, id, DPO, this]() {
+            Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
+            vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pOldAction, context, id, DPO, this]() {
                 if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
 #else
-            vd_pAction = create_async([pOldAction, id, DPO, this]() -> HRESULT {
+            _ContextCallback context = _ContextCallback::_CaptureCurrent();
+            vd_pAction = create_async([pOldAction, context, id, DPO, this]() -> HRESULT {
                 if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
 #endif
             HRESULT hr;
 #endif
             vd_Width = vd_CurrentFormats[id].width;
             vd_Height = vd_CurrentFormats[id].height;
+#ifdef HAVE_WINRT
+            if (vd_pMedCap) {
+                ABI::Windows::Foundation::IAsyncAction* pAction;
+#ifdef __cplusplus_winrt
+                context._CallInContext([id, &pAction, this](){
+                    HRESULT hr = setDeviceFormat(vd_pMedCap, (DWORD) id, &pAction);
+                    if (FAILED(hr)) throw Platform::Exception::CreateException(hr);
+#else                
+                hr = context._CallInContext([id, &pAction, this]() -> HRESULT {
+                    return setDeviceFormat(vd_pMedCap, (DWORD) id, &pAction);
+#endif
+                });
+#ifdef __cplusplus_winrt
+                CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction), context);
+#else
+                if (SUCCEEDED(hr)) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction, context);
+#endif
+            } else
+#endif
             hr = setDeviceFormat(vd_pSource, (DWORD) id);
             vd_IsSetuped = (SUCCEEDED(hr));
             if(vd_IsSetuped)
@@ -3105,6 +3157,37 @@ bool videoInput::isFrameNew(int deviceID)
     return false;
 }
 
+#ifdef HAVE_WINRT
+void videoInput::waitForDevice(int deviceID)
+{
+    DebugPrintOut *DPO = &DebugPrintOut::getInstance();
+    if (deviceID < 0)
+    {
+        DPO->printOut(L"VIDEODEVICE %i: Invalid device ID\n", deviceID);
+        return;
+    }
+    if(accessToDevices)
+    {
+        if(!isDeviceSetup(deviceID))
+        {
+            if(isDeviceMediaSource(deviceID))
+                return;
+        }
+        videoDevices *VDS = &videoDevices::getInstance();
+        videoDevice * VD = VDS->getDevice(deviceID);
+        if(VD)
+        {
+            VD->waitForDevice();
+        }
+    }
+    else
+    {
+        DPO->printOut(L"VIDEODEVICE(s): There is not any suitable video device\n");
+    }
+    return;
+}
+#endif
+
 unsigned int videoInput::getCountFormats(int deviceID)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -3532,11 +3615,31 @@ bool CvCaptureCAM_MSMF::open( int _index )
     return S_OK;
 #endif
     });
+    VI.waitForDevice(try_index);
+#endif
+#ifdef HAVE_WINRT
+#ifdef __cplusplus_winrt
+    context._CallInContext([this, try_index]() {
+#else
+    context._CallInContext([this, try_index]() -> HRESULT {
+#endif
 #endif
     if( !VI.isFrameNew(try_index) )
+#ifdef HAVE_WINRT
+#ifdef __cplusplus_winrt
+        throw Platform::Exception::CreateException(E_FAIL);
+#else
+        return E_FAIL;
+#endif
+#else
         return false;
+#endif
     index = try_index;
 #ifdef HAVE_WINRT
+#ifndef __cplusplus_winrt
+    return S_OK;
+#endif
+    });
     return true;
     });
 #endif
