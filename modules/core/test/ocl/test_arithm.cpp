@@ -1241,6 +1241,89 @@ OCL_TEST_P(Normalize, Mat)
     }
 }
 
+//////////////////////////////////////// InRange ///////////////////////////////////////////////
+
+PARAM_TEST_CASE(InRange, MatDepth, Channels, bool /*Scalar or not*/, bool /*Roi*/)
+{
+    int depth;
+    int cn;
+    bool scalars, use_roi;
+    cv::Scalar val1, val2;
+
+    TEST_DECLARE_INPUT_PARAMETER(src1)
+    TEST_DECLARE_INPUT_PARAMETER(src2)
+    TEST_DECLARE_INPUT_PARAMETER(src3)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        scalars = GET_PARAM(2);
+        use_roi = GET_PARAM(3);
+    }
+
+    virtual void generateTestData()
+    {
+        const int type = CV_MAKE_TYPE(depth, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, -40, 40);
+
+        Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src2, src2_roi, roiSize, src2Border, type, -40, 40);
+
+        Border src3Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src3, src3_roi, roiSize, src3Border, type, -40, 40);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_8UC1, 5, 16);
+
+        val1 = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+        val2 = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src1)
+        UMAT_UPLOAD_INPUT_PARAMETER(src2)
+        UMAT_UPLOAD_INPUT_PARAMETER(src3)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+
+    void Near()
+    {
+        OCL_EXPECT_MATS_NEAR(dst, 0)
+    }
+};
+
+OCL_TEST_P(InRange, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::inRange(src1_roi, src2_roi, src3_roi, dst_roi));
+        OCL_ON(cv::inRange(usrc1_roi, usrc2_roi, usrc3_roi, udst_roi));
+
+        Near();
+    }
+}
+
+OCL_TEST_P(InRange, Scalar)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::inRange(src1_roi, val1, val2, dst_roi));
+        OCL_ON(cv::inRange(usrc1_roi, val1, val2, udst_roi));
+
+        Near();
+    }
+}
+
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1276,7 +1359,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx_Mask, Combine(OCL_ALL_DEPTHS, ::te
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Normalize, Combine(OCL_ALL_DEPTHS, Values(Channels(1)), Bool()));
-
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 
 } } // namespace cvtest::ocl
 
