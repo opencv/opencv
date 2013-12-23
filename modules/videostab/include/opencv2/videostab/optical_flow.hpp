@@ -46,7 +46,7 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 #  include "opencv2/gpu/gpu.hpp"
 #endif
 
@@ -98,7 +98,7 @@ public:
             OutputArray status, OutputArray errors);
 };
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 class CV_EXPORTS DensePyrLkOptFlowEstimatorGpu
         : public PyrLkOptFlowEstimatorBase, public IDenseOptFlowEstimator
 {
