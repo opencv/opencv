@@ -149,7 +149,7 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
     UMat ufacepos, ustages, ustumps, usubsets;
-    ocl::Kernel cascadeKernel;
+    ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
 
     Mutex mtx;
@@ -392,6 +392,7 @@ public:
 
     virtual bool setImage(InputArray image, Size _origWinSize, Size);
     virtual bool setWindow(Point pt);
+    virtual void getUMats(std::vector<UMat>& bufs);
 
     int operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin); }
