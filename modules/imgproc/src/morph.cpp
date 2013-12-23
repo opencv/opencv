@@ -1314,35 +1314,10 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
     if(localThreads[0]*localThreads[1] * 2 < (localThreads[0] + ksize.width - 1) * (localThreads[1] + ksize.height - 1))
         return false;
 
-    char s[64];
-
-    switch (src.type())
-    {
-    case CV_8UC1:
-        sprintf(s, "-D VAL=%s -D GENTYPE=uchar", (op==MORPH_ERODE) ? "255" : "0");
-        break;
-    case CV_8UC4:
-        sprintf(s, "-D VAL=%s -D GENTYPE=uchar4", (op==MORPH_ERODE) ? "255" : "0");
-        break;
-    case CV_32FC1:
-        sprintf(s, "-D VAL=%s -D GENTYPE=float", (op==MORPH_ERODE) ? "FLT_MAX" : "-FLT_MAX");
-        break;
-    case CV_32FC4:
-        sprintf(s, "-D VAL=%s -D GENTYPE=float4", (op==MORPH_ERODE) ? "FLT_MAX" : "-FLT_MAX");
-        break;
-    case CV_64FC1:
-        sprintf(s, "-D VAL=%s -D GENTYPE=double", (op==MORPH_ERODE) ? "DBL_MAX" : "-DBL_MAX");
-        break;
-    case CV_64FC4:
-        sprintf(s, "-D VAL=%s -D GENTYPE=double4", (op==MORPH_ERODE) ? "DBL_MAX" : "-DBL_MAX");
-        break;
-    default:
-        CV_Error(Error::StsUnsupportedFormat, "unsupported type");
-    }
-
     char compile_option[128];
-    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s %s %s %s",
-        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op], doubleSupport?"-D DOUBLE_SUPPORT" :"", rectKernel?"-D RECTKERNEL":"", s);
+    sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s %s %s -D GENTYPE=%s -D DEPTH_%d",
+        anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op], doubleSupport?"-D DOUBLE_SUPPORT" :"", rectKernel?"-D RECTKERNEL":"",
+        ocl::typeToStr(_src.type()), _src.depth() );
 
     ocl::Kernel k( "morph", ocl::imgproc::morph_oclsrc, compile_option);
     if (k.empty())
@@ -1357,7 +1332,14 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
         Size wholesize;
         Point ofs;
         if( i == 0)
-            source = src;
+        {
+            int cols =  src.cols, rows = src.rows;
+            src.locateROI(wholesize,ofs);
+            src.adjustROI(ofs.y, wholesize.height - rows - ofs.y, ofs.x, wholesize.width - cols - ofs.x);
+            src.copyTo(source);
+            src.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
+            source.adjustROI(-ofs.y, -wholesize.height + rows + ofs.y, -ofs.x, -wholesize.width + cols + ofs.x);
+        }
         else
         {
             int cols =  dst.cols, rows = dst.rows;
@@ -1372,18 +1354,15 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
         int wholecols = wholesize.width, wholerows = wholesize.height;
 
         int idxArg = 0;
-        idxArg = k.set(idxArg, ocl::KernelArg::PtrReadOnly(source));
-        idxArg = k.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
-        idxArg = k.set(idxArg, (int)( (source.offset / source.elemSize())%(source.step / source.elemSize()) ) );
-        idxArg = k.set(idxArg, (int)( (source.offset / source.elemSize())/(source.step / source.elemSize()) ) );
+        idxArg = k.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(source));
+        idxArg = k.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
+        idxArg = k.set(idxArg, ofs.x);
+        idxArg = k.set(idxArg, ofs.y);
         idxArg = k.set(idxArg, source.cols);
         idxArg = k.set(idxArg, source.rows);
-        idxArg = k.set(idxArg, (int)(source.step / source.elemSize()));
-        idxArg = k.set(idxArg, (int)(dst.step / dst.elemSize()));
         idxArg = k.set(idxArg, ocl::KernelArg::PtrReadOnly(kernel));
         idxArg = k.set(idxArg, wholecols);
         idxArg = k.set(idxArg, wholerows);
-        idxArg = k.set(idxArg, (int)( dst.offset / dst.elemSize() ) );
 
         if (!k.run(2, globalThreads, localThreads, true))
             return false;

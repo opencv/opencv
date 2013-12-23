@@ -43,6 +43,31 @@
 #endif
 #endif
 
+#ifdef DEPTH_0
+#ifdef ERODE
+#define VAL 255
+#endif
+#ifdef DILATE
+#define VAL 0
+#endif
+#endif
+#ifdef DEPTH_5
+#ifdef ERODE
+#define VAL FLT_MAX
+#endif
+#ifdef DILATE
+#define VAL -FLT_MAX
+#endif
+#endif
+#ifdef DEPTH_6
+#ifdef ERODE
+#define VAL DBL_MAX
+#endif
+#ifdef DILATE
+#define VAL -DBL_MAX
+#endif
+#endif
+
 #ifdef ERODE
 #define MORPH_OP(A,B) min((A),(B))
 #endif
@@ -52,14 +77,12 @@
 //BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii
 #define ELEM(i,l_edge,r_edge,elem1,elem2) (i)<(l_edge) | (i) >= (r_edge) ? (elem1) : (elem2)
 
-__kernel void morph(__global const GENTYPE * restrict src,
-                    __global GENTYPE *dst,
+__kernel void morph(__global const uchar * restrict srcptr, int src_step, int src_offset,
+                    __global uchar * dstptr, int dst_step, int dst_offset,
                     int src_offset_x, int src_offset_y,
                     int cols, int rows,
-                    int src_step_in_pixel, int dst_step_in_pixel,
                     __constant uchar * mat_kernel,
-                    int src_whole_cols, int src_whole_rows,
-                    int dst_offset_in_pixel)
+                    int src_whole_cols, int src_whole_rows)
 {
     int l_x = get_local_id(0);
     int l_y = get_local_id(1);
@@ -79,17 +102,20 @@ __kernel void morph(__global const GENTYPE * restrict src,
     int cur_y = start_y + tl_y;
     int cur_x2 = start_x + tl_x2;
     int cur_y2 = start_y + tl_y2;
-    int start_addr = mad24(cur_y,src_step_in_pixel,cur_x);
-    int start_addr2 = mad24(cur_y2,src_step_in_pixel,cur_x2);
+    int start_addr = mad24(cur_y,src_step, cur_x*(int)sizeof(GENTYPE));
+    int start_addr2 = mad24(cur_y2,src_step, cur_x2*(int)sizeof(GENTYPE));
     GENTYPE temp0,temp1;
     __local GENTYPE LDS_DAT[2*LSIZE1*LSIZE0];
 
-    int end_addr = mad24(src_whole_rows - 1,src_step_in_pixel,src_whole_cols);
+    int end_addr = mad24(src_whole_rows - 1,src_step,src_whole_cols*(int)sizeof(GENTYPE));
     //read pixels from src
     start_addr = ((start_addr < end_addr) && (start_addr > 0)) ? start_addr : 0;
     start_addr2 = ((start_addr2 < end_addr) && (start_addr2 > 0)) ? start_addr2 : 0;
-    temp0 = src[start_addr];
-    temp1 = src[start_addr2];
+    __global const GENTYPE * src;
+    src = (__global const GENTYPE *)(srcptr+start_addr);
+    temp0 = src[0];
+    src = (__global const GENTYPE *)(srcptr+start_addr2);
+    temp1 = src[0];
     //judge if read out of boundary
     temp0= ELEM(cur_x,0,src_whole_cols,(GENTYPE)VAL,temp0);
     temp0= ELEM(cur_y,0,src_whole_rows,(GENTYPE)VAL,temp0);
@@ -116,10 +142,11 @@ __kernel void morph(__global const GENTYPE * restrict src,
         }
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
-    int out_addr = mad24(gidy,dst_step_in_pixel,gidx+dst_offset_in_pixel);
     if(gidx<cols && gidy<rows)
     {
-        dst[out_addr] = res;
+        int dst_index = mad24(gidy, dst_step, dst_offset + gidx * (int)sizeof(GENTYPE));
+        __global GENTYPE * dst = (__global GENTYPE *)(dstptr + dst_index);
+        dst[0] = res;
     }
 
 }
