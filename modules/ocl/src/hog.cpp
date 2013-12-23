@@ -76,6 +76,11 @@ namespace cv
                 int cdescr_width;
                 int cdescr_height;
 
+                // A shift value and type that allows qangle to be different
+                // sizes on different hardware
+                int qangle_step_shift;
+                int qangle_type;
+
                 void set_up_constants(int nbins, int block_stride_x, int block_stride_y,
                                       int nblocks_win_x, int nblocks_win_y);
 
@@ -153,6 +158,7 @@ cv::ocl::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size blo
         hog_device_cpu = true;
     else
         hog_device_cpu = false;
+
 }
 
 size_t cv::ocl::HOGDescriptor::getDescriptorSize() const
@@ -213,7 +219,7 @@ void cv::ocl::HOGDescriptor::init_buffer(const oclMat &img, Size win_stride)
         effect_size = img.size();
 
     grad.create(img.size(), CV_32FC2);
-    qangle.create(img.size(), CV_8UC2);
+    qangle.create(img.size(), hog::qangle_type);
 
     const size_t block_hist_size = getBlockHistogramSize();
     const Size blocks_per_img = numPartsWithin(img.size(), block_size, block_stride);
@@ -1606,6 +1612,16 @@ void cv::ocl::device::hog::set_up_constants(int nbins,
 
     int descr_size = descr_width * nblocks_win_y;
     cdescr_size = descr_size;
+
+    qangle_type = CV_8UC2;
+    qangle_step_shift = 0;
+    // Some Intel devices have low single-byte access performance,
+    // so we change the datatype here.
+    if (Context::getContext()->supportsFeature(FEATURE_CL_INTEL_DEVICE))
+    {
+        qangle_type = CV_32SC2;
+        qangle_step_shift = 2;
+    }
 }
 
 void cv::ocl::device::hog::compute_hists(int nbins,
@@ -1627,7 +1643,7 @@ void cv::ocl::device::hog::compute_hists(int nbins,
     int blocks_total = img_block_width * img_block_height;
 
     int grad_quadstep = grad.step >> 2;
-    int qangle_step = qangle.step;
+    int qangle_step = qangle.step >> qangle_step_shift;
 
     int blocks_in_group = 4;
     size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
@@ -1892,7 +1908,7 @@ void cv::ocl::device::hog::compute_gradients_8UC1(int height, int width,
     char correctGamma = (correct_gamma) ? 1 : 0;
     int img_step = img.step;
     int grad_quadstep = grad.step >> 3;
-    int qangle_step = qangle.step >> 1;
+    int qangle_step = qangle.step >> (1 + qangle_step_shift);
 
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&width));
@@ -1927,7 +1943,7 @@ void cv::ocl::device::hog::compute_gradients_8UC4(int height, int width,
     char correctGamma = (correct_gamma) ? 1 : 0;
     int img_step = img.step >> 2;
     int grad_quadstep = grad.step >> 3;
-    int qangle_step = qangle.step >> 1;
+    int qangle_step = qangle.step >> (1 + qangle_step_shift);
 
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&height));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&width));
