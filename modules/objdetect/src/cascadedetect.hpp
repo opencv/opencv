@@ -251,9 +251,9 @@ public:
     {
         Feature();
         bool read( const FileNode& node );
-        
+
         bool tilted;
-        
+
         enum { RECT_NUM = 3 };
         struct
         {
@@ -373,11 +373,11 @@ public:
 
         Rect rect; // weight and height for block
     };
-    
+
     struct OptFeature
     {
         OptFeature();
-        
+
         int calc( const int* pwin ) const;
         void setOffsets( const Feature& _f, int step );
         int ofs[16];
@@ -403,10 +403,10 @@ protected:
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
     OptFeature* optfeaturesPtr; // optimization
-    
+
     Mat sum0, sum;
     UMat usum0, usum, ufbuf;
-    
+
     const int* pwin;
 };
 
@@ -415,7 +415,7 @@ inline LBPEvaluator::Feature :: Feature()
 {
     rect = Rect();
 }
-    
+
 inline LBPEvaluator::OptFeature :: OptFeature()
 {
     for( int i = 0; i < 16; i++ )

@@ -124,13 +124,13 @@ __kernel void runLBPClassifierStump(
     int ix = get_global_id(0)*xyscale;
     int iy = get_global_id(1)*xyscale;
     sumstep /= sizeof(int);
-    
+
     if( ix < imgsize.x && iy < imgsize.y )
     {
         int stageIdx;
         __global const Stump* stump = stumps;
         __global const int* p = sum + mad24(iy, sumstep, ix);
-        
+
         for( stageIdx = 0; stageIdx < nstages; stageIdx++ )
         {
             int i, ntrees = stages[stageIdx].ntrees;
@@ -140,29 +140,29 @@ __kernel void runLBPClassifierStump(
                 float4 st = stump->st;
                 __global const OptLBPFeature* f = optfeatures + as_int(st.x);
                 int16 ofs = f->ofs;
-                
+
                 #define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
                 ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
-                
+
                 int cval = CALC_SUM_OFS_( ofs.s5, ofs.s6, ofs.s9, ofs.sa, p );
-                
+
                 int mask, idx = (CALC_SUM_OFS_( ofs.s0, ofs.s1, ofs.s4, ofs.s5, p ) >= cval ? 4 : 0); // 0
                 idx |= (CALC_SUM_OFS_( ofs.s1, ofs.s2, ofs.s5, ofs.s6, p ) >= cval ? 2 : 0); // 1
                 idx |= (CALC_SUM_OFS_( ofs.s2, ofs.s3, ofs.s6, ofs.s7, p ) >= cval ? 1 : 0); // 2
-                
+
                 mask = (CALC_SUM_OFS_( ofs.s6, ofs.s7, ofs.sa, ofs.sb, p ) >= cval ? 16 : 0); // 5
                 mask |= (CALC_SUM_OFS_( ofs.sa, ofs.sb, ofs.se, ofs.sf, p ) >= cval ? 8 : 0);  // 8
                 mask |= (CALC_SUM_OFS_( ofs.s9, ofs.sa, ofs.sd, ofs.se, p ) >= cval ? 4 : 0);  // 7
                 mask |= (CALC_SUM_OFS_( ofs.s8, ofs.s9, ofs.sc, ofs.sd, p ) >= cval ? 2 : 0);  // 6
                 mask |= (CALC_SUM_OFS_( ofs.s4, ofs.s5, ofs.s8, ofs.s9, p ) >= cval ? 1 : 0);  // 7
-                
+
                 s += (bitsets[idx] & (1 << mask)) ? st.z : st.w;
             }
-            
+
             if( s < stages[stageIdx].threshold )
                 break;
         }
-        
+
         if( stageIdx == nstages )
         {
             int nfaces = atomic_inc(facepos);
@@ -177,4 +177,3 @@ __kernel void runLBPClassifierStump(
         }
     }
 }
-
