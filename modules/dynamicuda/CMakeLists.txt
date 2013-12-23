@@ -1,4 +1,4 @@
-if(NOT DYNAMIC_CUDA_SUPPORT)
+if(NOT ENABLE_DYNAMIC_CUDA)
   ocv_module_disable(dynamicuda)
 endif()
 
