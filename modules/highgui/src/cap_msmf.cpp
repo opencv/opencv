@@ -391,6 +391,7 @@ private:
 #ifdef HAVE_WINRT
     ABI::Windows::Media::Capture::IMediaCapture* vd_pMedCap;
     ImageGrabberWinRT *vd_pImGr;
+    ABI::Windows::Foundation::IAsyncAction* vd_pAction;
 #endif
     emergensyStopEventCallback vd_func;
     void *vd_userData;
@@ -424,7 +425,6 @@ public:
 #else
             CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(vds_enumTask, _ContextCallback::_CaptureCurrent());
 #endif
-            SafeRelease(&vds_enumTask);
         }
     }
 #else
@@ -1112,6 +1112,7 @@ HRESULT ImageGrabberWinRT::stopGrabbing(ABI::Windows::Foundation::IAsyncAction**
                 SetEvent(ig_hFinish);
                 return hr;
                 });
+            (*action)->AddRef();
 #endif
         }
     }
@@ -1797,10 +1798,12 @@ unsigned char * RawImage::getpPixels()
 }
 
 videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pFriendlyName(NULL),
-    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_func(NULL), vd_userData(NULL)
+    vd_Width(0), vd_Height(0), vd_pSource(NULL), vd_pImGrTh(NULL), vd_func(NULL), vd_userData(NULL)
 {
 #ifdef HAVE_WINRT
     vd_pMedCap = NULL;
+    vd_pImGr = NULL;
+    vd_pAction = NULL;
 #endif
 }
 
@@ -1937,18 +1940,21 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
         if (FAILED(hr)) return hr;
         hr = pCapInitSet->put_StreamingCaptureMode(ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video);
         if (FAILED(hr)) return hr;
-        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> pAction;
+        ABI::Windows::Foundation::IAsyncAction* pAction;
         hr = pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), &pAction);
+        ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
 #ifdef __cplusplus_winrt
         Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
-        Concurrency::create_async([pAction, context, pIMedCap, this](){
-            CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction.Get()), context);
+        vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pAction, pOldAction, context, pIMedCap, this](){
+            if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
+            CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction), context);
             {
                 context._CallInContext([pIMedCap, this](){
 #else
         _ContextCallback context = _ContextCallback::_CaptureCurrent();
-        create_async([pAction, context, pIMedCap, this]() -> HRESULT {
-            HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction.Get(), context);
+        vd_pAction = create_async([pAction, pOldAction, context, pIMedCap, this]() -> HRESULT {
+            if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
+            HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction, context);
             if (SUCCEEDED(hr)) {
                 //all camera capture calls only in original context
                 context._CallInContext([pIMedCap, this]() -> HRESULT {
@@ -1962,8 +1968,11 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
             buildLibraryofTypes();
 #ifndef __cplusplus_winrt
             return hr;
-#endif
         });
+        vd_pAction->AddRef();
+#else
+        }));
+#endif
     }
 #else
     if(pActivate)
@@ -2024,16 +2033,16 @@ long videoDevice::checkDevice(ABI::Windows::Devices::Enumeration::DeviceClass de
     Microsoft::WRL::ComPtr<ABI::Windows::Devices::Enumeration::IDeviceInformationStatics> pDevStat;
     hr = objFactory.As(&pDevStat);
     if (FAILED(hr)) return hr;
-    Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>> pAction;
-    hr = pDevStat->FindAllAsyncDeviceClass(devClass, pAction.GetAddressOf());
+    ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>* pAction;
+    hr = pDevStat->FindAllAsyncDeviceClass(devClass, &pAction);
     if (SUCCEEDED(hr)) {
-        *pTask = Concurrency::create_task([pAction, this, ppDevice]() -> HRESULT {
+        *pTask = Concurrency::create_task([pAction, &ppDevice, this]() -> HRESULT {
             HRESULT hr = S_OK;
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>> pVector;
 #ifdef __cplusplus_winrt
-            pVector = reinterpret_cast<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(CCompletionHandler::PerformSynchronously<Windows::Devices::Enumeration::DeviceInformationCollection^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<Windows::Devices::Enumeration::DeviceInformationCollection^>^>(pAction.Get()), Concurrency::details::_ContextCallback::_CaptureCurrent()));
+            pVector = reinterpret_cast<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(CCompletionHandler::PerformSynchronously<Windows::Devices::Enumeration::DeviceInformationCollection^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<Windows::Devices::Enumeration::DeviceInformationCollection^>^>(pAction), Concurrency::details::_ContextCallback::_CaptureCurrent()));
 #else
-            hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>, ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>>::PerformSynchronously<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(pAction.Get(), _ContextCallback::_CaptureCurrent(), pVector.GetAddressOf());
+            hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>, ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>>::PerformSynchronously<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(pAction, _ContextCallback::_CaptureCurrent(), pVector.GetAddressOf());
 #endif
             UINT32 count = 0;
             if (SUCCEEDED(hr)) hr = pVector->get_Size(&count);
@@ -2125,25 +2134,26 @@ long videoDevice::initDevice()
     HRESULT hr = -1;
     CoInitialize(NULL);
 #ifdef HAVE_WINRT
-    Concurrency::task<HRESULT> pTask;
-    Microsoft::WRL::ComPtr<ABI::Windows::Devices::Enumeration::IDeviceInformation> pDevInfo;
-    hr = checkDevice(ABI::Windows::Devices::Enumeration::DeviceClass::DeviceClass_VideoCapture, &pTask, pDevInfo.GetAddressOf());
-    if (FAILED(hr)) return hr;
+    ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
 #ifdef __cplusplus_winrt
     Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
-    Concurrency::create_async([pTask, pDevInfo, context, this]() {
+    vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pOldAction, context, this]() {
+           if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
 #else
     _ContextCallback context = _ContextCallback::_CaptureCurrent();
-    create_async([pTask, pDevInfo, context, this]() -> HRESULT {
+    vd_pAction = create_async([pOldAction, context, this]() -> HRESULT {
+           if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
 #endif
-        pTask.wait();
-        HRESULT hr = pTask.get();
+        Concurrency::task<HRESULT> pTask;
+        Microsoft::WRL::ComPtr<ABI::Windows::Devices::Enumeration::IDeviceInformation> pDevInfo;
+        HRESULT hr = checkDevice(ABI::Windows::Devices::Enumeration::DeviceClass::DeviceClass_VideoCapture, &pTask, pDevInfo.GetAddressOf());
+        if (SUCCEEDED(hr)) hr = pTask.get();
         if (SUCCEEDED(hr)) {
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> pAction;
+            ABI::Windows::Foundation::IAsyncAction* pAction;
 #ifdef __cplusplus_winrt
-            context._CallInContext([pDevInfo, pAction, this]() mutable {
+            context._CallInContext([pDevInfo, &pAction, this]() {
 #else
-            hr = context._CallInContext([pDevInfo, pAction, this]() mutable -> HRESULT {
+            hr = context._CallInContext([pDevInfo, &pAction, this]() -> HRESULT {
 #endif
                 HRESULT hr;
                 ComPtr<IActivationFactory> objFactory;
@@ -2184,21 +2194,23 @@ long videoDevice::initDevice()
                     hr = WindowsDeleteString(str);
                 if (SUCCEEDED(hr))
                     hr = pCapInitSet->put_StreamingCaptureMode(ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video);
-                if (SUCCEEDED(hr)) hr = pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), pAction.GetAddressOf());
+                if (SUCCEEDED(hr)) hr = pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), &pAction);
 #ifdef __cplusplus_winrt
                 if (FAILED(hr)) throw Platform::Exception::CreateException(hr);
             });
-            CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction.Get()), context);
+            CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction), context);
         }
+    }));
 #else
                 return hr;
             });
             if (SUCCEEDED(hr))
-                hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction.Get(), context);
+                hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction, context);
         }
         return hr;
-#endif
     });
+    vd_pAction->AddRef();
+#endif
 #else
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     ComPtr<IMFAttributes> pAttributes = NULL;
@@ -2264,14 +2276,17 @@ void videoDevice::closeDevice()
         
 #ifdef HAVE_WINRT
         if (vd_pMedCap) {
-            Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> action;
-            vd_pImGr->stopGrabbing(action.GetAddressOf());
+            ABI::Windows::Foundation::IAsyncAction* action;
+            ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
+            vd_pImGr->stopGrabbing(&action);
 #ifdef __cplusplus_winrt
-            Concurrency::create_async([action, this]() {
-                CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action.Get()), Concurrency::details::_ContextCallback::_CaptureCurrent());
+            vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([action, pOldAction, this]() {
+                if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
+                CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(action), Concurrency::details::_ContextCallback::_CaptureCurrent());
 #else
-            create_async([action, this]() -> HRESULT {
-                HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action.Get(), _ContextCallback::_CaptureCurrent());
+            vd_pAction = create_async([action, pOldAction, this]() -> HRESULT {
+                if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
+                HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, _ContextCallback::_CaptureCurrent());
 #endif
                 if(vd_LockOut == RawDataLock) {
                     delete vd_pImGr;
@@ -2280,8 +2295,11 @@ void videoDevice::closeDevice()
                 vd_LockOut = OpenLock;
 #ifndef __cplusplus_winrt
                 return hr;
-#endif
             });
+            vd_pAction->AddRef();
+#else
+            }));
+#endif
             return;
         }
 #endif
@@ -2542,6 +2560,17 @@ bool videoDevice::setupDevice(unsigned int id)
         hr = initDevice();
         if(SUCCEEDED(hr))
         {
+#ifdef HAVE_WINRT
+            ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
+#ifdef __cplusplus_winrt
+            vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pOldAction, id, DPO, this]() {
+                if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
+#else
+            vd_pAction = create_async([pOldAction, id, DPO, this]() -> HRESULT {
+                if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
+#endif
+            HRESULT hr;
+#endif
             vd_Width = vd_CurrentFormats[id].width;
             vd_Height = vd_CurrentFormats[id].height;
             hr = setDeviceFormat(vd_pSource, (DWORD) id);
@@ -2550,6 +2579,15 @@ bool videoDevice::setupDevice(unsigned int id)
                 DPO->printOut(L"\n\nVIDEODEVICE %i: Device is setuped \n", vd_CurrentNumber);
             vd_PrevParametrs = getParametrs();
             return vd_IsSetuped;
+#ifdef HAVE_WINRT
+#ifndef __cplusplus_winrt
+            });
+            vd_pAction->AddRef();
+#else
+            }));
+#endif
+            return true;
+#endif
         }
         else
         {
@@ -2706,8 +2744,8 @@ long videoDevices::initDevices(ABI::Windows::Devices::Enumeration::DeviceClass d
     Microsoft::WRL::ComPtr<ABI::Windows::Devices::Enumeration::IDeviceInformationStatics> pDevStat;
     hr = objFactory.As(&pDevStat);
     if (FAILED(hr)) return hr;
-    Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>> pAction;
-    hr = pDevStat->FindAllAsyncDeviceClass(devClass, pAction.GetAddressOf());
+    ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>* pAction;
+    hr = pDevStat->FindAllAsyncDeviceClass(devClass, &pAction);
     if (SUCCEEDED(hr)) {
 #ifdef __cplusplus_winrt
         Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
@@ -2719,9 +2757,9 @@ long videoDevices::initDevices(ABI::Windows::Devices::Enumeration::DeviceClass d
             HRESULT hr = S_OK;
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>> pVector;
 #ifdef __cplusplus_winrt
-            pVector = reinterpret_cast<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(CCompletionHandler::PerformSynchronously<Windows::Devices::Enumeration::DeviceInformationCollection^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<Windows::Devices::Enumeration::DeviceInformationCollection^>^>(pAction.Get()), Concurrency::details::_ContextCallback::_CaptureCurrent()));
+            pVector = reinterpret_cast<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(CCompletionHandler::PerformSynchronously<Windows::Devices::Enumeration::DeviceInformationCollection^>(reinterpret_cast<Windows::Foundation::IAsyncOperation<Windows::Devices::Enumeration::DeviceInformationCollection^>^>(pAction), Concurrency::details::_ContextCallback::_CaptureCurrent()));
 #else
-            hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>, ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>>::PerformSynchronously<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(pAction.Get(), _ContextCallback::_CaptureCurrent(), pVector.GetAddressOf());
+            hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncOperationCompletedHandler<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>, ABI::Windows::Foundation::IAsyncOperation<ABI::Windows::Devices::Enumeration::DeviceInformationCollection*>>::PerformSynchronously<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>*>(pAction, _ContextCallback::_CaptureCurrent(), pVector.GetAddressOf());
 #endif
             if (SUCCEEDED(hr)) hr = pVector->get_Size(&count);
             if (SUCCEEDED(hr) && count > 0) {
@@ -3472,7 +3510,7 @@ bool CvCaptureCAM_MSMF::open( int _index )
 #else
     _ContextCallback context = _ContextCallback::_CaptureCurrent();
 #endif
-    Concurrency::create_task([_index, context, this]() -> bool {
+    Concurrency::task<bool> pTask = Concurrency::create_task([_index, context, this]() -> bool {
 #endif
     int try_index = _index;
     int devices = 0;
