@@ -136,8 +136,12 @@
 
 #elif defined OP_MUL_SCALE
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT scale
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * srcelem2 * scale)
+#ifdef UNARY_OP
+#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#else
+#define EXTRA_PARAMS , scaleT scale
+#endif
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * scale * srcelem2)
 
 #elif defined OP_DIV
 #define PROCESS_ELEM \
@@ -146,21 +150,36 @@
 
 #elif defined OP_DIV_SCALE
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT scale
+#ifdef UNARY_OP
+#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#else
+#define EXTRA_PARAMS , scaleT scale
+#endif
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
-        dstelem = convertToDT(e2 != zero ? srcelem1 * scale / e2 : zero)
+        dstelem = convertToDT(e2 == zero ? zero : (srcelem1 * (workT)(scale) / e2))
+
+#elif defined OP_RDIV_SCALE
+#undef EXTRA_PARAMS
+#ifdef UNARY_OP
+#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#else
+#define EXTRA_PARAMS , scaleT scale
+#endif
+#define PROCESS_ELEM \
+        workT e1 = srcelem1, zero = (workT)(0); \
+        dstelem = convertToDT(e1 == zero ? zero : (srcelem2 * (workT)(scale) / e1))
 
 #elif defined OP_RECIP_SCALE
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT scale
+#define EXTRA_PARAMS , scaleT scale
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
         dstelem = convertToDT(e1 != zero ? scale / e1 : zero)
 
 #elif defined OP_ADDW
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha, workT beta, workT gamma
+#define EXTRA_PARAMS , scaleT alpha, scaleT beta, scaleT gamma
 #define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + srcelem2*beta + gamma)
 
 #elif defined OP_MAG
@@ -260,7 +279,8 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #undef srcelem2
 #if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
     defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
-    defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW
+    defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW || \
+    defined OP_MUL || defined OP_DIV
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , workT srcelem2
 #endif

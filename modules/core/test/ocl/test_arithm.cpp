@@ -293,7 +293,7 @@ OCL_TEST_P(Mul, Mat)
     }
 }
 
-OCL_TEST_P(Mul, DISABLED_Scalar)
+OCL_TEST_P(Mul, Scalar)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -306,7 +306,7 @@ OCL_TEST_P(Mul, DISABLED_Scalar)
     }
 }
 
-OCL_TEST_P(Mul, DISABLED_Mat_Scale)
+OCL_TEST_P(Mul, Mat_Scale)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -318,6 +318,20 @@ OCL_TEST_P(Mul, DISABLED_Mat_Scale)
         Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
     }
 }
+
+OCL_TEST_P(Mul, Mat_Scalar_Scale)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::multiply(src1_roi, val, dst1_roi, val[0]));
+        OCL_ON(cv::multiply(usrc1_roi, val, udst1_roi, val[0]));
+
+        Near(udst1_roi.depth() >= CV_32F ? 1e-2 : 1);
+    }
+}
+
 
 //////////////////////////////// Div /////////////////////////////////////////////////
 
@@ -335,7 +349,7 @@ OCL_TEST_P(Div, Mat)
     }
 }
 
-OCL_TEST_P(Div, DISABLED_Scalar)
+OCL_TEST_P(Div, Scalar)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -343,6 +357,19 @@ OCL_TEST_P(Div, DISABLED_Scalar)
 
         OCL_OFF(cv::divide(val, src1_roi, dst1_roi));
         OCL_ON(cv::divide(val, usrc1_roi, udst1_roi));
+
+        Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
+    }
+}
+
+OCL_TEST_P(Div, Scalar2)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::divide(src1_roi, val, dst1_roi));
+        OCL_ON(cv::divide(usrc1_roi, val, udst1_roi));
 
         Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
     }
@@ -361,8 +388,7 @@ OCL_TEST_P(Div, Mat_Scale)
     }
 }
 
-
-OCL_TEST_P(Div, DISABLED_Mat_Scalar_Scale)
+OCL_TEST_P(Div, Mat_Scalar_Scale)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -372,6 +398,19 @@ OCL_TEST_P(Div, DISABLED_Mat_Scalar_Scale)
         OCL_ON(cv::divide(usrc1_roi, val, udst1_roi, val[0]));
 
         Near(udst1_roi.depth() >= CV_32F ? 4e-3 : 1);
+    }
+}
+
+OCL_TEST_P(Div, Recip)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::divide(val[0], src1_roi, dst1_roi));
+        OCL_ON(cv::divide(val[0], usrc1_roi, udst1_roi));
+
+        Near(udst1_roi.depth() >= CV_32F ? 1e-3 : 1);
     }
 }
 
