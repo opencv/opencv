@@ -19,10 +19,6 @@ if(ANDROID)
     set(OPENCV_STATIC_LIBTYPE_CONFIGMAKE ${OPENCV_LIBTYPE_CONFIGMAKE})
   endif()
 
-  if (HAVE_opencv_gpu)
-    set(OPENCV_PREBUILT_GPU_MODULE_CONFIGMAKE "on")
-  endif()
-
   # setup lists of camera libs
   foreach(abi ARMEABI ARMEABI_V7A X86 MIPS)
     ANDROID_GET_ABI_RAWNAME(${abi} ndkabi)
@@ -52,10 +48,15 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE "")
   foreach(m ${OPENCV_MODULES_PUBLIC})
     list(INSERT OPENCV_MODULES_CONFIGMAKE 0 ${${m}_MODULE_DEPS_${ocv_optkind}} ${m})
-    if(${m}_EXTRA_DEPS_${ocv_optkind} AND NOT ${m}_EXTRA_DEPS_${ocv_optkind} MATCHES "libcu.+$")
+    if(${m}_EXTRA_DEPS_${ocv_optkind})
       list(INSERT OPENCV_EXTRA_COMPONENTS_CONFIGMAKE 0 ${${m}_EXTRA_DEPS_${ocv_optkind}})
     endif()
   endforeach()
+
+  # remove CUDA runtime and NPP from regular deps
+  # it can be added seporately if needed.
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
 
   # split 3rdparty libs and modules
   foreach(mod ${OPENCV_MODULES_CONFIGMAKE})
