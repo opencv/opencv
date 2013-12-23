@@ -59,7 +59,7 @@ void SparsePyrLkOptFlowEstimator::run(
 }
 
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu()
 {
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
