@@ -417,6 +417,16 @@ public:
     ~videoDevices(void);
 #ifdef HAVE_WINRT
     long initDevices(ABI::Windows::Devices::Enumeration::DeviceClass devClass);
+    void waitInit() {
+        if (vds_enumTask) {
+#ifdef __cplusplus_winrt
+            CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(vds_enumTask), Concurrency::details::_ContextCallback::_CaptureCurrent());
+#else
+            CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(vds_enumTask, _ContextCallback::_CaptureCurrent());
+#endif
+            SafeRelease(&vds_enumTask);
+        }
+    }
 #else
     long initDevices(IMFAttributes *pAttributes);
 #endif
@@ -426,6 +436,9 @@ public:
     void clearDevices();
 private:
     UINT32 count;
+#ifdef HAVE_WINRT
+    ABI::Windows::Foundation::IAsyncAction* vds_enumTask;
+#endif
     std::vector<videoDevice *> vds_Devices;
     videoDevices(void);
 };
@@ -1930,12 +1943,22 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
         Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
         Concurrency::create_async([pAction, context, pIMedCap, this](){
             CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction.Get()), context);
+            {
+                context._CallInContext([pIMedCap, this](){
 #else
         _ContextCallback context = _ContextCallback::_CaptureCurrent();
         create_async([pAction, context, pIMedCap, this]() -> HRESULT {
             HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction.Get(), context);
+            if (SUCCEEDED(hr)) {
+                //all camera capture calls only in original context
+                context._CallInContext([pIMedCap, this]() -> HRESULT {
 #endif
-              enumerateCaptureFormats(pIMedCap.Get());
+                    enumerateCaptureFormats(pIMedCap.Get());
+#ifndef __cplusplus_winrt
+                    return S_OK;
+#endif
+                });
+            }
             buildLibraryofTypes();
 #ifndef __cplusplus_winrt
             return hr;
@@ -2115,57 +2138,60 @@ long videoDevice::initDevice()
 #endif
         pTask.wait();
         HRESULT hr = pTask.get();
-        ComPtr<IActivationFactory> objFactory;
-        HSTRING str = NULL;
-        HSTRING_HEADER hstrHead;
-        if (SUCCEEDED(hr)) {
-            hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_Capture_MediaCapture, (UINT32)wcslen(RuntimeClass_Windows_Media_Capture_MediaCapture), &hstrHead, &str);
-        }
-        if (SUCCEEDED(hr))
-            hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
-        Microsoft::WRL::ComPtr<ABI::Windows::Media::Capture::IMediaCapture> pIMedCap;
-        if (SUCCEEDED(hr)) {
-            ComPtr<IInspectable> pMedCap;
-            hr = objFactory->ActivateInstance(pMedCap.ReleaseAndGetAddressOf());
-            if (SUCCEEDED(hr)) {
-                hr = pMedCap.As(&pIMedCap);
-            }
-        }
-        if (SUCCEEDED(hr)) {
-            SafeRelease(&vd_pMedCap);
-            vd_pMedCap = pIMedCap.Get();
-            vd_pMedCap->AddRef();
-            hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, (UINT32)wcslen(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings), &hstrHead, &str);
-        }
-        if (SUCCEEDED(hr))
-            hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
-        Microsoft::WRL::ComPtr<ABI::Windows::Media::Capture::IMediaCaptureInitializationSettings> pCapInitSet;
-        if (SUCCEEDED(hr)) {
-            Microsoft::WRL::ComPtr<IInspectable> pCapInitSettings;
-            hr = objFactory->ActivateInstance(pCapInitSettings.ReleaseAndGetAddressOf());
-            if (SUCCEEDED(hr)) {
-                hr = pCapInitSettings.As(&pCapInitSet);
-            }
-        }
-        if (SUCCEEDED(hr))
-            hr = pDevInfo->get_Id(&str);
-        if (SUCCEEDED(hr))
-            hr = pCapInitSet->put_VideoDeviceId(str);
-        if (SUCCEEDED(hr))
-            hr = WindowsDeleteString(str);
-        if (SUCCEEDED(hr))
-            hr = pCapInitSet->put_StreamingCaptureMode(ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video);
         if (SUCCEEDED(hr)) {
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IAsyncAction> pAction;
 #ifdef __cplusplus_winrt
-            context._CallInContext([pIMedCap, pCapInitSet, pAction]() mutable {
-                if (FAILED(pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), pAction.GetAddressOf()))) throw;
+            context._CallInContext([pDevInfo, pAction, this]() mutable {
+#else
+            hr = context._CallInContext([pDevInfo, pAction, this]() mutable -> HRESULT {
+#endif
+                HRESULT hr;
+                ComPtr<IActivationFactory> objFactory;
+                HSTRING str = NULL;
+                HSTRING_HEADER hstrHead;
+                hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_Capture_MediaCapture, (UINT32)wcslen(RuntimeClass_Windows_Media_Capture_MediaCapture), &hstrHead, &str);
+                if (SUCCEEDED(hr))
+                    hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
+                Microsoft::WRL::ComPtr<ABI::Windows::Media::Capture::IMediaCapture> pIMedCap;
+                if (SUCCEEDED(hr)) {
+                    ComPtr<IInspectable> pMedCap;
+                    hr = objFactory->ActivateInstance(pMedCap.ReleaseAndGetAddressOf());
+                    if (SUCCEEDED(hr)) {
+                        hr = pMedCap.As(&pIMedCap);
+                    }
+                }
+                if (SUCCEEDED(hr)) {
+                    SafeRelease(&vd_pMedCap);
+                    vd_pMedCap = pIMedCap.Get();
+                    vd_pMedCap->AddRef();
+                    hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, (UINT32)wcslen(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings), &hstrHead, &str);
+                }
+                if (SUCCEEDED(hr))
+                    hr = Windows::Foundation::GetActivationFactory(str, objFactory.ReleaseAndGetAddressOf());
+                Microsoft::WRL::ComPtr<ABI::Windows::Media::Capture::IMediaCaptureInitializationSettings> pCapInitSet;
+                if (SUCCEEDED(hr)) {
+                    Microsoft::WRL::ComPtr<IInspectable> pCapInitSettings;
+                    hr = objFactory->ActivateInstance(pCapInitSettings.ReleaseAndGetAddressOf());
+                    if (SUCCEEDED(hr)) {
+                        hr = pCapInitSettings.As(&pCapInitSet);
+                    }
+                }
+                if (SUCCEEDED(hr))
+                    hr = pDevInfo->get_Id(&str);
+                if (SUCCEEDED(hr))
+                    hr = pCapInitSet->put_VideoDeviceId(str);
+                if (SUCCEEDED(hr))
+                    hr = WindowsDeleteString(str);
+                if (SUCCEEDED(hr))
+                    hr = pCapInitSet->put_StreamingCaptureMode(ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video);
+                if (SUCCEEDED(hr)) hr = pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), pAction.GetAddressOf());
+#ifdef __cplusplus_winrt
+                if (FAILED(hr)) throw Platform::Exception::CreateException(hr);
             });
             CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pAction.Get()), context);
         }
 #else
-            hr = context._CallInContext([pIMedCap, pCapInitSet, pAction]() mutable -> HRESULT {
-                return pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), pAction.GetAddressOf());
+                return hr;
             });
             if (SUCCEEDED(hr))
                 hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pAction.Get(), context);
@@ -2586,7 +2612,7 @@ HRESULT videoDevice::enumerateCaptureFormats(ABI::Windows::Media::Capture::IMedi
         MediaType MT = FormatReader::Read(pType.Get());
         vd_CurrentFormats.push_back(MT);
     }
-    return hr;    
+    return hr;
 }
 #endif
 
@@ -2634,7 +2660,11 @@ done:
 }
 
 videoDevices::videoDevices(void): count(0)
-{}
+{
+#ifdef HAVE_WINRT
+    vds_enumTask = NULL;
+#endif
+}
 
 void videoDevices::clearDevices()
 {
@@ -2680,9 +2710,11 @@ long videoDevices::initDevices(ABI::Windows::Devices::Enumeration::DeviceClass d
     hr = pDevStat->FindAllAsyncDeviceClass(devClass, pAction.GetAddressOf());
     if (SUCCEEDED(hr)) {
 #ifdef __cplusplus_winrt
-        Concurrency::create_async([pAction, this]() {
+        Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
+        vds_enumTask = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([pAction, context, this]() {
 #else
-        create_async([pAction, this]()-> HRESULT {
+        _ContextCallback context = _ContextCallback::_CaptureCurrent();
+        vds_enumTask = create_async([pAction, context, this]()-> HRESULT {
 #endif
             HRESULT hr = S_OK;
             Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IVectorView<ABI::Windows::Devices::Enumeration::DeviceInformation*>> pVector;
@@ -2698,15 +2730,26 @@ long videoDevices::initDevices(ABI::Windows::Devices::Enumeration::DeviceClass d
                     Microsoft::WRL::ComPtr<ABI::Windows::Devices::Enumeration::IDeviceInformation> pDevice;
                     hr = pVector->GetAt(i, pDevice.ReleaseAndGetAddressOf());
                     if (SUCCEEDED(hr)) {
-                        vd->readInfoOfDevice(pDevice.Get(), i);
+#ifdef __cplusplus_winrt
+                        context._CallInContext([vd, pDevice, i]() {
+#else
+                        context._CallInContext([vd, pDevice, i]() -> HRESULT {
+#endif                            
+                            vd->readInfoOfDevice(pDevice.Get(), i);
+#ifndef __cplusplus_winrt
+                            return S_OK;
+#endif
+                        });
                         vds_Devices.push_back(vd);
                     }
                 }
             }
 #ifndef __cplusplus_winrt
             return hr;
-#endif
         });
+#else
+        }));
+#endif
     }
     return hr;
 }
@@ -3191,6 +3234,9 @@ unsigned int videoInput::listDevices(bool silent)
     if(accessToDevices)
     {
         videoDevices *VDS = &videoDevices::getInstance();
+#ifdef HAVE_WINRT
+        VDS->waitInit();
+#endif
         out = VDS->getCount();
         DebugPrintOut *DPO = &DebugPrintOut::getInstance();
         if(!silent)DPO->printOut(L"\nVIDEOINPUT SPY MODE!\n\n");
@@ -3420,6 +3466,14 @@ void CvCaptureCAM_MSMF::close()
 // Initialize camera input
 bool CvCaptureCAM_MSMF::open( int _index )
 {
+#ifdef HAVE_WINRT
+#ifdef __cplusplus_winrt
+    Concurrency::details::_ContextCallback context = Concurrency::details::_ContextCallback::_CaptureCurrent();
+#else
+    _ContextCallback context = _ContextCallback::_CaptureCurrent();
+#endif
+    Concurrency::create_task([_index, context, this]() -> bool {
+#endif
     int try_index = _index;
     int devices = 0;
     close();
@@ -3427,10 +3481,27 @@ bool CvCaptureCAM_MSMF::open( int _index )
     if (devices == 0)
         return false;
     try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
+#ifdef HAVE_WINRT
+#ifdef __cplusplus_winrt
+    context._CallInContext([this, try_index]() {
+#else
+    context._CallInContext([this, try_index]() -> HRESULT {
+#endif
+#endif
     VI.setupDevice(try_index);
+#ifdef HAVE_WINRT
+#ifndef __cplusplus_winrt
+    return S_OK;
+#endif
+    });
+#endif
     if( !VI.isFrameNew(try_index) )
         return false;
     index = try_index;
+#ifdef HAVE_WINRT
+    return true;
+    });
+#endif
     return true;
 }
 
