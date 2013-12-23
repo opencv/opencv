@@ -95,7 +95,7 @@
 #undef clAmdFftSetPlanOutStride
 #define clAmdFftSetPlanOutStride clAmdFftSetPlanOutStride_pfn
 #undef clAmdFftSetPlanPrecision
-//#define clAmdFftSetPlanPrecision clAmdFftSetPlanPrecision_pfn
+#define clAmdFftSetPlanPrecision clAmdFftSetPlanPrecision_pfn
 #undef clAmdFftSetPlanScale
 #define clAmdFftSetPlanScale clAmdFftSetPlanScale_pfn
 #undef clAmdFftSetPlanTransposeResult
@@ -134,7 +134,7 @@ extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanDistance)(clAmdFftPlanH
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanInStride)(clAmdFftPlanHandle plHandle, const clAmdFftDim dim, size_t* clStrides);
 //extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanLength)(clAmdFftPlanHandle plHandle, const clAmdFftDim dim, const size_t* clLengths);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanOutStride)(clAmdFftPlanHandle plHandle, const clAmdFftDim dim, size_t* clStrides);
-//extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanPrecision)(clAmdFftPlanHandle plHandle, clAmdFftPrecision precision);
+extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanPrecision)(clAmdFftPlanHandle plHandle, clAmdFftPrecision precision);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanScale)(clAmdFftPlanHandle plHandle, clAmdFftDirection dir, cl_float scale);
 //extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetPlanTransposeResult)(clAmdFftPlanHandle plHandle, clAmdFftResultTransposed transposed);
 extern CL_RUNTIME_EXPORT clAmdFftStatus (*clAmdFftSetResultLocation)(clAmdFftPlanHandle plHandle, clAmdFftResultLocation placeness);

@@ -40,6 +40,9 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -1473,8 +1476,261 @@ typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, in
 typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
 #endif
 
+#ifdef HAVE_CLAMDFFT
+
+namespace cv {
+
+#define CLAMDDFT_Assert(func) \
+    { \
+        clAmdFftStatus s = (func); \
+        CV_Assert(s == CLFFT_SUCCESS); \
+    }
+
+enum FftType
+{
+    R2R = 0, // real to real
+    C2R = 1, // opencl HERMITIAN_INTERLEAVED to real
+    R2C = 2, // real to opencl HERMITIAN_INTERLEAVED
+    C2C = 3  // complex to complex
+};
+
+class PlanCache
+{
+    struct FftPlan
+    {
+        FftPlan(const Size & _dft_size, int _src_step, int _dst_step, bool _doubleFP, bool _inplace, int _flags, FftType _fftType) :
+            dft_size(_dft_size), src_step(_src_step), dst_step(_dst_step),
+            doubleFP(_doubleFP), inplace(_inplace), flags(_flags), fftType(_fftType), plHandle(0)
+        {
+            bool dft_inverse = (flags & DFT_INVERSE) != 0;
+            bool dft_scale = (flags & DFT_SCALE) != 0;
+            bool dft_rows = (flags & DFT_ROWS) != 0;
+
+            clAmdFftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
+            clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
+
+            size_t batchSize = dft_rows ? dft_size.height : 1;
+            size_t clLengthsIn[3] = { dft_size.width, dft_rows ? 1 : dft_size.height, 1 };
+            size_t clStridesIn[3] = { 1, 1, 1 };
+            size_t clStridesOut[3]  = { 1, 1, 1 };
+            int elemSize = doubleFP ? sizeof(double) : sizeof(float);
+
+            switch (fftType)
+            {
+            case C2C:
+                inLayout = CLFFT_COMPLEX_INTERLEAVED;
+                outLayout = CLFFT_COMPLEX_INTERLEAVED;
+                clStridesIn[1] = src_step / (elemSize << 1);
+                clStridesOut[1] = dst_step / (elemSize << 1);
+                break;
+            case R2C:
+                inLayout = CLFFT_REAL;
+                outLayout = CLFFT_HERMITIAN_INTERLEAVED;
+                clStridesIn[1] = src_step / elemSize;
+                clStridesOut[1] = dst_step / (elemSize << 1);
+                break;
+            case C2R:
+                inLayout = CLFFT_HERMITIAN_INTERLEAVED;
+                outLayout = CLFFT_REAL;
+                clStridesIn[1] = src_step / (elemSize << 1);
+                clStridesOut[1] = dst_step / elemSize;
+                break;
+            case R2R:
+            default:
+                CV_Error(Error::StsNotImplemented, "AMD Fft does not support this type");
+                break;
+            }
+
+            clStridesIn[2] = dft_rows ? clStridesIn[1] : dft_size.width * clStridesIn[1];
+            clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
+
+            // TODO remove all plans if context changed
+            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context2::getDefault().ptr(), dim, clLengthsIn))
+
+            // setting plan properties
+            CLAMDDFT_Assert(clAmdFftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
+            CLAMDDFT_Assert(clAmdFftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
+            CLAMDDFT_Assert(clAmdFftSetLayout(plHandle, inLayout, outLayout))
+            CLAMDDFT_Assert(clAmdFftSetPlanBatchSize(plHandle, batchSize))
+            CLAMDDFT_Assert(clAmdFftSetPlanInStride(plHandle, dim, clStridesIn))
+            CLAMDDFT_Assert(clAmdFftSetPlanOutStride(plHandle, dim, clStridesOut))
+            CLAMDDFT_Assert(clAmdFftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
+
+            float scale = dft_scale ? 1.0f / (dft_rows ? dft_size.width : dft_size.area()) : 1.0f;
+            CLAMDDFT_Assert(clAmdFftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
+
+            // ready to bake
+            cl_command_queue commandQueue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &commandQueue, NULL, NULL))
+        }
+
+        ~FftPlan()
+        {
+//            clAmdFftDestroyPlan(&plHandle);
+        }
+
+        friend class PlanCache;
+
+    private:
+        Size dft_size;
+        int src_step, dst_step;
+        bool doubleFP;
+        bool inplace;
+        int flags;
+        FftType fftType;
+
+        cl_context context;
+        clAmdFftPlanHandle plHandle;
+    };
+
+public:
+    static PlanCache & getInstance()
+    {
+        static PlanCache planCache;
+        return planCache;
+    }
+
+    clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
+                                     bool inplace, int flags, FftType fftType)
+    {
+        cl_context currentContext = (cl_context)ocl::Context2::getDefault().ptr();
+
+        for (size_t i = 0, size = planStorage.size(); i < size; i ++)
+        {
+            const FftPlan * const plan = planStorage[i];
+            if (plan->dft_size == dft_size &&
+                plan->flags == flags &&
+                plan->src_step == src_step &&
+                plan->dst_step == dst_step &&
+                plan->doubleFP == doubleFP &&
+                plan->fftType == fftType &&
+                plan->inplace == inplace)
+            {
+                if (plan->context != currentContext)
+                {
+                    planStorage.erase(planStorage.begin() + i);
+                    break;
+                }
+
+                return plan->plHandle;
+            }
+        }
+
+        // no baked plan is found, so let's create a new one
+        FftPlan * newPlan = new FftPlan(dft_size, src_step, dst_step, doubleFP, inplace, flags, fftType);
+        planStorage.push_back(newPlan);
+
+        return newPlan->plHandle;
+    }
+
+    ~PlanCache()
+    {
+        for (std::vector<FftPlan *>::iterator i = planStorage.begin(), end = planStorage.end(); i != end; ++i)
+            delete (*i);
+        planStorage.clear();
+    }
+
+protected:
+    PlanCache() :
+        planStorage()
+    {
+    }
+
+    std::vector<FftPlan *> planStorage;
+};
+
+extern "C" {
+
+static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
+{
+    UMatData * u = (UMatData *)p;
+
+    if( u && CV_XADD(&u->urefcount, -1) == 1 )
+        u->currAllocator->deallocate(u);
+    u = 0;
+
+    clReleaseEvent(e), e = 0;
+}
+
+}
+
+static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    Size ssize = _src.size();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if ( (!doubleSupport && depth == CV_64F) ||
+         !(type == CV_32FC1 || type == CV_32FC2 || type == CV_64FC1 || type == CV_64FC2) ||
+         _src.offset() != 0)
+        return false;
+
+    // if is not a multiplication of prime numbers { 2, 3, 5 }
+    if (ssize.area() != getOptimalDFTSize(ssize.area()))
+        return false;
+
+    int dst_complex_input = cn == 2 ? 1 : 0;
+    bool dft_inverse = (flags & DFT_INVERSE) != 0 ? 1 : 0;
+    int dft_complex_output = (flags & DFT_COMPLEX_OUTPUT) != 0;
+    bool dft_real_output = (flags & DFT_REAL_OUTPUT) != 0;
+
+    CV_Assert(dft_complex_output + dft_real_output < 2);
+    FftType fftType = (FftType)(dst_complex_input << 0 | dft_complex_output << 1);
+
+    switch (fftType)
+    {
+    case C2C:
+        _dst.create(ssize.height, ssize.width, CV_MAKE_TYPE(depth, 2));
+        break;
+    case R2C: // TODO implement it if possible
+    case C2R: // TODO implement it if possible
+    case R2R: // AMD Fft does not support this type
+    default:
+        return false;
+    }
+
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+    bool inplace = src.u == dst.u;
+
+    clAmdFftPlanHandle plHandle = PlanCache::getInstance().
+            getPlanHandle(ssize, (int)src.step, (int)dst.step,
+                          depth == CV_64F, inplace, flags, fftType);
+
+    // get the bufferSize
+    size_t bufferSize = 0;
+    CLAMDDFT_Assert(clAmdFftGetTmpBufSize(plHandle, &bufferSize))
+    UMat tmpBuffer(1, (int)bufferSize, CV_8UC1);
+
+    cl_mem srcarg = (cl_mem)src.handle(ACCESS_READ);
+    cl_mem dstarg = (cl_mem)dst.handle(ACCESS_RW);
+
+    cl_command_queue commandQueue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+    cl_event e = 0;
+
+    CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                                       1, &commandQueue, 0, NULL, &e,
+                                       &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
+
+    tmpBuffer.addref();
+    clSetEventCallback(e, CL_COMPLETE, oclCleanupCallback, tmpBuffer.u);
+
+    return true;
+}
+
+#undef DFT_ASSERT
+
+}
+
+#endif // HAVE_CLAMDFFT
+
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
+#ifdef HAVE_CLAMDFFT
+    if (ocl::useOpenCL() && ocl::haveAmdFft() && _dst.isUMat() && _src0.dims() <= 2
+            && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
+        return;
+#endif
+
     static DFTFunc dft_tbl[6] =
     {
         (DFTFunc)DFT_32f,
@@ -1879,9 +2135,46 @@ void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
+namespace cv {
+
+static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
+                              OutputArray _dst, int flags, bool conjB )
+{
+    int atype = _srcA.type(), btype = _srcB.type();
+    Size asize = _srcA.size(), bsize = _srcB.size();
+    CV_Assert(asize == bsize);
+
+    if ( !(atype == CV_32FC2 && btype == CV_32FC2) || flags != 0 )
+        return false;
+
+    UMat A = _srcA.getUMat(), B = _srcB.getUMat();
+    CV_Assert(A.size() == B.size());
+
+    _dst.create(A.size(), atype);
+    UMat dst = _dst.getUMat();
+
+    ocl::Kernel k("mulAndScaleSpectrums",
+                  ocl::core::mulspectrums_oclsrc,
+                  format("%s", conjB ? "-D CONJ" : ""));
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(A), ocl::KernelArg::ReadOnlyNoSize(B),
+           ocl::KernelArg::WriteOnly(dst));
+
+    size_t globalsize[2] = { asize.width, asize.height };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
+        return;
+
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
     int rows = srcA.rows, cols = srcA.cols;

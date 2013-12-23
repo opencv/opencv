@@ -86,11 +86,13 @@ FeatureEvaluator::setImage
 ------------------------------
 Assigns an image to feature evaluator.
 
-.. ocv:function:: bool FeatureEvaluator::setImage(const Mat& img, Size origWinSize)
+.. ocv:function:: bool FeatureEvaluator::setImage(InputArray img, Size origWinSize, Size sumSize)
 
-    :param img: Matrix of the type   ``CV_8UC1``  containing an image where the features are computed.
+    :param img: Matrix of the type ``CV_8UC1`` containing an image where the features are computed.
 
     :param origWinSize: Size of training images.
+
+    :param sumSize: The requested size of integral images (so if the integral image is smaller, it resides in the top-left corner of the larger image of requested size). Because the features are represented using offsets from the image origin, using the same sumSize for all scales helps to avoid constant readjustments of the features to different scales.
 
 The method assigns an image, where the features will be computed, to the feature evaluator.
 

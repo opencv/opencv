@@ -1357,43 +1357,65 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         func(ptrs[0], lut.data, ptrs[1], len, cn, lutcn);
 }
 
+namespace cv {
+
+static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, int rtype,
+                           double scale, double shift )
+{
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+    if( _mask.empty() )
+        src.convertTo( dst, rtype, scale, shift );
+    else
+    {
+        UMat temp;
+        src.convertTo( temp, rtype, scale, shift );
+        temp.copyTo( dst, _mask );
+    }
+
+    return true;
+}
+
+}
 
 void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
                     int norm_type, int rtype, InputArray _mask )
 {
-    Mat src = _src.getMat(), mask = _mask.getMat();
-
     double scale = 1, shift = 0;
     if( norm_type == CV_MINMAX )
     {
         double smin = 0, smax = 0;
         double dmin = MIN( a, b ), dmax = MAX( a, b );
-        minMaxLoc( _src, &smin, &smax, 0, 0, mask );
+        minMaxLoc( _src, &smin, &smax, 0, 0, _mask );
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         shift = dmin - smin*scale;
     }
     else if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
     {
-        scale = norm( src, norm_type, mask );
+        scale = norm( _src, norm_type, _mask );
         scale = scale > DBL_EPSILON ? a/scale : 0.;
         shift = 0;
     }
     else
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     if( rtype < 0 )
-        rtype = _dst.fixedType() ? _dst.depth() : src.depth();
+        rtype = _dst.fixedType() ? _dst.depth() : depth;
+    _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
-    _dst.create(src.dims, src.size, CV_MAKETYPE(rtype, src.channels()));
-    Mat dst = _dst.getMat();
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
+        return;
 
-    if( !mask.data )
+    Mat src = _src.getMat(), dst = _dst.getMat();
+    if( _mask.empty() )
         src.convertTo( dst, rtype, scale, shift );
     else
     {
         Mat temp;
         src.convertTo( temp, rtype, scale, shift );
-        temp.copyTo( dst, mask );
+        temp.copyTo( dst, _mask );
     }
 }
 

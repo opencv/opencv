@@ -43,6 +43,7 @@
 #include <map>
 
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
@@ -1423,6 +1424,83 @@ bool haveAmdBlas()
 
 #endif
 
+#ifdef HAVE_CLAMDFFT
+
+class AmdFftHelper
+{
+public:
+    static AmdFftHelper & getInstance()
+    {
+        static AmdFftHelper amdFft;
+        return amdFft;
+    }
+
+    bool isAvailable() const
+    {
+        return g_isAmdFftAvailable;
+    }
+
+    ~AmdFftHelper()
+    {
+        try
+        {
+//            clAmdFftTeardown();
+        }
+        catch (...) { }
+    }
+
+protected:
+    AmdFftHelper()
+    {
+        if (!g_isAmdFftInitialized)
+        {
+            AutoLock lock(m);
+
+            if (!g_isAmdFftInitialized && haveOpenCL())
+            {
+                try
+                {
+                    CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+                    g_isAmdFftAvailable = true;
+                }
+                catch (const Exception &)
+                {
+                    g_isAmdFftAvailable = false;
+                }
+            }
+            else
+                g_isAmdFftAvailable = false;
+
+            g_isAmdFftInitialized = true;
+        }
+    }
+
+private:
+    static clAmdFftSetupData setupData;
+    static Mutex m;
+    static bool g_isAmdFftInitialized;
+    static bool g_isAmdFftAvailable;
+};
+
+clAmdFftSetupData AmdFftHelper::setupData;
+bool AmdFftHelper::g_isAmdFftAvailable = false;
+bool AmdFftHelper::g_isAmdFftInitialized = false;
+Mutex AmdFftHelper::m;
+
+bool haveAmdFft()
+{
+    return AmdFftHelper::getInstance().isAvailable();
+}
+
+#else
+
+bool haveAmdFft()
+{
+    return false;
+}
+
+#endif
+
 void finish2()
 {
     Queue::getDefault().finish();
@@ -1524,6 +1602,7 @@ struct Device::Impl
     Impl(void* d)
     {
         handle = (cl_device_id)d;
+        refcount = 1;
     }
 
     template<typename _TpCL, typename _TpOut>
@@ -2784,8 +2863,6 @@ public:
     UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
     {
         UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags);
-        u->urefcount = 1;
-        u->refcount = 0;
         return u;
     }
 
@@ -2827,7 +2904,6 @@ public:
         u->data = 0;
         u->size = total;
         u->handle = handle;
-        u->urefcount = 1;
         u->flags = flags0;
 
         return u;
@@ -2866,7 +2942,6 @@ public:
         }
         if(accessFlags & ACCESS_WRITE)
             u->markHostCopyObsolete(true);
-        CV_XADD(&u->urefcount, 1);
         return true;
     }
 
@@ -2904,6 +2979,9 @@ public:
     {
         if(!u)
             return;
+
+        CV_Assert(u->urefcount >= 0);
+        CV_Assert(u->refcount >= 0);
 
         // TODO: !!! when we add Shared Virtual Memory Support,
         // this function (as well as the others) should be corrected
