@@ -462,6 +462,53 @@ CAsyncAction<_Function>* create_async(const _Function& _Func)
 }
 #endif
 
+EXTERN_C const IID IID_IMedCapFailHandler;
+
+class DECLSPEC_UUID("CE22BEDB-0B3C-4BE0-BE8F-E53AB457EA2C") DECLSPEC_NOVTABLE IMedCapFailHandler : public IUnknown
+{
+public:
+    virtual HRESULT AddHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap) = 0;
+    virtual HRESULT RemoveHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap) = 0;
+};
+
+template<typename _Function>
+class MediaCaptureFailedHandler :
+    public Microsoft::WRL::RuntimeClass<
+    Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::ClassicCom>,
+    IMedCapFailHandler, ABI::Windows::Media::Capture::IMediaCaptureFailedEventHandler, IAgileObject, FtmBase>
+{
+public:
+    MediaCaptureFailedHandler(const _Function &_Func) : _M_func(_Func) { m_cookie.value = 0; }
+    HRESULT AddHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap)
+    {
+        return pMedCap->add_Failed(this, &m_cookie);
+    }
+    HRESULT RemoveHandler(ABI::Windows::Media::Capture::IMediaCapture* pMedCap)
+    {
+        return pMedCap->remove_Failed(m_cookie);
+    }
+    HRESULT STDMETHODCALLTYPE Invoke( 
+        ABI::Windows::Media::Capture::IMediaCapture *sender,
+        ABI::Windows::Media::Capture::IMediaCaptureFailedEventArgs *errorEventArgs)
+    {
+        (void)sender;
+        (void)errorEventArgs;
+        _M_func();
+        return S_OK;
+    }
+    
+private:
+    _Function _M_func;
+    EventRegistrationToken m_cookie;
+};
+
+template<typename _Function>
+__declspec(noinline)
+MediaCaptureFailedHandler<_Function>* create_medcapfailedhandler(const _Function& _Func)
+{
+    return Microsoft::WRL::Make<MediaCaptureFailedHandler<_Function>>(_Func).Detach();
+}
+
 #endif
 
 template <class TBase=IMFAttributes>
