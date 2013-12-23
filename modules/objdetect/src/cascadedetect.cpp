@@ -1312,6 +1312,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     bool use_ocl = ocl::useOpenCL() &&
         (featureType == FeatureEvaluator::HAAR ||
          featureType == FeatureEvaluator::LBP) &&
+        ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
         !isOldFormatCascade() &&
         data.isStumpBased() &&
         maskGenerator.empty() &&
