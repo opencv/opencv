@@ -175,7 +175,7 @@ private:
     RawImage(unsigned int size);
 };
 
-class ImageGrabberCallback
+class ImageGrabberCallback : public IMFSampleGrabberSinkCallback
 {
 public:
     void pauseGrabbing();
@@ -229,17 +229,17 @@ public:
     unsigned int getWidth();
     unsigned int getHeight();
     // IMFClockStateSink methods
-    virtual STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset);
-    virtual STDMETHODIMP OnClockStop(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockPause(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockRestart(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockSetRate(MFTIME hnsSystemTime, float flRate);
+    STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset) { return ImageGrabberCallback::OnClockStart(hnsSystemTime, llClockStartOffset); }
+    STDMETHODIMP OnClockStop(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockStop(hnsSystemTime); }
+    STDMETHODIMP OnClockPause(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockPause(hnsSystemTime); }
+    STDMETHODIMP OnClockRestart(MFTIME hnsSystemTime) { return ImageGrabberCallback::OnClockRestart(hnsSystemTime); }
+    STDMETHODIMP OnClockSetRate(MFTIME hnsSystemTime, float flRate) { return ImageGrabberCallback::OnClockSetRate(hnsSystemTime, flRate); }
     // IMFSampleGrabberSinkCallback methods
-    virtual STDMETHODIMP OnSetPresentationClock(IMFPresentationClock* pClock);
-    virtual STDMETHODIMP OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
+    STDMETHODIMP OnSetPresentationClock(IMFPresentationClock* pClock) { return ImageGrabberCallback::OnSetPresentationClock(pClock); }
+    STDMETHODIMP OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
         LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
-        DWORD dwSampleSize);
-    virtual STDMETHODIMP OnShutdown();
+        DWORD dwSampleSize) { return ImageGrabberCallback::OnProcessSample(guidMajorMediaType, dwSampleFlags, llSampleTime, llSampleDuration, pSampleBuffer, dwSampleSize); }
+    STDMETHODIMP OnShutdown() { return ImageGrabberCallback::OnShutdown(); }
     // Function of creation of the instance of the class
     static HRESULT CreateInstance(ImageGrabberWinRT **ppIG, bool synchronous = false);
 private:
@@ -252,7 +252,7 @@ private:
 #endif
 
 // Class for grabbing image from video stream
-class ImageGrabber : public IMFSampleGrabberSinkCallback, public ImageGrabberCallback
+class ImageGrabber : public ImageGrabberCallback
 {
 public:
     ~ImageGrabber(void);
@@ -263,18 +263,6 @@ public:
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
     STDMETHODIMP_(ULONG) AddRef();
     STDMETHODIMP_(ULONG) Release();
-    // IMFClockStateSink methods
-    virtual STDMETHODIMP OnClockStart(MFTIME hnsSystemTime, LONGLONG llClockStartOffset);
-    virtual STDMETHODIMP OnClockStop(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockPause(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockRestart(MFTIME hnsSystemTime);
-    virtual STDMETHODIMP OnClockSetRate(MFTIME hnsSystemTime, float flRate);
-    // IMFSampleGrabberSinkCallback methods
-    virtual STDMETHODIMP OnSetPresentationClock(IMFPresentationClock* pClock);
-    virtual STDMETHODIMP OnProcessSample(REFGUID guidMajorMediaType, DWORD dwSampleFlags,
-        LONGLONG llSampleTime, LONGLONG llSampleDuration, const BYTE * pSampleBuffer,
-        DWORD dwSampleSize);
-    virtual STDMETHODIMP OnShutdown();    
     // Function of creation of the instance of the class
     static HRESULT CreateInstance(ImageGrabber **ppIG, unsigned int deviceID, bool synchronous = false);
 
@@ -1729,7 +1717,7 @@ bool Media_Foundation::buildListOfDevices()
         hr = vDs->initDevices(pAttributes.Get());
     }
 #endif
-    if (SUCCEEDED(hr))
+    if (FAILED(hr))
     {
        DebugPrintOut *DPO = &DebugPrintOut::getInstance();
        DPO->printOut(L"MEDIA FOUNDATION: The access to the video cameras denied\n");
