@@ -2140,6 +2140,7 @@ public:
     }
 #endif
     MediaSink() : m_IsShutdown(false), m_llStartTime(0) {
+        CBaseAttributes<>::Initialize(0U);
         InitializeCriticalSectionEx(&m_critSec, 3000, 0);
     }
 
