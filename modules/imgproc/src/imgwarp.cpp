@@ -3299,7 +3299,10 @@ public:
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
-                        bufa = (*m2)(Rect(x, y, bcols, brows));
+
+                        const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                        for( x1 = 0; x1 < bcols; x1++ )
+                            A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
@@ -3680,7 +3683,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1) : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst2f[x] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3689,7 +3692,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1): 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst1f[x*2+1] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }

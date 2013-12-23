@@ -46,33 +46,26 @@
 #ifndef WITH_MASK
 #define WITH_MASK 0
 #endif
-
-__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
-
-inline float ELEM_INT2(image2d_t _eig, int _x, int _y)
-{
-    return read_imagef(_eig, sampler, (int2)(_x, _y)).x;
-}
-
-inline float ELEM_FLT2(image2d_t _eig, float2 pt)
-{
-    return read_imagef(_eig, sampler, pt).x;
-}
+//macro to read eigenvalue matrix
+#define GET_SRC_32F(_x, _y) ((__global const float*)(eig + (_y)*eig_pitch))[_x]
 
 __kernel
     void findCorners
     (
-        image2d_t eig,
-        __global const char * mask,
-        __global float2 * corners,
-        const int mask_strip,// in pixels
-        const float threshold,
-        const int rows,
-        const int cols,
-        const int max_count,
-        __global int * g_counter
+        __global const char*    eig,
+        const int               eig_pitch,
+        __global const char*    mask,
+        __global float2*        corners,
+        const int               mask_strip,// in pixels
+        __global const float*   pMinMax,
+        const float             qualityLevel,
+        const int               rows,
+        const int               cols,
+        const int               max_count,
+        __global int*           g_counter
     )
 {
+    float threshold = qualityLevel*pMinMax[1];
     const int j = get_global_id(0);
     const int i = get_global_id(1);
 
@@ -82,39 +75,42 @@ __kernel
 #endif
         )
     {
-        const float val = ELEM_INT2(eig, j, i);
+        const float val = GET_SRC_32F(j, i);
 
         if (val > threshold)
         {
             float maxVal = val;
+            maxVal = fmax(GET_SRC_32F(j - 1, i - 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j    , i - 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j + 1, i - 1), maxVal);
 
-            maxVal = fmax(ELEM_INT2(eig, j - 1, i - 1), maxVal);
-            maxVal = fmax(ELEM_INT2(eig, j    , i - 1), maxVal);
-            maxVal = fmax(ELEM_INT2(eig, j + 1, i - 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j - 1, i), maxVal);
+            maxVal = fmax(GET_SRC_32F(j + 1, i), maxVal);
 
-            maxVal = fmax(ELEM_INT2(eig, j - 1, i), maxVal);
-            maxVal = fmax(ELEM_INT2(eig, j + 1, i), maxVal);
-
-            maxVal = fmax(ELEM_INT2(eig, j - 1, i + 1), maxVal);
-            maxVal = fmax(ELEM_INT2(eig, j    , i + 1), maxVal);
-            maxVal = fmax(ELEM_INT2(eig, j + 1, i + 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j - 1, i + 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j    , i + 1), maxVal);
+            maxVal = fmax(GET_SRC_32F(j + 1, i + 1), maxVal);
 
             if (val == maxVal)
             {
                 const int ind = atomic_inc(g_counter);
 
                 if (ind < max_count)
-                    corners[ind] = (float2)(j, i);
+                {// pack and store eigenvalue and its coordinates
+                    corners[ind].x = val;
+                    corners[ind].y = as_float(j|(i<<16));
+                }
             }
         }
     }
 }
+#undef GET_SRC_32F
+
 
 //bitonic sort
 __kernel
     void sortCorners_bitonicSort
     (
-        image2d_t eig,
         __global float2 * corners,
         const int count,
         const int stage,
@@ -140,8 +136,8 @@ __kernel
     const float2 leftPt  = corners[leftId];
     const float2 rightPt = corners[rightId];
 
-    const float leftVal  = ELEM_FLT2(eig, leftPt);
-    const float rightVal = ELEM_FLT2(eig, rightPt);
+    const float leftVal  = leftPt.x;
+    const float rightVal = rightPt.x;
 
     const bool compareResult = leftVal > rightVal;
 
@@ -152,124 +148,22 @@ __kernel
     corners[rightId] = sortOrder ? greater : lesser;
 }
 
-//selection sort for gfft
-//kernel is ported from Bolt library:
-//https://github.com/HSA-Libraries/Bolt/blob/master/include/bolt/cl/sort_kernels.cl
-//  Local sort will firstly sort elements of each workgroup using selection sort
-//  its performance is O(n)
-__kernel
-    void sortCorners_selectionSortLocal
-    (
-        image2d_t eig,
-        __global float2 * corners,
-        const int count,
-        __local float2 * scratch
-    )
+// this is simple short serial kernel that makes some short reduction and initialization work
+// it makes HOST like work to avoid additional sync with HOST to do this short work
+// data - input/output float2.
+//      input data are sevral (min,max) pairs
+//      output data is one reduced (min,max) pair
+// g_counter - counter that have to be initialized by 0 for next findCorner call.
+__kernel void arithm_op_minMax_final(__global float * data, int groupnum,__global int * g_counter)
 {
-    int          i  = get_local_id(0); // index in workgroup
-    int numOfGroups = get_num_groups(0); // index in workgroup
-    int groupID     = get_group_id(0);
-    int         wg  = get_local_size(0); // workgroup size = block size
-    int n; // number of elements to be processed for this work group
-
-    int offset   = groupID * wg;
-    int same     = 0;
-    corners      += offset;
-    n = (groupID == (numOfGroups-1))? (count - wg*(numOfGroups-1)) : wg;
-    float2 pt1, pt2;
-
-    pt1 = corners[min(i, n)];
-    scratch[i] = pt1;
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if(i >= n)
+    g_counter[0] = 0;
+    float minVal = data[0];
+    float maxVal = data[groupnum];
+    for(int i=1;i<groupnum;++i)
     {
-        return;
+        minVal = min(minVal,data[i]);
+        maxVal = max(maxVal,data[i+groupnum]);
     }
-
-    float val1 = ELEM_FLT2(eig, pt1);
-    float val2;
-
-    int pos = 0;
-    for (int j=0;j<n;++j)
-    {
-        pt2  = scratch[j];
-        val2 = ELEM_FLT2(eig, pt2);
-        if(val2 > val1)
-            pos++;//calculate the rank of this element in this work group
-        else
-        {
-            if(val1 > val2)
-                continue;
-            else
-            {
-                // val1 and val2 are same
-                same++;
-            }
-        }
-    }
-    for (int j=0; j< same; j++)
-        corners[pos + j] = pt1;
-}
-__kernel
-    void sortCorners_selectionSortFinal
-    (
-        image2d_t eig,
-        __global float2 * corners,
-        const int count
-    )
-{
-    const int          i  = get_local_id(0); // index in workgroup
-    const int numOfGroups = get_num_groups(0); // index in workgroup
-    const int groupID     = get_group_id(0);
-    const int         wg  = get_local_size(0); // workgroup size = block size
-    int pos = 0, same = 0;
-    const int offset = get_group_id(0) * wg;
-    const int remainder = count - wg*(numOfGroups-1);
-
-    if((offset + i ) >= count)
-        return;
-    float2 pt1, pt2;
-    pt1 = corners[groupID*wg + i];
-
-    float val1 = ELEM_FLT2(eig, pt1);
-    float val2;
-
-    for(int j=0; j<numOfGroups-1; j++ )
-    {
-        for(int k=0; k<wg; k++)
-        {
-            pt2  = corners[j*wg + k];
-            val2 = ELEM_FLT2(eig, pt2);
-            if(val1 > val2)
-                break;
-            else
-            {
-                //Increment only if the value is not the same.
-                if( val2 > val1 )
-                    pos++;
-                else
-                    same++;
-            }
-        }
-    }
-
-    for(int k=0; k<remainder; k++)
-    {
-        pt2  = corners[(numOfGroups-1)*wg + k];
-        val2 = ELEM_FLT2(eig, pt2);
-        if(val1 > val2)
-            break;
-        else
-        {
-            //Don't increment if the value is the same.
-            //Two elements are same if (*userComp)(jData, iData)  and (*userComp)(iData, jData) are both false
-            if(val2 > val1)
-                pos++;
-            else
-                same++;
-        }
-    }
-    for (int j=0; j< same; j++)
-        corners[pos + j] = pt1;
+    data[0] = minVal;
+    data[1] = maxVal;
 }

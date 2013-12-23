@@ -46,6 +46,7 @@
 
 #ifdef HAVE_OPENCV_OCL
 #include <cstdio>
+#include <sstream>
 #include "opencl_kernels.hpp"
 
 using namespace cv;
@@ -57,18 +58,25 @@ namespace cv
 {
     namespace ocl
     {
+        // The number of degrees between orientation samples in calcOrientation
+        const static int ORI_SEARCH_INC = 5;
+        // The local size of the calcOrientation kernel
+        const static int ORI_LOCAL_SIZE = (360 / ORI_SEARCH_INC);
+
         static void openCLExecuteKernelSURF(Context *clCxt, const cv::ocl::ProgramEntry* source, String kernelName, size_t globalThreads[3],
             size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
-            char optBuf [100] = {0};
-            char * optBufPtr = optBuf;
+            std::stringstream optsStr;
+            optsStr << "-D ORI_LOCAL_SIZE=" << ORI_LOCAL_SIZE << " ";
+            optsStr << "-D ORI_SEARCH_INC=" << ORI_SEARCH_INC << " ";
             cl_kernel kernel;
-            kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optBufPtr);
+            kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optsStr.str().c_str());
             size_t wave_size = queryWaveFrontSize(kernel);
             CV_Assert(clReleaseKernel(kernel) == CL_SUCCESS);
-            sprintf(optBufPtr, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
-            openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optBufPtr);
+            optsStr << "-D WAVE_SIZE=" << wave_size;
+            openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optsStr.str().c_str());
         }
+
     }
 }
 
@@ -601,8 +609,8 @@ void SURF_OCL_Invoker::icvCalcOrientation_gpu(const oclMat &keypoints, int nFeat
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_cols));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&surf_.sum.step));
 
-    size_t localThreads[3]  = {32, 4, 1};
-    size_t globalThreads[3] = {nFeatures *localThreads[0], localThreads[1], 1};
+    size_t localThreads[3]  = {ORI_LOCAL_SIZE, 1, 1};
+    size_t globalThreads[3] = {nFeatures * localThreads[0], 1, 1};
 
     openCLExecuteKernelSURF(clCxt, &surfprog, kernelName, globalThreads, localThreads, args, -1, -1);
 }
