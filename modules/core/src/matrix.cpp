@@ -1430,6 +1430,16 @@ Size _InputArray::size(int i) const
         return vv[i].size();
     }
 
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        if( i < 0 )
+            return vv.empty() ? Size() : Size((int)vv.size(), 1);
+        CV_Assert( i < (int)vv.size() );
+
+        return vv[i].size();
+    }
+
     if( k == OPENGL_BUFFER )
     {
         CV_Assert( i < 0 );
@@ -2262,6 +2272,12 @@ void _OutputArray::release() const
         return;
     }
 
+    if( k == UMAT )
+    {
+        ((UMat*)obj)->release();
+        return;
+    }
+
     if( k == GPU_MAT )
     {
         ((cuda::GpuMat*)obj)->release();
@@ -2298,6 +2314,12 @@ void _OutputArray::release() const
     if( k == STD_VECTOR_MAT )
     {
         ((std::vector<Mat>*)obj)->clear();
+        return;
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        ((std::vector<UMat>*)obj)->clear();
         return;
     }
 
