@@ -895,6 +895,114 @@ void cv::blur( InputArray src, OutputArray dst,
     boxFilter( src, dst, -1, ksize, anchor, true, borderType );
 }
 
+
+/****************************************************************************************\
+                                    Squared Box Filter
+\****************************************************************************************/
+
+namespace cv
+{
+
+template<typename T, typename ST> struct SqrRowSum : public BaseRowFilter
+{
+    SqrRowSum( int _ksize, int _anchor )
+    {
+        ksize = _ksize;
+        anchor = _anchor;
+    }
+
+    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    {
+        const T* S = (const T*)src;
+        ST* D = (ST*)dst;
+        int i = 0, k, ksz_cn = ksize*cn;
+
+        width = (width - 1)*cn;
+        for( k = 0; k < cn; k++, S++, D++ )
+        {
+            ST s = 0;
+            for( i = 0; i < ksz_cn; i += cn )
+            {
+                ST val = (ST)S[i];
+                s += val*val;
+            }
+            D[0] = s;
+            for( i = 0; i < width; i += cn )
+            {
+                ST val0 = (ST)S[i], val1 = (ST)S[i + ksz_cn];
+                s += val1*val1 - val0*val0;
+                D[i+cn] = s;
+            }
+        }
+    }
+};
+
+static Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int anchor)
+{
+    int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(sumType);
+    CV_Assert( CV_MAT_CN(sumType) == CV_MAT_CN(srcType) );
+
+    if( anchor < 0 )
+        anchor = ksize/2;
+
+    if( sdepth == CV_8U && ddepth == CV_32S )
+        return makePtr<SqrRowSum<uchar, int> >(ksize, anchor);
+    if( sdepth == CV_8U && ddepth == CV_64F )
+        return makePtr<SqrRowSum<uchar, double> >(ksize, anchor);
+    if( sdepth == CV_16U && ddepth == CV_64F )
+        return makePtr<SqrRowSum<ushort, double> >(ksize, anchor);
+    if( sdepth == CV_16S && ddepth == CV_64F )
+        return makePtr<SqrRowSum<short, double> >(ksize, anchor);
+    if( sdepth == CV_32F && ddepth == CV_64F )
+        return makePtr<SqrRowSum<float, double> >(ksize, anchor);
+    if( sdepth == CV_64F && ddepth == CV_64F )
+        return makePtr<SqrRowSum<double, double> >(ksize, anchor);
+
+    CV_Error_( CV_StsNotImplemented,
+              ("Unsupported combination of source format (=%d), and buffer format (=%d)",
+               srcType, sumType));
+
+    return Ptr<BaseRowFilter>();
+}
+
+}
+
+void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
+                       Size ksize, Point anchor,
+                       bool normalize, int borderType )
+{
+    Mat src = _src.getMat();
+    int sdepth = src.depth(), cn = src.channels();
+    if( ddepth < 0 )
+        ddepth = sdepth < CV_32F ? CV_32F : CV_64F;
+    _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
+    Mat dst = _dst.getMat();
+    if( borderType != BORDER_CONSTANT && normalize )
+    {
+        if( src.rows == 1 )
+            ksize.height = 1;
+        if( src.cols == 1 )
+            ksize.width = 1;
+    }
+
+    int sumType = CV_64F;
+    if( sdepth == CV_8U )
+        sumType = CV_32S;
+    sumType = CV_MAKETYPE( sumType, cn );
+    int srcType = CV_MAKETYPE(sdepth, cn);
+    int dstType = CV_MAKETYPE(ddepth, cn);
+
+    Ptr<BaseRowFilter> rowFilter = getSqrRowSumFilter(srcType, sumType, ksize.width, anchor.x );
+    Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,
+                                                            dstType, ksize.height, anchor.y,
+                                                            normalize ? 1./(ksize.width*ksize.height) : 1);
+
+    Ptr<FilterEngine> f = makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
+                                                srcType, dstType, sumType, borderType );
+    f->apply( src, dst );
+}
+
+
 /****************************************************************************************\
                                      Gaussian Blur
 \****************************************************************************************/

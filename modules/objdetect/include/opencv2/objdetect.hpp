@@ -111,12 +111,15 @@ public:
 };
 
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps = 0.2);
-CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights, int groupThreshold, double eps = 0.2);
-CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights,
+                                  int groupThreshold, double eps = 0.2);
+CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold,
+                                  double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
                                   std::vector<double>& levelWeights, int groupThreshold, double eps = 0.2);
-CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights, std::vector<double>& foundScales,
-                                          double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
+CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
+                                            std::vector<double>& foundScales,
+                                            double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
 class CV_EXPORTS FeatureEvaluator
 {
@@ -132,7 +135,7 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
 
-    virtual bool setImage(const Mat& img, Size origWinSize);
+    virtual bool setImage(InputArray img, Size origWinSize, Size sumSize);
     virtual bool setWindow(Point p);
 
     virtual double calcOrd(int featureIdx) const;
@@ -231,6 +234,8 @@ public:
     CV_WRAP Size getOriginalWindowSize() const;
     CV_WRAP int getFeatureType() const;
     void* getOldCascade();
+
+    CV_WRAP static bool convert(const String& oldcascade, const String& newcascade);
 
     void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
     Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();

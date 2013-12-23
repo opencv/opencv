@@ -43,15 +43,25 @@
 
 int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
 {
-    Mat mat = _probImage.getMat();
+    Size size;
+    int cn;
+    Mat mat;
+    UMat umat;
+    bool isUMat = _probImage.isUMat();
+
+    if (isUMat)
+        umat = _probImage.getUMat(), cn = umat.channels(), size = umat.size();
+    else
+        mat = _probImage.getMat(), cn = mat.channels(), size = mat.size();
+
     Rect cur_rect = window;
 
-    CV_Assert( mat.channels() == 1 );
+    CV_Assert( cn == 1 );
 
     if( window.height <= 0 || window.width <= 0 )
         CV_Error( Error::StsBadArg, "Input window has non-positive sizes" );
 
-    window = window & Rect(0, 0, mat.cols, mat.rows);
+    window = window & Rect(0, 0, size.width, size.height);
 
     double eps = (criteria.type & TermCriteria::EPS) ? std::max(criteria.epsilon, 0.) : 1.;
     eps = cvRound(eps*eps);
@@ -59,16 +69,16 @@ int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
 
     for( i = 0; i < niters; i++ )
     {
-        cur_rect = cur_rect & Rect(0, 0, mat.cols, mat.rows);
+        cur_rect = cur_rect & Rect(0, 0, size.width, size.height);
         if( cur_rect == Rect() )
         {
-            cur_rect.x = mat.cols/2;
-            cur_rect.y = mat.rows/2;
+            cur_rect.x = size.width/2;
+            cur_rect.y = size.height/2;
         }
         cur_rect.width = std::max(cur_rect.width, 1);
         cur_rect.height = std::max(cur_rect.height, 1);
 
-        Moments m = moments(mat(cur_rect));
+        Moments m = isUMat ? moments(umat(cur_rect)) : moments(mat(cur_rect));
 
         // Calculating center of mass
         if( fabs(m.m00) < DBL_EPSILON )
@@ -77,8 +87,8 @@ int cv::meanShift( InputArray _probImage, Rect& window, TermCriteria criteria )
         int dx = cvRound( m.m10/m.m00 - window.width*0.5 );
         int dy = cvRound( m.m01/m.m00 - window.height*0.5 );
 
-        int nx = std::min(std::max(cur_rect.x + dx, 0), mat.cols - cur_rect.width);
-        int ny = std::min(std::max(cur_rect.y + dy, 0), mat.rows - cur_rect.height);
+        int nx = std::min(std::max(cur_rect.x + dx, 0), size.width - cur_rect.width);
+        int ny = std::min(std::max(cur_rect.y + dy, 0), size.height - cur_rect.height);
 
         dx = nx - cur_rect.x;
         dy = ny - cur_rect.y;
@@ -99,9 +109,17 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
                               TermCriteria criteria )
 {
     const int TOLERANCE = 10;
-    Mat mat = _probImage.getMat();
+    Size size;
+    Mat mat;
+    UMat umat;
+    bool isUMat = _probImage.isUMat();
 
-    meanShift( mat, window, criteria );
+    if (isUMat)
+        umat = _probImage.getUMat(), size = umat.size();
+    else
+        mat = _probImage.getMat(), size = mat.size();
+
+    meanShift( _probImage, window, criteria );
 
     window.x -= TOLERANCE;
     if( window.x < 0 )
@@ -112,15 +130,15 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
         window.y = 0;
 
     window.width += 2 * TOLERANCE;
-    if( window.x + window.width > mat.cols )
-        window.width = mat.cols - window.x;
+    if( window.x + window.width > size.width )
+        window.width = size.width - window.x;
 
     window.height += 2 * TOLERANCE;
-    if( window.y + window.height > mat.rows )
-        window.height = mat.rows - window.y;
+    if( window.y + window.height > size.height )
+        window.height = size.height - window.y;
 
     // Calculating moments in new center mass
-    Moments m = moments( mat(window) );
+    Moments m = isUMat ? moments(umat(window)) : moments(mat(window));
 
     double m00 = m.m00, m10 = m.m10, m01 = m.m01;
     double mu11 = m.mu11, mu20 = m.mu20, mu02 = m.mu02;
@@ -164,19 +182,19 @@ cv::RotatedRect cv::CamShift( InputArray _probImage, Rect& window,
     int t1 = cvRound( fabs( width * sn ));
 
     t0 = MAX( t0, t1 ) + 2;
-    window.width = MIN( t0, (mat.cols - _xc) * 2 );
+    window.width = MIN( t0, (size.width - _xc) * 2 );
 
     t0 = cvRound( fabs( length * sn ));
     t1 = cvRound( fabs( width * cs ));
 
     t0 = MAX( t0, t1 ) + 2;
-    window.height = MIN( t0, (mat.rows - _yc) * 2 );
+    window.height = MIN( t0, (size.height - _yc) * 2 );
 
     window.x = MAX( 0, _xc - window.width / 2 );
     window.y = MAX( 0, _yc - window.height / 2 );
 
-    window.width = MIN( mat.cols - window.x, window.width );
-    window.height = MIN( mat.rows - window.y, window.height );
+    window.width = MIN( size.width - window.x, window.width );
+    window.height = MIN( size.height - window.y, window.height );
 
     RotatedRect box;
     box.size.height = (float)length;
