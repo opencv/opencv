@@ -53,6 +53,11 @@ if(ANDROID)
     endif()
   endforeach()
 
+  # remove CUDA runtime and NPP from regular deps
+  # it can be added seporately if needed.
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
+
   # split 3rdparty libs and modules
   foreach(mod ${OPENCV_MODULES_CONFIGMAKE})
     if(NOT mod MATCHES "^opencv_.+$")
