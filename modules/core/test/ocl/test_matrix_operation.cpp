@@ -54,7 +54,7 @@ namespace ocl {
 
 ////////////////////////////////converto/////////////////////////////////////////////////
 
-PARAM_TEST_CASE(MatrixTestBase, MatDepth, MatDepth, Channels, bool)
+PARAM_TEST_CASE(ConvertTo, MatDepth, MatDepth, Channels, bool)
 {
     int src_depth, cn, dstType;
     bool use_roi;
@@ -85,8 +85,6 @@ PARAM_TEST_CASE(MatrixTestBase, MatDepth, MatDepth, Channels, bool)
     }
 };
 
-typedef MatrixTestBase ConvertTo;
-
 OCL_TEST_P(ConvertTo, Accuracy)
 {
     for (int j = 0; j < test_loop_times; j++)
@@ -103,7 +101,51 @@ OCL_TEST_P(ConvertTo, Accuracy)
     }
 }
 
-typedef MatrixTestBase CopyTo;
+//////////////////////////////// CopyTo /////////////////////////////////////////////////
+
+PARAM_TEST_CASE(CopyTo, MatDepth, Channels, bool, bool)
+{
+    int depth, cn;
+    bool use_roi, use_mask;
+
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_INPUT_PARAMETER(mask)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+        use_mask = GET_PARAM(3);
+    }
+
+    void generateTestData()
+    {
+        const int type = CV_MAKE_TYPE(depth, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
+
+        if (use_mask)
+        {
+            Border maskBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            int mask_cn = randomDouble(0.0, 2.0) > 1.0 ? cn : 1;
+            randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC(mask_cn), 0, 2);
+            cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+        }
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        if (use_mask)
+            UMAT_UPLOAD_INPUT_PARAMETER(mask)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+};
+
 
 OCL_TEST_P(CopyTo, Accuracy)
 {
@@ -111,8 +153,16 @@ OCL_TEST_P(CopyTo, Accuracy)
     {
         generateTestData();
 
-        OCL_OFF(src_roi.copyTo(dst_roi));
-        OCL_ON(usrc_roi.copyTo(udst_roi));
+        if (use_mask)
+        {
+            OCL_OFF(src_roi.copyTo(dst_roi, mask_roi));
+            OCL_ON(usrc_roi.copyTo(udst_roi, umask_roi));
+        }
+        else
+        {
+            OCL_OFF(src_roi.copyTo(dst_roi));
+            OCL_ON(usrc_roi.copyTo(udst_roi));
+        }
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -122,7 +172,7 @@ OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
                             OCL_ALL_DEPTHS, OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
-                                OCL_ALL_DEPTHS, Values((MatDepth)0), OCL_ALL_CHANNELS, Bool()));
+                                OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 
 } } // namespace cvtest::ocl
 
