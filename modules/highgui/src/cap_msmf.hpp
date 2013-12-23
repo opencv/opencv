@@ -274,7 +274,7 @@ internal:
     static TResult PerformSynchronously(Windows::Foundation::IAsyncOperation<TResult>^ asyncOp, Concurrency::details::_ContextCallback context)
     {
         TResult pResult;
-        context._CallInContext([asyncOp, pResult]() mutable { Concurrency::task<TResult> asyncTask = Concurrency::task<TResult>(asyncOp); asyncTask.wait(); pResult = asyncTask.get(); });
+        context._CallInContext([asyncOp, &pResult]() { Concurrency::task<TResult> asyncTask = Concurrency::task<TResult>(asyncOp); pResult = asyncTask.get(); });
         return pResult;
 #else
     template <typename TResult>
@@ -282,7 +282,7 @@ internal:
     {
         HRESULT hr;
         ComPtr<CCompletionHandler<TCompletionHandler, TAction>> completeHandler = Microsoft::WRL::Make<CCompletionHandler<TCompletionHandler, TAction>>();
-        hr = context._CallInContext([&asyncOp, completeHandler]() -> HRESULT {
+        hr = context._CallInContext([&asyncOp, &completeHandler]() -> HRESULT {
             HRESULT hr = asyncOp->put_Completed(completeHandler.Get());
             if (FAILED(hr)) asyncOp->Release();
             return hr;
@@ -291,7 +291,7 @@ internal:
             completeHandler->wait();
         else
             return hr;
-        hr = context._CallInContext([&asyncOp, pResult]() -> HRESULT {
+        hr = context._CallInContext([&asyncOp, &pResult]() -> HRESULT {
             HRESULT hr = asyncOp->GetResults(pResult);
             asyncOp->Release();
             return hr;
@@ -303,13 +303,13 @@ internal:
 #ifdef __cplusplus_winrt
     static void PerformActionSynchronously(Windows::Foundation::IAsyncAction^ asyncOp, Concurrency::details::_ContextCallback context)
     {
-        context._CallInContext([asyncOp](){ Concurrency::task<void>(asyncOp).wait(); });
+        context._CallInContext([asyncOp](){ Concurrency::task<void>(asyncOp).get(); });
 #else
     static HRESULT PerformActionSynchronously(TAction* asyncOp, _ContextCallback context)
     {
         HRESULT hr;
         ComPtr<CCompletionHandler<TCompletionHandler, TAction>> completeHandler = Microsoft::WRL::Make<CCompletionHandler<TCompletionHandler, TAction>>();
-        hr = context._CallInContext([&asyncOp, completeHandler]() -> HRESULT {
+        hr = context._CallInContext([&asyncOp, &completeHandler]() -> HRESULT {
             HRESULT hr = asyncOp->put_Completed(completeHandler.Get());
             if (FAILED(hr)) asyncOp->Release();
             return hr;
@@ -412,7 +412,7 @@ public:
     HRESULT OnStart() {
         _M_task = Concurrency::task<HRESULT>(_M_func, _M_cts.get_token());
         AddRef();
-        _M_task.then([=](Concurrency::task<HRESULT> _Antecedent) {
+        _M_task.then([this](Concurrency::task<HRESULT> _Antecedent) {
             try {
                 HRESULT hr = _Antecedent.get();
                 if (FAILED(hr)) TryTransitionToError(hr);
@@ -436,7 +436,7 @@ protected:
     virtual void _FireCompletion()
     {
         AddRef();
-        _M_completeDelegateContext._CallInContext([=]() -> HRESULT {
+        _M_completeDelegateContext._CallInContext([this]() -> HRESULT {
             FireCompletion();
             Release();
             return S_OK;
