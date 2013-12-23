@@ -394,6 +394,7 @@ private:
     IMFMediaSource *vd_pSource;
 #ifdef HAVE_WINRT
     ABI::Windows::Media::Capture::IMediaCapture* vd_pMedCap;
+    IMedCapFailHandler* vd_pMedCapFail;
     ImageGrabberWinRT *vd_pImGr;
     ABI::Windows::Foundation::IAsyncAction* vd_pAction;
 #endif
@@ -1114,7 +1115,6 @@ HRESULT ImageGrabberWinRT::stopGrabbing(ABI::Windows::Foundation::IAsyncAction**
                 SetEvent(ig_hFinish);
                 return hr;
                 });
-            (*action)->AddRef();
 #endif
         }
     }
@@ -1830,6 +1830,7 @@ videoDevice::videoDevice(void): vd_IsSetuped(false), vd_LockOut(OpenLock), vd_pF
 {
 #ifdef HAVE_WINRT
     vd_pMedCap = NULL;
+    vd_pMedCapFail = NULL;
     vd_pImGr = NULL;
     vd_pAction = NULL;
 #endif
@@ -1997,7 +1998,6 @@ long videoDevice::resetDevice(IMFActivate *pActivate)
 #ifndef __cplusplus_winrt
             return hr;
         });
-        vd_pAction->AddRef();
 #else
         }));
 #endif
@@ -2084,8 +2084,7 @@ long videoDevice::checkDevice(ABI::Windows::Devices::Enumeration::DeviceClass de
                         hr = pDevice->get_Name(&str);
                         PCWSTR wstr = WindowsGetStringRawBuffer(str, &length);
                         if (wcscmp(wstr, vd_pFriendlyName) == 0) {
-                            *ppDevice = pDevice.Get();
-                            (*ppDevice)->AddRef();
+                            *ppDevice = pDevice.Detach();
                         }
                         WindowsDeleteString(str);
                     }
@@ -2200,8 +2199,7 @@ long videoDevice::initDevice()
                 }
                 if (SUCCEEDED(hr)) {
                     SafeRelease(&vd_pMedCap);
-                    vd_pMedCap = pIMedCap.Get();
-                    vd_pMedCap->AddRef();
+                    vd_pMedCap = pIMedCap.Detach();
                     hr = WindowsCreateStringReference(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings, (UINT32)wcslen(RuntimeClass_Windows_Media_Capture_MediaCaptureInitializationSettings), &hstrHead, &str);
                 }
                 if (SUCCEEDED(hr))
@@ -2222,7 +2220,9 @@ long videoDevice::initDevice()
                     hr = WindowsDeleteString(str);
                 if (SUCCEEDED(hr))
                     hr = pCapInitSet->put_StreamingCaptureMode(ABI::Windows::Media::Capture::StreamingCaptureMode::StreamingCaptureMode_Video);
-                if (SUCCEEDED(hr)) hr = pIMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), &pAction);
+                vd_pMedCapFail = create_medcapfailedhandler([this](){ closeDevice(); });
+                if (SUCCEEDED(hr)) hr = vd_pMedCapFail->AddHandler(vd_pMedCap);
+                if (SUCCEEDED(hr)) hr = vd_pMedCap->InitializeWithSettingsAsync(pCapInitSet.Get(), &pAction);
 #ifdef __cplusplus_winrt
                 if (FAILED(hr)) throw Platform::Exception::CreateException(hr);
             });
@@ -2237,7 +2237,6 @@ long videoDevice::initDevice()
         }
         return hr;
     });
-    vd_pAction->AddRef();
 #endif
 #else
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
@@ -2307,6 +2306,8 @@ void videoDevice::closeDevice()
             ABI::Windows::Foundation::IAsyncAction* action;
             ABI::Windows::Foundation::IAsyncAction* pOldAction = vd_pAction;
             vd_pImGr->stopGrabbing(&action);
+            vd_pMedCapFail->RemoveHandler(vd_pMedCap);
+            SafeRelease(&vd_pMedCapFail);
 #ifdef __cplusplus_winrt
             vd_pAction = reinterpret_cast<ABI::Windows::Foundation::IAsyncAction*>(Concurrency::create_async([action, pOldAction, this]() {
                 if (pOldAction) CCompletionHandler::PerformActionSynchronously(reinterpret_cast<Windows::Foundation::IAsyncAction^>(pOldAction), Concurrency::details::_ContextCallback::_CaptureCurrent());
@@ -2316,6 +2317,7 @@ void videoDevice::closeDevice()
                 if (pOldAction) CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(pOldAction, _ContextCallback::_CaptureCurrent());
                 HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, _ContextCallback::_CaptureCurrent());
 #endif
+                SafeRelease(&vd_pMedCap);
                 if(vd_LockOut == RawDataLock) {
                     delete vd_pImGr;
                 }
@@ -2324,7 +2326,6 @@ void videoDevice::closeDevice()
 #ifndef __cplusplus_winrt
                 return hr;
             });
-            vd_pAction->AddRef();
 #else
             }));
 #endif
@@ -2543,7 +2544,6 @@ bool videoDevice::isFrameNew()
                     HRESULT hr = CCompletionHandler<ABI::Windows::Foundation::IAsyncActionCompletedHandler, ABI::Windows::Foundation::IAsyncAction>::PerformActionSynchronously(action, context);
                     return hr;
                 });
-                vd_pAction->AddRef();
 #endif
                 
                 return true;
@@ -2634,7 +2634,6 @@ bool videoDevice::setupDevice(unsigned int id)
 #ifdef HAVE_WINRT
 #ifndef __cplusplus_winrt
             });
-            vd_pAction->AddRef();
 #else
             }));
 #endif
