@@ -105,27 +105,27 @@ class MatlabWrapperGenerator(object):
             for method in namespace.methods:
                 populated = tfunction.render(fun=method, time=time, includes=namespace.name)
                 with open(output_source_dir+'/'+method.name+'.cpp', 'wb') as f:
-                    f.write(populated)
+                    f.write(populated.encode('utf-8'))
                 if namespace.name in doc and method.name in doc[namespace.name]:
                     populated = tdoc.render(fun=method, doc=doc[namespace.name][method.name], time=time)
                     with open(output_class_dir+'/'+method.name+'.m', 'wb') as f:
-                        f.write(populated)
+                        f.write(populated.encode('utf-8'))
             # classes
             for clss in namespace.classes:
                 # cpp converter
                 populated = tclassc.render(clss=clss, time=time)
                 with open(output_private_dir+'/'+clss.name+'Bridge.cpp', 'wb') as f:
-                    f.write(populated)
+                    f.write(populated.encode('utf-8'))
                 # matlab classdef
                 populated = tclassm.render(clss=clss, time=time)
                 with open(output_class_dir+'/'+clss.name+'.m', 'wb') as f:
-                    f.write(populated)
+                    f.write(populated.encode('utf-8'))
 
         # create a global constants lookup table
         const = dict(constants(todict(parse_tree.namespaces)))
         populated = tconst.render(constants=const, time=time)
         with open(output_dir+'/cv.m', 'wb') as f:
-            f.write(populated)
+            f.write(populated.encode('utf-8'))
 
 
 if __name__ == "__main__":
