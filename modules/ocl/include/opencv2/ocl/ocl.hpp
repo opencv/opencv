@@ -706,17 +706,17 @@ namespace cv
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat &rowKernel,
-                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT);
+                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
                 const Ptr<BaseColumnFilter_GPU> &columnFilter);
 
         //! returns the Gaussian filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns filter engine for the generalized Sobel operator
-        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT, Size imgSize = Size(-1,-1) );
 
         //! applies Laplacian operator to the image
         // supports only ksize = 1 and ksize = 3
@@ -869,7 +869,6 @@ namespace cv
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
-
         /////////////////////////////////// ML ///////////////////////////////////////////
 
         //! Compute closest centers for each lines in source and lable it after center's index
@@ -1381,8 +1380,10 @@ namespace cv
             oclMat Dx_;
             oclMat Dy_;
             oclMat eig_;
+            oclMat eig_minmax_;
             oclMat minMaxbuf_;
             oclMat tmpCorners_;
+            oclMat counter_;
         };
 
         inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,

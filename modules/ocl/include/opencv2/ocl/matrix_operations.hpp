@@ -175,6 +175,7 @@ namespace cv
             data = m.data;
             datastart = m.datastart;
             dataend = m.dataend;
+            clCxt = m.clCxt;
             wholerows = m.wholerows;
             wholecols = m.wholecols;
             offset = m.offset;

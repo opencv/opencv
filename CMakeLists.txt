@@ -163,7 +163,7 @@ OCV_OPTION(WITH_XINE           "Include Xine support (GPL)"                  OFF
 OCV_OPTION(WITH_OPENCL         "Include OpenCL Runtime support"              ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDFFT   "Include AMD OpenCL FFT library support"      ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENCLAMDBLAS  "Include AMD OpenCL BLAS library support"     ON   IF (NOT ANDROID AND NOT IOS) )
-
+OCV_OPTION(WITH_INTELPERC      "Include Intel Perceptual Computing support"  OFF  IF WIN32 )
 
 # OpenCV build components
 # ===================================================
@@ -201,6 +201,7 @@ OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help wi
 
 # OpenCV build options
 # ===================================================
+OCV_OPTION(ENABLE_DYNAMIC_CUDA        "Enabled dynamic CUDA linkage"                             ON   IF ANDROID )
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON   IF (NOT IOS) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) IF (CMAKE_VERSION VERSION_GREATER "2.8.0") )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CMAKE_COMPILER_IS_GNUCXX )
@@ -214,6 +215,8 @@ OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"               
 OCV_OPTION(ENABLE_SSE41               "Enable SSE4.1 instructions"                               OFF  IF ((CV_ICC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"                               OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                                  OFF  IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
+OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 OFF  IF CMAKE_COMPILER_IS_GNUCXX AND ARM )
+OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF CMAKE_COMPILER_IS_GNUCXX AND ARM )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
@@ -239,6 +242,15 @@ include(cmake/OpenCVVersion.cmake)
 
 # Save libs and executables in the same place
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output directory for applications" )
+
+if (ANDROID)
+  if (ANDROID_ABI MATCHES "NEON")
+    set(ENABLE_NEON ON)
+  endif()
+  if (ANDROID_ABI MATCHES "VFPV3")
+    set(ENABLE_VFPV3 ON)
+  endif()
+endif()
 
 if(ANDROID OR WIN32)
   set(OPENCV_DOC_INSTALL_PATH doc)
@@ -461,7 +473,11 @@ endif()
 # ----------------------------------------------------------------------------
 # Add CUDA libraries (needed for apps/tools, samples)
 # ----------------------------------------------------------------------------
-if(HAVE_CUDA)
+if(NOT HAVE_CUDA)
+  set(ENABLE_DYNAMIC_CUDA OFF)
+endif()
+
+if(HAVE_CUDA AND NOT ENABLE_DYNAMIC_CUDA)
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
   if(HAVE_CUBLAS)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
@@ -470,6 +486,7 @@ if(HAVE_CUDA)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cufft_LIBRARY})
   endif()
 endif()
+
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -828,6 +845,11 @@ endif(DEFINED WITH_XIMEA)
 if(DEFINED WITH_XINE)
   status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
 endif(DEFINED WITH_XINE)
+
+if(DEFINED WITH_INTELPERC)
+  status("    Intel PerC:"     HAVE_INTELPERC      THEN "YES"                                 ELSE NO)
+endif(DEFINED WITH_INTELPERC)
+
 
 # ========================== Other third-party libraries ==========================
 status("")

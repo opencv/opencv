@@ -50,6 +50,14 @@
 #define NTHREADS 256
 #define CV_PI_F 3.1415926535897932384626433832795f
 
+#ifdef INTEL_DEVICE
+#define QANGLE_TYPE		int
+#define QANGLE_TYPE2	int2
+#else
+#define QANGLE_TYPE		uchar
+#define QANGLE_TYPE2	uchar2
+#endif
+
 //----------------------------------------------------------------------------
 // Histogram computation
 // 12 threads for a cell, 12x4 threads per block
@@ -59,7 +67,7 @@ __kernel void compute_hists_lut_kernel(
     const int cnbins, const int cblock_hist_size, const int img_block_width,
     const int blocks_in_group, const int blocks_total,
     const int grad_quadstep, const int qangle_step,
-    __global const float* grad, __global const uchar* qangle,
+    __global const float* grad, __global const QANGLE_TYPE* qangle,
     __global const float* gauss_w_lut,
     __global float* block_hists, __local float* smem)
 {
@@ -86,7 +94,7 @@ __kernel void compute_hists_lut_kernel(
 
     __global const float* grad_ptr = (gid < blocks_total) ?
         grad + offset_y * grad_quadstep + (offset_x << 1) : grad;
-    __global const uchar* qangle_ptr = (gid < blocks_total) ?
+    __global const QANGLE_TYPE* qangle_ptr = (gid < blocks_total) ?
         qangle + offset_y * qangle_step + (offset_x << 1) : qangle;
 
     __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) +
@@ -101,7 +109,7 @@ __kernel void compute_hists_lut_kernel(
     for (int dist_y = dist_y_begin; dist_y < dist_y_begin + 12; ++dist_y)
     {
         float2 vote = (float2) (grad_ptr[0], grad_ptr[1]);
-        uchar2 bin = (uchar2) (qangle_ptr[0], qangle_ptr[1]);
+        QANGLE_TYPE2 bin = (QANGLE_TYPE2) (qangle_ptr[0], qangle_ptr[1]);
 
         grad_ptr += grad_quadstep;
         qangle_ptr += qangle_step;
@@ -558,7 +566,7 @@ __kernel void extract_descrs_by_cols_kernel(
 __kernel void compute_gradients_8UC4_kernel(
     const int height, const int width,
     const int img_step, const int grad_quadstep, const int qangle_step,
-    const __global uchar4 * img, __global float * grad, __global uchar * qangle,
+    const __global uchar4 * img, __global float * grad, __global QANGLE_TYPE * qangle,
     const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
@@ -660,7 +668,7 @@ __kernel void compute_gradients_8UC4_kernel(
 __kernel void compute_gradients_8UC1_kernel(
     const int height, const int width,
     const int img_step, const int grad_quadstep, const int qangle_step,
-    __global const uchar * img, __global float * grad, __global uchar * qangle,
+    __global const uchar * img, __global float * grad, __global QANGLE_TYPE * qangle,
     const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
