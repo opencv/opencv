@@ -45,29 +45,42 @@
 #include <iostream>
 
 #if defined(HAVE_CUDA)
-    #include <cuda_runtime.h>
-    #include <npp.h>
+# include <cuda_runtime.h>
+# include <npp.h>
 
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4020
-    #define NPP_MINIMUM_REQUIRED_VERSION 4200
+# define CUDART_MINIMUM_REQUIRED_VERSION 4020
+# define NPP_MINIMUM_REQUIRED_VERSION 4200
 
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
+# if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+#  error "Insufficient Cuda Runtime library version, please update it."
+# endif
 
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
+# if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+#  error "Insufficient NPP version, please update it."
+# endif
 #endif
 
 #ifdef DYNAMIC_CUDA_SUPPORT
-#include <dlfcn.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
+# include <dlfcn.h>
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <dirent.h>
 #endif
 
 #ifdef ANDROID
+# ifdef LOG_TAG
+#  undef LOG_TAG
+# endif
+# ifdef LOGE
+#  undef LOGE
+# endif
+# ifdef LOGD
+#  undef LOGD
+# endif
+# ifdef LOGI
+#  undef LOGI
+# endif
+
 # include <android/log.h>
 
 # define LOG_TAG "OpenCV::CUDA"
