@@ -44,6 +44,7 @@ if(ANDROID)
 
   # build the list of opencv libs and dependencies for all modules
   set(OPENCV_MODULES_CONFIGMAKE "")
+  set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "off")
   set(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "")
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE "")
   foreach(m ${OPENCV_MODULES_PUBLIC})
@@ -66,6 +67,12 @@ if(ANDROID)
   endforeach()
   if(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE)
     list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
+  endif()
+
+  # GPU module enabled separately
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "gpu")
+  if(HAVE_opencv_gpu)
+    set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "on")
   endif()
 
   # convert CMake lists to makefile literals
