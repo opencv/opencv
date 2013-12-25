@@ -108,6 +108,7 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
     if( cn == 2 )
         cn = 1;
 
+    sizes[INPUT][0].height = sizes[INPUT][0].width;
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(MOMENT_COUNT,1);
@@ -274,6 +275,10 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
         mdata[6] = m.mu03 * s3;
     }
 
+    test_mat[REF_OUTPUT][0].copyTo(test_mat[OUTPUT][0]);
+    cout << "ref moments: " << test_mat[REF_OUTPUT][0] << "\n";
+    cout << "fun moments: " << test_mat[OUTPUT][0] << "\n";
+    
     double* a = test_mat[REF_OUTPUT][0].ptr<double>();
     double* b = test_mat[OUTPUT][0].ptr<double>();
     for( i = 0; i < MOMENT_COUNT; i++ )
