@@ -76,5 +76,5 @@ void readLoopTimes(int argc, char ** argv)
     CV_Assert(LOOP_TIMES > 0);
 }
 
-CV_TEST_MAIN(".", dumpOpenCLDevice(),
+CV_TEST_MAIN(".", ::dumpOpenCLDevice(),
                   readLoopTimes(argc, argv))

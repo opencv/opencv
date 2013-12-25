@@ -50,6 +50,8 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#define CV_BUILD_OCL_MODULE
+
 #include <cmath>
 #include <cstdio>
 #include <iostream>

@@ -210,6 +210,7 @@ public:
     Context2(const Context2& c);
     Context2& operator = (const Context2& c);
 
+    bool create();
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
