@@ -654,6 +654,7 @@ bool LBPEvaluator::Feature :: read(const FileNode& node )
 LBPEvaluator::LBPEvaluator()
 {
     features = makePtr<std::vector<Feature> >();
+    optfeatures = makePtr<std::vector<OptFeature> >();
 }
 LBPEvaluator::~LBPEvaluator()
 {
@@ -662,11 +663,12 @@ LBPEvaluator::~LBPEvaluator()
 bool LBPEvaluator::read( const FileNode& node )
 {
     features->resize(node.size());
-    featuresPtr = &(*features)[0];
+    optfeaturesPtr = &(*optfeatures)[0];
     FileNodeIterator it = node.begin(), it_end = node.end();
+    std::vector<Feature>& ff = *features;
     for(int i = 0; it != it_end; ++it, i++)
     {
-        if(!featuresPtr[i].read(*it))
+        if(!ff[i].read(*it))
             return false;
     }
     return true;
@@ -677,31 +679,58 @@ Ptr<FeatureEvaluator> LBPEvaluator::clone() const
     Ptr<LBPEvaluator> ret = makePtr<LBPEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
-    ret->featuresPtr = &(*ret->features)[0];
+    ret->optfeatures = optfeatures;
+    ret->optfeaturesPtr = ret->optfeatures.empty() ? 0 : &(*ret->optfeatures)[0];
     ret->sum0 = sum0, ret->sum = sum;
-    ret->normrect = normrect;
-    ret->offset = offset;
+    ret->pwin = pwin;
     return ret;
 }
 
-bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, Size )
+bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, Size _sumSize )
 {
-    Mat image = _image.getMat();
-    int rn = image.rows+1, cn = image.cols+1;
-    origWinSize = _origWinSize;
+    Size imgsz = _image.size();
+    int cols = imgsz.width, rows = imgsz.height;
 
-    if( image.cols < origWinSize.width || image.rows < origWinSize.height )
+    if (imgsz.width < origWinSize.width || imgsz.height < origWinSize.height)
         return false;
 
-    if( sum0.rows < rn || sum0.cols < cn )
+    origWinSize = _origWinSize;
+
+    int rn = _sumSize.height, cn = _sumSize.width;
+    int sumStep;
+    CV_Assert(rn >= rows+1 && cn >= cols+1);
+
+    if( _image.isUMat() )
+    {
+        usum0.create(rn, cn, CV_32S);
+        usum = UMat(usum0, Rect(0, 0, cols+1, rows+1));
+
+        integral(_image, usum, noArray(), noArray(), CV_32S);
+        sumStep = (int)(usum.step/usum.elemSize());
+    }
+    else
+    {
         sum0.create(rn, cn, CV_32S);
-    sum = Mat(rn, cn, CV_32S, sum0.data);
-    integral(image, sum);
+        sum = sum0(Rect(0, 0, cols+1, rows+1));
+
+        integral(_image, sum, noArray(), noArray(), CV_32S);
+        sumStep = (int)(sum.step/sum.elemSize());
+    }
 
     size_t fi, nfeatures = features->size();
+    const std::vector<Feature>& ff = *features;
 
-    for( fi = 0; fi < nfeatures; fi++ )
-        featuresPtr[fi].updatePtrs( sum );
+    if( sumSize0 != _sumSize )
+    {
+        optfeatures->resize(nfeatures);
+        optfeaturesPtr = &(*optfeatures)[0];
+        for( fi = 0; fi < nfeatures; fi++ )
+            optfeaturesPtr[fi].setOffsets( ff[fi], sumStep );
+    }
+    if( _image.isUMat() && (sumSize0 != _sumSize || ufbuf.empty()) )
+        copyVectorToUMat(*optfeatures, ufbuf);
+    sumSize0 = _sumSize;
+
     return true;
 }
 
@@ -711,8 +740,16 @@ bool LBPEvaluator::setWindow( Point pt )
         pt.x + origWinSize.width >= sum.cols ||
         pt.y + origWinSize.height >= sum.rows )
         return false;
-    offset = pt.y * ((int)sum.step/sizeof(int)) + pt.x;
+    pwin = &sum.at<int>(pt);
     return true;
+}
+
+
+void LBPEvaluator::getUMats(std::vector<UMat>& bufs)
+{
+    bufs.clear();
+    bufs.push_back(usum);
+    bufs.push_back(ufbuf);
 }
 
 //----------------------------------------------  HOGEvaluator ---------------------------------------
@@ -1133,50 +1170,84 @@ bool CascadeClassifierImpl::detectSingleScale( InputArray _image, Size processin
 bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size processingRectSize,
                                                    int yStep, double factor, Size sumSize0 )
 {
-    const int VECTOR_SIZE = 1;
-    Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
-    if( haar.empty() )
-        return false;
-
-    haar->setImage(_image, data.origWinSize, sumSize0);
-
-    if( cascadeKernel.empty() )
-    {
-        cascadeKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc,
-                             format("-D VECTOR_SIZE=%d", VECTOR_SIZE));
-        if( cascadeKernel.empty() )
-            return false;
-    }
+    int featureType = getFeatureType();
+    std::vector<UMat> bufs;
+    size_t globalsize[] = { processingRectSize.width/yStep, processingRectSize.height/yStep };
+    bool ok = false;
 
     if( ustages.empty() )
     {
         copyVectorToUMat(data.stages, ustages);
         copyVectorToUMat(data.stumps, ustumps);
+        if( !data.subsets.empty() )
+            copyVectorToUMat(data.subsets, usubsets);
     }
 
-    std::vector<UMat> bufs;
-    haar->getUMats(bufs);
-    CV_Assert(bufs.size() == 3);
+    if( featureType == FeatureEvaluator::HAAR )
+    {
+        Ptr<HaarEvaluator> haar = featureEvaluator.dynamicCast<HaarEvaluator>();
+        if( haar.empty() )
+            return false;
 
-    Rect normrect = haar->getNormRect();
+        haar->setImage(_image, data.origWinSize, sumSize0);
+        if( haarKernel.empty() )
+        {
+            haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "");
+            if( haarKernel.empty() )
+                return false;
+        }
 
-    //processingRectSize = Size(yStep, yStep);
-    size_t globalsize[] = { (processingRectSize.width/yStep + VECTOR_SIZE-1)/VECTOR_SIZE, processingRectSize.height/yStep };
+        haar->getUMats(bufs);
+        Rect normrect = haar->getNormRect();
 
-    cascadeKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
-                       ocl::KernelArg::ReadOnlyNoSize(bufs[1]), // sqsum
-                       ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
+        haarKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
+                        ocl::KernelArg::ReadOnlyNoSize(bufs[1]), // sqsum
+                        ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
 
-                       // cascade classifier
-                       (int)data.stages.size(),
-                       ocl::KernelArg::PtrReadOnly(ustages),
-                       ocl::KernelArg::PtrReadOnly(ustumps),
+                        // cascade classifier
+                        (int)data.stages.size(),
+                        ocl::KernelArg::PtrReadOnly(ustages),
+                        ocl::KernelArg::PtrReadOnly(ustumps),
 
-                       ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
-                       processingRectSize,
-                       yStep, (float)factor,
-                       normrect, data.origWinSize, MAX_FACES);
-    bool ok = cascadeKernel.run(2, globalsize, 0, true);
+                        ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
+                        processingRectSize,
+                        yStep, (float)factor,
+                        normrect, data.origWinSize, MAX_FACES);
+        ok = haarKernel.run(2, globalsize, 0, true);
+    }
+    else if( featureType == FeatureEvaluator::LBP )
+    {
+        Ptr<LBPEvaluator> lbp = featureEvaluator.dynamicCast<LBPEvaluator>();
+        if( lbp.empty() )
+            return false;
+
+        lbp->setImage(_image, data.origWinSize, sumSize0);
+        if( lbpKernel.empty() )
+        {
+            lbpKernel.create("runLBPClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "");
+            if( lbpKernel.empty() )
+                return false;
+        }
+
+        lbp->getUMats(bufs);
+
+        int subsetSize = (data.ncategories + 31)/32;
+        lbpKernel.args(ocl::KernelArg::ReadOnlyNoSize(bufs[0]), // sum
+                        ocl::KernelArg::PtrReadOnly(bufs[1]), // optfeatures
+
+                        // cascade classifier
+                        (int)data.stages.size(),
+                        ocl::KernelArg::PtrReadOnly(ustages),
+                        ocl::KernelArg::PtrReadOnly(ustumps),
+                        ocl::KernelArg::PtrReadOnly(usubsets),
+                        subsetSize,
+
+                        ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
+                        processingRectSize,
+                        yStep, (float)factor,
+                        data.origWinSize, MAX_FACES);
+        ok = lbpKernel.run(2, globalsize, 0, true);
+    }
     //CV_Assert(ok);
     return ok;
 }
@@ -1225,6 +1296,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
                                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                                     bool outputRejectLevels )
 {
+    int featureType = getFeatureType();
     Size imgsz = _image.size();
     int imgtype = _image.type();
 
@@ -1238,7 +1310,9 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         maxObjectSize = imgsz;
 
     bool use_ocl = ocl::useOpenCL() &&
-        getFeatureType() == FeatureEvaluator::HAAR &&
+        (featureType == FeatureEvaluator::HAAR ||
+         featureType == FeatureEvaluator::LBP) &&
+        ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
         !isOldFormatCascade() &&
         data.isStumpBased() &&
         maskGenerator.empty() &&
@@ -1564,7 +1638,8 @@ bool CascadeClassifierImpl::Data::read(const FileNode &root)
 bool CascadeClassifierImpl::read_(const FileNode& root)
 {
     tryOpenCL = true;
-    cascadeKernel = ocl::Kernel();
+    haarKernel = ocl::Kernel();
+    lbpKernel = ocl::Kernel();
     ustages.release();
     ustumps.release();
     if( !data.read(root) )
