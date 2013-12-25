@@ -741,6 +741,135 @@ void cv::ocl::filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &ke
     f->apply(src, dst);
 }
 
+const int optimizedSepFilterLocalSize = 16;
+static void sepFilter2D_SinglePass(const oclMat &src, oclMat &dst,
+                                   const Mat &row_kernel, const Mat &col_kernel, int bordertype = BORDER_DEFAULT)
+{
+    size_t lt2[3] = {optimizedSepFilterLocalSize, optimizedSepFilterLocalSize, 1};
+    size_t gt2[3] = {lt2[0]*(1 + (src.cols-1) / lt2[0]), lt2[1]*(1 + (src.rows-1) / lt2[1]), 1};
+
+    unsigned int src_pitch = src.step;
+    unsigned int dst_pitch = dst.step;
+
+    int src_offset_x = (src.offset % src.step) / src.elemSize();
+    int src_offset_y = src.offset / src.step;
+
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&src_pitch ));
+
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src_offset_x ));
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src_offset_y ));
+
+    args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&dst.data ));
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&dst.offset ));
+    args.push_back( std::make_pair( sizeof(cl_uint) , (void *)&dst_pitch ));
+
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src.wholecols ));
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&src.wholerows ));
+
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&dst.cols ));
+    args.push_back( std::make_pair( sizeof(cl_int)  , (void *)&dst.rows ));
+
+    String option = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d",(int)lt2[0], (int)lt2[1],
+        row_kernel.rows / 2, col_kernel.rows / 2 );
+
+    option += " -D KERNEL_MATRIX_X=";
+    for(int i=0; i<row_kernel.rows; i++)
+        option += cv::format("0x%x,", *reinterpret_cast<const unsigned int*>( &row_kernel.at<float>(i) ) );
+    option += "0x0";
+
+    option += " -D KERNEL_MATRIX_Y=";
+    for(int i=0; i<col_kernel.rows; i++)
+        option += cv::format("0x%x,", *reinterpret_cast<const unsigned int*>( &col_kernel.at<float>(i) ) );
+    option += "0x0";
+
+    switch(src.type())
+    {
+    case CV_8UC1:
+        option += " -D SRCTYPE=uchar -D CONVERT_SRCTYPE=convert_float -D WORKTYPE=float";
+        break;
+    case CV_32FC1:
+        option += " -D SRCTYPE=float -D CONVERT_SRCTYPE= -D WORKTYPE=float";
+        break;
+    case CV_8UC2:
+        option += " -D SRCTYPE=uchar2 -D CONVERT_SRCTYPE=convert_float2 -D WORKTYPE=float2";
+        break;
+    case CV_32FC2:
+        option += " -D SRCTYPE=float2 -D CONVERT_SRCTYPE= -D WORKTYPE=float2";
+        break;
+    case CV_8UC3:
+        option += " -D SRCTYPE=uchar3 -D CONVERT_SRCTYPE=convert_float3 -D WORKTYPE=float3";
+        break;
+    case CV_32FC3:
+        option += " -D SRCTYPE=float3 -D CONVERT_SRCTYPE= -D WORKTYPE=float3";
+        break;
+    case CV_8UC4:
+        option += " -D SRCTYPE=uchar4 -D CONVERT_SRCTYPE=convert_float4 -D WORKTYPE=float4";
+        break;
+    case CV_32FC4:
+        option += " -D SRCTYPE=float4 -D CONVERT_SRCTYPE= -D WORKTYPE=float4";
+        break;
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "Image type is not supported!");
+        break;
+    }
+    switch(dst.type())
+    {
+    case CV_8UC1:
+        option += " -D DSTTYPE=uchar -D CONVERT_DSTTYPE=convert_uchar_sat";
+        break;
+    case CV_8UC2:
+        option += " -D DSTTYPE=uchar2 -D CONVERT_DSTTYPE=convert_uchar2_sat";
+        break;
+    case CV_8UC3:
+        option += " -D DSTTYPE=uchar3 -D CONVERT_DSTTYPE=convert_uchar3_sat";
+        break;
+    case CV_8UC4:
+        option += " -D DSTTYPE=uchar4 -D CONVERT_DSTTYPE=convert_uchar4_sat";
+        break;
+    case CV_32FC1:
+        option += " -D DSTTYPE=float -D CONVERT_DSTTYPE=";
+        break;
+    case CV_32FC2:
+        option += " -D DSTTYPE=float2 -D CONVERT_DSTTYPE=";
+        break;
+    case CV_32FC3:
+        option += " -D DSTTYPE=float3 -D CONVERT_DSTTYPE=";
+        break;
+    case CV_32FC4:
+        option += " -D DSTTYPE=float4 -D CONVERT_DSTTYPE=";
+        break;
+    default:
+        CV_Error(CV_StsUnsupportedFormat, "Image type is not supported!");
+        break;
+    }
+    switch(bordertype)
+    {
+    case cv::BORDER_CONSTANT:
+        option += " -D BORDER_CONSTANT";
+        break;
+    case cv::BORDER_REPLICATE:
+        option += " -D BORDER_REPLICATE";
+        break;
+    case cv::BORDER_REFLECT:
+        option += " -D BORDER_REFLECT";
+        break;
+    case cv::BORDER_REFLECT101:
+        option += " -D BORDER_REFLECT_101";
+        break;
+    case cv::BORDER_WRAP:
+        option += " -D BORDER_WRAP";
+        break;
+    default:
+        CV_Error(CV_StsBadFlag, "BORDER type is not supported!");
+        break;
+    }
+
+    openCLExecuteKernel(src.clCxt, &filtering_sep_filter_singlepass, "sep_filter_singlepass", gt2, lt2, args,
+        -1, -1, option.c_str() );
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // SeparableFilter
 
@@ -789,6 +918,35 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter
 {
     return makePtr<SeparableFilterEngine_GPU>(rowFilter, columnFilter);
 }
+
+namespace
+{
+class SingleStepSeparableFilterEngine_GPU : public FilterEngine_GPU
+{
+public:
+    SingleStepSeparableFilterEngine_GPU( const Mat &rowKernel_, const Mat &columnKernel_, const int btype )
+    {
+        bordertype = btype;
+        rowKernel = rowKernel_;
+        columnKernel = columnKernel_;
+    }
+
+    virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
+    {
+        normalizeROI(roi, Size(rowKernel.rows, columnKernel.rows), Point(-1,-1), src.size());
+
+        oclMat srcROI = src(roi);
+        oclMat dstROI = dst(roi);
+
+        sepFilter2D_SinglePass(src, dst, rowKernel, columnKernel, bordertype);
+    }
+
+    Mat rowKernel;
+    Mat columnKernel;
+    int bordertype;
+};
+}
+
 
 static void GPUFilterBox(const oclMat &src, oclMat &dst,
                          Size &ksize, const Point anchor, const int borderType)
@@ -1243,17 +1401,32 @@ Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int /*bufType*/, in
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int dstType,
-        const Mat &rowKernel, const Mat &columnKernel, const Point &anchor, double delta, int bordertype)
+        const Mat &rowKernel, const Mat &columnKernel, const Point &anchor, double delta, int bordertype, Size imgSize )
 {
     int sdepth = CV_MAT_DEPTH(srcType), ddepth = CV_MAT_DEPTH(dstType);
     int cn = CV_MAT_CN(srcType);
     int bdepth = std::max(std::max(sdepth, ddepth), CV_32F);
     int bufType = CV_MAKETYPE(bdepth, cn);
+    Context* clCxt = Context::getContext();
 
-    Ptr<BaseRowFilter_GPU> rowFilter = getLinearRowFilter_GPU(srcType, bufType, rowKernel, anchor.x, bordertype);
-    Ptr<BaseColumnFilter_GPU> columnFilter = getLinearColumnFilter_GPU(bufType, dstType, columnKernel, anchor.y, bordertype, delta);
+    //if image size is non-degenerate and large enough
+    //and if filter support is reasonable to satisfy larger local memory requirements,
+    //then we can use single pass routine to avoid extra runtime calls overhead
+    if( clCxt && clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) &&
+        rowKernel.rows <= 21 && columnKernel.rows <= 21 &&
+        (rowKernel.rows & 1) == 1 && (columnKernel.rows & 1) == 1 &&
+        imgSize.width > optimizedSepFilterLocalSize + (rowKernel.rows>>1) &&
+        imgSize.height > optimizedSepFilterLocalSize + (columnKernel.rows>>1) )
+    {
+        return Ptr<FilterEngine_GPU>(new SingleStepSeparableFilterEngine_GPU(rowKernel, columnKernel, bordertype));
+    }
+    else
+    {
+        Ptr<BaseRowFilter_GPU> rowFilter = getLinearRowFilter_GPU(srcType, bufType, rowKernel, anchor.x, bordertype);
+        Ptr<BaseColumnFilter_GPU> columnFilter = getLinearColumnFilter_GPU(bufType, dstType, columnKernel, anchor.y, bordertype, delta);
 
-    return createSeparableFilter_GPU(rowFilter, columnFilter);
+        return createSeparableFilter_GPU(rowFilter, columnFilter);
+    }
 }
 
 void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernelX, const Mat &kernelY, Point anchor, double delta, int bordertype)
@@ -1277,16 +1450,16 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
 
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
-    Ptr<FilterEngine_GPU> f = createSeparableLinearFilter_GPU(src.type(), dst.type(), kernelX, kernelY, anchor, delta, bordertype);
+    Ptr<FilterEngine_GPU> f = createSeparableLinearFilter_GPU(src.type(), dst.type(), kernelX, kernelY, anchor, delta, bordertype, src.size());
     f->apply(src, dst);
 }
 
-Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int borderType)
+Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int borderType, Size imgSize )
 {
     Mat kx, ky;
     getDerivKernels(kx, ky, dx, dy, ksize, false, CV_32F);
     return createSeparableLinearFilter_GPU(srcType, dstType,
-                                           kx, ky, Point(-1, -1), 0, borderType);
+                                           kx, ky, Point(-1, -1), 0, borderType, imgSize);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1356,7 +1529,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gaussian Filter
 
-Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2, int bordertype)
+Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2, int bordertype, Size imgSize)
 {
     int depth = CV_MAT_DEPTH(type);
 
@@ -1383,7 +1556,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
     else
         ky = getGaussianKernel(ksize.height, sigma2, std::max(depth, CV_32F));
 
-    return createSeparableLinearFilter_GPU(type, type, kx, ky, Point(-1, -1), 0.0, bordertype);
+    return createSeparableLinearFilter_GPU(type, type, kx, ky, Point(-1, -1), 0.0, bordertype, imgSize);
 }
 
 void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double sigma1, double sigma2, int bordertype)
@@ -1419,7 +1592,7 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
 
     dst.create(src.size(), src.type());
 
-    Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype);
+    Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype, src.size());
     f->apply(src, dst);
 }
 
