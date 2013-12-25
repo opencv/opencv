@@ -149,7 +149,7 @@ protected:
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
     UMat ufacepos, ustages, ustumps, usubsets;
-    ocl::Kernel cascadeKernel;
+    ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
 
     Mutex mtx;
@@ -250,13 +250,11 @@ public:
     struct Feature
     {
         Feature();
-
         bool read( const FileNode& node );
 
         bool tilted;
 
         enum { RECT_NUM = 3 };
-
         struct
         {
             Rect r;
@@ -369,14 +367,20 @@ public:
     {
         Feature();
         Feature( int x, int y, int _block_w, int _block_h  ) :
-        rect(x, y, _block_w, _block_h) {}
+            rect(x, y, _block_w, _block_h) {}
 
-        int calc( int offset ) const;
-        void updatePtrs( const Mat& sum );
         bool read(const FileNode& node );
 
         Rect rect; // weight and height for block
-        const int* p[16]; // fast
+    };
+
+    struct OptFeature
+    {
+        OptFeature();
+
+        int calc( const int* pwin ) const;
+        void setOffsets( const Feature& _f, int step );
+        int ofs[16];
     };
 
     LBPEvaluator();
@@ -388,55 +392,60 @@ public:
 
     virtual bool setImage(InputArray image, Size _origWinSize, Size);
     virtual bool setWindow(Point pt);
+    virtual void getUMats(std::vector<UMat>& bufs);
 
     int operator()(int featureIdx) const
-    { return featuresPtr[featureIdx].calc(offset); }
+    { return optfeaturesPtr[featureIdx].calc(pwin); }
     virtual int calcCat(int featureIdx) const
     { return (*this)(featureIdx); }
 protected:
-    Size origWinSize;
+    Size origWinSize, sumSize0;
     Ptr<std::vector<Feature> > features;
-    Feature* featuresPtr; // optimization
-    Mat sum0, sum;
-    Rect normrect;
+    Ptr<std::vector<OptFeature> > optfeatures;
+    OptFeature* optfeaturesPtr; // optimization
 
-    int offset;
+    Mat sum0, sum;
+    UMat usum0, usum, ufbuf;
+
+    const int* pwin;
 };
 
 
 inline LBPEvaluator::Feature :: Feature()
 {
     rect = Rect();
+}
+
+inline LBPEvaluator::OptFeature :: OptFeature()
+{
     for( int i = 0; i < 16; i++ )
-        p[i] = 0;
+        ofs[i] = 0;
 }
 
-inline int LBPEvaluator::Feature :: calc( int _offset ) const
+inline int LBPEvaluator::OptFeature :: calc( const int* p ) const
 {
-    int cval = CALC_SUM_( p[5], p[6], p[9], p[10], _offset );
+    int cval = CALC_SUM_OFS_( ofs[5], ofs[6], ofs[9], ofs[10], p );
 
-    return (CALC_SUM_( p[0], p[1], p[4], p[5], _offset ) >= cval ? 128 : 0) |   // 0
-           (CALC_SUM_( p[1], p[2], p[5], p[6], _offset ) >= cval ? 64 : 0) |    // 1
-           (CALC_SUM_( p[2], p[3], p[6], p[7], _offset ) >= cval ? 32 : 0) |    // 2
-           (CALC_SUM_( p[6], p[7], p[10], p[11], _offset ) >= cval ? 16 : 0) |  // 5
-           (CALC_SUM_( p[10], p[11], p[14], p[15], _offset ) >= cval ? 8 : 0)|  // 8
-           (CALC_SUM_( p[9], p[10], p[13], p[14], _offset ) >= cval ? 4 : 0)|   // 7
-           (CALC_SUM_( p[8], p[9], p[12], p[13], _offset ) >= cval ? 2 : 0)|    // 6
-           (CALC_SUM_( p[4], p[5], p[8], p[9], _offset ) >= cval ? 1 : 0);
+    return (CALC_SUM_OFS_( ofs[0], ofs[1], ofs[4], ofs[5], p ) >= cval ? 128 : 0) |   // 0
+           (CALC_SUM_OFS_( ofs[1], ofs[2], ofs[5], ofs[6], p ) >= cval ? 64 : 0) |    // 1
+           (CALC_SUM_OFS_( ofs[2], ofs[3], ofs[6], ofs[7], p ) >= cval ? 32 : 0) |    // 2
+           (CALC_SUM_OFS_( ofs[6], ofs[7], ofs[10], ofs[11], p ) >= cval ? 16 : 0) |  // 5
+           (CALC_SUM_OFS_( ofs[10], ofs[11], ofs[14], ofs[15], p ) >= cval ? 8 : 0)|  // 8
+           (CALC_SUM_OFS_( ofs[9], ofs[10], ofs[13], ofs[14], p ) >= cval ? 4 : 0)|   // 7
+           (CALC_SUM_OFS_( ofs[8], ofs[9], ofs[12], ofs[13], p ) >= cval ? 2 : 0)|    // 6
+           (CALC_SUM_OFS_( ofs[4], ofs[5], ofs[8], ofs[9], p ) >= cval ? 1 : 0);
 }
 
-inline void LBPEvaluator::Feature :: updatePtrs( const Mat& _sum )
+inline void LBPEvaluator::OptFeature :: setOffsets( const Feature& _f, int step )
 {
-    const int* ptr = (const int*)_sum.data;
-    size_t step = _sum.step/sizeof(ptr[0]);
-    Rect tr = rect;
-    CV_SUM_PTRS( p[0], p[1], p[4], p[5], ptr, tr, step );
-    tr.x += 2*rect.width;
-    CV_SUM_PTRS( p[2], p[3], p[6], p[7], ptr, tr, step );
-    tr.y += 2*rect.height;
-    CV_SUM_PTRS( p[10], p[11], p[14], p[15], ptr, tr, step );
-    tr.x -= 2*rect.width;
-    CV_SUM_PTRS( p[8], p[9], p[12], p[13], ptr, tr, step );
+    Rect tr = _f.rect;
+    CV_SUM_OFS( ofs[0], ofs[1], ofs[4], ofs[5], 0, tr, step );
+    tr.x += 2*_f.rect.width;
+    CV_SUM_OFS( ofs[2], ofs[3], ofs[6], ofs[7], 0, tr, step );
+    tr.y += 2*_f.rect.height;
+    CV_SUM_OFS( ofs[10], ofs[11], ofs[14], ofs[15], 0, tr, step );
+    tr.x -= 2*_f.rect.width;
+    CV_SUM_OFS( ofs[8], ofs[9], ofs[12], ofs[13], 0, tr, step );
 }
 
 //---------------------------------------------- HOGEvaluator -------------------------------------------
