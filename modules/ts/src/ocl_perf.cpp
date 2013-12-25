@@ -53,41 +53,31 @@ namespace perf {
 void checkDeviceMaxMemoryAllocSize(const Size& size, int type, int factor)
 {
     assert(factor > 0);
+
     if (!cv::ocl::useOpenCL())
         return;
-    int cn = CV_MAT_CN(type);
-    int cn_ocl = cn == 3 ? 4 : cn;
-    int type_ocl = CV_MAKE_TYPE(CV_MAT_DEPTH(type), cn_ocl);
-    size_t memSize = size.area() * CV_ELEM_SIZE(type_ocl);
+
+    size_t memSize = size.area() * CV_ELEM_SIZE(type);
     const cv::ocl::Device& dev = cv::ocl::Device::getDefault();
+
     if (memSize * factor >= dev.maxMemAllocSize())
-    {
         throw ::perf::TestBase::PerfSkipTestException();
-    }
 }
 
 void randu(InputOutputArray dst)
 {
     if (dst.depth() == CV_8U)
-    {
         cv::randu(dst, 0, 256);
-    }
     else if (dst.depth() == CV_8S)
-    {
         cv::randu(dst, -128, 128);
-    }
     else if (dst.depth() == CV_16U)
-    {
         cv::randu(dst, 0, 1024);
-    }
     else if (dst.depth() == CV_32F || dst.depth() == CV_64F)
-    {
         cv::randu(dst, -1.0, 1.0);
-    }
-    else // (dst.depth() == CV_16S || dst.depth() == CV_32S)
-    {
+    else if (dst.depth() == CV_16S || dst.depth() == CV_32S)
         cv::randu(dst, -4096, 4096);
-    }
+    else
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported format");
 }
 
 } // namespace perf
