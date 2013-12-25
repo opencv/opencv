@@ -222,6 +222,12 @@ elseif(HAVE_QTKIT)
   list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()
 
+if(HAVE_INTELPERC)
+  list(APPEND highgui_srcs src/cap_intelperc.cpp)
+  ocv_include_directories(${INTELPERC_INCLUDE_DIR})
+  list(APPEND HIGHGUI_LIBRARIES ${INTELPERC_LIBRARIES})
+endif(HAVE_INTELPERC)
+
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
   list(APPEND highgui_srcs src/ios_conversions.mm src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
