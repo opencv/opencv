@@ -2877,11 +2877,121 @@ static InRangeFunc getInRangeFunc(int depth)
     return inRangeTab[depth];
 }
 
+static bool ocl_inRange( InputArray _src, InputArray _lowerb,
+                         InputArray _upperb, OutputArray _dst )
+{
+    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
+    int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
+    int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
+    int cn = CV_MAT_CN(stype);
+    bool lbScalar = false, ubScalar = false;
+
+    if( (lkind == _InputArray::MATX && skind != _InputArray::MATX) ||
+        ssize != lsize || stype != ltype )
+    {
+        if( !checkScalar(_lowerb, stype, lkind, skind) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The lower bounary is neither an array of the same size and same type as src, nor a scalar");
+        lbScalar = true;
+    }
+
+    if( (ukind == _InputArray::MATX && skind != _InputArray::MATX) ||
+        ssize != usize || stype != utype )
+    {
+        if( !checkScalar(_upperb, stype, ukind, skind) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The upper bounary is neither an array of the same size and same type as src, nor a scalar");
+        ubScalar = true;
+    }
+
+    if (lbScalar != ubScalar)
+        return false;
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+            haveScalar = lbScalar && ubScalar;
+
+    if ( (!doubleSupport && sdepth == CV_64F) ||
+         (!haveScalar && (sdepth != ldepth || sdepth != udepth)) )
+        return false;
+
+    ocl::Kernel ker("inrange", ocl::core::inrange_oclsrc,
+                    format("%s-D cn=%d -D T=%s%s", haveScalar ? "-D HAVE_SCALAR " : "",
+                           cn, ocl::typeToStr(sdepth), doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (ker.empty())
+        return false;
+
+    _dst.create(ssize, CV_8UC1);
+    UMat src = _src.getUMat(), dst = _dst.getUMat(), lscalaru, uscalaru;
+    Mat lscalar, uscalar;
+
+    if (lbScalar && ubScalar)
+    {
+        lscalar = _lowerb.getMat();
+        uscalar = _upperb.getMat();
+
+        size_t esz = src.elemSize();
+        size_t blocksize = 36;
+
+        AutoBuffer<uchar> _buf(blocksize*(((int)lbScalar + (int)ubScalar)*esz + cn) + 2*cn*sizeof(int) + 128);
+        uchar *buf = alignPtr(_buf + blocksize*cn, 16);
+
+        if( ldepth != sdepth && sdepth < CV_32S )
+        {
+            int* ilbuf = (int*)alignPtr(buf + blocksize*esz, 16);
+            int* iubuf = ilbuf + cn;
+
+            BinaryFunc sccvtfunc = getConvertFunc(ldepth, CV_32S);
+            sccvtfunc(lscalar.data, 0, 0, 0, (uchar*)ilbuf, 0, Size(cn, 1), 0);
+            sccvtfunc(uscalar.data, 0, 0, 0, (uchar*)iubuf, 0, Size(cn, 1), 0);
+            int minval = cvRound(getMinVal(sdepth)), maxval = cvRound(getMaxVal(sdepth));
+
+            for( int k = 0; k < cn; k++ )
+            {
+                if( ilbuf[k] > iubuf[k] || ilbuf[k] > maxval || iubuf[k] < minval )
+                    ilbuf[k] = minval+1, iubuf[k] = minval;
+            }
+            lscalar = Mat(cn, 1, CV_32S, ilbuf);
+            uscalar = Mat(cn, 1, CV_32S, iubuf);
+        }
+
+        lscalar.convertTo(lscalar, stype);
+        uscalar.convertTo(uscalar, stype);
+    }
+    else
+    {
+        lscalaru = _lowerb.getUMat();
+        uscalaru = _upperb.getUMat();
+    }
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst);
+
+    if (haveScalar)
+    {
+        lscalar.copyTo(lscalaru);
+        uscalar.copyTo(uscalaru);
+
+        ker.args(srcarg, dstarg, ocl::KernelArg::PtrReadOnly(lscalaru),
+               ocl::KernelArg::PtrReadOnly(uscalaru));
+    }
+    else
+        ker.args(srcarg, dstarg, ocl::KernelArg::ReadOnlyNoSize(lscalaru),
+               ocl::KernelArg::ReadOnlyNoSize(uscalaru));
+
+    size_t globalsize[2] = { ssize.width, ssize.height };
+    return ker.run(2, globalsize, NULL, false);
+}
+
 }
 
 void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _lowerb.dims() <= 2 &&
+            _upperb.dims() <= 2 && _dst.isUMat() && ocl_inRange(_src, _lowerb, _upperb, _dst))
+        return;
+
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
@@ -2905,14 +3015,14 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         ubScalar = true;
     }
 
-    CV_Assert( ((int)lbScalar ^ (int)ubScalar) == 0 );
+    CV_Assert(lbScalar == ubScalar);
 
     int cn = src.channels(), depth = src.depth();
 
     size_t esz = src.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
 
-    _dst.create(src.dims, src.size, CV_8U);
+    _dst.create(src.dims, src.size, CV_8UC1);
     Mat dst = _dst.getMat();
     InRangeFunc func = getInRangeFunc(depth);
 
