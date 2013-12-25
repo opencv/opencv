@@ -9,8 +9,12 @@ import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.gpu.Gpu;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -45,10 +49,29 @@ public class Tutorial4Activity extends Activity implements CvCameraViewListener2
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
 
-                    // Load native library after(!) OpenCV initialization
-                    System.loadLibrary("cuda_sample");
+                    // Check CUDA support
+                    if (Gpu.getCudaEnabledDeviceCount() <= 0)
+                    {
+                        Log.e(TAG, "No CUDA capable device found!");
+                        AlertDialog InitFailedDialog = new AlertDialog.Builder(Tutorial4Activity.this).create();
+                        InitFailedDialog.setTitle("OpenCV CUDA error");
+                        InitFailedDialog.setMessage("CUDA compatible device was not found!");
+                        InitFailedDialog.setCancelable(false); // This blocks the 'BACK' button
+                        InitFailedDialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK", new OnClickListener() {
 
-                    mOpenCvCameraView.enableView();
+                            public void onClick(DialogInterface dialog, int which) {
+                                Tutorial4Activity.this.finish();
+                            }
+                        });
+                        InitFailedDialog.show();
+                    }
+                    else
+                    {
+                        // Load native library after(!) OpenCV initialization
+                        Log.i(TAG, "Found CUDA capable device!");
+                        System.loadLibrary("cuda_sample");
+                        mOpenCvCameraView.enableView();
+                    }
                 } break;
                 default:
                 {
