@@ -363,36 +363,31 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
     nu30 = mu30*s3; nu21 = mu21*s3; nu12 = mu12*s3; nu03 = mu03*s3;
 }
 
-static const int OCL_TILE_SIZE = 32;
-    
-static bool ocl_moments( InputArray _src, Moments& m, bool binary )
+static bool ocl_moments( InputArray _src, Moments& m)
 {
-    printf("!!!!!!!!!!!!!!!!!! ocl moments !!!!!!!!!!!!!!!!!!!\n");
+    const int TILE_SIZE = 16;
     const int K = 10;
-    ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, binary ? "-D BINARY_MOMENTS" : "");
+    ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, format("-D TILE_SIZE=%d", TILE_SIZE));
     if( k.empty() )
         return false;
     
     UMat src = _src.getUMat();
     Size sz = src.size();
-    int xtiles = (sz.width + OCL_TILE_SIZE-1)/OCL_TILE_SIZE;
-    int ytiles = (sz.height + OCL_TILE_SIZE-1)/OCL_TILE_SIZE;
+    int xtiles = (sz.width + TILE_SIZE-1)/TILE_SIZE;
+    int ytiles = (sz.height + TILE_SIZE-1)/TILE_SIZE;
     int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
-    umbuf.setTo(Scalar::all(0));
     
     size_t globalsize[] = {xtiles, ytiles};
-    size_t localsize[] = {1, 1};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),
                      ocl::KernelArg::PtrWriteOnly(umbuf),
-                     OCL_TILE_SIZE, xtiles, ytiles).run(2, globalsize, localsize, false);
+                     xtiles).run(2, globalsize, 0, true);
     if(!ok)
         return false;
-    Mat mbuf;
-    umbuf.copyTo(mbuf);
+    Mat mbuf = umbuf.getMat(ACCESS_READ);
     for( int i = 0; i < ntiles; i++ )
     {
-        double x = (i % xtiles)*OCL_TILE_SIZE, y = (i / xtiles)*OCL_TILE_SIZE;
+        double x = (i % xtiles)*TILE_SIZE, y = (i / xtiles)*TILE_SIZE;
         const int* mom = mbuf.ptr<int>() + i*K;
         double xm = x * mom[0], ym = y * mom[0];
         
@@ -452,10 +447,8 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     if( size.width <= 0 || size.height <= 0 )
         return m;
     
-    if( ocl::useOpenCL() && depth == CV_8U &&
-        size.width >= OCL_TILE_SIZE &&
-        size.height >= OCL_TILE_SIZE &&
-        /*_src.isUMat() &&*/ ocl_moments(_src, m, binary) )
+    if( ocl::useOpenCL() && depth == CV_8U && !binary &&
+        _src.isUMat() && ocl_moments(_src, m) )
         ;
     else
     {
