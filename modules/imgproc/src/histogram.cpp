@@ -3169,7 +3169,7 @@ static bool ocl_calcHist(InputArray _src, OutputArray _hist)
 
 static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
 
     // calculation of histogram
     UMat hist;
