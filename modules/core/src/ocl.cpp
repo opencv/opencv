@@ -2616,11 +2616,16 @@ struct Program::Impl
                     if( retval >= 0 )
                     {
                         errmsg = String(buf);
-                        CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                        printf("OpenCL program can not be built: %s", errmsg.c_str());
                     }
                 }
+
+                if( handle )
+                {
+                    clReleaseProgram(handle);
+                    handle = NULL;
+                }
             }
-            CV_Assert(retval >= 0);
         }
     }
 
