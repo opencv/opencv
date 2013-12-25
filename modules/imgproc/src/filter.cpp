@@ -3371,9 +3371,9 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
         return false;
     }
 
-    bool extra_extrapolation = src.rows < ((-radiusY + globalsize[1]) >> 1) + 1;
+    bool extra_extrapolation = src.rows < (int)((-radiusY + globalsize[1]) >> 1) + 1;
     extra_extrapolation |= src.rows < radiusY;
-    extra_extrapolation |= src.cols < ((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
+    extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
     char build_options[1024];
     sprintf(build_options, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s",
