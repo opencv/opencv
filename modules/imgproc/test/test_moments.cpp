@@ -60,6 +60,7 @@ protected:
     void run_func();
     int coi;
     bool is_binary;
+    bool try_umat;
 };
 
 
@@ -102,20 +103,25 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int cn = cvtest::randInt(rng) % 4 + 1;
+    int cn = (cvtest::randInt(rng) % 4) + 1;
     int depth = cvtest::randInt(rng) % 4;
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : depth == 2 ? CV_16S : CV_32F;
-    if( cn == 2 )
+    
+    is_binary = cvtest::randInt(rng) % 2 != 0;
+    if( depth == 0 && !is_binary )
+        try_umat = cvtest::randInt(rng) % 5 != 0;
+    else
+        try_umat = cvtest::randInt(rng) % 2 != 0;
+    
+    if( cn == 2 || try_umat )
         cn = 1;
 
-    sizes[INPUT][0].height = sizes[INPUT][0].width;
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
     sizes[OUTPUT][0] = sizes[REF_OUTPUT][0] = cvSize(MOMENT_COUNT,1);
     if(CV_MAT_DEPTH(types[INPUT][0])>=CV_32S)
         sizes[INPUT][0].width = MAX(sizes[INPUT][0].width, 3);
-
-    is_binary = cvtest::randInt(rng) % 2 != 0;
+    
     coi = 0;
     cvmat_allowed = true;
     if( cn > 1 )
@@ -150,7 +156,16 @@ void CV_MomentsTest::run_func()
 {
     CvMoments* m = (CvMoments*)test_mat[OUTPUT][0].ptr<double>();
     double* others = (double*)(m + 1);
-    cvMoments( test_array[INPUT][0], m, is_binary );
+    if( try_umat )
+    {
+        UMat u;
+        test_mat[INPUT][0].clone().copyTo(u);
+        Moments new_m = moments(u, is_binary != 0);
+        *m = new_m;
+    }
+    else
+        cvMoments( test_array[INPUT][0], m, is_binary );
+    
     others[0] = cvGetNormalizedCentralMoment( m, 2, 0 );
     others[1] = cvGetNormalizedCentralMoment( m, 1, 1 );
     others[2] = cvGetNormalizedCentralMoment( m, 0, 2 );
@@ -275,10 +290,6 @@ void CV_MomentsTest::prepare_to_validation( int /*test_case_idx*/ )
         mdata[6] = m.mu03 * s3;
     }
 
-    test_mat[REF_OUTPUT][0].copyTo(test_mat[OUTPUT][0]);
-    cout << "ref moments: " << test_mat[REF_OUTPUT][0] << "\n";
-    cout << "fun moments: " << test_mat[OUTPUT][0] << "\n";
-    
     double* a = test_mat[REF_OUTPUT][0].ptr<double>();
     double* b = test_mat[OUTPUT][0].ptr<double>();
     for( i = 0; i < MOMENT_COUNT; i++ )

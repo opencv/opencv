@@ -1,110 +1,70 @@
 /* See LICENSE file in the root OpenCV directory */
 
-#ifdef BINARY_MOMENTS
-#define READ_PIX(ref) (ref != 0)
-#else
-#define READ_PIX(ref) ref
-#endif
-
 __kernel void moments(__global const uchar* src, int src_step, int src_offset,
-                      int src_rows, int src_cols, __global int* mom0,
-                      int tile_size, int xtiles, int ytiles)
+                      int src_rows, int src_cols, __global int* mom0, int xtiles)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
-    int x_min = x*tile_size;
-    int y_min = y*tile_size;
+    int x_min = x*TILE_SIZE;
+    int y_min = y*TILE_SIZE;
 
     if( x_min < src_cols && y_min < src_rows )
     {
-        int x_max = src_cols - x_min;
-        int y_max = src_rows - y_min;
-        int m[10]={0,0,0,0,0,0,0,0,0,0};
-        __global const uchar* ptr = (src + src_offset);// + y_min*src_step + x_min;
+        int x_max = min(src_cols - x_min, TILE_SIZE);
+        int y_max = min(src_rows - y_min, TILE_SIZE);
+        int m00=0, m10=0, m01=0, m20=0, m11=0, m02=0, m30=0, m21=0, m12=0, m03=0;
+        __global const uchar* ptr = src + src_offset + y_min*src_step + x_min;
         __global int* mom = mom0 + (xtiles*y + x)*10;
-        
-        x_max = x_max < tile_size ? x_max : tile_size;
-        y_max = y_max < tile_size ? y_max : tile_size;
 
-        for( y = 0; y < y_max; y++ )
+        for( y = 0; y < y_max; y++, ptr += src_step )
         {
-            int x00, x10, x20, x30;
-            int sx, sy, p;
-            x00 = x10 = x20 = x30 = 0;
-            sy = y*y;
+            int4 S = (int4)(0,0,0,0);
 
-            for( x = 0; x < x_max; x++ )
+            for( x = 0; x <= x_max - 4; x += 4 )
             {
-                p = ptr[0];//READ_PIX(ptr[x]);
-                sx = x*x;
-                x00 += p;
-                x10 += x*p;
-                x20 += sx*p;
-                x30 += x*sx*p;
+                int4 p = convert_int4(vload4(0, ptr + x));
+                #define SUM_ELEM(elem, ofs) \
+                    (int4)(elem, (x+ofs)*elem, (x+ofs)*(x+ofs)*elem, (x+ofs)*(x+ofs)*(x+ofs)*elem)
+                S += SUM_ELEM(p.s0, 0) + SUM_ELEM(p.s1, 1) + SUM_ELEM(p.s2, 2) + SUM_ELEM(p.s3, 3);
             }
-
-            m[0] += x00;
-            m[1] += x10;
-            m[2] += y*x00;
-            m[3] += x20;
-            m[4] += y*x10;
-            m[5] += sy*x00;
-            m[6] += x30;
-            m[7] += y*x20;
-            m[8] += sy*x10;
-            m[9] += y*sy*x00;
-            //ptr += src_step;
+            if( x < x_max )
+            {
+                int ps = ptr[x];
+                S += SUM_ELEM(ps, 0);
+                if( x+1 < x_max )
+                {
+                    ps = ptr[x+1];
+                    S += SUM_ELEM(ps, 1);
+                    if( x+2 < x_max )
+                    {
+                        ps = ptr[x+2];
+                        S += SUM_ELEM(ps, 2);
+                    }
+                }
+            }
+            
+            int sy = y*y;
+            m00 += S.s0;
+            m10 += S.s1;
+            m01 += y*S.s0;
+            m20 += S.s2;
+            m11 += y*S.s1;
+            m02 += sy*S.s0;
+            m30 += S.s3;
+            m21 += y*S.s2;
+            m12 += sy*S.s1;
+            m03 += y*sy*S.s0;
         }
 
-        mom[0] = m[0];
-
-        mom[1] = m[1];
-        mom[2] = m[2];
-
-        mom[3] = m[3];
-        mom[4] = m[4];
-        mom[5] = m[5];
-
-        mom[6] = m[6];
-        mom[7] = m[7];
-        mom[8] = m[8];
-        mom[9] = m[9];
+        mom[0] = m00;
+        mom[1] = m10;
+        mom[2] = m01;
+        mom[3] = m20;
+        mom[4] = m11;
+        mom[5] = m02;
+        mom[6] = m30;
+        mom[7] = m21;
+        mom[8] = m12;
+        mom[9] = m03;
     }
 }
-
-/*__kernel void moments(__global const uchar* src, int src_step, int src_offset,
-                     int src_rows, int src_cols, __global float* mom0,
-                     int tile_size, int xtiles, int ytiles)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-    if( x < xtiles && y < ytiles )
-    {
-        //int x_min = x*tile_size;
-        //int y_min = y*tile_size;
-        //int x_max = src_cols - x_min;
-        //int y_max = src_rows - y_min;
-        __global const uchar* ptr = src + src_offset;// + src_step*y_min + x_min;
-        __global float* mom = mom0;// + (y*xtiles + x)*16;
-        //int x00, x10, x20, x30, m00=0;
-        //x_max = min(x_max, tile_size);
-        //y_max = min(y_max, tile_size);
-        //int m00 = 0;
-        
-        //for( y = 0; y < y_max; y++, ptr += src_step )
-        //{
-            //int x00 = 0, x10 = 0, x20 = 0, x30 = 0;
-            //for( x = 0; x < x_max; x++ )
-            //{
-                int p = ptr[x];
-                //m00 = p;
-                //x10 += x*p;
-                /*x20 += x*x*p;
-                x30 += x*x*x*p;
-            //}
-            //m00 = m00 + x00;
-        //}
-        mom[0] = p;
-    }
-}*/
-

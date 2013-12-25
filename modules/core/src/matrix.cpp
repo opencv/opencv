@@ -2261,6 +2261,12 @@ void _OutputArray::release() const
         ((Mat*)obj)->release();
         return;
     }
+    
+    if( k == UMAT )
+    {
+        ((UMat*)obj)->release();
+        return;
+    }
 
     if( k == GPU_MAT )
     {
