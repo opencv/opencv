@@ -1919,28 +1919,28 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     param.clear();
     if (required > 0)
     {
-        std::vector<char> buf(required + 1, char(0));
-        err = f(obj, name, required, &buf[0], NULL);
+        AutoBuffer<char> buf(required + 1);
+        char* ptr = (char*)buf; // cleanup is not needed
+        err = f(obj, name, required, ptr, NULL);
         if (err != CL_SUCCESS)
             return err;
-        param = &buf[0];
+        param = ptr;
     }
 
     return CL_SUCCESS;
 };
 
 static void split(const std::string &s, char delim, std::vector<std::string> &elems) {
-    std::stringstream ss(s);
+    elems.clear();
+    if (s.size() == 0)
+        return;
+    std::istringstream ss(s);
     std::string item;
-    while (std::getline(ss, item, delim)) {
+    while (!ss.eof())
+    {
+        std::getline(ss, item, delim);
         elems.push_back(item);
     }
-}
-
-static std::vector<std::string> split(const std::string &s, char delim) {
-    std::vector<std::string> elems;
-    split(s, delim, elems);
-    return elems;
 }
 
 // Layout: <Platform>:<CPU|GPU|ACCELERATOR|nothing=GPU/CPU>:<deviceName>
@@ -1950,40 +1950,23 @@ static std::vector<std::string> split(const std::string &s, char delim) {
 static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
         std::string& platform, std::vector<std::string>& deviceTypes, std::string& deviceNameOrID)
 {
-    std::string deviceTypesStr;
-    size_t p0 = configurationStr.find(':');
-    if (p0 != std::string::npos)
+    std::vector<std::string> parts;
+    split(configurationStr, ':', parts);
+    if (parts.size() > 3)
     {
-        size_t p1 = configurationStr.find(':', p0 + 1);
-        if (p1 != std::string::npos)
-        {
-            size_t p2 = configurationStr.find(':', p1 + 1);
-            if (p2 != std::string::npos)
-            {
-                std::cerr << "ERROR: Invalid configuration string for OpenCL device" << std::endl;
-                return false;
-            }
-            else
-            {
-                // assume platform + device types + device name/id
-                platform = configurationStr.substr(0, p0);
-                deviceTypesStr = configurationStr.substr(p0 + 1, p1 - (p0 + 1));
-                deviceNameOrID = configurationStr.substr(p1 + 1, configurationStr.length() - (p1 + 1));
-            }
-        }
-        else
-        {
-            // assume platform + device types
-            platform = configurationStr.substr(0, p0);
-            deviceTypesStr = configurationStr.substr(p0 + 1, configurationStr.length() - (p0 + 1));
-        }
+        std::cerr << "ERROR: Invalid configuration string for OpenCL device" << std::endl;
+        return false;
     }
-    else
+    if (parts.size() > 2)
+        deviceNameOrID = parts[2];
+    if (parts.size() > 1)
     {
-        // assume only platform
-        platform = configurationStr;
+        split(parts[1], '|', deviceTypes);
     }
-    deviceTypes = split(deviceTypesStr, '|');
+    if (parts.size() > 0)
+    {
+        platform = parts[0];
+    }
     return true;
 }
 
@@ -2024,15 +2007,19 @@ static cl_device_id selectOpenCLDevice()
         }
     }
 
+    cl_int status = CL_SUCCESS;
     std::vector<cl_platform_id> platforms;
-    cl_uint numPlatforms = 0;
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
-    CV_Assert(status == CL_SUCCESS);
-    if (numPlatforms == 0)
-        return NULL;
-    platforms.resize((size_t)numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms);
-    CV_Assert(status == CL_SUCCESS);
+    {
+        cl_uint numPlatforms = 0;
+        status = clGetPlatformIDs(0, NULL, &numPlatforms);
+        CV_Assert(status == CL_SUCCESS);
+        if (numPlatforms == 0)
+            return NULL;
+        platforms.resize((size_t)numPlatforms);
+        status = clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms);
+        CV_Assert(status == CL_SUCCESS);
+        platforms.resize(numPlatforms);
+    }
 
     int selectedPlatform = -1;
     if (platform.length() > 0)
