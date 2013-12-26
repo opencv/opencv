@@ -169,7 +169,7 @@ void cv::ocl::fft_teardown()
 
 // bake a new plan
 cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _depth, int _flags, FftType _type)
-    : plHandle(0), dft_size(_dft_size), src_step(_src_step), depth(_depth), dst_step(_dst_step), flags(_flags), type(_type)
+    : plHandle(0), dft_size(_dft_size), src_step(_src_step), dst_step(_dst_step), depth(_depth), flags(_flags), type(_type)
 {
     fft_setup();
 

@@ -724,7 +724,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
 
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
     if (haveC)
-        ctrans ? transpose(matC, D) : matC.getMat().copyTo(D); // TODO fix it as soon as .copyTo works as expected
+        ctrans ? transpose(matC, D) : matC.copyTo(D);
     else
         D.setTo(Scalar::all(0));
 
