@@ -365,7 +365,7 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
 
 static bool ocl_moments( InputArray _src, Moments& m)
 {
-    const int TILE_SIZE = 16;
+    const int TILE_SIZE = 32;
     const int K = 10;
     ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, format("-D TILE_SIZE=%d", TILE_SIZE));
     if( k.empty() )
@@ -378,10 +378,10 @@ static bool ocl_moments( InputArray _src, Moments& m)
     int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
 
-    size_t globalsize[] = {xtiles, ytiles};
+    size_t globalsize[] = {xtiles, sz.height}, localsize[] = {1, TILE_SIZE};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),
                      ocl::KernelArg::PtrWriteOnly(umbuf),
-                     xtiles).run(2, globalsize, 0, true);
+                     xtiles).run(2, globalsize, localsize, true);
     if(!ok)
         return false;
     Mat mbuf = umbuf.getMat(ACCESS_READ);
