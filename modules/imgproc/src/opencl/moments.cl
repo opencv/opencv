@@ -31,17 +31,17 @@ __kernel void moments(__global const uchar* src, int src_step, int src_offset,
             {
                 p = convert_int4(vload4(0, ptr));
                 S += SUM_ELEM(p.s0, 0) + SUM_ELEM(p.s1, 1) + SUM_ELEM(p.s2, 2) + SUM_ELEM(p.s3, 3);
-                
+
                 if( x_max >= 8 )
                 {
                     p = convert_int4(vload4(0, ptr+4));
                     S += SUM_ELEM(p.s0, 4) + SUM_ELEM(p.s1, 5) + SUM_ELEM(p.s2, 6) + SUM_ELEM(p.s3, 7);
-                    
+
                     if( x_max >= 12 )
                     {
                         p = convert_int4(vload4(0, ptr+8));
                         S += SUM_ELEM(p.s0, 8) + SUM_ELEM(p.s1, 9) + SUM_ELEM(p.s2, 10) + SUM_ELEM(p.s3, 11);
-                        
+
                         if( x_max >= 16 )
                         {
                             p = convert_int4(vload4(0, ptr+12));
@@ -50,7 +50,7 @@ __kernel void moments(__global const uchar* src, int src_step, int src_offset,
                     }
                 }
             }
-            
+
             if( x < x_max )
             {
                 int ps = ptr[x];
@@ -66,7 +66,7 @@ __kernel void moments(__global const uchar* src, int src_step, int src_offset,
                     }
                 }
             }
-            
+
             int sy = y*y;
             m00 += S.s0;
             m10 += S.s1;

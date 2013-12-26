@@ -370,14 +370,14 @@ static bool ocl_moments( InputArray _src, Moments& m)
     ocl::Kernel k("moments", ocl::imgproc::moments_oclsrc, format("-D TILE_SIZE=%d", TILE_SIZE));
     if( k.empty() )
         return false;
-    
+
     UMat src = _src.getUMat();
     Size sz = src.size();
     int xtiles = (sz.width + TILE_SIZE-1)/TILE_SIZE;
     int ytiles = (sz.height + TILE_SIZE-1)/TILE_SIZE;
     int ntiles = xtiles*ytiles;
     UMat umbuf(1, ntiles*K, CV_32S);
-    
+
     size_t globalsize[] = {xtiles, ytiles};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),
                      ocl::KernelArg::PtrWriteOnly(umbuf),
@@ -390,43 +390,43 @@ static bool ocl_moments( InputArray _src, Moments& m)
         double x = (i % xtiles)*TILE_SIZE, y = (i / xtiles)*TILE_SIZE;
         const int* mom = mbuf.ptr<int>() + i*K;
         double xm = x * mom[0], ym = y * mom[0];
-        
+
         // accumulate moments computed in each tile
-        
+
         // + m00 ( = m00' )
         m.m00 += mom[0];
-        
+
         // + m10 ( = m10' + x*m00' )
         m.m10 += mom[1] + xm;
-        
+
         // + m01 ( = m01' + y*m00' )
         m.m01 += mom[2] + ym;
-        
+
         // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
         m.m20 += mom[3] + x * (mom[1] * 2 + xm);
-        
+
         // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
         m.m11 += mom[4] + x * (mom[2] + ym) + y * mom[1];
-        
+
         // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
         m.m02 += mom[5] + y * (mom[2] * 2 + ym);
-        
+
         // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
         m.m30 += mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
-        
+
         // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
         m.m21 += mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
-        
+
         // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
         m.m12 += mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
-        
+
         // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
         m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
     }
-    
+
     return true;
 }
-    
+
 }
 
 
@@ -441,13 +441,10 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     int cn = CV_MAT_CN( type );
     Size size = _src.size();
 
-    if( cn > 1 )
-        CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
-    
     if( size.width <= 0 || size.height <= 0 )
         return m;
-    
-    if( ocl::useOpenCL() && depth == CV_8U && !binary &&
+
+    if( ocl::useOpenCL() && type == CV_8UC1 && !binary &&
         _src.isUMat() && ocl_moments(_src, m) )
         ;
     else
@@ -455,6 +452,9 @@ cv::Moments cv::moments( InputArray _src, bool binary )
         Mat mat = _src.getMat();
         if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
             return contourMoments(mat);
+
+        if( cn > 1 )
+            CV_Error( CV_StsBadArg, "Invalid image type (must be single-channel)" );
 
         if( binary || depth == CV_8U )
             func = momentsInTile<uchar, int, int>;
