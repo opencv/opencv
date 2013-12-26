@@ -97,7 +97,7 @@ inline float pix_diff_1(const uchar4 l, __global const uchar *rs)
     return abs((int)(l.x) - *rs);
 }
 
-static float pix_diff_4(const uchar4 l, __global const uchar *rs)
+inline float pix_diff_4(const uchar4 l, __global const uchar *rs)
 {
     uchar4 r;
     r = *((__global uchar4 *)rs);
@@ -233,7 +233,7 @@ __kernel void level_up_message(__global T *src, int src_rows, int src_step,
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
-static void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
+inline void message(__global T *us_, __global T *ds_, __global T *ls_, __global T *rs_,
               const __global T *dt,
               int u_step, int msg_disp_step, int data_disp_step,
               float4 cmax_disc_term, float4 cdisc_single_jump)
