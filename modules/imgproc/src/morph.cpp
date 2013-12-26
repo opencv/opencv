@@ -1331,6 +1331,27 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
     _dst.create(src.size(), src.type());
     UMat dst = _dst.getUMat();
 
+    if( iterations== 1 && src.u != dst.u)
+    {
+        Size wholesize;
+        Point ofs;
+        src.locateROI(wholesize, ofs);
+        int wholecols = wholesize.width, wholerows = wholesize.height;
+
+        int idxArg = 0;
+        idxArg = kernels[0].set(idxArg, ocl::KernelArg::ReadOnlyNoSize(src));
+        idxArg = kernels[0].set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
+        idxArg = kernels[0].set(idxArg, ofs.x);
+        idxArg = kernels[0].set(idxArg, ofs.y);
+        idxArg = kernels[0].set(idxArg, src.cols);
+        idxArg = kernels[0].set(idxArg, src.rows);
+        idxArg = kernels[0].set(idxArg, ocl::KernelArg::PtrReadOnly(kernel));
+        idxArg = kernels[0].set(idxArg, wholecols);
+        idxArg = kernels[0].set(idxArg, wholerows);
+
+        return kernels[0].run(2, globalThreads, localThreads, false);
+    }
+
     for(int i = 0; i< iterations; i++)
     {
         UMat source;
@@ -1380,9 +1401,12 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-    bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && _src.channels() == _dst.channels() &&
-        _src.dims()<=2 && (_src.channels() == 1 || _src.channels() == 4) && (anchor.x == -1) && (anchor.y == -1) &&
-        (_src.depth() == CV_8U || _src.depth() == CV_32F || _src.depth() == CV_64F ) &&
+    int src_type = _src.type(), dst_type = _dst.type(),
+        src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
+
+    bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
+        _src.dims()<=2 && (src_cn == 1 || src_cn == 4) && (anchor.x == -1) && (anchor.y == -1) &&
+        (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
         (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue()) &&
         (op == MORPH_ERODE || op == MORPH_DILATE);
 
@@ -1470,9 +1494,12 @@ void cv::morphologyEx( InputArray _src, OutputArray _dst, int op,
                        InputArray kernel, Point anchor, int iterations,
                        int borderType, const Scalar& borderValue )
 {
-    bool use_opencl = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && _src.channels() == _dst.channels() &&
-        _src.dims()<=2 && (_src.channels() == 1 || _src.channels() == 4) && (anchor.x == -1) && (anchor.y == -1) &&
-        (_src.depth() == CV_8U || _src.depth() == CV_32F || _src.depth() == CV_64F ) &&
+    int src_type = _src.type(), dst_type = _dst.type(),
+        src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
+
+    bool use_opencl = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
+        _src.dims()<=2 && (src_cn == 1 || src_cn == 4) && (anchor.x == -1) && (anchor.y == -1) &&
+        (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
         (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue());
 
     _dst.create(_src.size(), _src.type());
