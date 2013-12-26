@@ -1319,9 +1319,14 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op], doubleSupport?"-D DOUBLE_SUPPORT" :"", rectKernel?"-D RECTKERNEL":"",
         ocl::typeToStr(_src.type()), _src.depth() );
 
-    ocl::Kernel k( "morph", ocl::imgproc::morph_oclsrc, compile_option);
-    if (k.empty())
-        return false;
+    std::vector<ocl::Kernel> kernels;
+    for(int i = 0; i<iterations; i++)
+    {
+        ocl::Kernel k( "morph", ocl::imgproc::morph_oclsrc, compile_option);
+        if (k.empty())
+            return false;
+        kernels.push_back(k);
+    }
 
     _dst.create(src.size(), src.type());
     UMat dst = _dst.getUMat();
@@ -1354,17 +1359,17 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
         int wholecols = wholesize.width, wholerows = wholesize.height;
 
         int idxArg = 0;
-        idxArg = k.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(source));
-        idxArg = k.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
-        idxArg = k.set(idxArg, ofs.x);
-        idxArg = k.set(idxArg, ofs.y);
-        idxArg = k.set(idxArg, source.cols);
-        idxArg = k.set(idxArg, source.rows);
-        idxArg = k.set(idxArg, ocl::KernelArg::PtrReadOnly(kernel));
-        idxArg = k.set(idxArg, wholecols);
-        idxArg = k.set(idxArg, wholerows);
+        idxArg = kernels[i].set(idxArg, ocl::KernelArg::ReadOnlyNoSize(source));
+        idxArg = kernels[i].set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
+        idxArg = kernels[i].set(idxArg, ofs.x);
+        idxArg = kernels[i].set(idxArg, ofs.y);
+        idxArg = kernels[i].set(idxArg, source.cols);
+        idxArg = kernels[i].set(idxArg, source.rows);
+        idxArg = kernels[i].set(idxArg, ocl::KernelArg::PtrReadOnly(kernel));
+        idxArg = kernels[i].set(idxArg, wholecols);
+        idxArg = kernels[i].set(idxArg, wholerows);
 
-        if (!k.run(2, globalThreads, localThreads, true))
+        if (!kernels[i].run(2, globalThreads, localThreads, false))
             return false;
     }
     return true;
