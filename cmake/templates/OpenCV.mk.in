@@ -13,10 +13,11 @@ OPENCV_BASEDIR:=@OPENCV_BASE_INCLUDE_DIR_CONFIGCMAKE@
 OPENCV_LOCAL_C_INCLUDES:=@OPENCV_INCLUDE_DIRS_CONFIGCMAKE@
 OPENCV_MODULES:=@OPENCV_MODULES_CONFIGMAKE@
 
+OPENCV_HAVE_GPU_MODULE=@OPENCV_HAVE_GPU_MODULE_CONFIGMAKE@
 OPENCV_USE_GPU_MODULE:=
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-    ifneq ($(findstring gpu,$(OPENCV_MODULES)),)
+    ifeq ($(OPENCV_HAVE_GPU_MODULE),on)
         ifneq ($(CUDA_TOOLKIT_DIR),)
             OPENCV_USE_GPU_MODULE:=on
         endif
@@ -114,6 +115,9 @@ ifeq ($(OPENCV_MK_$(OPENCV_TARGET_ARCH_ABI)_ALREADY_INCLUDED),)
 
     ifneq ($(OPENCV_BASEDIR),)
         OPENCV_LOCAL_C_INCLUDES += $(foreach mod, $(OPENCV_MODULES), $(OPENCV_BASEDIR)/modules/$(mod)/include)
+        ifeq ($(OPENCV_USE_GPU_MODULE),on)
+            OPENCV_LOCAL_C_INCLUDES += $(OPENCV_BASEDIR)/modules/gpu/include
+        endif
     endif
 
     #turn off module installation to prevent their redefinition
