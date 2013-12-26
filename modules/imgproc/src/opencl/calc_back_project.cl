@@ -37,9 +37,9 @@
 //
 //
 
-#if histdims == 1
-
 #define OUT_OF_RANGE -1
+
+#if histdims == 1
 
 __kernel void calcLUT(__global const uchar * histptr, int hist_step, int hist_offset, int hist_bins,
                       __global int * lut, float scale, __constant float * ranges)
@@ -68,7 +68,7 @@ __kernel void calcLUT(__global const uchar * histptr, int hist_step, int hist_of
 }
 
 __kernel void LUT(__global const uchar * src, int src_step, int src_offset,
-                  __global const int * lut,
+                  __constant int * lut,
                   __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     int x = get_global_id(0);
@@ -86,45 +86,47 @@ __kernel void LUT(__global const uchar * src, int src_step, int src_offset,
 
 #elif histdims == 2
 
-#define OUT_OF_RANGES(i) ( (value##i > ranges[(i<<1)+1]) || (value##i < ranges[i<<1]) )
-#define CALCULATE_BIN(i) \
-    float lb##i = ranges[i<<1], ub##i = ranges[(i<<1)+1], gap##i = (ub##i - lb##i) / hist_bins##i; \
-    value##i -= ranges[i<<1]; \
-    int bin##i = convert_int_sat_rtn(value##i / gap##i)
+__kernel void calcLUT(int hist_bins, __global int * lut, int lut_offset,
+                      __constant float * ranges, int roffset)
+{
+    int x = get_global_id(0);
+    float value = convert_float(x);
 
-__kernel void calcBackProject(__global const uchar * src0, int src0_step, int src0_offset,
-                              __global const uchar * src1, int src1_step, int src1_offset,
-                              __global const uchar * histptr, int hist_step, int hist_offset, int hist_bins0, int hist_bins1,
-                              __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              float scale, __constant float * ranges)
+    ranges += roffset;
+    lut += lut_offset;
+
+    if (value > ranges[1] || value < ranges[0])
+        lut[x] = OUT_OF_RANGE;
+    else
+    {
+        float lb = ranges[0], ub = ranges[1], gap = (ub - lb) / hist_bins;
+        value -= lb;
+        int bin = convert_int_sat_rtn(value / gap);
+
+        lut[x] = bin >= hist_bins ? OUT_OF_RANGE : bin;
+    }
+}
+
+__kernel void LUT(__global const uchar * src1, int src1_step, int src1_offset,
+                  __global const uchar * src2, int src2_step, int src2_offset,
+                  __global const uchar * histptr, int hist_step, int hist_offset,
+                  __constant int * lut, float scale,
+                  __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (x < dst_cols && y < dst_rows)
     {
-        int src0_index = mad24(src0_step, y, src0_offset + x * scn0);
-        int src1_index = mad24(src1_step, y, src1_offset + x * scn1);
-        int dst_index = mad24(dst_step, y, dst_offset + x);
+        int src1_index = mad24(y, src1_step, src1_offset + x * scn1);
+        int src2_index = mad24(y, src2_step, src2_offset + x * scn2);
+        int dst_index = mad24(y, dst_step, dst_offset + x);
 
-        float value0 = convert_float(src0[src0_index]), value1 = convert_float(src1[src1_index]);
-        if (OUT_OF_RANGES(0) || OUT_OF_RANGES(1))
-            dst[dst_index] = 0;
-        else
-        {
-            CALCULATE_BIN(0);
-            CALCULATE_BIN(1);
-
-            if (bin0 >= hist_bins0 || bin1 >= hist_bins1)
-                dst[dst_index] = 0;
-            else
-            {
-                int hist_index = mad24(hist_step, bin0, hist_offset + bin1 * (int)sizeof(float));
-                __global const float * hist = (__global const float *)(histptr + hist_index);
-
-                dst[dst_index] = convert_uchar_sat_rte(scale * hist[0]);
-            }
-        }
+        int bin1 = lut[src1[src1_index]];
+        int bin2 = lut[src2[src2_index] + 256];
+        dst[dst_index] = bin1 == OUT_OF_RANGE || bin2 == OUT_OF_RANGE ? 0 :
+                        convert_uchar_sat_rte(*(__global const float *)(histptr +
+                        mad24(hist_step, bin1, hist_offset + bin2 * (int)sizeof(float))) * scale);
     }
 }
 
