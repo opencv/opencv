@@ -59,6 +59,8 @@
 #  endif
 #endif
 
+#define CV_BUILD_OCL_MODULE
+
 #include <iomanip>
 #include <stdexcept>
 #include <string>
