@@ -61,7 +61,10 @@
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
+
+#if defined(_MSC_VER) && (_MSC_VER < 1700)
 #include <MultiMon.h>
+#endif
 
 #include <commctrl.h>
 #include <winuser.h>
