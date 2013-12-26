@@ -1,5 +1,9 @@
 /* See LICENSE file in the root OpenCV directory */
 
+#if TILE_SIZE > 16
+#error "TILE SIZE should be <= 16"
+#endif
+
 __kernel void moments(__global const uchar* src, int src_step, int src_offset,
                       int src_rows, int src_cols, __global int* mom0, int xtiles)
 {
@@ -15,30 +19,50 @@ __kernel void moments(__global const uchar* src, int src_step, int src_offset,
         int m00=0, m10=0, m01=0, m20=0, m11=0, m02=0, m30=0, m21=0, m12=0, m03=0;
         __global const uchar* ptr = src + src_offset + y_min*src_step + x_min;
         __global int* mom = mom0 + (xtiles*y + x)*10;
+        x = x_max & -4;
 
         for( y = 0; y < y_max; y++, ptr += src_step )
         {
-            int4 S = (int4)(0,0,0,0);
+            int4 S = (int4)(0,0,0,0), p;
 
-            for( x = 0; x <= x_max - 4; x += 4 )
+            #define SUM_ELEM(elem, ofs) \
+                (int4)(1, (ofs), ((ofs)*(ofs)), ((ofs)*(ofs)*(ofs)))*elem
+            if( x_max >= 4 )
             {
-                int4 p = convert_int4(vload4(0, ptr + x));
-                #define SUM_ELEM(elem, ofs) \
-                    (int4)(elem, (x+ofs)*elem, (x+ofs)*(x+ofs)*elem, (x+ofs)*(x+ofs)*(x+ofs)*elem)
+                p = convert_int4(vload4(0, ptr));
                 S += SUM_ELEM(p.s0, 0) + SUM_ELEM(p.s1, 1) + SUM_ELEM(p.s2, 2) + SUM_ELEM(p.s3, 3);
+                
+                if( x_max >= 8 )
+                {
+                    p = convert_int4(vload4(0, ptr+4));
+                    S += SUM_ELEM(p.s0, 4) + SUM_ELEM(p.s1, 5) + SUM_ELEM(p.s2, 6) + SUM_ELEM(p.s3, 7);
+                    
+                    if( x_max >= 12 )
+                    {
+                        p = convert_int4(vload4(0, ptr+8));
+                        S += SUM_ELEM(p.s0, 8) + SUM_ELEM(p.s1, 9) + SUM_ELEM(p.s2, 10) + SUM_ELEM(p.s3, 11);
+                        
+                        if( x_max >= 16 )
+                        {
+                            p = convert_int4(vload4(0, ptr+12));
+                            S += SUM_ELEM(p.s0, 12) + SUM_ELEM(p.s1, 13) + SUM_ELEM(p.s2, 14) + SUM_ELEM(p.s3, 15);
+                        }
+                    }
+                }
             }
+            
             if( x < x_max )
             {
                 int ps = ptr[x];
-                S += SUM_ELEM(ps, 0);
+                S += SUM_ELEM(ps, x);
                 if( x+1 < x_max )
                 {
                     ps = ptr[x+1];
-                    S += SUM_ELEM(ps, 1);
+                    S += SUM_ELEM(ps, x+1);
                     if( x+2 < x_max )
                     {
                         ps = ptr[x+2];
-                        S += SUM_ELEM(ps, 2);
+                        S += SUM_ELEM(ps, x+2);
                     }
                 }
             }

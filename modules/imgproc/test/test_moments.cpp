@@ -43,6 +43,13 @@
 using namespace cv;
 using namespace std;
 
+#define OCL_TUNING_MODE 0
+#if OCL_TUNING_MODE
+#define OCL_TUNING_MODE_ONLY(code) code
+#else
+#define OCL_TUNING_MODE_ONLY(code)
+#endif
+
 // image moments
 class CV_MomentsTest : public cvtest::ArrayTest
 {
@@ -71,6 +78,7 @@ CV_MomentsTest::CV_MomentsTest()
     test_array[REF_OUTPUT].push_back(NULL);
     coi = -1;
     is_binary = false;
+    OCL_TUNING_MODE_ONLY(test_case_count = 10);
     //element_wise_relative_error = false;
 }
 
@@ -97,7 +105,6 @@ void CV_MomentsTest::get_minmax_bounds( int i, int j, int type, Scalar& low, Sca
     }
 }
 
-
 void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
                                                 vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
@@ -115,6 +122,14 @@ void CV_MomentsTest::get_test_array_types_and_sizes( int test_case_idx,
     
     if( cn == 2 || try_umat )
         cn = 1;
+    
+    OCL_TUNING_MODE_ONLY(
+    cn = 1;
+    depth = CV_8U;
+    try_umat = true;
+    is_binary = false;
+    sizes[INPUT][0] = Size(1024,768)
+    );
 
     types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_64FC1;
@@ -160,7 +175,16 @@ void CV_MomentsTest::run_func()
     {
         UMat u;
         test_mat[INPUT][0].clone().copyTo(u);
+        OCL_TUNING_MODE_ONLY(
+            static double ttime = 0;
+            static int ncalls = 0;
+            moments(u, is_binary != 0);
+            double t = (double)getTickCount());
         Moments new_m = moments(u, is_binary != 0);
+        OCL_TUNING_MODE_ONLY(
+            ttime += (double)getTickCount() - t;
+            ncalls++;
+            printf("%g\n", ttime/ncalls/u.total()));
         *m = new_m;
     }
     else
