@@ -72,5 +72,5 @@ int main(int argc, char ** argv)
 {
     ::perf::TestBase::setModulePerformanceStrategy(::perf::PERF_STRATEGY_SIMPLE);
 
-    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, dumpOpenCLDevice())
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls, ::dumpOpenCLDevice())
 }
