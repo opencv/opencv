@@ -54,7 +54,7 @@ if(ANDROID)
   endforeach()
 
   # remove CUDA runtime and NPP from regular deps
-  # it can be added seporately if needed.
+  # it can be added separately if needed.
   ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
   ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
 
