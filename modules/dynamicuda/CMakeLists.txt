@@ -5,7 +5,7 @@ endif()
 set(the_description "Dynamic CUDA linkage")
 
 add_definitions(-DUSE_CUDA)
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wshadow)
 ocv_module_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
 set(OPENCV_MODULE_TYPE SHARED)
 if (BUILD_FAT_JAVA_LIB)
