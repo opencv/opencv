@@ -93,6 +93,9 @@ static GpuFactoryType gpuFactory = NULL;
 static DeviceInfoFactoryType deviceInfoFactory = NULL;
 
 # if defined(__linux__) || defined(__APPLE__) || defined (ANDROID)
+
+const std::string DYNAMIC_CUDA_LIB_NAME = "libopencv_dynamicuda.so";
+
 #  ifdef ANDROID
 static const std::string getCudaSupportLibName()
 {
@@ -144,7 +147,7 @@ static const std::string getCudaSupportLibName()
                 LOGD("Libraries folder found: %s", pathBegin);
 
                 fclose(file);
-                return std::string(pathBegin) + "/libopencv_core_cuda.so";
+                return std::string(pathBegin) + DYNAMIC_CUDA_LIB_NAME;
             }
             fclose(file);
             LOGE("Could not find library path");
@@ -165,7 +168,7 @@ static const std::string getCudaSupportLibName()
 #  else
 static const std::string getCudaSupportLibName()
 {
-    return "libopencv_core_cuda.so";
+    return DYNAMIC_CUDA_LIB_NAME;
 }
 #  endif
 
@@ -173,13 +176,18 @@ static bool loadCudaSupportLib()
 {
     void* handle;
     const std::string name = getCudaSupportLibName();
+    dlerror();
     handle = dlopen(name.c_str(), RTLD_LAZY);
     if (!handle)
+    {
+        LOGE("Cannot dlopen %s: %s", name.c_str(), dlerror());
         return false;
+    }
 
     deviceInfoFactory = (DeviceInfoFactoryType)dlsym(handle, "deviceInfoFactory");
     if (!deviceInfoFactory)
     {
+        LOGE("Cannot dlsym deviceInfoFactory: %s", dlerror());
         dlclose(handle);
         return false;
     }
@@ -187,6 +195,7 @@ static bool loadCudaSupportLib()
     gpuFactory = (GpuFactoryType)dlsym(handle, "gpuFactory");
     if (!gpuFactory)
     {
+        LOGE("Cannot dlsym gpuFactory: %s", dlerror());
         dlclose(handle);
         return false;
     }
