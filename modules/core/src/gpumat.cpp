@@ -45,29 +45,42 @@
 #include <iostream>
 
 #if defined(HAVE_CUDA)
-    #include <cuda_runtime.h>
-    #include <npp.h>
+# include <cuda_runtime.h>
+# include <npp.h>
 
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4020
-    #define NPP_MINIMUM_REQUIRED_VERSION 4200
+# define CUDART_MINIMUM_REQUIRED_VERSION 4020
+# define NPP_MINIMUM_REQUIRED_VERSION 4200
 
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
+# if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
+#  error "Insufficient Cuda Runtime library version, please update it."
+# endif
 
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
+# if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+#  error "Insufficient NPP version, please update it."
+# endif
 #endif
 
 #ifdef DYNAMIC_CUDA_SUPPORT
-#include <dlfcn.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
+# include <dlfcn.h>
+# include <sys/types.h>
+# include <sys/stat.h>
+# include <dirent.h>
 #endif
 
 #ifdef ANDROID
+# ifdef LOG_TAG
+#  undef LOG_TAG
+# endif
+# ifdef LOGE
+#  undef LOGE
+# endif
+# ifdef LOGD
+#  undef LOGD
+# endif
+# ifdef LOGI
+#  undef LOGI
+# endif
+
 # include <android/log.h>
 
 # define LOG_TAG "OpenCV::CUDA"
@@ -93,6 +106,9 @@ static GpuFactoryType gpuFactory = NULL;
 static DeviceInfoFactoryType deviceInfoFactory = NULL;
 
 # if defined(__linux__) || defined(__APPLE__) || defined (ANDROID)
+
+const std::string DYNAMIC_CUDA_LIB_NAME = "libopencv_dynamicuda.so";
+
 #  ifdef ANDROID
 static const std::string getCudaSupportLibName()
 {
@@ -144,7 +160,7 @@ static const std::string getCudaSupportLibName()
                 LOGD("Libraries folder found: %s", pathBegin);
 
                 fclose(file);
-                return std::string(pathBegin) + "/libopencv_core_cuda.so";
+                return std::string(pathBegin) + DYNAMIC_CUDA_LIB_NAME;
             }
             fclose(file);
             LOGE("Could not find library path");
@@ -165,7 +181,7 @@ static const std::string getCudaSupportLibName()
 #  else
 static const std::string getCudaSupportLibName()
 {
-    return "libopencv_core_cuda.so";
+    return DYNAMIC_CUDA_LIB_NAME;
 }
 #  endif
 
@@ -173,13 +189,18 @@ static bool loadCudaSupportLib()
 {
     void* handle;
     const std::string name = getCudaSupportLibName();
+    dlerror();
     handle = dlopen(name.c_str(), RTLD_LAZY);
     if (!handle)
+    {
+        LOGE("Cannot dlopen %s: %s", name.c_str(), dlerror());
         return false;
+    }
 
     deviceInfoFactory = (DeviceInfoFactoryType)dlsym(handle, "deviceInfoFactory");
     if (!deviceInfoFactory)
     {
+        LOGE("Cannot dlsym deviceInfoFactory: %s", dlerror());
         dlclose(handle);
         return false;
     }
@@ -187,6 +208,7 @@ static bool loadCudaSupportLib()
     gpuFactory = (GpuFactoryType)dlsym(handle, "gpuFactory");
     if (!gpuFactory)
     {
+        LOGE("Cannot dlsym gpuFactory: %s", dlerror());
         dlclose(handle);
         return false;
     }
