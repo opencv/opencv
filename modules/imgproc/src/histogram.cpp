@@ -1942,7 +1942,7 @@ static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & 
 
         if (totalChannels >= cn)
         {
-            idx = i;
+            idx = (int)i;
             cnidx = i == 0 ? cn : cn % (totalChannels - ccn);
             return;
         }
@@ -1966,7 +1966,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
     for (size_t i = 1; i < nimages; ++i)
     {
         const UMat & m = images[i];
-        totalcn *= m.channels();
+        totalcn += m.channels();
         CV_Assert(size == m.size() && depth == m.depth());
     }
 
@@ -1981,7 +1981,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         CV_Assert(idx >= 0);
         UMat im = images[idx];
 
-        String opts = format("-D histdims=1 -D scn=%d", im.channels(), cnidx);
+        String opts = format("-D histdims=1 -D scn=%d", im.channels());
         ocl::Kernel lutk("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
         if (lutk.empty())
             return false;
@@ -2013,28 +2013,47 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         int idx0, idx1, cnidx0, cnidx1;
         getUMatIndex(images, channels[0], idx0, cnidx0);
         getUMatIndex(images, channels[1], idx1, cnidx1);
-        printf("%d) channels = %d, indx = %d, cnidx = %d\n", images[0].channels(), channels[0], idx0, cnidx0);
-        printf("%d) channels = %d, indx = %d, cnidx = %d\n", images[1].channels(), channels[1], idx1, cnidx1);
         CV_Assert(idx0 >= 0 && idx1 >= 0);
         UMat im0 = images[idx0], im1 = images[idx1];
 
-        String opts = format("-D histdims=2 -D scn0=%d -D scn1=%d",
-                             im0.channels(), im1.channels());
-        ocl::Kernel k("calcBackProject", ocl::imgproc::calc_back_project_oclsrc, opts);
-        if (k.empty())
+        // Lut for the first dimension
+        String opts = format("-D histdims=2 -D scn1=%d -D scn2=%d", im0.channels(), im1.channels());
+        ocl::Kernel lutk1("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk1.empty())
+            return false;
+
+        size_t lsize = 256;
+        UMat lut(1, (int)lsize<<1, CV_32SC1), uranges(ranges, true), hist = _hist.getUMat();
+
+        lutk1.args(hist.rows, ocl::KernelArg::PtrWriteOnly(lut), (int)0, ocl::KernelArg::PtrReadOnly(uranges), (int)0);
+        if (!lutk1.run(1, &lsize, NULL, false))
+            return false;
+
+        // lut for the second dimension
+        ocl::Kernel lutk2("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk2.empty())
+            return false;
+
+        lut.offset += lsize * sizeof(int);
+        lutk2.args(hist.cols, ocl::KernelArg::PtrWriteOnly(lut), (int)256, ocl::KernelArg::PtrReadOnly(uranges), (int)2);
+        if (!lutk2.run(1, &lsize, NULL, false))
+            return false;
+
+        // perform lut
+        ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (mapk.empty())
             return false;
 
         _dst.create(size, depth);
-        UMat dst = _dst.getUMat(), hist = _hist.getUMat(), uranges(ranges, true);
+        UMat dst = _dst.getUMat();
 
         im0.offset += cnidx0;
         im1.offset += cnidx1;
-        k.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
-               ocl::KernelArg::ReadOnly(hist), ocl::KernelArg::WriteOnly(dst), scale,
-               ocl::KernelArg::PtrReadOnly(uranges));
+        mapk.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
+               ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
 
         size_t globalsize[2] = { size.width, size.height };
-        return k.run(2, globalsize, NULL, false);
+        return mapk.run(2, globalsize, NULL, false);
     }
     return false;
 }
@@ -2051,12 +2070,9 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
     size_t histdims = _1D ? 1 : hist.dims();
 
     if (ocl::useOpenCL() && images.isUMatVector() && dst.isUMat() && hist.type() == CV_32FC1 &&
-            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size() /*&&
-            ocl_calcBackProject(images, channels, hist, dst, ranges, scale)*/)
-    {
-        CV_Assert(ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims));
+            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size() &&
+            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
         return;
-    }
 
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();

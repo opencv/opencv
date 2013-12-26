@@ -147,15 +147,6 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 
     void Near()
     {
-//        std::cout << "Src: " << std::endl << src_roi[0] << std::endl;
-//        std::cout << "Hist: " << std::endl << hist_roi << std::endl;
-        std::cout << "OpenCV: " << std::endl << dst_roi << std::endl;
-        std::cout << "OpenCL: " << std::endl << udst_roi.getMat(ACCESS_READ) << std::endl;
-
-        Mat diff;
-        cv::absdiff(dst_roi, udst_roi, diff);
-        std::cout << "Difference: " << std::endl << diff << std::endl;
-
         OCL_EXPECT_MATS_NEAR(dst, 0.0)
     }
 };
