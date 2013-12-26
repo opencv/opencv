@@ -250,6 +250,10 @@ private:
             currentPot = bestNewPot;
             for (int i = 0; i < n; i++) closestDistSq[i] = std::min( distance(dataset[dsindices[i]], dataset[dsindices[bestNewIndex]], dataset.cols), closestDistSq[i] );
         }
+
+        centers_length = centerCount;
+
+        delete[] closestDistSq;
     }
 
 
