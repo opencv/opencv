@@ -381,8 +381,8 @@ struct PtrStepSz {
     int step;
     int rows, cols;
 };
-inline int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)); }
-inline void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * y + sizeof(int) * x)) = value; }
+inline int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))); }
+inline void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))) = value; }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // do Hysteresis for pixel whose edge type is 1
@@ -494,7 +494,7 @@ edgesHysteresisLocal
         }
     }
 #else
-    struct PtrStepSz map = {((__global int *)((__global char*)map_ptr + map_offset)), map_step, rows, cols};
+    struct PtrStepSz map = {((__global int *)((__global char*)map_ptr + map_offset)), map_step, rows + 1, cols + 1};
 
     __local int smem[18][18];
 
@@ -507,13 +507,13 @@ edgesHysteresisLocal
 
     smem[threadIdx.y + 1][threadIdx.x + 1] = x < map.cols && y < map.rows ? get(map, y, x) : 0;
     if (threadIdx.y == 0)
-        smem[0][threadIdx.x + 1] = y > 0 ? get(map, y - 1, x) : 0;
+        smem[0][threadIdx.x + 1] = x < map.cols ? get(map, y - 1, x) : 0;
     if (threadIdx.y == blockDim.y - 1)
         smem[blockDim.y + 1][threadIdx.x + 1] = y + 1 < map.rows ? get(map, y + 1, x) : 0;
     if (threadIdx.x == 0)
-        smem[threadIdx.y + 1][0] = x > 0 ? get(map, y, x - 1) : 0;
+        smem[threadIdx.y + 1][0] = y < map.rows ? get(map, y, x - 1) : 0;
     if (threadIdx.x == blockDim.x - 1)
-        smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols ? get(map, y, x + 1) : 0;
+        smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols && y < map.rows ? get(map, y, x + 1) : 0;
     if (threadIdx.x == 0 && threadIdx.y == 0)
         smem[0][0] = y > 0 && x > 0 ? get(map, y - 1, x - 1) : 0;
     if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0)
@@ -525,7 +525,7 @@ edgesHysteresisLocal
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (x >= map.cols || y >= map.rows)
+    if (x >= cols || y >= rows)
         return;
 
     int n;
@@ -576,7 +576,7 @@ edgesHysteresisLocal
     if (n > 0)
     {
         const int ind = atomic_inc(counter);
-        st[ind] = (ushort2)(x, y);
+        st[ind] = (ushort2)(x + 1, y + 1);
     }
 #endif
 }
