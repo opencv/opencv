@@ -1726,8 +1726,8 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
 #ifdef HAVE_CLAMDFFT
-    if (ocl::useOpenCL() && ocl::haveAmdFft() && _dst.isUMat() && _src0.dims() <= 2
-            && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
+    if (ocl::useOpenCL() && ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
         return;
 #endif
 
