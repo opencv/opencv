@@ -619,9 +619,11 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if(npairs == 0)
         return;
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
@@ -642,9 +644,11 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if(fromTo.empty())
         return;
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
