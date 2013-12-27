@@ -2306,7 +2306,11 @@ bool Context2::create(int dtype0)
 
 Context2::~Context2()
 {
-    p->release();
+    if (p)
+    {
+        p->release();
+        p = NULL;
+    }
 }
 
 Context2::Context2(const Context2& c)
@@ -2329,7 +2333,7 @@ Context2& Context2::operator = (const Context2& c)
 
 void* Context2::ptr() const
 {
-    return p->handle;
+    return p == NULL ? NULL : p->handle;
 }
 
 size_t Context2::ndevices() const
