@@ -3375,8 +3375,8 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
     extra_extrapolation |= src.rows < radiusY;
     extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
-    char build_options[1024];
-    sprintf(build_options, "-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s",
+
+    cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s",
         radiusX, (int)localsize[0], (int)localsize[1], cn,
         btype,
         extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
@@ -3433,25 +3433,25 @@ static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, b
 
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
 
-    char build_options[1024];
+    cv::String build_options;
     if (CV_8U == ddepth)
     {
         switch (cn)
         {
         case 1:
             globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float", "uchar", "convert_uchar_sat");
             break;
         case 2:
             globalsize[0] = DIVUP((sz.width + 1) / 2, localsize[0]) * localsize[0];
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float2", "uchar2", "convert_uchar2_sat");
             break;
         case 3:
         case 4:
             globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "uchar4", "convert_uchar4_sat");
             break;
         }
@@ -3462,21 +3462,21 @@ static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, b
         switch (dst.type())
         {
         case CV_32SC1:
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float", "int", "convert_int_sat");
             break;
         case CV_32SC3:
         case CV_32SC4:
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "int4", "convert_int4_sat");
             break;
         case CV_32FC1:
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float", "float", "");
             break;
         case CV_32FC3:
         case CV_32FC4:
-            sprintf(build_options, "-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
                     anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "float4", "");
             break;
         }

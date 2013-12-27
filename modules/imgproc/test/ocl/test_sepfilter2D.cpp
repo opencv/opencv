@@ -109,8 +109,7 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
