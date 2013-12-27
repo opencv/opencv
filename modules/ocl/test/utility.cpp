@@ -325,4 +325,42 @@ testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char
     return ::testing::AssertionSuccess();
 }
 
+int getMatchedPointsCount(std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual)
+{
+    std::sort(actual.begin(), actual.end(), KeyPointLess());
+    std::sort(gold.begin(), gold.end(), KeyPointLess());
+
+    int validCount = 0;
+
+    size_t sz = std::min(gold.size(), actual.size());
+    for (size_t i = 0; i < sz; ++i)
+    {
+        const cv::KeyPoint& p1 = gold[i];
+        const cv::KeyPoint& p2 = actual[i];
+
+        if (keyPointsEquals(p1, p2))
+            ++validCount;
+    }
+
+    return validCount;
+}
+
+int getMatchedPointsCount(const std::vector<cv::KeyPoint>& keypoints1, const std::vector<cv::KeyPoint>& keypoints2, const std::vector<cv::DMatch>& matches)
+{
+    int validCount = 0;
+
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+        const cv::DMatch& m = matches[i];
+
+        const cv::KeyPoint& p1 = keypoints1[m.queryIdx];
+        const cv::KeyPoint& p2 = keypoints2[m.trainIdx];
+
+        if (keyPointsEquals(p1, p2))
+            ++validCount;
+    }
+
+    return validCount;
+}
+
 } // namespace cvtest

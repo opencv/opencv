@@ -647,3 +647,138 @@ Returns block descriptors computed for the whole image.
         * **DESCR_FORMAT_COL_BY_COL** - Column-major order.
 
 The function is mainly used to learn the classifier.
+
+
+
+ocl::ORB_OCL
+--------------
+.. ocv:class:: ocl::ORB_OCL
+
+Class for extracting ORB features and descriptors from an image. ::
+
+    class ORB_OCL
+    {
+    public:
+        enum
+        {
+            X_ROW = 0,
+            Y_ROW,
+            RESPONSE_ROW,
+            ANGLE_ROW,
+            OCTAVE_ROW,
+            SIZE_ROW,
+            ROWS_COUNT
+        };
+
+        enum
+        {
+            DEFAULT_FAST_THRESHOLD = 20
+        };
+
+        explicit ORB_OCL(int nFeatures = 500, float scaleFactor = 1.2f,
+                         int nLevels = 8, int edgeThreshold = 31,
+                         int firstLevel = 0, int WTA_K = 2,
+                         int scoreType = 0, int patchSize = 31);
+
+        void operator()(const oclMat& image, const oclMat& mask,
+                        std::vector<KeyPoint>& keypoints);
+        void operator()(const oclMat& image, const oclMat& mask, oclMat& keypoints);
+
+        void operator()(const oclMat& image, const oclMat& mask,
+                        std::vector<KeyPoint>& keypoints, oclMat& descriptors);
+        void operator()(const oclMat& image, const oclMat& mask,
+                        oclMat& keypoints, oclMat& descriptors);
+
+        void downloadKeyPoints(oclMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+        void convertKeyPoints(Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+        int descriptorSize() const;
+        int descriptorType() const;
+        int defaultNorm() const;
+
+        void setFastParams(int threshold, bool nonmaxSupression = true);
+
+        void release();
+
+        bool blurForDescriptor;
+    };
+
+The class implements ORB feature detection and description algorithm.
+
+
+
+ocl::ORB_OCL::ORB_OCL
+------------------------
+Constructor.
+
+.. ocv:function:: ocl::ORB_OCL::ORB_OCL(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31)
+
+    :param nfeatures: The maximum number of features to retain.
+
+    :param scaleFactor: Pyramid decimation ratio, greater than 1. ``scaleFactor==2`` means the classical pyramid, where each next level has 4x less pixels than the previous, but such a big scale factor will degrade feature matching scores dramatically. On the other hand, too close to 1 scale factor will mean that to cover certain scale range you will need more pyramid levels and so the speed will suffer.
+
+    :param nlevels: The number of pyramid levels. The smallest level will have linear size equal to ``input_image_linear_size/pow(scaleFactor, nlevels)``.
+
+    :param edgeThreshold: This is size of the border where the features are not detected. It should roughly match the ``patchSize`` parameter.
+
+    :param firstLevel: It should be 0 in the current implementation.
+
+    :param WTA_K: The number of points that produce each element of the oriented BRIEF descriptor. The default value 2 means the BRIEF where we take a random point pair and compare their brightnesses, so we get 0/1 response. Other possible values are 3 and 4. For example, 3 means that we take 3 random points (of course, those point coordinates are random, but they are generated from the pre-defined seed, so each element of BRIEF descriptor is computed deterministically from the pixel rectangle), find point of maximum brightness and output index of the winner (0, 1 or 2). Such output will occupy 2 bits, and therefore it will need a special variant of Hamming distance, denoted as ``NORM_HAMMING2`` (2 bits per bin).  When ``WTA_K=4``, we take 4 random points to compute each bin (that will also occupy 2 bits with possible values 0, 1, 2 or 3).
+
+    :param scoreType: The default HARRIS_SCORE means that Harris algorithm is used to rank features (the score is written to ``KeyPoint::score`` and is used to retain best ``nfeatures`` features); FAST_SCORE is alternative value of the parameter that produces slightly less stable keypoints, but it is a little faster to compute.
+
+    :param patchSize: size of the patch used by the oriented BRIEF descriptor. Of course, on smaller pyramid layers the perceived image area covered by a feature will be larger.
+
+
+
+ocl::ORB_OCL::operator()
+--------------------------
+Detects keypoints and computes descriptors for them.
+
+.. ocv:function:: void ocl::ORB_OCL::operator()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints)
+
+.. ocv:function:: void ocl::ORB_OCL::operator()(const oclMat& image, const oclMat& mask, oclMat& keypoints)
+
+.. ocv:function:: void ocl::ORB_OCL::operator()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints, oclMat& descriptors)
+
+.. ocv:function:: void ocl::ORB_OCL::operator()(const oclMat& image, const oclMat& mask, oclMat& keypoints, oclMat& descriptors)
+
+    :param image: Input 8-bit grayscale image.
+
+    :param mask: Optional input mask that marks the regions where we should detect features.
+
+    :param keypoints: The input/output vector of keypoints. Can be stored both in host and device memory. For device memory:
+
+            * ``X_ROW`` contains the horizontal coordinate of the i'th feature.
+            * ``Y_ROW`` contains the vertical coordinate of the i'th feature.
+            * ``RESPONSE_ROW`` contains the response of the i'th feature.
+            * ``ANGLE_ROW`` contains the orientation of the i'th feature.
+            * ``RESPONSE_ROW`` contains the octave of the i'th feature.
+            * ``ANGLE_ROW`` contains the size of the i'th feature.
+
+    :param descriptors: Computed descriptors. if ``blurForDescriptor`` is true, image will be blurred before descriptors calculation.
+
+
+
+ocl::ORB_OCL::downloadKeyPoints
+---------------------------------
+Download keypoints from device to host memory.
+
+.. ocv:function:: static void ocl::ORB_OCL::downloadKeyPoints( const oclMat& d_keypoints, std::vector<KeyPoint>& keypoints )
+
+
+
+ocl::ORB_OCL::convertKeyPoints
+--------------------------------
+Converts keypoints from OCL representation to vector of ``KeyPoint``.
+
+.. ocv:function:: static void ocl::ORB_OCL::convertKeyPoints( const Mat& d_keypoints, std::vector<KeyPoint>& keypoints )
+
+
+
+ocl::ORB_OCL::release
+-----------------------
+Releases inner buffer memory.
+
+.. ocv:function:: void ocl::ORB_OCL::release()
