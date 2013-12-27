@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 
 using namespace cv;
 using namespace cv::gpu;
@@ -422,4 +422,4 @@ void cv::gpu::SURF_GPU::releaseMemory()
 
 #endif // !defined (HAVE_CUDA)
 
-#endif // defined(HAVE_OPENCV_GPU)
+#endif // defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
