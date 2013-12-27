@@ -2353,7 +2353,7 @@ GPU_TEST_P(AddWeighted, Accuracy)
         cv::Mat dst_gold;
         cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dst_depth);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-3);
+        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 2.0 : 1e-3);
     }
 }
 
@@ -3582,7 +3582,7 @@ GPU_TEST_P(Normalize, WithOutMask)
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
 GPU_TEST_P(Normalize, WithMask)
@@ -3598,7 +3598,7 @@ GPU_TEST_P(Normalize, WithMask)
     dst_gold.setTo(cv::Scalar::all(0));
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1e-6);
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Normalize, testing::Combine(
