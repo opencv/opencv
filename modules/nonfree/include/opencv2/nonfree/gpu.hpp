@@ -45,7 +45,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 
 #include "opencv2/gpu/gpu.hpp"
 
