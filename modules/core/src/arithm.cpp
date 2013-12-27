@@ -1409,7 +1409,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int wtype, dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
-    bool use_opencl = _dst.kind() == _OutputArray::UMAT && ocl::useOpenCL() && dims1 <= 2 && dims2 <= 2;
+    bool use_opencl = _dst.isUMat() && ocl::useOpenCL() && dims1 <= 2 && dims2 <= 2;
     bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
     bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
 

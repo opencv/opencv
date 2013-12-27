@@ -460,7 +460,7 @@ OCL_PERF_TEST_P(BitwiseAndFixture, Bitwise_and,
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::bitwise_and(src1, src2, dst);
@@ -481,7 +481,7 @@ OCL_PERF_TEST_P(BitwiseXorFixture, Bitwise_xor,
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::bitwise_xor(src1, src2, dst);
@@ -617,11 +617,11 @@ OCL_PERF_TEST_P(SqrtFixture, Sqrt, ::testing::Combine(
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    Mat src(srcSize, type), dst(srcSize, type);
+    UMat src(srcSize, type), dst(srcSize, type);
     randu(src, 0, 1000);
     declare.in(src).out(dst);
 
-    TEST_CYCLE() cv::sqrt(src, dst);
+    OCL_TEST_CYCLE() cv::sqrt(src, dst);
 
     SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
@@ -704,6 +704,114 @@ OCL_PERF_TEST_P(NormFixture, DISABLED_Norm,
     OCL_TEST_CYCLE() res = cv::norm(src1, src2, normType);
 
     SANITY_CHECK(res, 1e-6, ERROR_RELATIVE);
+}
+
+///////////// Repeat ////////////////////////
+
+typedef Size_MatType RepeatFixture;
+
+OCL_PERF_TEST_P(RepeatFixture, Repeat,
+            ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), nx = 2, ny = 2;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(Size(srcSize.width * nx, srcSize.height * ny), type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::repeat(src, nx, ny, dst);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// Min ////////////////////////
+
+typedef Size_MatType MinFixture;
+
+OCL_PERF_TEST_P(MinFixture, Min,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::min(src1, src2, dst);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// Max ////////////////////////
+
+typedef Size_MatType MaxFixture;
+
+OCL_PERF_TEST_P(MaxFixture, Max,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::max(src1, src2, dst);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// InRange ////////////////////////
+
+typedef Size_MatType InRangeFixture;
+
+OCL_PERF_TEST_P(InRangeFixture, InRange,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), lb(srcSize, type), ub(srcSize, type), dst(srcSize, CV_8UC1);
+    declare.in(src, lb, ub, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::inRange(src, lb, ub, dst);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// Normalize ////////////////////////
+
+CV_ENUM(NormalizeModes, CV_MINMAX, CV_L2, CV_L1, CV_C)
+
+typedef tuple<Size, MatType, NormalizeModes> NormalizeParams;
+typedef TestBaseWithParam<NormalizeParams> NormalizeFixture;
+
+OCL_PERF_TEST_P(NormalizeFixture, Normalize,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, NormalizeModes::all()))
+{
+    const NormalizeParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), mode = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode);
+
+    SANITY_CHECK(dst, 5e-2);
 }
 
 } } // namespace cvtest::ocl
