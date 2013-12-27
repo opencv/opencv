@@ -122,7 +122,7 @@ OCL_TEST_P(SepFilter2D, Mat)
         OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, 0.0, borderType));
         OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, 0.0, borderType));
 
-        Near(2.0);
+        Near(1.0);
     }
 }
 
