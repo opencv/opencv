@@ -208,7 +208,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
     if(!use_cpu_sorter)
     {   // round to 2^n
         unsigned int n=1;
-        for(n=1;n<(unsigned int)corner_array_size;n<<=1);
+        for(n=1;n<(unsigned int)corner_array_size;n<<=1) ;
         corner_array_size = (int)n;
 
         ensureSizeIsEnough(1, corner_array_size , CV_32FC2, tmpCorners_);
