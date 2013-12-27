@@ -1940,10 +1940,16 @@ static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & 
         int ccn = um[i].channels();
         totalChannels += ccn;
 
-        if (totalChannels >= cn)
+        if (totalChannels == cn)
+        {
+            idx = (int)(i + 1);
+            cnidx = 0;
+            return;
+        }
+        else if (totalChannels > cn)
         {
             idx = (int)i;
-            cnidx = i == 0 ? cn : cn % (totalChannels - ccn);
+            cnidx = i == 0 ? cn : (cn - totalChannels + ccn);
             return;
         }
     }
