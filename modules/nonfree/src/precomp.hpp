@@ -51,7 +51,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
 
-#if defined(HAVE_OPENCV_GPU)
+#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
     #include "opencv2/nonfree/gpu.hpp"
 
     #if defined(HAVE_CUDA)

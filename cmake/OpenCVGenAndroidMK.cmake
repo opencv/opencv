@@ -70,7 +70,9 @@ if(ANDROID)
   endif()
 
   # GPU module enabled separately
-  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "gpu")
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_gpu")
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_dynamicuda")
+
   if(HAVE_opencv_gpu)
     set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "on")
   endif()
