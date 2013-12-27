@@ -43,28 +43,29 @@
 
 using namespace cv;
 
-static cv::Mat cvcloud_load()
-{
-    cv::Mat cloud(1, 20000, CV_32FC3);
-        std::ifstream ifs("d:/cloud_dragon.ply");
-
-    std::string str;
-    for(size_t i = 0; i < 11; ++i)
-        std::getline(ifs, str);
-
-    cv::Point3f* data = cloud.ptr<cv::Point3f>();
-    for(size_t i = 0; i < cloud.total(); ++i)
-        ifs >> data[i].x >> data[i].y >> data[i].z;
-
-    return cloud;
-}
-
 TEST(Viz_viz3d, develop)
 {
-    cv::Mat cloud = cvcloud_load();
+    std::cout << std::string(cvtest::TS::ptr()->get_data_path()) + "dragon.ply" << std::endl;
+
+    cv::Mat cloud = cv::viz::readCloud(String(cvtest::TS::ptr()->get_data_path()) + "dragon.ply");
+
     cv::viz::Viz3d viz("abc");
-    cv::viz::WCloud c(cloud, cv::Mat(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0)));
+    viz.showWidget("coo", cv::viz::WCoordinateSystem());
+
+    cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
+
+    //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
+
+    //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
+
+    cv::RNG rng;
+    rng.fill(colors, cv::RNG::UNIFORM, 0, 255);
+    cv::viz::WCloud c(cloud, colors);
     //cv::viz::WCloud c(cloud, cv::viz::Color::bluberry());
     viz.showWidget("c", c);
+
+    //viz.showWidget("l", cv::viz::WLine(Point3f(0,0,0), Point3f(1,1,1)));
+    //viz.showWidget("s", cv::viz::WSphere(Point3f(0,0,0), 1));
+    //viz.showWidget("d", cv::viz::WCircle(Point3f(0,0,0), 1));
     viz.spin();
 }
