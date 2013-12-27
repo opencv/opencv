@@ -209,13 +209,13 @@ namespace cv
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
-        class CV_EXPORTS oclMat
+        class CV_EXPORTS_W oclMat
         {
         public:
             //! default constructor
-            oclMat();
+            CV_WRAP oclMat();
             //! constructs oclMatrix of the specified size and type (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-            oclMat(int rows, int cols, int type);
+            CV_WRAP oclMat(int rows, int cols, int type);
             oclMat(Size size, int type);
             //! constucts oclMatrix and fills it with the specified value _s.
             oclMat(int rows, int cols, int type, const Scalar &s);
@@ -232,7 +232,7 @@ namespace cv
             oclMat(const oclMat &m, const Rect &roi);
 
             //! builds oclMat from Mat. Perfom blocking upload to device.
-            explicit oclMat (const Mat &m);
+            CV_WRAP explicit oclMat (const Mat &m);
 
             //! destructor - calls release()
             ~oclMat();
@@ -244,12 +244,12 @@ namespace cv
             oclMat &operator = (const oclMatExpr& expr);
 
             //! pefroms blocking upload data to oclMat.
-            void upload(const cv::Mat &m);
+            CV_WRAP void upload(const cv::Mat &m);
 
 
             //! downloads data from device to host memory. Blocking calls.
             operator Mat() const;
-            void download(cv::Mat &m) const;
+            CV_WRAP void download(CV_OUT cv::Mat &m) const;
 
             //! convert to _InputArray
             operator _InputArray();
@@ -611,7 +611,7 @@ namespace cv
         //! support only CV_32FC2 type
         CV_EXPORTS void mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false);
 
-        CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code, int dcn = 0);
+        CV_EXPORTS_W void cvtColor(const ocl::oclMat &src, CV_OUT ocl::oclMat &dst, int code, int dcn = 0);
 
         //! initializes a scaled identity matrix
         CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
@@ -887,10 +887,10 @@ namespace cv
         };
 
         /////////////////////////////// Pyramid /////////////////////////////////////
-        CV_EXPORTS void pyrDown(const oclMat &src, oclMat &dst);
+        CV_EXPORTS_W void pyrDown(const ocl::oclMat &src, CV_OUT ocl::oclMat &dst);
 
         //! upsamples the source image and then smoothes it
-        CV_EXPORTS void pyrUp(const oclMat &src, oclMat &dst);
+        CV_EXPORTS_W void pyrUp(const ocl::oclMat &src, CV_OUT ocl::oclMat &dst);
 
         //! performs linear blending of two images
         //! to avoid accuracy errors sum of weigths shouldn't be very close to zero
@@ -1227,7 +1227,7 @@ namespace cv
 
         ////////////////////////////////// BruteForceMatcher //////////////////////////////////
 
-        class CV_EXPORTS BruteForceMatcher_OCL_base
+        class CV_EXPORTS_W BruteForceMatcher_OCL_base
         {
         public:
             enum DistType {L1Dist = 0, L2Dist, HammingDist};
@@ -1278,9 +1278,9 @@ namespace cv
             void match(const oclMat &query, std::vector<DMatch> &matches, const std::vector<oclMat> &masks = std::vector<oclMat>());
 
             // Find k best matches for each query descriptor (in increasing order of distances)
-            void knnMatchSingle(const oclMat &query, const oclMat &train,
-                                oclMat &trainIdx, oclMat &distance, oclMat &allDist, int k,
-                                const oclMat &mask = oclMat());
+            CV_WRAP void knnMatchSingle(const ocl::oclMat &query, const ocl::oclMat &train,
+                                CV_OUT ocl::oclMat &trainIdx, CV_OUT ocl::oclMat &distance, CV_OUT ocl::oclMat &allDist, int k,
+                                const ocl::oclMat &mask = ocl::oclMat());
 
             // Download trainIdx and distance and convert it to vector with DMatch
             // compactResult is used when mask is not empty. If compactResult is false matches
@@ -1403,10 +1403,10 @@ namespace cv
             explicit BruteForceMatcher_OCL(Hamming /*d*/) : BruteForceMatcher_OCL_base(HammingDist) {}
         };
 
-        class CV_EXPORTS BFMatcher_OCL : public BruteForceMatcher_OCL_base
+        class CV_EXPORTS_W BFMatcher_OCL : public BruteForceMatcher_OCL_base
         {
         public:
-            explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
+            CV_WRAP explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
         };
 
         class CV_EXPORTS GoodFeaturesToTrackDetector_OCL
@@ -2184,9 +2184,9 @@ namespace cv
             CvSVM_OCL(const cv::Mat& trainData, const cv::Mat& responses,
                       const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
                       CvSVMParams params=CvSVMParams());
-            CV_WRAP float predict( const int row_index, Mat& src, bool returnDFVal=false ) const;
-            CV_WRAP void predict( cv::InputArray samples, cv::OutputArray results ) const;
-            CV_WRAP float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
+            float predict( const int row_index, Mat& src, bool returnDFVal=false ) const;
+            void predict( cv::InputArray samples, cv::OutputArray results ) const;
+            float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
             float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
 
         protected:

@@ -24,6 +24,14 @@
 #  include "opencv2/nonfree.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_OCL
+#  include "opencv2/ocl.hpp"
+#  ifdef HAVE_OPENCV_NONFREE
+#    include "opencv2/nonfree/ocl.hpp"
+#  endif
+#endif
+
+
 #include "pycompat.hpp"
 
 using cv::flann::IndexParams;
@@ -162,6 +170,23 @@ typedef Ptr<flann::SearchParams> Ptr_flann_SearchParams;
 typedef Ptr<FaceRecognizer> Ptr_FaceRecognizer;
 typedef std::vector<Scalar> vector_Scalar;
 
+template<class T> 
+struct RefPtr : public Ptr<T>
+{
+    RefPtr() : Ptr(new T()) {}
+    RefPtr(T & _obj) : Ptr(new T(_obj)) {}
+
+    operator T& () {return **this;}
+    operator T const& () const {return **this;}
+};
+
+
+#ifdef HAVE_OPENCV_OCL
+    typedef RefPtr<ocl::oclMat> ocl_oclMat;
+#endif
+
+
+
 static PyObject* failmsgp(const char *fmt, ...)
 {
   char str[1000];
@@ -250,7 +275,19 @@ template<typename T> static
 bool pyopencv_to(PyObject* obj, T& p, const char* name = "<unknown>");
 
 template<typename T> static
+bool pyopencv_to(PyObject* obj, RefPtr<T>& p, const char* name)
+{
+    return pyopencv_to(obj, reinterpret_cast<Ptr<T>&>(p), name);
+}
+
+template<typename T> static
 PyObject* pyopencv_from(const T& src);
+
+template<typename T> static
+PyObject* pyopencv_from(const RefPtr<T>& src)
+{
+    return pyopencv_from<Ptr<T> >(src);
+}
 
 enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 
