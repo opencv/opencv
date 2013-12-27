@@ -71,11 +71,16 @@ if(ANDROID)
 
   # GPU module enabled separately
   list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_gpu")
-  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_dynamicuda")
 
   if(HAVE_opencv_gpu)
     set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "on")
   endif()
+
+  # dynamicuda is internal library
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_dynamicuda")
+
+  # OpenCV.mk adds different core modules depending CUDA support
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_core")
 
   # convert CMake lists to makefile literals
   foreach(lst OPENCV_MODULES_CONFIGMAKE OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE OPENCV_EXTRA_COMPONENTS_CONFIGMAKE)
