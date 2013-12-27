@@ -9,18 +9,17 @@ class DeviceInfoFuncTable
 {
 public:
     // cv::DeviceInfo
-    virtual size_t sharedMemPerBlock() const = 0;
-    virtual void queryMemory(size_t&, size_t&) const = 0;
-    virtual size_t freeMemory() const = 0;
-    virtual size_t totalMemory() const = 0;
-    virtual bool supports(FeatureSet) const = 0;
-    virtual bool isCompatible() const = 0;
-    virtual void query() = 0;
-    virtual int deviceID() const = 0;
-    virtual std::string name() const = 0;
-    virtual int majorVersion() const = 0;
-    virtual int minorVersion() const = 0;
-    virtual int multiProcessorCount() const = 0;
+    virtual size_t sharedMemPerBlock(int id) const = 0;
+    virtual void queryMemory(int id, size_t&, size_t&) const = 0;
+    virtual size_t freeMemory(int id) const = 0;
+    virtual size_t totalMemory(int id) const = 0;
+    virtual bool supports(int id, FeatureSet) const = 0;
+    virtual bool isCompatible(int id) const = 0;
+    virtual std::string name(int id) const = 0;
+    virtual int majorVersion(int id) const = 0;
+    virtual int minorVersion(int id) const = 0;
+    virtual int multiProcessorCount(int id) const = 0;
+
     virtual int getCudaEnabledDeviceCount() const = 0;
     virtual void setDevice(int) const = 0;
     virtual int getDevice() const = 0;
@@ -46,8 +45,6 @@ public:
 class GpuFuncTable
 {
 public:
-    virtual ~GpuFuncTable() {}
-
     // GpuMat routines
     virtual void copy(const Mat& src, GpuMat& dst) const = 0;
     virtual void copy(const GpuMat& src, Mat& dst) const = 0;
@@ -64,23 +61,23 @@ public:
 
     virtual void mallocPitch(void** devPtr, size_t* step, size_t width, size_t height) const = 0;
     virtual void free(void* devPtr) const = 0;
+
+    virtual ~GpuFuncTable() {}
 };
 
 class EmptyDeviceInfoFuncTable: public DeviceInfoFuncTable
 {
 public:
-    size_t sharedMemPerBlock() const { throw_nogpu; return 0; }
-    void queryMemory(size_t&, size_t&) const { throw_nogpu; }
-    size_t freeMemory() const { throw_nogpu; return 0; }
-    size_t totalMemory() const { throw_nogpu; return 0; }
-    bool supports(FeatureSet) const { throw_nogpu; return false; }
-    bool isCompatible() const { throw_nogpu; return false; }
-    void query() { throw_nogpu; }
-    int deviceID() const { throw_nogpu; return -1; };
-    std::string name() const { throw_nogpu; return std::string(); }
-    int majorVersion() const { throw_nogpu; return -1; }
-    int minorVersion() const { throw_nogpu; return -1; }
-    int multiProcessorCount() const { throw_nogpu; return -1; }
+    size_t sharedMemPerBlock(int) const { throw_nogpu; return 0; }
+    void queryMemory(int, size_t&, size_t&) const { throw_nogpu; }
+    size_t freeMemory(int) const { throw_nogpu; return 0; }
+    size_t totalMemory(int) const { throw_nogpu; return 0; }
+    bool supports(int, FeatureSet) const { throw_nogpu; return false; }
+    bool isCompatible(int) const { throw_nogpu; return false; }
+    std::string name(int) const { throw_nogpu; return std::string(); }
+    int majorVersion(int) const { throw_nogpu; return -1; }
+    int minorVersion(int) const { throw_nogpu; return -1; }
+    int multiProcessorCount(int) const { throw_nogpu; return -1; }
 
     int getCudaEnabledDeviceCount() const { return 0; }
 
@@ -538,94 +535,84 @@ private:
 };
 
 DeviceProps deviceProps;
+const CudaArch cudaArch;
 
 class CudaDeviceInfoFuncTable : public DeviceInfoFuncTable
 {
 public:
-    size_t sharedMemPerBlock() const
+    size_t sharedMemPerBlock(int id) const
     {
-        return deviceProps.get(device_id_)->sharedMemPerBlock;
+        return deviceProps.get(id)->sharedMemPerBlock;
     }
 
-    void queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
+    void queryMemory(int id, size_t& _totalMemory, size_t& _freeMemory) const
     {
         int prevDeviceID = getDevice();
-        if (prevDeviceID != device_id_)
-            setDevice(device_id_);
+        if (prevDeviceID != id)
+            setDevice(id);
 
         cudaSafeCall( cudaMemGetInfo(&_freeMemory, &_totalMemory) );
 
-        if (prevDeviceID != device_id_)
+        if (prevDeviceID != id)
             setDevice(prevDeviceID);
     }
 
-    size_t freeMemory() const
+    size_t freeMemory(int id) const
     {
         size_t _totalMemory, _freeMemory;
-        queryMemory(_totalMemory, _freeMemory);
+        queryMemory(id, _totalMemory, _freeMemory);
         return _freeMemory;
     }
 
-    size_t totalMemory() const
+    size_t totalMemory(int id) const
     {
         size_t _totalMemory, _freeMemory;
-        queryMemory(_totalMemory, _freeMemory);
+        queryMemory(id, _totalMemory, _freeMemory);
         return _totalMemory;
     }
 
-    bool supports(FeatureSet feature_set) const
+    bool supports(int id, FeatureSet feature_set) const
     {
-        int version = majorVersion_ * 10 + minorVersion_;
+        int version = majorVersion(id) * 10 + minorVersion(id);
         return version >= feature_set;
     }
 
-    bool isCompatible() const
+    bool isCompatible(int id) const
     {
         // Check PTX compatibility
-        if (hasEqualOrLessPtx(majorVersion_, minorVersion_))
+        if (hasEqualOrLessPtx(majorVersion(id), minorVersion(id)))
             return true;
 
         // Check BIN compatibility
-            for (int i = minorVersion_; i >= 0; --i)
-                if (hasBin(majorVersion_, i))
+            for (int i = minorVersion(id); i >= 0; --i)
+                if (hasBin(majorVersion(id), i))
                     return true;
 
                 return false;
     }
 
-    void query()
+    std::string name(int id) const
     {
-        const cudaDeviceProp* prop = deviceProps.get(device_id_);
-
-        name_ = prop->name;
-        multi_processor_count_ = prop->multiProcessorCount;
-        majorVersion_ = prop->major;
-        minorVersion_ = prop->minor;
+        const cudaDeviceProp* prop = deviceProps.get(id);
+        return prop->name;
     }
 
-    int deviceID() const
+    int majorVersion(int id) const
     {
-        return device_id_;
+        const cudaDeviceProp* prop = deviceProps.get(id);
+        return prop->major;
     }
 
-    std::string name() const
+    int minorVersion(int id) const
     {
-        return name_;
+        const cudaDeviceProp* prop = deviceProps.get(id);
+        return prop->minor;
     }
 
-    int majorVersion() const
+    int multiProcessorCount(int id) const
     {
-        return majorVersion_;
-    }
-
-    int minorVersion() const
-    {
-        return minorVersion_;
-    }
-
-    int multiProcessorCount() const
-    {
-        return multi_processor_count_;
+        const cudaDeviceProp* prop = deviceProps.get(id);
+        return prop->multiProcessorCount;
     }
 
     int getCudaEnabledDeviceCount() const
@@ -836,15 +823,6 @@ public:
     }
 
 private:
-    int device_id_;
-
-    std::string name_;
-    int multi_processor_count_;
-    int majorVersion_;
-    int minorVersion_;
-
-    const CudaArch cudaArch;
-
     int convertSMVer2Cores(int major, int minor) const
     {
         // Defines for GPU Architecture types (using the SM version to determine the # of cores per SM
