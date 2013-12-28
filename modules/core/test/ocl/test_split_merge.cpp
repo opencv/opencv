@@ -52,7 +52,9 @@
 namespace cvtest {
 namespace ocl {
 
-PARAM_TEST_CASE(MergeTestBase, MatDepth, Channels, bool)
+//////////////////////////////////////// Merge ///////////////////////////////////////////////
+
+PARAM_TEST_CASE(Merge, MatDepth, Channels, bool)
 {
     int depth, cn;
     bool use_roi;
@@ -75,7 +77,7 @@ PARAM_TEST_CASE(MergeTestBase, MatDepth, Channels, bool)
         CV_Assert(cn >= 1 && cn <= 4);
     }
 
-    void random_roi()
+    void generateTestData()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
 
@@ -117,13 +119,11 @@ PARAM_TEST_CASE(MergeTestBase, MatDepth, Channels, bool)
     }
 };
 
-typedef MergeTestBase Merge;
-
 OCL_TEST_P(Merge, Accuracy)
 {
     for(int j = 0; j < test_loop_times; j++)
     {
-        random_roi();
+        generateTestData();
 
         OCL_OFF(cv::merge(src_roi, dst_roi));
         OCL_ON(cv::merge(usrc_roi, udst_roi));
@@ -132,7 +132,9 @@ OCL_TEST_P(Merge, Accuracy)
     }
 }
 
-PARAM_TEST_CASE(SplitTestBase, MatType, Channels, bool)
+//////////////////////////////////////// Split ///////////////////////////////////////////////
+
+PARAM_TEST_CASE(Split, MatType, Channels, bool)
 {
     int depth, cn;
     bool use_roi;
@@ -155,7 +157,7 @@ PARAM_TEST_CASE(SplitTestBase, MatType, Channels, bool)
         CV_Assert(cn >= 1 && cn <= 4);
     }
 
-    void random_roi()
+    void generateTestData()
     {
         Size roiSize = randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -195,13 +197,11 @@ PARAM_TEST_CASE(SplitTestBase, MatType, Channels, bool)
     }
 };
 
-typedef SplitTestBase Split;
-
 OCL_TEST_P(Split, DISABLED_Accuracy)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        random_roi();
+        generateTestData();
 
         OCL_OFF(cv::split(src_roi, dst_roi));
         OCL_ON(cv::split(usrc_roi, udst_roi));
@@ -214,8 +214,150 @@ OCL_TEST_P(Split, DISABLED_Accuracy)
     }
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(SplitMerge, Merge, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(SplitMerge, Split, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+//////////////////////////////////////// MixChannels ///////////////////////////////////////////////
+
+PARAM_TEST_CASE(MixChannels, MatType, bool)
+{
+    int depth;
+    bool use_roi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src1)
+    TEST_DECLARE_INPUT_PARAMETER(src2)
+    TEST_DECLARE_INPUT_PARAMETER(src3)
+    TEST_DECLARE_INPUT_PARAMETER(src4)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst1)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst3)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst4)
+
+    std::vector<Mat> src_roi, dst_roi, dst;
+    std::vector<UMat> usrc_roi, udst_roi, udst;
+    std::vector<int> fromTo;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        use_roi = GET_PARAM(1);
+    }
+
+    // generate number of channels and create type
+    int type()
+    {
+        int cn = randomInt(1, 5);
+        return CV_MAKE_TYPE(depth, cn);
+    }
+
+    void generateTestData()
+    {
+        src_roi.clear();
+        dst_roi.clear();
+        dst.clear();
+        usrc_roi.clear();
+        udst_roi.clear();
+        udst.clear();
+        fromTo.clear();
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+
+        {
+            Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(src1, src1_roi, roiSize, src1Border, type(), 2, 11);
+
+            Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(src2, src2_roi, roiSize, src2Border, type(), -1540, 1740);
+
+            Border src3Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(src3, src3_roi, roiSize, src3Border, type(), -1540, 1740);
+
+            Border src4Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(src4, src4_roi, roiSize, src4Border, type(), -1540, 1740);
+        }
+
+        {
+            Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst1, dst1_roi, roiSize, dst1Border, type(), 2, 11);
+
+            Border dst2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst2, dst2_roi, roiSize, dst2Border, type(), -1540, 1740);
+
+            Border dst3Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst3, dst3_roi, roiSize, dst3Border, type(), -1540, 1740);
+
+            Border dst4Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
+            randomSubMat(dst4, dst4_roi, roiSize, dst4Border, type(), -1540, 1740);
+        }
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src1)
+        UMAT_UPLOAD_INPUT_PARAMETER(src2)
+        UMAT_UPLOAD_INPUT_PARAMETER(src3)
+        UMAT_UPLOAD_INPUT_PARAMETER(src4)
+
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4)
+
+        int nsrc = randomInt(1, 5), ndst = randomInt(1, 5);
+
+        src_roi.push_back(src1_roi), usrc_roi.push_back(usrc1_roi);
+        if (nsrc >= 2)
+            src_roi.push_back(src2_roi), usrc_roi.push_back(usrc2_roi);
+        if (nsrc >= 3)
+            src_roi.push_back(src3_roi), usrc_roi.push_back(usrc3_roi);
+        if (nsrc >= 4)
+            src_roi.push_back(src4_roi), usrc_roi.push_back(usrc4_roi);
+
+        dst_roi.push_back(dst1_roi), udst_roi.push_back(udst1_roi),
+                dst.push_back(dst1), udst.push_back(udst1);
+        if (ndst >= 2)
+            dst_roi.push_back(dst2_roi), udst_roi.push_back(udst2_roi),
+                    dst.push_back(dst2), udst.push_back(udst2);
+        if (ndst >= 3)
+            dst_roi.push_back(dst3_roi), udst_roi.push_back(udst3_roi),
+                    dst.push_back(dst3), udst.push_back(udst3);
+        if (ndst >= 4)
+            dst_roi.push_back(dst4_roi), udst_roi.push_back(udst4_roi),
+                    dst.push_back(dst4), udst.push_back(udst4);
+
+        int scntotal = 0, dcntotal = 0;
+        for (int i = 0; i < nsrc; ++i)
+            scntotal += src_roi[i].channels();
+        for (int i = 0; i < ndst; ++i)
+            dcntotal += dst_roi[i].channels();
+
+        int npairs = randomInt(1, std::min(scntotal, dcntotal) + 1);
+        fromTo.resize(npairs << 1);
+
+        for (int i = 0; i < npairs; ++i)
+        {
+            fromTo[i<<1] = randomInt(0, scntotal);
+            fromTo[(i<<1)+1] = randomInt(0, dcntotal);
+        }
+    }
+};
+
+OCL_TEST_P(MixChannels, Accuracy)
+{
+    for (int j = 0; j < test_loop_times + 10; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::mixChannels(src_roi, dst_roi, fromTo));
+        OCL_ON(cv::mixChannels(usrc_roi, udst_roi, fromTo));
+
+        for (size_t i = 0, size = dst_roi.size(); i < size; ++i)
+        {
+            EXPECT_MAT_NEAR(dst[i], udst[i], 0.0);
+            EXPECT_MAT_NEAR(dst_roi[i], udst_roi[i], 0.0);
+        }
+    }
+}
+
+//////////////////////////////////////// Instantiation ///////////////////////////////////////////////
+
+OCL_INSTANTIATE_TEST_CASE_P(Channels, Merge, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Channels, Split, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Channels, MixChannels, Combine(OCL_ALL_DEPTHS, Bool()));
 
 } } // namespace cvtest::ocl
 
