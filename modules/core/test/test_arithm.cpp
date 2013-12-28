@@ -1564,3 +1564,19 @@ TEST(Core_round, CvRound)
     ASSERT_EQ(-2, cvRound(-2.5));
     ASSERT_EQ(-4, cvRound(-3.5));
 }
+
+
+typedef testing::TestWithParam<Size> Mul1;
+
+TEST_P(Mul1, One)
+{
+    Size size = GetParam();
+    cv::Mat src(size, CV_32FC1, cv::Scalar::all(2)), dst,
+            ref_dst(size, CV_32FC1, cv::Scalar::all(6));
+
+    cv::multiply(3, src, dst);
+
+    ASSERT_EQ(0, cv::norm(dst, ref_dst, cv::NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, Mul1, testing::Values(Size(2, 2), Size(1, 1)));
