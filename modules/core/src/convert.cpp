@@ -612,16 +612,111 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     }
 }
 
+namespace cv {
+
+static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & cnidx)
+{
+    int totalChannels = 0;
+    for (size_t i = 0, size = um.size(); i < size; ++i)
+    {
+        int ccn = um[i].channels();
+        totalChannels += ccn;
+
+        if (totalChannels == cn)
+        {
+            idx = (int)(i + 1);
+            cnidx = 0;
+            return;
+        }
+        else if (totalChannels > cn)
+        {
+            idx = (int)i;
+            cnidx = i == 0 ? cn : (cn - totalChannels + ccn);
+            return;
+        }
+    }
+
+    idx = cnidx = -1;
+}
+
+static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _dst,
+                            const int* fromTo, size_t npairs)
+{
+    const std::vector<UMat> & src = *(const std::vector<UMat> *)_src.getObj();
+    std::vector<UMat> & dst = *(std::vector<UMat> *)_dst.getObj();
+
+    size_t nsrc = src.size(), ndst = dst.size();
+    CV_Assert(nsrc > 0 && ndst > 0);
+
+    Size size = src[0].size();
+    int depth = src[0].depth(), esz = CV_ELEM_SIZE(depth);
+
+    for (size_t i = 1, ssize = src.size(); i < ssize; ++i)
+        CV_Assert(src[i].size() == size && src[i].depth() == depth);
+    for (size_t i = 0, dsize = dst.size(); i < dsize; ++i)
+        CV_Assert(dst[i].size() == size && dst[i].depth() == depth);
+
+    String declsrc, decldst, declproc, declcn;
+    std::vector<UMat> srcargs(npairs), dstargs(npairs);
+
+    for (size_t i = 0; i < npairs; ++i)
+    {
+        int scn = fromTo[i<<1], dcn = fromTo[(i<<1) + 1];
+        int src_idx, src_cnidx, dst_idx, dst_cnidx;
+
+        getUMatIndex(src, scn, src_idx, src_cnidx);
+        getUMatIndex(dst, dcn, dst_idx, dst_cnidx);
+
+        CV_Assert(dst_idx >= 0 && src_idx >= 0);
+
+        srcargs[i] = src[src_idx];
+        srcargs[i].offset += src_cnidx * esz;
+
+        dstargs[i] = dst[dst_idx];
+        dstargs[i].offset += dst_cnidx * esz;
+
+        declsrc += format("DECLARE_INPUT_MAT(%d)", i);
+        decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
+        declproc += format("PROCESS_ELEM(%d)", i);
+        declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
+    }
+
+    ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,
+                  format("-D T=%s -D DECLARE_INPUT_MATS=%s -D DECLARE_OUTPUT_MATS=%s"
+                         " -D PROCESS_ELEMS=%s%s", ocl::memopTypeToStr(depth),
+                         declsrc.c_str(), decldst.c_str(), declproc.c_str(), declcn.c_str()));
+    if (k.empty())
+        return false;
+
+    int argindex = 0;
+    for (size_t i = 0; i < npairs; ++i)
+        argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(srcargs[i]));
+    for (size_t i = 0; i < npairs; ++i)
+        argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(dstargs[i]));
+    k.set(k.set(argindex, size.height), size.width);
+
+    size_t globalsize[2] = { size.width, size.height };
+    return k.run(2, globalsize, NULL, false);
+}
+
+}
 
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
-    if(npairs == 0)
+    if (npairs == 0 || fromTo == NULL)
         return;
+
+    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() &&
+            ocl_mixChannels(src, dst, fromTo, npairs))
+        return;
+
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
@@ -639,12 +734,22 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                      const std::vector<int>& fromTo)
 {
-    if(fromTo.empty())
+    if (fromTo.empty())
         return;
+
+    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() /*&&
+            ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1)*/)
+    {
+        CV_Assert(ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1));
+        return;
+    }
+
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
-                      src.kind() != _InputArray::STD_VECTOR_VECTOR;
+            src.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            src.kind() != _InputArray::STD_VECTOR_UMAT;
     bool dst_is_mat = dst.kind() != _InputArray::STD_VECTOR_MAT &&
-                      dst.kind() != _InputArray::STD_VECTOR_VECTOR;
+            dst.kind() != _InputArray::STD_VECTOR_VECTOR &&
+            dst.kind() != _InputArray::STD_VECTOR_UMAT;
     int i;
     int nsrc = src_is_mat ? 1 : (int)src.total();
     int ndst = dst_is_mat ? 1 : (int)dst.total();
