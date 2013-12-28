@@ -1272,8 +1272,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveScalar = false, swapped12 = false;
     int depth2 = src2.depth();
     if( src1.size != src2.size || src1.channels() != src2.channels() ||
-        ((kind1 == _InputArray::MATX || kind2 == _InputArray::MATX) &&
-         src1.cols == 1 && src2.rows == 4) )
+        (kind1 == _InputArray::MATX && (src1.size() == Size(1,4) || src1.size() == Size(1,1))) ||
+        (kind2 == _InputArray::MATX && (src2.size() == Size(1,4) || src2.size() == Size(1,1))) )
     {
         if( checkScalar(src1, src2.type(), kind1, kind2) )
         {
