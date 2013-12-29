@@ -60,6 +60,7 @@
 
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  include <MultiMon.h>
 #endif
 
 #include <commctrl.h>
