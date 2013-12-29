@@ -1266,10 +1266,49 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
+static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
+{
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (!doubleSupport && depth == CV_64F)
+        return false;
+
+    char cvt[2][50];
+    int wdepth = std::max(depth, CV_32F);
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=uchar -D srcT1=%s"
+                         " -D workT=%s -D convertToWT1=%s -D convertToDT=%s%s",
+                         ocl::typeToStr(depth), ocl::typeToStr(wdepth),
+                         ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
+                         ocl::convertTypeStr(wdepth, CV_8U, 1, cvt[1]),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    _dst.createSameSize(_src, CV_8UC(cn));
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+
+    if (wdepth == CV_32F)
+        k.args(srcarg, dstarg, (float)alpha, (float)beta);
+    else if (wdepth == CV_64F)
+        k.args(srcarg, dstarg, alpha, beta);
+
+    size_t globalsize[2] = { src.cols * cn, src.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
 }
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
+            ocl_convertScaleAbs(_src, _dst, alpha, beta))
+        return;
+
     Mat src = _src.getMat();
     int cn = src.channels();
     double scale[] = {alpha, beta};
