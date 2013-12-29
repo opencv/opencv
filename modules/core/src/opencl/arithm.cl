@@ -223,13 +223,12 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #define convertToWT2
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
 
-#elif defined OP_CONVERT
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1)
-
-#elif defined OP_CONVERT_SCALE
+#elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , workT alpha, workT beta
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + beta)
+#define PROCESS_ELEM \
+    workT value = srcelem1 * alpha + beta; \
+    dstelem = convertToDT(value >= 0 ? value : -value)
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
 #ifdef OP_CTP_AD

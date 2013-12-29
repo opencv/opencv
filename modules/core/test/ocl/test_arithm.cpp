@@ -1324,6 +1324,23 @@ OCL_TEST_P(InRange, Scalar)
 }
 
 
+//////////////////////////////// ConvertScaleAbs ////////////////////////////////////////////////
+
+typedef ArithmTestBase ConvertScaleAbs;
+
+OCL_TEST_P(ConvertScaleAbs, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::convertScaleAbs(src1_roi, dst1_roi, val[0], val[1]));
+        OCL_ON(cv::convertScaleAbs(usrc1_roi, udst1_roi, val[0], val[1]));
+
+        Near(depth <= CV_32S ? 1 : 1e-6);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1360,6 +1377,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNE
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Normalize, Combine(OCL_ALL_DEPTHS, Values(Channels(1)), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 
