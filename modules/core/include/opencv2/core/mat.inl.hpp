@@ -267,6 +267,12 @@ inline _InputOutputArray::_InputOutputArray(const Mat& m)
 inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
 
+inline _InputOutputArray::_InputOutputArray(const UMat& m)
+{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); }
+
+inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
+{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); }
+
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_RW, &d_mat); }
 
