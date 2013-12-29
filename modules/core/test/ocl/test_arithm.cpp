@@ -42,6 +42,8 @@
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 
+#include <cmath>
+
 #ifdef HAVE_OPENCL
 
 namespace cvtest {
@@ -1357,6 +1359,63 @@ OCL_TEST_P(ScaleAdd, Mat)
     }
 }
 
+//////////////////////////////// PatchNans ////////////////////////////////////////////////
+
+PARAM_TEST_CASE(PatchNaNs, Channels, bool)
+{
+    int cn;
+    bool use_roi;
+    double value;
+
+    TEST_DECLARE_INPUT_PARAMETER(src)
+
+    virtual void SetUp()
+    {
+        cn = GET_PARAM(0);
+        use_roi = GET_PARAM(1);
+    }
+
+    virtual void generateTestData()
+    {
+        const int type = CV_MAKE_TYPE(CV_32F, cn);
+
+        Size roiSize = randomSize(1, 10);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -40, 40);
+
+        // generating NaNs
+        roiSize.width *= cn;
+        for (int y = 0; y < roiSize.height; ++y)
+        {
+            float * const ptr = src_roi.ptr<float>(y);
+            for (int x = 0; x < roiSize.width; ++x)
+                ptr[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+        }
+
+        value = randomDouble(-100, 100);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+    }
+
+    void Near()
+    {
+        OCL_EXPECT_MATS_NEAR(src, 0)
+    }
+};
+
+OCL_TEST_P(PatchNaNs, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::patchNaNs(src_roi, value));
+        OCL_ON(cv::patchNaNs(usrc_roi, value));
+
+        Near();
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1395,6 +1454,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Normalize, Combine(OCL_ALL_DEPTHS, Values(Ch
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 

@@ -2364,12 +2364,31 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     return badPt.x < 0;
 }
 
+static bool ocl_patchNaNs( InputOutputArray _a, float value )
+{
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=int"));
+    if (k.empty())
+        return false;
+
+    UMat a = _a.getUMat();
+    int cn = a.channels();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+           ocl::KernelArg::WriteOnly(a), (float)value);
+
+    size_t globalsize[2] = { a.cols * cn, a.rows };
+    return k.run(2, globalsize, NULL, false);
+}
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
-    Mat a = _a.getMat();
-    CV_Assert( a.depth() == CV_32F );
+    CV_Assert( _a.depth() == CV_32F );
 
+    if (ocl::useOpenCL() && _a.isUMat() && _a.dims() <= 2 && ocl_patchNaNs(_a, (float)_val))
+        return;
+
+    Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1];
     NAryMatIterator it(arrays, (uchar**)ptrs);

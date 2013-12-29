@@ -271,6 +271,13 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
     dstelem = cos(alpha) * x; \
     dstelem2 = sin(alpha) * x
 
+#elif defined OP_PATCH_NANS
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , int val
+#define PROCESS_ELEM \
+    if (( srcelem1 & 0x7fffffff) > 0x7f800000 ) \
+        dstelem = val
+
 #else
 #error "unknown op type"
 #endif
