@@ -99,7 +99,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   endforeach()
 endif()
 
-if (INSTALL_C_EXAMPLES AND NOT WIN32)
+if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
           DESTINATION share/OpenCV/samples/cpp
