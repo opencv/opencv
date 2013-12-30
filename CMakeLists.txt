@@ -362,7 +362,11 @@ endif(WIN32 AND NOT MINGW)
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
-  find_package(PkgConfig QUIET)
+  if (ANDROID)
+    find_host_package(PkgConfig QUIET)
+  else()
+    find_package(PkgConfig QUIET)
+  endif()
   include(CheckFunctionExists)
   include(CheckIncludeFile)
 

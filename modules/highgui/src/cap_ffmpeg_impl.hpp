@@ -139,9 +139,9 @@ extern "C" {
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
-#ifndef ANDROID
-    #include <sys/sysctl.h>
-#endif
+    #if !defined ANDROID
+        #include <sys/sysctl.h>
+    #endif
 #endif
 
 #ifndef MIN

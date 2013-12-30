@@ -240,9 +240,6 @@ if(UNIX)
     ocv_include_directories(${P})
   endforeach()
 
-  foreach(P ${HIGHGUI_LIBRARY_DIRS})
-    link_directories(${P})
-  endforeach()
 endif()
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})

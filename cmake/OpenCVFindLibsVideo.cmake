@@ -235,7 +235,7 @@ if(WITH_FFMPEG)
     endif()
   endif()
 
-  if(APPLE)
+  if(APPLE AND NOT HAVE_FFMPEG)
     find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h"
               PATHS /usr/local /usr /opt
               PATH_SUFFIXES include
