@@ -40,9 +40,89 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 // ----------------------------------------------------------------------
 // CLAHE
+
+namespace clahe
+{
+    static bool calcLut(cv::InputArray _src, cv::OutputArray _dst,
+        const int tilesX, const int tilesY, const cv::Size tileSize,
+        const int clipLimit, const float lutScale)
+    {
+        cv::ocl::Kernel _k("calcLut", cv::ocl::imgproc::clahe_oclsrc);
+
+        bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
+        cv::String opts;
+        if(is_cpu)
+            opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", _k.preferedWorkGroupSizeMultiple());
+
+        cv::ocl::Kernel k("calcLut", cv::ocl::imgproc::clahe_oclsrc, opts);
+        if(k.empty())
+            return false;
+
+        cv::UMat src = _src.getUMat();
+        _dst.create(tilesX * tilesY, 256, CV_8UC1);
+        cv::UMat dst = _dst.getUMat();
+
+        int tile_size[2];
+        tile_size[0] = tileSize.width;
+        tile_size[1] = tileSize.height;
+
+        size_t localThreads[3]  = { 32, 8, 1 };
+        size_t globalThreads[3] = { tilesX * localThreads[0], tilesY * localThreads[1], 1 };
+
+        int idx = 0;
+        idx = k.set(idx, cv::ocl::KernelArg::ReadOnlyNoSize(src));
+        idx = k.set(idx, cv::ocl::KernelArg::WriteOnlyNoSize(dst));
+        idx = k.set(idx, tile_size);
+        idx = k.set(idx, tilesX);
+        idx = k.set(idx, clipLimit);
+        idx = k.set(idx, lutScale);
+
+        if (!k.run(2, globalThreads, localThreads, false))
+            return false;
+        return true;
+    }
+
+    static bool transform(const cv::InputArray _src, cv::OutputArray _dst, const cv::InputArray _lut,
+        const int tilesX, const int tilesY, const cv::Size & tileSize)
+    {
+
+        cv::ocl::Kernel k("transform", cv::ocl::imgproc::clahe_oclsrc);
+        if(k.empty())
+            return false;
+
+        int tile_size[2];
+        tile_size[0] = tileSize.width;
+        tile_size[1] = tileSize.height;
+
+        cv::UMat src = _src.getUMat();
+        _dst.create(src.size(), src.type());
+        cv::UMat dst = _dst.getUMat();
+        cv::UMat lut = _lut.getUMat();
+
+        size_t localThreads[3]  = { 32, 8, 1 };
+        size_t globalThreads[3] = { src.cols, src.rows, 1 };
+
+        int idx = 0;
+        idx = k.set(idx, cv::ocl::KernelArg::ReadOnlyNoSize(src));
+        idx = k.set(idx, cv::ocl::KernelArg::WriteOnlyNoSize(dst));
+        idx = k.set(idx, cv::ocl::KernelArg::ReadOnlyNoSize(lut));
+        idx = k.set(idx, src.cols);
+        idx = k.set(idx, src.rows);
+        idx = k.set(idx, tile_size);
+        idx = k.set(idx, tilesX);
+        idx = k.set(idx, tilesY);
+
+        if (!k.run(2, globalThreads, localThreads, false))
+            return false;
+        return true;
+    }
+}
 
 namespace
 {
@@ -241,7 +321,9 @@ namespace
         int tilesY_;
 
         cv::Mat srcExt_;
+        cv::UMat usrcExt_;
         cv::Mat lut_;
+        cv::UMat ulut_;
     };
 
     CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
@@ -256,31 +338,34 @@ namespace
 
     void CLAHE_Impl::apply(cv::InputArray _src, cv::OutputArray _dst)
     {
-        cv::Mat src = _src.getMat();
+        CV_Assert( _src.type() == CV_8UC1 );
 
-        CV_Assert( src.type() == CV_8UC1 );
-
-        _dst.create( src.size(), src.type() );
-        cv::Mat dst = _dst.getMat();
+        bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2;
 
         const int histSize = 256;
 
-        lut_.create(tilesX_ * tilesY_, histSize, CV_8UC1);
-
         cv::Size tileSize;
-        cv::Mat srcForLut;
+        cv::_InputArray _srcForLut;
 
-        if (src.cols % tilesX_ == 0 && src.rows % tilesY_ == 0)
+        if (_src.size().width % tilesX_ == 0 && _src.size().height % tilesY_ == 0)
         {
-            tileSize = cv::Size(src.cols / tilesX_, src.rows / tilesY_);
-            srcForLut = src;
+            tileSize = cv::Size(_src.size().width / tilesX_, _src.size().height / tilesY_);
+            _srcForLut = _src;
         }
         else
         {
-            cv::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101);
-
-            tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
-            srcForLut = srcExt_;
+            if(useOpenCL)
+            {
+                cv::copyMakeBorder(_src, usrcExt_, 0, tilesY_ - (_src.size().height % tilesY_), 0, tilesX_ - (_src.size().width % tilesX_), cv::BORDER_REFLECT_101);
+                tileSize = cv::Size(usrcExt_.size().width / tilesX_, usrcExt_.size().height / tilesY_);
+                _srcForLut = usrcExt_;
+            }
+            else
+            {
+                cv::copyMakeBorder(_src, srcExt_, 0, tilesY_ - (_src.size().height % tilesY_), 0, tilesX_ - (_src.size().width % tilesX_), cv::BORDER_REFLECT_101);
+                tileSize = cv::Size(srcExt_.size().width / tilesX_, srcExt_.size().height / tilesY_);
+                _srcForLut = srcExt_;
+            }
         }
 
         const int tileSizeTotal = tileSize.area();
@@ -292,6 +377,16 @@ namespace
             clipLimit = static_cast<int>(clipLimit_ * tileSizeTotal / histSize);
             clipLimit = std::max(clipLimit, 1);
         }
+
+        if(useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
+            if( clahe::transform(_src, _dst, ulut_, tilesX_, tilesY_, tileSize) )
+                return;
+
+        cv::Mat src = _src.getMat();
+        _dst.create( src.size(), src.type() );
+        cv::Mat dst = _dst.getMat();
+        cv::Mat srcForLut = _srcForLut.getMat();
+        lut_.create(tilesX_ * tilesY_, histSize, CV_8UC1);
 
         CLAHE_CalcLut_Body calcLutBody(srcForLut, lut_, tileSize, tilesX_, tilesY_, clipLimit, lutScale);
         cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), calcLutBody);
@@ -325,6 +420,8 @@ namespace
     {
         srcExt_.release();
         lut_.release();
+        usrcExt_.release();
+        ulut_.release();
     }
 }
 

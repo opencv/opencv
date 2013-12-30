@@ -2817,6 +2817,16 @@ size_t Kernel::workGroupSize() const
                                     sizeof(val), &val, &retsz) >= 0 ? val : 0;
 }
 
+size_t Kernel::preferedWorkGroupSizeMultiple() const
+{
+    if(!p)
+        return 0;
+    size_t val = 0, retsz = 0;
+    cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
+    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
+                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+}
+
 bool Kernel::compileWorkGroupSize(size_t wsz[]) const
 {
     if(!p || !wsz)
