@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 
 #ifdef HAVE_IPP
@@ -2154,19 +2155,60 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 
 typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
 
+static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
+{
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    Size size = _src1.size();
+
+    if ( (!doubleSupport && depth == CV_64F) || size != _src2.size() )
+        return false;
+
+    char cvt[2][50];
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
+                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s%s", ocl::typeToStr(depth),
+                         ocl::typeToStr(wdepth), ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
+                         ocl::convertTypeStr(wdepth, depth, 1, cvt[1]),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    _dst.create(size, type);
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat();
+
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+
+    if (wdepth == CV_32F)
+        k.args(src1arg, src2arg, dstarg, (float)alpha);
+    else
+        k.args(src1arg, src2arg, dstarg, alpha);
+
+    size_t globalsize[2] = { dst.cols * cn, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
 }
 
 void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst )
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-    int depth = src1.depth(), cn = src1.channels();
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( type == _src2.type() );
 
-    CV_Assert( src1.type() == src2.type() );
+    if (ocl::useOpenCL() && _src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat() &&
+            ocl_scaleAdd(_src1, alpha, _src2, _dst, type))
+        return;
+
     if( depth < CV_32F )
     {
         addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);
         return;
     }
+
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    CV_Assert(src1.size == src2.size);
 
     _dst.create(src1.dims, src1.size, src1.type());
     Mat dst = _dst.getMat();
