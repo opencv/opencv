@@ -2212,7 +2212,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
     int type = src.type();
@@ -2240,7 +2240,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             return;
     }
 #endif
-
+*/
     if( interpolation == INTER_NEAREST )
     {
         resizeNN( src, dst, inv_scale_x, inv_scale_y );
@@ -4003,7 +4003,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4047,7 +4047,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         }
     }
 #endif
-
+*/
     for( x = 0; x < dst.cols; x++ )
     {
         adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
@@ -4234,7 +4234,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4278,7 +4278,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         }
     }
 #endif
-
+*/
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
