@@ -41,12 +41,13 @@
 
 #include "precomp.hpp"
 
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 #define USE_IPP_CANNY 1
 #else
 #undef USE_IPP_CANNY
 #endif
-
+*/
 #ifdef USE_IPP_CANNY
 namespace cv
 {

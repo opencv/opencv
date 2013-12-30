@@ -1,3 +1,8 @@
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// eliminating duplicated round() declaration
+#define HAVE_ROUND
+#endif
+
 #include <Python.h>
 
 #define MODULESTR "cv2"
