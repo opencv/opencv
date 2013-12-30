@@ -1,30 +1,23 @@
-SET(OPENCV_OCL_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
-                                     opencv_ml opencv_video opencv_objdetect opencv_features2d
-                                     opencv_calib3d opencv_legacy opencv_contrib opencv_ocl
-                                     opencv_nonfree opencv_bioinspired)
+SET(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_video opencv_highgui)
 
-ocv_check_dependencies(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
+ocv_check_dependencies(${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
-  set(project "ocl")
+  set(project "tapi")
   string(TOUPPER "${project}" project_upper)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
-
-  if(HAVE_OPENCL)
-    ocv_include_directories(${OPENCL_INCLUDE_DIR})
-  endif()
+  ocv_include_modules(${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 
   # ---------------------------------------------
   #      Define executable targets
   # ---------------------------------------------
-  MACRO(OPENCV_DEFINE_OCL_EXAMPLE name srcs)
+  MACRO(OPENCV_DEFINE_TAPI_EXAMPLE name srcs)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
+    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
@@ -47,7 +40,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   foreach(sample_filename ${all_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     file(GLOB sample_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${sample}.*)
-    OPENCV_DEFINE_OCL_EXAMPLE(${sample} ${sample_srcs})
+    OPENCV_DEFINE_TAPI_EXAMPLE(${sample} ${sample_srcs})
   endforeach()
 endif()
 
