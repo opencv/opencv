@@ -489,6 +489,7 @@ public:
     bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
+    size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
     size_t localMemSize() const;
 
