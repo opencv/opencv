@@ -692,7 +692,7 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
     for (size_t i = 0; i < npairs; ++i)
         argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(srcargs[i]));
     for (size_t i = 0; i < npairs; ++i)
-        argindex = k.set(argindex, ocl::KernelArg::ReadOnlyNoSize(dstargs[i]));
+        argindex = k.set(argindex, ocl::KernelArg::WriteOnlyNoSize(dstargs[i]));
     k.set(k.set(argindex, size.height), size.width);
 
     size_t globalsize[2] = { size.width, size.height };
@@ -737,12 +737,9 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (fromTo.empty())
         return;
 
-    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() /*&&
-            ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1)*/)
-    {
-        CV_Assert(ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1));
+    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() &&
+            ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
         return;
-    }
 
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
             src.kind() != _InputArray::STD_VECTOR_VECTOR &&
