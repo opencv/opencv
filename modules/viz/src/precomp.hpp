@@ -132,6 +132,7 @@
 #endif
 
 #include <vtk/vtkCloudMatSource.h>
+#include <vtk/vtkCloudMatSink.h>
 #include <vtk/vtkOBJWriter.h>
 #include <vtk/vtkXYZWriter.h>
 

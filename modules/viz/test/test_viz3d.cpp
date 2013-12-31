@@ -49,6 +49,7 @@ TEST(Viz_viz3d, develop)
 
     cv::Mat cloud = cv::viz::readCloud(String(cvtest::TS::ptr()->get_data_path()) + "dragon.ply");
 
+
 //    for(size_t i = 0; i < cloud.total(); ++i)
 //    {
 //        if (i % 15 == 0)
@@ -63,14 +64,12 @@ TEST(Viz_viz3d, develop)
     cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
 
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
-
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
 
     cv::RNG rng;
     rng.fill(colors, cv::RNG::UNIFORM, 0, 255);
-    cv::viz::WCloud c(cloud, colors);
-    //cv::viz::WCloud c(cloud, cv::viz::Color::bluberry());
-    viz.showWidget("c", c);
+    viz.showWidget("c", cv::viz::WCloud(cloud, colors));
+    //viz.showWidget("c", cv::viz::WCloud(cloud, cv::viz::Color::bluberry()));
 
     //viz.showWidget("l", cv::viz::WLine(Point3f(0,0,0), Point3f(1,1,1)));
     //viz.showWidget("s", cv::viz::WSphere(Point3f(0,0,0), 1));
