@@ -48,47 +48,86 @@ namespace cv { namespace viz
 {
     vtkStandardNewMacro(vtkCloudMatSource);
 
-    struct IsNotNan
+    template<typename _Tp> bool isNan(const _Tp* data)
     {
-        template<typename _Tp> bool operator()(const _Tp* data) const
-        {
-            return !isNan(data[0]) && !isNan(data[1]) && !isNan(data[2]);
-        }
+        return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
+    }
+
+    template<typename _Tp> struct VtkDepthTraits;
+
+    template<> struct VtkDepthTraits<float>
+    {
+        const static int data_type = VTK_FLOAT;
+        typedef vtkFloatArray array_type;
+    };
+
+    template<> struct VtkDepthTraits<double>
+    {
+        const static int data_type = VTK_DOUBLE;
+        typedef vtkDoubleArray array_type;
     };
 }}
 
 cv::viz::vtkCloudMatSource::vtkCloudMatSource() { SetNumberOfInputPorts(0); }
 cv::viz::vtkCloudMatSource::~vtkCloudMatSource() {}
 
-void cv::viz::vtkCloudMatSource::SetCloud(const Mat& cloud)
+int cv::viz::vtkCloudMatSource::SetCloud(const Mat& cloud)
 {
     CV_Assert(cloud.depth() == CV_32F || cloud.depth() == CV_64F);
     CV_Assert(cloud.channels() == 3 || cloud.channels() == 4);
 
-    int total = cloud.depth() == CV_32F ? filterNanCopy<float >(cloud, VTK_FLOAT)
-                                        : filterNanCopy<double>(cloud, VTK_DOUBLE);
+    int total = cloud.depth() == CV_32F ? filterNanCopy<float>(cloud) : filterNanCopy<double>(cloud);
 
     vertices = vtkSmartPointer<vtkCellArray>::New();
     vertices->Allocate(vertices->EstimateSize(1, total));
     vertices->InsertNextCell(total);
     for(int i = 0; i < total; ++i)
         vertices->InsertCellPoint(i);
+
+    return total;
 }
 
-void cv::viz::vtkCloudMatSource::SetColorCloud(const Mat &cloud, const Mat &colors)
+int cv::viz::vtkCloudMatSource::SetColorCloud(const Mat &cloud, const Mat &colors)
 {
-    vtkCloudMatSource::SetCloud(cloud);
+    int total = SetCloud(cloud);
 
     if (colors.empty())
-        return;
+        return total;
 
     CV_Assert(colors.depth() == CV_8U && colors.channels() <= 4 && colors.channels() != 2);
     CV_Assert(colors.size() == cloud.size());
 
     if (cloud.depth() == CV_32F)
-        filterNanColorsCopy<float, IsNotNan>(colors, cloud);
+        filterNanColorsCopy<float>(colors, cloud, total);
     else if (cloud.depth() == CV_64F)
-        filterNanColorsCopy<double, IsNotNan>(colors, cloud);
+        filterNanColorsCopy<double>(colors, cloud, total);
+
+    return total;
+}
+
+int cv::viz::vtkCloudMatSource::SetColorCloudNormals(const Mat &cloud, const Mat &colors, const Mat &normals)
+{
+    int total = SetColorCloud(cloud, colors);
+
+    if (normals.empty())
+        return total;
+
+    CV_Assert(normals.depth() == CV_32F || normals.depth() == CV_64F);
+    CV_Assert(normals.channels() == 3 || normals.channels() == 4);
+    CV_Assert(normals.size() == cloud.size());
+
+    if (normals.depth() == CV_32F && cloud.depth() == CV_32F)
+        filterNanNormalsCopy<float, float>(colors, cloud, total);
+    else if (normals.depth() == CV_32F && cloud.depth() == CV_64F)
+        filterNanNormalsCopy<float, double>(colors, cloud, total);
+    else if (normals.depth() == CV_64F && cloud.depth() == CV_32F)
+        filterNanNormalsCopy<double, float>(colors, cloud, total);
+    else if (normals.depth() == CV_64F && cloud.depth() == CV_64F)
+        filterNanNormalsCopy<double, double>(colors, cloud, total);
+    else
+        CV_Assert(!"Unsupported normals type");
+
+    return total;
 }
 
 int cv::viz::vtkCloudMatSource::RequestData(vtkInformation *vtkNotUsed(request), vtkInformationVector **vtkNotUsed(inputVector), vtkInformationVector *outputVector)
@@ -100,27 +139,31 @@ int cv::viz::vtkCloudMatSource::RequestData(vtkInformation *vtkNotUsed(request),
     output->SetVerts(vertices);
     if (scalars)
         output->GetPointData()->SetScalars(scalars);
+
+    if (normals)
+        output->GetPointData()->SetNormals(normals);
+
     return 1;
 }
 
 template<typename _Tp>
-int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& source, int dataType)
+int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& cloud)
 {
-    CV_DbgAssert(DataType<_Tp>::depth == source.depth());
+    CV_DbgAssert(DataType<_Tp>::depth == cloud.depth());
     points = vtkSmartPointer<vtkPoints>::New();
-    points->SetDataType(dataType);
-    points->Allocate(source.total());
-    points->SetNumberOfPoints(source.total());
+    points->SetDataType(VtkDepthTraits<_Tp>::data_type);
+    points->Allocate(cloud.total());
+    points->SetNumberOfPoints(cloud.total());
 
-    int cn = source.channels();
+    int cn = cloud.channels();
     int total = 0;
-    for (int y = 0; y < source.rows; ++y)
+    for (int y = 0; y < cloud.rows; ++y)
     {
-        const _Tp* srow = source.ptr<_Tp>(y);
-        const _Tp* send = srow + source.cols * cn;
+        const _Tp* srow = cloud.ptr<_Tp>(y);
+        const _Tp* send = srow + cloud.cols * cn;
 
         for (; srow != send; srow += cn)
-            if (!isNan(srow[0]) && !isNan(srow[1]) && !isNan(srow[2]))
+            if (!isNan(srow))
                 points->SetPoint(total++, srow);
     }
     points->SetNumberOfPoints(total);
@@ -128,40 +171,32 @@ int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& source, int dataType)
     return total;
 }
 
-
-template<typename _Msk, class _NanPred>
-void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& colors, const Mat& mask)
+template<typename _Msk>
+void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& cloud_colors, const Mat& mask, int total)
 {
-    Mat buffer(colors.size(), CV_8UC3);
-    Vec3b* pos = buffer.ptr<Vec3b>();
+    Vec3b* array = new Vec3b[total];
+    Vec3b* pos = array;
 
-    int s_chs = colors.channels();
+    int s_chs = cloud_colors.channels();
     int m_chs = mask.channels();
-
-    _NanPred pred;
-
-    for (int y = 0; y < colors.rows; ++y)
+    for (int y = 0; y < cloud_colors.rows; ++y)
     {
-        const unsigned char* srow = colors.ptr<unsigned char>(y);
-        const unsigned char* send = srow + colors.cols * colors.channels();
-        const _Msk* mrow = mask.empty() ? 0 : mask.ptr<_Msk>(y);
+        const unsigned char* srow = cloud_colors.ptr<unsigned char>(y);
+        const unsigned char* send = srow + cloud_colors.cols * cloud_colors.channels();
+        const _Msk* mrow = mask.ptr<_Msk>(y);
 
-        if (colors.channels() == 1)
+        if (cloud_colors.channels() == 1)
         {
             for (; srow != send; srow += s_chs, mrow += m_chs)
-                if (pred(mrow))
+                if (!isNan(mrow))
                     *pos++ = Vec3b(srow[0], srow[0], srow[0]);
         }
         else
             for (; srow != send; srow += s_chs, mrow += m_chs)
-                if (pred(mrow))
+                if (!isNan(mrow))
                     *pos++ = Vec3b(srow[2], srow[1], srow[0]);
 
     }
-
-    int total = pos - buffer.ptr<Vec3b>();
-    Vec3b* array = new Vec3b[total];
-    std::copy(buffer.ptr<Vec3b>(), pos, array);
 
     scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
     scalars->SetName("colors");
@@ -170,4 +205,26 @@ void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& colors, const Ma
     scalars->SetArray(array->val, total * 3, 0);
 }
 
+template<typename _Tn, typename _Msk>
+void cv::viz::vtkCloudMatSource::filterNanNormalsCopy(const Mat& cloud_normals, const Mat& mask, int total)
+{
+    normals = vtkSmartPointer< VtkDepthTraits<_Tn>::array_type >::New();
+    normals->SetNumberOfComponents(3);
+    normals->SetNumberOfTuples(total);
 
+    int s_chs = cloud_normals.channels();
+    int m_chs = mask.channels();
+
+    int pos = 0;
+    for (int y = 0; y < cloud_normals.rows; ++y)
+    {
+        const _Tn* srow = cloud_normals.ptr<_Tn>(y);
+        const _Tn* send = srow + cloud_normals.cols * s_chs;
+
+        const _Msk* mrow = mask.ptr<_Msk>(y);
+
+        for (; srow != send; srow += s_chs, mrow += m_chs)
+            if (!isNan(mrow))
+                normals->SetTuple(pos++, srow);
+    }
+}

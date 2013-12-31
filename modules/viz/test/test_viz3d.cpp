@@ -49,6 +49,14 @@ TEST(Viz_viz3d, develop)
 
     cv::Mat cloud = cv::viz::readCloud(String(cvtest::TS::ptr()->get_data_path()) + "dragon.ply");
 
+//    for(size_t i = 0; i < cloud.total(); ++i)
+//    {
+//        if (i % 15 == 0)
+//            continue;
+//        const static float qnan = std::numeric_limits<float>::quiet_NaN();
+//        cloud.at<Vec3f>(i) = Vec3f(qnan, qnan, qnan);
+//    }
+
     cv::viz::Viz3d viz("abc");
     viz.showWidget("coo", cv::viz::WCoordinateSystem());
 
