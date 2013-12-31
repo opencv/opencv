@@ -164,37 +164,35 @@ void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write clouds. Supported formats: ply, stl, xyz, obj
 
-void cv::viz::writeCloud(const String& file, InputArray _cloud, InputArray _colors)
+void cv::viz::writeCloud(const String& file, InputArray _cloud, InputArray _colors, InputArray _normals, bool binary)
 {
     CV_Assert(file.size() > 4 && "Extention is required");
     String extention = file.substr(file.size()-4);
 
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
+    Mat normals = _normals.getMat();
 
     vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
-    source->SetColorCloud(cloud, colors);
+    source->SetColorCloudNormals(cloud, colors, normals);
 
     vtkSmartPointer<vtkWriter> writer;
     if (extention == ".xyz")
     {
         writer = vtkSmartPointer<vtkXYZWriter>::New();
-        vtkPLYWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+        vtkXYZWriter::SafeDownCast(writer)->SetFileName(file.c_str());
     }
     else if (extention == ".ply")
     {
         writer = vtkSmartPointer<vtkPLYWriter>::New();
         vtkPLYWriter::SafeDownCast(writer)->SetFileName(file.c_str());
+        vtkPLYWriter::SafeDownCast(writer)->SetFileType(binary ? VTK_BINARY : VTK_ASCII);
+        vtkPLYWriter::SafeDownCast(writer)->SetArrayName("Colors");
     }
     else if (extention == ".obj")
     {
         writer = vtkSmartPointer<vtkOBJWriter>::New();
         vtkOBJWriter::SafeDownCast(writer)->SetFileName(file.c_str());
-    }
-    else if (extention == ".stl")
-    {
-        writer = vtkSmartPointer<vtkSTLWriter>::New();
-        vtkSTLWriter::SafeDownCast(writer)->SetFileName(file.c_str());
     }
     else
         CV_Assert(!"Unsupported format");
@@ -203,7 +201,7 @@ void cv::viz::writeCloud(const String& file, InputArray _cloud, InputArray _colo
     writer->Write();
 }
 
-cv::Mat cv::viz::readCloud(const String& file, OutputArray colors)
+cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray normals)
 {
     CV_Assert(file.size() > 4 && "Extention is required");
     String extention = file.substr(file.size()-4);
@@ -233,43 +231,12 @@ cv::Mat cv::viz::readCloud(const String& file, OutputArray colors)
     else
         CV_Assert(!"Unsupported format");
 
-    reader->Update();
-    vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
-    vtkSmartPointer<vtkPoints> points = poly_data->GetPoints();
+    cv::Mat cloud;
 
-    int vtktype = points->GetDataType();
-    CV_Assert(vtktype == VTK_FLOAT || vtktype == VTK_DOUBLE);
-
-    Mat cloud(1, points->GetNumberOfPoints(), vtktype == VTK_FLOAT ? CV_32FC3 : CV_64FC3);
-    Vec3d *ddata = cloud.ptr<Vec3d>();
-    Vec3f *fdata = cloud.ptr<Vec3f>();
-
-    if (cloud.depth() == CV_32F)
-        for(size_t i = 0; i < cloud.total(); ++i)
-            *fdata++ = Vec3d(points->GetPoint(i));
-
-    if (cloud.depth() == CV_64F)
-        for(size_t i = 0; i < cloud.total(); ++i)
-            *ddata++ = Vec3d(points->GetPoint(i));
-
-    vtkSmartPointer<vtkDataArray> scalars = poly_data->GetPointData() ? poly_data->GetPointData()->GetScalars() : 0;
-
-    if (colors.needed() && scalars)
-    {
-        int channels = scalars->GetNumberOfComponents();
-        int vtktype = scalars->GetDataType();
-
-        CV_Assert((channels == 3 || channels == 4) && "Only 3- or 4-channel color data support is implemented");
-        CV_Assert(cloud.total() == (size_t)scalars->GetNumberOfTuples());
-        Mat buffer(cloud.size(), CV_64FC(channels));
-        Vec3d *cptr = buffer.ptr<Vec3d>();
-        for(size_t i = 0; i < colors.total(); ++i)
-            *cptr++ = Vec3d(scalars->GetTuple(i));
-
-        buffer.convertTo(colors, CV_8U, vtktype == VTK_FLOAT || VTK_FLOAT == VTK_DOUBLE ?  255.0 : 1.0);
-    }
-    else
-        colors.release();
+    vtkSmartPointer<vtkCloudMatSink> sink = vtkSmartPointer<vtkCloudMatSink>::New();
+    sink->SetInputConnection(reader->GetOutputPort());
+    sink->SetOutput(cloud, colors, normals);
+    sink->Write();
 
     return cloud;
 }
