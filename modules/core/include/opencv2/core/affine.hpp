@@ -73,9 +73,6 @@ namespace cv
         //Combines all contructors above. Supports 4x4, 3x3, 1x3, 3x1 sizes of data matrix
         explicit Affine3(const cv::Mat& data, const Vec3& t = Vec3::all(0));
 
-        //Euler angles
-        Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t = Vec3::all(0));
-
         static Affine3 Identity();
 
         //Rotation matrix
@@ -86,9 +83,6 @@ namespace cv
 
         //Combines rotation methods above. Suports 3x3, 1x3, 3x1 sizes of data matrix;
         void rotation(const Mat& data);
-
-        //Euler angles
-        void rotation(float_type alpha, float_type beta, float_type gamma);
 
         void linear(const Mat3& L);
         void translation(const Vec3& t);
@@ -187,15 +181,6 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
 }
 
 template<typename T> inline
-cv::Affine3<T>::Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t)
-{
-    rotation(alpha, beta, gamma);
-    translation(t);
-    matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
-    matrix.val[15] = 1;
-}
-
-template<typename T> inline
 cv::Affine3<T> cv::Affine3<T>::Identity()
 {
     return Affine3<T>(cv::Affine3<T>::Mat4::eye());
@@ -259,12 +244,6 @@ void cv::Affine3<T>::rotation(const cv::Mat& data)
     }
     else
         CV_Assert(!"Input marix can be 3x3, 1x3 or 3x1");
-}
-
-template<typename T> inline
-void cv::Affine3<T>::rotation(float_type alpha, float_type beta, float_type gamma)
-{
-    rotation(Vec3(alpha, beta, gamma));
 }
 
 template<typename T> inline
