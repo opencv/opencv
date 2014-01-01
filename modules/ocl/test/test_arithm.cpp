@@ -224,6 +224,38 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
     }
 
+    virtual void random_sqr_roi()
+    {
+        const int type = CV_MAKE_TYPE(depth, cn);
+
+        Size roiSize = randomSqrSize(1, MAX_VALUE);
+        Border src1Border = randomSymmBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, 2, 11);
+
+        Border src2Border = randomSymmBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src2, src2_roi, roiSize, src2Border, type, -1540, 1740);
+
+        Border dst1Border = randomSymmBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst1, dst1_roi, roiSize, dst1Border, type, 5, 16);
+
+        Border dst2Border = randomSymmBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst2, dst2_roi, roiSize, dst2Border, type, 5, 16);
+
+        Border maskBorder = randomSymmBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(mask, mask_roi, roiSize, maskBorder, CV_8UC1, 0, 2);
+        cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+
+
+        generateOclMat(gsrc1_whole, gsrc1_roi, src1, roiSize, src1Border);
+        generateOclMat(gsrc2_whole, gsrc2_roi, src2, roiSize, src2Border);
+        generateOclMat(gdst1_whole, gdst1_roi, dst1, roiSize, dst1Border);
+        generateOclMat(gdst2_whole, gdst2_roi, dst2, roiSize, dst2Border);
+        generateOclMat(gmask_whole, gmask_roi, mask, roiSize, maskBorder);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+    }
+
     void Near(double threshold = 0.)
     {
         Mat whole, roi;
@@ -1580,6 +1612,34 @@ OCL_TEST_P(Repeat, Mat)
     }
 }
 
+//////////////////////////////// CompleteSymm /////////////////////////////////////////////////
+
+typedef ArithmTestBase CompleteSymm;
+
+OCL_TEST_P(CompleteSymm, LU)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_sqr_roi();
+
+        cv::completeSymm(dst1, true);
+        cv::ocl::completeSymm(gdst1_whole, true);
+        Near(1e-5);
+    }
+}
+
+OCL_TEST_P(CompleteSymm, UL)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_sqr_roi();
+
+        cv::completeSymm(dst1, false);
+        cv::ocl::completeSymm(gdst1_whole, false);
+        Near(1e-5);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool(), Bool()));
@@ -1617,5 +1677,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(Values(CV_8U, CV_8S, CV_16U
 INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, Repeat, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CompleteSymm, Combine(Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F), Values(1, 2, 3, 4), Bool()));
 
 #endif // HAVE_OPENCL
