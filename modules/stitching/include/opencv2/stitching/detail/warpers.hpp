@@ -134,9 +134,9 @@ public:
 
     Point2f warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T);
 
-    Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
+    virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
 
-    Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
                Mat &dst);
 
     Rect warpRoi(Size src_size, const Mat &K, const Mat &R, const Mat &T);
@@ -501,6 +501,45 @@ protected:
     {
         RotationWarperBase<PlanePortraitProjector>::detectResultRoiByBorder(src_size, dst_tl, dst_br);
     }
+};
+
+/////////////////////////////////////// OpenCL Accelerated Warpers /////////////////////////////////////
+
+class CV_EXPORTS PlaneWarperOcl : public PlaneWarper
+{
+public:
+    PlaneWarperOcl(float scale = 1.f) : PlaneWarper(scale) { }
+
+    virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap)
+    {
+        return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32FC1), xmap, ymap);
+    }
+
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst)
+    {
+        return warp(src, K, R, Mat::zeros(3, 1, CV_32FC1), interp_mode, border_mode, dst);
+    }
+
+    virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap);
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode, Mat &dst);
+};
+
+class CV_EXPORTS SphericalWarperOcl :  public SphericalWarper
+{
+public:
+    SphericalWarperOcl(float scale) : SphericalWarper(scale) { }
+
+    virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst);
+};
+
+class CV_EXPORTS CylindricalWarperOcl :  public CylindricalWarper
+{
+public:
+    CylindricalWarperOcl(float scale) : CylindricalWarper(scale) { }
+
+    virtual Rect buildMaps(Size src_size, const Mat &K, const Mat &R, Mat &xmap, Mat &ymap);
+    virtual Point warp(const Mat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode, Mat &dst);
 };
 
 } // namespace detail
