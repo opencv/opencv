@@ -1355,7 +1355,7 @@ OCL_TEST_P(ScaleAdd, Mat)
         OCL_OFF(cv::scaleAdd(src1_roi, val[0], src2_roi, dst1_roi));
         OCL_ON(cv::scaleAdd(usrc1_roi, val[0], usrc2_roi, udst1_roi));
 
-        Near(depth <= CV_32S ? 1 : 1e-6);
+        Near(depth <= CV_32S ? 1 : 1e-3);
     }
 }
 

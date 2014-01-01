@@ -479,7 +479,8 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
 
-    int ddepth = std::max(CV_32S, depth), dtype = CV_MAKE_TYPE(ddepth, cn);
+    int ddepth = std::max(sum_op == OCL_OP_SUM_SQR ? CV_32F : CV_32S, depth),
+            dtype = CV_MAKE_TYPE(ddepth, cn);
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)
@@ -501,7 +502,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op )
            dbsize, ocl::KernelArg::PtrWriteOnly(db));
 
     size_t globalsize = dbsize * wgs;
-    if (k.run(1, &globalsize, &wgs, true))
+    if (k.run(1, &globalsize, &wgs, false))
     {
         typedef Scalar (*part_sum)(Mat m);
         part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },
@@ -1927,8 +1928,9 @@ static bool ocl_norm( InputArray _src, int normType, double & result )
         Scalar s;
         bool unstype = depth == CV_8U || depth == CV_16U;
 
-        ocl_sum(src.reshape(1), s, normType == NORM_L2 ?
-                    OCL_OP_SUM_SQR : (unstype ? OCL_OP_SUM : OCL_OP_SUM_ABS) );
+        if ( !ocl_sum(src.reshape(1), s, normType == NORM_L2 ?
+                    OCL_OP_SUM_SQR : (unstype ? OCL_OP_SUM : OCL_OP_SUM_ABS)) )
+            return false;
         result = normType == NORM_L1 ? s[0] : std::sqrt(s[0]);
     }
 
