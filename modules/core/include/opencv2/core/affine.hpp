@@ -99,6 +99,9 @@ namespace cv
         // a.rotate(R) is equivalent to Affine(R, 0) * a;
         Affine3 rotate(const Mat3& R) const;
 
+        // a.rotate(R) is equivalent to Affine(rvec, 0) * a;
+        Affine3 rotate(const Vec3& rvec) const;
+
         // a.translate(t) is equivalent to Affine(E, t) * a;
         Affine3 translate(const Vec3& t) const;
 
@@ -359,6 +362,12 @@ cv::Affine3<T> cv::Affine3<T>::rotate(const Mat3& R) const
         result(j, 3) = R.row(j).dot(tc.t());
     }
     return result;
+}
+
+template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::rotate(const Vec3& _rvec) const
+{
+    return rotate(Affine3f(_rvec).rotation());
 }
 
 template<typename T> inline
