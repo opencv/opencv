@@ -88,7 +88,7 @@
 #define REDUCE_GLOBAL \
     accumulator += src[0] == zero ? zero : one
 #define SET_LOCAL_1 \
-        localmem[lid] = accumulator
+    localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
     localmem[lid - WGS2_ALIGNED] += accumulator
 #define REDUCE_LOCAL_2 \
