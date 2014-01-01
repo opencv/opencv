@@ -459,6 +459,7 @@ CV_INLINE int cvIsInf( double value )
 #    endif
 #  endif
 #elif defined _MSC_VER && !defined RC_INVOKED
+#  include <intrin.h>
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
    CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
