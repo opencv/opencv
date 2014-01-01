@@ -482,19 +482,19 @@ This class wraps mesh attributes, and it can load a mesh from a ``ply`` file. ::
         Mat polygons;
 
         //! Loads mesh from a given ply file
-        static Mesh3d loadMesh(const String& file);
+        static Mesh3d load(const String& file);
 
     private:
         /* hidden */
     };
 
-viz::Mesh3d::loadMesh
+viz::Mesh3d::load
 ---------------------
 Loads a mesh from a ``ply`` file.
 
-.. ocv:function:: static Mesh3d loadMesh(const String& file)
+.. ocv:function:: static Mesh3d load(const String& file)
 
-    :param file: File name.
+    :param file: File name (for no only PLY is supported)
 
 
 viz::KeyboardEvent

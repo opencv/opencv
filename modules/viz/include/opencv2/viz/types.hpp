@@ -112,7 +112,7 @@ namespace cv
             Mat polygons;
 
             //! Loads mesh from a given ply file
-            static Mesh3d loadMesh(const String& file);
+            static Mesh3d load(const String& file);
         };
 
         class CV_EXPORTS Camera

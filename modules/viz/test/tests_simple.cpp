@@ -85,3 +85,18 @@ TEST(Viz, DISABLED_show_cloud_masked)
     viz.showWidget("dragon", WCloud(dragon_cloud));
     viz.spin();
 }
+
+TEST(Viz, DISABLED_show_cloud_collection)
+{
+    Mat cloud = readCloud(get_dragon_ply_file_path());
+
+    WCloudCollection ccol;
+    ccol.addCloud(cloud, Color::white(), Affine3d().translate(Vec3d(0, 0, 0)).rotate(Vec3d(1.57, 0, 0)));
+    ccol.addCloud(cloud, Color::blue(),  Affine3d().translate(Vec3d(1, 0, 0)));
+    ccol.addCloud(cloud, Color::red(),   Affine3d().translate(Vec3d(2, 0, 0)));
+
+    Viz3d viz("show_cloud_collection");
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("ccol", ccol);
+    viz.spin();
+}
