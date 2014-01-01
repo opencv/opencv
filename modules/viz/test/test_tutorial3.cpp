@@ -15,23 +15,23 @@ void tutorial3(bool camera_pov)
     myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
     /// Let's assume camera has the following properties
-    Point3f cam_pos(3.f, 3.f, 3.f), cam_focal_point(3.f, 3.f, 2.f), cam_y_dir(-1.f, 0.f, 0.f);
+    Point3d cam_pos(3.0, 3.0, 3.0), cam_focal_point(3.0, 3.0, 2.0), cam_y_dir(-1.0, 0.0, 0.0);
 
     /// We can get the pose of the cam using makeCameraPose
-    Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
+    Affine3d cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
 
     /// We can get the transformation matrix from camera coordinate system to global using
     /// - makeTransformToGlobal. We need the axes of the camera
-    Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.f, -1.f, 0.f), Vec3f(-1.f, 0.f, 0.f), Vec3f(0.f, 0.f, -1.f), cam_pos);
+    Affine3d transform = viz::makeTransformToGlobal(Vec3d(0.0, -1.0, 0.0), Vec3d(-1.0, 0.0, 0.0), Vec3d(0.0, 0.0, -1.0), cam_pos);
 
     /// Create a cloud widget.
     Mat dragon_cloud = viz::readCloud(get_dragon_ply_file_path());
     viz::WCloud cloud_widget(dragon_cloud, viz::Color::green());
 
     /// Pose of the widget in camera frame
-    Affine3f cloud_pose = Affine3f().translate(Vec3f(0.f, 0.f, 3.f));
+    Affine3d cloud_pose = Affine3d().translate(Vec3d(0.0, 0.0, 3.0));
     /// Pose of the widget in global frame
-    Affine3f cloud_pose_global = transform * cloud_pose;
+    Affine3d cloud_pose_global = transform * cloud_pose;
 
     /// Visualize camera frame
     if (!camera_pov)

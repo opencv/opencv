@@ -57,14 +57,14 @@ public:
     VizImpl(const String &name);
     virtual ~VizImpl();
 
-    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+    void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
     Widget getWidget(const String &id) const;
     void removeAllWidgets();
 
-    void setWidgetPose(const String &id, const Affine3f &pose);
-    void updateWidgetPose(const String &id, const Affine3f &pose);
-    Affine3f getWidgetPose(const String &id) const;
+    void setWidgetPose(const String &id, const Affine3d &pose);
+    void updateWidgetPose(const String &id, const Affine3d &pose);
+    Affine3d getWidgetPose(const String &id) const;
 
     void setDesiredUpdateRate(double rate);
     double getDesiredUpdateRate();
@@ -95,8 +95,8 @@ public:
     void resetCameraViewpoint(const String& id);
     void resetCamera();
 
-    void setViewerPose(const Affine3f &pose);
-    Affine3f getViewerPose();
+    void setViewerPose(const Affine3d &pose);
+    Affine3d getViewerPose();
 
     void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
@@ -279,31 +279,6 @@ namespace cv
                 return table[nan_mask.depth() - 5][source.channels() == 1 ? 0 : 1](source, output, nan_mask);
             }
         };
-
-        struct ApplyAffine
-        {
-            const Affine3f& affine_;
-            ApplyAffine(const Affine3f& affine) : affine_(affine) {}
-
-            template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) const { return affine_ * p; }
-
-            template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v) const
-            {
-                const float* m = affine_.matrix.val;
-
-                Vec<_Tp, 3> result;
-                result[0] = (_Tp)(m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3]);
-                result[1] = (_Tp)(m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7]);
-                result[2] = (_Tp)(m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11]);
-                return result;
-            }
-
-        private:
-            ApplyAffine(const ApplyAffine&);
-            ApplyAffine& operator=(const ApplyAffine&);
-        };
-
-
 
         struct ConvertToVtkImage
         {

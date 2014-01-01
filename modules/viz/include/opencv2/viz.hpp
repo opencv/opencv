@@ -58,10 +58,10 @@ namespace cv
     namespace viz
     {
         //! takes coordiante frame data and builds transfrom to global coordinate frame
-        CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
+        CV_EXPORTS Affine3d makeTransformToGlobal(const Vec3d& axis_x, const Vec3d& axis_y, const Vec3d& axis_z, const Vec3d& origin = Vec3d::all(0));
 
         //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation)
-        CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir);
+        CV_EXPORTS Affine3d makeCameraPose(const Vec3d& position, const Vec3d& focal_point, const Vec3d& y_dir);
 
         //! retrieves a window by its name. If no window with such name, then it creates new.
         CV_EXPORTS Viz3d get(const String &window_name);
@@ -101,10 +101,7 @@ namespace cv
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write poses and trajectories
 
-        CV_EXPORTS bool readPose(const String& file, Affine3f& pose, const String& tag = "pose");
         CV_EXPORTS bool readPose(const String& file, Affine3d& pose, const String& tag = "pose");
-
-        CV_EXPORTS void writePose(const String& file, const Affine3f& pose, const String& tag = "pose");
         CV_EXPORTS void writePose(const String& file, const Affine3d& pose, const String& tag = "pose");
 
         CV_EXPORTS void writeTrajectory(const std::vector<Affine3f>& traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");

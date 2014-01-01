@@ -111,9 +111,9 @@ namespace cv
         public:
             Widget3D() {}
 
-            void setPose(const Affine3f &pose);
-            void updatePose(const Affine3f &pose);
-            Affine3f getPose() const;
+            void setPose(const Affine3d &pose);
+            void updatePose(const Affine3d &pose);
+            Affine3d getPose() const;
 
             void setColor(const Color &color);
 
@@ -264,21 +264,22 @@ namespace cv
 
             //! Displays trajectory of the given path either by coordinate frames or polyline
             WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
+            WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectoryFrustums : public Widget3D
         {
         public:
             //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
         {
         public:
-            WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
+            WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
                 float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
@@ -300,9 +301,9 @@ namespace cv
             WCloudCollection();
 
             //! Each point in cloud is mapped to a color in colors
-            void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+            void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             //! All points in cloud have the same color
-            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
+            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity());
         };
 
         class CV_EXPORTS WCloudNormals : public Widget3D

@@ -120,7 +120,7 @@ cv::viz::Viz3d::VizImpl::~VizImpl()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -172,7 +172,7 @@ cv::viz::Widget cv::viz::Viz3d::VizImpl::getWidget(const String &id) const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -187,7 +187,7 @@ void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &po
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -202,8 +202,8 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f 
         setWidgetPose(id, pose);
         return ;
     }
-    Matx44f matrix_cv = convertToMatx(matrix);
-    Affine3f updated_pose = pose * Affine3f(matrix_cv);
+    Matx44d matrix_cv = convertToMatx(matrix);
+    Affine3d updated_pose = pose * Affine3d(matrix_cv);
     matrix = convertToVtkMatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
@@ -211,7 +211,7 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f 
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
+cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -221,8 +221,8 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
     CV_Assert("Widget is not 3D." && actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    Matx44f matrix_cv = convertToMatx(matrix);
-    return Affine3f(matrix_cv);
+    Matx44d matrix_cv = convertToMatx(matrix);
+    return Affine3d(matrix_cv);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,32 +350,32 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
 
     // Position = extrinsic translation
-    cv::Vec3f pos_vec = pose.translation();
+    cv::Vec3d pos_vec = pose.translation();
 
     // Rotate the view vector
-    cv::Matx33f rotation = pose.rotation();
-    cv::Vec3f y_axis(0.f, 1.f, 0.f);
-    cv::Vec3f up_vec(rotation * y_axis);
+    cv::Matx33d rotation = pose.rotation();
+    cv::Vec3d y_axis(0.0, 1.0, 0.0);
+    cv::Vec3d up_vec(rotation * y_axis);
 
     // Compute the new focal point
-    cv::Vec3f z_axis(0.f, 0.f, 1.f);
-    cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
+    cv::Vec3d z_axis(0.0, 0.0, 1.0);
+    cv::Vec3d focal_vec = pos_vec + rotation * z_axis;
 
-    camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
-    camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
-    camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
+    camera.SetPosition(pos_vec.val);
+    camera.SetFocalPoint(focal_vec.val);
+    camera.SetViewUp(up_vec.val);
 
     renderer_->ResetCameraClippingRange();
     renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose()
+cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
 
@@ -400,7 +400,7 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose()
     R(2, 1) = y_axis[2];
     R(2, 2) = z_axis[2];
 
-    return cv::Affine3f(R, pos);
+    return cv::Affine3d(R, pos);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

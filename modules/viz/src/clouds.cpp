@@ -250,7 +250,7 @@ cv::viz::WCloudCollection::WCloudCollection()
     WidgetAccessor::setProp(*this, actor);
 }
 
-void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, const Affine3f &pose)
+void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, const Affine3d &pose)
 {
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
@@ -292,7 +292,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     CloudCollectionUtils::createMapper(actor, transform_filter->GetOutput());
 }
 
-void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)
+void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3d &pose)
 {
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);

@@ -170,9 +170,9 @@ Base class of all 3D widgets. ::
     public:
         Widget3D() {}
 
-        void setPose(const Affine3f &pose);
-        void updatePose(const Affine3f &pose);
-        Affine3f getPose() const;
+        void setPose(const Affine3d &pose);
+        void updatePose(const Affine3d &pose);
+        Affine3d getPose() const;
 
         void setColor(const Color &color);
     private:
@@ -183,7 +183,7 @@ viz::Widget3D::setPose
 ----------------------
 Sets pose of the widget.
 
-.. ocv:function:: void setPose(const Affine3f &pose)
+.. ocv:function:: void setPose(const Affine3d &pose)
 
     :param pose: The new pose of the widget.
 
@@ -191,7 +191,7 @@ viz::Widget3D::updateWidgetPose
 -------------------------------
 Updates pose of the widget by pre-multiplying its current pose.
 
-.. ocv:function:: void updateWidgetPose(const Affine3f &pose)
+.. ocv:function:: void updateWidgetPose(const Affine3d &pose)
 
     :param pose: The pose that the current pose of the widget will be pre-multiplied by.
 
@@ -199,7 +199,7 @@ viz::Widget3D::getPose
 ----------------------
 Returns the current pose of the widget.
 
-.. ocv:function:: Affine3f getWidgetPose() const
+.. ocv:function:: Affine3d getWidgetPose() const
 
 viz::Widget3D::setColor
 -----------------------
@@ -732,14 +732,14 @@ This 3D Widget represents a trajectory. ::
         enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white(),;
+        WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white(),;
     };
 
 viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param display_mode: Display mode. This can be PATH, FRAMES, and BOTH.
@@ -762,16 +762,16 @@ This 3D Widget represents a trajectory. ::
     {
     public:
         //! Displays trajectory of the given path by frustums
-        WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
+        WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white());
         //! Displays trajectory of the given path by frustums
-        WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
+        WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white());
     };
 
 viz::WTrajectoryFrustums::WTrajectoryFrustums
 -----------------------------
 Constructs a WTrajectoryFrustums.
 
-.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param K: Intrinsic matrix of the camera.
@@ -780,7 +780,7 @@ Constructs a WTrajectoryFrustums.
 
     Displays frustums at each pose of the trajectory.
 
-.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param fov: Field of view of the camera (horizontal, vertical).
@@ -799,7 +799,7 @@ represent the direction from previous position to the current. ::
     class CV_EXPORTS WTrajectorySpheres : public Widget3D
     {
     public:
-        WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f,
+        WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length = 0.05f,
                     float init_sphere_radius = 0.021, sphere_radius = 0.007,
                     Color &line_color = Color::white(), const Color &sphere_color = Color::white());
     };
@@ -808,7 +808,7 @@ viz::WTrajectorySpheres::WTrajectorySpheres
 -------------------------------------------
 Constructs a WTrajectorySpheres.
 
-.. ocv:function:: WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021, float sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
+.. ocv:function:: WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length = 0.05f, float init_sphere_radius = 0.021, float sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param line_length: Length of the lines.
@@ -867,9 +867,9 @@ This 3D Widget defines a collection of clouds. ::
         WCloudCollection();
 
         //! Each point in cloud is mapped to a color in colors
-        void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+        void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
         //! All points in cloud have the same color
-        void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3f &pose = Affine3f::Identity());
+        void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3d &pose = Affine3d::Identity());
 
     private:
         /* hidden */
@@ -885,7 +885,7 @@ viz::WCloudCollection::addCloud
 -------------------------------
 Adds a cloud to the collection.
 
-.. ocv:function:: void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity())
+.. ocv:function:: void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity())
 
     :param cloud: Point set which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param colors: Set of colors. It has to be of the same size with cloud.
@@ -893,7 +893,7 @@ Adds a cloud to the collection.
 
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
 
-.. ocv:function:: void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity())
+.. ocv:function:: void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity())
 
     :param cloud: Point set which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param colors: A single :ocv:class:`Color` for the whole cloud.
