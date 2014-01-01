@@ -1182,7 +1182,7 @@ namespace cv { namespace viz { namespace
 {
     struct TrajectoryUtils
     {
-        static void applyPath(vtkSmartPointer<vtkPolyData> poly_data, vtkSmartPointer<vtkAppendPolyData> append_filter, const std::vector<Affine3f> &path)
+        static void applyPath(vtkSmartPointer<vtkPolyData> poly_data, vtkSmartPointer<vtkAppendPolyData> append_filter, const std::vector<Affine3d> &path)
         {
             vtkIdType nr_points = path.size();
 
@@ -1213,7 +1213,105 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display_mode, float scale, const Color &color)
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &_path, int display_mode, float scale, const Color &color)
+{
+    std::vector<Affine3d> path(_path.begin(), _path.end());
+
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+    // Bitwise and with 3 in order to limit the domain to 2 bits
+    if ((~display_mode & 3) ^ WTrajectory::PATH)
+    {
+        // Create a poly line along the path
+        vtkIdType nr_points = path.size();
+
+        vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+        points->SetDataTypeToFloat();
+        points->SetNumberOfPoints(nr_points);
+
+        vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+        vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
+        polyLine->GetPointIds()->SetNumberOfIds(nr_points);
+
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+
+        for (vtkIdType i = 0; i < nr_points; ++i)
+        {
+            Vec3f cam_pose = path[i].translation();
+            *data_beg++ = cam_pose;
+            polyLine->GetPointIds()->SetId(i,i);
+        }
+
+        vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+        cells->InsertNextCell(polyLine);
+
+        polyData->SetPoints(points);
+        polyData->SetLines(cells);
+
+        // Set the color for polyData
+        vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+        colors->SetNumberOfComponents(3);
+        colors->SetNumberOfTuples(nr_points);
+        colors->FillComponent(0, color[2]);
+        colors->FillComponent(1, color[1]);
+        colors->FillComponent(2, color[0]);
+
+        polyData->GetPointData()->SetScalars(colors);
+#if VTK_MAJOR_VERSION <= 5
+        appendFilter->AddInputConnection(polyData->GetProducerPort());
+#else
+        appendFilter->AddInputData(polyData);
+#endif
+    }
+
+    if ((~display_mode & 3) ^ WTrajectory::FRAMES)
+    {
+        // Create frames and transform along the path
+        vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
+        axes->SetOrigin(0, 0, 0);
+        axes->SetScaleFactor(scale);
+
+        vtkSmartPointer<vtkUnsignedCharArray> axes_colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+        axes_colors->SetNumberOfComponents(3);
+        axes_colors->InsertNextTuple3(255,0,0);
+        axes_colors->InsertNextTuple3(255,0,0);
+        axes_colors->InsertNextTuple3(0,255,0);
+        axes_colors->InsertNextTuple3(0,255,0);
+        axes_colors->InsertNextTuple3(0,0,255);
+        axes_colors->InsertNextTuple3(0,0,255);
+
+        vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput();
+#if VTK_MAJOR_VERSION <= 5
+        axes_data->Update();
+#else
+        axes->Update();
+#endif
+        axes_data->GetPointData()->SetScalars(axes_colors);
+
+        vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New();
+#if VTK_MAJOR_VERSION <= 5
+        axes_tubes->SetInput(axes_data);
+#else
+        axes_tubes->SetInputData(axes_data);
+#endif
+        axes_tubes->SetRadius(axes->GetScaleFactor() / 50.0);
+        axes_tubes->SetNumberOfSides(6);
+        axes_tubes->Update();
+
+        TrajectoryUtils::applyPath(axes_tubes->GetOutput(), appendFilter, path);
+    }
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetScalarModeToUsePointData();
+    mapper->SetInputConnection(appendFilter->GetOutputPort());
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
+}
+
+cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3d> &path, int display_mode, float scale, const Color &color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
@@ -1318,7 +1416,7 @@ template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// WTrajectoryFrustums widget implementation
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3f> &path, const Matx33f &K, float scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
     float f_x = K(0,0);
@@ -1362,7 +1460,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3f> &p
     setColor(color);
 }
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3f> &path, const Vec2f &fov, float scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
@@ -1411,7 +1509,7 @@ template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajecto
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// WTrajectorySpheres widget implementation
 
-cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3f> &path, float line_length, float init_sphere_radius, float sphere_radius,
+cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length, float init_sphere_radius, float sphere_radius,
                                                           const Color &line_color, const Color &sphere_color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
@@ -1469,8 +1567,8 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3f> &pat
         }
 
 
-        Affine3f relativeAffine = path[i].inv() * path[i-1];
-        Vec3f v = path[i].rotation() * relativeAffine.translation();
+        Affine3d relativeAffine = path[i].inv() * path[i-1];
+        Vec3d v = path[i].rotation() * relativeAffine.translation();
         v = normalize(v) * line_length;
 
         vtkSmartPointer<vtkLineSource> line_source = vtkSmartPointer<vtkLineSource>::New();

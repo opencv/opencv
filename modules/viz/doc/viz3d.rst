@@ -13,7 +13,7 @@ viz::makeTransformToGlobal
 --------------------------
 Takes coordinate frame data and builds transform to global coordinate frame.
 
-.. ocv:function:: Affine3f viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0))
+.. ocv:function:: Affine3d viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0))
 
     :param axis_x: X axis vector in global coordinate frame.
     :param axis_y: Y axis vector in global coordinate frame.
@@ -26,7 +26,7 @@ viz::makeCameraPose
 -------------------
 Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation).
 
-.. ocv:function:: Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
+.. ocv:function:: Affine3d makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
 
     :param position: Position of the camera in global coordinate frame.
     :param focal_point: Focal point of the camera in global coordinate frame.
@@ -94,19 +94,19 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         Viz3d& operator=(const Viz3d&);
         ~Viz3d();
 
-        void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+        void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
         void removeWidget(const String &id);
         Widget getWidget(const String &id) const;
         void removeAllWidgets();
 
-        void setWidgetPose(const String &id, const Affine3f &pose);
-        void updateWidgetPose(const String &id, const Affine3f &pose);
-        Affine3f getWidgetPose(const String &id) const;
+        void setWidgetPose(const String &id, const Affine3d &pose);
+        void updateWidgetPose(const String &id, const Affine3d &pose);
+        Affine3d getWidgetPose(const String &id) const;
 
         void setCamera(const Camera &camera);
         Camera getCamera() const;
-        Affine3f getViewerPose();
-        void setViewerPose(const Affine3f &pose);
+        Affine3d getViewerPose();
+        void setViewerPose(const Affine3d &pose);
 
         void resetCameraViewpoint (const String &id);
         void resetCamera();
@@ -152,7 +152,7 @@ viz::Viz3d::showWidget
 ----------------------
 Shows a widget in the window.
 
-.. ocv:function:: void Viz3d::showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity())
+.. ocv:function:: void Viz3d::showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity())
 
     :param id: A unique id for the widget.
     :param widget: The widget to be displayed in the window.
@@ -186,7 +186,7 @@ viz::Viz3d::setWidgetPose
 -------------------------
 Sets pose of a widget in the window.
 
-.. ocv:function:: void setWidgetPose(const String &id, const Affine3f &pose)
+.. ocv:function:: void setWidgetPose(const String &id, const Affine3d &pose)
 
     :param id: The id of the widget whose pose will be set.
     :param pose: The new pose of the widget.
@@ -195,7 +195,7 @@ viz::Viz3d::updateWidgetPose
 ----------------------------
 Updates pose of a widget in the window by pre-multiplying its current pose.
 
-.. ocv:function:: void updateWidgetPose(const String &id, const Affine3f &pose)
+.. ocv:function:: void updateWidgetPose(const String &id, const Affine3d &pose)
 
     :param id: The id of the widget whose pose will be updated.
     :param pose: The pose that the current pose of the widget will be pre-multiplied by.
@@ -204,7 +204,7 @@ viz::Viz3d::getWidgetPose
 -------------------------
 Returns the current pose of a widget in the window.
 
-.. ocv:function:: Affine3f getWidgetPose(const String &id) const
+.. ocv:function:: Affine3d getWidgetPose(const String &id) const
 
     :param id: The id of the widget whose pose will be returned.
 
@@ -226,13 +226,13 @@ viz::Viz3d::getViewerPose
 -------------------------
 Returns the current pose of the viewer.
 
-..ocv:function:: Affine3f getViewerPose()
+..ocv:function:: Affine3d getViewerPose()
 
 viz::Viz3d::setViewerPose
 -------------------------
 Sets pose of the viewer.
 
-.. ocv:function:: void setViewerPose(const Affine3f &pose)
+.. ocv:function:: void setViewerPose(const Affine3d &pose)
 
     :param pose: The new pose of the viewer.
 
