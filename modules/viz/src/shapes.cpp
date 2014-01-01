@@ -474,7 +474,7 @@ namespace cv { namespace viz { namespace
 {
     struct GridUtils
     {
-        static vtkSmartPointer<vtkPolyData> createGrid(const Vec2i &dimensions, const Vec2d &spacing)
+        static vtkSmartPointer<vtkPolyData> createGrid(const Vec2i &dimensions, const Vec2f &spacing)
         {
             // Create the grid using image data
             vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
@@ -500,7 +500,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
+cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2f &spacing, const Color &color)
 {
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
@@ -518,7 +518,7 @@ cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color
     setColor(color);
 }
 
-cv::viz::WGrid::WGrid(const Vec4f &coefs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
+cv::viz::WGrid::WGrid(const Vec4f &coefs, const Vec2i &dimensions, const Vec2f &spacing, const Color &color)
 {
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
@@ -1224,11 +1224,11 @@ cv::viz::WTrajectory::WTrajectory(const std::vector<Affine3f> &path, int display
         vtkIdType nr_points = path.size();
 
         vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-        vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-        vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
-
         points->SetDataTypeToFloat();
         points->SetNumberOfPoints(nr_points);
+
+        vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+        vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
         polyLine->GetPointIds()->SetNumberOfIds(nr_points);
 
         Vec3f *data_beg = vtkpoints_data<float>(points);
