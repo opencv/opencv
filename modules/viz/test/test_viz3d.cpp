@@ -67,7 +67,7 @@ TEST(Viz_viz3d, develop)
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
 
-    std::vector<cv::Affine3f> gt, es;
+    std::vector<cv::Affine3d> gt, es;
     cv::viz::readTrajectory(gt, "d:/Datasets/trajs/gt%05d.xml");
     cv::viz::readTrajectory(es, "d:/Datasets/trajs/es%05d.xml");
 

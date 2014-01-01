@@ -45,21 +45,21 @@
 
 #include "precomp.hpp"
 
-cv::Affine3f cv::viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin)
+cv::Affine3d cv::viz::makeTransformToGlobal(const Vec3d& axis_x, const Vec3d& axis_y, const Vec3d& axis_z, const Vec3d& origin)
 {
-    Affine3f::Mat3 R(axis_x[0], axis_y[0], axis_z[0],
+    Affine3d::Mat3 R(axis_x[0], axis_y[0], axis_z[0],
                      axis_x[1], axis_y[1], axis_z[1],
                      axis_x[2], axis_y[2], axis_z[2]);
 
-    return Affine3f(R, origin);
+    return Affine3d(R, origin);
 }
 
-cv::Affine3f cv::viz::makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
+cv::Affine3d cv::viz::makeCameraPose(const Vec3d& position, const Vec3d& focal_point, const Vec3d& y_dir)
 {
     // Compute the transformation matrix for drawing the camera frame in a scene
-    Vec3f n = normalize(focal_point - position);
-    Vec3f u = normalize(y_dir.cross(n));
-    Vec3f v = n.cross(u);
+    Vec3d n = normalize(focal_point - position);
+    Vec3d u = normalize(y_dir.cross(n));
+    Vec3d v = n.cross(u);
 
     return makeTransformToGlobal(u, v, n, position);
 }
@@ -240,27 +240,29 @@ cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray n
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write poses and trajectories
 
+bool cv::viz::readPose(const String& file, Affine3d& pose, const String& tag)
+{
+    FileStorage fs(file, FileStorage::READ);
+    if (!fs.isOpened())
+        return false;
+
+    Mat hdr(pose.matrix, false);
+    fs[tag] >> hdr;
+    if (hdr.empty() || hdr.cols != pose.matrix.cols || hdr.rows != pose.matrix.rows)
+        return false;
+
+    hdr.convertTo(pose.matrix, CV_64F);
+    return true;
+}
+
+void cv::viz::writePose(const String& file, const Affine3d& pose, const String& tag)
+{
+    FileStorage fs(file, FileStorage::WRITE);
+    fs << tag << Mat(pose.matrix, false);
+}
+
 namespace cv { namespace viz { namespace impl
 {
-    template <typename _Tp>
-    bool readPose(const String& file, Affine3<_Tp>& pose, const String& tag)
-    {
-        FileStorage fs(file, FileStorage::READ);
-        if (!fs.isOpened())
-            return false;
-
-        Mat hdr(pose.matrix, false);
-        fs[tag] >> hdr;
-        return !hdr.empty() && hdr.depth() == DataDepth<_Tp>::value;
-    }
-
-    template <typename _Tp>
-    void writePose(const String& file, const Affine3<_Tp>& pose, const String& tag)
-    {
-        FileStorage fs(file, FileStorage::WRITE);
-        fs << tag << Mat(pose.matrix, false);
-    }
-
     template <typename _Tp>
     void readTrajectory(std::vector<Affine3<_Tp> >& traj, const String& files_format, int start, int end, const String& tag)
     {
@@ -271,8 +273,8 @@ namespace cv { namespace viz { namespace impl
 
         for(int i = start; i < end; ++i)
         {
-            Affine3<_Tp> affine;
-            bool ok = readPose(cv::format(files_format.c_str(), i),affine, tag);
+            Affine3d affine;
+            bool ok = readPose(cv::format(files_format.c_str(), i), affine, tag);
             if (!ok)
                 break;
 
@@ -290,11 +292,7 @@ namespace cv { namespace viz { namespace impl
 }}}
 
 
-bool cv::viz::readPose(const String& file, Affine3f& pose, const String& tag) { return impl::readPose(file, pose, tag); }
-bool cv::viz::readPose(const String& file, Affine3d& pose, const String& tag) { return impl::readPose(file, pose, tag); }
 
-void cv::viz::writePose(const String& file, const Affine3f& pose, const String& tag) { impl::writePose(file, pose, tag); }
-void cv::viz::writePose(const String& file, const Affine3d& pose, const String& tag) { impl::writePose(file, pose, tag); }
 
 void cv::viz::readTrajectory(std::vector<Affine3f>& traj, const String& files_format, int start, int end, const String& tag)
 { impl::readTrajectory(traj, files_format, start, end, tag); }

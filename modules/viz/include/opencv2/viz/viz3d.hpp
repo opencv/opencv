@@ -70,19 +70,19 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
-            void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+            void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;
             void removeAllWidgets();
 
-            void setWidgetPose(const String &id, const Affine3f &pose);
-            void updateWidgetPose(const String &id, const Affine3f &pose);
-            Affine3f getWidgetPose(const String &id) const;
+            void setWidgetPose(const String &id, const Affine3d &pose);
+            void updateWidgetPose(const String &id, const Affine3d &pose);
+            Affine3d getWidgetPose(const String &id) const;
 
             void setCamera(const Camera &camera);
             Camera getCamera() const;
-            Affine3f getViewerPose();
-            void setViewerPose(const Affine3f &pose);
+            Affine3d getViewerPose();
+            void setViewerPose(const Affine3d &pose);
 
             void resetCameraViewpoint(const String &id);
             void resetCamera();
