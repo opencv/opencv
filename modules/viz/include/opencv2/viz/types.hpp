@@ -197,19 +197,19 @@ inline cv::viz::Color cv::viz::Color::magenta() { return Color(255,   0, 255); }
 inline cv::viz::Color cv::viz::Color::white()   { return Color(255, 255, 255); }
 inline cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
 
-inline cv::viz::Color cv::viz::Color::mlab()    { return Color(235, 118, 118); }
+inline cv::viz::Color cv::viz::Color::mlab()    { return Color(255, 128, 128); }
 
 inline cv::viz::Color cv::viz::Color::navy()       { return Color(0,     0, 128); }
 inline cv::viz::Color cv::viz::Color::olive()      { return Color(0,   128, 128); }
 inline cv::viz::Color cv::viz::Color::maroon()     { return Color(0,     0, 128); }
 inline cv::viz::Color cv::viz::Color::teal()       { return Color(128, 128,   0); }
-inline cv::viz::Color cv::viz::Color::rose()       { return Color(127,   0, 255); }
-inline cv::viz::Color cv::viz::Color::azure()      { return Color(255, 127,   0); }
+inline cv::viz::Color cv::viz::Color::rose()       { return Color(128,   0, 255); }
+inline cv::viz::Color cv::viz::Color::azure()      { return Color(255, 128,   0); }
 inline cv::viz::Color cv::viz::Color::lime()       { return Color(0,   255, 191); }
 inline cv::viz::Color cv::viz::Color::gold()       { return Color(0,   215, 255); }
 inline cv::viz::Color cv::viz::Color::brown()      { return Color(0,    75, 150); }
 inline cv::viz::Color cv::viz::Color::orange()     { return Color(0,   165, 255); }
-inline cv::viz::Color cv::viz::Color::chartreuse() { return Color(0,   255, 127); }
+inline cv::viz::Color cv::viz::Color::chartreuse() { return Color(0,   255, 128); }
 inline cv::viz::Color cv::viz::Color::orange_red() { return Color(0,    69, 255); }
 inline cv::viz::Color cv::viz::Color::purple()     { return Color(128,   0, 128); }
 inline cv::viz::Color cv::viz::Color::indigo()     { return Color(130,   0,  75); }
@@ -224,9 +224,5 @@ inline cv::viz::Color cv::viz::Color::apricot()        { return Color(177, 206, 
 inline cv::viz::Color cv::viz::Color::turquoise()      { return Color(208, 224,  64); }
 inline cv::viz::Color cv::viz::Color::celestial_blue() { return Color(208, 151,  73); }
 inline cv::viz::Color cv::viz::Color::amethyst()       { return Color(204, 102, 153); }
-
-
-
-
 
 #endif

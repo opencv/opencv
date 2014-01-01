@@ -59,16 +59,24 @@ TEST(Viz_viz3d, develop)
 //    }
 
     cv::viz::Viz3d viz("abc");
-    viz.showWidget("coo", cv::viz::WCoordinateSystem());
+    viz.setBackgroundColor(cv::viz::Color::mlab());
+    viz.showWidget("coo", cv::viz::WCoordinateSystem(0.1));
 
     cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
 
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
 
+    std::vector<cv::Affine3f> gt, es;
+    cv::viz::readTrajectory(gt, "d:/Datasets/trajs/gt%05d.xml");
+    cv::viz::readTrajectory(es, "d:/Datasets/trajs/es%05d.xml");
+
+    viz.showWidget("gt", viz::WTrajectory(gt, viz::WTrajectory::PATH, 1.f, viz::Color::blue()), gt[0].inv());
+    viz.showWidget("tr", viz::WTrajectory(es, viz::WTrajectory::PATH, 1.f, viz::Color::red()), gt[0].inv());
+
     cv::RNG rng;
     rng.fill(colors, cv::RNG::UNIFORM, 0, 255);
-    viz.showWidget("c", cv::viz::WCloud(cloud, colors));
+    //viz.showWidget("c", cv::viz::WCloud(cloud, colors));
     //viz.showWidget("c", cv::viz::WCloud(cloud, cv::viz::Color::bluberry()));
 
     //viz.showWidget("l", cv::viz::WLine(Point3f(0,0,0), Point3f(1,1,1)));
