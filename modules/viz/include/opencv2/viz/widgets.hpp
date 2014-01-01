@@ -65,14 +65,14 @@ namespace cv
             SHADING
         };
 
-        enum RenderingRepresentationProperties
+        enum RepresentationValues
         {
             REPRESENTATION_POINTS,
             REPRESENTATION_WIREFRAME,
             REPRESENTATION_SURFACE
         };
 
-        enum ShadingRepresentationProperties
+        enum ShadingValues
         {
             SHADING_FLAT,
             SHADING_GOURAUD,
