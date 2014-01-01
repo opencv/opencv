@@ -63,12 +63,6 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
 
-    if (cloud.isContinuous() && colors.isContinuous())
-    {
-        cloud = cloud.reshape(cloud.channels(), 1);
-        colors = colors.reshape(colors.channels(), 1);
-    }
-
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetColorCloud(cloud, colors);
 
@@ -267,12 +261,6 @@ void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, 
     Mat colors = _colors.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.depth() == CV_8U && cloud.size() == colors.size());
-
-    if (cloud.isContinuous() && colors.isContinuous())
-    {
-        cloud = cloud.reshape(cloud.channels(), 1);
-        colors = colors.reshape(colors.channels(), 1);
-    }
 
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata =  CloudCollectionUtils::create(cloud, nr_points);

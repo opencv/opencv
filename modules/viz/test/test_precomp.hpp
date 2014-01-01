@@ -63,5 +63,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <limits>
+
+namespace cv
+{
+    struct Path
+    {
+        static String combine(const String& item1, const String& item2);
+        static String combine(const String& item1, const String& item2, const String& item3);
+        static String change_extension(const String& file, const String& ext);
+    };
+
+    inline cv::String get_dragon_ply_file_path()
+    {
+        return Path::combine(cvtest::TS::ptr()->get_data_path(), "dragon.ply");
+    }
+}
 
 #endif

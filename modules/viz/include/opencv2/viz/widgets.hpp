@@ -234,9 +234,9 @@ namespace cv
         {
         public:
             //! Creates grid at the origin
-            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            WGrid(const Vec2i &dimensions, const Vec2f &spacing, const Color &color = Color::white());
             //! Creates grid based on the plane equation
-            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2f &spacing, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCameraPosition : public Widget3D

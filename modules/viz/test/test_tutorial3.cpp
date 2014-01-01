@@ -15,21 +15,21 @@ void tutorial3(bool camera_pov)
     myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
     /// Let's assume camera has the following properties
-    Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
+    Point3f cam_pos(3.f, 3.f, 3.f), cam_focal_point(3.f, 3.f, 2.f), cam_y_dir(-1.f, 0.f, 0.f);
 
     /// We can get the pose of the cam using makeCameraPose
     Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
 
     /// We can get the transformation matrix from camera coordinate system to global using
     /// - makeTransformToGlobal. We need the axes of the camera
-    Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.0f,-1.0f,0.0f), Vec3f(-1.0f,0.0f,0.0f), Vec3f(0.0f,0.0f,-1.0f), cam_pos);
+    Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.f, -1.f, 0.f), Vec3f(-1.f, 0.f, 0.f), Vec3f(0.f, 0.f, -1.f), cam_pos);
 
     /// Create a cloud widget.
-    Mat bunny_cloud = viz::readCloud("d:/cloud_dragon.ply");
-    viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
+    Mat dragon_cloud = viz::readCloud(get_dragon_ply_file_path());
+    viz::WCloud cloud_widget(dragon_cloud, viz::Color::green());
 
     /// Pose of the widget in camera frame
-    Affine3f cloud_pose = Affine3f().translate(Vec3f(0.0f,0.0f,3.0f));
+    Affine3f cloud_pose = Affine3f().translate(Vec3f(0.f, 0.f, 3.f));
     /// Pose of the widget in global frame
     Affine3f cloud_pose_global = transform * cloud_pose;
 
@@ -37,7 +37,7 @@ void tutorial3(bool camera_pov)
     if (!camera_pov)
     {
         viz::WCameraPosition cpw(0.5); // Coordinate axes
-        viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+        viz::WCameraPosition cpw_frustum(Vec2f(0.889484f, 0.523599f)); // Camera frustum
         myWindow.showWidget("CPW", cpw, cam_pose);
         myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
     }
@@ -53,12 +53,12 @@ void tutorial3(bool camera_pov)
     myWindow.spin();
 }
 
-TEST(Viz_viz3d, DISABLED_tutorial3_global_view)
+TEST(Viz, DISABLED_tutorial3_global_view)
 {
     tutorial3(false);
 }
 
-TEST(Viz_viz3d, DISABLED_tutorial3_camera_view)
+TEST(Viz, DISABLED_tutorial3_camera_view)
 {
     tutorial3(true);
 }
