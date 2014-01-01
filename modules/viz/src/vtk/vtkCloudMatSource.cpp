@@ -71,12 +71,14 @@ namespace cv { namespace viz
 cv::viz::vtkCloudMatSource::vtkCloudMatSource() { SetNumberOfInputPorts(0); }
 cv::viz::vtkCloudMatSource::~vtkCloudMatSource() {}
 
-int cv::viz::vtkCloudMatSource::SetCloud(const Mat& cloud)
+int cv::viz::vtkCloudMatSource::SetCloud(InputArray _cloud)
 {
-    CV_Assert(cloud.depth() == CV_32F || cloud.depth() == CV_64F);
-    CV_Assert(cloud.channels() == 3 || cloud.channels() == 4);
+    CV_Assert(_cloud.depth() == CV_32F || _cloud.depth() == CV_64F);
+    CV_Assert(_cloud.channels() == 3 || _cloud.channels() == 4);
 
-    int total = cloud.depth() == CV_32F ? filterNanCopy<float>(cloud) : filterNanCopy<double>(cloud);
+    Mat cloud = _cloud.getMat();
+
+    int total = _cloud.depth() == CV_32F ? filterNanCopy<float>(cloud) : filterNanCopy<double>(cloud);
 
     vertices = vtkSmartPointer<vtkCellArray>::New();
     vertices->Allocate(vertices->EstimateSize(1, total));
@@ -87,15 +89,18 @@ int cv::viz::vtkCloudMatSource::SetCloud(const Mat& cloud)
     return total;
 }
 
-int cv::viz::vtkCloudMatSource::SetColorCloud(const Mat &cloud, const Mat &colors)
+int cv::viz::vtkCloudMatSource::SetColorCloud(InputArray _cloud, InputArray _colors)
 {
-    int total = SetCloud(cloud);
+    int total = SetCloud(_cloud);
 
-    if (colors.empty())
+    if (_colors.empty())
         return total;
 
-    CV_Assert(colors.depth() == CV_8U && colors.channels() <= 4 && colors.channels() != 2);
-    CV_Assert(colors.size() == cloud.size());
+    CV_Assert(_colors.depth() == CV_8U && _colors.channels() <= 4 && _colors.channels() != 2);
+    CV_Assert(_colors.size() == _cloud.size());
+
+    Mat cloud = _cloud.getMat();
+    Mat colors = _colors.getMat();
 
     if (cloud.depth() == CV_32F)
         filterNanColorsCopy<float>(colors, cloud, total);
@@ -105,25 +110,28 @@ int cv::viz::vtkCloudMatSource::SetColorCloud(const Mat &cloud, const Mat &color
     return total;
 }
 
-int cv::viz::vtkCloudMatSource::SetColorCloudNormals(const Mat &cloud, const Mat &colors, const Mat &normals)
+int cv::viz::vtkCloudMatSource::SetColorCloudNormals(InputArray _cloud, InputArray _colors, InputArray _normals)
 {
-    int total = SetColorCloud(cloud, colors);
+    int total = SetColorCloud(_cloud, _colors);
 
-    if (normals.empty())
+    if (_normals.empty())
         return total;
 
-    CV_Assert(normals.depth() == CV_32F || normals.depth() == CV_64F);
-    CV_Assert(normals.channels() == 3 || normals.channels() == 4);
-    CV_Assert(normals.size() == cloud.size());
+    CV_Assert(_normals.depth() == CV_32F || _normals.depth() == CV_64F);
+    CV_Assert(_normals.channels() == 3 || _normals.channels() == 4);
+    CV_Assert(_normals.size() == _cloud.size());
+
+    Mat cloud = _cloud.getMat();
+    Mat normals = _normals.getMat();
 
     if (normals.depth() == CV_32F && cloud.depth() == CV_32F)
-        filterNanNormalsCopy<float, float>(colors, cloud, total);
+        filterNanNormalsCopy<float, float>(normals, cloud, total);
     else if (normals.depth() == CV_32F && cloud.depth() == CV_64F)
-        filterNanNormalsCopy<float, double>(colors, cloud, total);
+        filterNanNormalsCopy<float, double>(normals, cloud, total);
     else if (normals.depth() == CV_64F && cloud.depth() == CV_32F)
-        filterNanNormalsCopy<double, float>(colors, cloud, total);
+        filterNanNormalsCopy<double, float>(normals, cloud, total);
     else if (normals.depth() == CV_64F && cloud.depth() == CV_64F)
-        filterNanNormalsCopy<double, double>(colors, cloud, total);
+        filterNanNormalsCopy<double, double>(normals, cloud, total);
     else
         CV_Assert(!"Unsupported normals type");
 

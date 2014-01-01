@@ -56,12 +56,9 @@ namespace cv
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Point Cloud Widget implementation
 
-cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
+cv::viz::WCloud::WCloud(InputArray cloud, InputArray colors)
 {
-    CV_Assert(!_cloud.empty() && !_colors.empty());
-
-    Mat cloud = _cloud.getMat();
-    Mat colors = _colors.getMat();
+    CV_Assert(!cloud.empty() && !colors.empty());
 
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetColorCloud(cloud, colors);
@@ -81,10 +78,8 @@ cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCloud::WCloud(InputArray _cloud, const Color &color)
+cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
 {
-    Mat cloud = _cloud.getMat();
-
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetCloud(cloud);
 

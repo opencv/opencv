@@ -164,14 +164,10 @@ void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write clouds. Supported formats: ply, stl, xyz, obj
 
-void cv::viz::writeCloud(const String& file, InputArray _cloud, InputArray _colors, InputArray _normals, bool binary)
+void cv::viz::writeCloud(const String& file, InputArray cloud, InputArray colors, InputArray normals, bool binary)
 {
     CV_Assert(file.size() > 4 && "Extention is required");
     String extention = file.substr(file.size()-4);
-
-    Mat cloud = _cloud.getMat();
-    Mat colors = _colors.getMat();
-    Mat normals = _normals.getMat();
 
     vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
     source->SetColorCloudNormals(cloud, colors, normals);
