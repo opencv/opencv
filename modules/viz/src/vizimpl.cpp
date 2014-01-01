@@ -387,20 +387,7 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
     Vec3d z_axis = normalized(focal - pos);
     Vec3d x_axis = normalized(y_axis.cross(z_axis));
 
-    cv::Matx33d R;
-    R(0, 0) = x_axis[0];
-    R(0, 1) = y_axis[0];
-    R(0, 2) = z_axis[0];
-
-    R(1, 0) = x_axis[1];
-    R(1, 1) = y_axis[1];
-    R(1, 2) = z_axis[1];
-
-    R(2, 0) = x_axis[2];
-    R(2, 1) = y_axis[2];
-    R(2, 2) = z_axis[2];
-
-    return cv::Affine3d(R, pos);
+    return makeTransformToGlobal(x_axis, y_axis, z_axis, pos);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
