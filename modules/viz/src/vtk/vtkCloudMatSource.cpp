@@ -163,14 +163,14 @@ int cv::viz::vtkCloudMatSource::filterNanCopy(const Mat& cloud)
     points->Allocate(cloud.total());
     points->SetNumberOfPoints(cloud.total());
 
-    int cn = cloud.channels();
+    int s_chs = cloud.channels();
     int total = 0;
     for (int y = 0; y < cloud.rows; ++y)
     {
         const _Tp* srow = cloud.ptr<_Tp>(y);
-        const _Tp* send = srow + cloud.cols * cn;
+        const _Tp* send = srow + cloud.cols * s_chs;
 
-        for (; srow != send; srow += cn)
+        for (; srow != send; srow += s_chs)
             if (!isNan(srow))
                 points->SetPoint(total++, srow);
     }

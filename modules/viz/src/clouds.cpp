@@ -126,49 +126,47 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     transform_filter->SetTransform(transform);
     transform_filter->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = transform_filter->GetOutput();
     vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Incompatible widget type." && actor);
 
-    vtkSmartPointer<vtkPolyData> poly_data = transform_filter->GetOutput();
-
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
-
     if (!mapper)
     {
         // This is the first cloud
         mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 #if VTK_MAJOR_VERSION <= 5
-        mapper->SetInput(poly_data);
+        mapper->SetInput(polydata);
 #else
-        mapper->SetInputData(poly_data);
+        mapper->SetInputData(polydata);
 #endif
         mapper->SetScalarRange(0, 255);
         mapper->SetScalarModeToUsePointData();
         mapper->ScalarVisibilityOn();
         mapper->ImmediateModeRenderingOff();
 
-        actor->SetNumberOfCloudPoints(std::max(1, poly_data->GetNumberOfPoints()/10));
+        actor->SetNumberOfCloudPoints(std::max(1, polydata->GetNumberOfPoints()/10));
         actor->GetProperty()->SetInterpolationToFlat();
         actor->GetProperty()->BackfaceCullingOn();
         actor->SetMapper(mapper);
         return;
     }
 
-    vtkPolyData *data = vtkPolyData::SafeDownCast(mapper->GetInput());
-    CV_Assert("Cloud Widget without data" && data);
+    vtkPolyData *currdata = vtkPolyData::SafeDownCast(mapper->GetInput());
+    CV_Assert("Cloud Widget without data" && currdata);
 
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 #if VTK_MAJOR_VERSION <= 5
-    appendFilter->AddInput(data);
-    appendFilter->AddInput(poly_data);
+    appendFilter->AddInput(currdata);
+    appendFilter->AddInput(polydata);
     mapper->SetInput(appendFilter->GetOutput());
 #else
-    appendFilter->AddInputData(data);
-    appendFilter->AddInputData(poly_data);
+    appendFilter->AddInputData(currdata);
+    appendFilter->AddInputData(polydata);
     mapper->SetInputData(appendFilter->GetOutput());
 #endif
 
-    actor->SetNumberOfCloudPoints(std::max(1, actor->GetNumberOfCloudPoints() + poly_data->GetNumberOfPoints()/10));
+    actor->SetNumberOfCloudPoints(std::max(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
 }
 
 void cv::viz::WCloudCollection::addCloud(InputArray cloud, const Color &color, const Affine3d &pose)
@@ -328,150 +326,78 @@ template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Mesh Widget implementation
 
-namespace cv { namespace viz { namespace
-{
-    struct MeshUtils
-    {
-        template<typename _Tp>
-        static Vec<_Tp, 3> * copy(const Mat &source, Vec<_Tp, 3> *output, int *look_up, const Mat &nan_mask)
-        {
-            CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
-            CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-            CV_DbgAssert(DataDepth<_Tp>::value == nan_mask.depth());
-
-            int s_chs = source.channels();
-            int m_chs = nan_mask.channels();
-
-            int index = 0;
-            const _Tp* srow = source.ptr<_Tp>(0);
-            const _Tp* mrow = nan_mask.ptr<_Tp>(0);
-
-            for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
-            {
-                if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                {
-                    look_up[x] = index;
-                    *output++ = Vec<_Tp, 3>(srow);
-                    ++index;
-                }
-            }
-            return output;
-        }
-    };
-}}}
-
 cv::viz::WMesh::WMesh(const Mesh3d &mesh)
 {
-    CV_Assert(mesh.cloud.rows == 1 && (mesh.cloud.type() == CV_32FC3 || mesh.cloud.type() == CV_64FC3 || mesh.cloud.type() == CV_32FC4 || mesh.cloud.type() == CV_64FC4));
-    CV_Assert(mesh.colors.empty() || (mesh.colors.depth() == CV_8U && mesh.cloud.size() == mesh.colors.size()));
-    CV_Assert(!mesh.polygons.empty() && mesh.polygons.type() == CV_32SC1);
+    CV_Assert(mesh.cloud.rows == 1 && mesh.polygons.type() == CV_32SC1);
 
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    vtkIdType nr_points = mesh.cloud.total();
-    Mat look_up_mat(1, nr_points, CV_32SC1);
-    int * look_up = look_up_mat.ptr<int>();
-    points->SetNumberOfPoints(nr_points);
+    vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
+    source->SetColorCloud(mesh.cloud, mesh.colors);
+    source->Update();
 
-    // Copy data from cloud to vtkPoints
-    if (mesh.cloud.depth() == CV_32F)
+    Mat lookup_buffer(1, mesh.cloud.total(), CV_32SC1);
+    int *lookup = lookup_buffer.ptr<int>();
+    for(int y = 0, index = 0; y < mesh.cloud.rows; ++y)
     {
-        points->SetDataTypeToFloat();
-        Vec3f *data_beg = vtkpoints_data<float>(points);
-        Vec3f *data_end = MeshUtils::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
-        nr_points = data_end - data_beg;
-    }
-    else
-    {
-        points->SetDataTypeToDouble();
-        Vec3d *data_beg = vtkpoints_data<double>(points);
-        Vec3d *data_end = MeshUtils::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
-        nr_points = data_end - data_beg;
-    }
+        int s_chs = mesh.cloud.channels();
 
-    vtkSmartPointer<vtkUnsignedCharArray> scalars;
-
-    if (!mesh.colors.empty())
-    {
-        Vec3b *colors_data = new Vec3b[nr_points];
-        NanFilter::copyColor(mesh.colors, colors_data, mesh.cloud);
-
-        scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
-        scalars->SetNumberOfComponents(3);
-        scalars->SetNumberOfTuples(nr_points);
-        scalars->SetArray(colors_data->val, 3 * nr_points, 0);
-    }
-
-    points->SetNumberOfPoints(nr_points);
-
-    vtkSmartPointer<vtkPointSet> data;
-
-    if (mesh.polygons.size().area() > 1)
-    {
-        vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
-        const int * polygons = mesh.polygons.ptr<int>();
-
-        int idx = 0;
-        int poly_size = mesh.polygons.total();
-        for (int i = 0; i < poly_size; ++idx)
+        if (mesh.cloud.depth() == CV_32F)
         {
-            int n_points = polygons[i++];
+            const float* srow = mesh.cloud.ptr<float>(y);
+            const float* send = srow + mesh.cloud.cols * s_chs;
 
-            cell_array->InsertNextCell(n_points);
-            for (int j = 0; j < n_points; ++j, ++idx)
-                cell_array->InsertCellPoint(look_up[polygons[i++]]);
+            for (; srow != send; srow += s_chs, ++lookup)
+                if (!isNan(srow[0]) && !isNan(srow[1]) && !isNan(srow[2]))
+                    *lookup = index++;
         }
-        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-        cell_array->GetData()->SetNumberOfValues(idx);
-        cell_array->Squeeze();
-        polydata->SetStrips(cell_array);
-        polydata->SetPoints(points);
 
-        if (scalars)
-            polydata->GetPointData()->SetScalars(scalars);
+        if (mesh.cloud.depth() == CV_64F)
+        {
+            const double* srow = mesh.cloud.ptr<double>(y);
+            const double* send = srow + mesh.cloud.cols * s_chs;
 
-        data = polydata;
+            for (; srow != send; srow += s_chs, ++lookup)
+                if (!isNan(srow[0]) && !isNan(srow[1]) && !isNan(srow[2]))
+                    *lookup = index++;
+        }
     }
-    else
+    lookup = lookup_buffer.ptr<int>();
+
+    vtkSmartPointer<vtkPolyData> polydata = source->GetOutput();
+    polydata->SetVerts(0);
+
+    const int * polygons = mesh.polygons.ptr<int>();
+    vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
+
+    int idx = 0;
+    int poly_size = mesh.polygons.total();
+    for (int i = 0; i < poly_size; ++idx)
     {
-        // Only one polygon
-        vtkSmartPointer<vtkPolygon> polygon = vtkSmartPointer<vtkPolygon>::New();
-        const int * polygons = mesh.polygons.ptr<int>();
-        int n_points = polygons[0];
+        int n_points = polygons[i++];
 
-        polygon->GetPointIds()->SetNumberOfIds(n_points);
-
-        for (int j = 1; j < n_points+1; ++j)
-            polygon->GetPointIds()->SetId(j, look_up[polygons[j]]);
-
-        vtkSmartPointer<vtkUnstructuredGrid> poly_grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-        poly_grid->Allocate(1, 1);
-        poly_grid->InsertNextCell(polygon->GetCellType(), polygon->GetPointIds());
-        poly_grid->SetPoints(points);
-
-        if (scalars)
-            poly_grid->GetPointData()->SetScalars(scalars);
-
-        data = poly_grid;
+        cell_array->InsertNextCell(n_points);
+        for (int j = 0; j < n_points; ++j, ++idx)
+            cell_array->InsertCellPoint(lookup[polygons[i++]]);
     }
+    cell_array->GetData()->SetNumberOfValues(idx);
+    cell_array->Squeeze();
+    polydata->SetStrips(cell_array);
 
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    mapper->SetScalarModeToUsePointData();
+    mapper->ImmediateModeRenderingOff();
+#if VTK_MAJOR_VERSION <= 5
+    mapper->SetInput(polydata);
+#else
+    mapper->SetInputData(polydata);
+#endif
 
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    //actor->SetNumberOfCloudPoints(std::max(1, polydata->GetNumberOfPoints() / 10));
     actor->GetProperty()->SetRepresentationToSurface();
     actor->GetProperty()->BackfaceCullingOff(); // Backface culling is off for higher efficiency
     actor->GetProperty()->SetInterpolationToFlat();
     actor->GetProperty()->EdgeVisibilityOff();
     actor->GetProperty()->ShadingOff();
-
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(data);
-#else
-    mapper->SetInputData(data);
-#endif
-    mapper->ImmediateModeRenderingOff();
-
-    vtkIdType numberOfCloudPoints = nr_points * 0.1;
-    actor->SetNumberOfCloudPoints(int(numberOfCloudPoints > 1 ? numberOfCloudPoints : 1));
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);

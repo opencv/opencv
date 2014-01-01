@@ -100,3 +100,37 @@ TEST(Viz, DISABLED_show_cloud_collection)
     viz.showWidget("ccol", ccol);
     viz.spin();
 }
+
+TEST(Viz, DISABLED_show_mesh)
+{
+    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+
+    Viz3d viz("show_mesh");
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("mesh", WMesh(mesh));
+    viz.spin();
+}
+
+TEST(Viz, DISABLED_show_mesh_random_colors)
+{
+    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
+
+    Viz3d viz("show_mesh_random_color");
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("mesh", WMesh(mesh));
+    viz.setRenderingProperty("mesh", SHADING, SHADING_PHONG);
+    viz.spin();
+}
+
+TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
+{
+    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+
+    Viz3d viz("spin_twice");
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("mesh", WMesh(mesh));
+    viz.spin();
+    viz.spin();
+}
+
