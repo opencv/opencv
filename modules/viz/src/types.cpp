@@ -128,7 +128,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
+cv::viz::Mesh3d cv::viz::Mesh3d::load(const String& file)
 {
     return MeshUtils::loadMesh(file);
 }
