@@ -48,7 +48,7 @@ void tutorial2()
 }
 
 
-TEST(Viz_viz3d, DISABLED_tutorial2_pose_of_widget)
+TEST(Viz, DISABLED_tutorial2_pose_of_widget)
 {
     tutorial2();
 }
