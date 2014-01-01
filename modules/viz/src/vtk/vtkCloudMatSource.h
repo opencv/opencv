@@ -61,9 +61,9 @@ namespace cv
             static vtkCloudMatSource *New();
             vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm);
 
-            virtual int SetCloud(const Mat& cloud);
-            virtual int SetColorCloud(const Mat &cloud, const Mat &colors = cv::Mat());
-            virtual int SetColorCloudNormals(const Mat &cloud, const Mat &colors = cv::Mat(), const Mat &normals = cv::Mat());
+            virtual int SetCloud(InputArray cloud);
+            virtual int SetColorCloud(InputArray cloud, InputArray colors = noArray());
+            virtual int SetColorCloudNormals(InputArray cloud, InputArray colors = noArray(), InputArray normals = noArray());
 
         protected:
             vtkCloudMatSource();
