@@ -64,24 +64,6 @@ cv::Affine3d cv::viz::makeCameraPose(const Vec3d& position, const Vec3d& focal_p
     return makeTransformToGlobal(u, v, n, position);
 }
 
-vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix(const cv::Matx44f &m)
-{
-    vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            vtk_matrix->SetElement(i, k, m(i, k));
-    return vtk_matrix;
-}
-
-cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
-{
-    cv::Matx44f m;
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            m(i, k) = vtk_matrix->GetElement(i, k);
-    return m;
-}
-
 namespace cv { namespace viz
 {
     template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);

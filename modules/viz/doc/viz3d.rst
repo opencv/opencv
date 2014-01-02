@@ -571,24 +571,24 @@ that can extract the intrinsic parameters from ``field of view``, ``intrinsic ma
     class CV_EXPORTS Camera
     {
     public:
-        Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-        Camera(const Vec2f &fov, const Size &window_size);
-        Camera(const cv::Matx33f &K, const Size &window_size);
-        Camera(const cv::Matx44f &proj, const Size &window_size);
+        Camera(double f_x, double f_y, double c_x, double c_y, const Size &window_size);
+        Camera(const Vec2d &fov, const Size &window_size);
+        Camera(const Matx33d &K, const Size &window_size);
+        Camera(const Matx44d &proj, const Size &window_size);
 
-        inline const Vec2d & getClip() const { return clip_; }
-        inline void setClip(const Vec2d &clip) { clip_ = clip; }
+        inline const Vec2d & getClip() const;
+        inline void setClip(const Vec2d &clip);
 
-        inline const Size & getWindowSize() const { return window_size_; }
+        inline const Size & getWindowSize() const;
         void setWindowSize(const Size &window_size);
 
-        inline const Vec2f & getFov() const { return fov_; }
-        inline void setFov(const Vec2f & fov) { fov_ = fov; }
+        inline const Vec2d & getFov() const;
+        inline void setFov(const Vec2d & fov);
 
-        inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
-        inline const Vec2f & getFocalLength() const { return focal_; }
+        inline const Vec2d & getPrincipalPoint() const;
+        inline const Vec2d & getFocalLength() const;
 
-        void computeProjectionMatrix(Matx44f &proj) const;
+        void computeProjectionMatrix(Matx44d &proj) const;
 
         static Camera KinectCamera(const Size &window_size);
 
@@ -600,7 +600,7 @@ viz::Camera::Camera
 -------------------
 Constructs a Camera.
 
-.. ocv:function:: Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+.. ocv:function:: Camera(double f_x, double f_y, double c_x, double c_y, const Size &window_size)
 
     :param f_x: Horizontal focal length.
     :param f_y: Vertical focal length.
@@ -608,19 +608,19 @@ Constructs a Camera.
     :param c_y: y coordinate of the principal point.
     :param window_size: Size of the window. This together with focal length and principal point determines the field of view.
 
-.. ocv:function:: Camera(const Vec2f &fov, const Size &window_size)
+.. ocv:function:: Camera(const Vec2d &fov, const Size &window_size)
 
     :param fov: Field of view (horizontal, vertical)
     :param window_size: Size of the window.
 
     Principal point is at the center of the window by default.
 
-.. ocv:function:: Camera(const cv::Matx33f &K, const Size &window_size)
+.. ocv:function:: Camera(const Matx33d &K, const Size &window_size)
 
     :param K: Intrinsic matrix of the camera.
     :param window_size: Size of the window. This together with intrinsic matrix determines the field of view.
 
-.. ocv:function:: Camera(const cv::Matx44f &proj, const Size &window_size)
+.. ocv:function:: Camera(const Matx44d &proj, const Size &window_size)
 
     :param proj: Projection matrix of the camera.
     :param window_size: Size of the window. This together with projection matrix determines the field of view.
@@ -629,7 +629,7 @@ viz::Camera::computeProjectionMatrix
 ------------------------------------
 Computes projection matrix using intrinsic parameters of the camera.
 
-.. ocv:function:: void computeProjectionMatrix(Matx44f &proj) const
+.. ocv:function:: void computeProjectionMatrix(Matx44d &proj) const
 
     :param proj: Output projection matrix.
 

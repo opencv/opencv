@@ -118,10 +118,10 @@ namespace cv
         class CV_EXPORTS Camera
         {
         public:
-            Camera(float fx, float fy, float cx, float cy, const Size &window_size);
-            explicit Camera(const Vec2f &fov, const Size &window_size);
-            explicit Camera(const Matx33f &K, const Size &window_size);
-            explicit Camera(const Matx44f &proj, const Size &window_size);
+            Camera(double fx, double fy, double cx, double cy, const Size &window_size);
+            explicit Camera(const Vec2d &fov, const Size &window_size);
+            explicit Camera(const Matx33d &K, const Size &window_size);
+            explicit Camera(const Matx44d &proj, const Size &window_size);
 
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }
@@ -129,24 +129,24 @@ namespace cv
             inline const Size & getWindowSize() const { return window_size_; }
             void setWindowSize(const Size &window_size);
 
-            inline const Vec2f & getFov() const { return fov_; }
-            inline void setFov(const Vec2f & fov) { fov_ = fov; }
+            inline const Vec2d& getFov() const { return fov_; }
+            inline void setFov(const Vec2d& fov) { fov_ = fov; }
 
-            inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
-            inline const Vec2f & getFocalLength() const { return focal_; }
+            inline const Vec2d& getPrincipalPoint() const { return principal_point_; }
+            inline const Vec2d& getFocalLength() const { return focal_; }
 
-            void computeProjectionMatrix(Matx44f &proj) const;
+            void computeProjectionMatrix(Matx44d &proj) const;
 
             static Camera KinectCamera(const Size &window_size);
 
         private:
-            void init(float fx, float fy, float cx, float cy, const Size &window_size);
+            void init(double fx, double fy, double cx, double cy, const Size &window_size);
 
             Vec2d clip_;
-            Vec2f fov_;
+            Vec2d fov_;
             Size window_size_;
-            Vec2f principal_point_;
-            Vec2f focal_;
+            Vec2d principal_point_;
+            Vec2d focal_;
         };
 
         class CV_EXPORTS KeyboardEvent

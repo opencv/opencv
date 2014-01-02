@@ -244,7 +244,7 @@ void cv::viz::Widget3D::setPose(const Affine3d &pose)
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
@@ -261,8 +261,8 @@ void cv::viz::Widget3D::updatePose(const Affine3d &pose)
         return;
     }
 
-    Affine3d updated_pose = pose * Affine3d(convertToMatx(matrix));
-    matrix = convertToVtkMatrix(updated_pose.matrix);
+    Affine3d updated_pose = pose * Affine3d(*matrix->Element);
+    matrix = vtkmatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
     actor->Modified();
@@ -272,7 +272,7 @@ cv::Affine3d cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Widget is not 3D." && actor);
-    return Affine3d(convertToMatx(actor->GetUserMatrix()));
+    return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
 void cv::viz::Widget3D::setColor(const Color &color)

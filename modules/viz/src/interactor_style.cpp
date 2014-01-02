@@ -469,7 +469,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
         // if a valid transformation was found, use it otherwise fall back to default view point.
         if (found_transformation)
         {
-            const vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
+            vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
 
             cam->SetFocalPoint(m->GetElement(0, 3) - m->GetElement(0, 2),
                                m->GetElement(1, 3) - m->GetElement(1, 2),
