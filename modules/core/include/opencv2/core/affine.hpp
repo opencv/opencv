@@ -179,6 +179,12 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
         data.copyTo(matrix);
         return;
     }
+    else if (data.cols == 4 && data.rows == 3)
+    {
+        rotation(data(Rect(0, 0, 3, 3)));
+        translation(data(Rect(3, 0, 1, 3)));
+        return;
+    }
 
     rotation(data);
     translation(t);
