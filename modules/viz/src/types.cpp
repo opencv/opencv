@@ -136,12 +136,12 @@ cv::viz::Mesh3d cv::viz::Mesh3d::load(const String& file)
 ////////////////////////////////////////////////////////////////////
 /// Camera implementation
 
-cv::viz::Camera::Camera(float fx, float fy, float cx, float cy, const Size &window_size)
+cv::viz::Camera::Camera(double fx, double fy, double cx, double cy, const Size &window_size)
 {
     init(fx, fy, cx, cy, window_size);
 }
 
-cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
+cv::viz::Camera::Camera(const Vec2d &fov, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
@@ -152,16 +152,16 @@ cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
     focal_ = Vec2f(principal_point_[0] / tan(fov_[0]*0.5f), principal_point_[1] / tan(fov_[1]*0.5f));
 }
 
-cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
+cv::viz::Camera::Camera(const cv::Matx33d & K, const Size &window_size)
 {
-    float f_x = K(0,0);
-    float f_y = K(1,1);
-    float c_x = K(0,2);
-    float c_y = K(1,2);
+    double f_x = K(0,0);
+    double f_y = K(1,1);
+    double c_x = K(0,2);
+    double c_y = K(1,2);
     init(f_x, f_y, c_x, c_y, window_size);
 }
 
-cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
+cv::viz::Camera::Camera(const Matx44d &proj, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
 
@@ -174,28 +174,26 @@ cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
 
     double epsilon = 2.2204460492503131e-16;
 
-    if (fabs(left-right) < epsilon) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
-    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right);
-    focal_[0] = -near * principal_point_[0] / left;
+    principal_point_[0] = fabs(left-right) < epsilon ? window_size.width  * 0.5 : (left * window_size.width) / (left - right);
+    principal_point_[1] = fabs(top-bottom) < epsilon ? window_size.height * 0.5 : (top * window_size.height) / (top - bottom);
 
-    if (fabs(top-bottom) < epsilon) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f;
-    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom);
-    focal_[1] = near * principal_point_[1] / top;
+    focal_[0] = -near * principal_point_[0] / left;
+    focal_[1] =  near * principal_point_[1] / top;
 
     setClip(Vec2d(near, far));
-    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
-    fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
+    fov_[0] = atan2(principal_point_[0], focal_[0]) + atan2(window_size.width-principal_point_[0],  focal_[0]);
+    fov_[1] = atan2(principal_point_[1], focal_[1]) + atan2(window_size.height-principal_point_[1], focal_[1]);
 
     window_size_ = window_size;
 }
 
-void cv::viz::Camera::init(float fx, float fy, float cx, float cy, const Size &window_size)
+void cv::viz::Camera::init(double fx, double fy, double cx, double cy, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
 
-    fov_[0] = (atan2(cx,fx) + atan2(window_size.width-cx,fx));
-    fov_[1] = (atan2(cy,fy) + atan2(window_size.height-cy,fy));
+    fov_[0] = atan2(cx, fx) + atan2(window_size.width  - cx, fx);
+    fov_[1] = atan2(cy, fy) + atan2(window_size.height - cy, fy);
 
     principal_point_[0] = cx;
     principal_point_[1] = cy;
@@ -223,7 +221,7 @@ void cv::viz::Camera::setWindowSize(const Size &window_size)
     window_size_ = window_size;
 }
 
-void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
+void cv::viz::Camera::computeProjectionMatrix(Matx44d &proj) const
 {
     double top = clip_[0] * principal_point_[1] / focal_[1];
     double left = -clip_[0] * principal_point_[0] / focal_[0];
@@ -247,6 +245,6 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
-    Matx33f K(525.f, 0.f, 320.f, 0.f, 525.f, 240.f, 0.f, 0.f, 1.f) ;
+    Matx33d K(525.0, 0.0, 320.0, 0.0, 525.0, 240.0, 0.0, 0.0, 1.0) ;
     return Camera(K, window_size);
 }

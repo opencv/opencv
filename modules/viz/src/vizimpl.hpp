@@ -180,19 +180,22 @@ private:
 };
 
 
-
 namespace cv
 {
     namespace viz
     {
-        vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix(const cv::Matx44f &m);
-        cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
+        inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)
+        {
+            vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+            vtk_matrix->DeepCopy(matrix.val);
+            return vtk_matrix;
+        }
 
         struct color_tag {};
         struct gray_tag {};
 
-        static Vec3b fetchRgb(const unsigned char* color, color_tag) { return Vec3b(color[2], color[1], color[0]); }
-        static Vec3b fetchRgb(const unsigned char* color,  gray_tag) { return Vec3b(color[0], color[0], color[0]); }
+        inline Vec3b fetchRgb(const unsigned char* color, color_tag) { return Vec3b(color[2], color[1], color[0]); }
+        inline Vec3b fetchRgb(const unsigned char* color,  gray_tag) { return Vec3b(color[0], color[0], color[0]); }
 
         inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
         template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
@@ -203,82 +206,6 @@ namespace cv
             std::swap(scaled_color[0], scaled_color[2]);
             return scaled_color;
         }
-
-        struct NanFilter
-        {
-            template<typename _Msk>
-            struct Impl
-            {
-                template<typename _Tp>
-                static Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
-                {
-                    CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
-                    CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-                    CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
-
-                    int s_chs = source.channels();
-                    int m_chs = nan_mask.channels();
-
-                    for (int y = 0; y < source.rows; ++y)
-                    {
-                        const _Tp* srow = source.ptr<_Tp>(y);
-                        const _Msk* mrow = nan_mask.ptr<_Msk>(y);
-
-                        for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
-                            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                                *output++ = Vec<_Tp, 3>(srow);
-                    }
-                    return output;
-                }
-
-                template<typename _Tag>
-                static Vec3b* copyColor(const Mat& source, Vec3b* output, const Mat& nan_mask)
-                {
-                    CV_Assert(source.size() == nan_mask.size());
-                    CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-                    CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
-
-                    int s_chs = source.channels();
-                    int m_chs = nan_mask.channels();
-
-                    for (int y = 0; y < source.rows; ++y)
-                    {
-                        const unsigned char* srow = source.ptr<unsigned char>(y);
-                        const _Msk* mrow = nan_mask.ptr<_Msk>(y);
-
-                        for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
-                            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                                *output++ = fetchRgb(srow, _Tag());
-                    }
-                    return output;
-                }
-            };
-
-            template<typename _Tp>
-            static inline Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
-            {
-                CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
-
-                typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
-                const static copy_func table[2] = { &NanFilter::Impl<float>::copy<_Tp>, &NanFilter::Impl<double>::copy<_Tp> };
-
-                return table[nan_mask.depth() - 5](source, output, nan_mask);
-            }
-
-            static inline Vec3b* copyColor(const Mat& source, Vec3b* output, const Mat& nan_mask)
-            {
-                CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
-
-                typedef Vec3b* (*copy_func)(const Mat&, Vec3b*, const Mat&);
-                const static copy_func table[2][2] =
-                {
-                    { &NanFilter::Impl<float >::copyColor<gray_tag>, &NanFilter::Impl<float> ::copyColor<color_tag> },
-                    { &NanFilter::Impl<double>::copyColor<gray_tag>, &NanFilter::Impl<double>::copyColor<color_tag> }
-                };
-
-                return table[nan_mask.depth() - 5][source.channels() == 1 ? 0 : 1](source, output, nan_mask);
-            }
-        };
 
         struct ConvertToVtkImage
         {

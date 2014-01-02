@@ -1195,7 +1195,7 @@ namespace cv { namespace viz { namespace
                 vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
                 transform->PreMultiply();
                 vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-                mat_trans = convertToVtkMatrix(path[i].matrix);
+                mat_trans = vtkmatrix(path[i].matrix);
                 transform->SetMatrix(mat_trans);
 
                 vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();

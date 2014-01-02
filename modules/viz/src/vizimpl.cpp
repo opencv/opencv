@@ -134,7 +134,7 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     if (actor)
     {
         // If the actor is 3D, apply pose
-        vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+        vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
         actor->SetUserMatrix(matrix);
         actor->Modified();
     }
@@ -181,7 +181,7 @@ void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3d &po
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
@@ -202,9 +202,8 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3d 
         setWidgetPose(id, pose);
         return ;
     }
-    Matx44d matrix_cv = convertToMatx(matrix);
-    Affine3d updated_pose = pose * Affine3d(matrix_cv);
-    matrix = convertToVtkMatrix(updated_pose.matrix);
+    Affine3d updated_pose = pose * Affine3d(*matrix->Element);
+    matrix = vtkmatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
     actor->Modified();
@@ -220,9 +219,7 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    Matx44d matrix_cv = convertToMatx(matrix);
-    return Affine3d(matrix_cv);
+    return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -315,21 +312,23 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
-    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
 
     // Set the intrinsic parameters of the camera
     window_->SetSize(camera.getWindowSize().width, camera.getWindowSize().height);
     double aspect_ratio = static_cast<double>(camera.getWindowSize().width)/static_cast<double>(camera.getWindowSize().height);
 
-    Matx44f proj_mat;
+    Matx44d proj_mat;
     camera.computeProjectionMatrix(proj_mat);
+
     // Use the intrinsic parameters of the camera to simulate more realistically
-    Matx44f old_proj_mat = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0));
-    vtkTransform *transform = vtkTransform::New();
+    vtkSmartPointer<vtkMatrix4x4> vtk_matrix = active_camera->GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0);
+    Matx44d old_proj_mat(*vtk_matrix->Element);
+
     // This is a hack around not being able to set Projection Matrix
-    transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
-    active_camera.SetUserTransform(transform);
-    transform->Delete();
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->SetMatrix(vtkmatrix(proj_mat * old_proj_mat.inv()));
+    active_camera->SetUserTransform(transform);
 
     renderer_->ResetCameraClippingRange();
     renderer_->Render();
@@ -338,15 +337,14 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
-    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
 
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
     double aspect_ratio = window_size.width / (double)window_size.height;
 
-    Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
-    Camera camera(proj_matrix, window_size);
-    return camera;
+    vtkSmartPointer<vtkMatrix4x4> proj_matrix = active_camera->GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f);
+    return Camera(Matx44d(*proj_matrix->Element), window_size);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

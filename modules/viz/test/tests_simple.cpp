@@ -50,7 +50,6 @@ TEST(Viz, DISABLED_show_cloud_bluberry)
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
     Viz3d viz("show_cloud_bluberry");
-    viz.setBackgroundColor();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, Color::bluberry()));
     viz.spin();
@@ -64,7 +63,6 @@ TEST(Viz, DISABLED_show_cloud_random_color)
     theRNG().fill(colors, RNG::UNIFORM, 0, 255);
 
     Viz3d viz("show_cloud_random_color");
-    viz.setBackgroundColor();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, colors));
     viz.spin();
@@ -80,7 +78,6 @@ TEST(Viz, DISABLED_show_cloud_masked)
             dragon_cloud.at<Vec3f>(i) = qnan;
 
     Viz3d viz("show_cloud_masked");
-    viz.setBackgroundColor();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud));
     viz.spin();
