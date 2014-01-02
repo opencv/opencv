@@ -267,7 +267,7 @@ if(WITH_FFMPEG)
           "${FFMPEG_LIB_DIR}/libswscale.a")
       ocv_include_directories(${FFMPEG_INCLUDE_DIR})
     endif()
-  endif(APPLE)
+  endif()
 endif(WITH_FFMPEG)
 
 # --- VideoInput/DirectShow ---
