@@ -73,6 +73,9 @@ namespace cv
         //Combines all contructors above. Supports 4x4, 3x3, 1x3, 3x1 sizes of data matrix
         explicit Affine3(const cv::Mat& data, const Vec3& t = Vec3::all(0));
 
+        //From 16th element array
+        Affine3(const float_type* vals);
+
         static Affine3 Identity();
 
         //Rotation matrix
@@ -182,6 +185,10 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
     matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
     matrix.val[15] = 1;
 }
+
+template<typename T> inline
+cv::Affine3<T>::Affine3(const float_type* vals) : matrix(vals)
+{}
 
 template<typename T> inline
 cv::Affine3<T> cv::Affine3<T>::Identity()
