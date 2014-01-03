@@ -83,7 +83,8 @@ Functions return the actual number of found lines.
 */
 static void
 icvHoughLinesStandard( const CvMat* img, float rho, float theta,
-                       int threshold, CvSeq *lines, int linesMax )
+                       int threshold, CvSeq *lines, int linesMax,
+                       double min_theta, double max_theta )
 {
     cv::AutoBuffer<int> _accum, _sort_buf;
     cv::AutoBuffer<float> _tabSin, _tabCos;
@@ -103,7 +104,13 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     width = img->cols;
     height = img->rows;
 
-    numangle = cvRound(CV_PI / theta);
+    if (max_theta < 0 || max_theta > Pi) {
+        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+    }
+    if (min_theta < 0 || min_theta > max_theta) {
+        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+    numangle = floor((max_theta - min_theta) / theta);
     numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     _accum.allocate((numangle+2) * (numrho+2));
@@ -115,7 +122,7 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    float ang = 0;
+    float ang = min_theta;
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin((double)ang) * irho);
@@ -176,7 +183,8 @@ static void
 icvHoughLinesSDiv( const CvMat* img,
                    float rho, float theta, int threshold,
                    int srn, int stn,
-                   CvSeq* lines, int linesMax )
+                   CvSeq* lines, int linesMax,
+                   double min_theta, double max_theta )
 {
     std::vector<uchar> _caccum, _buffer;
     std::vector<float> _sinTable;
@@ -329,7 +337,7 @@ icvHoughLinesSDiv( const CvMat* img,
 
     if( count * 100 > rn * tn )
     {
-        icvHoughLinesStandard( img, rho, theta, threshold, lines, linesMax );
+        icvHoughLinesStandard( img, rho, theta, threshold, lines, linesMax, min_theta, max_theta );
         return;
     }
 
@@ -693,7 +701,8 @@ icvHoughLinesProbabilistic( CvMat* image,
 CV_IMPL CvSeq*
 cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                double rho, double theta, int threshold,
-               double param1, double param2 )
+               double param1, double param2,
+               double min_theta, double max_theta )
 {
     CvSeq* result = 0;
 
@@ -758,12 +767,12 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     switch( method )
     {
     case CV_HOUGH_STANDARD:
-          icvHoughLinesStandard( img, (float)rho,
-                (float)theta, threshold, lines, linesMax );
+          icvHoughLinesStandard( img, (float)rho, (float)theta,
+                threshold, lines, linesMax, min_theta, max_theta );
           break;
     case CV_HOUGH_MULTI_SCALE:
-          icvHoughLinesSDiv( img, (float)rho, (float)theta,
-                threshold, iparam1, iparam2, lines, linesMax );
+          icvHoughLinesSDiv( img, (float)rho, (float)theta, threshold, iparam1,
+                iparam2, lines, linesMax, min_theta, max_theta );
           break;
     case CV_HOUGH_PROBABILISTIC:
           icvHoughLinesProbabilistic( img, (float)rho, (float)theta,
@@ -785,7 +794,6 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
 
     return result;
 }
-
 
 /****************************************************************************************\
 *                                     Circle Detection                                   *
@@ -1104,14 +1112,15 @@ static void seqToMat(const CvSeq* seq, OutputArray _arr)
 
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                      double rho, double theta, int threshold,
-                     double srn, double stn )
+                     double srn, double stn,
+                     double min_theta, double max_theta )
 {
     Ptr<CvMemStorage> storage = cvCreateMemStorage(STORAGE_SIZE);
     Mat image = _image.getMat();
     CvMat c_image = image;
     CvSeq* seq = cvHoughLines2( &c_image, storage, srn == 0 && stn == 0 ?
                     CV_HOUGH_STANDARD : CV_HOUGH_MULTI_SCALE,
-                    rho, theta, threshold, srn, stn );
+                    rho, theta, threshold, srn, stn, min_theta, max_theta );
     seqToMat(seq, _lines);
 }
 
