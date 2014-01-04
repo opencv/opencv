@@ -203,48 +203,46 @@ PERF_TEST_P(Size_MatType, subtractScalar, TYPICAL_MATS_CORE_ARITHM)
     SANITY_CHECK(c, 1e-8);
 }
 
-
 PERF_TEST_P(Size_MatType, multiply, TYPICAL_MATS_CORE_ARITHM)
 {
-	Size sz = get<0>(GetParam());
-	int type = get<1>(GetParam());
-	cv::Mat a = Mat(sz, type);
-	cv::Mat b = Mat(sz, type);
-	cv::Mat c = Mat(sz, type);
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
 
-	declare.in(a, b, WARMUP_RNG).out(c);
+    declare.in(a, b, WARMUP_RNG).out(c);
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+	    //According to docs, saturation is not applied when result is 32bit integer
+	    a /= (2 << 16);
+	    b /= (2 << 16);
+    }
 
-	if (CV_MAT_DEPTH(type) == CV_32S)
-	{
-		//According to docs, saturation is not applied when result is 32bit integer
-		a /= (2 << 16);
-		b /= (2 << 16);
-	}
+    TEST_CYCLE() multiply(a, b, c);
 
-	TEST_CYCLE() multiply(a, b, c);
-
-	SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
 
 PERF_TEST_P(Size_MatType, multiplyScale, TYPICAL_MATS_CORE_ARITHM)
 {
-	Size sz = get<0>(GetParam());
-	int type = get<1>(GetParam());
-	cv::Mat a = Mat(sz, type);
-	cv::Mat b = Mat(sz, type);
-	cv::Mat c = Mat(sz, type);
-	double scale = 0.5;
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    cv::Mat a = Mat(sz, type);
+    cv::Mat b = Mat(sz, type);
+    cv::Mat c = Mat(sz, type);
+    double scale = 0.5;
 
-	declare.in(a, b, WARMUP_RNG).out(c);
+    declare.in(a, b, WARMUP_RNG).out(c);
 
-	if (CV_MAT_DEPTH(type) == CV_32S)
-	{
-		//According to docs, saturation is not applied when result is 32bit integer
-		a /= (2 << 16);
-		b /= (2 << 16);
-	}
+    if (CV_MAT_DEPTH(type) == CV_32S)
+    {
+        //According to docs, saturation is not applied when result is 32bit integer
+        a /= (2 << 16);
+        b /= (2 << 16);
+    }
 
-	TEST_CYCLE() multiply(a, b, c, scale);
+    TEST_CYCLE() multiply(a, b, c, scale);
 
-	SANITY_CHECK(c, 1e-8);
+    SANITY_CHECK(c, 1e-8);
 }
