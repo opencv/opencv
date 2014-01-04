@@ -493,7 +493,7 @@ int build_mlp_classifier( char* data_filename,
 }
 
 static
-int build_knearest_classifier( char* data_filename, int K )
+int build_knearest_classifier(char* data_filename, int K, const char* filename_to_save, const char* filename_to_load)
 {
     const int var_count = 16;
     CvMat* data = 0;
@@ -524,8 +524,11 @@ int build_knearest_classifier( char* data_filename, int K )
     CvMat* train_resp = cvCreateMat( ntrain_samples, 1, CV_32FC1);
     for (int i = 0; i < ntrain_samples; i++)
         train_resp->data.fl[i] = responses->data.fl[i];
-    CvKNearest knearest(&train_data, train_resp);
-
+    CvKNearest knearest;
+    if (filename_to_load)
+        knearest.load(filename_to_load);
+    else
+        knearest.train(&train_data, train_resp);
     CvMat* nearests = cvCreateMat( (nsamples_all - ntrain_samples), K, CV_32FC1);
     float* _sample = new float[var_count * (nsamples_all - ntrain_samples)];
     CvMat sample = cvMat( nsamples_all - ntrain_samples, 16, CV_32FC1, _sample );
@@ -557,7 +560,8 @@ int build_knearest_classifier( char* data_filename, int K )
 
     printf("true_resp = %f%%\tavg accuracy = %f%%\n", (float)true_resp / (nsamples_all - ntrain_samples) * 100,
                                                       (float)accuracy / (nsamples_all - ntrain_samples) / K * 100);
-
+    if (filename_to_save)
+        knearest.save(filename_to_save);
     delete[] true_results;
     delete[] _sample;
     cvReleaseMat( &train_resp );
@@ -791,7 +795,7 @@ int main( int argc, char *argv[] )
         method == 2 ?
         build_mlp_classifier( data_filename, filename_to_save, filename_to_load ) :
         method == 3 ?
-        build_knearest_classifier( data_filename, 10 ) :
+        build_knearest_classifier(data_filename, 10, filename_to_save, filename_to_load) :
         method == 4 ?
         build_nbayes_classifier( data_filename) :
         method == 5 ?

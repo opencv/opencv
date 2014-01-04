@@ -275,7 +275,8 @@ public:
 
     virtual void find_neighbors_direct( const CvMat* _samples, int k, int start, int end,
         float* neighbor_responses, const float** neighbors, float* dist ) const;
-
+    virtual void read(CvFileStorage* fs, CvFileNode* node);
+    virtual void write(CvFileStorage* storage, const char* name) const;
 protected:
 
     int max_k, var_count;
