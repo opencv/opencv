@@ -479,4 +479,131 @@ float CvKNearest::find_nearest( const cv::Mat& _samples, int k, CV_OUT cv::Mat& 
     return find_nearest(_samples, k, &results, 0, &neighborResponses, &dists);
 }
 
+
+
+void CvKNearest::write(CvFileStorage* fs, const char* name) const
+{
+
+    __BEGIN__;
+    cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_KNN);
+
+    cvWriteInt(fs, "var_count", var_count);
+    cvWriteInt(fs, "max_k", max_k);
+    cvWriteInt(fs, "total", total);
+    cvWriteInt(fs, "regression", regression);
+
+    CvVectors* s = samples;
+
+    cvStartWriteStruct(fs, "response", CV_NODE_SEQ);
+    for (; s != 0; s = s->next)
+    {
+        cvWriteRawData(fs, s + 1, s->count, "f");
+    }
+    cvEndWriteStruct(fs);
+
+    cvStartWriteStruct(fs, "sample", CV_NODE_SEQ);
+    s = samples;
+    for (; s != 0; s = s->next)
+    {
+        int n = s->count;
+        for (int j = 0; j < n; j++)
+        {
+            const float* v = s->data.fl[j];
+            cvWriteRawData(fs, v, var_count, "f");
+        }
+    }
+    cvEndWriteStruct(fs);
+
+    cvEndWriteStruct(fs);
+
+    __END__;
+}
+
+void CvKNearest::read(CvFileStorage* fs, CvFileNode* node)
+{
+    CvVectors* _samples;
+
+    CV_FUNCNAME("CvKNearest::read");
+
+    __BEGIN__;
+
+    CvFileNode* w;
+    CvSeqReader reader;
+    float** _data = 0;
+    int _rsize;
+    int _var_count, _max_k, _total, _regression;
+    w = cvGetFileNodeByName(fs, node, "var_count");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_INTEGER)
+        CV_ERROR(CV_StsParseError, "var_count is not found or is invalid");
+    _var_count = cvReadIntByName(fs, node, "var_count");
+
+    w = cvGetFileNodeByName(fs, node, "max_k");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_INTEGER)
+        CV_ERROR(CV_StsParseError, "max_k is not found or is invalid");
+    _max_k = cvReadIntByName(fs, node, "max_k");
+
+
+    w = cvGetFileNodeByName(fs, node, "total");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_INTEGER)
+        CV_ERROR(CV_StsParseError, "total is not found or is invalid");
+    _total = cvReadIntByName(fs, node, "total");
+
+    w = cvGetFileNodeByName(fs, node, "regression");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_INTEGER)
+        CV_ERROR(CV_StsParseError, "regression is not found or is invalid");
+    _regression = cvReadIntByName(fs, node, "regression");
+
+    if (_total <= 0 || _var_count <= 0)
+        CV_ERROR(CV_StsParseError, "total/var_count ust be non-negative");
+
+    w = cvGetFileNodeByName(fs, node, "sample");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ
+        || (w->data.seq->total != _var_count * _total))
+        CV_ERROR(CV_StsParseError, "sample is not found or is invalid $");
+
+    _rsize = _total*sizeof(float);
+    CV_CALL(_samples = (CvVectors*)cvAlloc(sizeof(*_samples) + _rsize));
+
+
+    _data = (float**)cvAlloc(sizeof(float*)* _total + _var_count * _total * sizeof(float));
+    _data[0] = (float*)(_data + _total);
+    for (int i = 0; i < _total; i++)
+    {
+        _data[i] = _data[0] + i * _var_count;
+    }
+    _samples->next = 0;
+    _samples->type = CV_32F;
+    _samples->data.fl = _data;
+    _samples->count = _total;
+
+    cvStartReadRawData(fs, w, &reader);
+
+    for (int i = 0; i < _total; i++)
+    {
+
+        cvReadRawDataSlice(fs, &reader, _var_count, _data[i], "f");
+    }
+
+    w = cvGetFileNodeByName(fs, node, "response");
+    if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_SEQ
+        || w->data.seq->total  != _total)
+        CV_ERROR(CV_StsParseError, "response is not found or is invalid");
+
+
+    cvReadRawData(fs, w, _samples + 1, "f");
+
+
+    clear();
+    var_count = _var_count;
+    max_k = _max_k;
+    total = _total;
+    regression = _regression == 0 ? false : true ;
+    samples = _samples;
+
+    return;
+    __END__;
+
+    cvFree(&samples);
+
+}
 /* End of file */
