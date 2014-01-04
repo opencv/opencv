@@ -110,7 +110,7 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     if (min_theta < 0 || min_theta > max_theta) {
         CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
     }
-    numangle = floor((max_theta - min_theta) / theta);
+    numangle = cvRound((max_theta - min_theta) / theta);
     numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     _accum.allocate((numangle+2) * (numrho+2));
@@ -122,7 +122,7 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    float ang = min_theta;
+    double ang = min_theta;
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin((double)ang) * irho);
