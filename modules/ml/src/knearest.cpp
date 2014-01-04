@@ -483,7 +483,6 @@ float CvKNearest::find_nearest( const cv::Mat& _samples, int k, CV_OUT cv::Mat& 
 
 void CvKNearest::write(CvFileStorage* fs, const char* name) const
 {
-    CV_FUNCNAME("CvKNearest::write");
 
     __BEGIN__;
     cvStartWriteStruct(fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_KNN);
@@ -498,7 +497,6 @@ void CvKNearest::write(CvFileStorage* fs, const char* name) const
     cvStartWriteStruct(fs, "response", CV_NODE_SEQ);
     for (; s != 0; s = s->next)
     {
-        int _rsize = s->count*sizeof(float);
         cvWriteRawData(fs, s + 1, s->count, "f");
     }
     cvEndWriteStruct(fs);
@@ -508,7 +506,6 @@ void CvKNearest::write(CvFileStorage* fs, const char* name) const
     for (; s != 0; s = s->next)
     {
         int n = s->count;
-        int _rowsize = var_count*sizeof(float);
         for (int j = 0; j < n; j++)
         {
             const float* v = s->data.fl[j];
@@ -526,13 +523,14 @@ void CvKNearest::read(CvFileStorage* fs, CvFileNode* node)
 {
     CvVectors* _samples;
 
-    CV_FUNCNAME("CvANN_MLP::read");
+    CV_FUNCNAME("CvKNearest::read");
 
     __BEGIN__;
 
     CvFileNode* w;
     CvSeqReader reader;
-
+    float** _data = 0;
+    int _rsize;
     int _var_count, _max_k, _total, _regression;
     w = cvGetFileNodeByName(fs, node, "var_count");
     if (!w || CV_NODE_TYPE(w->tag) != CV_NODE_INTEGER)
@@ -563,9 +561,8 @@ void CvKNearest::read(CvFileStorage* fs, CvFileNode* node)
         || (w->data.seq->total != _var_count * _total))
         CV_ERROR(CV_StsParseError, "sample is not found or is invalid $");
 
-    int _rsize = _total*sizeof(float);
+    _rsize = _total*sizeof(float);
     CV_CALL(_samples = (CvVectors*)cvAlloc(sizeof(*_samples) + _rsize));
-    float** _data = 0;
 
 
     _data = (float**)cvAlloc(sizeof(float*)* _total + _var_count * _total * sizeof(float));
@@ -600,7 +597,7 @@ void CvKNearest::read(CvFileStorage* fs, CvFileNode* node)
     var_count = _var_count;
     max_k = _max_k;
     total = _total;
-    regression = _regression;
+    regression = _regression == 0 ? false : true ;
     samples = _samples;
 
     return;
