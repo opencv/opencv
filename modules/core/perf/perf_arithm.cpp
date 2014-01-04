@@ -214,9 +214,9 @@ PERF_TEST_P(Size_MatType, multiply, TYPICAL_MATS_CORE_ARITHM)
     declare.in(a, b, WARMUP_RNG).out(c);
     if (CV_MAT_DEPTH(type) == CV_32S)
     {
-	    //According to docs, saturation is not applied when result is 32bit integer
-	    a /= (2 << 16);
-	    b /= (2 << 16);
+        //According to docs, saturation is not applied when result is 32bit integer
+        a /= (2 << 16);
+        b /= (2 << 16);
     }
 
     TEST_CYCLE() multiply(a, b, c);
