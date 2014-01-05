@@ -1011,6 +1011,7 @@ OCL_TEST_P(Phase, angleInDegree)
     }
 }
 
+
 OCL_TEST_P(Phase, angleInRadians)
 {
     for (int j = 0; j < test_loop_times; j++)
