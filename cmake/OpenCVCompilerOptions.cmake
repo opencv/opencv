@@ -124,6 +124,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(ENABLE_SSE2)
     add_extra_compiler_option(-msse2)
   endif()
+  if (ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=neon")
+  endif()
+  if (ENABLE_VFPV3 AND NOT ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=vfpv3")
+  endif()
 
   # SSE3 and further should be disabled under MingW because it generates compiler errors
   if(NOT MINGW)

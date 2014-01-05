@@ -52,6 +52,146 @@ using namespace cv;
 
 int test_loop_times = 1; // TODO Read from command line / environment
 
+
+#define DUMP_PROPERTY_XML(propertyName, propertyValue) \
+    do { \
+        std::stringstream ssName, ssValue;\
+        ssName << propertyName;\
+        ssValue << (propertyValue); \
+        ::testing::Test::RecordProperty(ssName.str(), ssValue.str()); \
+    } while (false)
+
+#define DUMP_MESSAGE_STDOUT(msg) \
+    do { \
+        std::cout << msg << std::endl; \
+    } while (false)
+
+static std::string bytesToStringRepr(size_t value)
+{
+    size_t b = value % 1024;
+    value /= 1024;
+
+    size_t kb = value % 1024;
+    value /= 1024;
+
+    size_t mb = value % 1024;
+    value /= 1024;
+
+    size_t gb = value;
+
+    std::ostringstream stream;
+
+    if (gb > 0)
+        stream << gb << " GB ";
+    if (mb > 0)
+        stream << mb << " MB ";
+    if (kb > 0)
+        stream << kb << " kB ";
+    if (b > 0)
+        stream << b << " B";
+
+    return stream.str();
+}
+
+void dumpOpenCLDevice()
+{
+    using namespace cv::ocl;
+    try
+    {
+#if 0
+        Platforms platforms;
+        getOpenCLPlatforms(platforms);
+        if (platforms.size() > 0)
+        {
+            DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
+            for (size_t i = 0; i < platforms.size(); i++)
+            {
+                const Platform* platform = platforms.at(i);
+                DUMP_MESSAGE_STDOUT("    " << platform->name().c_str());
+                const Devices& devices = platform->devices();
+                for (size_t j = 0; j < devices.size(); j++)
+                {
+                    const Device& current_device = *devices.at(j);
+                    const char* deviceTypeStr = current_device.type() == Device::TYPE_CPU
+                                ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+                    DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
+                    DUMP_PROPERTY_XML(cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j),
+                            "(Platform=" << current_device.getPlatform().name().c_str()
+                            << ")(Type=" << deviceTypeStr
+                            << ")(Name=" << current_device.name().c_str()
+                            << ")(Version=" << current_device.version().c_str() << ")");
+                }
+            }
+        }
+        else
+        {
+            DUMP_MESSAGE_STDOUT("OpenCL is not available");
+            DUMP_PROPERTY_XML("cv_ocl", "not available");
+            return;
+        }
+#endif
+        DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
+
+        const Device& device = Device::getDefault();
+
+#if 0
+        DUMP_MESSAGE_STDOUT("    Platform = "<< device.getPlatform().name());
+        DUMP_PROPERTY_XML("cv_ocl_current_platformName", device.getPlatform().name());
+#endif
+
+        const char* deviceTypeStr = device.type() == Device::TYPE_CPU
+                        ? "CPU" : (device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+        DUMP_MESSAGE_STDOUT("    Type = "<< deviceTypeStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_deviceType", deviceTypeStr);
+
+        DUMP_MESSAGE_STDOUT("    Name = "<< device.name());
+        DUMP_PROPERTY_XML("cv_ocl_current_deviceName", device.name());
+
+#if 0
+        DUMP_MESSAGE_STDOUT("    Version = " << device.version());
+        DUMP_PROPERTY_XML("cv_ocl_current_deviceVersion", device.version());
+#endif
+
+        DUMP_MESSAGE_STDOUT("    Compute units = "<< device.maxComputeUnits());
+        DUMP_PROPERTY_XML("cv_ocl_current_maxComputeUnits", device.maxComputeUnits());
+
+        DUMP_MESSAGE_STDOUT("    Max work group size = "<< device.maxWorkGroupSize());
+        DUMP_PROPERTY_XML("cv_ocl_current_maxWorkGroupSize", device.maxWorkGroupSize());
+
+        std::string localMemorySizeStr = bytesToStringRepr(device.localMemSize());
+        DUMP_MESSAGE_STDOUT("    Local memory size = " << localMemorySizeStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_localMemSize", device.localMemSize());
+
+        std::string maxMemAllocSizeStr = bytesToStringRepr(device.maxMemAllocSize());
+        DUMP_MESSAGE_STDOUT("    Max memory allocation size = "<< maxMemAllocSizeStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_maxMemAllocSize", device.maxMemAllocSize());
+
+#if 0
+        const char* doubleSupportStr = device.haveDoubleSupport() ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Double support = "<< doubleSupportStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_haveDoubleSupport", device.haveDoubleSupport());
+#else
+        const char* doubleSupportStr = device.doubleFPConfig() > 0 ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Double support = "<< doubleSupportStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_haveDoubleSupport", device.doubleFPConfig() > 0);
+
+#endif
+
+        const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Host unified memory = "<< isUnifiedMemoryStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_hostUnifiedMemory", device.hostUnifiedMemory());
+    }
+    catch (...)
+    {
+        DUMP_MESSAGE_STDOUT("Exception. Can't dump OpenCL info");
+        DUMP_MESSAGE_STDOUT("OpenCL device not available");
+        DUMP_PROPERTY_XML("cv_ocl", "not available");
+    }
+}
+#undef DUMP_MESSAGE_STDOUT
+#undef DUMP_PROPERTY_XML
+
+
 Mat TestUtils::readImage(const String &fileName, int flags)
 {
     return cv::imread(cvtest::TS::ptr()->get_data_path() + fileName, flags);

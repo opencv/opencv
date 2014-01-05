@@ -1930,13 +1930,159 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
 }
 
 
+namespace cv {
+
+static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & cnidx)
+{
+    int totalChannels = 0;
+    for (size_t i = 0, size = um.size(); i < size; ++i)
+    {
+        int ccn = um[i].channels();
+        totalChannels += ccn;
+
+        if (totalChannels == cn)
+        {
+            idx = (int)(i + 1);
+            cnidx = 0;
+            return;
+        }
+        else if (totalChannels > cn)
+        {
+            idx = (int)i;
+            cnidx = i == 0 ? cn : (cn - totalChannels + ccn);
+            return;
+        }
+    }
+
+    idx = cnidx = -1;
+}
+
+static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> channels,
+                                 InputArray _hist, OutputArray _dst,
+                                 const std::vector<float>& ranges,
+                                 float scale, size_t histdims )
+{
+    const std::vector<UMat> & images = *(const std::vector<UMat> *)_images.getObj();
+    size_t nimages = images.size(), totalcn = images[0].channels();
+
+    CV_Assert(nimages > 0);
+    Size size = images[0].size();
+    int depth = images[0].depth();
+
+    for (size_t i = 1; i < nimages; ++i)
+    {
+        const UMat & m = images[i];
+        totalcn += m.channels();
+        CV_Assert(size == m.size() && depth == m.depth());
+    }
+
+    std::sort(channels.begin(), channels.end());
+    for (size_t i = 0; i < histdims; ++i)
+        CV_Assert(channels[i] < (int)totalcn);
+
+    if (histdims == 1)
+    {
+        int idx, cnidx;
+        getUMatIndex(images, channels[0], idx, cnidx);
+        CV_Assert(idx >= 0);
+        UMat im = images[idx];
+
+        String opts = format("-D histdims=1 -D scn=%d", im.channels());
+        ocl::Kernel lutk("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk.empty())
+            return false;
+
+        size_t lsize = 256;
+        UMat lut(1, (int)lsize, CV_32SC1), hist = _hist.getUMat(), uranges(ranges, true);
+
+        lutk.args(ocl::KernelArg::ReadOnlyNoSize(hist), hist.rows,
+                  ocl::KernelArg::PtrWriteOnly(lut), scale, ocl::KernelArg::PtrReadOnly(uranges));
+        if (!lutk.run(1, &lsize, NULL, false))
+            return false;
+
+        ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (mapk.empty())
+            return false;
+
+        _dst.create(size, depth);
+        UMat dst = _dst.getUMat();
+
+        im.offset += cnidx;
+        mapk.args(ocl::KernelArg::ReadOnlyNoSize(im), ocl::KernelArg::PtrReadOnly(lut),
+                  ocl::KernelArg::WriteOnly(dst));
+
+        size_t globalsize[2] = { size.width, size.height };
+        return mapk.run(2, globalsize, NULL, false);
+    }
+    else if (histdims == 2)
+    {
+        int idx0, idx1, cnidx0, cnidx1;
+        getUMatIndex(images, channels[0], idx0, cnidx0);
+        getUMatIndex(images, channels[1], idx1, cnidx1);
+        CV_Assert(idx0 >= 0 && idx1 >= 0);
+        UMat im0 = images[idx0], im1 = images[idx1];
+
+        // Lut for the first dimension
+        String opts = format("-D histdims=2 -D scn1=%d -D scn2=%d", im0.channels(), im1.channels());
+        ocl::Kernel lutk1("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk1.empty())
+            return false;
+
+        size_t lsize = 256;
+        UMat lut(1, (int)lsize<<1, CV_32SC1), uranges(ranges, true), hist = _hist.getUMat();
+
+        lutk1.args(hist.rows, ocl::KernelArg::PtrWriteOnly(lut), (int)0, ocl::KernelArg::PtrReadOnly(uranges), (int)0);
+        if (!lutk1.run(1, &lsize, NULL, false))
+            return false;
+
+        // lut for the second dimension
+        ocl::Kernel lutk2("calcLUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (lutk2.empty())
+            return false;
+
+        lut.offset += lsize * sizeof(int);
+        lutk2.args(hist.cols, ocl::KernelArg::PtrWriteOnly(lut), (int)256, ocl::KernelArg::PtrReadOnly(uranges), (int)2);
+        if (!lutk2.run(1, &lsize, NULL, false))
+            return false;
+
+        // perform lut
+        ocl::Kernel mapk("LUT", ocl::imgproc::calc_back_project_oclsrc, opts);
+        if (mapk.empty())
+            return false;
+
+        _dst.create(size, depth);
+        UMat dst = _dst.getUMat();
+
+        im0.offset += cnidx0;
+        im1.offset += cnidx1;
+        mapk.args(ocl::KernelArg::ReadOnlyNoSize(im0), ocl::KernelArg::ReadOnlyNoSize(im1),
+               ocl::KernelArg::ReadOnlyNoSize(hist), ocl::KernelArg::PtrReadOnly(lut), scale, ocl::KernelArg::WriteOnly(dst));
+
+        size_t globalsize[2] = { size.width, size.height };
+        return mapk.run(2, globalsize, NULL, false);
+    }
+    return false;
+}
+
+}
+
 void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                           InputArray hist, OutputArray dst,
                           const std::vector<float>& ranges,
                           double scale )
 {
+    Size histSize = hist.size();
+    bool _1D = histSize.height == 1 || histSize.width == 1;
+    size_t histdims = _1D ? 1 : hist.dims();
+
+    if (ocl::useOpenCL() && images.isUMatVector() && dst.isUMat() && hist.type() == CV_32FC1 &&
+            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size() &&
+            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
+        return;
+
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
+
     if( hcn > 1 )
     {
         CV_Assert( H0.isContinuous() );
@@ -1947,12 +2093,15 @@ void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& cha
     }
     else
         H = H0;
+
     bool _1d = H.rows == 1 || H.cols == 1;
     int i, dims = H.dims, rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
+
     CV_Assert(nimages > 0);
     CV_Assert(rsz == dims*2 || (rsz == 2 && _1d) || (rsz == 0 && images.depth(0) == CV_8U));
     CV_Assert(csz == 0 || csz == dims || (csz == 1 && _1d));
+
     float* _ranges[CV_MAX_DIM];
     if( rsz > 0 )
     {
@@ -3169,7 +3318,7 @@ static bool ocl_calcHist(InputArray _src, OutputArray _hist)
 
 static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    size_t wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
 
     // calculation of histogram
     UMat hist;

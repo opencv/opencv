@@ -34,7 +34,7 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
    * An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
 
-   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
+   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/python/edge.py
 
 cornerEigenValsAndVecs
 ----------------------

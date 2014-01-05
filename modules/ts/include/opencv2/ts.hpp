@@ -4,6 +4,8 @@
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
+#include "cvconfig.h"
+
 #ifdef HAVE_WINRT
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
@@ -548,6 +550,15 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 #endif
 
+#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+namespace cvtest { namespace ocl {
+void dumpOpenCLDevice();
+}}
+#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
+#else
+#define TEST_DUMP_OCL_INFO
+#endif
+
 #define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
 { \
@@ -555,6 +566,7 @@ int main(int argc, char **argv) \
     ::testing::InitGoogleTest(&argc, argv); \
     cvtest::printVersionInfo(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
+    TEST_DUMP_OCL_INFO \
     return RUN_ALL_TESTS(); \
 }
 

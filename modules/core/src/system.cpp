@@ -107,7 +107,7 @@ std::wstring GetTempPathWinRT()
     if (FAILED(WindowsCreateStringReference(RuntimeClass_Windows_Storage_ApplicationData,
                                             (UINT32)wcslen(RuntimeClass_Windows_Storage_ApplicationData), &hstrHead, &str)))
         return wstr;
-    if (FAILED(Windows::Foundation::GetActivationFactory(str, appdataFactory.ReleaseAndGetAddressOf())))
+    if (FAILED(RoGetActivationFactory(str, IID_PPV_ARGS(appdataFactory.ReleaseAndGetAddressOf()))))
         return wstr;
     if (FAILED(appdataFactory->get_Current(appdataRef.ReleaseAndGetAddressOf())))
         return wstr;

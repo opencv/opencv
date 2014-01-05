@@ -41,6 +41,9 @@
 
 #include "precomp.hpp"
 #include <map>
+#include <string>
+#include <sstream>
+#include <iostream> // std::cerr
 
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
@@ -1905,12 +1908,261 @@ const Device& Device::getDefault()
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
+template <typename Functor, typename ObjectType>
+inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string& param)
+{
+    ::size_t required;
+    cl_int err = f(obj, name, 0, NULL, &required);
+    if (err != CL_SUCCESS)
+        return err;
+
+    param.clear();
+    if (required > 0)
+    {
+        AutoBuffer<char> buf(required + 1);
+        char* ptr = (char*)buf; // cleanup is not needed
+        err = f(obj, name, required, ptr, NULL);
+        if (err != CL_SUCCESS)
+            return err;
+        param = ptr;
+    }
+
+    return CL_SUCCESS;
+};
+
+static void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    elems.clear();
+    if (s.size() == 0)
+        return;
+    std::istringstream ss(s);
+    std::string item;
+    while (!ss.eof())
+    {
+        std::getline(ss, item, delim);
+        elems.push_back(item);
+    }
+}
+
+// Layout: <Platform>:<CPU|GPU|ACCELERATOR|nothing=GPU/CPU>:<deviceName>
+// Sample: AMD:GPU:
+// Sample: AMD:GPU:Tahiti
+// Sample: :GPU|CPU: = '' = ':' = '::'
+static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
+        std::string& platform, std::vector<std::string>& deviceTypes, std::string& deviceNameOrID)
+{
+    std::vector<std::string> parts;
+    split(configurationStr, ':', parts);
+    if (parts.size() > 3)
+    {
+        std::cerr << "ERROR: Invalid configuration string for OpenCL device" << std::endl;
+        return false;
+    }
+    if (parts.size() > 2)
+        deviceNameOrID = parts[2];
+    if (parts.size() > 1)
+    {
+        split(parts[1], '|', deviceTypes);
+    }
+    if (parts.size() > 0)
+    {
+        platform = parts[0];
+    }
+    return true;
+}
+
+static cl_device_id selectOpenCLDevice()
+{
+    std::string platform;
+    std::vector<std::string> deviceTypes;
+    std::string deviceName;
+    const char* configuration = getenv("OPENCV_OPENCL_DEVICE");
+    if (configuration)
+    {
+        if (!parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName))
+            return NULL;
+    }
+
+    bool isID = false;
+    int deviceID = -1;
+    if (deviceName.length() == 1)
+    // We limit ID range to 0..9, because we want to write:
+    // - '2500' to mean i5-2500
+    // - '8350' to mean AMD FX-8350
+    // - '650' to mean GeForce 650
+    // To extend ID range change condition to '> 0'
+    {
+        isID = true;
+        for (size_t i = 0; i < deviceName.length(); i++)
+        {
+            if (!isdigit(deviceName[i]))
+            {
+                isID = false;
+                break;
+            }
+        }
+        if (isID)
+        {
+            deviceID = atoi(deviceName.c_str());
+            CV_Assert(deviceID >= 0);
+        }
+    }
+
+    cl_int status = CL_SUCCESS;
+    std::vector<cl_platform_id> platforms;
+    {
+        cl_uint numPlatforms = 0;
+        status = clGetPlatformIDs(0, NULL, &numPlatforms);
+        CV_Assert(status == CL_SUCCESS);
+        if (numPlatforms == 0)
+            return NULL;
+        platforms.resize((size_t)numPlatforms);
+        status = clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms);
+        CV_Assert(status == CL_SUCCESS);
+        platforms.resize(numPlatforms);
+    }
+
+    int selectedPlatform = -1;
+    if (platform.length() > 0)
+    {
+        for (size_t i = 0; i < platforms.size(); i++)
+        {
+            std::string name;
+            status = getStringInfo(clGetPlatformInfo, platforms[i], CL_PLATFORM_NAME, name);
+            CV_Assert(status == CL_SUCCESS);
+            if (name.find(platform) != std::string::npos)
+            {
+                selectedPlatform = (int)i;
+                break;
+            }
+        }
+        if (selectedPlatform == -1)
+        {
+            std::cerr << "ERROR: Can't find OpenCL platform by name: " << platform << std::endl;
+            goto not_found;
+        }
+    }
+
+    if (deviceTypes.size() == 0)
+    {
+        if (!isID)
+        {
+            deviceTypes.push_back("GPU");
+            deviceTypes.push_back("CPU");
+        }
+        else
+        {
+            deviceTypes.push_back("ALL");
+        }
+    }
+    for (size_t t = 0; t < deviceTypes.size(); t++)
+    {
+        int deviceType = 0;
+        if (deviceTypes[t] == "GPU")
+        {
+            deviceType = Device::TYPE_GPU;
+        }
+        else if (deviceTypes[t] == "CPU")
+        {
+            deviceType = Device::TYPE_CPU;
+        }
+        else if (deviceTypes[t] == "ACCELERATOR")
+        {
+            deviceType = Device::TYPE_ACCELERATOR;
+        }
+        else if (deviceTypes[t] == "ALL")
+        {
+            deviceType = Device::TYPE_ALL;
+        }
+        else
+        {
+            std::cerr << "ERROR: Unsupported device type for OpenCL device (GPU, CPU, ACCELERATOR): " << deviceTypes[t] << std::endl;
+            goto not_found;
+        }
+
+        std::vector<cl_device_id> devices; // TODO Use clReleaseDevice to cleanup
+        for (int i = selectedPlatform >= 0 ? selectedPlatform : 0;
+                (selectedPlatform >= 0 ? i == selectedPlatform : true) && (i < (int)platforms.size());
+                i++)
+        {
+            cl_uint count = 0;
+            status = clGetDeviceIDs(platforms[i], deviceType, 0, NULL, &count);
+            CV_Assert(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND);
+            if (count == 0)
+                continue;
+            size_t base = devices.size();
+            devices.resize(base + count);
+            status = clGetDeviceIDs(platforms[i], deviceType, count, &devices[base], &count);
+            CV_Assert(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND);
+        }
+
+        for (size_t i = (isID ? deviceID : 0);
+             (isID ? (i == (size_t)deviceID) : true) && (i < devices.size());
+             i++)
+        {
+            std::string name;
+            status = getStringInfo(clGetDeviceInfo, devices[i], CL_DEVICE_NAME, name);
+            CV_Assert(status == CL_SUCCESS);
+            if (isID || name.find(deviceName) != std::string::npos)
+            {
+                // TODO check for OpenCL 1.1
+                return devices[i];
+            }
+        }
+    }
+not_found:
+    std::cerr << "ERROR: Required OpenCL device not found, check configuration: " << (configuration == NULL ? "" : configuration) << std::endl
+            << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
+            << "    Device types: ";
+    for (size_t t = 0; t < deviceTypes.size(); t++)
+    {
+        std::cerr << deviceTypes[t] << " ";
+    }
+    std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
+    return NULL;
+}
+
 struct Context2::Impl
 {
     Impl()
     {
         refcount = 1;
         handle = 0;
+    }
+
+    void setDefault()
+    {
+        CV_Assert(handle == NULL);
+
+        cl_device_id d = selectOpenCLDevice();
+
+        if (d == NULL)
+            return;
+
+        cl_platform_id pl = NULL;
+        cl_int status = clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL);
+        CV_Assert(status == CL_SUCCESS);
+
+        cl_context_properties prop[] =
+        {
+            CL_CONTEXT_PLATFORM, (cl_context_properties)pl,
+            0
+        };
+
+        // !!! in the current implementation force the number of devices to 1 !!!
+        int nd = 1;
+
+        handle = clCreateContext(prop, nd, &d, 0, 0, &status);
+        CV_Assert(status == CL_SUCCESS);
+        bool ok = handle != 0 && status >= 0;
+        if( ok )
+        {
+            devices.resize(nd);
+            devices[0].set(d);
+        }
+        else
+        {
+            handle = NULL;
+        }
     }
 
     Impl(int dtype0)
@@ -2022,6 +2274,21 @@ Context2::Context2(int dtype)
     create(dtype);
 }
 
+bool Context2::create()
+{
+    if( !haveOpenCL() )
+        return false;
+    if(p)
+        p->release();
+    p = new Impl();
+    if(!p->handle)
+    {
+        delete p;
+        p = 0;
+    }
+    return p != 0;
+}
+
 bool Context2::create(int dtype0)
 {
     if( !haveOpenCL() )
@@ -2039,7 +2306,11 @@ bool Context2::create(int dtype0)
 
 Context2::~Context2()
 {
-    p->release();
+    if (p)
+    {
+        p->release();
+        p = NULL;
+    }
 }
 
 Context2::Context2(const Context2& c)
@@ -2062,7 +2333,7 @@ Context2& Context2::operator = (const Context2& c)
 
 void* Context2::ptr() const
 {
-    return p->handle;
+    return p == NULL ? NULL : p->handle;
 }
 
 size_t Context2::ndevices() const
@@ -2081,23 +2352,16 @@ Context2& Context2::getDefault(bool initialize)
     static Context2 ctx;
     if(!ctx.p && haveOpenCL())
     {
+        if (!ctx.p)
+            ctx.p = new Impl();
         if (initialize)
         {
             // do not create new Context2 right away.
             // First, try to retrieve existing context of the same type.
             // In its turn, Platform::getContext() may call Context2::create()
             // if there is no such context.
-            ctx.create(Device::TYPE_ACCELERATOR);
-            if(!ctx.p)
-                ctx.create(Device::TYPE_DGPU);
-            if(!ctx.p)
-                ctx.create(Device::TYPE_IGPU);
-            if(!ctx.p)
-                ctx.create(Device::TYPE_CPU);
-        }
-        else
-        {
-            ctx.p = new Impl();
+            if (ctx.p->handle == NULL)
+                ctx.p->setDefault();
         }
     }
 
@@ -2553,6 +2817,16 @@ size_t Kernel::workGroupSize() const
                                     sizeof(val), &val, &retsz) >= 0 ? val : 0;
 }
 
+size_t Kernel::preferedWorkGroupSizeMultiple() const
+{
+    if(!p)
+        return 0;
+    size_t val = 0, retsz = 0;
+    cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
+    return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
+                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+}
+
 bool Kernel::compileWorkGroupSize(size_t wsz[]) const
 {
     if(!p || !wsz)
@@ -2616,11 +2890,16 @@ struct Program::Impl
                     if( retval >= 0 )
                     {
                         errmsg = String(buf);
-                        CV_Error_(Error::StsAssert, ("OpenCL program can not be built: %s", errmsg.c_str()));
+                        printf("OpenCL program can not be built: %s", errmsg.c_str());
                     }
                 }
+
+                if( handle )
+                {
+                    clReleaseProgram(handle);
+                    handle = NULL;
+                }
             }
-            CV_Assert(retval >= 0);
         }
     }
 

@@ -210,6 +210,7 @@ public:
     Context2(const Context2& c);
     Context2& operator = (const Context2& c);
 
+    bool create();
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
@@ -488,6 +489,7 @@ public:
     bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
+    size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
     size_t localMemSize() const;
 
