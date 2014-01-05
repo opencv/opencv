@@ -999,6 +999,17 @@ MatIterator_<_Tp> Mat::end()
     return it;
 }
 
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) {
+    this->forEach_impl<_Tp>(operation);
+};
+
+template<typename _Tp, typename Functor> inline
+void Mat::forEach(const Functor& operation) const {
+    // call as not const
+    (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
+};
+
 template<typename _Tp> inline
 Mat::operator std::vector<_Tp>() const
 {
@@ -1584,6 +1595,15 @@ MatIterator_<_Tp> Mat_<_Tp>::end()
     return Mat::end<_Tp>();
 }
 
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) {
+    Mat::forEach<_Tp, Functor>(operation);
+}
+
+template<typename _Tp> template<typename Functor> inline
+void Mat_<_Tp>::forEach(const Functor& operation) const {
+    Mat::forEach<_Tp, Functor>(operation);
+}
 
 ///////////////////////////// SparseMat /////////////////////////////
 
