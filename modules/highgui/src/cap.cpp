@@ -156,6 +156,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_GIGE_API
         CV_CAP_GIGANETIX,
 #endif
+#ifdef HAVE_INTELPERC
+        CV_CAP_INTELPERC,
+#endif
         -1
     };
 
@@ -193,6 +196,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_ANDROID_NATIVE_CAMERA) || \
     defined(HAVE_GIGE_API) || \
+    defined(HAVE_INTELPERC)    || \
     (0)
         // local variable to memorize the captured device
         CvCapture *capture;
@@ -342,6 +346,13 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
         break; // CV_CAP_GIGANETIX
 #endif
 
+#ifdef HAVE_INTELPERC
+        case CV_CAP_INTELPERC:
+            capture = cvCreateCameraCapture_IntelPerC(index);
+            if (capture)
+                return capture;
+        break; // CV_CAP_INTEL_PERC
+#endif
         }
     }
 

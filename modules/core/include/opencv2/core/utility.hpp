@@ -85,7 +85,7 @@ template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 public:
     typedef _Tp value_type;
 
-    //! the default contructor
+    //! the default constructor
     AutoBuffer();
     //! constructor taking the real buffer size
     AutoBuffer(size_t _size);

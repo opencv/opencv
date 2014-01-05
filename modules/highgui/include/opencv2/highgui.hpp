@@ -271,7 +271,8 @@ enum { CAP_ANY          = 0,     // autodetect
        CAP_XIAPI        = 1100,  // XIMEA Camera API
        CAP_AVFOUNDATION = 1200,  // AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,  // Smartek Giganetix GigEVisionSDK
-       CAP_MSMF         = 1400   // Microsoft Media Foundation (via videoInput)
+       CAP_MSMF         = 1400,  // Microsoft Media Foundation (via videoInput)
+       CAP_INTELPERC    = 1500   // Intel Perceptual Computing SDK
      };
 
 // generic properties (based on DC1394 properties)
@@ -496,6 +497,26 @@ enum { CAP_PROP_GIGA_FRAME_OFFSET_X   = 10001,
        CAP_PROP_GIGA_FRAME_SENS_HEIGH = 10006
      };
 
+enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
+       CAP_PROP_INTELPERC_PROFILE_IDX                 = 11002,
+       CAP_PROP_INTELPERC_DEPTH_LOW_CONFIDENCE_VALUE  = 11003,
+       CAP_PROP_INTELPERC_DEPTH_SATURATION_VALUE      = 11004,
+       CAP_PROP_INTELPERC_DEPTH_CONFIDENCE_THRESHOLD  = 11005,
+       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_HORZ     = 11006,
+       CAP_PROP_INTELPERC_DEPTH_FOCAL_LENGTH_VERT     = 11007
+     };
+
+// Intel PerC streams
+enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
+       CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
+       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
+     };
+
+enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
+       CAP_INTELPERC_UVDEPTH_MAP            = 1, // Each pixel contains two 32-bit floating point values in the range of 0-1, representing the mapping of depth coordinates to the color coordinates.
+       CAP_INTELPERC_IR_MAP                 = 2, // Each pixel is a 16-bit integer. The value indicates the intensity of the reflected laser beam.
+       CAP_INTELPERC_IMAGE                  = 3
+     };
 
 class CV_EXPORTS_W VideoCapture
 {

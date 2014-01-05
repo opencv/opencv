@@ -394,7 +394,9 @@ template<typename _Tp> static inline _Tp randu()
   return (_Tp)theRNG();
 }
 
+///////////////////////////////// Formatted string generation /////////////////////////////////
 
+CV_EXPORTS String format( const char* fmt, ... );
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 

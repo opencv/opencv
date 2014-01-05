@@ -229,6 +229,75 @@ OCL_TEST_P(GaussianBlurTest, Mat)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Erode
+
+typedef FilterTestBase Erode;
+
+OCL_TEST_P(Erode, Mat)
+{
+    Size kernelSize(ksize, ksize);
+    int iterations = (int)param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+        Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
+
+        OCL_OFF(cv::erode(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_ON(cv::erode(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+
+        Near();
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Dilate
+
+typedef FilterTestBase Dilate;
+
+OCL_TEST_P(Dilate, Mat)
+{
+    Size kernelSize(ksize, ksize);
+    int iterations = (int)param;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+        Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
+
+        OCL_OFF(cv::dilate(src_roi, dst_roi, kernel, Point(-1,-1), iterations) );
+        OCL_ON(cv::dilate(usrc_roi, udst_roi, kernel, Point(-1,-1), iterations) );
+
+        Near();
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// MorphologyEx
+
+typedef FilterTestBase MorphologyEx;
+
+OCL_TEST_P(MorphologyEx, Mat)
+{
+    Size kernelSize(ksize, ksize);
+    int iterations = (int)param;
+    int op = size.height;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+        Mat kernel = randomMat(kernelSize, CV_8UC1, 0, 3);
+
+        OCL_OFF(cv::morphologyEx(src_roi, dst_roi, op, kernel, Point(-1,-1), iterations) );
+        OCL_ON(cv::morphologyEx(usrc_roi, udst_roi, op, kernel, Point(-1,-1), iterations) );
+
+        Near();
+    }
+}
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FILTER_BORDER_SET_NO_ISOLATED \
@@ -284,6 +353,31 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, GaussianBlurTest, Combine(
                             FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
                             Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Erode, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(3, 5, 7),
+                            Values(Size(0,0)),//not used
+                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(1.0, 2.0, 3.0),
+                            Bool() ) );
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, Dilate, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(3, 5, 7),
+                            Values(Size(0,0)),//not used
+                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(1.0, 2.0, 3.0),
+                            Bool() ) );
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
+                            Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4),
+                            Values(3, 5, 7),
+                            Values(Size(0,0), Size(0,1), Size(0,2), Size(0,3), Size(0,4), Size(0,5),Size(0,6)),//uses as generator of operations
+                            Values((BorderType)BORDER_CONSTANT),//not used
+                            Values(1.0, 2.0, 3.0),
+                            Bool() ) );
+
 
 } } // namespace cvtest::ocl
 

@@ -695,17 +695,17 @@ namespace cv
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat &rowKernel,
-                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT);
+                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
                 const Ptr<BaseColumnFilter_GPU> &columnFilter);
 
         //! returns the Gaussian filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns filter engine for the generalized Sobel operator
-        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT, Size imgSize = Size(-1,-1) );
 
         //! applies Laplacian operator to the image
         // supports only ksize = 1 and ksize = 3
@@ -1439,8 +1439,10 @@ namespace cv
             oclMat Dx_;
             oclMat Dy_;
             oclMat eig_;
+            oclMat eig_minmax_;
             oclMat minMaxbuf_;
             oclMat tmpCorners_;
+            oclMat counter_;
         };
 
         inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,
@@ -1531,6 +1533,110 @@ namespace cv
         protected:
 
             int bytes;
+        };
+
+        ////////////////////////////////// ORB Descriptor Extractor //////////////////////////////////
+        class CV_EXPORTS ORB_OCL
+        {
+        public:
+            enum
+            {
+                X_ROW = 0,
+                Y_ROW,
+                RESPONSE_ROW,
+                ANGLE_ROW,
+                OCTAVE_ROW,
+                SIZE_ROW,
+                ROWS_COUNT
+            };
+
+            enum
+            {
+                DEFAULT_FAST_THRESHOLD = 20
+            };
+
+            //! Constructor
+            explicit ORB_OCL(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
+                             int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
+
+            //! Compute the ORB features on an image
+            //! image - the image to compute the features (supports only CV_8UC1 images)
+            //! mask - the mask to apply
+            //! keypoints - the resulting keypoints
+            void operator ()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints);
+            void operator ()(const oclMat& image, const oclMat& mask, oclMat& keypoints);
+
+            //! Compute the ORB features and descriptors on an image
+            //! image - the image to compute the features (supports only CV_8UC1 images)
+            //! mask - the mask to apply
+            //! keypoints - the resulting keypoints
+            //! descriptors - descriptors array
+            void operator ()(const oclMat& image, const oclMat& mask, std::vector<KeyPoint>& keypoints, oclMat& descriptors);
+            void operator ()(const oclMat& image, const oclMat& mask, oclMat& keypoints, oclMat& descriptors);
+
+            //! download keypoints from device to host memory
+            static void downloadKeyPoints(const oclMat& d_keypoints, std::vector<KeyPoint>& keypoints);
+            //! convert keypoints to KeyPoint vector
+            static void convertKeyPoints(const Mat& d_keypoints, std::vector<KeyPoint>& keypoints);
+
+            //! returns the descriptor size in bytes
+            inline int descriptorSize() const { return kBytes; }
+            inline int descriptorType() const { return CV_8U; }
+            inline int defaultNorm() const { return NORM_HAMMING; }
+
+            inline void setFastParams(int threshold, bool nonmaxSupression = true)
+            {
+                fastDetector_.threshold = threshold;
+                fastDetector_.nonmaxSupression = nonmaxSupression;
+            }
+
+            //! release temporary buffer's memory
+            void release();
+
+            //! if true, image will be blurred before descriptors calculation
+            bool blurForDescriptor;
+
+        private:
+            enum { kBytes = 32 };
+
+            void buildScalePyramids(const oclMat& image, const oclMat& mask);
+
+            void computeKeyPointsPyramid();
+
+            void computeDescriptors(oclMat& descriptors);
+
+            void mergeKeyPoints(oclMat& keypoints);
+
+            int nFeatures_;
+            float scaleFactor_;
+            int nLevels_;
+            int edgeThreshold_;
+            int firstLevel_;
+            int WTA_K_;
+            int scoreType_;
+            int patchSize_;
+
+            // The number of desired features per scale
+            std::vector<size_t> n_features_per_level_;
+
+            // Points to compute BRIEF descriptors from
+            oclMat pattern_;
+
+            std::vector<oclMat> imagePyr_;
+            std::vector<oclMat> maskPyr_;
+
+            oclMat buf_;
+
+            std::vector<oclMat> keyPointsPyr_;
+            std::vector<int> keyPointsCount_;
+
+            FAST_OCL fastDetector_;
+
+            Ptr<ocl::FilterEngine_GPU> blurFilter;
+
+            oclMat d_keypoints_;
+
+            oclMat uMax_;
         };
 
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////

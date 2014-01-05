@@ -2212,7 +2212,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
     int type = src.type();
@@ -2240,7 +2240,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             return;
     }
 #endif
-
+*/
     if( interpolation == INTER_NEAREST )
     {
         resizeNN( src, dst, inv_scale_x, inv_scale_y );
@@ -3299,7 +3299,10 @@ public:
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
-                        bufa = (*m2)(Rect(x, y, bcols, brows));
+
+                        const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                        for( x1 = 0; x1 < bcols; x1++ )
+                            A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
@@ -3680,7 +3683,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1) : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst2f[x] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3689,7 +3692,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1): 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst1f[x*2+1] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -4000,7 +4003,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4044,7 +4047,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         }
     }
 #endif
-
+*/
     for( x = 0; x < dst.cols; x++ )
     {
         adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
@@ -4231,7 +4234,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4275,7 +4278,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         }
     }
 #endif
-
+*/
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));

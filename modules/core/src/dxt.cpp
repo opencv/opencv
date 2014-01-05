@@ -1726,8 +1726,8 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
 #ifdef HAVE_CLAMDFFT
-    if (ocl::useOpenCL() && ocl::haveAmdFft() && _dst.isUMat() && _src0.dims() <= 2
-            && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
+    if (ocl::useOpenCL() && ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
         return;
 #endif
 
@@ -2577,7 +2577,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
 
     DCTFunc dct_func = dct_tbl[(int)inv + (depth == CV_64F)*2];
 
-    if( (flags & DFT_ROWS) || src.rows == 1 ||
+    if( (flags & DCT_ROWS) || src.rows == 1 ||
         (src.cols == 1 && (src.isContinuous() && dst.isContinuous())))
     {
         stage = end_stage = 0;
@@ -2597,7 +2597,7 @@ void cv::dct( InputArray _src0, OutputArray _dst, int flags )
         {
             len = src.cols;
             count = src.rows;
-            if( len == 1 && !(flags & DFT_ROWS) )
+            if( len == 1 && !(flags & DCT_ROWS) )
             {
                 len = src.rows;
                 count = 1;

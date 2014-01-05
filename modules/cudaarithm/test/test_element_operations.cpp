@@ -2514,7 +2514,7 @@ CUDA_TEST_P(AddWeighted, Accuracy)
         cv::Mat dst_gold;
         cv::addWeighted(src1, alpha, src2, beta, gamma, dst_gold, dst_depth);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 1.0 : 1e-3);
+        EXPECT_MAT_NEAR(dst_gold, dst, dst_depth < CV_32F ? 2.0 : 1e-3);
     }
 }
 

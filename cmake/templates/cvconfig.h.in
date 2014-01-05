@@ -88,6 +88,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
+/* Intel Perceptual Computing SDK library */
+#cmakedefine HAVE_INTELPERC
+
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 

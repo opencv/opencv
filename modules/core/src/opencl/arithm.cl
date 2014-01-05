@@ -91,6 +91,9 @@
 
 #else
 
+    #ifndef convertToWT2
+    #define convertToWT2 convertToWT1
+    #endif
     #define srcelem1 convertToWT1(*(__global srcT1*)(srcptr1 + src1_index))
     #define srcelem2 convertToWT2(*(__global srcT2*)(srcptr2 + src2_index))
 
@@ -223,13 +226,17 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #define convertToWT2
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
 
-#elif defined OP_CONVERT
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1)
-
-#elif defined OP_CONVERT_SCALE
+#elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , workT alpha, workT beta
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + beta)
+#define PROCESS_ELEM \
+    workT value = srcelem1 * alpha + beta; \
+    dstelem = convertToDT(value >= 0 ? value : -value)
+
+#elif defined OP_SCALE_ADD
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , workT alpha
+#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * alpha + srcelem2)
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
 #ifdef OP_CTP_AD
@@ -263,6 +270,13 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
     FROM_DEGREE; \
     dstelem = cos(alpha) * x; \
     dstelem2 = sin(alpha) * x
+
+#elif defined OP_PATCH_NANS
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , int val
+#define PROCESS_ELEM \
+    if (( srcelem1 & 0x7fffffff) > 0x7f800000 ) \
+        dstelem = val
 
 #else
 #error "unknown op type"

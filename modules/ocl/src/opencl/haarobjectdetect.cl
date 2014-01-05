@@ -126,13 +126,11 @@ __kernel void gpuRunHaarClassifierCascadePacked(
     )
 
 {
-// this version used information provided for each workgroup
-// no empty WG
     int     gid = (int)get_group_id(0);
     int     lid_x = (int)get_local_id(0);
     int     lid_y = (int)get_local_id(1);
     int     lid = lid_y*LSx+lid_x;
-    int4    WGInfo = pWGInfo[gid];
+    int4    WGInfo = pWGInfo[WGSTART+gid];
     int     GroupX = (WGInfo.y >> 16)&0xFFFF;
     int     GroupY = (WGInfo.y >> 0 )& 0xFFFF;
     int     Width  = (WGInfo.x >> 16)&0xFFFF;
@@ -140,8 +138,8 @@ __kernel void gpuRunHaarClassifierCascadePacked(
     int     ImgOffset = WGInfo.z;
     float   ScaleFactor = as_float(WGInfo.w);
 
-#define DATA_SIZE_X (LSx+WND_SIZE_X)
-#define DATA_SIZE_Y (LSy+WND_SIZE_Y)
+#define DATA_SIZE_X (PIXEL_STEP*LSx+WND_SIZE_X)
+#define DATA_SIZE_Y (PIXEL_STEP*LSy+WND_SIZE_Y)
 #define DATA_SIZE (DATA_SIZE_X*DATA_SIZE_Y)
 
     local int SumL[DATA_SIZE];
@@ -165,9 +163,11 @@ __kernel void gpuRunHaarClassifierCascadePacked(
     int4    info1 = p;
     int4    info2 = pq;
 
-    {
-        int     xl = lid_x;
-        int     yl = lid_y;
+    // calc processed ROI coordinate in local mem
+    int     xl = lid_x*PIXEL_STEP;
+    int     yl = lid_y*PIXEL_STEP;
+
+    {// calc variance_norm_factor for all stages
         int     OffsetLocal =          yl * DATA_SIZE_X +         xl;
         int     OffsetGlobal = (GroupY+yl)* pixelstep   + (GroupX+xl);
 
@@ -194,13 +194,13 @@ __kernel void gpuRunHaarClassifierCascadePacked(
 
     int result = (1.0f>0.0f);
     for(int stageloop = start_stage; (stageloop < end_stage) && result; stageloop++ )
-    {// iterate until candidate is exist
+    {// iterate until candidate is valid
         float   stage_sum = 0.0f;
         __global GpuHidHaarStageClassifier* stageinfo = (__global GpuHidHaarStageClassifier*)
             ((__global uchar*)stagecascadeptr+stageloop*sizeof(GpuHidHaarStageClassifier));
+        int     lcl_off = (yl*DATA_SIZE_X)+(xl);
         int stagecount = stageinfo->count;
         float stagethreshold = stageinfo->threshold;
-        int     lcl_off = (lid_y*DATA_SIZE_X)+(lid_x);
         for(int nodeloop = 0; nodeloop < stagecount; nodecounter++,nodeloop++ )
         {
         // simple macro to extract shorts from int
@@ -212,7 +212,7 @@ __kernel void gpuRunHaarClassifierCascadePacked(
             int4    n1 = pN[1];
             int4    n2 = pN[2];
             float   nodethreshold  = as_float(n2.y) * variance_norm_factor;
-            // calc sum of intensity pixels according to node information
+            // calc sum of intensity pixels according to classifier node information
             float classsum =
                 (SumL[M0(n0.x)+lcl_off] - SumL[M1(n0.x)+lcl_off] - SumL[M0(n0.y)+lcl_off] + SumL[M1(n0.y)+lcl_off]) * as_float(n1.z) +
                 (SumL[M0(n0.z)+lcl_off] - SumL[M1(n0.z)+lcl_off] - SumL[M0(n0.w)+lcl_off] + SumL[M1(n0.w)+lcl_off]) * as_float(n1.w) +
@@ -228,8 +228,8 @@ __kernel void gpuRunHaarClassifierCascadePacked(
         int index = 1+atomic_inc((volatile global int*)candidate); //get index to write global data with face info
         if(index<OUTPUTSZ)
         {
-            int     x = GroupX+lid_x;
-            int     y = GroupY+lid_y;
+            int     x = GroupX+xl;
+            int     y = GroupY+yl;
             int4 candidate_result;
             candidate_result.x = convert_int_rtn(x*ScaleFactor);
             candidate_result.y = convert_int_rtn(y*ScaleFactor);

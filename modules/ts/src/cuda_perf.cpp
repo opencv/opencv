@@ -44,10 +44,6 @@
 #include "opencv2/ts/cuda_perf.hpp"
 #include "opencv2/core/cuda.hpp"
 
-#ifdef HAVE_CUDA
-    #include <cuda_runtime.h>
-#endif
-
 using namespace cv;
 using namespace std;
 
@@ -260,44 +256,8 @@ namespace perf
     void printCudaInfo()
     {
         printOsInfo();
-    #ifndef HAVE_CUDA
-        printf("[----------]\n[ GPU INFO ] \tOpenCV was built without CUDA support.\n[----------]\n"), fflush(stdout);
-    #else
-        int driver;
-        cudaDriverGetVersion(&driver);
-
-        printf("[----------]\n"), fflush(stdout);
-        printf("[ GPU INFO ] \tCUDA Driver  version: %d.\n", driver), fflush(stdout);
-        printf("[ GPU INFO ] \tCUDA Runtime version: %d.\n", CUDART_VERSION), fflush(stdout);
-        printf("[----------]\n"), fflush(stdout);
-
-        printf("[----------]\n"), fflush(stdout);
-        printf("[ GPU INFO ] \tCUDA module was compiled for the following GPU archs.\n"), fflush(stdout);
-        printf("[      BIN ] \t%s.\n", CUDA_ARCH_BIN), fflush(stdout);
-        printf("[      PTX ] \t%s.\n", CUDA_ARCH_PTX), fflush(stdout);
-        printf("[----------]\n"), fflush(stdout);
-
-        printf("[----------]\n"), fflush(stdout);
-        int deviceCount = cv::cuda::getCudaEnabledDeviceCount();
-        printf("[ GPU INFO ] \tCUDA device count:: %d.\n", deviceCount), fflush(stdout);
-        printf("[----------]\n"), fflush(stdout);
-
-        for (int i = 0; i < deviceCount; ++i)
-        {
-            cv::cuda::DeviceInfo info(i);
-
-            printf("[----------]\n"), fflush(stdout);
-            printf("[ DEVICE   ] \t# %d %s.\n", i, info.name()), fflush(stdout);
-            printf("[          ] \tCompute capability: %d.%d\n", (int)info.majorVersion(), (int)info.minorVersion()), fflush(stdout);
-            printf("[          ] \tMulti Processor Count:  %d\n", info.multiProcessorCount()), fflush(stdout);
-            printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)), fflush(stdout);
-            printf("[          ] \tFree  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory()  / 1024.0) / 1024.0)), fflush(stdout);
-            if (!info.isCompatible())
-                printf("[ GPU INFO ] \tThis device is NOT compatible with current CUDA module build\n");
-            printf("[----------]\n"), fflush(stdout);
-        }
-
-    #endif
+        for (int i = 0; i < cv::cuda::getCudaEnabledDeviceCount(); i++)
+            cv::cuda::printCudaDeviceInfo(i);
     }
 
     struct KeypointIdxCompare
