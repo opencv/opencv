@@ -60,7 +60,7 @@ inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
 
 inline void* _InputArray::getObj() const { return obj; }
 
-inline _InputArray::_InputArray() { init(0, 0); }
+inline _InputArray::_InputArray() { init(NONE, 0); }
 inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
