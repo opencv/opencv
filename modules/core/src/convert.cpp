@@ -839,122 +839,122 @@ stype* dst, size_t dstep, Size size, double*) \
 }
 
 
-DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float);
-DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float);
+DEF_CVT_SCALE_ABS_FUNC(8u, cvtScaleAbs_, uchar, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(8s8u, cvtScaleAbs_, schar, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtScaleAbs_, ushort, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtScaleAbs_, short, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtScaleAbs_, int, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtScaleAbs_, float, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtScaleAbs_, double, uchar, float)
 
-DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float);
-DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float);
-DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float);
-DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float);
-DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float);
-DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float);
-DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float);
+DEF_CVT_SCALE_FUNC(8u,     uchar, uchar, float)
+DEF_CVT_SCALE_FUNC(8s8u,   schar, uchar, float)
+DEF_CVT_SCALE_FUNC(16u8u,  ushort, uchar, float)
+DEF_CVT_SCALE_FUNC(16s8u,  short, uchar, float)
+DEF_CVT_SCALE_FUNC(32s8u,  int, uchar, float)
+DEF_CVT_SCALE_FUNC(32f8u,  float, uchar, float)
+DEF_CVT_SCALE_FUNC(64f8u,  double, uchar, float)
 
-DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float);
-DEF_CVT_SCALE_FUNC(8s,     schar, schar, float);
-DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float);
-DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float);
-DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float);
-DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float);
-DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float);
+DEF_CVT_SCALE_FUNC(8u8s,   uchar, schar, float)
+DEF_CVT_SCALE_FUNC(8s,     schar, schar, float)
+DEF_CVT_SCALE_FUNC(16u8s,  ushort, schar, float)
+DEF_CVT_SCALE_FUNC(16s8s,  short, schar, float)
+DEF_CVT_SCALE_FUNC(32s8s,  int, schar, float)
+DEF_CVT_SCALE_FUNC(32f8s,  float, schar, float)
+DEF_CVT_SCALE_FUNC(64f8s,  double, schar, float)
 
-DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float);
-DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float);
-DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float);
-DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float);
-DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float);
-DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float);
-DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float);
+DEF_CVT_SCALE_FUNC(8u16u,  uchar, ushort, float)
+DEF_CVT_SCALE_FUNC(8s16u,  schar, ushort, float)
+DEF_CVT_SCALE_FUNC(16u,    ushort, ushort, float)
+DEF_CVT_SCALE_FUNC(16s16u, short, ushort, float)
+DEF_CVT_SCALE_FUNC(32s16u, int, ushort, float)
+DEF_CVT_SCALE_FUNC(32f16u, float, ushort, float)
+DEF_CVT_SCALE_FUNC(64f16u, double, ushort, float)
 
-DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float);
-DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float);
-DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float);
-DEF_CVT_SCALE_FUNC(16s,    short, short, float);
-DEF_CVT_SCALE_FUNC(32s16s, int, short, float);
-DEF_CVT_SCALE_FUNC(32f16s, float, short, float);
-DEF_CVT_SCALE_FUNC(64f16s, double, short, float);
+DEF_CVT_SCALE_FUNC(8u16s,  uchar, short, float)
+DEF_CVT_SCALE_FUNC(8s16s,  schar, short, float)
+DEF_CVT_SCALE_FUNC(16u16s, ushort, short, float)
+DEF_CVT_SCALE_FUNC(16s,    short, short, float)
+DEF_CVT_SCALE_FUNC(32s16s, int, short, float)
+DEF_CVT_SCALE_FUNC(32f16s, float, short, float)
+DEF_CVT_SCALE_FUNC(64f16s, double, short, float)
 
-DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float);
-DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float);
-DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float);
-DEF_CVT_SCALE_FUNC(16s32s, short, int, float);
-DEF_CVT_SCALE_FUNC(32s,    int, int, double);
-DEF_CVT_SCALE_FUNC(32f32s, float, int, float);
-DEF_CVT_SCALE_FUNC(64f32s, double, int, double);
+DEF_CVT_SCALE_FUNC(8u32s,  uchar, int, float)
+DEF_CVT_SCALE_FUNC(8s32s,  schar, int, float)
+DEF_CVT_SCALE_FUNC(16u32s, ushort, int, float)
+DEF_CVT_SCALE_FUNC(16s32s, short, int, float)
+DEF_CVT_SCALE_FUNC(32s,    int, int, double)
+DEF_CVT_SCALE_FUNC(32f32s, float, int, float)
+DEF_CVT_SCALE_FUNC(64f32s, double, int, double)
 
-DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float);
-DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float);
-DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float);
-DEF_CVT_SCALE_FUNC(16s32f, short, float, float);
-DEF_CVT_SCALE_FUNC(32s32f, int, float, double);
-DEF_CVT_SCALE_FUNC(32f,    float, float, float);
-DEF_CVT_SCALE_FUNC(64f32f, double, float, double);
+DEF_CVT_SCALE_FUNC(8u32f,  uchar, float, float)
+DEF_CVT_SCALE_FUNC(8s32f,  schar, float, float)
+DEF_CVT_SCALE_FUNC(16u32f, ushort, float, float)
+DEF_CVT_SCALE_FUNC(16s32f, short, float, float)
+DEF_CVT_SCALE_FUNC(32s32f, int, float, double)
+DEF_CVT_SCALE_FUNC(32f,    float, float, float)
+DEF_CVT_SCALE_FUNC(64f32f, double, float, double)
 
-DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double);
-DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double);
-DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double);
-DEF_CVT_SCALE_FUNC(16s64f, short, double, double);
-DEF_CVT_SCALE_FUNC(32s64f, int, double, double);
-DEF_CVT_SCALE_FUNC(32f64f, float, double, double);
-DEF_CVT_SCALE_FUNC(64f,    double, double, double);
+DEF_CVT_SCALE_FUNC(8u64f,  uchar, double, double)
+DEF_CVT_SCALE_FUNC(8s64f,  schar, double, double)
+DEF_CVT_SCALE_FUNC(16u64f, ushort, double, double)
+DEF_CVT_SCALE_FUNC(16s64f, short, double, double)
+DEF_CVT_SCALE_FUNC(32s64f, int, double, double)
+DEF_CVT_SCALE_FUNC(32f64f, float, double, double)
+DEF_CVT_SCALE_FUNC(64f,    double, double, double)
 
-DEF_CPY_FUNC(8u,     uchar);
-DEF_CVT_FUNC(8s8u,   schar, uchar);
-DEF_CVT_FUNC(16u8u,  ushort, uchar);
-DEF_CVT_FUNC(16s8u,  short, uchar);
-DEF_CVT_FUNC(32s8u,  int, uchar);
-DEF_CVT_FUNC(32f8u,  float, uchar);
-DEF_CVT_FUNC(64f8u,  double, uchar);
+DEF_CPY_FUNC(8u,     uchar)
+DEF_CVT_FUNC(8s8u,   schar, uchar)
+DEF_CVT_FUNC(16u8u,  ushort, uchar)
+DEF_CVT_FUNC(16s8u,  short, uchar)
+DEF_CVT_FUNC(32s8u,  int, uchar)
+DEF_CVT_FUNC(32f8u,  float, uchar)
+DEF_CVT_FUNC(64f8u,  double, uchar)
 
-DEF_CVT_FUNC(8u8s,   uchar, schar);
-DEF_CVT_FUNC(16u8s,  ushort, schar);
-DEF_CVT_FUNC(16s8s,  short, schar);
-DEF_CVT_FUNC(32s8s,  int, schar);
-DEF_CVT_FUNC(32f8s,  float, schar);
-DEF_CVT_FUNC(64f8s,  double, schar);
+DEF_CVT_FUNC(8u8s,   uchar, schar)
+DEF_CVT_FUNC(16u8s,  ushort, schar)
+DEF_CVT_FUNC(16s8s,  short, schar)
+DEF_CVT_FUNC(32s8s,  int, schar)
+DEF_CVT_FUNC(32f8s,  float, schar)
+DEF_CVT_FUNC(64f8s,  double, schar)
 
-DEF_CVT_FUNC(8u16u,  uchar, ushort);
-DEF_CVT_FUNC(8s16u,  schar, ushort);
-DEF_CPY_FUNC(16u,    ushort);
-DEF_CVT_FUNC(16s16u, short, ushort);
-DEF_CVT_FUNC(32s16u, int, ushort);
-DEF_CVT_FUNC(32f16u, float, ushort);
-DEF_CVT_FUNC(64f16u, double, ushort);
+DEF_CVT_FUNC(8u16u,  uchar, ushort)
+DEF_CVT_FUNC(8s16u,  schar, ushort)
+DEF_CPY_FUNC(16u,    ushort)
+DEF_CVT_FUNC(16s16u, short, ushort)
+DEF_CVT_FUNC(32s16u, int, ushort)
+DEF_CVT_FUNC(32f16u, float, ushort)
+DEF_CVT_FUNC(64f16u, double, ushort)
 
-DEF_CVT_FUNC(8u16s,  uchar, short);
-DEF_CVT_FUNC(8s16s,  schar, short);
-DEF_CVT_FUNC(16u16s, ushort, short);
-DEF_CVT_FUNC(32s16s, int, short);
-DEF_CVT_FUNC(32f16s, float, short);
-DEF_CVT_FUNC(64f16s, double, short);
+DEF_CVT_FUNC(8u16s,  uchar, short)
+DEF_CVT_FUNC(8s16s,  schar, short)
+DEF_CVT_FUNC(16u16s, ushort, short)
+DEF_CVT_FUNC(32s16s, int, short)
+DEF_CVT_FUNC(32f16s, float, short)
+DEF_CVT_FUNC(64f16s, double, short)
 
-DEF_CVT_FUNC(8u32s,  uchar, int);
-DEF_CVT_FUNC(8s32s,  schar, int);
-DEF_CVT_FUNC(16u32s, ushort, int);
-DEF_CVT_FUNC(16s32s, short, int);
-DEF_CPY_FUNC(32s,    int);
-DEF_CVT_FUNC(32f32s, float, int);
-DEF_CVT_FUNC(64f32s, double, int);
+DEF_CVT_FUNC(8u32s,  uchar, int)
+DEF_CVT_FUNC(8s32s,  schar, int)
+DEF_CVT_FUNC(16u32s, ushort, int)
+DEF_CVT_FUNC(16s32s, short, int)
+DEF_CPY_FUNC(32s,    int)
+DEF_CVT_FUNC(32f32s, float, int)
+DEF_CVT_FUNC(64f32s, double, int)
 
-DEF_CVT_FUNC(8u32f,  uchar, float);
-DEF_CVT_FUNC(8s32f,  schar, float);
-DEF_CVT_FUNC(16u32f, ushort, float);
-DEF_CVT_FUNC(16s32f, short, float);
-DEF_CVT_FUNC(32s32f, int, float);
-DEF_CVT_FUNC(64f32f, double, float);
+DEF_CVT_FUNC(8u32f,  uchar, float)
+DEF_CVT_FUNC(8s32f,  schar, float)
+DEF_CVT_FUNC(16u32f, ushort, float)
+DEF_CVT_FUNC(16s32f, short, float)
+DEF_CVT_FUNC(32s32f, int, float)
+DEF_CVT_FUNC(64f32f, double, float)
 
-DEF_CVT_FUNC(8u64f,  uchar, double);
-DEF_CVT_FUNC(8s64f,  schar, double);
-DEF_CVT_FUNC(16u64f, ushort, double);
-DEF_CVT_FUNC(16s64f, short, double);
-DEF_CVT_FUNC(32s64f, int, double);
-DEF_CVT_FUNC(32f64f, float, double);
-DEF_CPY_FUNC(64s,    int64);
+DEF_CVT_FUNC(8u64f,  uchar, double)
+DEF_CVT_FUNC(8s64f,  schar, double)
+DEF_CVT_FUNC(16u64f, ushort, double)
+DEF_CVT_FUNC(16s64f, short, double)
+DEF_CVT_FUNC(32s64f, int, double)
+DEF_CVT_FUNC(32f64f, float, double)
+DEF_CPY_FUNC(64s,    int64)
 
 static BinaryFunc getCvtScaleAbsFunc(int depth)
 {

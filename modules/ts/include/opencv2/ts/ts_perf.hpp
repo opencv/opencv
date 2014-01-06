@@ -258,7 +258,7 @@ typedef struct CV_EXPORTS performance_metrics
 enum PERF_STRATEGY
 {
     PERF_STRATEGY_BASE = 0,
-    PERF_STRATEGY_SIMPLE = 1,
+    PERF_STRATEGY_SIMPLE = 1
 };
 
 

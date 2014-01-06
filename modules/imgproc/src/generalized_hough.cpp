@@ -300,7 +300,7 @@ namespace
                       obj.info()->addParam(obj, "votesThreshold", obj.votesThreshold, false, 0, 0,
                                            "The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.");
                       obj.info()->addParam(obj, "dp", obj.dp, false, 0, 0,
-                                           "Inverse ratio of the accumulator resolution to the image resolution."));
+                                           "Inverse ratio of the accumulator resolution to the image resolution."))
 
     GHT_Ballard_Pos::GHT_Ballard_Pos()
     {
@@ -466,7 +466,7 @@ namespace
                       obj.info()->addParam(obj, "maxScale", obj.maxScale, false, 0, 0,
                                            "Maximal scale to detect.");
                       obj.info()->addParam(obj, "scaleStep", obj.scaleStep, false, 0, 0,
-                                           "Scale step."));
+                                           "Scale step."))
 
     GHT_Ballard_PosScale::GHT_Ballard_PosScale()
     {
@@ -631,7 +631,7 @@ namespace
                       obj.info()->addParam(obj, "maxAngle", obj.maxAngle, false, 0, 0,
                                            "Maximal rotation angle to detect in degrees.");
                       obj.info()->addParam(obj, "angleStep", obj.angleStep, false, 0, 0,
-                                           "Angle step in degrees."));
+                                           "Angle step in degrees."))
 
     GHT_Ballard_PosRotation::GHT_Ballard_PosRotation()
     {
@@ -878,7 +878,7 @@ namespace
                       obj.info()->addParam(obj, "dp", obj.dp, false, 0, 0,
                                            "Inverse ratio of the accumulator resolution to the image resolution.");
                       obj.info()->addParam(obj, "posThresh", obj.posThresh, false, 0, 0,
-                                           "Position threshold."));
+                                           "Position threshold."))
 
     GHT_Guil_Full::GHT_Guil_Full()
     {
