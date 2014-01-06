@@ -181,7 +181,7 @@ INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 
 ///////////////////////////// Haar //////////////////////////////
-IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
+IMPLEMENT_PARAM_CLASS(CascadeName, std::string)
 CascadeName cascade_frontalface_alt(std::string("haarcascade_frontalface_alt.xml"));
 CascadeName cascade_frontalface_alt2(std::string("haarcascade_frontalface_alt2.xml"));
 struct getRect

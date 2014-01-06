@@ -85,7 +85,7 @@ Retina::Retina(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAMPLIN
 {
     _retinaFilter = 0;
     _init(inputSz, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
-};
+}
 
 Retina::~Retina()
 {
