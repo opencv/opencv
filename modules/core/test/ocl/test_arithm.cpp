@@ -1011,7 +1011,6 @@ OCL_TEST_P(Phase, angleInDegree)
     }
 }
 
-
 OCL_TEST_P(Phase, angleInRadians)
 {
     for (int j = 0; j < test_loop_times; j++)
@@ -1548,6 +1547,25 @@ OCL_TEST_P(PatchNaNs, Mat)
     }
 }
 
+//////////////////////////////// Psnr ////////////////////////////////////////////////
+
+typedef ArithmTestBase Psnr;
+
+OCL_TEST_P(Psnr, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        double cpuRes = 0, gpuRes = 0;
+
+        OCL_OFF(cpuRes = cv::PSNR(src1_roi, src2_roi));
+        OCL_ON(gpuRes = cv::PSNR(usrc1_roi, usrc2_roi));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1587,6 +1605,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHA
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 
