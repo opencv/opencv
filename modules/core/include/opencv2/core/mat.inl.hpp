@@ -47,6 +47,10 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
+#ifdef HAVE_TBB
+#include <tbb/parallel_for.h>
+#endif
+
 namespace cv
 {
 
@@ -1006,6 +1010,30 @@ void Mat::forEach(Functor operation) {
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEachParallel(Functor operation) {
+#ifdef HAVE_TBB
+    struct TbbFunctor {
+        TbbFunctor(Mat * m, Functor *_operation) : mat(m), COLS(m->cols), _operation(_operation) {
+        }
+
+        Mat * const mat;
+        const int COLS;
+        Functor * const _operation;
+        void operator()(const tbb::blocked_range<int>& range) const {
+            const int r_END = range.end();
+
+            for (int r = range.begin(); r < range.end(); ++r) {
+                _Tp * pixel_reference = &(mat->at<_Tp>(r, 0));
+                const _Tp * const pixel_reference_end = pixel_reference + COLS;
+                int c = 0;
+                while (pixel_reference < pixel_reference_end) {
+                    (*_operation)(*pixel_reference++, r, c++);
+                }
+            }
+        }
+    };
+
+    tbb::parallel_for(tbb::blocked_range<int>(0, this->rows), TbbFunctor(this, &operation));
+#elif defined HAVE_OPENMP
     const int ROWS = this->rows;
     const int COLS = this->cols;
 
@@ -1015,17 +1043,13 @@ void Mat::forEachParallel(Functor operation) {
         const _Tp* pixel_reference_end = pixel_reference + COLS;
         int c = 0;
 
-        while (pixel_reference < pixel_reference_end - 4) {
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-        }
-
         while (pixel_reference < pixel_reference_end) {
             operation(*pixel_reference++, r, c++);
         }
     }
+#else
+    this->forEach<_Tp>(operation);
+#endif
 };
 
 template<typename _Tp, typename Functor> inline
