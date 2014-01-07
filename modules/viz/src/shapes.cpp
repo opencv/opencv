@@ -942,6 +942,32 @@ namespace  cv  { namespace viz { namespace
             actor->SetMapper(planeMapper);
             actor->SetTexture(texture);
         }
+
+        static vtkSmartPointer<vtkPolyData> createFrustrum(double aspect_ratio, double fovy, double scale)
+        {
+            vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+            camera->SetViewAngle(fovy);
+            camera->SetPosition(0.0, 0.0, 0.0);
+            camera->SetViewUp(0.0, 1.0, 0.0);
+            camera->SetFocalPoint(0.0, 0.0, 1.0);
+            camera->SetClippingRange(0.01, scale);
+
+            double planesArray[24];
+            camera->GetFrustumPlanes(aspect_ratio, planesArray);
+
+            vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+            planes->SetFrustumPlanes(planesArray);
+
+            vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
+            frustumSource->SetPlanes(planes);
+
+            vtkSmartPointer<vtkExtractEdges> extract_edges = vtkSmartPointer<vtkExtractEdges>::New();
+            extract_edges->SetInputConnection(frustumSource->GetOutputPort());
+            extract_edges->Update();
+
+            return extract_edges->GetOutput();
+        }
+
     };
 }}}
 
@@ -960,36 +986,16 @@ cv::viz::WCameraPosition::WCameraPosition(double scale)
 
 cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const Color &color)
 {
-    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    double f_x = K(0,0);
-    double f_y = K(1,1);
-    double c_y = K(1,2);
-    double aspect_ratio = f_y / f_x;
+    double f_x = K(0,0), f_y = K(1,1), c_y = K(1,2);
+
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    double fovy = 2.0 * atan2(c_y,f_y) * 180 / CV_PI;
+    double fovy = 2.0 * atan2(c_y, f_y) * 180 / CV_PI;
+    double aspect_ratio = f_y / f_x;
 
-    camera->SetViewAngle(fovy);
-    camera->SetPosition(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
-    camera->SetFocalPoint(0.0, 0.0, 1.0);
-    camera->SetClippingRange(0.01, scale);
-
-    double planesArray[24];
-    camera->GetFrustumPlanes(aspect_ratio, planesArray);
-
-    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
-    planes->SetFrustumPlanes(planesArray);
-
-    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
-    frustumSource->SetPlanes(planes);
-    frustumSource->Update();
-
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(frustumSource->GetOutputPort());
-    filter->Update();
+    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustrum(aspect_ratio, fovy, scale);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(filter->GetOutputPort());
+    mapper->SetInputConnection(polydata->GetProducerPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -1000,34 +1006,13 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const 
 
 cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const Color &color)
 {
-    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-
-    camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
-    camera->SetPosition(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
-    camera->SetFocalPoint(0.0, 0.0, 1.0);
-    camera->SetClippingRange(0.01, scale);
-
     double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
+    double fovy = fov[1] * 180 / CV_PI;
 
-    double planesArray[24];
-    camera->GetFrustumPlanes(aspect_ratio, planesArray);
-
-    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
-    planes->SetFrustumPlanes(planesArray);
-
-    vtkSmartPointer<vtkFrustumSource> frustumSource =
-    vtkSmartPointer<vtkFrustumSource>::New();
-    frustumSource->SetPlanes(planes);
-    frustumSource->Update();
-
-    // Extract the edges so we have the grid
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(frustumSource->GetOutputPort());
-    filter->Update();
+    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustrum(aspect_ratio, fovy, scale);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(filter->GetOutputPort());
+    mapper->SetInputConnection(polydata->GetProducerPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -1039,11 +1024,12 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
 cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, const Mat &image, double scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-    double f_y = K(1,1);
-    double c_y = K(1,2);
+
+    double f_y = K(1,1), c_y = K(1,2);
+
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    double fovy = 2.0 * atan2(c_y,f_y) * 180.0 / CV_PI;
-    double far_end_height = 2.0f * c_y * scale / f_y;
+    double fovy = 2.0 * atan2(c_y, f_y) * 180.0 / CV_PI;
+    double far_end_height = 2.00 * c_y * scale / f_y;
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     CameraPositionUtils::projectImage(fovy, far_end_height, image, scale, color, actor);
