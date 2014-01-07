@@ -175,7 +175,7 @@ template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollec
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Normals Widget implementation
 
-cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
+cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, int level, double scale, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     Mat normals = _normals.getMat();
@@ -207,7 +207,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
             for (; srow < send; srow += xstep * s_chs, nrow += xstep * n_chs)
                 if (!isNan(srow) && !isNan(nrow))
                 {
-                    Vec3f endp = Vec3f(srow) + Vec3f(nrow) * scale;
+                    Vec3f endp = Vec3f(srow) + Vec3f(nrow) * (float)scale;
 
                     points->InsertNextPoint(srow);
                     points->InsertNextPoint(endp.val);

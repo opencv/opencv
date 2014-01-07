@@ -55,7 +55,7 @@ namespace cv
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
-cv::viz::WLine::WLine(const Point3f &pt1, const Point3f &pt2, const Color &color)
+cv::viz::WLine::WLine(const Point3d &pt1, const Point3d &pt2, const Color &color)
 {
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
     line->SetPoint1(pt1.x, pt1.y, pt1.z);
@@ -103,11 +103,11 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WPlane::WPlane(const Vec4f& coefs, float size, const Color &color)
+cv::viz::WPlane::WPlane(const Vec4d& coefs, double size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
     plane->SetNormal(coefs[0], coefs[1], coefs[2]);
-    double norm = cv::norm(Vec3f(coefs.val));
+    double norm = cv::norm(Vec3d(coefs.val));
     plane->Push(-coefs[3] / norm);
 
     Vec3d p_center;
@@ -123,15 +123,15 @@ cv::viz::WPlane::WPlane(const Vec4f& coefs, float size, const Color &color)
     setColor(color);
 }
 
-cv::viz::WPlane::WPlane(const Vec4f& coefs, const Point3f& pt, float size, const Color &color)
+cv::viz::WPlane::WPlane(const Vec4d& coefs, const Point3d& pt, double size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-    Point3f coefs3(coefs[0], coefs[1], coefs[2]);
+    Point3d coefs3(coefs[0], coefs[1], coefs[2]);
     double norm_sqr = 1.0 / coefs3.dot(coefs3);
     plane->SetNormal(coefs[0], coefs[1], coefs[2]);
 
     double t = coefs3.dot(pt) + coefs[3];
-    Vec3f p_center = pt - coefs3 * t * norm_sqr;
+    Vec3d p_center = pt - coefs3 * t * norm_sqr;
     plane->SetCenter(p_center[0], p_center[1], p_center[2]);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -153,7 +153,7 @@ template<> cv::viz::WPlane cv::viz::Widget::cast<cv::viz::WPlane>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// sphere widget implementation
 
-cv::viz::WSphere::WSphere(const Point3f &center, float radius, int sphere_resolution, const Color &color)
+cv::viz::WSphere::WSphere(const Point3d &center, double radius, int sphere_resolution, const Color &color)
 {
     vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
     sphere->SetRadius(radius);
@@ -181,7 +181,7 @@ template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// arrow widget implementation
 
-cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, float thickness, const Color &color)
+cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness, const Color &color)
 {
     vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New();
     arrowSource->SetShaftRadius(thickness);
@@ -231,7 +231,7 @@ template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
-cv::viz::WCircle::WCircle(const Point3f& pt, float radius, float thickness, const Color& color)
+cv::viz::WCircle::WCircle(const Point3d& pt, double radius, double thickness, const Color& color)
 {
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New();
     // Maybe the resolution should be lower e.g. 50 or 25
@@ -267,9 +267,9 @@ template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-cv::viz::WCylinder::WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides, const Color &color)
+cv::viz::WCylinder::WCylinder(const Point3d& pt_on_axis, const Point3d& axis_direction, double radius, int numsides, const Color &color)
 {
-    const Point3f pt2 = pt_on_axis + axis_direction;
+    const Point3d pt2 = pt_on_axis + axis_direction;
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
     line->SetPoint1(pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
     line->SetPoint2(pt2.x, pt2.y, pt2.z);
@@ -298,7 +298,7 @@ template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-cv::viz::WCube::WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame, const Color &color)
+cv::viz::WCube::WCube(const Point3d& pt_min, const Point3d& pt_max, bool wire_frame, const Color &color)
 {
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     if (wire_frame)
@@ -330,7 +330,7 @@ template<> cv::viz::WCube cv::viz::Widget::cast<cv::viz::WCube>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// coordinate system widget implementation
 
-cv::viz::WCoordinateSystem::WCoordinateSystem(float scale)
+cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
     axes->SetOrigin(0, 0, 0);
@@ -461,7 +461,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2f &spacing, const Color &color)
+cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
 {
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
@@ -479,14 +479,14 @@ cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2f &spacing, const Color
     setColor(color);
 }
 
-cv::viz::WGrid::WGrid(const Vec4f &coefs, const Vec2i &dimensions, const Vec2f &spacing, const Color &color)
+cv::viz::WGrid::WGrid(const Vec4d &coefs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
 {
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
     // Estimate the transform to set the normal based on the coefficients
     Vec3d normal(coefs[0], coefs[1], coefs[2]);
     Vec3d up_vector(0.0, 1.0, 0.0); // Just set as default
-    double push_distance = -coefs[3]/cv::norm(Vec3f(coefs.val));
+    double push_distance = -coefs[3]/cv::norm(Vec3d(coefs.val));
     Vec3d n = normalize(normal);
     Vec3d u = normalize(up_vector.cross(n));
     Vec3d v = n.cross(u);
@@ -525,7 +525,7 @@ template<> cv::viz::WGrid cv::viz::Widget::cast<cv::viz::WGrid>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text3D widget implementation
 
-cv::viz::WText3D::WText3D(const String &text, const Point3f &position, float text_scale, bool face_camera, const Color &color)
+cv::viz::WText3D::WText3D(const String &text, const Point3d &position, double text_scale, bool face_camera, const Color &color)
 {
     vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New();
     textSource->SetText(text.c_str());
@@ -759,7 +759,7 @@ cv::viz::WImage3D::WImage3D(const Mat &image, const Size &size)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WImage3D::WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size)
+cv::viz::WImage3D::WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
@@ -857,7 +857,7 @@ namespace  cv  { namespace viz { namespace
 {
     struct CameraPositionUtils
     {
-        static void projectImage(float fovy, float far_end_height, const Mat &image,
+        static void projectImage(double fovy, double far_end_height, const Mat &image,
                                  double scale, const Color &color, vtkSmartPointer<vtkActor> actor)
         {
             // Create a camera
@@ -950,7 +950,7 @@ namespace  cv  { namespace viz { namespace
     };
 }}}
 
-cv::viz::WCameraPosition::WCameraPosition(float scale)
+cv::viz::WCameraPosition::WCameraPosition(double scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
     axes->SetOrigin(0, 0, 0);
@@ -992,20 +992,20 @@ cv::viz::WCameraPosition::WCameraPosition(float scale)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, float scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    float f_x = K(0,0);
-    float f_y = K(1,1);
-    float c_y = K(1,2);
-    float aspect_ratio = f_y / f_x;
+    double f_x = K(0,0);
+    double f_y = K(1,1);
+    double c_y = K(1,2);
+    double aspect_ratio = f_y / f_x;
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    float fovy = 2.0f * atan2(c_y,f_y) * 180 / CV_PI;
+    double fovy = 2.0 * atan2(c_y,f_y) * 180 / CV_PI;
 
     camera->SetViewAngle(fovy);
-    camera->SetPosition(0.0,0.0,0.0);
-    camera->SetViewUp(0.0,1.0,0.0);
-    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetPosition(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    camera->SetFocalPoint(0.0, 0.0, 1.0);
     camera->SetClippingRange(0.01, scale);
 
     double planesArray[24];
@@ -1014,8 +1014,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, float scale, const C
     vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
     planes->SetFrustumPlanes(planesArray);
 
-    vtkSmartPointer<vtkFrustumSource> frustumSource =
-    vtkSmartPointer<vtkFrustumSource>::New();
+    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
     frustumSource->SetPlanes(planes);
     frustumSource->Update();
 
@@ -1034,14 +1033,14 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, float scale, const C
 }
 
 
-cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, float scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
     camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
-    camera->SetPosition(0.0,0.0,0.0);
-    camera->SetViewUp(0.0,1.0,0.0);
-    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetPosition(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    camera->SetFocalPoint(0.0, 0.0, 1.0);
     camera->SetClippingRange(0.01, scale);
 
     double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
@@ -1072,25 +1071,25 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, float scale, const C
     setColor(color);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Matx33f &K, const Mat &image, float scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, const Mat &image, double scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-    float f_y = K(1,1);
-    float c_y = K(1,2);
+    double f_y = K(1,1);
+    double c_y = K(1,2);
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    float fovy = 2.0f * atan2(c_y,f_y) * 180.0f / CV_PI;
-    float far_end_height = 2.0f * c_y * scale / f_y;
+    double fovy = 2.0 * atan2(c_y,f_y) * 180.0 / CV_PI;
+    double far_end_height = 2.0f * c_y * scale / f_y;
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     CameraPositionUtils::projectImage(fovy, far_end_height, image, scale, color, actor);
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Vec2f &fov, const Mat &image, float scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, const Mat &image, double scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-    float fovy = fov[1] * 180.0f / CV_PI;
-    float far_end_height = 2.0 * scale * tan(fov[1] * 0.5);
+    double fovy = fov[1] * 180.0 / CV_PI;
+    double far_end_height = 2.0 * scale * tan(fov[1] * 0.5);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     CameraPositionUtils::projectImage(fovy, far_end_height, image, scale, color, actor);
@@ -1141,7 +1140,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, float scale, const Color &color)
+cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double scale, const Color &color)
 {
     CV_Assert(_path.kind() == _InputArray::STD_VECTOR || _path.kind() == _InputArray::MAT);
     CV_Assert(_path.type() == CV_32FC(16) || _path.type() == CV_64FC(16));
@@ -1259,15 +1258,15 @@ template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// WTrajectoryFrustums widget implementation
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    float f_x = K(0,0);
-    float f_y = K(1,1);
-    float c_y = K(1,2);
-    float aspect_ratio = f_y / f_x;
+    double f_x = K(0,0);
+    double f_y = K(1,1);
+    double c_y = K(1,2);
+    double aspect_ratio = f_y / f_x;
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    float fovy = 2.0f * atan2(c_y,f_y) * 180 / CV_PI;
+    double fovy = 2.0 * atan2(c_y,f_y) * 180 / CV_PI;
 
     camera->SetViewAngle(fovy);
     camera->SetPosition(0.0,0.0,0.0);
@@ -1303,14 +1302,14 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &p
     setColor(color);
 }
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
 
     camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
-    camera->SetPosition(0.0,0.0,0.0);
-    camera->SetViewUp(0.0,1.0,0.0);
-    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetPosition(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    camera->SetFocalPoint(0.0, 0.0, 1.0);
     camera->SetClippingRange(0.01, scale);
 
     double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
@@ -1352,7 +1351,7 @@ template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajecto
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// WTrajectorySpheres widget implementation
 
-cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length, float init_sphere_radius, float sphere_radius,
+cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3d> &path, double line_length, double init_sphere_radius, double sphere_radius,
                                                           const Color &line_color, const Color &sphere_color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
