@@ -335,36 +335,28 @@ cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
     axes->SetOrigin(0, 0, 0);
     axes->SetScaleFactor(scale);
-
-    vtkSmartPointer<vtkFloatArray> axes_colors = vtkSmartPointer<vtkFloatArray>::New();
-    axes_colors->Allocate(6);
-    axes_colors->InsertNextValue(0.0);
-    axes_colors->InsertNextValue(0.0);
-    axes_colors->InsertNextValue(0.5);
-    axes_colors->InsertNextValue(0.5);
-    axes_colors->InsertNextValue(1.0);
-    axes_colors->InsertNextValue(1.0);
-
-    vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput();
-#if VTK_MAJOR_VERSION <= 5
-    axes_data->Update();
-#else
     axes->Update();
-#endif
-    axes_data->GetPointData()->SetScalars(axes_colors);
 
-    vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New();
-#if VTK_MAJOR_VERSION <= 5
-    axes_tubes->SetInput(axes_data);
-#else
-    axes_tubes->SetInputData(axes_data);
-#endif
-    axes_tubes->SetRadius(axes->GetScaleFactor() / 50.0);
-    axes_tubes->SetNumberOfSides(6);
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->InsertNextTuple3(255, 0, 0);
+    colors->InsertNextTuple3(255, 0, 0);
+    colors->InsertNextTuple3(0, 255, 0);
+    colors->InsertNextTuple3(0, 255, 0);
+    colors->InsertNextTuple3(0, 0, 255);
+    colors->InsertNextTuple3(0, 0, 255);
+
+    vtkSmartPointer<vtkPolyData> polydata = axes->GetOutput();
+    polydata->GetPointData()->SetScalars(colors);
+
+    vtkSmartPointer<vtkTubeFilter> tube_filter = vtkSmartPointer<vtkTubeFilter>::New();
+    VtkUtils::SetInputData(tube_filter, polydata);
+    tube_filter->SetRadius(axes->GetScaleFactor() / 50.0);
+    tube_filter->SetNumberOfSides(6);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetScalarModeToUsePointData();
-    mapper->SetInputConnection(axes_tubes->GetOutputPort());
+    VtkUtils::SetInputData(mapper, tube_filter->GetOutput());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
