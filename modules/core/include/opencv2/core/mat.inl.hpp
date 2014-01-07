@@ -1029,7 +1029,7 @@ void Mat::forEachParallel(Functor operation) {
 };
 
 template<typename _Tp, typename Functor> inline
-const void Mat::forEach(Functor operation) const {
+void Mat::forEach(Functor operation) const {
     if (false) {
         // test for arguments is const.
         operation(*reinterpret_cast<const _Tp*>(0));
@@ -1634,7 +1634,7 @@ void Mat_<_Tp>::forEachParallel(Functor operation) {
 }
 
 template<typename _Tp> template<typename Functor> inline
-const void Mat_<_Tp>::forEach(Functor operation) const {
+void Mat_<_Tp>::forEach(Functor operation) const {
     Mat::forEach<_Tp, Functor>(operation);
 }
 
@@ -1974,7 +1974,7 @@ void SparseMat::forEach(Functor operation)
 }
 
 template<typename _Tp, typename Functor> inline
-const void SparseMat::forEach(Functor operation) const
+void SparseMat::forEach(Functor operation) const
 {
     if (false) {
         operation(*reinterpret_cast<const _Tp*>(0));
@@ -2167,7 +2167,7 @@ void SparseMat_<_Tp>::forEach(Functor operation)
 }
 
 template<typename _Tp> template<typename Functor> inline
-const void SparseMat_<_Tp>::forEach(Functor operation) const
+void SparseMat_<_Tp>::forEach(Functor operation) const
 {
     return SparseMat::forEach<_Tp>(operation);
 }

@@ -879,7 +879,7 @@ public:
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename _Tp, typename Functor> void forEach(Functor operation);
     template<typename _Tp, typename Functor> void forEachParallel(Functor operation);
-    template<typename _Tp, typename Functor> const void forEach(Functor operation) const;
+    template<typename _Tp, typename Functor> void forEach(Functor operation) const;
 
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
@@ -1029,7 +1029,7 @@ public:
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename Function> void forEach(Function operation);
     template<typename Function> void forEachParallel(Function operation);
-    template<typename Function> const void forEach(Function operation) const;
+    template<typename Function> void forEach(Function operation) const;
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
     void create(int _rows, int _cols);
@@ -1666,7 +1666,7 @@ public:
 
     //! template methods for for operation over all matrix elements.
     template<typename _Tp, typename Functor> void forEach(Functor operation);
-    template<typename _Tp, typename Functor> const void forEach(Functor operation) const;
+    template<typename _Tp, typename Functor> void forEach(Functor operation) const;
 
     //! returns the value stored in the sparse martix node
     template<typename _Tp> _Tp& value(Node* n);
@@ -1770,7 +1770,7 @@ public:
 
     //! template methods for for operation over all matrix elements.
     template<typename Functor> void forEach(Functor operation);
-    template<typename Functor> const void forEach(Functor operation) const;
+    template<typename Functor> void forEach(Functor operation) const;
 };
 
 
