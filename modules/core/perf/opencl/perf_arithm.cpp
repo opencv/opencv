@@ -890,6 +890,28 @@ OCL_PERF_TEST_P(ScaleAddFixture, ScaleAdd,
     SANITY_CHECK(dst, 1e-6);
 }
 
+///////////// PSNR ////////////////////////
+
+typedef Size_MatType PSNRFixture;
+
+OCL_PERF_TEST_P(PSNRFixture, PSNR,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    double psnr = 0;
+    UMat src1(srcSize, type), src2(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG);
+
+    OCL_TEST_CYCLE() psnr = cv::PSNR(src1, src2);
+
+    SANITY_CHECK(psnr, 1e-6, ERROR_RELATIVE);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
