@@ -732,16 +732,16 @@ This 3D Widget represents a trajectory. ::
         enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white(),;
+        WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white(),;
     };
 
 viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white())
 
-    :param path: List of poses on a trajectory.
+    :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
     :param display_mode: Display mode. This can be PATH, FRAMES, and BOTH.
     :param scale: Scale of the frames. Polyline is not affected.
     :param color: :ocv:class:`Color` of the polyline that represents path. Frames are not affected.

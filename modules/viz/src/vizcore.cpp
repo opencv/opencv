@@ -243,53 +243,103 @@ void cv::viz::writePose(const String& file, const Affine3d& pose, const String& 
     fs << tag << Mat(pose.matrix, false);
 }
 
-namespace cv { namespace viz { namespace impl
+void cv::viz::readTrajectory(OutputArray _traj, const String& files_format, int start, int end, const String& tag)
 {
-    template <typename _Tp>
-    void readTrajectory(std::vector<Affine3<_Tp> >& traj, const String& files_format, int start, int end, const String& tag)
+    CV_Assert(_traj.kind() == _InputArray::STD_VECTOR || _traj.kind() == _InputArray::MAT);
+
+    start = max(0, std::min(start, end));
+    end = std::max(start, end);
+
+    std::vector<Affine3d> traj;
+
+    for(int i = start; i < end; ++i)
     {
-        start = max(0, std::min(start, end));
-        end = std::max(start, end);
+        Affine3d affine;
+        bool ok = readPose(cv::format(files_format.c_str(), i), affine, tag);
+        if (!ok)
+            break;
 
-        std::vector< Affine3<_Tp> > temp;
+        traj.push_back(affine);
+    }
 
-        for(int i = start; i < end; ++i)
+    Mat(traj).convertTo(_traj, _traj.depth());
+}
+
+void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int start, const String& tag)
+{
+    if (_traj.kind() == _InputArray::STD_VECTOR_MAT)
+    {
+        std::vector<Mat>& v = *(std::vector<Mat>*)_traj.getObj();
+
+        for(size_t i = 0, index = max(0, start); i < v.size(); ++i, ++index)
         {
             Affine3d affine;
-            bool ok = readPose(cv::format(files_format.c_str(), i), affine, tag);
-            if (!ok)
-                break;
-
-            temp.push_back(affine);
+            Mat pose = v[i];
+            CV_Assert(pose.type() == CV_32FC(16) || pose.type() == CV_64FC(16));
+            pose.copyTo(affine.matrix);
+            writePose(cv::format(files_format.c_str(), index), affine, tag);
         }
-        traj.swap(temp);
+        return;
     }
 
-    template <typename _Tp>
-    void writeTrajectory(const std::vector<Affine3<_Tp> >& traj, const String& files_format, int start, const String& tag)
+    if (_traj.kind() == _InputArray::STD_VECTOR || _traj.kind() == _InputArray::MAT)
     {
-        for(size_t i = 0, index = max(0, start); i < traj.size(); ++i, ++index)
-            writePose(cv::format(files_format.c_str(), index), traj[i], tag);
+        CV_Assert(_traj.type() == CV_32FC(16) || _traj.type() == CV_64FC(16));
+
+        Mat traj = _traj.getMat();
+
+        if (traj.depth() == CV_32F)
+            for(size_t i = 0, index = max(0, start); i < traj.total(); ++i, ++index)
+                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3f>(i), tag);
+
+        if (traj.depth() == CV_64F)
+            for(size_t i = 0, index = max(0, start); i < traj.total(); ++i, ++index)
+                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3d>(i), tag);
     }
-}}}
 
+    CV_Assert(!"Unsupported array kind");
+}
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Computing normals for mesh
 
+void cv::viz::computeNormals(const Mesh3d& mesh, OutputArray _normals)
+{
+    vtkSmartPointer<vtkProp> prop = WidgetAccessor::getProp(WMesh(mesh));
+    vtkSmartPointer<vtkMapper> mapper = vtkActor::SafeDownCast(prop)->GetMapper();
+    vtkSmartPointer<vtkPolyData> polydata = vtkPolyData::SafeDownCast(mapper->GetInput());
 
-void cv::viz::readTrajectory(std::vector<Affine3f>& traj, const String& files_format, int start, int end, const String& tag)
-{ impl::readTrajectory(traj, files_format, start, end, tag); }
+    vtkSmartPointer<vtkPolyDataNormals> normal_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
+#if VTK_MAJOR_VERSION <= 5
+    normal_generator->SetInput(polydata);
+#else
+    normal_generator->SetInputData(polydata);
+#endif
+    normal_generator->ComputePointNormalsOn();
+    normal_generator->ComputeCellNormalsOff();
 
-void cv::viz::readTrajectory(std::vector<Affine3d>& traj, const String& files_format, int start, int end, const String& tag)
-{ impl::readTrajectory(traj, files_format, start, end, tag); }
+    normal_generator->SetFeatureAngle(0.1);
+    normal_generator->SetSplitting(0);
+    normal_generator->SetConsistency(1);
+    normal_generator->SetAutoOrientNormals(0);
+    normal_generator->SetFlipNormals(0);
+    normal_generator->SetNonManifoldTraversal(1);
+    normal_generator->Update();
 
-void cv::viz::writeTrajectory(const std::vector<Affine3f>& traj, const String& files_format, int start, const String& tag)
-{ impl::writeTrajectory(traj, files_format, start, tag); }
+    vtkSmartPointer<vtkDataArray> generic_normals = normal_generator->GetOutput()->GetPointData()->GetNormals();
+    if(generic_normals)
+    {
+        Mat normals(1, generic_normals->GetNumberOfTuples(), CV_64FC3);
+        Vec3d *optr = normals.ptr<Vec3d>();
 
-void cv::viz::writeTrajectory(const std::vector<Affine3d>& traj, const String& files_format, int start, const String& tag)
-{ impl::writeTrajectory(traj, files_format, start, tag); }
+        for(int i = 0; i < generic_normals->GetNumberOfTuples(); ++i, ++optr)
+            generic_normals->GetTuple(i, optr->val);
 
-
-
+        normals.convertTo(_normals, mesh.cloud.type());
+    }
+    else
+        _normals.release();
+}
 
 
 
