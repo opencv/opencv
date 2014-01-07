@@ -135,44 +135,44 @@ namespace cv
         class CV_EXPORTS WLine : public Widget3D
         {
         public:
-            WLine(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
+            WLine(const Point3d &pt1, const Point3d &pt2, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            WPlane(const Vec4f& coefs, float size = 1.f, const Color &color = Color::white());
-            WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.f, const Color &color = Color::white());
+            WPlane(const Vec4d& coefs, double size = 1.f, const Color &color = Color::white());
+            WPlane(const Vec4d& coefs, const Point3d& pt, double size = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WSphere : public Widget3D
         {
         public:
-            WSphere(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
+            WSphere(const cv::Point3d &center, double radius, int sphere_resolution = 10, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WArrow : public Widget3D
         {
         public:
-            WArrow(const Point3f& pt1, const Point3f& pt2, float thickness = 0.03f, const Color &color = Color::white());
+            WArrow(const Point3d& pt1, const Point3d& pt2, double thickness = 0.03, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            WCircle(const Point3f& pt, float radius, float thickness = 0.01f, const Color &color = Color::white());
+            WCircle(const Point3d& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
-            WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides = 30, const Color &color = Color::white());
+            WCylinder(const Point3d& pt_on_axis, const Point3d& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCube : public Widget3D
         {
         public:
-            WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
+            WCube(const Point3d& pt_min, const Point3d& pt_max, bool wire_frame = true, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WPolyLine : public Widget3D
@@ -196,7 +196,7 @@ namespace cv
         class CV_EXPORTS WText3D : public Widget3D
         {
         public:
-            WText3D(const String &text, const Point3f &position, float text_scale = 1.f, bool face_camera = true, const Color &color = Color::white());
+            WText3D(const String &text, const Point3d &position, double text_scale = 1., bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
@@ -216,7 +216,7 @@ namespace cv
             //! Creates 3D image at the origin
             WImage3D(const Mat &image, const Size &size);
             //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-            WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
+            WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size);
 
             void setImage(const Mat &image);
         };
@@ -234,24 +234,24 @@ namespace cv
         {
         public:
             //! Creates grid at the origin
-            WGrid(const Vec2i &dimensions, const Vec2f &spacing, const Color &color = Color::white());
+            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             //! Creates grid based on the plane equation
-            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2f &spacing, const Color &color = Color::white());
+            WGrid(const Vec4d &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCameraPosition : public Widget3D
         {
         public:
             //! Creates camera coordinate frame (axes) at the origin
-            WCameraPosition(float scale = 1.f);
+            WCameraPosition(double scale = 1.0);
             //! Creates frustum based on the intrinsic marix K at the origin
-            WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33d &K, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33d &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Vec2d &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
@@ -270,16 +270,16 @@ namespace cv
         {
         public:
             //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale = 1., const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale = 1., const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
         {
         public:
-            WTrajectorySpheres(const std::vector<Affine3d> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
-                float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            WTrajectorySpheres(const std::vector<Affine3d> &path, double line_length = 0.05, double init_sphere_radius = 0.021,
+                double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
@@ -308,7 +308,7 @@ namespace cv
         class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
-            WCloudNormals(InputArray cloud, InputArray normals, int level = 64, float scale = 0.1f, const Color &color = Color::white());
+            WCloudNormals(InputArray cloud, InputArray normals, int level = 64, double scale = 0.1, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WMesh : public Widget3D
