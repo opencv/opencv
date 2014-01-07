@@ -995,13 +995,6 @@ void Mat::forEach(Functor operation) {
         const _Tp* pixel_reference_end = pixel_reference + COLS;
         int c = 0;
 
-        while (pixel_reference < pixel_reference_end - 4) {
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-            operation(*pixel_reference++, r, c++);
-        }
-
         while (pixel_reference < pixel_reference_end) {
             operation(*pixel_reference++, r, c++);
         }
@@ -1012,12 +1005,12 @@ template<typename _Tp, typename Functor> inline
 void Mat::forEachParallel(Functor operation) {
 #ifdef HAVE_TBB
     struct TbbFunctor {
-        TbbFunctor(Mat * m, Functor *_operation) : mat(m), COLS(m->cols), _operation(_operation) {
+        TbbFunctor(Mat * m, Functor *op) : mat(m), COLS(m->cols), tbbOperation(op) {
         }
 
         Mat * const mat;
         const int COLS;
-        Functor * const _operation;
+        Functor * const tbbOperation;
         void operator()(const tbb::blocked_range<int>& range) const {
             const int r_END = range.end();
 
@@ -1026,7 +1019,7 @@ void Mat::forEachParallel(Functor operation) {
                 const _Tp * const pixel_reference_end = pixel_reference + COLS;
                 int c = 0;
                 while (pixel_reference < pixel_reference_end) {
-                    (*_operation)(*pixel_reference++, r, c++);
+                    (*tbbOperation)(*pixel_reference++, r, c++);
                 }
             }
         }
