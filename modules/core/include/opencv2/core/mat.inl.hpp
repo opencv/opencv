@@ -983,59 +983,59 @@ MatIterator_<_Tp> Mat::end()
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(Functor operation) {
-	const int ROWS = this->rows;
-	const int COLS = this->cols;
+    const int ROWS = this->rows;
+    const int COLS = this->cols;
 
-	for (int r = 0; r < ROWS; ++r) {
-		_Tp* ptr = &(this->at<_Tp>(r, 0));
-		const _Tp* ptr_end = ptr + COLS;
-		int c = 0;
+    for (int r = 0; r < ROWS; ++r) {
+        _Tp* ptr = &(this->at<_Tp>(r, 0));
+        const _Tp* ptr_end = ptr + COLS;
+        int c = 0;
 
-		while (ptr < ptr_end - 4) {
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-		}
+        while (ptr < ptr_end - 4) {
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+        }
 
-		while (ptr < ptr_end) {
-			operation(*ptr++, r, c++);
-		}
-	}
+        while (ptr < ptr_end) {
+            operation(*ptr++, r, c++);
+        }
+    }
 };
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEachParallel(Functor operation) {
-	const int ROWS = this->rows;
-	const int COLS = this->cols;
+    const int ROWS = this->rows;
+    const int COLS = this->cols;
 
 #pragma omp parallel for
-	for (int r = 0; r < ROWS; ++r) {
-		_Tp* ptr = &(this->at<_Tp>(r, 0));
-		const _Tp* ptr_end = ptr + COLS;
-		int c = 0;
+    for (int r = 0; r < ROWS; ++r) {
+        _Tp* ptr = &(this->at<_Tp>(r, 0));
+        const _Tp* ptr_end = ptr + COLS;
+        int c = 0;
 
-		while (ptr < ptr_end - 4) {
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-			operation(*ptr++, r, c++);
-		}
+        while (ptr < ptr_end - 4) {
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+            operation(*ptr++, r, c++);
+        }
 
-		while (ptr < ptr_end) {
-			operation(*ptr++, r, c++);
-		}
-	}
+        while (ptr < ptr_end) {
+            operation(*ptr++, r, c++);
+        }
+    }
 };
 
 template<typename _Tp, typename Functor> inline
 const void Mat::forEach(Functor operation) const {
-	if (false) {
-		// test for arguments is const.
-		operation(*reinterpret_cast<const _Tp*>(0));
-	}
-	// call as not const
-	(const_cast<Mat*>(this))->forEach<_Tp>(operation);
+    if (false) {
+        // test for arguments is const.
+        operation(*reinterpret_cast<const _Tp*>(0));
+    }
+    // call as not const
+    (const_cast<Mat*>(this))->forEach<_Tp>(operation);
 };
 
 template<typename _Tp> inline
@@ -1625,17 +1625,17 @@ MatIterator_<_Tp> Mat_<_Tp>::end()
 
 template<typename _Tp> template<typename Functor> inline
 void Mat_<_Tp>::forEach(Functor operation) {
-	Mat::forEach<_Tp, Functor>(operation);
+    Mat::forEach<_Tp, Functor>(operation);
 }
 
 template<typename _Tp> template<typename Functor> inline
 void Mat_<_Tp>::forEachParallel(Functor operation) {
-	Mat::forEachParallel<_Tp, Functor>(operation);
+    Mat::forEachParallel<_Tp, Functor>(operation);
 }
 
 template<typename _Tp> template<typename Functor> inline
 const void Mat_<_Tp>::forEach(Functor operation) const {
-	Mat::forEach<_Tp, Functor>(operation);
+    Mat::forEach<_Tp, Functor>(operation);
 }
 
 
@@ -1966,23 +1966,23 @@ SparseMatConstIterator_<_Tp> SparseMat::end() const
 template<typename _Tp, typename Functor> inline
 void SparseMat::forEach(Functor operation)
 {
-	std::for_each(
-		this->begin<_Tp>(),
-		this->end<_Tp>(),
-		operation
-		);
+    std::for_each(
+        this->begin<_Tp>(),
+        this->end<_Tp>(),
+        operation
+        );
 }
 
 template<typename _Tp, typename Functor> inline
 const void SparseMat::forEach(Functor operation) const
 {
-	if (false) {
-		operation(*reinterpret_cast<const _Tp*>(0));
-		// If your compiler repots error on this line.
-		// Please check your arguments of functor(function object, pointer or lambda)
-		// is declared with "const" keyword.
-	}
-	const_cast<SparseMat*>(this)->forEach<_Tp>(operation);
+    if (false) {
+        operation(*reinterpret_cast<const _Tp*>(0));
+        // If your compiler repots error on this line.
+        // Please check your arguments of functor(function object, pointer or lambda)
+        // is declared with "const" keyword.
+    }
+    const_cast<SparseMat*>(this)->forEach<_Tp>(operation);
 }
 
 
@@ -2163,13 +2163,13 @@ SparseMatConstIterator_<_Tp> SparseMat_<_Tp>::end() const
 template<typename _Tp> template<typename Functor> inline
 void SparseMat_<_Tp>::forEach(Functor operation)
 {
-	return SparseMat::forEach<_Tp>(operation);
+    return SparseMat::forEach<_Tp>(operation);
 }
 
 template<typename _Tp> template<typename Functor> inline
 const void SparseMat_<_Tp>::forEach(Functor operation) const
 {
-	return SparseMat::forEach<_Tp>(operation);
+    return SparseMat::forEach<_Tp>(operation);
 }
 
 ////////////////////////// MatConstIterator /////////////////////////
