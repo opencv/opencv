@@ -305,9 +305,7 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
 
 void cv::viz::computeNormals(const Mesh3d& mesh, OutputArray _normals)
 {
-    vtkSmartPointer<vtkProp> prop = WidgetAccessor::getProp(WMesh(mesh));
-    vtkSmartPointer<vtkMapper> mapper = vtkActor::SafeDownCast(prop)->GetMapper();
-    vtkSmartPointer<vtkPolyData> polydata = vtkPolyData::SafeDownCast(mapper->GetInput());
+    vtkSmartPointer<vtkPolyData> polydata = getPolyData(WMesh(mesh));
 
     vtkSmartPointer<vtkPolyDataNormals> normal_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
 #if VTK_MAJOR_VERSION <= 5

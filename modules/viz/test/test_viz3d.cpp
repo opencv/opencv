@@ -45,37 +45,51 @@ using namespace cv;
 
 TEST(Viz_viz3d, develop)
 {
-    std::cout << std::string(cvtest::TS::ptr()->get_data_path()) + "dragon.ply" << std::endl;
+    cv::Mat cloud = cv::viz::readCloud(get_dragon_ply_file_path());
 
-    cv::Mat cloud = cv::viz::readCloud(String(cvtest::TS::ptr()->get_data_path()) + "dragon.ply");
+    //cv::viz::Mesh3d mesh = cv::viz::Mesh3d::load(get_dragon_ply_file_path());
 
-
-//    for(size_t i = 0; i < cloud.total(); ++i)
-//    {
-//        if (i % 15 == 0)
-//            continue;
-//        const static float qnan = std::numeric_limits<float>::quiet_NaN();
-//        cloud.at<Vec3f>(i) = Vec3f(qnan, qnan, qnan);
-//    }
+    //theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
 
     cv::viz::Viz3d viz("abc");
     viz.setBackgroundColor(cv::viz::Color::mlab());
     viz.showWidget("coo", cv::viz::WCoordinateSystem(0.1));
 
-    cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
+
+//    double c = cos(CV_PI/6);
+//    std::vector<Vec3d> pts;
+//    pts.push_back(Vec3d(0, 0.0, -1.0));
+//    pts.push_back(Vec3d(1,   c, -0.5));
+//    pts.push_back(Vec3d(2,   c,  0.5));
+//    pts.push_back(Vec3d(3, 0.0,  1.0));
+//    pts.push_back(Vec3d(4,  -c,  0.5));
+//    pts.push_back(Vec3d(5,  -c, -0.5));
+
+//    viz.showWidget("pl", cv::viz::WPolyLine(Mat(pts), cv::viz::Color::green()));
+
+    //viz.showWidget("pl", cv::viz::WPolyLine(cloud.colRange(0, 100), cv::viz::Color::green()));
+    //viz.spin();
+
+    //cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
 
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
 
     std::vector<cv::Affine3d> gt, es;
     cv::viz::readTrajectory(gt, "d:/Datasets/trajs/gt%05d.xml");
-    cv::viz::readTrajectory(es, "d:/Datasets/trajs/es%05d.xml");
+    //cv::viz::readTrajectory(es, "d:/Datasets/trajs/es%05d.xml");
+    gt.resize(20);
 
-    viz.showWidget("gt", viz::WTrajectory(gt, viz::WTrajectory::PATH, 1.f, viz::Color::blue()), gt[0].inv());
-    viz.showWidget("tr", viz::WTrajectory(es, viz::WTrajectory::PATH, 1.f, viz::Color::red()), gt[0].inv());
+    Affine3d inv = gt[0].inv();
+    for(size_t i = 0; i < gt.size(); ++i)
+        gt[i] = inv * gt[i];
 
-    cv::RNG rng;
-    rng.fill(colors, cv::RNG::UNIFORM, 0, 255);
+    //viz.showWidget("gt", viz::WTrajectory(gt, viz::WTrajectory::PATH, 1.f, viz::Color::blue()), gt[0].inv());
+    viz.showWidget("gt", viz::WTrajectory(gt, viz::WTrajectory::BOTH, 0.01f, viz::Color::blue()));
+
+    //viz.showWidget("tr", viz::WTrajectory(es, viz::WTrajectory::PATH, 1.f, viz::Color::red()), gt[0].inv());
+
+    //theRNG().fill(colors, cv::RNG::UNIFORM, 0, 255);
     //viz.showWidget("c", cv::viz::WCloud(cloud, colors));
     //viz.showWidget("c", cv::viz::WCloud(cloud, cv::viz::Color::bluberry()));
 

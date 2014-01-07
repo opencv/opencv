@@ -227,7 +227,7 @@ namespace cv
         class CV_EXPORTS WCoordinateSystem : public Widget3D
         {
         public:
-            WCoordinateSystem(float scale = 1.f);
+            WCoordinateSystem(double scale = 1.f);
         };
 
         class CV_EXPORTS WGrid : public Widget3D
@@ -263,7 +263,7 @@ namespace cv
             enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
             //! Takes vector<Affine3<T>> and displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
+            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectoryFrustums : public Widget3D

@@ -172,10 +172,40 @@ namespace cv
             friend class Viz3d;
         };
 
-        template<typename _Tp> bool isNan(const _Tp* data)
+        template<typename _Tp> inline bool isNan(const _Tp* data)
         {
             return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
         }
+
+        inline vtkSmartPointer<vtkPolyData> getPolyData(const Widget3D& widget)
+        {
+            vtkSmartPointer<vtkProp> prop = WidgetAccessor::getProp(widget);
+            vtkSmartPointer<vtkMapper> mapper = vtkActor::SafeDownCast(prop)->GetMapper();
+            return vtkPolyData::SafeDownCast(mapper->GetInput());
+        }
+
+        struct VtkUtils
+        {
+            template<class Filter>
+            static inline void SetInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
+            {
+            #if VTK_MAJOR_VERSION <= 5
+                filter->SetInput(polydata);
+            #else
+                filter->SetInputData(polydata);
+            #endif
+            }
+
+            template<class Filter>
+            static inline void AddInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
+            {
+            #if VTK_MAJOR_VERSION <= 5
+                filter->AddInput(polydata);
+            #else
+                filter->AddInputData(polydata);
+            #endif
+            }
+        };
     }
 }
 
