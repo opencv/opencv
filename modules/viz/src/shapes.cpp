@@ -45,14 +45,6 @@
 
 #include "precomp.hpp"
 
-namespace cv
-{
-    namespace viz
-    {
-        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
 cv::viz::WLine::WLine(const Point3d &pt1, const Point3d &pt2, const Color &color)
@@ -350,7 +342,7 @@ cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
     polydata->GetPointData()->SetScalars(colors);
 
     vtkSmartPointer<vtkTubeFilter> tube_filter = vtkSmartPointer<vtkTubeFilter>::New();
-    VtkUtils::SetInputData(tube_filter, polydata);
+    tube_filter->SetInputConnection(polydata->GetProducerPort());
     tube_filter->SetRadius(axes->GetScaleFactor() / 50.0);
     tube_filter->SetNumberOfSides(6);
 
@@ -445,11 +437,7 @@ namespace cv { namespace viz { namespace
 
             // Extract the edges so we have the grid
             vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-#if VTK_MAJOR_VERSION <= 5
             filter->SetInputConnection(grid->GetProducerPort());
-#else
-            filter->SetInputData(grid);
-#endif
             filter->Update();
             return filter->GetOutput();
         }
@@ -461,11 +449,7 @@ cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
     mapper->SetInputConnection(grid->GetProducerPort());
-#else
-    mapper->SetInputData(grid);
-#endif
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
