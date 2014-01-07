@@ -49,9 +49,11 @@ TEST(Viz, DISABLED_show_cloud_bluberry)
 {
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
     Viz3d viz("show_cloud_bluberry");
     viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("dragon", WCloud(dragon_cloud, Color::bluberry()));
+    viz.showWidget("dragon", WCloud(dragon_cloud, Color::bluberry()), pose);
     viz.spin();
 }
 
@@ -62,9 +64,11 @@ TEST(Viz, DISABLED_show_cloud_random_color)
     Mat colors(dragon_cloud.size(), CV_8UC3);
     theRNG().fill(colors, RNG::UNIFORM, 0, 255);
 
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
     Viz3d viz("show_cloud_random_color");
     viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("dragon", WCloud(dragon_cloud, colors));
+    viz.showWidget("dragon", WCloud(dragon_cloud, colors), pose);
     viz.spin();
 }
 
@@ -77,9 +81,11 @@ TEST(Viz, DISABLED_show_cloud_masked)
         if (i % 15 != 0)
             dragon_cloud.at<Vec3f>(i) = qnan;
 
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
     Viz3d viz("show_cloud_masked");
     viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("dragon", WCloud(dragon_cloud));
+    viz.showWidget("dragon", WCloud(dragon_cloud), pose);
     viz.spin();
 }
 
@@ -102,9 +108,11 @@ TEST(Viz, DISABLED_show_mesh)
 {
     Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
 
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
     Viz3d viz("show_mesh");
     viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("mesh", WMesh(mesh));
+    viz.showWidget("mesh", WMesh(mesh), pose);
     viz.spin();
 }
 
@@ -113,9 +121,11 @@ TEST(Viz, DISABLED_show_mesh_random_colors)
     Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
     theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
 
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
     Viz3d viz("show_mesh_random_color");
     viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("mesh", WMesh(mesh));
+    viz.showWidget("mesh", WMesh(mesh), pose);
     viz.setRenderingProperty("mesh", SHADING, SHADING_PHONG);
     viz.spin();
 }
