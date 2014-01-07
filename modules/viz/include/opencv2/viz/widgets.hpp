@@ -269,10 +269,11 @@ namespace cv
         class CV_EXPORTS WTrajectoryFrustums : public Widget3D
         {
         public:
-            //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale = 1., const Color &color = Color::white());
-            //! Displays trajectory of the given path by frustums
-            WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale = 1., const Color &color = Color::white());
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path by frustums
+            WTrajectoryFrustums(InputArray path, const Matx33d &K, double scale = 1., const Color &color = Color::white());
+
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path by frustums
+            WTrajectoryFrustums(InputArray path, const Vec2d &fov, double scale = 1., const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
