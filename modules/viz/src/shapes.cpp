@@ -1056,41 +1056,6 @@ template<> cv::viz::WCameraPosition cv::viz::Widget::cast<cv::viz::WCameraPositi
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// trajectory widget implementation
 
-namespace cv { namespace viz { namespace
-{
-    struct TrajectoryUtils
-    {
-        static void applyPath(vtkSmartPointer<vtkPolyData> poly_data, vtkSmartPointer<vtkAppendPolyData> append_filter, const std::vector<Affine3d> &path)
-        {
-            vtkIdType nr_points = path.size();
-
-            for (vtkIdType i = 0; i < nr_points; ++i)
-            {
-                vtkSmartPointer<vtkPolyData> new_data = vtkSmartPointer<vtkPolyData>::New();
-                new_data->DeepCopy(poly_data);
-
-                // Transform the default coordinate frame
-                vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-                transform->PreMultiply();
-                vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-                mat_trans = vtkmatrix(path[i].matrix);
-                transform->SetMatrix(mat_trans);
-
-                vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-#if VTK_MAJOR_VERSION <= 5
-                filter->SetInput(new_data);
-#else
-                filter->SetInputData(new_data);
-#endif
-                filter->SetTransform(transform);
-                filter->Update();
-
-                append_filter->AddInputConnection(filter->GetOutputPort());
-            }
-        }
-    };
-}}}
-
 cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double scale, const Color &color)
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
@@ -1103,7 +1068,6 @@ cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double sca
         appendFilter->AddInputConnection(polydata->GetProducerPort());
     }
 
-    vtkSmartPointer<vtkTensorGlyph> tensor_glyph;
     if (display_mode & WTrajectory::FRAMES)
     {
         vtkSmartPointer<vtkTrajectorySource> source = vtkSmartPointer<vtkTrajectorySource>::New();
@@ -1111,7 +1075,7 @@ cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double sca
 
         vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCoordinateSystem(scale));
 
-        tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
+        vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
         tensor_glyph->SetInputConnection(source->GetOutputPort());
         tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
         tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
@@ -1142,42 +1106,26 @@ template<> cv::viz::WTrajectory cv::viz::Widget::cast<cv::viz::WTrajectory>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// WTrajectoryFrustums widget implementation
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Matx33d &K, double scale, const Color &color)
 {
-    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    double f_x = K(0,0);
-    double f_y = K(1,1);
-    double c_y = K(1,2);
-    double aspect_ratio = f_y / f_x;
-    // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    double fovy = 2.0 * atan2(c_y, f_y) * 180 / CV_PI;
+    vtkSmartPointer<vtkTrajectorySource> source = vtkSmartPointer<vtkTrajectorySource>::New();
+    source->SetTrajectory(_path);
 
-    camera->SetViewAngle(fovy);
-    camera->SetPosition(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
-    camera->SetFocalPoint(0.0, 0.0, 1.0);
-    camera->SetClippingRange(0.01, scale);
+    vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCameraPosition(K, scale));
 
-    double planesArray[24];
-    camera->GetFrustumPlanes(aspect_ratio, planesArray);
+    vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
+    tensor_glyph->SetInputConnection(source->GetOutputPort());
+    tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+    tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
+    tensor_glyph->ThreeGlyphsOff();
+    tensor_glyph->SymmetricOff();
+    tensor_glyph->ColorGlyphsOff();
+    tensor_glyph->Update();
 
-    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
-    planes->SetFrustumPlanes(planesArray);
-
-    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
-    frustumSource->SetPlanes(planes);
-    frustumSource->Update();
-
-    // Extract the edges
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(frustumSource->GetOutputPort());
-    filter->Update();
-
-    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-    TrajectoryUtils::applyPath(filter->GetOutput(), appendFilter, path);
+    vtkSmartPointer<vtkPolyData> polydata = tensor_glyph->GetOutput();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(appendFilter->GetOutputPort());
+    mapper->SetInputConnection(polydata->GetProducerPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -1186,38 +1134,26 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &p
     setColor(color);
 }
 
-cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale, const Color &color)
+cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d &fov, double scale, const Color &color)
 {
-    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    vtkSmartPointer<vtkTrajectorySource> source = vtkSmartPointer<vtkTrajectorySource>::New();
+    source->SetTrajectory(_path);
 
-    camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
-    camera->SetPosition(0.0, 0.0, 0.0);
-    camera->SetViewUp(0.0, 1.0, 0.0);
-    camera->SetFocalPoint(0.0, 0.0, 1.0);
-    camera->SetClippingRange(0.01, scale);
+    vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCameraPosition(fov, scale));
 
-    double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
+    vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
+    tensor_glyph->SetInputConnection(source->GetOutputPort());
+    tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+    tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
+    tensor_glyph->ThreeGlyphsOff();
+    tensor_glyph->SymmetricOff();
+    tensor_glyph->ColorGlyphsOff();
+    tensor_glyph->Update();
 
-    double planesArray[24];
-    camera->GetFrustumPlanes(aspect_ratio, planesArray);
-
-    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
-    planes->SetFrustumPlanes(planesArray);
-
-    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
-    frustumSource->SetPlanes(planes);
-    frustumSource->Update();
-
-    // Extract the edges
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(frustumSource->GetOutputPort());
-    filter->Update();
-
-    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-    TrajectoryUtils::applyPath(filter->GetOutput(), appendFilter, path);
+    vtkSmartPointer<vtkPolyData> polydata = tensor_glyph->GetOutput();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(appendFilter->GetOutputPort());
+    mapper->SetInputConnection(polydata->GetProducerPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
