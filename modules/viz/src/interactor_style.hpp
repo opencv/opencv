@@ -63,7 +63,7 @@ namespace cv
             virtual void Initialize();
 
             void setWidgetActorMap(const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
-            void setRenderer(vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
+            void setRenderer(vtkSmartPointer<vtkRenderer>& renderer) { renderer_ = renderer; }
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
             void saveScreenshot(const String &file);

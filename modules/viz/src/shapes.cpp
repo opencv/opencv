@@ -189,28 +189,22 @@ cv::viz::WArrow::WArrow(const Point3f& pt1, const Point3f& pt2, float thickness,
     arrowSource->SetTipRadius(thickness * 3.0);
     arrowSource->SetTipLength(thickness * 10.0);
 
-    Vec3f startPoint(pt1.x, pt1.y, pt1.z), endPoint(pt2.x, pt2.y, pt2.z);
-    Vec3f arbitrary(theRNG().uniform(-10.f, 10.f), theRNG().uniform(-10.f, 10.f), theRNG().uniform(-10.f, 10.f));
+    RNG rng = theRNG();
+    Vec3d arbitrary(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
+    Vec3d startPoint(pt1.x, pt1.y, pt1.z), endPoint(pt2.x, pt2.y, pt2.z);
+
     double length = cv::norm(endPoint - startPoint);
 
-    Vec3f xvec = normalized(endPoint - startPoint);
-    Vec3f zvec = normalized(xvec.cross(arbitrary));
-    Vec3f yvec = zvec.cross(xvec);
+    Vec3d xvec = normalized(endPoint - startPoint);
+    Vec3d zvec = normalized(xvec.cross(arbitrary));
+    Vec3d yvec = zvec.cross(xvec);
 
-    // Create the direction cosine matrix
-    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-    matrix->Identity();
-    for (int i = 0; i < 3; ++i)
-    {
-        matrix->SetElement(i, 0, xvec[i]);
-        matrix->SetElement(i, 1, yvec[i]);
-        matrix->SetElement(i, 2, zvec[i]);
-    }
+    Affine3d pose = makeTransformToGlobal(xvec, yvec, zvec);
 
     // Apply the transforms
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->Translate(startPoint.val);
-    transform->Concatenate(matrix);
+    transform->Concatenate(vtkmatrix(pose.matrix));
     transform->Scale(length, length, length);
 
     // Transform the polydata
@@ -523,34 +517,18 @@ cv::viz::WGrid::WGrid(const Vec4f &coefs, const Vec2i &dimensions, const Vec2f &
     vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
 
     // Estimate the transform to set the normal based on the coefficients
-    Vec3f normal(coefs[0], coefs[1], coefs[2]);
-    Vec3f up_vector(0.0f, 1.0f, 0.0f); // Just set as default
+    Vec3d normal(coefs[0], coefs[1], coefs[2]);
+    Vec3d up_vector(0.0, 1.0, 0.0); // Just set as default
     double push_distance = -coefs[3]/cv::norm(Vec3f(coefs.val));
-    Vec3f u,v,n;
-    n = normalize(normal);
-    u = normalize(up_vector.cross(n));
-    v = n.cross(u);
+    Vec3d n = normalize(normal);
+    Vec3d u = normalize(up_vector.cross(n));
+    Vec3d v = n.cross(u);
 
-    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-    mat_trans->SetElement(0,0,u[0]);
-    mat_trans->SetElement(0,1,u[1]);
-    mat_trans->SetElement(0,2,u[2]);
-    mat_trans->SetElement(1,0,v[0]);
-    mat_trans->SetElement(1,1,v[1]);
-    mat_trans->SetElement(1,2,v[2]);
-    mat_trans->SetElement(2,0,n[0]);
-    mat_trans->SetElement(2,1,n[1]);
-    mat_trans->SetElement(2,2,n[2]);
-    // Inverse rotation (orthogonal, so just take transpose)
-    mat_trans->Transpose();
-    mat_trans->SetElement(0,3,n[0] * push_distance);
-    mat_trans->SetElement(1,3,n[1] * push_distance);
-    mat_trans->SetElement(2,3,n[2] * push_distance);
-    mat_trans->SetElement(3,3,1);
+    Affine3d pose = makeTransformToGlobal(u, v, n, n * push_distance);
 
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->PreMultiply();
-    transform->SetMatrix(mat_trans);
+    transform->SetMatrix(vtkmatrix(pose.matrix));
 
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transform_filter->SetTransform(transform);
@@ -837,28 +815,11 @@ cv::viz::WImage3D::WImage3D(const Vec3f &position, const Vec3f &normal, const Ve
     plane->SetNormal(0.0, 0.0, 1.0);
 
     // Compute the transformation matrix for drawing the camera frame in a scene
-    Vec3f u,v,n;
-    n = normalize(normal);
-    u = normalize(up_vector.cross(n));
-    v = n.cross(u);
+    Vec3d n = normalize(normal);
+    Vec3d u = normalize(up_vector.cross(n));
+    Vec3d v = n.cross(u);
 
-    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-    mat_trans->SetElement(0,0,u[0]);
-    mat_trans->SetElement(0,1,u[1]);
-    mat_trans->SetElement(0,2,u[2]);
-    mat_trans->SetElement(1,0,v[0]);
-    mat_trans->SetElement(1,1,v[1]);
-    mat_trans->SetElement(1,2,v[2]);
-    mat_trans->SetElement(2,0,n[0]);
-    mat_trans->SetElement(2,1,n[1]);
-    mat_trans->SetElement(2,2,n[2]);
-    // Inverse rotation (orthogonal, so just take transpose)
-    mat_trans->Transpose();
-    // Then translate the coordinate frame to camera position
-    mat_trans->SetElement(0,3,position[0]);
-    mat_trans->SetElement(1,3,position[1]);
-    mat_trans->SetElement(2,3,position[2]);
-    mat_trans->SetElement(3,3,1);
+    Affine3d pose = makeTransformToGlobal(u, v, n, position);
 
     // Apply the texture
     vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
@@ -870,7 +831,7 @@ cv::viz::WImage3D::WImage3D(const Vec3f &position, const Vec3f &normal, const Ve
     // Apply the transform after texture mapping
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->PreMultiply();
-    transform->SetMatrix(mat_trans);
+    transform->SetMatrix(vtkmatrix(pose));
     transform->Scale(size.width, size.height, 1.0);
 
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
