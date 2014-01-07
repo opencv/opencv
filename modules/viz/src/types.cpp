@@ -245,6 +245,6 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44d &proj) const
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
-    Matx33d K(525.0, 0.0, 320.0, 0.0, 525.0, 240.0, 0.0, 0.0, 1.0) ;
+    Matx33d K(525.0, 0.0, 320.0, 0.0, 525.0, 240.0, 0.0, 0.0, 1.0);
     return Camera(K, window_size);
 }

@@ -762,9 +762,9 @@ This 3D Widget represents a trajectory. ::
     {
     public:
         //! Displays trajectory of the given path by frustums
-        WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale = 1.0, const Color &color = Color::white());
+        WTrajectoryFrustums(InputArray path, const Matx33d &K, double scale = 1.0, const Color &color = Color::white());
         //! Displays trajectory of the given path by frustums
-        WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
+        WTrajectoryFrustums(InputArray path, const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
     };
 
 viz::WTrajectoryFrustums::WTrajectoryFrustums
@@ -773,7 +773,7 @@ Constructs a WTrajectoryFrustums.
 
 .. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale = 1.0, const Color &color = Color::white())
 
-    :param path: List of poses on a trajectory.
+    :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
     :param K: Intrinsic matrix of the camera.
     :param scale: Scale of the frustums.
     :param color: :ocv:class:`Color` of the frustums.
@@ -782,7 +782,7 @@ Constructs a WTrajectoryFrustums.
 
 .. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3d> &path, const Vec2d &fov, double scale = 1.0, const Color &color = Color::white())
 
-    :param path: List of poses on a trajectory.
+    :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
     :param fov: Field of view of the camera (horizontal, vertical).
     :param scale: Scale of the frustums.
     :param color: :ocv:class:`Color` of the frustums.
