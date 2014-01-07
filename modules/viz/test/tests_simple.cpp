@@ -130,6 +130,18 @@ TEST(Viz, DISABLED_show_mesh_random_colors)
     viz.spin();
 }
 
+TEST(Viz, DISABLED_show_polyline)
+{
+    Mat polyline(1, 32, CV_64FC3);
+    for(size_t i = 0; i < polyline.total(); ++i)
+        polyline.at<Vec3d>(i) = Vec3d(i/16.0, cos(i * CV_PI/6), sin(i * CV_PI/6));
+
+    Viz3d viz("show_polyline");
+    viz.showWidget("polyline", WPolyLine(Mat(polyline), Color::apricot()));
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.spin();
+}
+
 TEST(Viz, DISABLED_show_sampled_normals)
 {
     Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
