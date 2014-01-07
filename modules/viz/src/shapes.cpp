@@ -400,18 +400,29 @@ cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
     for(size_t i = 0; i < total; ++i)
         cell_array->InsertCellPoint(i);
 
+    Vec3b rgb = Vec3d(color[2], color[1], color[0]);
+    Vec3b* color_data = new Vec3b[total];
+    std::fill(color_data, color_data + total, rgb);
+
+    vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    scalars->SetName("Colors");
+    scalars->SetNumberOfComponents(3);
+    scalars->SetNumberOfTuples(total);
+    scalars->SetArray(color_data->val, total * 3, 0);
+
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
     polydata->SetLines(cell_array);
+    polydata->GetPointData()->SetScalars(scalars);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(polydata->GetProducerPort());
+    mapper->SetScalarRange(0, 255);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WPolyLine cv::viz::Widget::cast<cv::viz::WPolyLine>()
