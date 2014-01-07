@@ -400,15 +400,7 @@ cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
     for(size_t i = 0; i < total; ++i)
         cell_array->InsertCellPoint(i);
 
-    Vec3b rgb = Vec3d(color[2], color[1], color[0]);
-    Vec3b* color_data = new Vec3b[total];
-    std::fill(color_data, color_data + total, rgb);
-
-    vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    scalars->SetName("Colors");
-    scalars->SetNumberOfComponents(3);
-    scalars->SetNumberOfTuples(total);
-    scalars->SetArray(color_data->val, total * 3, 0);
+    vtkSmartPointer<vtkUnsignedCharArray> scalars =  VtkUtils::FillScalars(total, color);
 
     vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(points);
@@ -913,9 +905,9 @@ namespace  cv  { namespace viz { namespace
 
             // Create frustum
             camera->SetViewAngle(fovy);
-            camera->SetPosition(0.0,0.0,0.0);
-            camera->SetViewUp(0.0,1.0,0.0);
-            camera->SetFocalPoint(0.0,0.0,1.0);
+            camera->SetPosition(0.0, 0.0, 0.0);
+            camera->SetViewUp(0.0, 1.0, 0.0);
+            camera->SetFocalPoint(0.0, 0.0, 1.0);
             camera->SetClippingRange(0.01, scale);
 
             double planesArray[24];
@@ -955,39 +947,10 @@ namespace  cv  { namespace viz { namespace
 
 cv::viz::WCameraPosition::WCameraPosition(double scale)
 {
-    vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
-    axes->SetOrigin(0, 0, 0);
-    axes->SetScaleFactor(scale);
-
-    vtkSmartPointer<vtkFloatArray> axes_colors = vtkSmartPointer<vtkFloatArray>::New();
-    axes_colors->Allocate(6);
-    axes_colors->InsertNextValue(0.0);
-    axes_colors->InsertNextValue(0.0);
-    axes_colors->InsertNextValue(0.5);
-    axes_colors->InsertNextValue(0.5);
-    axes_colors->InsertNextValue(1.0);
-    axes_colors->InsertNextValue(1.0);
-
-    vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput();
-#if VTK_MAJOR_VERSION <= 5
-    axes_data->Update();
-#else
-    axes->Update();
-#endif
-    axes_data->GetPointData()->SetScalars(axes_colors);
-
-    vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New();
-#if VTK_MAJOR_VERSION <= 5
-    axes_tubes->SetInput(axes_data);
-#else
-    axes_tubes->SetInputData(axes_data);
-#endif
-    axes_tubes->SetRadius(axes->GetScaleFactor() / 50.0);
-    axes_tubes->SetNumberOfSides(6);
-
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+
+    VtkUtils::SetInputData(mapper, getPolyData(WCoordinateSystem(scale)));
     mapper->SetScalarModeToUsePointData();
-    mapper->SetInputConnection(axes_tubes->GetOutputPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -1034,7 +997,6 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const 
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
-
 
 cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const Color &color)
 {
@@ -1299,28 +1261,19 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(const std::vector<Affine3d> &pat
     line_scalars->InsertNextTuple3(line_color[2], line_color[1], line_color[0]);
 
     // Create color array for sphere
-    vtkSphereSource * dummy_sphere = vtkSphereSource::New();
+    vtkSmartPointer<vtkSphereSource> dummy_sphere = vtkSmartPointer<vtkSphereSource>::New();
     // Create the array for big sphere
     dummy_sphere->SetRadius(init_sphere_radius);
     dummy_sphere->Update();
     vtkIdType nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
-    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars_init = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    sphere_scalars_init->SetNumberOfComponents(3);
-    sphere_scalars_init->SetNumberOfTuples(nr_points);
-    sphere_scalars_init->FillComponent(0, sphere_color[2]);
-    sphere_scalars_init->FillComponent(1, sphere_color[1]);
-    sphere_scalars_init->FillComponent(2, sphere_color[0]);
+    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars_init = VtkUtils::FillScalars(nr_points, sphere_color);
+
     // Create the array for small sphere
     dummy_sphere->SetRadius(sphere_radius);
     dummy_sphere->Update();
     nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
-    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    sphere_scalars->SetNumberOfComponents(3);
-    sphere_scalars->SetNumberOfTuples(nr_points);
-    sphere_scalars->FillComponent(0, sphere_color[2]);
-    sphere_scalars->FillComponent(1, sphere_color[1]);
-    sphere_scalars->FillComponent(2, sphere_color[0]);
-    dummy_sphere->Delete();
+    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars = VtkUtils::FillScalars(nr_points, sphere_color);
+
 
     for (vtkIdType i = 0; i < nr_poses; ++i)
     {
