@@ -170,6 +170,11 @@ namespace cv
             static VizMap storage;
             friend class Viz3d;
         };
+
+        template<typename _Tp> bool isNan(const _Tp* data)
+        {
+            return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
+        }
     }
 }
 

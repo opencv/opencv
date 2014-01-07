@@ -73,8 +73,8 @@ void cv::viz::vtkCloudMatSink::WriteData()
         CV_Assert(vtktype == VTK_FLOAT || vtktype == VTK_DOUBLE);
 
         cloud.create(1, points_Data->GetNumberOfPoints(), vtktype == VTK_FLOAT ? CV_32FC3 : CV_64FC3);
-        Vec3d *ddata = (Vec3d*)cloud.getMat().ptr();
-        Vec3f *fdata = (Vec3f*)cloud.getMat().ptr();
+        Vec3d *ddata = cloud.getMat().ptr<Vec3d>();
+        Vec3f *fdata = cloud.getMat().ptr<Vec3f>();
 
         if (cloud.depth() == CV_32F)
             for(size_t i = 0; i < cloud.total(); ++i)

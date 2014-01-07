@@ -120,6 +120,20 @@ TEST(Viz, DISABLED_show_mesh_random_colors)
     viz.spin();
 }
 
+TEST(Viz, DISABLED_show_sampled_normals)
+{
+    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    computeNormals(mesh, mesh.normals);
+
+    Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
+
+    Viz3d viz("show_sampled_normals");
+    viz.showWidget("mesh", WMesh(mesh), pose);
+    viz.showWidget("normals", WCloudNormals(mesh.cloud, mesh.normals, 30, 0.1f, Color::green()), pose);
+    viz.setRenderingProperty("normals", LINE_WIDTH, 2.0);
+    viz.spin();
+}
+
 TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
 {
     Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
@@ -130,4 +144,3 @@ TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
     viz.spin();
     viz.spin();
 }
-
