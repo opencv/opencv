@@ -262,9 +262,8 @@ namespace cv
         public:
             enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
-            //! Displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
-            WTrajectory(const std::vector<Affine3d> &path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path either by coordinate frames or polyline
+            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, float scale = 1.f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectoryFrustums : public Widget3D
@@ -309,7 +308,7 @@ namespace cv
         class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
-            WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
+            WCloudNormals(InputArray cloud, InputArray normals, int level = 64, float scale = 0.1f, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WMesh : public Widget3D

@@ -104,11 +104,17 @@ namespace cv
         CV_EXPORTS bool readPose(const String& file, Affine3d& pose, const String& tag = "pose");
         CV_EXPORTS void writePose(const String& file, const Affine3d& pose, const String& tag = "pose");
 
-        CV_EXPORTS void writeTrajectory(const std::vector<Affine3f>& traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
-        CV_EXPORTS void writeTrajectory(const std::vector<Affine3d>& traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
+        //! takes vector<Affine3<T>> with T = float/dobule and writes to a sequence of files with given filename format
+        CV_EXPORTS void writeTrajectory(InputArray traj, const String& files_format = "pose%05d.xml", int start = 0, const String& tag = "pose");
 
-        CV_EXPORTS void readTrajectory(std::vector<Affine3f>& traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
-        CV_EXPORTS void readTrajectory(std::vector<Affine3d>& traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
+        //! takes vector<Affine3<T>> with T = float/dobule and loads poses from sequence of files
+        CV_EXPORTS void readTrajectory(OutputArray traj, const String& files_format = "pose%05d.xml", int start = 0, int end = INT_MAX, const String& tag = "pose");
+
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////
+        /// Computing normals for mesh
+
+        CV_EXPORTS void computeNormals(const Mesh3d& mesh, OutputArray normals);
 
     } /* namespace viz */
 } /* namespace cv */
