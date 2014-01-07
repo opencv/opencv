@@ -987,19 +987,19 @@ void Mat::forEach(Functor operation) {
     const int COLS = this->cols;
 
     for (int r = 0; r < ROWS; ++r) {
-        _Tp* ptr = &(this->at<_Tp>(r, 0));
-        const _Tp* ptr_end = ptr + COLS;
+        _Tp* pixel_reference = &(this->at<_Tp>(r, 0));
+        const _Tp* pixel_reference_end = pixel_reference + COLS;
         int c = 0;
 
-        while (ptr < ptr_end - 4) {
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
+        while (pixel_reference < pixel_reference_end - 4) {
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
         }
 
-        while (ptr < ptr_end) {
-            operation(*ptr++, r, c++);
+        while (pixel_reference < pixel_reference_end) {
+            operation(*pixel_reference++, r, c++);
         }
     }
 };
@@ -1011,19 +1011,19 @@ void Mat::forEachParallel(Functor operation) {
 
 #pragma omp parallel for
     for (int r = 0; r < ROWS; ++r) {
-        _Tp* ptr = &(this->at<_Tp>(r, 0));
-        const _Tp* ptr_end = ptr + COLS;
+        _Tp* pixel_reference = &(this->at<_Tp>(r, 0));
+        const _Tp* pixel_reference_end = pixel_reference + COLS;
         int c = 0;
 
-        while (ptr < ptr_end - 4) {
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
-            operation(*ptr++, r, c++);
+        while (pixel_reference < pixel_reference_end - 4) {
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
+            operation(*pixel_reference++, r, c++);
         }
 
-        while (ptr < ptr_end) {
-            operation(*ptr++, r, c++);
+        while (pixel_reference < pixel_reference_end) {
+            operation(*pixel_reference++, r, c++);
         }
     }
 };
