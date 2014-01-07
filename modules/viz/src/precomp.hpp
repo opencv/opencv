@@ -188,7 +188,7 @@ namespace cv
         struct VtkUtils
         {
             template<class Filter>
-            static inline void SetInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
+            static void SetInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
             {
             #if VTK_MAJOR_VERSION <= 5
                 filter->SetInput(polydata);
@@ -198,13 +198,27 @@ namespace cv
             }
 
             template<class Filter>
-            static inline void AddInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
+            static void AddInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
             {
             #if VTK_MAJOR_VERSION <= 5
                 filter->AddInput(polydata);
             #else
                 filter->AddInputData(polydata);
             #endif
+            }
+
+            static vtkSmartPointer<vtkUnsignedCharArray> FillScalars(size_t size, const Color& color)
+            {
+                Vec3b rgb = Vec3d(color[2], color[1], color[0]);
+                Vec3b* color_data = new Vec3b[size];
+                std::fill(color_data, color_data + size, rgb);
+
+                vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
+                scalars->SetName("Colors");
+                scalars->SetNumberOfComponents(3);
+                scalars->SetNumberOfTuples(size);
+                scalars->SetArray(color_data->val, size * 3, 0);
+                return scalars;
             }
         };
     }
