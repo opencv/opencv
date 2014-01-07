@@ -45,14 +45,6 @@
 
 #include "precomp.hpp"
 
-namespace cv
-{
-    namespace viz
-    {
-        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Point Cloud Widget implementation
 
@@ -183,119 +175,67 @@ template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollec
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Normals Widget implementation
 
-namespace cv { namespace viz { namespace
-{
-    struct CloudNormalsUtils
-    {
-        template<typename _Tp>
-        struct Impl
-        {
-            static vtkSmartPointer<vtkCellArray> applyOrganized(const Mat &cloud, const Mat& normals, double level, float scale, _Tp *&pts, vtkIdType &nr_normals)
-            {
-                vtkIdType point_step = static_cast<vtkIdType>(std::sqrt(level));
-                nr_normals = (static_cast<vtkIdType>((cloud.cols - 1) / point_step) + 1) *
-                             (static_cast<vtkIdType>((cloud.rows - 1) / point_step) + 1);
-                vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-
-                pts = new _Tp[2 * nr_normals * 3];
-
-                int cch = cloud.channels();
-                vtkIdType cell_count = 0;
-                for (vtkIdType y = 0; y < cloud.rows; y += point_step)
-                {
-                    const _Tp *prow = cloud.ptr<_Tp>(y);
-                    const _Tp *nrow = normals.ptr<_Tp>(y);
-                    for (vtkIdType x = 0; x < cloud.cols; x += point_step * cch)
-                    {
-                        pts[2 * cell_count * 3 + 0] = prow[x];
-                        pts[2 * cell_count * 3 + 1] = prow[x+1];
-                        pts[2 * cell_count * 3 + 2] = prow[x+2];
-                        pts[2 * cell_count * 3 + 3] = prow[x] + nrow[x] * scale;
-                        pts[2 * cell_count * 3 + 4] = prow[x+1] + nrow[x+1] * scale;
-                        pts[2 * cell_count * 3 + 5] = prow[x+2] + nrow[x+2] * scale;
-
-                        lines->InsertNextCell(2);
-                        lines->InsertCellPoint(2 * cell_count);
-                        lines->InsertCellPoint(2 * cell_count + 1);
-                        cell_count++;
-                    }
-                }
-                return lines;
-            }
-
-            static vtkSmartPointer<vtkCellArray> applyUnorganized(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
-            {
-                vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-                nr_normals = (cloud.size().area() - 1) / level + 1 ;
-                pts = new _Tp[2 * nr_normals * 3];
-
-                int cch = cloud.channels();
-                const _Tp *p = cloud.ptr<_Tp>();
-                const _Tp *n = normals.ptr<_Tp>();
-                for (vtkIdType i = 0, j = 0; j < nr_normals; j++, i = j * level * cch)
-                {
-
-                    pts[2 * j * 3 + 0] = p[i];
-                    pts[2 * j * 3 + 1] = p[i+1];
-                    pts[2 * j * 3 + 2] = p[i+2];
-                    pts[2 * j * 3 + 3] = p[i] + n[i] * scale;
-                    pts[2 * j * 3 + 4] = p[i+1] + n[i+1] * scale;
-                    pts[2 * j * 3 + 5] = p[i+2] + n[i+2] * scale;
-
-                    lines->InsertNextCell(2);
-                    lines->InsertCellPoint(2 * j);
-                    lines->InsertCellPoint(2 * j + 1);
-                }
-                return lines;
-            }
-        };
-
-        template<typename _Tp>
-        static inline vtkSmartPointer<vtkCellArray> apply(const Mat &cloud, const Mat& normals, int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
-        {
-            if (cloud.cols > 1 && cloud.rows > 1)
-                return CloudNormalsUtils::Impl<_Tp>::applyOrganized(cloud, normals, level, scale, pts, nr_normals);
-            else
-                return CloudNormalsUtils::Impl<_Tp>::applyUnorganized(cloud, normals, level, scale, pts, nr_normals);
-        }
-    };
-
-}}}
-
 cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     Mat normals = _normals.getMat();
+
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(cloud.size() == normals.size() && cloud.type() == normals.type());
 
+    int sqlevel = (int)std::sqrt((double)level);
+    int ystep = (cloud.cols > 1 && cloud.rows > 1) ? sqlevel : 1;
+    int xstep = (cloud.cols > 1 && cloud.rows > 1) ? sqlevel : level;
+
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    points->SetDataType(cloud.depth() == CV_32F ? VTK_FLOAT : VTK_DOUBLE);
+
     vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-    vtkIdType nr_normals = 0;
 
-    if (cloud.depth() == CV_32F)
+    int s_chs = cloud.channels();
+    int n_chs = normals.channels();
+    int total = 0;
+
+    for(int y = 0; y < cloud.rows; y += ystep)
     {
-        points->SetDataTypeToFloat();
+        if (cloud.depth() == CV_32F)
+        {
+            const float *srow = cloud.ptr<float>(y);
+            const float *send = srow + cloud.cols * s_chs;
+            const float *nrow = normals.ptr<float>(y);
 
-        vtkSmartPointer<vtkFloatArray> data = vtkSmartPointer<vtkFloatArray>::New();
-        data->SetNumberOfComponents(3);
+            for (; srow < send; srow += xstep * s_chs, nrow += xstep * n_chs)
+                if (!isNan(srow) && !isNan(nrow))
+                {
+                    Vec3f endp = Vec3f(srow) + Vec3f(nrow) * scale;
 
-        float* pts = 0;
-        lines = CloudNormalsUtils::apply(cloud, normals, level, scale, pts, nr_normals);
-        data->SetArray(&pts[0], 2 * nr_normals * 3, 0);
-        points->SetData(data);
-    }
-    else
-    {
-        points->SetDataTypeToDouble();
+                    points->InsertNextPoint(srow);
+                    points->InsertNextPoint(endp.val);
 
-        vtkSmartPointer<vtkDoubleArray> data = vtkSmartPointer<vtkDoubleArray>::New();
-        data->SetNumberOfComponents(3);
+                    lines->InsertNextCell(2);
+                    lines->InsertCellPoint(total++);
+                    lines->InsertCellPoint(total++);
+                }
+        }
+        else
+        {
+            const double *srow = cloud.ptr<double>(y);
+            const double *send = srow + cloud.cols * s_chs;
+            const double *nrow = normals.ptr<double>(y);
 
-        double* pts = 0;
-        lines = CloudNormalsUtils::apply(cloud, normals, level, scale, pts, nr_normals);
-        data->SetArray(&pts[0], 2 * nr_normals * 3, 0);
-        points->SetData(data);
+            for (; srow < send; srow += xstep * s_chs, nrow += xstep * n_chs)
+                if (!isNan(srow) && !isNan(nrow))
+                {
+                    Vec3d endp = Vec3d(srow) + Vec3d(nrow) * (double)scale;
+
+                    points->InsertNextPoint(srow);
+                    points->InsertNextPoint(endp.val);
+
+                    lines->InsertNextCell(2);
+                    lines->InsertCellPoint(total++);
+                    lines->InsertCellPoint(total++);
+                }
+        }
     }
 
     vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
@@ -303,16 +243,17 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
     polyData->SetLines(lines);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    mapper->SetColorModeToMapScalars();
+    mapper->SetScalarModeToUsePointData();
 #if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(polyData);
 #else
     mapper->SetInputData(polyData);
 #endif
-    mapper->SetColorModeToMapScalars();
-    mapper->SetScalarModeToUsePointData();
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
+
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }

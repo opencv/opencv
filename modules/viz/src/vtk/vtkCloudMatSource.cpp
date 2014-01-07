@@ -48,11 +48,6 @@ namespace cv { namespace viz
 {
     vtkStandardNewMacro(vtkCloudMatSource);
 
-    template<typename _Tp> bool isNan(const _Tp* data)
-    {
-        return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
-    }
-
     template<typename _Tp> struct VtkDepthTraits;
 
     template<> struct VtkDepthTraits<float>
@@ -190,7 +185,7 @@ void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& cloud_colors, co
     for (int y = 0; y < cloud_colors.rows; ++y)
     {
         const unsigned char* srow = cloud_colors.ptr<unsigned char>(y);
-        const unsigned char* send = srow + cloud_colors.cols * cloud_colors.channels();
+        const unsigned char* send = srow + cloud_colors.cols * s_chs;
         const _Msk* mrow = mask.ptr<_Msk>(y);
 
         if (cloud_colors.channels() == 1)
