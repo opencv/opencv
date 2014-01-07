@@ -42,10 +42,10 @@
 //
 //M*/
 
-#ifndef __vtkCloudMatSource_h
-#define __vtkCloudMatSource_h
+#ifndef __vtkTrajectorySource_h
+#define __vtkTrajectorySource_h
 
-#include <opencv2/core.hpp>
+#include <opencv2/core/mat.hpp>
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkSmartPointer.h>
 #include <vtkPoints.h>
@@ -55,35 +55,28 @@ namespace cv
 {
     namespace viz
     {
-        class vtkCloudMatSource : public vtkPolyDataAlgorithm
+        class vtkTrajectorySource : public vtkPolyDataAlgorithm
         {
         public:
-            static vtkCloudMatSource *New();
-            vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm);
+            static vtkTrajectorySource *New();
+            vtkTypeMacro(vtkTrajectorySource,vtkPolyDataAlgorithm);
 
-            virtual int SetCloud(InputArray cloud);
-            virtual int SetColorCloud(InputArray cloud, InputArray colors = noArray());
-            virtual int SetColorCloudNormals(InputArray cloud, InputArray colors = noArray(), InputArray normals = noArray());
+            virtual void SetTrajectory(InputArray trajectory);
+
+            static Mat ExtractPoints(InputArray trajectory);
 
         protected:
-            vtkCloudMatSource();
-            ~vtkCloudMatSource();
-
-            int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+            vtkTrajectorySource();
+            ~vtkTrajectorySource();
 
             vtkSmartPointer<vtkPoints> points;
-            vtkSmartPointer<vtkCellArray> vertices;
-            vtkSmartPointer<vtkUnsignedCharArray> scalars;
-            vtkSmartPointer<vtkDataArray> normals;
+            vtkSmartPointer<vtkDoubleArray> tensors;
+
+            int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
         private:
-            vtkCloudMatSource(const vtkCloudMatSource&);  // Not implemented.
-            void operator=(const vtkCloudMatSource&);  // Not implemented.
+            vtkTrajectorySource(const vtkTrajectorySource&);  // Not implemented.
+            void operator=(const vtkTrajectorySource&);  // Not implemented.
 
-            template<typename _Tp> int filterNanCopy(const Mat& cloud);
-            template<typename _Msk> void filterNanColorsCopy(const Mat& cloud_colors, const Mat& mask, int total);
-
-            template<typename _Tn, typename _Msk>
-            void filterNanNormalsCopy(const Mat& cloud_normals, const Mat& mask, int total);
         };
     }
 }
