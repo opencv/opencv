@@ -64,27 +64,6 @@ cv::Affine3d cv::viz::makeCameraPose(const Vec3d& position, const Vec3d& focal_p
     return makeTransformToGlobal(u, v, n, position);
 }
 
-namespace cv { namespace viz
-{
-    template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-
-    template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
-    {
-        CV_Assert(points->GetDataType() == VTK_FLOAT);
-        vtkDataArray *data = points->GetData();
-        float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
-        return reinterpret_cast<Vec3f*>(pointer);
-    }
-
-    template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
-    {
-        CV_Assert(points->GetDataType() == VTK_DOUBLE);
-        vtkDataArray *data = points->GetData();
-        double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
-        return reinterpret_cast<Vec3d*>(pointer);
-    }
-}}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// VizStorage implementation
 
@@ -308,11 +287,7 @@ void cv::viz::computeNormals(const Mesh3d& mesh, OutputArray _normals)
     vtkSmartPointer<vtkPolyData> polydata = getPolyData(WMesh(mesh));
 
     vtkSmartPointer<vtkPolyDataNormals> normal_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
-#if VTK_MAJOR_VERSION <= 5
-    normal_generator->SetInput(polydata);
-#else
-    normal_generator->SetInputData(polydata);
-#endif
+    normal_generator->SetInputConnection(polydata->GetProducerPort());
     normal_generator->ComputePointNormalsOn();
     normal_generator->ComputeCellNormalsOff();
 
