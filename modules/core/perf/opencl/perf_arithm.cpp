@@ -909,7 +909,7 @@ OCL_PERF_TEST_P(PSNRFixture, PSNR,
 
     OCL_TEST_CYCLE() psnr = cv::PSNR(src1, src2);
 
-    SANITY_CHECK(psnr, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(psnr, 1e-4, ERROR_RELATIVE);
 }
 
 } } // namespace cvtest::ocl
