@@ -45,6 +45,9 @@
 #ifndef __vtkCloudMatSink_h
 #define __vtkCloudMatSink_h
 
+#include <opencv2/core.hpp>
+#include <vtkPolyDataWriter.h>
+
 namespace cv
 {
     namespace viz

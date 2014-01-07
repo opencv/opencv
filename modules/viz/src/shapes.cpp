@@ -1145,106 +1145,39 @@ namespace cv { namespace viz { namespace
 
 cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double scale, const Color &color)
 {
-    CV_Assert(_path.kind() == _InputArray::STD_VECTOR || _path.kind() == _InputArray::MAT);
-    CV_Assert(_path.type() == CV_32FC(16) || _path.type() == CV_64FC(16));
-
-    const Affine3d* dpath = _path.getMat().ptr<Affine3d>(), *dend = dpath + _path.total();
-    const Affine3f* fpath = _path.getMat().ptr<Affine3f>(), *fend = fpath + _path.total();
-    std::vector<Affine3d> path;
-
-    if (_path.depth() == CV_32F)
-        path.assign(fpath, fend);
-
-    if (_path.depth() == CV_64F)
-        path.assign(dpath, dend);
-
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
     // Bitwise and with 3 in order to limit the domain to 2 bits
-    if ((~display_mode & 3) ^ WTrajectory::PATH)
+    if (display_mode & WTrajectory::PATH)
     {
-        // Create a poly line along the path
-        vtkIdType nr_points = path.size();
-
-        vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-        points->SetDataTypeToFloat();
-        points->SetNumberOfPoints(nr_points);
-
-        vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-        vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
-        polyLine->GetPointIds()->SetNumberOfIds(nr_points);
-
-        Vec3f *data_beg = vtkpoints_data<float>(points);
-
-        for (vtkIdType i = 0; i < nr_points; ++i)
-        {
-            Vec3f cam_pose = path[i].translation();
-            *data_beg++ = cam_pose;
-            polyLine->GetPointIds()->SetId(i,i);
-        }
-
-        vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
-        cells->InsertNextCell(polyLine);
-
-        polyData->SetPoints(points);
-        polyData->SetLines(cells);
-
-        // Set the color for polyData
-        vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
-        colors->SetNumberOfComponents(3);
-        colors->SetNumberOfTuples(nr_points);
-        colors->FillComponent(0, color[2]);
-        colors->FillComponent(1, color[1]);
-        colors->FillComponent(2, color[0]);
-
-        polyData->GetPointData()->SetScalars(colors);
-#if VTK_MAJOR_VERSION <= 5
-        appendFilter->AddInputConnection(polyData->GetProducerPort());
-#else
-        appendFilter->AddInputData(polyData);
-#endif
+        Mat points = vtkTrajectorySource::ExtractPoints(_path);
+        vtkSmartPointer<vtkPolyData> polydata = getPolyData(WPolyLine(points, color));
+        appendFilter->AddInputConnection(polydata->GetProducerPort());
     }
 
-    if ((~display_mode & 3) ^ WTrajectory::FRAMES)
+    vtkSmartPointer<vtkTensorGlyph> tensor_glyph;
+    if (display_mode & WTrajectory::FRAMES)
     {
-        // Create frames and transform along the path
-        vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
-        axes->SetOrigin(0, 0, 0);
-        axes->SetScaleFactor(scale);
+        vtkSmartPointer<vtkTrajectorySource> source = vtkSmartPointer<vtkTrajectorySource>::New();
+        source->SetTrajectory(_path);
 
-        vtkSmartPointer<vtkUnsignedCharArray> axes_colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
-        axes_colors->SetNumberOfComponents(3);
-        axes_colors->InsertNextTuple3(255,0,0);
-        axes_colors->InsertNextTuple3(255,0,0);
-        axes_colors->InsertNextTuple3(0,255,0);
-        axes_colors->InsertNextTuple3(0,255,0);
-        axes_colors->InsertNextTuple3(0,0,255);
-        axes_colors->InsertNextTuple3(0,0,255);
+        vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCoordinateSystem(scale));
 
-        vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput();
-#if VTK_MAJOR_VERSION <= 5
-        axes_data->Update();
-#else
-        axes->Update();
-#endif
-        axes_data->GetPointData()->SetScalars(axes_colors);
+        tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
+        tensor_glyph->SetInputConnection(source->GetOutputPort());
+        tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+        tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
+        tensor_glyph->ThreeGlyphsOff();
+        tensor_glyph->SymmetricOff();
+        tensor_glyph->ColorGlyphsOff();
 
-        vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New();
-#if VTK_MAJOR_VERSION <= 5
-        axes_tubes->SetInput(axes_data);
-#else
-        axes_tubes->SetInputData(axes_data);
-#endif
-        axes_tubes->SetRadius(axes->GetScaleFactor() / 50.0);
-        axes_tubes->SetNumberOfSides(6);
-        axes_tubes->Update();
-
-        TrajectoryUtils::applyPath(axes_tubes->GetOutput(), appendFilter, path);
+        appendFilter->AddInputConnection(tensor_glyph->GetOutputPort());
     }
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, appendFilter->GetOutput());
     mapper->SetScalarModeToUsePointData();
-    mapper->SetInputConnection(appendFilter->GetOutputPort());
+    mapper->SetScalarRange(0, 255);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -1269,12 +1202,12 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(const std::vector<Affine3d> &p
     double c_y = K(1,2);
     double aspect_ratio = f_y / f_x;
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    double fovy = 2.0 * atan2(c_y,f_y) * 180 / CV_PI;
+    double fovy = 2.0 * atan2(c_y, f_y) * 180 / CV_PI;
 
     camera->SetViewAngle(fovy);
-    camera->SetPosition(0.0,0.0,0.0);
-    camera->SetViewUp(0.0,1.0,0.0);
-    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetPosition(0.0, 0.0, 0.0);
+    camera->SetViewUp(0.0, 1.0, 0.0);
+    camera->SetFocalPoint(0.0, 0.0, 1.0);
     camera->SetClippingRange(0.01, scale);
 
     double planesArray[24];
