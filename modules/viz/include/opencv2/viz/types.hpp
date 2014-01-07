@@ -108,7 +108,7 @@ namespace cv
         {
         public:
 
-            Mat cloud, colors;
+            Mat cloud, colors, normals;
             Mat polygons;
 
             //! Loads mesh from a given ply file
