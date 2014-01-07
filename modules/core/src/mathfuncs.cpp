@@ -2375,7 +2375,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     int cn = a.channels();
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a), (float)value);
+           ocl::KernelArg::WriteOnly(a, cn), (float)value);
 
     size_t globalsize[2] = { a.cols * cn, a.rows };
     return k.run(2, globalsize, NULL, false);
