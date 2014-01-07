@@ -124,6 +124,7 @@
 #include <vtkSTLReader.h>
 #include <vtkOBJExporter.h>
 #include <vtkVRMLExporter.h>
+#include <vtkTensorGlyph.h>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
