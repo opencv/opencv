@@ -381,72 +381,39 @@ template<> cv::viz::WCoordinateSystem cv::viz::Widget::cast<cv::viz::WCoordinate
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// polyline widget implementation
 
-namespace cv { namespace  viz { namespace
+cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
 {
-    struct PolyLineUtils
-    {
-        template<typename _Tp>
-        static void copy(const Mat& source, Vec<_Tp, 3> *output, vtkSmartPointer<vtkPolyLine> polyLine)
-        {
-            int s_chs = source.channels();
+    CV_Assert(_points.type() == CV_32FC3 || _points.type() == CV_32FC4 || _points.type() == CV_64FC3 || _points.type() == CV_64FC4);
 
-            for (int y = 0, id = 0; y < source.rows; ++y)
-            {
-                const _Tp* srow = source.ptr<_Tp>(y);
-
-                for (int x = 0; x < source.cols; ++x, srow += s_chs, ++id)
-                {
-                    *output++ = Vec<_Tp, 3>(srow);
-                    polyLine->GetPointIds()->SetId(id,id);
-                }
-            }
-        }
-    };
-}}}
-
-cv::viz::WPolyLine::WPolyLine(InputArray _pointData, const Color &color)
-{
-    Mat pointData = _pointData.getMat();
-    CV_Assert(pointData.type() == CV_32FC3 || pointData.type() == CV_32FC4 || pointData.type() == CV_64FC3 || pointData.type() == CV_64FC4);
-    vtkIdType nr_points = pointData.total();
+    const float *fpoints = _points.getMat().ptr<float>();
+    const double *dpoints = _points.getMat().ptr<double>();
+    size_t total = _points.total();
+    int s_chs = _points.channels();
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-    vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
+    points->SetDataType(_points.depth() == CV_32F ? VTK_FLOAT : VTK_DOUBLE);
+    points->SetNumberOfPoints(total);
 
-    if (pointData.depth() == CV_32F)
-        points->SetDataTypeToFloat();
-    else
-        points->SetDataTypeToDouble();
+    if (_points.depth() == CV_32F)
+        for(size_t i = 0; i < total; ++i, fpoints += s_chs)
+            points->SetPoint(i, fpoints);
 
-    points->SetNumberOfPoints(nr_points);
-    polyLine->GetPointIds()->SetNumberOfIds(nr_points);
+    if (_points.depth() == CV_64F)
+        for(size_t i = 0; i < total; ++i, dpoints += s_chs)
+            points->SetPoint(i, dpoints);
 
-    if (pointData.depth() == CV_32F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3f *data_beg = vtkpoints_data<float>(points);
-        PolyLineUtils::copy(pointData, data_beg, polyLine);
-    }
-    else if (pointData.depth() == CV_64F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3d *data_beg = vtkpoints_data<double>(points);
-        PolyLineUtils::copy(pointData, data_beg, polyLine);
-    }
+    vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
+    cell_array->Allocate(cell_array->EstimateSize(1, total));
+    cell_array->InsertNextCell(total);
+    for(size_t i = 0; i < total; ++i)
+        cell_array->InsertCellPoint(i);
 
-    vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
-    cells->InsertNextCell(polyLine);
-
-    polyData->SetPoints(points);
-    polyData->SetLines(cells);
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(points);
+    polydata->SetLines(cell_array);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(polyData);
-#else
-    mapper->SetInputData(polyData);
-#endif
+    mapper->SetInputConnection(polydata->GetProducerPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -831,7 +798,7 @@ cv::viz::WImage3D::WImage3D(const Vec3f &position, const Vec3f &normal, const Ve
     // Apply the transform after texture mapping
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->PreMultiply();
-    transform->SetMatrix(vtkmatrix(pose));
+    transform->SetMatrix(vtkmatrix(pose.matrix));
     transform->Scale(size.width, size.height, 1.0);
 
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
