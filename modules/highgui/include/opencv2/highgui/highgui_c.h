@@ -170,7 +170,9 @@ enum
     CV_EVENT_MBUTTONUP      =6,
     CV_EVENT_LBUTTONDBLCLK  =7,
     CV_EVENT_RBUTTONDBLCLK  =8,
-    CV_EVENT_MBUTTONDBLCLK  =9
+    CV_EVENT_MBUTTONDBLCLK  =9,
+    CV_EVENT_MOUSEWHEEL     =10,
+    CV_EVENT_MOUSEHWHEEL    =11
 };
 
 enum
@@ -182,6 +184,11 @@ enum
     CV_EVENT_FLAG_SHIFTKEY  =16,
     CV_EVENT_FLAG_ALTKEY    =32
 };
+
+
+#define CV_GET_WHEEL_DELTA(event) ((short)((event >> 16) & 0xffff)) // upper 16 bits
+#define CV_GET_MOUSEWHEEL_EVENT(event) (event & 0xffff) // lower 16 bits
+
 
 typedef void (CV_CDECL *CvMouseCallback )(int event, int x, int y, int flags, void* param);
 
