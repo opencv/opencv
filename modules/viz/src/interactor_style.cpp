@@ -564,7 +564,6 @@ void cv::viz::InteractorStyle::OnLeftButtonUp()
 void cv::viz::InteractorStyle::OnMiddleButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
-
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
     MouseEvent event(type, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
@@ -586,7 +585,6 @@ void cv::viz::InteractorStyle::OnMiddleButtonUp()
 void cv::viz::InteractorStyle::OnRightButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
-
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
     MouseEvent event(type, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
