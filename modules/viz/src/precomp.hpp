@@ -221,6 +221,22 @@ namespace cv
                 return scalars;
             }
         };
+
+        inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)
+        {
+            vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+            vtk_matrix->DeepCopy(matrix.val);
+            return vtk_matrix;
+        }
+
+        inline Color vtkcolor(const Color& color)
+        {
+            Color scaled_color = color * (1.0/255.0);
+            std::swap(scaled_color[0], scaled_color[2]);
+            return scaled_color;
+        }
+
+        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/norm(v); }
     }
 }
 

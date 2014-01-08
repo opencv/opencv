@@ -71,6 +71,35 @@ template<> cv::viz::WLine cv::viz::Widget::cast<cv::viz::WLine>()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+/// sphere widget implementation
+
+cv::viz::WSphere::WSphere(const Point3d &center, double radius, int sphere_resolution, const Color &color)
+{
+    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
+    sphere->SetRadius(radius);
+    sphere->SetCenter(center.x, center.y, center.z);
+    sphere->SetPhiResolution(sphere_resolution);
+    sphere->SetThetaResolution(sphere_resolution);
+    sphere->LatLongTessellationOff();
+    sphere->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, sphere->GetOutput());
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<WSphere&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 /// plane widget implementation
 
 namespace cv { namespace viz { namespace
@@ -144,50 +173,20 @@ template<> cv::viz::WPlane cv::viz::Widget::cast<cv::viz::WPlane>()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-/// sphere widget implementation
-
-cv::viz::WSphere::WSphere(const Point3d &center, double radius, int sphere_resolution, const Color &color)
-{
-    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
-    sphere->SetRadius(radius);
-    sphere->SetCenter(center.x, center.y, center.z);
-    sphere->SetPhiResolution(sphere_resolution);
-    sphere->SetThetaResolution(sphere_resolution);
-    sphere->LatLongTessellationOff();
-    sphere->Update();
-
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, sphere->GetOutput());
-
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    WidgetAccessor::setProp(*this, actor);
-    setColor(color);
-}
-
-template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
-{
-    Widget3D widget = this->cast<Widget3D>();
-    return static_cast<WSphere&>(widget);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
 /// arrow widget implementation
 
 cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness, const Color &color)
 {
-    vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New();
-    arrowSource->SetShaftRadius(thickness);
-    // The thickness and radius of the tip are adjusted based on the thickness of the arrow
-    arrowSource->SetTipRadius(thickness * 3.0);
-    arrowSource->SetTipLength(thickness * 10.0);
+    vtkSmartPointer<vtkArrowSource> arrow_source = vtkSmartPointer<vtkArrowSource>::New();
+    arrow_source->SetShaftRadius(thickness);
+    arrow_source->SetTipRadius(thickness * 3.0);
+    arrow_source->SetTipLength(thickness * 10.0);
 
     RNG rng = theRNG();
     Vec3d arbitrary(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
     Vec3d startPoint(pt1.x, pt1.y, pt1.z), endPoint(pt2.x, pt2.y, pt2.z);
 
-    double length = cv::norm(endPoint - startPoint);
+    double length = norm(endPoint - startPoint);
 
     Vec3d xvec = normalized(endPoint - startPoint);
     Vec3d zvec = normalized(xvec.cross(arbitrary));
@@ -204,7 +203,7 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     // Transform the polydata
     vtkSmartPointer<vtkTransformPolyDataFilter> transformPD = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transformPD->SetTransform(transform);
-    transformPD->SetInputConnection(arrowSource->GetOutputPort());
+    transformPD->SetInputConnection(arrow_source->GetOutputPort());
     transformPD->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -908,14 +907,14 @@ namespace  cv  { namespace viz { namespace
             actor->SetTexture(texture);
         }
 
-        static vtkSmartPointer<vtkPolyData> createFrustrum(double aspect_ratio, double fovy, double scale)
+        static vtkSmartPointer<vtkPolyData> createFrustum(double aspect_ratio, double fovy, double scale)
         {
             vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
             camera->SetViewAngle(fovy);
             camera->SetPosition(0.0, 0.0, 0.0);
             camera->SetViewUp(0.0, 1.0, 0.0);
             camera->SetFocalPoint(0.0, 0.0, 1.0);
-            camera->SetClippingRange(0.01, scale);
+            camera->SetClippingRange(1e-9, scale);
 
             double planesArray[24];
             camera->GetFrustumPlanes(aspect_ratio, planesArray);
@@ -956,7 +955,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const 
     double fovy = 2.0 * atan2(c_y, f_y) * 180 / CV_PI;
     double aspect_ratio = f_y / f_x;
 
-    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustrum(aspect_ratio, fovy, scale);
+    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
@@ -973,7 +972,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
     double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
     double fovy = fov[1] * 180 / CV_PI;
 
-    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustrum(aspect_ratio, fovy, scale);
+    vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
