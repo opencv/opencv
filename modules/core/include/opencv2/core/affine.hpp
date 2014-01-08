@@ -113,6 +113,8 @@ namespace cv
 
         template <typename Y> operator Affine3<Y>() const;
 
+        template <typename Y> Affine3<Y> cast() const;
+
         Mat4 matrix;
 
 #if defined EIGEN_WORLD_VERSION && defined EIGEN_GEOMETRY_MODULE_H
@@ -417,6 +419,12 @@ cv::Affine3<T> cv::Affine3<T>::concatenate(const Affine3<T>& affine) const
 
 template<typename T> template <typename Y> inline
 cv::Affine3<T>::operator Affine3<Y>() const
+{
+    return Affine3<Y>(matrix);
+}
+
+template<typename T> template <typename Y> inline
+cv::Affine3<Y> cv::Affine3<T>::cast() const
 {
     return Affine3<Y>(matrix);
 }
