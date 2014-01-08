@@ -799,23 +799,21 @@ represent the direction from previous position to the current. ::
     class CV_EXPORTS WTrajectorySpheres : public Widget3D
     {
     public:
-        WTrajectorySpheres(const std::vector<Affine3d> &path, double line_length = 0.05f,
-                    double init_sphere_radius = 0.021, sphere_radius = 0.007,
-                    Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+        WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007,
+                               const Color &from = Color::red(), const Color &to = Color::white());
     };
 
 viz::WTrajectorySpheres::WTrajectorySpheres
 -------------------------------------------
 Constructs a WTrajectorySpheres.
 
-.. ocv:function:: WTrajectorySpheres(const std::vector<Affine3d> &path, double line_length = 0.05f, double init_sphere_radius = 0.021, double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
+.. ocv:function:: WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007, const Color &from = Color::red(), const Color &to = Color::white());
 
-    :param path: List of poses on a trajectory.
-    :param line_length: Length of the lines.
-    :param init_sphere_radius: Radius of the first sphere which represents the initial position of the camera.
-    :param sphere_radius: Radius of the rest of the spheres.
-    :param line_color: :ocv:class:`Color` of the lines.
-    :param sphere_color: :ocv:class:`Color` of the spheres.
+    :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
+    :param line_length: Max length of the lines which point to previous position
+    :param sphere_radius: Radius of the spheres.
+    :param from: :ocv:class:`Color` for first sphere.
+    :param to: :ocv:class:`Color` for last sphere. Intermediate spheres will have interpolated color.
 
 viz::WCloud
 -----------

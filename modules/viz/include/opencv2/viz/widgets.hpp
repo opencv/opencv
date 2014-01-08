@@ -279,8 +279,8 @@ namespace cv
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
         {
         public:
-            WTrajectorySpheres(const std::vector<Affine3d> &path, double line_length = 0.05, double init_sphere_radius = 0.021,
-                double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007,
+                               const Color &from = Color::red(), const Color &to = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
