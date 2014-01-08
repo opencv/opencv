@@ -59,9 +59,8 @@ void cv::viz::vtkTrajectorySource::SetTrajectory(InputArray _traj)
 
     Mat traj;
     _traj.getMat().convertTo(traj, CV_64F);
-    const Affine3d* dpath = _traj.getMat().ptr<Affine3d>();
-
-    size_t total = _traj.total();
+    const Affine3d* dpath = traj.ptr<Affine3d>();
+    size_t total = traj.total();
 
     points = vtkSmartPointer<vtkPoints>::New();
     points->SetDataType(VTK_DOUBLE);
@@ -80,7 +79,6 @@ void cv::viz::vtkTrajectorySource::SetTrajectory(InputArray _traj)
         points->SetPoint(i, p.val);
     }
 }
-
 
 cv::Mat cv::viz::vtkTrajectorySource::ExtractPoints(InputArray _traj)
 {

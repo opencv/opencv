@@ -279,6 +279,7 @@ namespace cv
         class CV_EXPORTS WTrajectorySpheres: public Widget3D
         {
         public:
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path
             WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007,
                                const Color &from = Color::red(), const Color &to = Color::white());
         };

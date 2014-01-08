@@ -156,6 +156,49 @@ TEST(Viz, DISABLED_show_sampled_normals)
     viz.spin();
 }
 
+TEST(Viz, DISABLED_show_trajectories)
+{
+    std::vector<Affine3d> path = generate_test_trajectory<double>(), sub0, sub1, sub2, sub3, sub4, sub5;
+
+    Mat(path).rowRange(0, path.size()/10+1).copyTo(sub0);
+    Mat(path).rowRange(path.size()/10, path.size()/5+1).copyTo(sub1);
+    Mat(path).rowRange(path.size()/5, 11*path.size()/12).copyTo(sub2);
+    Mat(path).rowRange(11*path.size()/12, path.size()).copyTo(sub3);
+    Mat(path).rowRange(3*path.size()/4, 33*path.size()/40).copyTo(sub4);
+    Mat(path).rowRange(33*path.size()/40, 9*path.size()/10).copyTo(sub5);
+    Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
+
+    Viz3d viz("show_trajectories");
+    viz.showWidget("coos", WCoordinateSystem());
+    viz.showWidget("sub0", WTrajectorySpheres(sub0, 0.25, 0.07));
+    viz.showWidget("sub1", WTrajectory(sub1, WTrajectory::PATH, 0.2, Color::brown()));
+    viz.showWidget("sub2", WTrajectory(sub2, WTrajectory::FRAMES, 0.2));
+    viz.showWidget("sub3", WTrajectory(sub3, WTrajectory::BOTH, 0.2, Color::green()));
+    viz.showWidget("sub4", WTrajectoryFrustums(sub4, K, 0.3));
+    viz.showWidget("sub5", WTrajectoryFrustums(sub5, Vec2d(0.78, 0.78), 0.15));
+
+    int i = 0;
+    while(!viz.wasStopped())
+    {
+        double a = --i % 360;
+        Vec3d pose(sin(a * CV_PI/180), 0.7, cos(a * CV_PI/180));
+        viz.setViewerPose(makeCameraPose(pose * 7.5, Vec3d(0.0, 0.5, 0.0), Vec3d(0.0, 0.1, 0.0)));
+        viz.spinOnce(20, true);
+    }
+    //viz.spin();
+}
+
+TEST(Viz, DISABLED_show_trajectory_reposition)
+{
+    std::vector<Affine3f> path = generate_test_trajectory<float>();
+
+    Viz3d viz("show_trajectory_reposition_to_origin");
+    viz.showWidget("coos", WCoordinateSystem());
+    viz.showWidget("sub3", WTrajectory(Mat(path).rowRange(0, path.size()/3), WTrajectory::BOTH, 0.2, Color::brown()), path.front().inv());
+    viz.spin();
+}
+
+
 TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
 {
     Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
