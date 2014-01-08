@@ -54,9 +54,10 @@ cv::viz::WCloud::WCloud(InputArray cloud, InputArray colors)
 
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetColorCloud(cloud, colors);
+    cloud_source->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(cloud_source->GetOutputPort());
+    VtkUtils::SetInputData(mapper, cloud_source->GetOutput());
     mapper->SetScalarModeToUsePointData();
     mapper->ImmediateModeRenderingOff();
     mapper->SetScalarRange(0, 255);
@@ -74,9 +75,10 @@ cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
 {
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetCloud(cloud);
+    cloud_source->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(cloud_source->GetOutputPort());
+    VtkUtils::SetInputData(mapper, cloud_source->GetOutput());
     mapper->ImmediateModeRenderingOff();
     mapper->ScalarVisibilityOff();
 
@@ -127,15 +129,11 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     {
         // This is the first cloud
         mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-#if VTK_MAJOR_VERSION <= 5
-        mapper->SetInput(polydata);
-#else
-        mapper->SetInputData(polydata);
-#endif
         mapper->SetScalarRange(0, 255);
         mapper->SetScalarModeToUsePointData();
         mapper->ScalarVisibilityOn();
         mapper->ImmediateModeRenderingOff();
+        VtkUtils::SetInputData(mapper, polydata);
 
         actor->SetNumberOfCloudPoints(std::max(1, polydata->GetNumberOfPoints()/10));
         actor->GetProperty()->SetInterpolationToFlat();
@@ -147,16 +145,12 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     vtkPolyData *currdata = vtkPolyData::SafeDownCast(mapper->GetInput());
     CV_Assert("Cloud Widget without data" && currdata);
 
-    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-#if VTK_MAJOR_VERSION <= 5
-    appendFilter->AddInput(currdata);
-    appendFilter->AddInput(polydata);
-    mapper->SetInput(appendFilter->GetOutput());
-#else
-    appendFilter->AddInputData(currdata);
-    appendFilter->AddInputData(polydata);
-    mapper->SetInputData(appendFilter->GetOutput());
-#endif
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+    append_filter->AddInputConnection(currdata->GetProducerPort());
+    append_filter->AddInputConnection(polydata->GetProducerPort());
+    append_filter->Update();
+
+    VtkUtils::SetInputData(mapper, append_filter->GetOutput());
 
     actor->SetNumberOfCloudPoints(std::max(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
 }
@@ -245,11 +239,7 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetColorModeToMapScalars();
     mapper->SetScalarModeToUsePointData();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(polyData);
-#else
-    mapper->SetInputData(polyData);
-#endif
+    VtkUtils::SetInputData(mapper, polyData);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -326,11 +316,7 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetScalarModeToUsePointData();
     mapper->ImmediateModeRenderingOff();
-#if VTK_MAJOR_VERSION <= 5
-    mapper->SetInput(polydata);
-#else
-    mapper->SetInputData(polydata);
-#endif
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     //actor->SetNumberOfCloudPoints(std::max(1, polydata->GetNumberOfPoints() / 10));
