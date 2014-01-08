@@ -45,18 +45,9 @@
 
 #include "precomp.hpp"
 
-
-#if (1 || !defined __APPLE__) && !defined _MSC_VER
-vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew();
-vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
-{
-  return vtkRenderWindowInteractor::New();
-}
-#endif
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
-    :  s_lastDone_(0.0), style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
+    : s_lastDone_(0.0), style_(vtkSmartPointer<InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
@@ -72,12 +63,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     style_->setWidgetActorMap(widget_actor_map_);
     style_->UseTimersOn();
 
-    /////////////////////////////////////////////////
-#if (1 || !defined __APPLE__) && !defined _MSC_VER
-    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::Take(vtkRenderWindowInteractorFixNew());
-#else
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-#endif
 
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
@@ -88,7 +74,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
 
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
-    interactor_->SetDesiredUpdateRate(30.0);
+    interactor_->SetDesiredUpdateRate(24.0);
 
     // Initialize and create timer, also create window
     interactor_->Initialize();
@@ -401,10 +387,7 @@ void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d
 {
     Vec4d world_pt;
     vtkInteractorObserver::ComputeDisplayToWorld(renderer_, window_coord.x, window_coord.y, window_coord.z, world_pt.val);
-
-    vtkCamera &active_camera = *renderer_->GetActiveCamera();
-    Vec3d cam_pos;
-    active_camera.GetPosition(cam_pos.val);
+    Vec3d cam_pos(renderer_->GetActiveCamera()->GetPosition());
     origin = cam_pos;
     direction = normalize(Vec3d(world_pt.val) - cam_pos);
 }
@@ -479,7 +462,6 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode)
 {
@@ -488,12 +470,7 @@ void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-cv::String cv::viz::Viz3d::VizImpl::getWindowName() const
-{
-    return (window_ ? window_->GetWindowName() : "");
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
+cv::String cv::viz::Viz3d::VizImpl::getWindowName() const { return window_ ? window_->GetWindowName() : ""; }
 void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_->SetPosition(position.x, position.y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize(const Size& window_size) { window_->SetSize(window_size.width, window_size.height); }
 cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }
