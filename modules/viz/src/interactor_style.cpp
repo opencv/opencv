@@ -298,12 +298,8 @@ void cv::viz::InteractorStyle::OnKeyDown()
     {
         vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
 
-        Vec2d clip;
-        Vec3d focal, pos, view;
-        cam->GetClippingRange(clip.val);
-        cam->GetFocalPoint(focal.val);
-        cam->GetPosition(pos.val);
-        cam->GetViewUp(view.val);
+        Vec2d clip(cam->GetClippingRange());
+        Vec3d focal(cam->GetFocalPoint()), pos(cam->GetPosition()), view(cam->GetViewUp());
         Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
         Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
         double angle = cam->GetViewAngle () / 180.0 * CV_PI;
