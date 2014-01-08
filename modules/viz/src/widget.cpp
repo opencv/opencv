@@ -140,14 +140,11 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                 {
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
+                        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
                         vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-#if VTK_MAJOR_VERSION <= 5
-                        normals->SetInput(actor->GetMapper()->GetInput());
-#else
-                        normals->SetInputData(actor->GetMapper()->GetInput());
-#endif
+                        VtkUtils::SetInputData(normals, mapper->GetInput());
                         normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
+                        VtkUtils::SetInputData(mapper, normals->GetOutput());
                     }
                     actor->GetProperty()->SetInterpolationToGouraud();
                     break;
@@ -156,14 +153,11 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                 {
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
+                        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
                         vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-#if VTK_MAJOR_VERSION <= 5
-                        normals->SetInput(actor->GetMapper()->GetInput());
-#else
-                        normals->SetInputData(actor->GetMapper()->GetInput());
-#endif
+                        VtkUtils::SetInputData(normals, mapper->GetInput());
                         normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
+                        VtkUtils::SetInputData(mapper, normals->GetOutput());
                     }
                     actor->GetProperty()->SetInterpolationToPhong();
                     break;

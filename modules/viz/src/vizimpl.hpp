@@ -179,33 +179,15 @@ private:
     bool removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor);
 };
 
-
 namespace cv
 {
     namespace viz
     {
-        inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)
-        {
-            vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-            vtk_matrix->DeepCopy(matrix.val);
-            return vtk_matrix;
-        }
-
         struct color_tag {};
         struct gray_tag {};
 
         inline Vec3b fetchRgb(const unsigned char* color, color_tag) { return Vec3b(color[2], color[1], color[0]); }
         inline Vec3b fetchRgb(const unsigned char* color,  gray_tag) { return Vec3b(color[0], color[0], color[0]); }
-
-        inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
-        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
-
-        inline Color vtkcolor(const Color& color)
-        {
-            Color scaled_color = color * (1.0/255.0);
-            std::swap(scaled_color[0], scaled_color[2]);
-            return scaled_color;
-        }
 
         struct ConvertToVtkImage
         {
