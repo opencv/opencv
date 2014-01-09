@@ -199,6 +199,33 @@ TEST(Viz, DISABLED_show_trajectory_reposition)
 }
 
 
+
+TEST(Viz, show_camera_positions)
+{
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+    Mat chs[3]; split(lena, chs);
+    Mat gray = 0.114 * chs[0] + 0.58 * chs[1] + 0.3 * chs[2];
+
+    Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
+
+    Affine3d poses[2];
+    for(int i = 0; i < 2; ++i)
+    {
+        Vec3d pose = 5 * Vec3d(sin(3.14 + 2.7 + i*60 * CV_PI/180), 0.4 - i*0.3, cos(3.14 + 2.7 + i*60 * CV_PI/180));
+        poses[i] = makeCameraPose(pose, Vec3d(0.0, 0.0, 0.0), Vec3d(0.0, -0.1, 0.0));
+    }
+
+    Viz3d viz("show_camera_positions");
+    viz.showWidget("sphe", WSphere(Point3d(0,0,0), 1.0));
+    viz.showWidget("coos", WCoordinateSystem(1.5));
+    viz.showWidget("pos1", WCameraPosition(0.75), poses[0]);
+    viz.showWidget("pos2", WCameraPosition(Vec2d(0.78, 0.78), lena, 2.2, Color::green()), poses[0]);
+
+    viz.showWidget("pos3", WCameraPosition(0.75), poses[1]);
+    viz.showWidget("pos4", WCameraPosition(K, gray, 3, Color::indigo()), poses[1]);
+    viz.spin();
+}
+
 TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
 {
     Mesh mesh = Mesh::load(get_dragon_ply_file_path());
