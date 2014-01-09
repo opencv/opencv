@@ -827,7 +827,8 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     if (!ocl_sum(_src, stddev, OCL_OP_SUM_SQR, _mask))
         return false;
 
-    double total = 1.0 / (haveMask ? countNonZero(_mask) : _src.total());
+    int nz = haveMask ? countNonZero(_mask) : (int)_src.total();
+    double total = nz != 0 ? 1.0 / nz : 0;
     int k, j, cn = _src.channels();
     for (int i = 0; i < cn; ++i)
     {
