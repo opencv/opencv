@@ -617,15 +617,13 @@ cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
-    // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-    ConvertToVtkImage::convert(image, vtk_image);
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
 
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flip_filter = vtkSmartPointer<vtkImageFlip>::New();
     flip_filter->SetFilteredAxis(1); // Vertical flip
-    flip_filter->SetInputConnection(vtk_image->GetProducerPort());
-    flip_filter->Update();
+    flip_filter->SetInputConnection(source->GetOutputPort());
 
     // Scale the image based on the Rect
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
@@ -637,6 +635,7 @@ cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
     image_reslice->SetOutputDimensionality(2);
     image_reslice->InterpolateOn();
     image_reslice->AutoCropOutputOn();
+    image_reslice->Update();
 
     vtkSmartPointer<vtkImageMapper> image_mapper = vtkSmartPointer<vtkImageMapper>::New();
     image_mapper->SetInputConnection(image_reslice->GetOutputPort());
@@ -661,13 +660,13 @@ void cv::viz::WImageOverlay::setImage(const Mat &image)
     CV_Assert("This widget does not support overlay image." && mapper);
 
     // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-    ConvertToVtkImage::convert(image, vtk_image);
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
 
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
     flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->SetInputConnection(source->GetOutputPort());
     flipFilter->Update();
 
     mapper->SetInputConnection(flipFilter->GetOutputPort());
@@ -686,14 +685,13 @@ cv::viz::WImage3D::WImage3D(const Mat &image, const Size &size)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
-    // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-    ConvertToVtkImage::convert(image, vtk_image);
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
 
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
     flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->SetInputConnection(source->GetOutputPort());
     flipFilter->Update();
 
     Vec3d plane_center(size.width * 0.5, size.height * 0.5, 0.0);
@@ -735,13 +733,13 @@ cv::viz::WImage3D::WImage3D(const Vec3d &position, const Vec3d &normal, const Ve
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
     // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-    ConvertToVtkImage::convert(image, vtk_image);
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
 
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
     flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->SetInputConnection(source->GetOutputPort());
     flipFilter->Update();
 
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
@@ -790,14 +788,13 @@ void cv::viz::WImage3D::setImage(const Mat &image)
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("This widget does not support 3D image." && actor);
 
-    // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-    ConvertToVtkImage::convert(image, vtk_image);
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
 
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
     flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->SetInputConnection(source->GetOutputPort());
     flipFilter->Update();
 
     // Apply the texture
@@ -850,8 +847,10 @@ namespace  cv  { namespace viz { namespace
             float aspect_ratio = float(image.cols)/float(image.rows);
 
             // Create the vtk image
-            vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
-            ConvertToVtkImage::convert(image, vtk_image);
+            vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+            source->SetImage(image);
+            source->Update();
+            vtkSmartPointer<vtkImageData> vtk_image = source->GetOutput();
 
             // Adjust a pixel of the vtk_image
             if(image.channels() == 1)

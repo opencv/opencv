@@ -198,15 +198,11 @@ TEST(Viz, DISABLED_show_trajectory_reposition)
     viz.spin();
 }
 
-
-
 TEST(Viz, show_camera_positions)
 {
-    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
-    Mat chs[3]; split(lena, chs);
-    Mat gray = 0.114 * chs[0] + 0.58 * chs[1] + 0.3 * chs[2];
-
     Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+    Mat gray = make_gray(lena);
 
     Affine3d poses[2];
     for(int i = 0; i < 2; ++i)
@@ -223,6 +219,31 @@ TEST(Viz, show_camera_positions)
 
     viz.showWidget("pos3", WCameraPosition(0.75), poses[1]);
     viz.showWidget("pos4", WCameraPosition(K, gray, 3, Color::indigo()), poses[1]);
+    viz.spin();
+}
+
+TEST(Viz, show_overlay_image)
+{
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+    Mat gray = make_gray(lena);
+
+    Viz3d viz("show_overlay_image");
+    viz.showWidget("coos", WCoordinateSystem());
+    viz.showWidget("img1", WImageOverlay(lena, Rect(Point(0, 0), Size_<double>(viz.getWindowSize()) * 0.5)));
+    viz.showWidget("img2", WImageOverlay(gray, Rect(Point(640, 0), Size_<double>(viz.getWindowSize()) * 0.5)));
+    viz.spin();
+}
+
+TEST(Viz, show_image_3d)
+{
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+    Mat gray = make_gray(lena);
+
+    Viz3d viz("show_image_3d");
+    viz.showWidget("coos", WCoordinateSystem(100));
+    viz.showWidget("img1", WImage3D(lena, Size(lena.cols, lena.rows/2)), makeCameraPose(Vec3d(1.0, 1.0, 1.0), Vec3d::all(0.0), Vec3d(0.0, -1.0, 0.0)));
+    viz.showWidget("img2", WImage3D(Vec3d(1.0, -1.0, 1.0), Vec3d(-1, 1, -1), Vec3d(0.0, -1.0, 0.0), gray, lena.size()));
+
     viz.spin();
 }
 

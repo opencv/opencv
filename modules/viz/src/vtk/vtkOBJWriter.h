@@ -55,7 +55,7 @@ namespace cv
         {
         public:
           static vtkOBJWriter *New();
-          vtkTypeMacro(vtkOBJWriter,vtkPolyDataWriter);
+          vtkTypeMacro(vtkOBJWriter,vtkPolyDataWriter)
           void PrintSelf(ostream& os, vtkIndent indent);
 
           vtkGetMacro(DecimalPrecision, int);

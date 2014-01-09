@@ -59,7 +59,7 @@ namespace cv
         {
         public:
             static vtkTrajectorySource *New();
-            vtkTypeMacro(vtkTrajectorySource,vtkPolyDataAlgorithm);
+            vtkTypeMacro(vtkTrajectorySource,vtkPolyDataAlgorithm)
 
             virtual void SetTrajectory(InputArray trajectory);
 
