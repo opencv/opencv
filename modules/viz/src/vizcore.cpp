@@ -285,21 +285,9 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
 void cv::viz::computeNormals(const Mesh3d& mesh, OutputArray _normals)
 {
     vtkSmartPointer<vtkPolyData> polydata = getPolyData(WMesh(mesh));
+    vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(polydata);
 
-    vtkSmartPointer<vtkPolyDataNormals> normal_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
-    normal_generator->SetInputConnection(polydata->GetProducerPort());
-    normal_generator->ComputePointNormalsOn();
-    normal_generator->ComputeCellNormalsOff();
-
-    normal_generator->SetFeatureAngle(0.1);
-    normal_generator->SetSplitting(0);
-    normal_generator->SetConsistency(1);
-    normal_generator->SetAutoOrientNormals(0);
-    normal_generator->SetFlipNormals(0);
-    normal_generator->SetNonManifoldTraversal(1);
-    normal_generator->Update();
-
-    vtkSmartPointer<vtkDataArray> generic_normals = normal_generator->GetOutput()->GetPointData()->GetNormals();
+    vtkSmartPointer<vtkDataArray> generic_normals = with_normals->GetPointData()->GetNormals();
     if(generic_normals)
     {
         Mat normals(1, generic_normals->GetNumberOfTuples(), CV_64FC3);
