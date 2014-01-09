@@ -264,8 +264,6 @@ This 3D Widget defines a finite plane. ::
     public:
         WPlane(const Vec4d& coefs, double size = 1.0, const Color &color = Color::white());
         WPlane(const Vec4d& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
-    private:
-        /* hidden */
     };
 
 viz::WPlane::WPlane
@@ -437,9 +435,6 @@ This 3D Widget defines a poly line. ::
     {
     public:
         WPolyLine(InputArray points, const Color &color = Color::white());
-
-    private:
-        /* hidden */
     };
 
 viz::WPolyLine::WPolyLine
@@ -464,8 +459,6 @@ This 3D Widget defines a grid. ::
         WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
         //! Creates grid based on the plane equation
         WGrid(const Vec4d &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-    private:
-        /* hidden */
     };
 
 viz::WGrid::WGrid
@@ -732,14 +725,14 @@ This 3D Widget represents a trajectory. ::
         enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH};
 
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.f, const Color &color = Color::white(),;
+        WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.0, const Color &color = Color::white(),;
     };
 
 viz::WTrajectory::WTrajectory
 -----------------------------
 Constructs a WTrajectory.
 
-.. ocv:function:: WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.f, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
     :param display_mode: Display mode. This can be PATH, FRAMES, and BOTH.
@@ -828,9 +821,6 @@ This 3D Widget defines a point cloud. ::
         WCloud(InputArray cloud, InputArray colors);
         //! All points in cloud have the same color
         WCloud(InputArray cloud, const Color &color = Color::white());
-
-    private:
-        /* hidden */
     };
 
 viz::WCloud::WCloud
@@ -868,9 +858,6 @@ This 3D Widget defines a collection of clouds. ::
         void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
         //! All points in cloud have the same color
         void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3d &pose = Affine3d::Identity());
-
-    private:
-        /* hidden */
     };
 
 viz::WCloudCollection::WCloudCollection
@@ -911,9 +898,6 @@ This 3D Widget represents normals of a point cloud. ::
     {
     public:
         WCloudNormals(InputArray cloud, InputArray normals, int level = 100, double scale = 0.02f, const Color &color = Color::white());
-
-    private:
-        /* hidden */
     };
 
 viz::WCloudNormals::WCloudNormals
@@ -939,16 +923,22 @@ This 3D Widget defines a mesh. ::
     class CV_EXPORTS WMesh : public Widget3D
     {
     public:
-        WMesh(const Mesh3d &mesh);
-
-    private:
-        /* hidden */
+        WMesh(const Mesh &mesh);
+		WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
     };
 
 viz::WMesh::WMesh
 -----------------
 Constructs a WMesh.
 
-.. ocv:function:: WMesh(const Mesh3d &mesh)
+.. ocv:function:: WMesh(const Mesh &mesh)
 
-    :param mesh: :ocv:class:`Mesh3d` object that will be displayed.
+    :param mesh: :ocv:class:`Mesh` object that will be displayed.
+	
+.. ocv:function:: WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
+
+    :param cloud: Points of the mesh object.
+	:param polygons: Points of the mesh object.
+	:param colors: Point colors.
+	:param normals: Point normals.
+	
