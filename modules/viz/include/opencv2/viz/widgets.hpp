@@ -141,8 +141,8 @@ namespace cv
         class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            WPlane(const Vec4d& coefs, double size = 1.f, const Color &color = Color::white());
-            WPlane(const Vec4d& coefs, const Point3d& pt, double size = 1.f, const Color &color = Color::white());
+            WPlane(const Vec4d& coefs, double size = 1.0, const Color &color = Color::white());
+            WPlane(const Vec4d& coefs, const Point3d& pt, double size = 1.0, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WSphere : public Widget3D
@@ -227,7 +227,7 @@ namespace cv
         class CV_EXPORTS WCoordinateSystem : public Widget3D
         {
         public:
-            WCoordinateSystem(double scale = 1.f);
+            WCoordinateSystem(double scale = 1.0);
         };
 
         class CV_EXPORTS WGrid : public Widget3D
@@ -263,7 +263,7 @@ namespace cv
             enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
             //! Takes vector<Affine3<T>> and displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.f, const Color &color = Color::white());
+            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.0, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WTrajectoryFrustums : public Widget3D

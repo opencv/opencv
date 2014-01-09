@@ -61,9 +61,9 @@ namespace cv
         CV_EXPORTS Affine3d makeCameraPose(const Vec3d& position, const Vec3d& focal_point, const Vec3d& y_dir);
 
         //! retrieves a window by its name. If no window with such name, then it creates new.
-        CV_EXPORTS Viz3d get(const String &window_name);
+        CV_EXPORTS Viz3d getWindowByName(const String &window_name);
 
-        //! Unregisters all Viz windows from internal database. After it 'get()' will create new windows instead getting existing from the database.
+        //! Unregisters all Viz windows from internal database. After it 'getWindowByName()' will create new windows instead getting existing from the database.
         CV_EXPORTS void unregisterAllWindows();
 
         //! checks float value for Nan
