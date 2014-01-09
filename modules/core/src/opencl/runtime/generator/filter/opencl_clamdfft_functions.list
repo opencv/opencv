@@ -5,7 +5,7 @@ clAmdFftDestroyPlan
 clAmdFftEnqueueTransform
 //clAmdFftGetLayout
 //clAmdFftGetPlanBatchSize
-clAmdFftGetPlanContext
+//clAmdFftGetPlanContext
 //clAmdFftGetPlanDim
 //clAmdFftGetPlanDistance
 //clAmdFftGetPlanInStride
@@ -22,7 +22,7 @@ clAmdFftSetPlanBatchSize
 //clAmdFftSetPlanDim
 clAmdFftSetPlanDistance
 clAmdFftSetPlanInStride
-clAmdFftSetPlanLength
+//clAmdFftSetPlanLength
 clAmdFftSetPlanOutStride
 clAmdFftSetPlanPrecision
 clAmdFftSetPlanScale
