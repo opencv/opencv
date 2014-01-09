@@ -220,6 +220,22 @@ namespace cv
                 scalars->SetArray(color_data->val, size * 3, 0);
                 return scalars;
             }
+
+            static vtkSmartPointer<vtkPolyData> ComputeNormals(vtkSmartPointer<vtkPolyData> polydata)
+            {
+                vtkSmartPointer<vtkPolyDataNormals> normals_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
+                normals_generator->ComputePointNormalsOn();
+                normals_generator->ComputeCellNormalsOff();
+                normals_generator->SetFeatureAngle(0.1);
+                normals_generator->SetSplitting(0);
+                normals_generator->SetConsistency(1);
+                normals_generator->SetAutoOrientNormals(0);
+                normals_generator->SetFlipNormals(0);
+                normals_generator->SetNonManifoldTraversal(1);
+                VtkUtils::SetInputData(normals_generator, polydata);
+                normals_generator->Update();
+                return normals_generator->GetOutput();
+            }
         };
 
         inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)

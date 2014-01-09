@@ -313,7 +313,7 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
     cell_array->Squeeze();
     polydata->SetStrips(cell_array);
 
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetScalarModeToUsePointData();
     mapper->ImmediateModeRenderingOff();
     VtkUtils::SetInputData(mapper, polydata);
