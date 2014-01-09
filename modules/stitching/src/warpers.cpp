@@ -45,8 +45,10 @@
 namespace cv {
 namespace detail {
 
-void ProjectorBase::setCameraParams(const Mat &K, const Mat &R, const Mat &T)
+void ProjectorBase::setCameraParams(InputArray _K, InputArray _R, InputArray _T)
 {
+    Mat K = _K.getMat(), R = _R.getMat(), T = _T.getMat();
+
     CV_Assert(K.size() == Size(3, 3) && K.type() == CV_32F);
     CV_Assert(R.size() == Size(3, 3) && R.type() == CV_32F);
     CV_Assert((T.size() == Size(1, 3) || T.size() == Size(3, 1)) && T.type() == CV_32F);
@@ -76,7 +78,7 @@ void ProjectorBase::setCameraParams(const Mat &K, const Mat &R, const Mat &T)
 }
 
 
-Point2f PlaneWarper::warpPoint(const Point2f &pt, const Mat &K, const Mat &R, const Mat &T)
+Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R, InputArray T)
 {
     projector_.setCameraParams(K, R, T);
     Point2f uv;
@@ -85,15 +87,17 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, const Mat &K, const Mat &R, co
 }
 
 
-Rect PlaneWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, Mat &xmap, Mat &ymap)
+Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray _xmap, OutputArray _ymap)
 {
     projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
     detectResultRoi(src_size, dst_tl, dst_br);
 
-    xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
-    ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    _xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+    _ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32F);
+
+    Mat xmap = _xmap.getMat(), ymap = _ymap.getMat();
 
     float x, y;
     for (int v = dst_tl.y; v <= dst_br.y; ++v)
@@ -110,8 +114,8 @@ Rect PlaneWarper::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat
 }
 
 
-Point PlaneWarper::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-                        Mat &dst)
+Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
+                        OutputArray dst)
 {
     Mat xmap, ymap;
     Rect dst_roi = buildMaps(src.size(), K, R, T, xmap, ymap);
@@ -123,7 +127,7 @@ Point PlaneWarper::warp(const Mat &src, const Mat &K, const Mat &R, const Mat &T
 }
 
 
-Rect PlaneWarper::warpRoi(Size src_size, const Mat &K, const Mat &R, const Mat &T)
+Rect PlaneWarper::warpRoi(Size src_size, InputArray K, InputArray R, InputArray T)
 {
     projector_.setCameraParams(K, R, T);
 
@@ -211,12 +215,12 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
 
 
 #ifdef HAVE_OPENCV_CUDAWARPING
-Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap)
+Rect PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
     return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);
 }
 
-Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, const Mat &T, cuda::GpuMat &xmap, cuda::GpuMat &ymap)
+Rect PlaneWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
     projector_.setCameraParams(K, R, T);
 
@@ -229,15 +233,15 @@ Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, const 
     return Rect(dst_tl, dst_br);
 }
 
-Point PlaneWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                           cuda::GpuMat &dst)
+Point PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                           cuda::GpuMat & dst)
 {
     return warp(src, K, R, Mat::zeros(3, 1, CV_32F), interp_mode, border_mode, dst);
 }
 
 
-Point PlaneWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, const Mat &T, int interp_mode, int border_mode,
-                           cuda::GpuMat &dst)
+Point PlaneWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
+                           cuda::GpuMat & dst)
 {
     Rect dst_roi = buildMaps(src.size(), K, R, T, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -246,7 +250,7 @@ Point PlaneWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, 
 }
 
 
-Rect SphericalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap)
+Rect SphericalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
     projector_.setCameraParams(K, R);
 
@@ -260,8 +264,8 @@ Rect SphericalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, cu
 }
 
 
-Point SphericalWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                               cuda::GpuMat &dst)
+Point SphericalWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                               cuda::GpuMat & dst)
 {
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
@@ -270,7 +274,7 @@ Point SphericalWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat 
 }
 
 
-Rect CylindricalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap)
+Rect CylindricalWarperGpu::buildMaps(Size src_size, InputArray K, InputArray R, cuda::GpuMat & xmap, cuda::GpuMat & ymap)
 {
     projector_.setCameraParams(K, R);
 
@@ -284,8 +288,8 @@ Rect CylindricalWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, 
 }
 
 
-Point CylindricalWarperGpu::warp(const cuda::GpuMat &src, const Mat &K, const Mat &R, int interp_mode, int border_mode,
-                                 cuda::GpuMat &dst)
+Point CylindricalWarperGpu::warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+                                 cuda::GpuMat & dst)
 {
     Rect dst_roi = buildMaps(src.size(), K, R, d_xmap_, d_ymap_);
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
