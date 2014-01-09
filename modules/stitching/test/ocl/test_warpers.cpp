@@ -92,9 +92,9 @@ OCL_TEST_F(SphericalWarperOclTest, Mat)
         OCL_ON(warper->buildMaps(src.size(), K, R, uxmap, uymap));
 
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
-        OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
+        OCL_ON(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-5);
+        Near(1e-4);
     }
 }
 
@@ -115,9 +115,9 @@ OCL_TEST_F(CylindricalWarperOclTest, Mat)
         OCL_ON(warper->buildMaps(src.size(), K, R, uxmap, uymap));
 
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
-        OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
+        OCL_ON(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-5);
+        Near(1e-4);
     }
 }
 
@@ -138,7 +138,7 @@ OCL_TEST_F(PlaneWarperOclTest, Mat)
         OCL_ON(warper->buildMaps(src.size(), K, R, uxmap, uymap));
 
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
-        OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
+        OCL_ON(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
         Near(1e-5);
     }

@@ -48,7 +48,7 @@ namespace detail {
 
 /////////////////////////////////////////// PlaneWarperOcl ////////////////////////////////////////////
 
-Rect PlaneWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R, const Mat & T, Mat & xmap, Mat & ymap)
+Rect PlaneWarperOcl::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap)
 {
     projector_.setCameraParams(K, R);
 
@@ -60,18 +60,19 @@ Rect PlaneWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R, cons
         ocl::Kernel k("buildWarpPlaneMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
         {
-            xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
-            ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
+            Size dsize(dst_br.x - dst_tl.x + 1, dst_br.y - dst_tl.y + 1);
+            xmap.create(dsize, CV_32FC1);
+            ymap.create(dsize, CV_32FC1);
 
             Mat r_kinv(1, 9, CV_32FC1, projector_.r_kinv), t(1, 3, CV_32FC1, projector_.t);
-            UMat uxmap = xmap.getUMat(ACCESS_WRITE), uymap = ymap.getUMat(ACCESS_WRITE),
+            UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(),
                     ur_kinv = r_kinv.getUMat(ACCESS_READ), ut = t.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
                    ocl::KernelArg::PtrReadOnly(ur_kinv), ocl::KernelArg::PtrReadOnly(ut),
                    dst_tl.x, dst_tl.y, projector_.scale);
 
-            size_t globalsize[2] = { xmap.cols, xmap.rows };
+            size_t globalsize[2] = { dsize.width, dsize.height };
             if (k.run(2, globalsize, NULL, true))
                 return Rect(dst_tl, dst_br);
         }
@@ -80,13 +81,13 @@ Rect PlaneWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R, cons
     return PlaneWarper::buildMaps(src_size, K, R, T, xmap, ymap);
 }
 
-Point PlaneWarperOcl::warp(const Mat & src, const Mat & K, const Mat & R, const Mat & T, int interp_mode, int border_mode, Mat & dst)
+Point PlaneWarperOcl::warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode, OutputArray dst)
 {
-    Mat uxmap, uymap;
+    UMat uxmap, uymap;
     Rect dst_roi = buildMaps(src.size(), K, R, T, uxmap, uymap);
 
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    UMat udst = dst.getUMat(ACCESS_WRITE);
+    UMat udst = dst.getUMat();
     remap(src, udst, uxmap, uymap, interp_mode, border_mode);
 
     return dst_roi.tl();
@@ -94,7 +95,7 @@ Point PlaneWarperOcl::warp(const Mat & src, const Mat & K, const Mat & R, const 
 
 /////////////////////////////////////////// SphericalWarperOcl ////////////////////////////////////////
 
-Rect SphericalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat &R, Mat & xmap, Mat & ymap)
+Rect SphericalWarperOcl::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
     projector_.setCameraParams(K, R);
 
@@ -106,16 +107,17 @@ Rect SphericalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat &R, M
         ocl::Kernel k("buildWarpSphericalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
         {
-            xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
-            ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
+            Size dsize(dst_br.x - dst_tl.x + 1, dst_br.y - dst_tl.y + 1);
+            xmap.create(dsize, CV_32FC1);
+            ymap.create(dsize, CV_32FC1);
 
             Mat r_kinv(1, 9, CV_32FC1, projector_.r_kinv);
-            UMat uxmap = xmap.getUMat(ACCESS_WRITE), uymap = ymap.getUMat(ACCESS_WRITE), ur_kinv = r_kinv.getUMat(ACCESS_READ);
+            UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), ur_kinv = r_kinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
                    ocl::KernelArg::PtrReadOnly(ur_kinv), dst_tl.x, dst_tl.y, projector_.scale);
 
-            size_t globalsize[2] = { xmap.cols, xmap.rows };
+            size_t globalsize[2] = { dsize.width, dsize.height };
             if (k.run(2, globalsize, NULL, true))
                 return Rect(dst_tl, dst_br);
         }
@@ -124,13 +126,13 @@ Rect SphericalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat &R, M
     return SphericalWarper::buildMaps(src_size, K, R, xmap, ymap);
 }
 
-Point SphericalWarperOcl::warp(const Mat & src, const Mat & K, const Mat & R, int interp_mode, int border_mode, Mat & dst)
+Point SphericalWarperOcl::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst)
 {
-    Mat uxmap, uymap;
+    UMat uxmap, uymap;
     Rect dst_roi = buildMaps(src.size(), K, R, uxmap, uymap);
 
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    UMat udst = dst.getUMat(ACCESS_WRITE);
+    UMat udst = dst.getUMat();
     remap(src, udst, uxmap, uymap, interp_mode, border_mode);
 
     return dst_roi.tl();
@@ -138,7 +140,7 @@ Point SphericalWarperOcl::warp(const Mat & src, const Mat & K, const Mat & R, in
 
 /////////////////////////////////////////// CylindricalWarperOcl ////////////////////////////////////////
 
-Rect CylindricalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R, Mat & xmap, Mat & ymap)
+Rect CylindricalWarperOcl::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
 {
     projector_.setCameraParams(K, R);
 
@@ -150,16 +152,17 @@ Rect CylindricalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R
         ocl::Kernel k("buildWarpCylindricalMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
         {
-            xmap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
-            ymap.create(dst_br.y - dst_tl.y + 1, dst_br.x - dst_tl.x + 1, CV_32FC1);
+            Size dsize(dst_br.x - dst_tl.x + 1, dst_br.y - dst_tl.y + 1);
+            xmap.create(dsize, CV_32FC1);
+            ymap.create(dsize, CV_32FC1);
 
             Mat r_kinv(1, 9, CV_32FC1, projector_.r_kinv);
-            UMat uxmap = xmap.getUMat(ACCESS_WRITE), uymap = ymap.getUMat(ACCESS_WRITE), ur_kinv = r_kinv.getUMat(ACCESS_READ);
+            UMat uxmap = xmap.getUMat(), uymap = ymap.getUMat(), ur_kinv = r_kinv.getUMat(ACCESS_READ);
 
             k.args(ocl::KernelArg::WriteOnlyNoSize(uxmap), ocl::KernelArg::WriteOnly(uymap),
                    ocl::KernelArg::PtrReadOnly(ur_kinv), dst_tl.x, dst_tl.y, projector_.scale);
 
-            size_t globalsize[2] = { xmap.cols, xmap.rows };
+            size_t globalsize[2] = { dsize.width, dsize.height };
             if (k.run(2, globalsize, NULL, true))
                 return Rect(dst_tl, dst_br);
         }
@@ -168,13 +171,13 @@ Rect CylindricalWarperOcl::buildMaps(Size src_size, const Mat & K, const Mat & R
     return CylindricalWarper::buildMaps(src_size, K, R, xmap, ymap);
 }
 
-Point CylindricalWarperOcl::warp(const Mat & src, const Mat & K, const Mat & R, int interp_mode, int border_mode, Mat & dst)
+Point CylindricalWarperOcl::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode, OutputArray dst)
 {
-    Mat uxmap, uymap;
+    UMat uxmap, uymap;
     Rect dst_roi = buildMaps(src.size(), K, R, uxmap, uymap);
 
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
-    UMat udst = dst.getUMat(ACCESS_WRITE);
+    UMat udst = dst.getUMat();
     remap(src, udst, uxmap, uymap, interp_mode, border_mode);
 
     return dst_roi.tl();
