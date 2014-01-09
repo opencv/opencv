@@ -944,6 +944,25 @@ OCL_TEST_P(MeanStdDev, Mat_Mask)
     }
 }
 
+OCL_TEST(MeanStdDev_, ZeroMask)
+{
+    Size size(5, 5);
+    UMat um(size, CV_32SC1), umask(size, CV_8UC1, Scalar::all(0));
+    Mat m(size, CV_32SC1), mask(size, CV_8UC1, Scalar::all(0));
+
+    Scalar cpu_mean, cpu_stddev;
+    Scalar gpu_mean, gpu_stddev;
+
+    OCL_OFF(cv::meanStdDev(m, cpu_mean, cpu_stddev, mask));
+    OCL_ON(cv::meanStdDev(um, gpu_mean, gpu_stddev, umask));
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 0.1);
+        EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
+    }
+}
+
 //////////////////////////////////////// Log /////////////////////////////////////////
 
 typedef ArithmTestBase Log;

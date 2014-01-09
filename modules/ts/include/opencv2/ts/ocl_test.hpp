@@ -318,6 +318,8 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS
 
 #define OCL_TEST_P TEST_P
+#define OCL_TEST_F(name, ...) typedef name OCL_##name; TEST_F(OCL_##name, __VA_ARGS__)
+#define OCL_TEST(name, ...) TEST(OCL_##name, __VA_ARGS__)
 
 #define OCL_OFF(fn) cv::ocl::setUseOpenCL(false); fn
 #define OCL_ON(fn) cv::ocl::setUseOpenCL(true); fn
