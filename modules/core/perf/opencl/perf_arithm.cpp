@@ -651,13 +651,13 @@ OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
 
 typedef Size_MatType MeanStdDevFixture;
 
-OCL_PERF_TEST_P(MeanStdDevFixture, DISABLED_MeanStdDev,
+OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
                 ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const double eps = 1e-5;
+    const double eps = 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -687,7 +687,7 @@ CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
 typedef std::tr1::tuple<Size, MatType, NormType> NormParams;
 typedef TestBaseWithParam<NormParams> NormFixture;
 
-OCL_PERF_TEST_P(NormFixture, DISABLED_Norm,
+OCL_PERF_TEST_P(NormFixture, Norm,
                 ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES, NormType::all()))
 {
     const NormParams params = GetParam();
@@ -703,7 +703,7 @@ OCL_PERF_TEST_P(NormFixture, DISABLED_Norm,
 
     OCL_TEST_CYCLE() res = cv::norm(src1, src2, normType);
 
-    SANITY_CHECK(res, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(res, 1e-5, ERROR_RELATIVE);
 }
 
 ///////////// Repeat ////////////////////////
