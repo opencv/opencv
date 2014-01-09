@@ -166,6 +166,16 @@ TEST(Photo_MergeMertens, regression)
     merge->process(images, result);
     result.convertTo(result, CV_8UC3, 255);
     checkEqual(expected, result, 3, "Mertens");
+
+    Mat uniform(100, 100, CV_8UC3);
+    uniform = Scalar(0, 255, 0);
+
+    images.clear();
+    images.push_back(uniform);
+
+    merge->process(images, result);
+    result.convertTo(result, CV_8UC3, 255);
+    checkEqual(uniform, result, 1e-2f, "Mertens");
 }
 
 TEST(Photo_MergeDebevec, regression)
