@@ -56,7 +56,7 @@ namespace cv
         {
         public:
           static vtkCloudMatSink *New();
-          vtkTypeMacro(vtkCloudMatSink,vtkPolyDataWriter);
+          vtkTypeMacro(vtkCloudMatSink,vtkPolyDataWriter)
           void PrintSelf(ostream& os, vtkIndent indent);
 
           void SetOutput(OutputArray cloud, OutputArray colors = noArray(), OutputArray normals = noArray());

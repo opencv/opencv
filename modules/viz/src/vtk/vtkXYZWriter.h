@@ -55,11 +55,11 @@ namespace cv
         {
         public:
             static vtkXYZWriter *New();
-            vtkTypeMacro(vtkXYZWriter,vtkPolyDataWriter);
+            vtkTypeMacro(vtkXYZWriter,vtkPolyDataWriter)
             void PrintSelf(ostream& os, vtkIndent indent);
 
-            vtkGetMacro(DecimalPrecision, int);
-            vtkSetMacro(DecimalPrecision, int);
+            vtkGetMacro(DecimalPrecision, int)
+            vtkSetMacro(DecimalPrecision, int)
 
         protected:
             vtkXYZWriter();

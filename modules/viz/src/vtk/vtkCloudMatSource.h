@@ -59,7 +59,7 @@ namespace cv
         {
         public:
             static vtkCloudMatSource *New();
-            vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm);
+            vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm)
 
             virtual int SetCloud(InputArray cloud);
             virtual int SetColorCloud(InputArray cloud, InputArray colors = noArray());
