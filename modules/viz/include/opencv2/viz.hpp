@@ -111,7 +111,7 @@ namespace cv
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Computing normals for mesh
 
-        CV_EXPORTS void computeNormals(const Mesh3d& mesh, OutputArray normals);
+        CV_EXPORTS void computeNormals(const Mesh& mesh, OutputArray normals);
 
     } /* namespace viz */
 } /* namespace cv */

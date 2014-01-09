@@ -316,7 +316,8 @@ namespace cv
         class CV_EXPORTS WMesh : public Widget3D
         {
         public:
-            WMesh(const Mesh3d &mesh);
+            WMesh(const Mesh &mesh);
+            WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
         };
 
         /////////////////////////////////////////////////////////////////////////////

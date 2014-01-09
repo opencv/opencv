@@ -106,7 +106,7 @@ TEST(Viz, DISABLED_show_cloud_collection)
 
 TEST(Viz, DISABLED_show_mesh)
 {
-    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
 
     Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
 
@@ -118,7 +118,7 @@ TEST(Viz, DISABLED_show_mesh)
 
 TEST(Viz, DISABLED_show_mesh_random_colors)
 {
-    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
     theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
 
     Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
@@ -144,7 +144,7 @@ TEST(Viz, DISABLED_show_polyline)
 
 TEST(Viz, DISABLED_show_sampled_normals)
 {
-    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
     computeNormals(mesh, mesh.normals);
 
     Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
@@ -201,7 +201,7 @@ TEST(Viz, DISABLED_show_trajectory_reposition)
 
 TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
 {
-    Mesh3d mesh = Mesh3d::load(get_dragon_ply_file_path());
+    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
 
     Viz3d viz("spin_twice");
     viz.showWidget("coosys", WCoordinateSystem());

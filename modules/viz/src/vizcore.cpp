@@ -282,7 +282,7 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Computing normals for mesh
 
-void cv::viz::computeNormals(const Mesh3d& mesh, OutputArray _normals)
+void cv::viz::computeNormals(const Mesh& mesh, OutputArray _normals)
 {
     vtkSmartPointer<vtkPolyData> polydata = getPolyData(WMesh(mesh));
     vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(polydata);
