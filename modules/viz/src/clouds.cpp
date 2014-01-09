@@ -257,7 +257,7 @@ template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Mesh Widget implementation
 
-cv::viz::WMesh::WMesh(const Mesh3d &mesh)
+cv::viz::WMesh::WMesh(const Mesh &mesh)
 {
     CV_Assert(mesh.cloud.rows == 1 && mesh.polygons.type() == CV_32SC1);
 
@@ -300,8 +300,8 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
     vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
 
     int idx = 0;
-    int poly_size = mesh.polygons.total();
-    for (int i = 0; i < poly_size; ++idx)
+    size_t polygons_size = mesh.polygons.total();
+    for (size_t i = 0; i < polygons_size; ++idx)
     {
         int n_points = polygons[i++];
 
@@ -328,6 +328,16 @@ cv::viz::WMesh::WMesh(const Mesh3d &mesh)
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
+}
+
+cv::viz::WMesh::WMesh(InputArray cloud, InputArray polygons, InputArray colors, InputArray normals)
+{
+    Mesh mesh;
+    mesh.cloud = cloud.getMat();
+    mesh.colors = colors.getMat();
+    mesh.normals = normals.getMat();
+    mesh.polygons = polygons.getMat();
+    *this = WMesh(mesh);
 }
 
 template<> CV_EXPORTS cv::viz::WMesh cv::viz::Widget::cast<cv::viz::WMesh>()

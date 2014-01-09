@@ -61,9 +61,9 @@ namespace cv { namespace viz { namespace
 {
     struct MeshUtils
     {
-        static Mesh3d loadMesh(const String &file)
+        static Mesh loadMesh(const String &file)
         {
-            Mesh3d mesh;
+            Mesh mesh;
 
             vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
             reader->SetFileName(file.c_str());
@@ -128,7 +128,7 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
-cv::viz::Mesh3d cv::viz::Mesh3d::load(const String& file)
+cv::viz::Mesh cv::viz::Mesh::load(const String& file)
 {
     return MeshUtils::loadMesh(file);
 }

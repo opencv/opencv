@@ -468,31 +468,31 @@ This class a represents BGR color. ::
         static Color gray();
     };
 
-viz::Mesh3d
+viz::Mesh
 -----------
-.. ocv:class:: Mesh3d
+.. ocv:class:: Mesh
 
 This class wraps mesh attributes, and it can load a mesh from a ``ply`` file. ::
 
-    class CV_EXPORTS Mesh3d
+    class CV_EXPORTS Mesh
     {
     public:
 
-        Mat cloud, colors;
+        Mat cloud, colors, normals;
+        
+        //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
+        //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
         Mat polygons;
 
         //! Loads mesh from a given ply file
-        static Mesh3d load(const String& file);
-
-    private:
-        /* hidden */
+        static Mesh load(const String& file);
     };
 
-viz::Mesh3d::load
+viz::Mesh::load
 ---------------------
 Loads a mesh from a ``ply`` file.
 
-.. ocv:function:: static Mesh3d load(const String& file)
+.. ocv:function:: static Mesh load(const String& file)
 
     :param file: File name (for no only PLY is supported)
 

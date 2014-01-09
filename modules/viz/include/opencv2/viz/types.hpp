@@ -104,15 +104,17 @@ namespace cv
             static Color amethyst();
         };
 
-        class CV_EXPORTS Mesh3d
+        class CV_EXPORTS Mesh
         {
         public:
-
             Mat cloud, colors, normals;
+
+            //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
+            //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
             Mat polygons;
 
             //! Loads mesh from a given ply file
-            static Mesh3d load(const String& file);
+            static Mesh load(const String& file);
         };
 
         class CV_EXPORTS Camera
@@ -123,17 +125,17 @@ namespace cv
             explicit Camera(const Matx33d &K, const Size &window_size);
             explicit Camera(const Matx44d &proj, const Size &window_size);
 
-            inline const Vec2d & getClip() const { return clip_; }
-            inline void setClip(const Vec2d &clip) { clip_ = clip; }
+            const Vec2d & getClip() const { return clip_; }
+            void setClip(const Vec2d &clip) { clip_ = clip; }
 
-            inline const Size & getWindowSize() const { return window_size_; }
+            const Size & getWindowSize() const { return window_size_; }
             void setWindowSize(const Size &window_size);
 
-            inline const Vec2d& getFov() const { return fov_; }
-            inline void setFov(const Vec2d& fov) { fov_ = fov; }
+            const Vec2d& getFov() const { return fov_; }
+            void setFov(const Vec2d& fov) { fov_ = fov; }
 
-            inline const Vec2d& getPrincipalPoint() const { return principal_point_; }
-            inline const Vec2d& getFocalLength() const { return focal_; }
+            const Vec2d& getPrincipalPoint() const { return principal_point_; }
+            const Vec2d& getFocalLength() const { return focal_; }
 
             void computeProjectionMatrix(Matx44d &proj) const;
 
