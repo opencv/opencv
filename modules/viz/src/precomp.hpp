@@ -125,6 +125,7 @@
 #include <vtkOBJExporter.h>
 #include <vtkVRMLExporter.h>
 #include <vtkTensorGlyph.h>
+#include <vtkImageAlgorithm.h>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -137,6 +138,7 @@
 #include <vtk/vtkCloudMatSink.h>
 #include <vtk/vtkCloudMatSource.h>
 #include <vtk/vtkTrajectorySource.h>
+#include <vtk/vtkImageMatSource.h>
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
