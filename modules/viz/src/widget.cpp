@@ -141,10 +141,10 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
                         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
-                        vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-                        VtkUtils::SetInputData(normals, mapper->GetInput());
-                        normals->Update();
-                        VtkUtils::SetInputData(mapper, normals->GetOutput());
+                        CV_Assert("Can't set shading property for such type of widget" && mapper);
+
+                        vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(mapper->GetInput());
+                        VtkUtils::SetInputData(mapper, with_normals);
                     }
                     actor->GetProperty()->SetInterpolationToGouraud();
                     break;
@@ -154,10 +154,10 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
                         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
-                        vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
-                        VtkUtils::SetInputData(normals, mapper->GetInput());
-                        normals->Update();
-                        VtkUtils::SetInputData(mapper, normals->GetOutput());
+                        CV_Assert("Can't set shading property for such type of widget" && mapper);
+
+                        vtkSmartPointer<vtkPolyData> with_normals = VtkUtils::ComputeNormals(mapper->GetInput());
+                        VtkUtils::SetInputData(mapper, with_normals);
                     }
                     actor->GetProperty()->SetInterpolationToPhong();
                     break;
