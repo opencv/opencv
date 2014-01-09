@@ -83,3 +83,53 @@ PERF_TEST(HaarFixture, Haar)
     else
         OCL_PERF_ELSE
 }
+
+using namespace std;
+using namespace cv;
+using namespace perf;
+using std::tr1::make_tuple;
+using std::tr1::get;
+
+typedef std::tr1::tuple<std::string, std::string, int> Cascade_Image_MinSize_t;
+typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
+
+PERF_TEST_P( Cascade_Image_MinSize, CascadeClassifier_UMat,
+             testing::Combine(
+                testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml") ),
+                testing::Values( string("cv/shared/lena.png"),
+                                 string("cv/cascadeandhog/images/bttf301.png"),
+                                 string("cv/cascadeandhog/images/class57.png") ),
+                testing::Values(30, 64, 90) ) )
+{
+    const string cascasePath = get<0>(GetParam());
+    const string imagePath   = get<1>(GetParam());
+    const int min_size = get<2>(GetParam());
+    Size minSize(min_size, min_size);
+
+    ocl::OclCascadeClassifier cc;
+    if (!cc.load( getDataPath(cascasePath) ))
+        FAIL() << "Can't load cascade file: " << getDataPath(cascasePath);
+
+    Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
+    if (img.empty())
+        FAIL() << "Can't load source image: " << getDataPath(imagePath);
+
+    vector<Rect> faces;
+
+    equalizeHist(img, img);
+    declare.in(img).time(60);
+
+    ocl::oclMat uimg(img);
+
+    while(next())
+    {
+        faces.clear();
+
+        startTimer();
+        cc.detectMultiScale(uimg, faces, 1.1, 3, 0, minSize);
+        stopTimer();
+    }
+
+    //sort(faces.begin(), faces.end(), comparators::RectLess());
+    SANITY_CHECK_NOTHING();//(faces, min_size/5);
+}
