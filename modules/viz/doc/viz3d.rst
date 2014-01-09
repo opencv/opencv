@@ -34,11 +34,11 @@ Constructs camera pose from position, focal_point and up_vector (see gluLookAt()
 
 This function returns pose of the camera in global coordinate frame.
 
-viz::get
+viz::getWindowByName
 --------
 Retrieves a window by its name.
 
-.. ocv:function:: Viz3d get(const String &window_name)
+.. ocv:function:: Viz3d getWindowByName(const String &window_name)
 
     :param window_name: Name of the window that is to be retrieved.
 
@@ -51,8 +51,8 @@ This function returns a :ocv:class:`Viz3d` object with the given name.
           .. code-block:: cpp
 
                 /// window and window_2 are the same windows.
-                viz::Viz3d window   = viz::get("myWindow");
-                viz::Viz3d window_2 = viz::get("Viz - myWindow");
+                viz::Viz3d window   = viz::getWindowByName("myWindow");
+                viz::Viz3d window_2 = viz::getWindowByName("Viz - myWindow");
 
 viz::isNan
 ----------
