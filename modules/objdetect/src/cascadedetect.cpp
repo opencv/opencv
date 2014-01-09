@@ -1212,7 +1212,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
                         ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
                         processingRectSize,
                         yStep, (float)factor,
-                        normrect, data.origWinSize, MAX_FACES);
+                        normrect, data.origWinSize, (int)MAX_FACES);
         ok = haarKernel.run(2, globalsize, 0, true);
     }
     else if( featureType == FeatureEvaluator::LBP )
@@ -1245,7 +1245,7 @@ bool CascadeClassifierImpl::ocl_detectSingleScale( InputArray _image, Size proce
                         ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
                         processingRectSize,
                         yStep, (float)factor,
-                        data.origWinSize, MAX_FACES);
+                        data.origWinSize, (int)MAX_FACES);
         ok = lbpKernel.run(2, globalsize, 0, true);
     }
     //CV_Assert(ok);
