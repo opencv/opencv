@@ -52,7 +52,7 @@ enum
 {
     MOUTH = 0,
     LEYE = 1,
-    REYE = 2,
+    REYE = 2
 };
 
 #define MAX_LAYERS      64
