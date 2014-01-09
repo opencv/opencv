@@ -119,7 +119,7 @@ cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
     return output;
 }
 
-cv::viz::Viz3d cv::viz::get(const String &window_name) { return Viz3d (window_name); }
+cv::viz::Viz3d cv::viz::getWindowByName(const String &window_name) { return Viz3d (window_name); }
 void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
