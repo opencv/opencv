@@ -40596,1242 +40596,6 @@
       <y>1461</y>
       <cn>3</cn>
       <val>0.</val></rng2></dst></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2735968098958334e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3937694759903408e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.2388310927159789e-03</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7674699203393565e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2744683268229167e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2737364908854167e+02</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2736398437500000e+02</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2753362955729168e+02</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3912339152305933e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3875809659827695e+01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3885601474296109e+01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3978466315731879e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.1393146172804336e-03</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -2.8115374175285979e-04</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.3149189113355533e-04</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        6.6520853577912932e-04</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7790908348748549e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7697711345205571e-01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7597194906719906e-01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7761446995092591e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2739779513888890e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3920216242043907e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2493965874556226e-05</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7712029696087142e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2741035807291667e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2738458984375001e+02</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2753041775173611e+02</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2743981553819444e+02</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3894335003266050e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3872158750654791e+01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3864200183065620e+01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3937093853143935e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        8.1478798968722299e-06</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -6.3402620595196717e-04</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.0847708798909378e-04</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.2629844931105054e-04</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7755483240974648e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7717050184757324e-01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7653556573526255e-01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7730698872534458e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2738738908179013e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3914390950188249e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -1.6806422988551793e-04</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7714648634186794e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2745783130787038e+02</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2745721402391976e+02</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2749452835648148e+02</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.2749974440586421e+02</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3893400880172123e+01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3864138946917336e+01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3870233409859807e+01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.3911611930832564e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
-<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
-  <mean0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -6.0970104607770702e-06</data></val></mean0>
-  <mean1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        -6.9656603625867035e-05</data></val></mean1>
-  <mean2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.5724321877862143e-04</data></val></mean2>
-  <mean3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.5205510281056724e-04</data></val></mean3>
-  <stddev0>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7723571648530836e-01</data></val></stddev0>
-  <stddev1>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7740038813481542e-01</data></val></stddev1>
-  <stddev2>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7728863805384389e-01</data></val></stddev2>
-  <stddev3>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7734831620565685e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
-<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        26188890.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.7897398128067900e+04</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9992914199829102e+00</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.0420410683612525e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        4.5171980271382785e+02</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        104813227.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.1583521436506258e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L2->
-<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9985889196395874e+00</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        8.1909185505072773e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        9.0485588184012431e+02</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        78631355.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.0035071891620907e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9981801509857178e+00</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        6.1430782329988945e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        7.8362281722749788e+02</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        314384084.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.0058324577092673e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9989753961563110e+00</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.4576486243225839e+06</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.5677439848158729e+03</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        176971737.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.5052559604598815e+05</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9989959001541138e+00</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.3823066901886761e+06</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.1757575152365214e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        255.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        707762953.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        3.0100024736036349e+05</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L2->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_INF->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        1.9996674060821533e+00</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_INF->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L1->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        5.5298745782973869e+06</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L1->
-<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L2->
-  <res>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        2.3517006055211377e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L2->
 <OCL_AddFixture_Add--Add---640x480--8UC1->
   <dst>
     <kind>720896</kind>
@@ -46909,4 +45673,1244 @@
       <y>786</y>
       <cn>1</cn>
       <val>-3.2264012098312378e-01</val></rng2></dst1></OCL_MixChannelsFixture_MixChannels--MixChannels---1920x1080--CV_32F->
+ <!-- resumed -->
+
+<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        26188890.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7897398128067900e+04</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9992914199829102e+00</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.0420410683612525e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.5171980271382785e+02</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        104813227.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.1583521436506258e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC4--NORM_L2->
+<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9985889196395874e+00</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1909185505072773e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.0485588184012431e+02</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC4--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        78631355.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.0035071891620907e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9981801509857178e+00</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.1430782329988945e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.8362281722749788e+02</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        314384084.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.0058324577092673e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC4--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9989753961563110e+00</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.4576486243225839e+06</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.5677439848158729e+03</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC4--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        176971737.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.5052559604598815e+05</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9989959001541138e+00</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3823066901886761e+06</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.1757575152365214e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC1--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        707762953.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.0100024736036349e+05</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC4--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9996674060821533e+00</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.5298745782973869e+06</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.3517006055211377e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC4--NORM_L2->
+ <!-- resumed -->
+
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2735968098958334e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3937694759903408e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.2388310927159789e-03</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7674699203393565e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2744683268229167e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2737364908854167e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2736398437500000e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2753362955729168e+02</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3912339152305933e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3875809659827695e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3885601474296109e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3978466315731879e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.1393146172804336e-03</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -2.8115374175285979e-04</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.3149189113355533e-04</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.6520853577912932e-04</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7790908348748549e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7697711345205571e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7597194906719906e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7761446995092591e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2739779513888890e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3920216242043907e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2493965874556226e-05</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7712029696087142e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2741035807291667e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2738458984375001e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2753041775173611e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2743981553819444e+02</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3894335003266050e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3872158750654791e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3864200183065620e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3937093853143935e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1478798968722299e-06</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -6.3402620595196717e-04</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.0847708798909378e-04</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.2629844931105054e-04</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7755483240974648e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7717050184757324e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7653556573526255e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7730698872534458e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2738738908179013e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3914390950188249e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.6806422988551793e-04</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7714648634186794e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2745783130787038e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2745721402391976e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2749452835648148e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2749974440586421e+02</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3893400880172123e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3864138946917336e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3870233409859807e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3911611930832564e+01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -6.0970104607770702e-06</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -6.9656603625867035e-05</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.5724321877862143e-04</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.5205510281056724e-04</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7723571648530836e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7740038813481542e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7728863805384389e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7734831620565685e-01</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
 </opencv_storage>
