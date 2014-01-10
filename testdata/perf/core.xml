@@ -46922,12 +46922,12 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>71</x>
-      <y>8</y>
+      <x>73</x>
+      <y>294</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>12</x>
-      <y>71</y>
+      <x>322</x>
+      <y>151</y>
       <val>255.</val></rng2></c></Size_MatType_multiply--multiply---640x480--8UC1->
 <Size_MatType_multiply--multiply---640x480--8SC1->
   <c>
@@ -46940,13 +46940,13 @@
       <y>479</y>
       <val>-128.</val></last>
     <rng1>
-      <x>282</x>
-      <y>380</y>
-      <val>-112.</val></rng1>
+      <x>328</x>
+      <y>79</y>
+      <val>-128.</val></rng1>
     <rng2>
-      <x>221</x>
-      <y>9</y>
-      <val>-128.</val></rng2></c></Size_MatType_multiply--multiply---640x480--8SC1->
+      <x>592</x>
+      <y>326</y>
+      <val>127.</val></rng2></c></Size_MatType_multiply--multiply---640x480--8SC1->
 <Size_MatType_multiply--multiply---640x480--16SC1->
   <c>
     <kind>65536</kind>
@@ -46958,12 +46958,12 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>564</x>
-      <y>473</y>
+      <x>187</x>
+      <y>289</y>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>447</x>
-      <y>129</y>
+      <x>637</x>
+      <y>61</y>
       <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---640x480--16SC1->
 <Size_MatType_multiply--multiply---640x480--16SC2->
   <c>
@@ -46976,14 +46976,12 @@
       <y>479</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>206</x>
-      <y>297</y>
-      <cn>1</cn>
+      <x>145</x>
+      <y>435</y>
       <val>32767.</val></rng1>
     <rng2>
-      <x>273</x>
-      <y>219</y>
-      <cn>1</cn>
+      <x>488</x>
+      <y>310</y>
       <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---640x480--16SC2->
 <Size_MatType_multiply--multiply---640x480--16SC3->
   <c>
@@ -46996,14 +46994,15 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>577</x>
-      <y>347</y>
+      <x>284</x>
+      <y>251</y>
       <cn>2</cn>
-      <val>32767.</val></rng1>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>152</x>
-      <y>313</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---640x480--16SC3->
+      <x>631</x>
+      <y>234</y>
+      <cn>1</cn>
+      <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---640x480--16SC3->
 <Size_MatType_multiply--multiply---640x480--16SC4->
   <c>
     <kind>65536</kind>
@@ -47015,13 +47014,13 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>525</x>
-      <y>400</y>
-      <val>-32768.</val></rng1>
+      <x>512</x>
+      <y>195</y>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>299</x>
-      <y>401</y>
-      <cn>3</cn>
+      <x>22</x>
+      <y>56</y>
+      <cn>1</cn>
       <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---640x480--16SC4->
 <Size_MatType_multiply--multiply---640x480--8UC4->
   <c>
@@ -47034,33 +47033,33 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>306</x>
-      <y>56</y>
+      <x>142</x>
+      <y>451</y>
       <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>451</x>
+      <x>116</x>
       <y>373</y>
-      <cn>3</cn>
+      <cn>1</cn>
       <val>255.</val></rng2></c></Size_MatType_multiply--multiply---640x480--8UC4->
 <Size_MatType_multiply--multiply---640x480--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147435584.</min>
-    <max>2147481586.</max>
+    <min>-268238868.</min>
+    <max>267175314.</max>
     <last>
       <x>639</x>
       <y>479</y>
-      <val>-1968063090.</val></last>
+      <val>-176891743.</val></last>
     <rng1>
-      <x>450</x>
-      <y>104</y>
-      <val>-338689448.</val></rng1>
+      <x>585</x>
+      <y>344</y>
+      <val>50674330.</val></rng1>
     <rng2>
-      <x>158</x>
-      <y>335</y>
-      <val>-1147259376.</val></rng2></c></Size_MatType_multiply--multiply---640x480--32SC1->
+      <x>588</x>
+      <y>427</y>
+      <val>10710320.</val></rng2></c></Size_MatType_multiply--multiply---640x480--32SC1->
 <Size_MatType_multiply--multiply---640x480--32FC1->
   <c>
     <kind>65536</kind>
@@ -47072,13 +47071,13 @@
       <y>479</y>
       <val>-11050085.</val></last>
     <rng1>
-      <x>158</x>
-      <y>153</y>
-      <val>2536469.</val></rng1>
+      <x>183</x>
+      <y>149</y>
+      <val>-6353693.</val></rng1>
     <rng2>
-      <x>626</x>
-      <y>330</y>
-      <val>1.6472876562500000e+005</val></rng2></c></Size_MatType_multiply--multiply---640x480--32FC1->
+      <x>590</x>
+      <y>378</y>
+      <val>3.4345127500000000e+06</val></rng2></c></Size_MatType_multiply--multiply---640x480--32FC1->
 <Size_MatType_multiply--multiply---1280x720--8UC1->
   <c>
     <kind>65536</kind>
@@ -47090,12 +47089,12 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>1057</x>
-      <y>658</y>
+      <x>575</x>
+      <y>397</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>907</x>
-      <y>694</y>
+      <x>185</x>
+      <y>682</y>
       <val>255.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--8UC1->
 <Size_MatType_multiply--multiply---1280x720--8SC1->
   <c>
@@ -47108,13 +47107,13 @@
       <y>719</y>
       <val>127.</val></last>
     <rng1>
-      <x>836</x>
-      <y>653</y>
-      <val>127.</val></rng1>
+      <x>112</x>
+      <y>396</y>
+      <val>-128.</val></rng1>
     <rng2>
-      <x>494</x>
-      <y>443</y>
-      <val>127.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--8SC1->
+      <x>763</x>
+      <y>606</y>
+      <val>0.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--8SC1->
 <Size_MatType_multiply--multiply---1280x720--16SC1->
   <c>
     <kind>65536</kind>
@@ -47126,13 +47125,13 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>240</x>
-      <y>640</y>
-      <val>32767.</val></rng1>
+      <x>49</x>
+      <y>138</y>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>184</x>
-      <y>339</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC1->
+      <x>227</x>
+      <y>429</y>
+      <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC1->
 <Size_MatType_multiply--multiply---1280x720--16SC2->
   <c>
     <kind>65536</kind>
@@ -47144,13 +47143,13 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>394</x>
-      <y>119</y>
+      <x>434</x>
+      <y>575</y>
+      <cn>1</cn>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>694</x>
-      <y>186</y>
-      <cn>1</cn>
+      <x>204</x>
+      <y>92</y>
       <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC2->
 <Size_MatType_multiply--multiply---1280x720--16SC3->
   <c>
@@ -47163,14 +47162,15 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>764</x>
-      <y>635</y>
+      <x>815</x>
+      <y>113</y>
       <cn>1</cn>
-      <val>-32768.</val></rng1>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>655</x>
-      <y>313</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC3->
+      <x>416</x>
+      <y>141</y>
+      <cn>2</cn>
+      <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC3->
 <Size_MatType_multiply--multiply---1280x720--16SC4->
   <c>
     <kind>65536</kind>
@@ -47182,13 +47182,14 @@
       <y>719</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>1083</x>
-      <y>248</y>
+      <x>510</x>
+      <y>33</y>
+      <cn>1</cn>
       <val>32767.</val></rng1>
     <rng2>
-      <x>776</x>
-      <y>64</y>
-      <cn>2</cn>
+      <x>1123</x>
+      <y>610</y>
+      <cn>3</cn>
       <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--16SC4->
 <Size_MatType_multiply--multiply---1280x720--8UC4->
   <c>
@@ -47201,33 +47202,32 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>1091</x>
-      <y>298</y>
-      <cn>2</cn>
-      <val>0.</val></rng1>
+      <x>370</x>
+      <y>585</y>
+      <val>255.</val></rng1>
     <rng2>
-      <x>1101</x>
-      <y>427</y>
+      <x>18</x>
+      <y>333</y>
       <cn>1</cn>
-      <val>255.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--8UC4->
+      <val>236.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--8UC4->
 <Size_MatType_multiply--multiply---1280x720--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147477896.</min>
-    <max>2147476460.</max>
+    <min>-267944157.</min>
+    <max>267518720.</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>-196897116.</val></last>
+      <val>24063690.</val></last>
     <rng1>
-      <x>77</x>
-      <y>401</y>
-      <val>-1037390514.</val></rng1>
+      <x>1174</x>
+      <y>668</y>
+      <val>175910992.</val></rng1>
     <rng2>
-      <x>308</x>
-      <y>661</y>
-      <val>-148118440.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--32SC1->
+      <x>379</x>
+      <y>46</y>
+      <val>-25109748.</val></rng2></c></Size_MatType_multiply--multiply---1280x720--32SC1->
 <Size_MatType_multiply--multiply---1280x720--32FC1->
   <c>
     <kind>65536</kind>
@@ -47237,15 +47237,15 @@
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>1.5035173750000000e+006</val></last>
+      <val>1.5035173750000000e+06</val></last>
     <rng1>
-      <x>1034</x>
-      <y>602</y>
-      <val>-6.8500205000000000e+006</val></rng1>
+      <x>957</x>
+      <y>559</y>
+      <val>-5490677.</val></rng1>
     <rng2>
-      <x>698</x>
-      <y>254</y>
-      <val>3.9023035000000000e+006</val></rng2></c></Size_MatType_multiply--multiply---1280x720--32FC1->
+      <x>124</x>
+      <y>280</y>
+      <val>6.1995395000000000e+06</val></rng2></c></Size_MatType_multiply--multiply---1280x720--32FC1->
 <Size_MatType_multiply--multiply---1920x1080--8UC1->
   <c>
     <kind>65536</kind>
@@ -47257,12 +47257,12 @@
       <y>1079</y>
       <val>0.</val></last>
     <rng1>
-      <x>1651</x>
-      <y>386</y>
+      <x>1407</x>
+      <y>243</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>296</x>
-      <y>533</y>
+      <x>995</x>
+      <y>874</y>
       <val>255.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--8UC1->
 <Size_MatType_multiply--multiply---1920x1080--8SC1->
   <c>
@@ -47275,13 +47275,13 @@
       <y>1079</y>
       <val>0.</val></last>
     <rng1>
-      <x>1632</x>
-      <y>11</y>
-      <val>-128.</val></rng1>
+      <x>435</x>
+      <y>825</y>
+      <val>127.</val></rng1>
     <rng2>
-      <x>534</x>
-      <y>823</y>
-      <val>85.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--8SC1->
+      <x>290</x>
+      <y>754</y>
+      <val>127.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--8SC1->
 <Size_MatType_multiply--multiply---1920x1080--16SC1->
   <c>
     <kind>65536</kind>
@@ -47293,13 +47293,13 @@
       <y>1079</y>
       <val>32767.</val></last>
     <rng1>
-      <x>653</x>
-      <y>1072</y>
+      <x>509</x>
+      <y>469</y>
       <val>32767.</val></rng1>
     <rng2>
-      <x>692</x>
-      <y>787</y>
-      <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--16SC1->
+      <x>308</x>
+      <y>647</y>
+      <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--16SC1->
 <Size_MatType_multiply--multiply---1920x1080--16SC2->
   <c>
     <kind>65536</kind>
@@ -47311,14 +47311,13 @@
       <y>1079</y>
       <val>32767.</val></last>
     <rng1>
-      <x>111</x>
-      <y>1074</y>
+      <x>1360</x>
+      <y>166</y>
       <cn>1</cn>
       <val>32767.</val></rng1>
     <rng2>
-      <x>1037</x>
-      <y>606</y>
-      <cn>1</cn>
+      <x>484</x>
+      <y>573</y>
       <val>-32768.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--16SC2->
 <Size_MatType_multiply--multiply---1920x1080--16SC3->
   <c>
@@ -47331,13 +47330,13 @@
       <y>1079</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>1543</x>
-      <y>990</y>
-      <cn>2</cn>
-      <val>-32768.</val></rng1>
+      <x>1267</x>
+      <y>291</y>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>1546</x>
-      <y>708</y>
+      <x>94</x>
+      <y>430</y>
+      <cn>2</cn>
       <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--16SC3->
 <Size_MatType_multiply--multiply---1920x1080--16SC4->
   <c>
@@ -47350,14 +47349,13 @@
       <y>1079</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>475</x>
-      <y>230</y>
+      <x>123</x>
+      <y>261</y>
       <cn>1</cn>
-      <val>32767.</val></rng1>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>1046</x>
-      <y>243</y>
-      <cn>1</cn>
+      <x>33</x>
+      <y>1004</y>
       <val>32767.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--16SC4->
 <Size_MatType_multiply--multiply---1920x1080--8UC4->
   <c>
@@ -47370,33 +47368,33 @@
       <y>1079</y>
       <val>255.</val></last>
     <rng1>
-      <x>495</x>
-      <y>481</y>
+      <x>138</x>
+      <y>432</y>
       <cn>1</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>1799</x>
-      <y>1017</y>
-      <cn>3</cn>
+      <x>278</x>
+      <y>588</y>
+      <cn>1</cn>
       <val>255.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--8UC4->
 <Size_MatType_multiply--multiply---1920x1080--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147483156.</min>
-    <max>2147479698.</max>
+    <min>-268156944.</min>
+    <max>268337157.</max>
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>-81125408.</val></last>
+      <val>46374685.</val></last>
     <rng1>
-      <x>621</x>
-      <y>1001</y>
-      <val>1950678800.</val></rng1>
+      <x>1633</x>
+      <y>189</y>
+      <val>-135635180.</val></rng1>
     <rng2>
-      <x>1704</x>
-      <y>509</y>
-      <val>2077373764.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--32SC1->
+      <x>824</x>
+      <y>492</y>
+      <val>24800907.</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--32SC1->
 <Size_MatType_multiply--multiply---1920x1080--32FC1->
   <c>
     <kind>65536</kind>
@@ -47406,15 +47404,15 @@
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>2.8966505000000000e+006</val></last>
+      <val>2.8966505000000000e+06</val></last>
     <rng1>
-      <x>1900</x>
-      <y>355</y>
-      <val>-6.9513539062500000e+004</val></rng1>
+      <x>1095</x>
+      <y>268</y>
+      <val>4.3377155000000000e+06</val></rng1>
     <rng2>
-      <x>1508</x>
-      <y>1052</y>
-      <val>-1.8451717500000000e+006</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--32FC1->
+      <x>411</x>
+      <y>1</y>
+      <val>9.8596368750000000e+05</val></rng2></c></Size_MatType_multiply--multiply---1920x1080--32FC1->
 <Size_MatType_multiplyScale--multiplyScale---640x480--8UC1->
   <c>
     <kind>65536</kind>
@@ -47426,12 +47424,12 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>185</x>
-      <y>476</y>
+      <x>222</x>
+      <y>249</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>279</x>
-      <y>235</y>
+      <x>608</x>
+      <y>135</y>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--8UC1->
 <Size_MatType_multiplyScale--multiplyScale---640x480--8SC1->
   <c>
@@ -47444,12 +47442,12 @@
       <y>479</y>
       <val>-128.</val></last>
     <rng1>
-      <x>465</x>
-      <y>326</y>
-      <val>127.</val></rng1>
+      <x>433</x>
+      <y>450</y>
+      <val>-128.</val></rng1>
     <rng2>
-      <x>71</x>
-      <y>105</y>
+      <x>498</x>
+      <y>81</y>
       <val>127.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--8SC1->
 <Size_MatType_multiplyScale--multiplyScale---640x480--16SC1->
   <c>
@@ -47462,13 +47460,13 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>327</x>
-      <y>6</y>
-      <val>-32768.</val></rng1>
+      <x>276</x>
+      <y>382</y>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>155</x>
-      <y>168</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC1->
+      <x>527</x>
+      <y>432</y>
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC1->
 <Size_MatType_multiplyScale--multiplyScale---640x480--16SC2->
   <c>
     <kind>65536</kind>
@@ -47480,15 +47478,15 @@
       <y>479</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>314</x>
-      <y>156</y>
+      <x>444</x>
+      <y>169</y>
       <cn>1</cn>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>68</x>
-      <y>403</y>
+      <x>137</x>
+      <y>313</y>
       <cn>1</cn>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC2->
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC2->
 <Size_MatType_multiplyScale--multiplyScale---640x480--16SC3->
   <c>
     <kind>65536</kind>
@@ -47500,14 +47498,12 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>234</x>
-      <y>265</y>
-      <cn>1</cn>
-      <val>32767.</val></rng1>
+      <x>482</x>
+      <y>178</y>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>332</x>
-      <y>180</y>
-      <cn>1</cn>
+      <x>102</x>
+      <y>182</y>
       <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC3->
 <Size_MatType_multiplyScale--multiplyScale---640x480--16SC4->
   <c>
@@ -47520,15 +47516,15 @@
       <y>479</y>
       <val>32767.</val></last>
     <rng1>
-      <x>32</x>
-      <y>88</y>
-      <cn>1</cn>
-      <val>32767.</val></rng1>
+      <x>599</x>
+      <y>320</y>
+      <cn>3</cn>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>604</x>
-      <y>177</y>
+      <x>340</x>
+      <y>49</y>
       <cn>2</cn>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC4->
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--16SC4->
 <Size_MatType_multiplyScale--multiplyScale---640x480--8UC4->
   <c>
     <kind>65536</kind>
@@ -47540,50 +47536,50 @@
       <y>479</y>
       <val>255.</val></last>
     <rng1>
-      <x>418</x>
-      <y>252</y>
+      <x>592</x>
+      <y>191</y>
+      <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>89</x>
-      <y>432</y>
-      <cn>1</cn>
+      <x>243</x>
+      <y>160</y>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--8UC4->
 <Size_MatType_multiplyScale--multiplyScale---640x480--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147483648.</min>
-    <max>-2147483648.</max>
+    <min>-134119434.</min>
+    <max>133587657.</max>
     <last>
       <x>639</x>
       <y>479</y>
-      <val>-2147483648.</val></last>
+      <val>-88445872.</val></last>
     <rng1>
-      <x>53</x>
-      <y>203</y>
-      <val>-2147483648.</val></rng1>
+      <x>222</x>
+      <y>390</y>
+      <val>25767648.</val></rng1>
     <rng2>
-      <x>54</x>
-      <y>344</y>
-      <val>-2147483648.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--32SC1->
+      <x>387</x>
+      <y>298</y>
+      <val>-9220826.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--32SC1->
 <Size_MatType_multiplyScale--multiplyScale---640x480--32FC1->
   <c>
     <kind>65536</kind>
     <type>5</type>
-    <min>-8.3785715000000000e+006</min>
-    <max>8.3450915000000000e+006</max>
+    <min>-8.3785715000000000e+06</min>
+    <max>8.3450915000000000e+06</max>
     <last>
       <x>639</x>
       <y>479</y>
-      <val>-5.5250425000000000e+006</val></last>
+      <val>-5.5250425000000000e+06</val></last>
     <rng1>
-      <x>553</x>
-      <y>282</y>
-      <val>-1.5353763750000000e+006</val></rng1>
+      <x>559</x>
+      <y>440</y>
+      <val>-2.1372925000000000e+06</val></rng1>
     <rng2>
-      <x>7</x>
-      <y>387</y>
-      <val>1.2459307500000000e+006</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--32FC1->
+      <x>391</x>
+      <y>164</y>
+      <val>-1.0207980468750000e+05</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---640x480--32FC1->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--8UC1->
   <c>
     <kind>65536</kind>
@@ -47595,12 +47591,12 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>684</x>
-      <y>360</y>
+      <x>463</x>
+      <y>503</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>618</x>
-      <y>468</y>
+      <x>267</x>
+      <y>636</y>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--8UC1->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--8SC1->
   <c>
@@ -47613,12 +47609,12 @@
       <y>719</y>
       <val>127.</val></last>
     <rng1>
-      <x>635</x>
-      <y>705</y>
-      <val>95.</val></rng1>
+      <x>112</x>
+      <y>40</y>
+      <val>-81.</val></rng1>
     <rng2>
-      <x>188</x>
-      <y>42</y>
+      <x>183</x>
+      <y>490</y>
       <val>-128.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--8SC1->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--16SC1->
   <c>
@@ -47631,12 +47627,12 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>1114</x>
-      <y>55</y>
+      <x>1221</x>
+      <y>86</y>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>502</x>
-      <y>259</y>
+      <x>57</x>
+      <y>122</y>
       <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC1->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--16SC2->
   <c>
@@ -47649,14 +47645,14 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>152</x>
-      <y>381</y>
-      <val>-32768.</val></rng1>
+      <x>594</x>
+      <y>559</y>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>583</x>
-      <y>676</y>
+      <x>327</x>
+      <y>87</y>
       <cn>1</cn>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC2->
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC2->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--16SC3->
   <c>
     <kind>65536</kind>
@@ -47668,13 +47664,14 @@
       <y>719</y>
       <val>32767.</val></last>
     <rng1>
-      <x>1098</x>
-      <y>92</y>
+      <x>304</x>
+      <y>645</y>
+      <cn>2</cn>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>1213</x>
-      <y>562</y>
-      <cn>2</cn>
+      <x>1226</x>
+      <y>352</y>
+      <cn>1</cn>
       <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC3->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--16SC4->
   <c>
@@ -47687,14 +47684,15 @@
       <y>719</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>1003</x>
-      <y>476</y>
-      <cn>2</cn>
-      <val>-32768.</val></rng1>
+      <x>302</x>
+      <y>216</y>
+      <cn>1</cn>
+      <val>32767.</val></rng1>
     <rng2>
-      <x>1034</x>
-      <y>647</y>
-      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC4->
+      <x>676</x>
+      <y>437</y>
+      <cn>3</cn>
+      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--16SC4->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--8UC4->
   <c>
     <kind>65536</kind>
@@ -47706,51 +47704,50 @@
       <y>719</y>
       <val>255.</val></last>
     <rng1>
-      <x>360</x>
-      <y>655</y>
-      <cn>1</cn>
-      <val>255.</val></rng1>
+      <x>1216</x>
+      <y>619</y>
+      <val>72.</val></rng1>
     <rng2>
-      <x>296</x>
-      <y>718</y>
-      <cn>2</cn>
+      <x>1042</x>
+      <y>439</y>
+      <cn>1</cn>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--8UC4->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147483648.</min>
-    <max>-2147483648.</max>
+    <min>-133972078.</min>
+    <max>133759360.</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>-2147483648.</val></last>
+      <val>12031845.</val></last>
     <rng1>
-      <x>995</x>
-      <y>186</y>
-      <val>-2147483648.</val></rng1>
+      <x>1070</x>
+      <y>276</y>
+      <val>-16620831.</val></rng1>
     <rng2>
-      <x>375</x>
-      <y>247</y>
-      <val>-2147483648.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--32SC1->
+      <x>49</x>
+      <y>646</y>
+      <val>5274126.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--32SC1->
 <Size_MatType_multiplyScale--multiplyScale---1280x720--32FC1->
   <c>
     <kind>65536</kind>
     <type>5</type>
-    <min>-8.3692605000000000e+006</min>
-    <max>8.3556685000000000e+006</max>
+    <min>-8.3692605000000000e+06</min>
+    <max>8.3556685000000000e+06</max>
     <last>
       <x>1279</x>
       <y>719</y>
-      <val>7.5175868750000000e+005</val></last>
+      <val>7.5175868750000000e+05</val></last>
     <rng1>
-      <x>563</x>
-      <y>518</y>
-      <val>2.0081547500000000e+006</val></rng1>
+      <x>691</x>
+      <y>627</y>
+      <val>4.8299825000000000e+06</val></rng1>
     <rng2>
-      <x>129</x>
-      <y>400</y>
-      <val>-3837084.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--32FC1->
+      <x>758</x>
+      <y>536</y>
+      <val>4.0549771875000000e+05</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1280x720--32FC1->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--8UC1->
   <c>
     <kind>65536</kind>
@@ -47762,12 +47759,12 @@
       <y>1079</y>
       <val>0.</val></last>
     <rng1>
-      <x>1702</x>
-      <y>490</y>
+      <x>876</x>
+      <y>299</y>
       <val>255.</val></rng1>
     <rng2>
-      <x>1372</x>
-      <y>635</y>
+      <x>8</x>
+      <y>982</y>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--8UC1->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--8SC1->
   <c>
@@ -47780,12 +47777,12 @@
       <y>1079</y>
       <val>0.</val></last>
     <rng1>
-      <x>1694</x>
-      <y>676</y>
-      <val>127.</val></rng1>
+      <x>1805</x>
+      <y>640</y>
+      <val>126.</val></rng1>
     <rng2>
-      <x>662</x>
-      <y>834</y>
+      <x>895</x>
+      <y>904</y>
       <val>127.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--8SC1->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC1->
   <c>
@@ -47798,13 +47795,13 @@
       <y>1079</y>
       <val>32767.</val></last>
     <rng1>
-      <x>145</x>
-      <y>103</y>
+      <x>48</x>
+      <y>606</y>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>887</x>
-      <y>286</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC1->
+      <x>962</x>
+      <y>799</y>
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC1->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC2->
   <c>
     <kind>65536</kind>
@@ -47816,13 +47813,13 @@
       <y>1079</y>
       <val>32767.</val></last>
     <rng1>
-      <x>1471</x>
-      <y>684</y>
+      <x>1410</x>
+      <y>596</y>
       <val>-32768.</val></rng1>
     <rng2>
-      <x>705</x>
-      <y>785</y>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC2->
+      <x>959</x>
+      <y>112</y>
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC2->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC3->
   <c>
     <kind>65536</kind>
@@ -47834,14 +47831,14 @@
       <y>1079</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>504</x>
-      <y>975</y>
-      <val>32767.</val></rng1>
+      <x>1021</x>
+      <y>1007</y>
+      <cn>2</cn>
+      <val>-32768.</val></rng1>
     <rng2>
-      <x>1402</x>
-      <y>1049</y>
-      <cn>1</cn>
-      <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC3->
+      <x>403</x>
+      <y>685</y>
+      <val>32767.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC3->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC4->
   <c>
     <kind>65536</kind>
@@ -47853,13 +47850,13 @@
       <y>1079</y>
       <val>-32768.</val></last>
     <rng1>
-      <x>1727</x>
-      <y>690</y>
+      <x>1162</x>
+      <y>964</y>
       <val>32767.</val></rng1>
     <rng2>
-      <x>195</x>
-      <y>652</y>
-      <cn>1</cn>
+      <x>1612</x>
+      <y>764</y>
+      <cn>2</cn>
       <val>-32768.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--16SC4->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--8UC4->
   <c>
@@ -47872,49 +47869,49 @@
       <y>1079</y>
       <val>255.</val></last>
     <rng1>
-      <x>629</x>
-      <y>71</y>
-      <cn>1</cn>
+      <x>220</x>
+      <y>584</y>
+      <cn>3</cn>
       <val>255.</val></rng1>
     <rng2>
-      <x>9</x>
-      <y>549</y>
-      <cn>1</cn>
+      <x>1315</x>
+      <y>641</y>
+      <cn>3</cn>
       <val>255.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--8UC4->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--32SC1->
   <c>
     <kind>65536</kind>
     <type>4</type>
-    <min>-2147483648.</min>
-    <max>-2147483648.</max>
+    <min>-134078472.</min>
+    <max>134168578.</max>
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>-2147483648.</val></last>
+      <val>23187342.</val></last>
     <rng1>
-      <x>1354</x>
-      <y>563</y>
-      <val>-2147483648.</val></rng1>
+      <x>1588</x>
+      <y>475</y>
+      <val>-116279104.</val></rng1>
     <rng2>
-      <x>1418</x>
-      <y>136</y>
-      <val>-2147483648.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--32SC1->
+      <x>1245</x>
+      <y>323</y>
+      <val>9238320.</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--32SC1->
 <Size_MatType_multiplyScale--multiplyScale---1920x1080--32FC1->
   <c>
     <kind>65536</kind>
     <type>5</type>
     <min>-8376094.</min>
-    <max>8.3816315000000000e+006</max>
+    <max>8.3816315000000000e+06</max>
     <last>
       <x>1919</x>
       <y>1079</y>
-      <val>1.4483252500000000e+006</val></last>
+      <val>1.4483252500000000e+06</val></last>
     <rng1>
-      <x>1236</x>
-      <y>904</y>
-      <val>6.1923775000000000e+005</val></rng1>
+      <x>90</x>
+      <y>391</y>
+      <val>-7.3742465000000000e+06</val></rng1>
     <rng2>
-      <x>454</x>
-      <y>766</y>
-      <val>-1.5712777500000000e+006</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--32FC1->
+      <x>664</x>
+      <y>875</y>
+      <val>-3.9323545000000000e+06</val></rng2></c></Size_MatType_multiplyScale--multiplyScale---1920x1080--32FC1->
 </opencv_storage>
