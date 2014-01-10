@@ -56,9 +56,10 @@ namespace
     IMPLEMENT_PARAM_CLASS(PyrScale, double)
     IMPLEMENT_PARAM_CLASS(PolyN, int)
     CV_FLAGS(FarnebackOptFlowFlags, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+    IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
 }
 
-PARAM_TEST_CASE(FarnebackOpticalFlow, PyrScale, PolyN, FarnebackOptFlowFlags)
+PARAM_TEST_CASE(FarnebackOpticalFlow, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
 {
     int numLevels;
     int winSize;
@@ -66,6 +67,7 @@ PARAM_TEST_CASE(FarnebackOpticalFlow, PyrScale, PolyN, FarnebackOptFlowFlags)
     double pyrScale;
     int polyN;
     int flags;
+    bool useInitFlow;
 
     virtual void SetUp()
     {
@@ -75,10 +77,11 @@ PARAM_TEST_CASE(FarnebackOpticalFlow, PyrScale, PolyN, FarnebackOptFlowFlags)
         pyrScale = GET_PARAM(0);
         polyN = GET_PARAM(1);
         flags = GET_PARAM(2);
+        useInitFlow = GET_PARAM(3);
     }
 };
 
-OCL_TEST_P(FarnebackOpticalFlow, Accuracy)
+OCL_TEST_P(FarnebackOpticalFlow, Mat)
 {
     cv::Mat frame0 = readImage("optflow/RubberWhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -89,6 +92,12 @@ OCL_TEST_P(FarnebackOpticalFlow, Accuracy)
     double polySigma = polyN <= 5 ? 1.1 : 1.5;
 
     cv::Mat flow; cv::UMat uflow;
+    if (useInitFlow)
+    {
+        OCL_ON(cv::calcOpticalFlowFarneback(frame0, frame1, uflow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags));
+        uflow.copyTo(flow);
+        flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
+    }
     OCL_OFF(cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags));
     OCL_ON(cv::calcOpticalFlowFarneback(frame0, frame1, uflow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags));
 
@@ -100,7 +109,8 @@ OCL_INSTANTIATE_TEST_CASE_P(Video, FarnebackOpticalFlow,
                             Combine(
                                 Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
                                 Values(PolyN(5), PolyN(7)),
-                                Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN))
+                                Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
+                                Values(UseInitFlow(false), UseInitFlow(true))
                                 )
                            );
 
