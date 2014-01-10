@@ -714,8 +714,8 @@ public:
 
             if (fastPyramids)
             {
-                polynomialExpansionOcl(pyramid0_[k], polyN, R[0]);
-                polynomialExpansionOcl(pyramid1_[k], polyN, R[1]);
+                polynomialExpansionOcl(pyramid0_[k], R[0]);
+                polynomialExpansionOcl(pyramid1_[k], R[1]);
             }
             else
             {
@@ -736,7 +736,7 @@ public:
                 {
                     gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]);
                     resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR);
-                    polynomialExpansionOcl(pyrLevel[i], polyN, R[i]);
+                    polynomialExpansionOcl(pyrLevel[i], R[i]);
                 }
             }
 
@@ -874,7 +874,7 @@ private:
         idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
-    bool polynomialExpansionOcl(const UMat &src, int polyN, UMat &dst)
+    bool polynomialExpansionOcl(const UMat &src, UMat &dst)
     {
 #ifdef ANDROID
         size_t localsize[2] = { 128, 1};
