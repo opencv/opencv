@@ -294,18 +294,18 @@ template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-cv::viz::WCube::WCube(const Point3d& pt_min, const Point3d& pt_max, bool wire_frame, const Color &color)
+cv::viz::WCube::WCube(const Point3d& min_point, const Point3d& max_point, bool wire_frame, const Color &color)
 {
     vtkSmartPointer<vtkPolyDataAlgorithm> cube;
     if (wire_frame)
     {
         cube = vtkSmartPointer<vtkOutlineSource>::New();
-        vtkOutlineSource::SafeDownCast(cube)->SetBounds(pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+        vtkOutlineSource::SafeDownCast(cube)->SetBounds(min_point.x, max_point.x, min_point.y, max_point.y, min_point.z, max_point.z);
     }
     else
     {
         cube = vtkSmartPointer<vtkCubeSource>::New();
-        vtkCubeSource::SafeDownCast(cube)->SetBounds(pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+        vtkCubeSource::SafeDownCast(cube)->SetBounds(min_point.x, max_point.x, min_point.y, max_point.y, min_point.z, max_point.z);
     }
     cube->Update();
 
@@ -620,10 +620,9 @@ cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flip_filter = vtkSmartPointer<vtkImageFlip>::New();
-    flip_filter->SetFilteredAxis(1); // Vertical flip
     flip_filter->SetInputConnection(source->GetOutputPort());
+    flip_filter->SetFilteredAxis(1);
 
     // Scale the image based on the Rect
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
@@ -663,13 +662,11 @@ void cv::viz::WImageOverlay::setImage(const Mat &image)
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    // Need to flip the image as the coordinates are different in OpenCV and VTK
-    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
-    flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(source->GetOutputPort());
-    flipFilter->Update();
+    vtkSmartPointer<vtkImageFlip> flip_filter = vtkSmartPointer<vtkImageFlip>::New();
+    flip_filter->SetInputConnection(source->GetOutputPort());
+    flip_filter->SetFilteredAxis(1);
 
-    mapper->SetInputConnection(flipFilter->GetOutputPort());
+    mapper->SetInputConnection(flip_filter->GetOutputPort());
 }
 
 template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>()
@@ -681,104 +678,49 @@ template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// image 3D widget implementation
 
-cv::viz::WImage3D::WImage3D(const Mat &image, const Size &size)
+cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    // Need to flip the image as the coordinates are different in OpenCV and VTK
-    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
-    flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(source->GetOutputPort());
-    flipFilter->Update();
-
-    Vec3d plane_center(size.width * 0.5, size.height * 0.5, 0.0);
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(source->GetOutputPort());
 
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-    plane->SetCenter(plane_center[0], plane_center[1], plane_center[2]);
-    plane->SetNormal(0.0, 0.0, 1.0);
+    plane->SetOrigin(-0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint1( 0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
 
-    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->PreMultiply();
-    transform->Translate(plane_center[0], plane_center[1], plane_center[2]);
-    transform->Scale(size.width, size.height, 1.0);
-    transform->Translate(-plane_center[0], -plane_center[1], -plane_center[2]);
+    vtkSmartPointer<vtkTextureMapToPlane> textured_plane = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    textured_plane->SetInputConnection(plane->GetOutputPort());
 
-    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    transform_filter->SetTransform(transform);
-    transform_filter->SetInputConnection(plane->GetOutputPort());
-    transform_filter->Update();
-
-    // Apply the texture
-    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-    texture->SetInputConnection(flipFilter->GetOutputPort());
-
-    vtkSmartPointer<vtkTextureMapToPlane> texturePlane = vtkSmartPointer<vtkTextureMapToPlane>::New();
-    texturePlane->SetInputConnection(transform_filter->GetOutputPort());
-
-    vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    planeMapper->SetInputConnection(texturePlane->GetOutputPort());
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(textured_plane->GetOutputPort());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(planeMapper);
+    actor->SetMapper(mapper);
     actor->SetTexture(texture);
+    actor->GetProperty()->ShadingOff();
+    actor->GetProperty()->LightingOff();
 
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WImage3D::WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size)
+cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-
-    // Create the vtk image and set its parameters based on input image
-    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
-    source->SetImage(image);
-
-    // Need to flip the image as the coordinates are different in OpenCV and VTK
-    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
-    flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(source->GetOutputPort());
-    flipFilter->Update();
-
-    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-    plane->SetCenter(0.0, 0.0, 0.0);
-    plane->SetNormal(0.0, 0.0, 1.0);
 
     // Compute the transformation matrix for drawing the camera frame in a scene
     Vec3d n = normalize(normal);
     Vec3d u = normalize(up_vector.cross(n));
     Vec3d v = n.cross(u);
+    Affine3d pose = makeTransformToGlobal(u, v, n, center);
 
-    Affine3d pose = makeTransformToGlobal(u, v, n, position);
-
-    // Apply the texture
-    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-    texture->SetInputConnection(flipFilter->GetOutputPort());
-
-    vtkSmartPointer<vtkTextureMapToPlane> texturePlane = vtkSmartPointer<vtkTextureMapToPlane>::New();
-    texturePlane->SetInputConnection(plane->GetOutputPort());
-
-    // Apply the transform after texture mapping
-    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->PreMultiply();
-    transform->SetMatrix(vtkmatrix(pose.matrix));
-    transform->Scale(size.width, size.height, 1.0);
-
-    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    transform_filter->SetTransform(transform);
-    transform_filter->SetInputConnection(texturePlane->GetOutputPort());
-    transform_filter->Update();
-
-    vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    planeMapper->SetInputConnection(transform_filter->GetOutputPort());
-
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(planeMapper);
-    actor->SetTexture(texture);
-
-    WidgetAccessor::setProp(*this, actor);
+    WImage3D image3d(image, size);
+    image3d.applyTransform(pose);
+    *this = image3d;
 }
 
 void cv::viz::WImage3D::setImage(const Mat &image)
@@ -791,15 +733,8 @@ void cv::viz::WImage3D::setImage(const Mat &image)
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    // Need to flip the image as the coordinates are different in OpenCV and VTK
-    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
-    flipFilter->SetFilteredAxis(1); // Vertical flip
-    flipFilter->SetInputConnection(source->GetOutputPort());
-    flipFilter->Update();
-
-    // Apply the texture
     vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-    texture->SetInputConnection(flipFilter->GetOutputPort());
+    texture->SetInputConnection(source->GetOutputPort());
 
     actor->SetTexture(texture);
 }

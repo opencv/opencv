@@ -126,6 +126,7 @@
 #include <vtkVRMLExporter.h>
 #include <vtkTensorGlyph.h>
 #include <vtkImageAlgorithm.h>
+#include <vtkTransformFilter.h>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -175,6 +176,8 @@ namespace cv
             friend class Viz3d;
         };
 
+        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/norm(v); }
+
         template<typename _Tp> inline bool isNan(const _Tp* data)
         {
             return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
@@ -187,10 +190,24 @@ namespace cv
             return vtkPolyData::SafeDownCast(mapper->GetInput());
         }
 
+        inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)
+        {
+            vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+            vtk_matrix->DeepCopy(matrix.val);
+            return vtk_matrix;
+        }
+
+        inline Color vtkcolor(const Color& color)
+        {
+            Color scaled_color = color * (1.0/255.0);
+            std::swap(scaled_color[0], scaled_color[2]);
+            return scaled_color;
+        }
+
         struct VtkUtils
         {
             template<class Filter>
-            static void SetInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
+            static void SetInputData(vtkSmartPointer<Filter> filter, vtkPolyData* polydata)
             {
             #if VTK_MAJOR_VERSION <= 5
                 filter->SetInput(polydata);
@@ -238,23 +255,19 @@ namespace cv
                 normals_generator->Update();
                 return normals_generator->GetOutput();
             }
+
+            static vtkSmartPointer<vtkPolyData> TransformPolydata(vtkSmartPointer<vtkPolyData> polydata, const Affine3d& pose)
+            {
+                vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+                transform->SetMatrix(vtkmatrix(pose.matrix));
+
+                vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                transform_filter->SetTransform(transform);
+                transform_filter->SetInputConnection(polydata->GetProducerPort());
+                transform_filter->Update();
+                return transform_filter->GetOutput();
+            }
         };
-
-        inline vtkSmartPointer<vtkMatrix4x4> vtkmatrix(const cv::Matx44d &matrix)
-        {
-            vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-            vtk_matrix->DeepCopy(matrix.val);
-            return vtk_matrix;
-        }
-
-        inline Color vtkcolor(const Color& color)
-        {
-            Color scaled_color = color * (1.0/255.0);
-            std::swap(scaled_color[0], scaled_color[2]);
-            return scaled_color;
-        }
-
-        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/norm(v); }
     }
 }
 

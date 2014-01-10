@@ -111,9 +111,13 @@ namespace cv
         public:
             Widget3D() {}
 
+            //! widget position manipulation, i.e. place where it is rendered
             void setPose(const Affine3d &pose);
             void updatePose(const Affine3d &pose);
             Affine3d getPose() const;
+
+            //! update internal widget data, i.e. points, normals, etc.
+            void applyTransform(const Affine3d &transform);
 
             void setColor(const Color &color);
 
@@ -172,7 +176,8 @@ namespace cv
         class CV_EXPORTS WCube : public Widget3D
         {
         public:
-            WCube(const Point3d& pt_min, const Point3d& pt_max, bool wire_frame = true, const Color &color = Color::white());
+            WCube(const Point3d& min_point = Vec3d::all(-0.5), const Point3d& max_point = Vec3d::all(0.5),
+                  bool wire_frame = true, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WPolyLine : public Widget3D
@@ -213,10 +218,12 @@ namespace cv
         class CV_EXPORTS WImage3D : public Widget3D
         {
         public:
-            //! Creates 3D image at the origin
-            WImage3D(const Mat &image, const Size &size);
+            //! Creates 3D image in a plane centered at the origin with normal orientaion along z-axis,
+            //! image x- and y-axes are oriented along x- and y-axes of 3d world
+            WImage3D(const Mat &image, const Size2d &size);
+
             //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-            WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size);
+            WImage3D(const Mat &image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector);
 
             void setImage(const Mat &image);
         };
