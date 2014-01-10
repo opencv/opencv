@@ -176,7 +176,7 @@ private:
     /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
     bool camera_set_;
 
-    bool removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor);
+    bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
 };
 
 #endif

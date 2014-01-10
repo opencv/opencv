@@ -305,6 +305,3 @@ void cv::viz::computeNormals(const Mesh& mesh, OutputArray _normals)
 
 
 
-
-
-

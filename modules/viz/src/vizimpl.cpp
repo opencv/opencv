@@ -271,7 +271,7 @@ void cv::viz::Viz3d::VizImpl::removeAllWidgets()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor)
+bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> actor)
 {
     vtkProp* actor_to_remove = vtkProp::SafeDownCast(actor);
 

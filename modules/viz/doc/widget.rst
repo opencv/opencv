@@ -170,13 +170,16 @@ Base class of all 3D widgets. ::
     public:
         Widget3D() {}
 
+        //! widget position manipulation, i.e. place where it is rendered.
         void setPose(const Affine3d &pose);
         void updatePose(const Affine3d &pose);
         Affine3d getPose() const;
 
+        //! updates internal widget data, i.e. points, normals, etc.
+        void applyTransform(const Affine3d &transform);
+
         void setColor(const Color &color);
-    private:
-        /* hidden */
+
     };
 
 viz::Widget3D::setPose
@@ -200,6 +203,15 @@ viz::Widget3D::getPose
 Returns the current pose of the widget.
 
 .. ocv:function:: Affine3d getWidgetPose() const
+
+
+viz::Widget3D::applyTransform
+-------------------------------
+Transforms internal widget data (i.e. points, normals) using the given transform. 
+
+.. ocv:function::  void applyTransform(const Affine3d &transform);
+
+    :param transform: Specified transformation to apply.
 
 viz::Widget3D::setColor
 -----------------------
@@ -598,25 +610,25 @@ This 3D Widget represents an image in 3D space. ::
 
     class CV_EXPORTS WImage3D : public Widget3D
     {
-    public:
-        //! Creates 3D image at the origin
-        WImage3D(const Mat &image, const Size &size);
-        //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-        WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size);
+	public:
+		//! Creates 3D image at the origin
+		WImage3D(const Mat &image, const Size2d &size);
+		//! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
+		WImage3D(const Mat &image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector);
 
-        void setImage(const Mat &image);
-    };
+		void setImage(const Mat &image);
+	};
 
 viz::WImage3D::WImage3D
 -----------------------
 Constructs an WImage3D.
 
-.. ocv:function:: WImage3D(const Mat &image, const Size &size)
+.. ocv:function:: WImage3D(const Mat &image, const Size2d &size)
 
     :param image: BGR or Gray-Scale image.
     :param size: Size of the image.
 
-.. ocv:function:: WImage3D(const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector, const Mat &image, const Size &size)
+.. ocv:function:: WImage3D(const Mat &image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector)
 
     :param position: Position of the image.
     :param normal: Normal of the plane that represents the image.

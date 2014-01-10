@@ -212,6 +212,7 @@ template<typename _Tn, typename _Msk>
 void cv::viz::vtkCloudMatSource::filterNanNormalsCopy(const Mat& cloud_normals, const Mat& mask, int total)
 {
     normals = vtkSmartPointer< VtkDepthTraits<_Tn>::array_type >::New();
+    normals->SetName("Normals");
     normals->SetNumberOfComponents(3);
     normals->SetNumberOfTuples(total);
 

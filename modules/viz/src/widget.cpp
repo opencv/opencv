@@ -269,6 +269,17 @@ cv::Affine3d cv::viz::Widget3D::getPose() const
     return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
+void cv::viz::Widget3D::applyTransform(const Affine3d &transform)
+{
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert("Widget is not 3D actor." && actor);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    CV_Assert("Widget doesn't have a polydata mapper" && mapper);
+
+    VtkUtils::SetInputData(mapper, VtkUtils::TransformPolydata(mapper->GetInput(), transform));
+}
+
 void cv::viz::Widget3D::setColor(const Color &color)
 {
     // Cast to actor instead of prop3d since prop3d doesn't provide getproperty
