@@ -349,23 +349,38 @@ viz::WCircle
 
 This 3D Widget defines a circle. ::
 
-    class CV_EXPORTS WCircle : public Widget3D
+   class CV_EXPORTS WCircle : public Widget3D
     {
     public:
-        WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+        //! creates default planar circle centred at origin with plane normal along z-axis
+        WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
+
+        //! creates repositioned circle
+        WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
     };
 
 viz::WCircle::WCircle
 -------------------------------
-Constructs a WCircle.
+Constructs default planar circle centred at origin with plane normal along z-axis
 
-.. ocv:function:: WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white())
+.. ocv:function:: WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
 
-    :param pt: Center of the circle.
-    :param radius: Radius of the circle.
+    :param radius: Radius of the circle.    
     :param thickness: Thickness of the circle.
     :param color: :ocv:class:`Color` of the circle.
 
+viz::WCircle::WCircle
+-------------------------------
+Constructs repositioned planar circle.
+
+.. ocv:function:: WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
+
+    :param radius: Radius of the circle.
+    :param center: Center of the circle.
+    :param normal: Normal of the plane in which the circle lies.
+    :param thickness: Thickness of the circle.
+    :param color: :ocv:class:`Color` of the circle.    
+    
 viz::WCylinder
 --------------
 .. ocv:class:: WCylinder

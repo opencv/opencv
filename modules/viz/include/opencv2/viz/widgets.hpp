@@ -164,7 +164,11 @@ namespace cv
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            WCircle(const Point3d& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+            //! creates default circle centred at origin with normal along z-axis
+            WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
+
+            //! creates repositioned circle
+            WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCylinder : public Widget3D

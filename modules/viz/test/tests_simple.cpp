@@ -293,7 +293,9 @@ TEST(Viz, show_simple_widgets)
     Viz3d viz("show_simple_widgets");
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
-    viz.showWidget("arr3", WArrow(Vec3d::all(-0.5), Vec3d::all(0.5), 0.009, Color::raspberry()));
+    viz.showWidget("arro", WArrow(Vec3d::all(-0.5), Vec3d::all(0.5), 0.009, Color::raspberry()));
+    viz.showWidget("cir1", WCircle(0.5, 0.01, Color::bluberry()));
+    viz.showWidget("cir2", WCircle(0.5, Point3d(0.5, 0.0, 0.0), Vec3d(1.0, 0.0, 0.0), 0.01, Color::apricot()));
     viz.spin();
 }
 
