@@ -256,16 +256,21 @@ namespace cv
                 return normals_generator->GetOutput();
             }
 
-            static vtkSmartPointer<vtkPolyData> TransformPolydata(vtkSmartPointer<vtkPolyData> polydata, const Affine3d& pose)
+            static vtkSmartPointer<vtkPolyData> TransformPolydata(vtkSmartPointer<vtkAlgorithmOutput> algorithm_output_port, const Affine3d& pose)
             {
                 vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
                 transform->SetMatrix(vtkmatrix(pose.matrix));
 
                 vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
                 transform_filter->SetTransform(transform);
-                transform_filter->SetInputConnection(polydata->GetProducerPort());
+                transform_filter->SetInputConnection(algorithm_output_port);
                 transform_filter->Update();
                 return transform_filter->GetOutput();
+            }
+
+            static vtkSmartPointer<vtkPolyData> TransformPolydata(vtkSmartPointer<vtkPolyData> polydata, const Affine3d& pose)
+            {
+                return TransformPolydata(polydata->GetProducerPort(), pose);
             }
         };
     }
