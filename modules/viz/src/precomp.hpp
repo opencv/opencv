@@ -127,6 +127,7 @@
 #include <vtkTensorGlyph.h>
 #include <vtkImageAlgorithm.h>
 #include <vtkTransformFilter.h>
+#include <vtkConeSource.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
