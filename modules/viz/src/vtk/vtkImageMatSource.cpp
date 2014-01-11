@@ -44,15 +44,6 @@
 
 #include "precomp.hpp"
 
-
-#include "vtkImageData.h"
-#include "vtkImageProgressIterator.h"
-#include "vtkMath.h"
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-
 namespace cv { namespace viz
 {
     vtkStandardNewMacro(vtkImageMatSource);
@@ -93,48 +84,60 @@ void cv::viz::vtkImageMatSource::SetImage(InputArray _image)
 
     this->ImageData->SetDimensions(image.cols, image.rows, 1);
 #if VTK_MAJOR_VERSION <= 5
-    this->ImageData->SetNumberOfScalarComponents(std::min(3, image.channels()));
+    this->ImageData->SetNumberOfScalarComponents(image.channels());
     this->ImageData->SetScalarTypeToUnsignedChar();
     this->ImageData->AllocateScalars();
 #else
-    this->ImageData->AllocateScalars(VTK_UNSIGNED_CHAR, std::min(3, image.channels()));
+    this->ImageData->AllocateScalars(VTK_UNSIGNED_CHAR, image.channels());
 #endif
 
     switch(image.channels())
     {
-    case 1: copyGrayImage(image, this->ImageData);
-    case 3: copyRGBImage (image, this->ImageData);
-    case 4: copyRGBAImage(image, this->ImageData);
+    case 1: copyGrayImage(image, this->ImageData); break;
+    case 3: copyRGBImage (image, this->ImageData); break;
+    case 4: copyRGBAImage(image, this->ImageData); break;
     }
     this->ImageData->Modified();
 }
 
 void cv::viz::vtkImageMatSource::copyGrayImage(const Mat &source, vtkSmartPointer<vtkImageData> output)
 {
+    unsigned char* dptr = reinterpret_cast<unsigned char*>(output->GetScalarPointer());
+    size_t elem_step = output->GetIncrements()[1]/sizeof(unsigned char);
+
     for (int y = 0; y < source.rows; ++y)
     {
+        unsigned char* drow = dptr + elem_step * y;
         const unsigned char *srow = source.ptr<unsigned char>(y);
         for (int x = 0; x < source.cols; ++x)
-            *reinterpret_cast<unsigned char*>(output->GetScalarPointer(x,y,0)) = *srow++;
+            drow[x] = *srow++;
     }
 }
 
 void cv::viz::vtkImageMatSource::copyRGBImage(const Mat &source, vtkSmartPointer<vtkImageData> output)
 {
+    Vec3b* dptr = reinterpret_cast<Vec3b*>(output->GetScalarPointer());
+    size_t elem_step = output->GetIncrements()[1]/sizeof(Vec3b);
+
     for (int y = 0; y < source.rows; ++y)
     {
+        Vec3b* drow = dptr + elem_step * y;
         const unsigned char *srow = source.ptr<unsigned char>(y);
         for (int x = 0; x < source.cols; ++x, srow += source.channels())
-            *reinterpret_cast<Vec3b*>(output->GetScalarPointer(x,y,0)) = Vec3b(srow[2], srow[1], srow[0]);
+            drow[x] = Vec3b(srow[2], srow[1], srow[0]);
     }
 }
 
 void cv::viz::vtkImageMatSource::copyRGBAImage(const Mat &source, vtkSmartPointer<vtkImageData> output)
 {
+    Vec4b* dptr = reinterpret_cast<Vec4b*>(output->GetScalarPointer());
+    size_t elem_step = output->GetIncrements()[1]/sizeof(Vec4b);
+
     for (int y = 0; y < source.rows; ++y)
     {
+        Vec4b* drow = dptr + elem_step * y;
         const unsigned char *srow = source.ptr<unsigned char>(y);
         for (int x = 0; x < source.cols; ++x, srow += source.channels())
-            *reinterpret_cast<Vec4b*>(output->GetScalarPointer(x,y,0)) = Vec4b(srow[2], srow[1], srow[0], srow[3]);
+            drow[x] = Vec4b(srow[2], srow[1], srow[0], srow[3]);
     }
 }

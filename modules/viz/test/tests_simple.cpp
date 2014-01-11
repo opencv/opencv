@@ -198,7 +198,7 @@ TEST(Viz, DISABLED_show_trajectory_reposition)
     viz.spin();
 }
 
-TEST(Viz, show_camera_positions)
+TEST(Viz, DISABLED_show_camera_positions)
 {
     Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
@@ -216,7 +216,6 @@ TEST(Viz, show_camera_positions)
     viz.showWidget("coos", WCoordinateSystem(1.5));
     viz.showWidget("pos1", WCameraPosition(0.75), poses[0]);
     viz.showWidget("pos2", WCameraPosition(Vec2d(0.78, 0.78), lena, 2.2, Color::green()), poses[0]);
-
     viz.showWidget("pos3", WCameraPosition(0.75), poses[1]);
     viz.showWidget("pos4", WCameraPosition(K, gray, 3, Color::indigo()), poses[1]);
     viz.spin();
@@ -229,9 +228,10 @@ TEST(Viz, show_overlay_image)
 
     Viz3d viz("show_overlay_image");
     viz.showWidget("coos", WCoordinateSystem());
-    viz.showWidget("cube", WCube(Vec3d::all(-0.5), Vec3d::all(0.5)));
-    viz.showWidget("img1", WImageOverlay(lena, Rect(Point(0, 400), Size_<double>(viz.getWindowSize()) * 0.5)));
-    viz.showWidget("img2", WImageOverlay(gray, Rect(Point(640, 0), Size_<double>(viz.getWindowSize()) * 0.5)));
+    viz.showWidget("cube", WCube());
+    viz.showWidget("img1", WImageOverlay(lena, Rect(Point(0, 400), Size2d(viz.getWindowSize()) * 0.5)));
+    viz.showWidget("img2", WImageOverlay(gray, Rect(Point(640, 0), Size2d(viz.getWindowSize()) * 0.5)));
+    viz.spin();
 
     int i = 0;
     while(!viz.wasStopped())
@@ -254,7 +254,7 @@ TEST(Viz, DISABLED_show_image_3d)
 
     Viz3d viz("show_image_3d");
     viz.showWidget("coos", WCoordinateSystem());
-    viz.showWidget("cube", WCube(Vec3d::all(-0.5), Vec3d::all(0.5)));
+    viz.showWidget("cube", WCube());
     viz.showWidget("arr0", WArrow(Vec3d(0.5, 0.0, 0.0), Vec3d(1.5, 0.0, 0.0), 0.009, Color::raspberry()));
     viz.showWidget("img0", WImage3D(lena, Size2d(1.0, 1.0)), Affine3d(Vec3d(0.0, CV_PI/2, 0.0), Vec3d(.5, 0.0, 0.0)));
     viz.showWidget("arr1", WArrow(Vec3d(-0.5, -0.5, 0.0), Vec3d(0.2, 0.2, 0.0), 0.009, Color::raspberry()));
