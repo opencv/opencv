@@ -277,6 +277,8 @@ TEST(Viz, DISABLED_show_image_3d)
     viz.showWidget("arr1", WArrow(Vec3d(-0.5, -0.5, 0.0), Vec3d(0.2, 0.2, 0.0), 0.009, Color::raspberry()));
     viz.showWidget("img1", WImage3D(gray, Size2d(1.0, 1.0), Vec3d(-0.5, -0.5, 0.0), Vec3d(1.0, 1.0, 0.0), Vec3d(0.0, 1.0, 0.0)));
 
+    viz.showWidget("arr3", WArrow(Vec3d::all(-0.5), Vec3d::all(0.5), 0.009, Color::raspberry()));
+
     int i = 0;
     while(!viz.wasStopped())
     {
@@ -284,6 +286,15 @@ TEST(Viz, DISABLED_show_image_3d)
         viz.spinOnce(1, true);
     }
     //viz.spin();
+}
+
+TEST(Viz, show_simple_widgets)
+{
+    Viz3d viz("show_simple_widgets");
+    viz.showWidget("coos", WCoordinateSystem());
+    viz.showWidget("cube", WCube());
+    viz.showWidget("arr3", WArrow(Vec3d::all(-0.5), Vec3d::all(0.5), 0.009, Color::raspberry()));
+    viz.spin();
 }
 
 TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
