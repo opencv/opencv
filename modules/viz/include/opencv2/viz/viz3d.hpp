@@ -75,6 +75,8 @@ namespace cv
             Widget getWidget(const String &id) const;
             void removeAllWidgets();
 
+            void showImage(InputArray image, const Size& window_size = Size(-1, -1));
+
             void setWidgetPose(const String &id, const Affine3d &pose);
             void updateWidgetPose(const String &id, const Affine3d &pose);
             Affine3d getWidgetPose(const String &id) const;

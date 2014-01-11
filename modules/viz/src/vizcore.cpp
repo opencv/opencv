@@ -122,6 +122,13 @@ cv::String cv::viz::VizStorage::generateWindowName(const String &window_name)
 cv::viz::Viz3d cv::viz::getWindowByName(const String &window_name) { return Viz3d (window_name); }
 void cv::viz::unregisterAllWindows() { VizStorage::unregisterAll(); }
 
+cv::viz::Viz3d cv::viz::imshow(const String& window_name, InputArray image, const Size& window_size)
+{
+    Viz3d viz = getWindowByName(window_name);
+    viz.showImage(image, window_size);
+    return viz;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write clouds. Supported formats: ply, stl, xyz, obj
 

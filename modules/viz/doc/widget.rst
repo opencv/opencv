@@ -580,16 +580,16 @@ This 2D Widget represents an image overlay. ::
     class CV_EXPORTS WImageOverlay : public Widget2D
     {
     public:
-        WImageOverlay(const Mat &image, const Rect &rect);
+        WImageOverlay(InputArray image, const Rect &rect);
 
-        void setImage(const Mat &image);
+        void setImage(InputArray image);
     };
 
 viz::WImageOverlay::WImageOverlay
 ---------------------------------
 Constructs an WImageOverlay.
 
-.. ocv:function:: WImageOverlay(const Mat &image, const Rect &rect)
+.. ocv:function:: WImageOverlay(InputArray image, const Rect &rect)
 
     :param image: BGR or Gray-Scale image.
     :param rect: Image is scaled and positioned based on rect.
@@ -598,7 +598,7 @@ viz::WImageOverlay::setImage
 ----------------------------
 Sets the image content of the widget.
 
-.. ocv:function:: void setImage(const Mat &image)
+.. ocv:function:: void setImage(InputArray image)
 
     :param image: BGR or Gray-Scale image.
 
@@ -612,23 +612,23 @@ This 3D Widget represents an image in 3D space. ::
     {
 	public:
 		//! Creates 3D image at the origin
-		WImage3D(const Mat &image, const Size2d &size);
+		WImage3D(InputArray image, const Size2d &size);
 		//! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-		WImage3D(const Mat &image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector);
+		WImage3D(InputArray image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector);
 
-		void setImage(const Mat &image);
+		void setImage(InputArray image);
 	};
 
 viz::WImage3D::WImage3D
 -----------------------
 Constructs an WImage3D.
 
-.. ocv:function:: WImage3D(const Mat &image, const Size2d &size)
+.. ocv:function:: WImage3D(InputArray image, const Size2d &size)
 
     :param image: BGR or Gray-Scale image.
     :param size: Size of the image.
 
-.. ocv:function:: WImage3D(const Mat &image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector)
+.. ocv:function:: WImage3D(InputArray image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector)
 
     :param position: Position of the image.
     :param normal: Normal of the plane that represents the image.
@@ -640,7 +640,7 @@ viz::WImage3D::setImage
 -----------------------
 Sets the image content of the widget.
 
-.. ocv:function:: void setImage(const Mat &image)
+.. ocv:function:: void setImage(InputArray image)
 
     :param image: BGR or Gray-Scale image.
 

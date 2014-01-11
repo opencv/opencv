@@ -102,6 +102,8 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         void setWidgetPose(const String &id, const Affine3d &pose);
         void updateWidgetPose(const String &id, const Affine3d &pose);
         Affine3d getWidgetPose(const String &id) const;
+        
+        void showImage(InputArray image, const Size& window_size = Size(-1, -1));
 
         void setCamera(const Camera &camera);
         Camera getCamera() const;
@@ -181,6 +183,15 @@ viz::Viz3d::removeAllWidgets
 Removes all widgets from the window.
 
 .. ocv:function:: void removeAllWidgets()
+
+viz::Viz3d::showImage
+---------------------
+Removed all widgets and displays image scaled to whole window area.
+
+.. ocv:function:: void showImage(InputArray image, const Size& window_size = Size(-1, -1));
+
+    :param image: Image to be displayed.
+    :param size: Size of Viz3d window. Default value means no change.
 
 viz::Viz3d::setWidgetPose
 -------------------------

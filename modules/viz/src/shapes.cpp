@@ -613,15 +613,16 @@ cv::String cv::viz::WText::getText() const
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// image overlay widget implementation
 
-cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
+cv::viz::WImageOverlay::WImageOverlay(InputArray image, const Rect &rect)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
+    Size sz = image.size();
 
     // Scale the image based on the Rect, and flip to match y-ais orientation
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Scale(image.cols/(double)rect.width, image.rows/(double)rect.height, 1.0);
+    transform->Scale(sz.width/(double)rect.width, sz.height/(double)rect.height, 1.0);
     transform->RotateX(180);
 
     vtkSmartPointer<vtkImageReslice> image_reslice = vtkSmartPointer<vtkImageReslice>::New();
@@ -640,11 +641,12 @@ cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
     vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
     actor->SetMapper(image_mapper);
     actor->SetPosition(rect.x, rect.y);
+    actor->GetProperty()->SetDisplayLocationToForeground();
 
     WidgetAccessor::setProp(*this, actor);
 }
 
-void cv::viz::WImageOverlay::setImage(const Mat &image)
+void cv::viz::WImageOverlay::setImage(InputArray image)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
@@ -661,10 +663,11 @@ void cv::viz::WImageOverlay::setImage(const Mat &image)
     // Create the vtk image and set its parameters based on input image
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
+    Size sz = image.size();
 
     // Scale the image based on the Rect, and flip to match y-ais orientation
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Scale(image.cols/(double)size.width, image.rows/(double)size.height, 1.0);
+    transform->Scale(sz.width/(double)size.width, sz.height/(double)size.height, 1.0);
     transform->RotateX(180);
 
     vtkSmartPointer<vtkImageReslice> image_reslice = vtkSmartPointer<vtkImageReslice>::New();
@@ -687,7 +690,7 @@ template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// image 3D widget implementation
 
-cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size)
+cv::viz::WImage3D::WImage3D(InputArray image, const Size2d &size)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
@@ -717,7 +720,7 @@ cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector)
+cv::viz::WImage3D::WImage3D(InputArray image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
@@ -732,7 +735,7 @@ cv::viz::WImage3D::WImage3D(const Mat &image, const Size2d &size, const Vec3d &c
     *this = image3d;
 }
 
-void cv::viz::WImage3D::setImage(const Mat &image)
+void cv::viz::WImage3D::setImage(InputArray image)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
 
