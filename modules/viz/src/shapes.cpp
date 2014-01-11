@@ -135,8 +135,12 @@ cv::viz::WPlane::WPlane(const Vec4d& coefs, double size, const Color &color)
     Vec3d p_center;
     plane->GetOrigin(p_center.val);
 
+
+    vtkSmartPointer<vtkTransformPolyDataFilter> filter = PlaneUtils::setSize(p_center, plane->GetOutputPort(), size);
+    filter->Update();
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(PlaneUtils::setSize(p_center, plane->GetOutputPort(), size)->GetOutputPort());
+    VtkUtils::SetInputData(mapper, filter->GetOutput());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -571,6 +575,7 @@ cv::viz::WText3D::WText3D(const String &text, const Point3d &position, double te
         actor->SetMapper(mapper);
         actor->SetPosition(position.x, position.y, position.z);
         actor->SetScale(text_scale);
+        actor->GetProperty()->LightingOff();
         WidgetAccessor::setProp(*this, actor);
     }
 
@@ -579,7 +584,7 @@ cv::viz::WText3D::WText3D(const String &text, const Point3d &position, double te
 
 void cv::viz::WText3D::setText(const String &text)
 {
-    vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("This widget does not support text." && actor);
 
     // Update text source
@@ -613,7 +618,7 @@ template<> cv::viz::WText3D cv::viz::Widget::cast<cv::viz::WText3D>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
-cv::viz::WText::WText(const String &text, const Point2i &pos, int font_size, const Color &color)
+cv::viz::WText::WText(const String &text, const Point &pos, int font_size, const Color &color)
 {
     vtkSmartPointer<vtkTextActor> actor = vtkSmartPointer<vtkTextActor>::New();
     actor->SetPosition(pos.x, pos.y);
