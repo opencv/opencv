@@ -777,28 +777,34 @@ namespace  cv  { namespace viz { namespace
             return extract_edges->GetOutput();
         }
 
-        static vtkSmartPointer<vtkActor> projectImage(double fovy, double far_end_height, const Mat &image, double scale, const Color &color)
+        static vtkSmartPointer<vtkActor> projectImage(vtkSmartPointer<vtkPolyData> frustum, double far_end_height, const Mat &image, double scale, const Color &color)
         {
-            float aspect_ratio = float(image.cols)/float(image.rows);
+            Mat color_image = image;
+            if (color_image.channels() == 1)
+            {
+                color_image.create(image.size(), CV_8UC3);
+                Vec3b *drow = color_image.ptr<Vec3b>();
+                for(int y = 0; y < image.rows; ++y)
+                {
+                    const unsigned char *srow = image.ptr<unsigned char>(y);
+                    const unsigned char *send = srow + image.cols;
+                    for(;srow < send;)
+                        *drow++ = Vec3b::all(*srow++);
+                }
+            }
+
+
+            double aspect_ratio = color_image.cols/(double)color_image.rows;
 
             // Create the vtk image
             vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
-            source->SetImage(image);
+            source->SetImage(color_image);
             source->Update();
             vtkSmartPointer<vtkImageData> vtk_image = source->GetOutput();
 
-            // Adjust a pixel of the vtk_image
-            if(image.channels() == 1)
-            {
-                double gray = color[2] * 0.299 + color[1] * 0.578 + color[0] * 0.144;
-                vtk_image->SetScalarComponentFromDouble(0, 0, 0, 0, gray);
-            }
-            else
-            {
-                vtk_image->SetScalarComponentFromDouble(0, 0, 0, 0, color[2]);
-                vtk_image->SetScalarComponentFromDouble(0, 0, 0, 1, color[1]);
-                vtk_image->SetScalarComponentFromDouble(0, 0, 0, 2, color[0]);
-            }
+            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 0, color[2]);
+            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 1, color[1]);
+            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 2, color[0]);
 
             Vec3d plane_center(0.0, 0.0, scale);
 
@@ -824,7 +830,7 @@ namespace  cv  { namespace viz { namespace
             transform_filter->SetInputConnection(texture_plane->GetOutputPort());
             transform_filter->SetTransform(transform);
 
-            vtkSmartPointer<vtkPolyData> frustum = createFrustum(aspect_ratio, fovy, scale);
+
 
             // Frustum needs to be textured or else it can't be combined with image
             vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
@@ -901,14 +907,15 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
 cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, const Mat &image, double scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-
     double f_y = K(1,1), c_y = K(1,2);
-
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
     double fovy = 2.0 * atan2(c_y, f_y) * 180.0 / CV_PI;
     double far_end_height = 2.00 * c_y * scale / f_y;
+    double aspect_ratio = image.cols/(double)image.rows;
 
-    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(fovy, far_end_height, image, scale, color);
+    vtkSmartPointer<vtkPolyData> frustum = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
+
+    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(frustum, far_end_height, image, scale, color);
     WidgetAccessor::setProp(*this, actor);
 }
 
@@ -917,8 +924,11 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, const Mat &image, do
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     double fovy = fov[1] * 180.0 / CV_PI;
     double far_end_height = 2.0 * scale * tan(fov[1] * 0.5);
+    double aspect_ratio = image.cols/(double)image.rows;
 
-    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(fovy, far_end_height, image, scale, color);
+    vtkSmartPointer<vtkPolyData> frustum = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
+
+    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(frustum, far_end_height, image, scale, color);
     WidgetAccessor::setProp(*this, actor);
 }
 

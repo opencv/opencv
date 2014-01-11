@@ -174,7 +174,7 @@ TEST(Viz, DISABLED_show_trajectories)
     viz.showWidget("sub1", WTrajectory(sub1, WTrajectory::PATH, 0.2, Color::brown()));
     viz.showWidget("sub2", WTrajectory(sub2, WTrajectory::FRAMES, 0.2));
     viz.showWidget("sub3", WTrajectory(sub3, WTrajectory::BOTH, 0.2, Color::green()));
-    viz.showWidget("sub4", WTrajectoryFrustums(sub4, K, 0.3));
+    viz.showWidget("sub4", WTrajectoryFrustums(sub4, K, 0.3, Color::yellow()));
     viz.showWidget("sub5", WTrajectoryFrustums(sub5, Vec2d(0.78, 0.78), 0.15));
 
     int i = 0;
@@ -212,7 +212,7 @@ TEST(Viz, show_camera_positions)
     }
 
     Viz3d viz("show_camera_positions");
-    viz.showWidget("sphe", WSphere(Point3d(0,0,0), 1.0));
+    viz.showWidget("sphe", WSphere(Point3d(0,0,0), 1.0, 10, Color::orange_red()));
     viz.showWidget("coos", WCoordinateSystem(1.5));
     viz.showWidget("pos1", WCameraPosition(0.75), poses[0]);
     viz.showWidget("pos2", WCameraPosition(Vec2d(0.78, 0.78), lena, 2.2, Color::green()), poses[0]);
