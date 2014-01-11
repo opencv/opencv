@@ -1,7 +1,3 @@
-#ifndef ADDITIONAL_FN_DEFINITIONS
-#define ADDITIONAL_FN_DEFINITIONS
-#endif
-
 @CL_FN_ENUMS@
 
 namespace {
