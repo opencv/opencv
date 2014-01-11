@@ -250,6 +250,20 @@ TEST(Viz, DISABLED_show_overlay_image)
     //viz.spin();
 }
 
+
+TEST(Viz, DISABLED_show_image_method)
+{
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+
+    Viz3d viz("show_image_method");
+    viz.showImage(lena);
+    viz.spinOnce(1500, true);
+    viz.showImage(lena, lena.size());
+    viz.spinOnce(1500, true);
+
+    cv::viz::imshow("show_image_method", make_gray(lena)).spin();
+}
+
 TEST(Viz, DISABLED_show_image_3d)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));

@@ -210,8 +210,8 @@ namespace cv
         class CV_EXPORTS WImageOverlay : public Widget2D
         {
         public:
-            WImageOverlay(const Mat &image, const Rect &rect);
-            void setImage(const Mat &image);
+            WImageOverlay(InputArray image, const Rect &rect);
+            void setImage(InputArray image);
         };
 
         class CV_EXPORTS WImage3D : public Widget3D
@@ -219,12 +219,12 @@ namespace cv
         public:
             //! Creates 3D image in a plane centered at the origin with normal orientaion along z-axis,
             //! image x- and y-axes are oriented along x- and y-axes of 3d world
-            WImage3D(const Mat &image, const Size2d &size);
+            WImage3D(InputArray image, const Size2d &size);
 
             //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-            WImage3D(const Mat &image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector);
+            WImage3D(InputArray image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector);
 
-            void setImage(const Mat &image);
+            void setImage(InputArray image);
         };
 
         /////////////////////////////////////////////////////////////////////////////
