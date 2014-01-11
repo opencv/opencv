@@ -66,6 +66,9 @@ namespace cv
         //! Unregisters all Viz windows from internal database. After it 'getWindowByName()' will create new windows instead getting existing from the database.
         CV_EXPORTS void unregisterAllWindows();
 
+        //! Displays image in specified window
+        CV_EXPORTS Viz3d imshow(const String& window_name, InputArray image, const Size& window_size = Size(-1, -1));
+
         //! checks float value for Nan
         inline bool isNan(float x)
         {
