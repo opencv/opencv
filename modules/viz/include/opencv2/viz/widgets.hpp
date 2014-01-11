@@ -211,7 +211,6 @@ namespace cv
         {
         public:
             WImageOverlay(const Mat &image, const Rect &rect);
-
             void setImage(const Mat &image);
         };
 
