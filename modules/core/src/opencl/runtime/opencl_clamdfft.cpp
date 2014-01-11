@@ -100,8 +100,6 @@ static void* openclamdfft_check_fn(int ID);
 
 #define CUSTOM_FUNCTION_ID 1000
 
-#undef ADDITIONAL_FN_DEFINITIONS
-
 //
 // END OF CUSTOM FUNCTIONS HERE
 //
@@ -110,7 +108,6 @@ static void* openclamdfft_check_fn(int ID);
 
 static void* openclamdfft_check_fn(int ID)
 {
-    ID = (ID <= CUSTOM_FUNCTION_ID) ? ID : ID - CUSTOM_FUNCTION_ID;
     assert(ID >= 0 && ID < (int)(sizeof(openclamdfft_fn)/sizeof(openclamdfft_fn[0])));
     const struct DynamicFnEntry* e = openclamdfft_fn[ID];
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);
