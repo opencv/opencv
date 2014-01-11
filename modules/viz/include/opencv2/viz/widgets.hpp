@@ -206,7 +206,7 @@ namespace cv
         class CV_EXPORTS WText : public Widget2D
         {
         public:
-            WText(const String &text, const Point2i &pos, int font_size = 20, const Color &color = Color::white());
+            WText(const String &text, const Point &pos, int font_size = 20, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
@@ -215,6 +215,7 @@ namespace cv
         class CV_EXPORTS WText3D : public Widget3D
         {
         public:
+            //! creates text label in 3D. If face_camera = false, text plane normal is oriented along z-axis. Use widget pose to orient it properly
             WText3D(const String &text, const Point3d &position, double text_scale = 1., bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
