@@ -221,17 +221,22 @@ TEST(Viz, DISABLED_show_camera_positions)
     viz.spin();
 }
 
-TEST(Viz, show_overlay_image)
+TEST(Viz, DISABLED_show_overlay_image)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
     Mat gray = make_gray(lena);
 
+    Size2d half_lsize = Size2d(lena.size()) * 0.5;
+
     Viz3d viz("show_overlay_image");
+    Size vsz = viz.getWindowSize();
+
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
-    viz.showWidget("img1", WImageOverlay(lena, Rect(Point(0, 400), Size2d(viz.getWindowSize()) * 0.5)));
-    viz.showWidget("img2", WImageOverlay(gray, Rect(Point(640, 0), Size2d(viz.getWindowSize()) * 0.5)));
-    viz.spin();
+    viz.showWidget("img1", WImageOverlay(lena, Rect(Point(10, 10), half_lsize)));
+    viz.showWidget("img2", WImageOverlay(gray, Rect(Point(vsz.width-10-lena.cols/2, 10), half_lsize)));
+    viz.showWidget("img3", WImageOverlay(gray, Rect(Point(10, vsz.height-10-lena.rows/2), half_lsize)));
+    viz.showWidget("img5", WImageOverlay(lena, Rect(Point(vsz.width-10-lena.cols/2, vsz.height-10-lena.rows/2), half_lsize)));
 
     int i = 0;
     while(!viz.wasStopped())
@@ -239,9 +244,7 @@ TEST(Viz, show_overlay_image)
         double a = ++i % 360;
         Vec3d pose(sin(a * CV_PI/180), 0.7, cos(a * CV_PI/180));
         viz.setViewerPose(makeCameraPose(pose * 3, Vec3d(0.0, 0.5, 0.0), Vec3d(0.0, 0.1, 0.0)));
-
         viz.getWidget("img1").cast<WImageOverlay>().setImage(lena * pow(sin(i*10*CV_PI/180) * 0.5 + 0.5, 1.0));
-        //viz.getWidget("img1").cast<WImageOverlay>().setImage(gray);
         viz.spinOnce(1, true);
     }
     //viz.spin();

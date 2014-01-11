@@ -616,21 +616,17 @@ cv::String cv::viz::WText::getText() const
 cv::viz::WImageOverlay::WImageOverlay(const Mat &image, const Rect &rect)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
-
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    vtkSmartPointer<vtkImageFlip> flip_filter = vtkSmartPointer<vtkImageFlip>::New();
-    flip_filter->SetInputConnection(source->GetOutputPort());
-    flip_filter->SetFilteredAxis(1);
-
-    // Scale the image based on the Rect
+    // Scale the image based on the Rect, and flip to match y-ais orientation
     vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->Scale(image.cols/(double)rect.width, image.rows/(double)rect.height, 1.0);
+    transform->RotateX(180);
 
     vtkSmartPointer<vtkImageReslice> image_reslice = vtkSmartPointer<vtkImageReslice>::New();
     image_reslice->SetResliceTransform(transform);
-    image_reslice->SetInputConnection(flip_filter->GetOutputPort());
+    image_reslice->SetInputConnection(source->GetOutputPort());
     image_reslice->SetOutputDimensionality(2);
     image_reslice->InterpolateOn();
     image_reslice->AutoCropOutputOn();
@@ -657,16 +653,29 @@ void cv::viz::WImageOverlay::setImage(const Mat &image)
 
     vtkImageMapper *mapper = vtkImageMapper::SafeDownCast(actor->GetMapper());
     CV_Assert("This widget does not support overlay image." && mapper);
+    \
+    Vec6i extent;
+    mapper->GetInput()->GetExtent(extent.val);
+    Size size(extent[1], extent[3]);
 
     // Create the vtk image and set its parameters based on input image
     vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
     source->SetImage(image);
 
-    vtkSmartPointer<vtkImageFlip> flip_filter = vtkSmartPointer<vtkImageFlip>::New();
-    flip_filter->SetInputConnection(source->GetOutputPort());
-    flip_filter->SetFilteredAxis(1);
+    // Scale the image based on the Rect, and flip to match y-ais orientation
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->Scale(image.cols/(double)size.width, image.rows/(double)size.height, 1.0);
+    transform->RotateX(180);
 
-    mapper->SetInputConnection(flip_filter->GetOutputPort());
+    vtkSmartPointer<vtkImageReslice> image_reslice = vtkSmartPointer<vtkImageReslice>::New();
+    image_reslice->SetResliceTransform(transform);
+    image_reslice->SetInputConnection(source->GetOutputPort());
+    image_reslice->SetOutputDimensionality(2);
+    image_reslice->InterpolateOn();
+    image_reslice->AutoCropOutputOn();
+    image_reslice->Update();
+
+    mapper->SetInputConnection(image_reslice->GetOutputPort());
 }
 
 template<> cv::viz::WImageOverlay cv::viz::Widget::cast<cv::viz::WImageOverlay>()
