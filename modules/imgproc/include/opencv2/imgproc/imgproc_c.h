@@ -601,7 +601,8 @@ CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
    param1 ~ srn, param2 ~ stn - for multi-scale */
 CVAPI(CvSeq*)  cvHoughLines2( CvArr* image, void* line_storage, int method,
                               double rho, double theta, int threshold,
-                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0));
+                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0),
+                              double min_theta CV_DEFAULT(0), double max_theta CV_DEFAULT(CV_PI));
 
 /* Finds circles in the image */
 CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,
