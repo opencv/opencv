@@ -183,10 +183,14 @@ namespace cv
             return isNan(data[0]) || isNan(data[1]) || isNan(data[2]);
         }
 
+        inline vtkSmartPointer<vtkActor> getActor(const Widget3D& widget)
+        {
+            return vtkActor::SafeDownCast(WidgetAccessor::getProp(widget));
+        }
+
         inline vtkSmartPointer<vtkPolyData> getPolyData(const Widget3D& widget)
         {
-            vtkSmartPointer<vtkProp> prop = WidgetAccessor::getProp(widget);
-            vtkSmartPointer<vtkMapper> mapper = vtkActor::SafeDownCast(prop)->GetMapper();
+            vtkSmartPointer<vtkMapper> mapper = getActor(widget)->GetMapper();
             return vtkPolyData::SafeDownCast(mapper->GetInput());
         }
 
