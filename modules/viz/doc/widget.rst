@@ -660,9 +660,9 @@ This 3D Widget represents camera position in a scene by its axes or viewing frus
         //! Creates frustum based on the field of view at the origin
         WCameraPosition(const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        WCameraPosition(const Matx33d &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Matx33d &K, InputArray image, double scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        WCameraPosition(const Vec2d &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Vec2d &fov, InputArray image, double scale = 1.0, const Color &color = Color::white());
     };
 
 viz::WCameraPosition::WCameraPosition
@@ -703,7 +703,7 @@ Constructs a WCameraPosition.
 
 - **Display image on the far plane of the viewing frustum.**
 
-    .. ocv:function:: WCameraPosition(const Matx33d &K, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Matx33d &K, InputArray image, double scale = 1.0, const Color &color = Color::white())
 
         :param K: Intrinsic matrix of the camera.
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
@@ -712,7 +712,7 @@ Constructs a WCameraPosition.
 
         Creates viewing frustum of the camera based on its intrinsic matrix K, and displays image on the far end plane.
 
-    .. ocv:function:: WCameraPosition(const Vec2d &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Vec2d &fov, InputArray image, double scale = 1.0, const Color &color = Color::white())
 
         :param fov: Field of view of the camera (horizontal, vertical).
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
