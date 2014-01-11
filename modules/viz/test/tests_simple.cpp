@@ -291,6 +291,7 @@ TEST(Viz, DISABLED_show_image_3d)
 TEST(Viz, show_simple_widgets)
 {
     Viz3d viz("show_simple_widgets");
+
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
     viz.showWidget("cub0", WCube(Vec3d::all(-1.0), Vec3d::all(-0.5), false, Color::indigo()));
@@ -301,6 +302,26 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("cyl0", WCylinder(Vec3d(-0.5, 0.5, -0.5), Vec3d(0.5, 0.5, -0.5), 0.125, 30, Color::brown()));
     viz.showWidget("con0", WCone(0.25, 0.125, 6, Color::azure()));
     viz.showWidget("con1", WCone(0.125, Point3d(0.5, -0.5, 0.5), Point3d(0.5, -1.0, 0.5), 6, Color::turquoise()));
+
+    viz.showWidget("text2d", WText("Simple text", Point(20, 20), 20, Color::green()));
+
+    viz.showWidget("text3d", WText3D("Simple 3D text", Point3d( 0.5,  0.5, 0.5), 0.125, false, Color::green()));
+
+    viz.spinOnce(1500, true);
+    viz.getWidget("text2d").cast<WText>().setText("New simple text");
+    viz.getWidget("text3d").cast<WText3D>().setText("Updated text 3D");
+    viz.spin();
+}
+
+TEST(Viz, show_follower)
+{
+    Viz3d viz("show_follower");
+
+    viz.showWidget("coos", WCoordinateSystem());
+    viz.showWidget("cube", WCube());
+    viz.showWidget("t3d_2", WText3D("Simple 3D follower", Point3d(-0.5, -0.5, 0.5), 0.125, true,  Color::green()));
+    viz.spinOnce(1500, true);
+    //viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");
     viz.spin();
 }
 
