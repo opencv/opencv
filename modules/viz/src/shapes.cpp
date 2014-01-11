@@ -192,22 +192,13 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     Vec3d zvec = normalized(xvec.cross(arbitrary));
     Vec3d yvec = zvec.cross(xvec);
 
-    Affine3d pose = makeTransformToGlobal(xvec, yvec, zvec);
+    Matx33d R = makeTransformToGlobal(xvec, yvec, zvec).rotation();
+    Affine3d transform_with_scale(R * length, startPoint);
 
-    // Apply the transforms
-    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Translate(startPoint.val);
-    transform->Concatenate(vtkmatrix(pose.matrix));
-    transform->Scale(length, length, length);
-
-    // Transform the polydata
-    vtkSmartPointer<vtkTransformPolyDataFilter> transformPD = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    transformPD->SetTransform(transform);
-    transformPD->SetInputConnection(arrow_source->GetOutputPort());
-    transformPD->Update();
+    vtkSmartPointer<vtkPolyData> polydata = VtkUtils::TransformPolydata(arrow_source->GetOutputPort(), transform_with_scale);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, transformPD->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
