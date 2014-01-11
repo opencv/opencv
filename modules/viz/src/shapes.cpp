@@ -777,80 +777,23 @@ namespace  cv  { namespace viz { namespace
             return extract_edges->GetOutput();
         }
 
-        static vtkSmartPointer<vtkActor> projectImage(vtkSmartPointer<vtkPolyData> frustum, double far_end_height, const Mat &image, double scale, const Color &color)
+        static Mat ensureColorImage(InputArray image)
         {
-            Mat color_image = image;
-            if (color_image.channels() == 1)
+            Mat color(image.size(), CV_8UC3);
+            if (image.channels() == 1)
             {
-                color_image.create(image.size(), CV_8UC3);
-                Vec3b *drow = color_image.ptr<Vec3b>();
-                for(int y = 0; y < image.rows; ++y)
+                Vec3b *drow = color.ptr<Vec3b>();
+                for(int y = 0; y < color.rows; ++y)
                 {
-                    const unsigned char *srow = image.ptr<unsigned char>(y);
-                    const unsigned char *send = srow + image.cols;
+                    const unsigned char *srow = image.getMat().ptr<unsigned char>(y);
+                    const unsigned char *send = srow + color.cols;
                     for(;srow < send;)
                         *drow++ = Vec3b::all(*srow++);
                 }
             }
-
-
-            double aspect_ratio = color_image.cols/(double)color_image.rows;
-
-            // Create the vtk image
-            vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
-            source->SetImage(color_image);
-            source->Update();
-            vtkSmartPointer<vtkImageData> vtk_image = source->GetOutput();
-
-            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 0, color[2]);
-            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 1, color[1]);
-            vtk_image->SetScalarComponentFromDouble(0, 0, 0, 2, color[0]);
-
-            Vec3d plane_center(0.0, 0.0, scale);
-
-            vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-            plane->SetCenter(plane_center.val);
-            plane->SetNormal(0.0, 0.0, 1.0);
-
-            vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-            transform->PreMultiply();
-            transform->Translate(plane_center.val);
-            transform->Scale(far_end_height*aspect_ratio, far_end_height, 1.0);
-            transform->RotateY(180.0);
-            transform->Translate(-plane_center[0], -plane_center[1], -plane_center[2]);
-
-            // Apply the texture
-            vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
-            texture->SetInputConnection(vtk_image->GetProducerPort());
-
-            vtkSmartPointer<vtkTextureMapToPlane> texture_plane = vtkSmartPointer<vtkTextureMapToPlane>::New();
-            texture_plane->SetInputConnection(plane->GetOutputPort());
-
-            vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-            transform_filter->SetInputConnection(texture_plane->GetOutputPort());
-            transform_filter->SetTransform(transform);
-
-
-
-            // Frustum needs to be textured or else it can't be combined with image
-            vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
-            frustum_texture->SetInputConnection(frustum->GetProducerPort());
-            // Texture mapping with only one pixel from the image to have constant color
-            frustum_texture->SetSRange(0.0, 0.0);
-            frustum_texture->SetTRange(0.0, 0.0);
-
-            vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-            appendFilter->AddInputConnection(frustum_texture->GetOutputPort());
-            appendFilter->AddInputConnection(transform_filter->GetOutputPort());
-
-            vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-            planeMapper->SetInputConnection(appendFilter->GetOutputPort());
-
-            vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-            actor->SetMapper(planeMapper);
-            actor->SetTexture(texture);
-
-            return actor;
+            else
+                image.copyTo(color);
+            return color;
         }
     };
 }}}
@@ -904,31 +847,69 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
     setColor(color);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, const Mat &image, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, InputArray _image, double scale, const Color &color)
 {
-    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    CV_Assert(!_image.empty() && _image.depth() == CV_8U);
+    Mat image = CameraPositionUtils::ensureColorImage(_image);
+    image.at<Vec3b>(0, 0) = Vec3d(color.val); //workaround of VTK limitation
+
     double f_y = K(1,1), c_y = K(1,2);
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
     double fovy = 2.0 * atan2(c_y, f_y) * 180.0 / CV_PI;
     double far_end_height = 2.00 * c_y * scale / f_y;
     double aspect_ratio = image.cols/(double)image.rows;
+    double image_scale = far_end_height/image.rows;
+
+    WImage3D image_widget(image, Size2d(image.size()) * image_scale);
+    image_widget.applyTransform(Affine3d().translate(Vec3d(0, 0, scale)));
+    vtkSmartPointer<vtkPolyData> plane = getPolyData(image_widget);
 
     vtkSmartPointer<vtkPolyData> frustum = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
 
-    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(frustum, far_end_height, image, scale, color);
+    // Frustum needs to be textured or else it can't be combined with image
+    vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    frustum_texture->SetInputConnection(frustum->GetProducerPort());
+    frustum_texture->SetSRange(0.0, 0.0); // Texture mapping with only one pixel
+    frustum_texture->SetTRange(0.0, 0.0); // from the image to have constant color
+
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+    append_filter->AddInputConnection(frustum_texture->GetOutputPort());
+    append_filter->AddInputConnection(plane->GetProducerPort());
+
+    vtkSmartPointer<vtkActor> actor = getActor(image_widget);
+    actor->GetMapper()->SetInputConnection(append_filter->GetOutputPort());
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, const Mat &image, double scale, const Color &color)
+cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, InputArray _image, double scale, const Color &color)
 {
-    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    CV_Assert(!_image.empty() && _image.depth() == CV_8U);
+    Mat image = CameraPositionUtils::ensureColorImage(_image);
+    image.at<Vec3b>(0, 0) = Vec3d(color.val); //workaround of VTK limitation
+
     double fovy = fov[1] * 180.0 / CV_PI;
     double far_end_height = 2.0 * scale * tan(fov[1] * 0.5);
     double aspect_ratio = image.cols/(double)image.rows;
+    double image_scale = far_end_height/image.rows;
+
+    WImage3D image_widget(image, Size2d(image.size()) * image_scale);
+    image_widget.applyTransform(Affine3d().translate(Vec3d(0, 0, scale)));
+    vtkSmartPointer<vtkPolyData> plane = getPolyData(image_widget);
 
     vtkSmartPointer<vtkPolyData> frustum = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
 
-    vtkSmartPointer<vtkActor> actor = CameraPositionUtils::projectImage(frustum, far_end_height, image, scale, color);
+    // Frustum needs to be textured or else it can't be combined with image
+    vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    frustum_texture->SetInputConnection(frustum->GetProducerPort());
+    frustum_texture->SetSRange(0.0, 0.0); // Texture mapping with only one pixel
+    frustum_texture->SetTRange(0.0, 0.0); // from the image to have constant color
+
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+    append_filter->AddInputConnection(frustum_texture->GetOutputPort());
+    append_filter->AddInputConnection(plane->GetProducerPort());
+
+    vtkSmartPointer<vtkActor> actor = getActor(image_widget);
+    actor->GetMapper()->SetInputConnection(append_filter->GetOutputPort());
     WidgetAccessor::setProp(*this, actor);
 }
 

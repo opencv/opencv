@@ -256,9 +256,9 @@ namespace cv
             //! Creates frustum based on the field of view at the origin
             WCameraPosition(const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Matx33d &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Matx33d &K, InputArray image, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Vec2d &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Vec2d &fov, InputArray image, double scale = 1.0, const Color &color = Color::white());
         };
 
         /////////////////////////////////////////////////////////////////////////////
