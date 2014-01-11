@@ -112,15 +112,8 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
     source->SetColorCloud(cloud, colors);
 
-    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->SetMatrix(pose.matrix.val);
+    vtkSmartPointer<vtkPolyData> polydata = VtkUtils::TransformPolydata(source->GetOutputPort(), pose);
 
-    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    transform_filter->SetInputConnection(source->GetOutputPort());
-    transform_filter->SetTransform(transform);
-    transform_filter->Update();
-
-    vtkSmartPointer<vtkPolyData> polydata = transform_filter->GetOutput();
     vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert("Incompatible widget type." && actor);
 
