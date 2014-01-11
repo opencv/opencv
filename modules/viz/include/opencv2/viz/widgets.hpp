@@ -171,6 +171,16 @@ namespace cv
             WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
         };
 
+        class CV_EXPORTS WCone : public Widget3D
+        {
+        public:
+            //! create default cone, oriented along x-axis with center of its base located at origin
+            WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
+
+            //! creates repositioned cone
+            WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
+        };
+
         class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
@@ -341,6 +351,7 @@ namespace cv
         template<> CV_EXPORTS WCylinder Widget::cast<WCylinder>();
         template<> CV_EXPORTS WArrow Widget::cast<WArrow>();
         template<> CV_EXPORTS WCircle Widget::cast<WCircle>();
+        template<> CV_EXPORTS WCone Widget::cast<WCone>();
         template<> CV_EXPORTS WCube Widget::cast<WCube>();
         template<> CV_EXPORTS WCoordinateSystem Widget::cast<WCoordinateSystem>();
         template<> CV_EXPORTS WPolyLine Widget::cast<WPolyLine>();

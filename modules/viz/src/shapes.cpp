@@ -254,6 +254,46 @@ template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+/// WCone widget implementation
+
+cv::viz::WCone::WCone(double length, double radius, int resolution, const Color &color)
+{
+    vtkSmartPointer<vtkConeSource> cone_source = vtkSmartPointer<vtkConeSource>::New();
+    cone_source->SetCenter(length*0.5, 0.0, 0.0);
+    cone_source->SetHeight(length);
+    cone_source->SetRadius(radius);
+    cone_source->SetResolution(resolution);
+    cone_source->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, cone_source->GetOutput());
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+cv::viz::WCone::WCone(double radius, const Point3d& center, const Point3d& tip, int resolution, const Color &color)
+{
+    Vec3d arbitrary = get_random_vec();
+    Vec3d xvec = normalized(Vec3d(tip - center));
+    Vec3d zvec = normalized(xvec.cross(arbitrary));
+    Vec3d yvec = zvec.cross(xvec);
+
+    WCone circle(norm(tip - center), radius, resolution, color);
+    circle.applyTransform(makeTransformToGlobal(xvec, yvec, zvec, center));
+    *this = circle;
+}
+
+template<> cv::viz::WCone cv::viz::Widget::cast<cv::viz::WCone>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<WCone&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
 cv::viz::WCylinder::WCylinder(const Point3d& axis_point1, const Point3d& axis_point2, double radius, int numsides, const Color &color)
