@@ -182,18 +182,17 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     arrow_source->SetTipRadius(thickness * 3.0);
     arrow_source->SetTipLength(thickness * 10.0);
 
-    RNG rng = theRNG();
-    Vec3d arbitrary(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-    Vec3d startPoint(pt1.x, pt1.y, pt1.z), endPoint(pt2.x, pt2.y, pt2.z);
+    Vec3d arbitrary = get_random_vec();
+    Vec3d start_point(pt1.x, pt1.y, pt1.z), end_point(pt2.x, pt2.y, pt2.z);
 
-    double length = norm(endPoint - startPoint);
+    double length = norm(end_point - start_point);
 
-    Vec3d xvec = normalized(endPoint - startPoint);
+    Vec3d xvec = normalized(end_point - start_point);
     Vec3d zvec = normalized(xvec.cross(arbitrary));
     Vec3d yvec = zvec.cross(xvec);
 
     Matx33d R = makeTransformToGlobal(xvec, yvec, zvec).rotation();
-    Affine3d transform_with_scale(R * length, startPoint);
+    Affine3d transform_with_scale(R * length, start_point);
 
     vtkSmartPointer<vtkPolyData> polydata = VtkUtils::TransformPolydata(arrow_source->GetOutputPort(), transform_with_scale);
 
@@ -216,32 +215,36 @@ template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
-cv::viz::WCircle::WCircle(const Point3d& pt, double radius, double thickness, const Color& color)
+cv::viz::WCircle::WCircle(double radius, double thickness, const Color &color)
 {
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New();
-    // Maybe the resolution should be lower e.g. 50 or 25
-    disk->SetCircumferentialResolution(50);
+    disk->SetCircumferentialResolution(30);
     disk->SetInnerRadius(radius - thickness);
     disk->SetOuterRadius(radius + thickness);
-
-    // Set the circle origin
-    vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
-    t->Identity();
-    t->Translate(pt.x, pt.y, pt.z);
-
-    vtkSmartPointer<vtkTransformPolyDataFilter> tf = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    tf->SetTransform(t);
-    tf->SetInputConnection(disk->GetOutputPort());
-    tf->Update();
+    disk->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, tf->GetOutput());
+    VtkUtils::SetInputData(mapper, disk->GetOutput());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->GetProperty()->LightingOff();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
+
+}
+
+cv::viz::WCircle::WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness, const Color &color)
+{
+    Vec3d arbitrary = get_random_vec();
+    Vec3d zvec = normalized(normal);
+    Vec3d xvec = normalized(zvec.cross(arbitrary));
+    Vec3d yvec = zvec.cross(xvec);
+
+    WCircle circle(radius, thickness, color);
+    circle.applyTransform(makeTransformToGlobal(xvec, yvec, zvec, center));
+    *this = circle;
 }
 
 template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
