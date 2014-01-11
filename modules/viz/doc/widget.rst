@@ -390,7 +390,7 @@ This 3D Widget defines a cylinder. ::
     class CV_EXPORTS WCylinder : public Widget3D
     {
     public:
-        WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+        WCylinder(const Point3d& axis_point1, const Point3d& axis_point2, double radius, int numsides = 30, const Color &color = Color::white());
     };
 
 viz::WCylinder::WCylinder
@@ -399,8 +399,8 @@ Constructs a WCylinder.
 
 .. ocv:function:: WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white())
 
-    :param pt_on_axis: A point on the axis of the cylinder.
-    :param axis_direction: Direction of the axis of the cylinder.
+    :param axis_point1: A point1 on the axis of the cylinder.
+    :param axis_point2: A point2 on the axis of the cylinder.
     :param radius: Radius of the cylinder.
     :param numsides: Resolution of the cylinder.
     :param color: :ocv:class:`Color` of the cylinder.

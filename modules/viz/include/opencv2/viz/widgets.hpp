@@ -164,7 +164,7 @@ namespace cv
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            //! creates default circle centred at origin with normal along z-axis
+            //! creates default planar circle centred at origin with plane normal along z-axis
             WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
 
             //! creates repositioned circle
@@ -174,7 +174,7 @@ namespace cv
         class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
-            WCylinder(const Point3d& pt_on_axis, const Point3d& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+            WCylinder(const Point3d& axis_point1, const Point3d& axis_point2, double radius, int numsides = 30, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCube : public Widget3D

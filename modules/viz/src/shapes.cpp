@@ -256,17 +256,16 @@ template<> cv::viz::WCircle cv::viz::Widget::cast<cv::viz::WCircle>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-cv::viz::WCylinder::WCylinder(const Point3d& pt_on_axis, const Point3d& axis_direction, double radius, int numsides, const Color &color)
+cv::viz::WCylinder::WCylinder(const Point3d& axis_point1, const Point3d& axis_point2, double radius, int numsides, const Color &color)
 {
-    const Point3d pt2 = pt_on_axis + axis_direction;
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
-    line->SetPoint1(pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
-    line->SetPoint2(pt2.x, pt2.y, pt2.z);
+    line->SetPoint1(axis_point1.x, axis_point1.y, axis_point1.z);
+    line->SetPoint2(axis_point2.x, axis_point2.y, axis_point2.z);
 
     vtkSmartPointer<vtkTubeFilter> tuber = vtkSmartPointer<vtkTubeFilter>::New();
     tuber->SetInputConnection(line->GetOutputPort());
-    tuber->SetRadius(radius);
     tuber->SetNumberOfSides(numsides);
+    tuber->SetRadius(radius);
     tuber->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -290,16 +289,24 @@ template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>()
 
 cv::viz::WCube::WCube(const Point3d& min_point, const Point3d& max_point, bool wire_frame, const Color &color)
 {
+    double bounds[6];
+    bounds[0] = std::min(min_point.x, max_point.x);
+    bounds[1] = std::max(min_point.x, max_point.x);
+    bounds[2] = std::min(min_point.y, max_point.y);
+    bounds[3] = std::max(min_point.y, max_point.y);
+    bounds[4] = std::min(min_point.z, max_point.z);
+    bounds[5] = std::max(min_point.z, max_point.z);
+
     vtkSmartPointer<vtkPolyDataAlgorithm> cube;
     if (wire_frame)
     {
         cube = vtkSmartPointer<vtkOutlineSource>::New();
-        vtkOutlineSource::SafeDownCast(cube)->SetBounds(min_point.x, max_point.x, min_point.y, max_point.y, min_point.z, max_point.z);
+        vtkOutlineSource::SafeDownCast(cube)->SetBounds(bounds);
     }
     else
     {
         cube = vtkSmartPointer<vtkCubeSource>::New();
-        vtkCubeSource::SafeDownCast(cube)->SetBounds(min_point.x, max_point.x, min_point.y, max_point.y, min_point.z, max_point.z);
+        vtkCubeSource::SafeDownCast(cube)->SetBounds(bounds);
     }
     cube->Update();
 
