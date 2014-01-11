@@ -299,6 +299,8 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("cir2", WCircle(0.5, Point3d(0.5, 0.0, 0.0), Vec3d(1.0, 0.0, 0.0), 0.01, Color::apricot()));
 
     viz.showWidget("cyl0", WCylinder(Vec3d(-0.5, 0.5, -0.5), Vec3d(0.5, 0.5, -0.5), 0.125, 30, Color::brown()));
+    viz.showWidget("con0", WCone(0.25, 0.125, 6, Color::azure()));
+    viz.showWidget("con1", WCone(0.125, Point3d(0.5, -0.5, 0.5), Point3d(0.5, -1.0, 0.5), 6, Color::turquoise()));
     viz.spin();
 }
 

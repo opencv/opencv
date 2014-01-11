@@ -349,7 +349,7 @@ viz::WCircle
 
 This 3D Widget defines a circle. ::
 
-   class CV_EXPORTS WCircle : public Widget3D
+    class CV_EXPORTS WCircle : public Widget3D
     {
     public:
         //! creates default planar circle centred at origin with plane normal along z-axis
@@ -381,6 +381,46 @@ Constructs repositioned planar circle.
     :param thickness: Thickness of the circle.
     :param color: :ocv:class:`Color` of the circle.    
     
+    
+viz::WCone
+-----------------
+.. ocv:class:: WCone
+
+This 3D Widget defines a cone. ::
+
+    class CV_EXPORTS WCone : public Widget3D
+    {
+    public:
+        //! create default cone, oriented along x-axis with center of its base located at origin
+        WCone(double lenght, double radius, int resolution = 6.0, const Color &color = Color::white());
+
+        //! creates repositioned cone
+        WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
+    };
+
+viz::WCone::WCone
+-------------------------------
+Constructs default cone oriented along x-axis with center of its base located at origin
+
+.. ocv:function:: WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
+
+    :param length: Length of the cone.    
+    :param radius: Radius of the cone.    
+    :param resolution: Resolution of the cone.
+    :param color: :ocv:class:`Color` of the cone.
+
+viz::WCone::WCone
+-------------------------------
+Constructs repositioned planar cone.
+
+.. ocv:function:: WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
+
+    :param radius: Radius of the cone.    
+    :param center: Center of the cone base.
+    :param tip: Tip of the cone.
+    :param resolution: Resolution of the cone.
+    :param color: :ocv:class:`Color` of the cone.    
+          
 viz::WCylinder
 --------------
 .. ocv:class:: WCylinder
