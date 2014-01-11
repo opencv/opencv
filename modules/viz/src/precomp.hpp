@@ -209,6 +209,12 @@ namespace cv
             return scaled_color;
         }
 
+        inline Vec3d get_random_vec(double from = -10.0, double to = 10.0)
+        {
+            RNG& rng = theRNG();
+            return Vec3d(rng.uniform(from, to), rng.uniform(from, to), rng.uniform(from, to));
+        }
+
         struct VtkUtils
         {
             template<class Filter>
