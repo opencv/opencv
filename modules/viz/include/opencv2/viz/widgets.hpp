@@ -145,8 +145,11 @@ namespace cv
         class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            WPlane(const Vec4d& coefs, double size = 1.0, const Color &color = Color::white());
-            WPlane(const Vec4d& coefs, const Point3d& pt, double size = 1.0, const Color &color = Color::white());
+            //! created default plane with center point at origin and normal oriented along z-axis
+            WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+
+            //! repositioned plane
+            WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
         };
 
         class CV_EXPORTS WSphere : public Widget3D

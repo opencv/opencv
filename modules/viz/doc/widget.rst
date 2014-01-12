@@ -274,25 +274,30 @@ This 3D Widget defines a finite plane. ::
     class CV_EXPORTS WPlane : public Widget3D
     {
     public:
-        WPlane(const Vec4d& coefs, double size = 1.0, const Color &color = Color::white());
-        WPlane(const Vec4d& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+        //! created default plane with center point at origin and normal oriented along z-axis
+        WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+
+        //! repositioned plane
+        WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
     };
 
 viz::WPlane::WPlane
 -------------------
-Constructs a WPlane.
+Constructs a default plane with center point at origin and normal oriented along z-axis.
 
-.. ocv:function:: WPlane(const Vec4d& coefs, double size = 1.0, const Color &color = Color::white())
+.. ocv:function:: WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
 
-    :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
-    :param size: Size of the plane.
+    :param size: Size of the plane
     :param color: :ocv:class:`Color` of the plane.
 
-.. ocv:function:: WPlane(const Vec4d& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white())
+viz::WPlane::WPlane
+Constructs a repositioned plane
+        
+.. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
 
-    :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
-    :param pt: Position of the plane.
-    :param size: Size of the plane.
+    :param center: Center of the plane
+    :param normal: Plane normal orientation
+    :param new_plane_yaxis: Up-vector. New orientation of plane y-axis.
     :param color: :ocv:class:`Color` of the plane.
 
 viz::WSphere
