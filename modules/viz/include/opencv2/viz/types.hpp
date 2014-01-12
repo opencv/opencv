@@ -113,6 +113,8 @@ namespace cv
             //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
             Mat polygons;
 
+            Mat texture, tcoords;
+
             //! Loads mesh from a given ply file
             static Mesh load(const String& file);
         };
