@@ -1392,7 +1392,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 
           // Set the wheel delta of mouse wheel to be in the upper word of 'event'
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-          event |= (delta << 16);
+          flags |= (delta << 16);
 
           POINT pt;
           {
