@@ -149,7 +149,8 @@ namespace cv
             WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
 
             //! repositioned plane
-            WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+            WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,
+                   const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
         };
 
         class CV_EXPORTS WSphere : public Widget3D
@@ -257,10 +258,12 @@ namespace cv
         class CV_EXPORTS WGrid : public Widget3D
         {
         public:
-            //! Creates grid at the origin
-            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-            //! Creates grid based on the plane equation
-            WGrid(const Vec4d &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            //! Creates grid at the origin and normal oriented along z-axis
+            WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
+
+            //! Creates repositioned grid
+            WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,
+                  const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCameraPosition : public Widget3D
