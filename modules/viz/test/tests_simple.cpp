@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::viz;
 
-TEST(Viz, DISABLED_show_cloud_bluberry)
+TEST(Viz, show_cloud_bluberry)
 {
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
@@ -73,7 +73,7 @@ TEST(Viz, show_cloud_random_color)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_cloud_masked)
+TEST(Viz, show_cloud_masked)
 {
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
@@ -90,7 +90,7 @@ TEST(Viz, DISABLED_show_cloud_masked)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_cloud_collection)
+TEST(Viz, show_cloud_collection)
 {
     Mat cloud = readCloud(get_dragon_ply_file_path());
 
@@ -105,7 +105,7 @@ TEST(Viz, DISABLED_show_cloud_collection)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_mesh)
+TEST(Viz, show_mesh)
 {
     Mesh mesh = Mesh::load(get_dragon_ply_file_path());
 
@@ -117,7 +117,7 @@ TEST(Viz, DISABLED_show_mesh)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_mesh_random_colors)
+TEST(Viz, show_mesh_random_colors)
 {
     Mesh mesh = Mesh::load(get_dragon_ply_file_path());
     theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
@@ -131,7 +131,7 @@ TEST(Viz, DISABLED_show_mesh_random_colors)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_polyline)
+TEST(Viz, show_polyline)
 {
     Mat polyline(1, 32, CV_64FC3);
     for(size_t i = 0; i < polyline.total(); ++i)
@@ -143,7 +143,7 @@ TEST(Viz, DISABLED_show_polyline)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_sampled_normals)
+TEST(Viz, show_sampled_normals)
 {
     Mesh mesh = Mesh::load(get_dragon_ply_file_path());
     computeNormals(mesh, mesh.normals);
@@ -157,7 +157,7 @@ TEST(Viz, DISABLED_show_sampled_normals)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_trajectories)
+TEST(Viz, show_trajectories)
 {
     std::vector<Affine3d> path = generate_test_trajectory<double>(), sub0, sub1, sub2, sub3, sub4, sub5;
 
@@ -189,7 +189,7 @@ TEST(Viz, DISABLED_show_trajectories)
     //viz.spin();
 }
 
-TEST(Viz, DISABLED_show_trajectory_reposition)
+TEST(Viz, show_trajectory_reposition)
 {
     std::vector<Affine3f> path = generate_test_trajectory<float>();
 
@@ -199,7 +199,7 @@ TEST(Viz, DISABLED_show_trajectory_reposition)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_camera_positions)
+TEST(Viz, show_camera_positions)
 {
     Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
@@ -222,7 +222,7 @@ TEST(Viz, DISABLED_show_camera_positions)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_overlay_image)
+TEST(Viz, show_overlay_image)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
     Mat gray = make_gray(lena);
@@ -253,7 +253,7 @@ TEST(Viz, DISABLED_show_overlay_image)
 }
 
 
-TEST(Viz, DISABLED_show_image_method)
+TEST(Viz, show_image_method)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
 
