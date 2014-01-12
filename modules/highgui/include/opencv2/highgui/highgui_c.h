@@ -186,9 +186,7 @@ enum
 };
 
 
-#define CV_GET_WHEEL_DELTA(event) ((short)((event >> 16) & 0xffff)) // upper 16 bits
-#define CV_GET_MOUSEWHEEL_EVENT(event) (event & 0xffff) // lower 16 bits
-
+#define CV_GET_WHEEL_DELTA(flags) ((short)((flags >> 16) & 0xffff)) // upper 16 bits
 
 typedef void (CV_CDECL *CvMouseCallback )(int event, int x, int y, int flags, void* param);
 
