@@ -309,6 +309,8 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("plane1", WPlane(Size2d(0.25, 0.75)));
     viz.showWidget("plane2", WPlane(Vec3d(0.5, -0.5, -0.5), Vec3d(0.0, 1.0, 1.0), Vec3d(1.0, 1.0, 0.0), Size2d(1.0, 0.5), Color::gold()));
 
+    viz.showWidget("grid1", WGrid(Vec2i(7,7), Vec2d::all(0.75), Color::gray()), Affine3d().translate(Vec3d(0.0, 0.0, -1.0)));
+
     viz.spinOnce(1500, true);
     viz.getWidget("text2d").cast<WText>().setText("New simple text");
     viz.getWidget("text3d").cast<WText3D>().setText("Updated text 3D");
