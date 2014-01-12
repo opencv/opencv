@@ -62,6 +62,8 @@ public:
     Widget getWidget(const String &id) const;
     void removeAllWidgets();
 
+    void showImage(InputArray image, const Size& window_size);
+
     void setWidgetPose(const String &id, const Affine3d &pose);
     void updateWidgetPose(const String &id, const Affine3d &pose);
     Affine3d getWidgetPose(const String &id) const;
@@ -108,6 +110,9 @@ public:
     void setFullScreen(bool mode);
     String getWindowName() const;
     void setBackgroundColor(const Color& color);
+
+    void setBackgroundTexture(InputArray image);
+    void setBackgroundMeshLab();
 
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);

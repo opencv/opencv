@@ -102,29 +102,6 @@ template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// plane widget implementation
 
-namespace cv { namespace viz { namespace
-{
-    struct PlaneUtils
-    {
-        template<typename _Tp>
-        static vtkSmartPointer<vtkTransformPolyDataFilter> setSize(const Vec<_Tp, 3> &center, vtkSmartPointer<vtkAlgorithmOutput> poly_data_port, double size)
-        {
-            vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-            transform->PreMultiply();
-            transform->Translate(center[0], center[1], center[2]);
-            transform->Scale(size, size, size);
-            transform->Translate(-center[0], -center[1], -center[2]);
-
-            vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-            transform_filter->SetInputConnection(poly_data_port);
-            transform_filter->SetTransform(transform);
-            transform_filter->Update();
-
-            return transform_filter;
-        }
-    };
-}}}
-
 cv::viz::WPlane::WPlane(const Size2d& size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();

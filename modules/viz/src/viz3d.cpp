@@ -113,15 +113,7 @@ void cv::viz::Viz3d::removeWidget(const String &id) { impl_->removeWidget(id); }
 cv::viz::Widget cv::viz::Viz3d::getWidget(const String &id) const { return impl_->getWidget(id); }
 void cv::viz::Viz3d::removeAllWidgets() { impl_->removeAllWidgets(); }
 
-
-void cv::viz::Viz3d::showImage(InputArray image, const Size& window_size)
-{
-    removeAllWidgets();
-    if (window_size.width > 0 && window_size.height > 0)
-        setWindowSize(window_size);
-
-    showWidget("showImage", WImageOverlay(image, Rect(Point(0,0), getWindowSize())));
-}
+void cv::viz::Viz3d::showImage(InputArray image, const Size& window_size) { impl_->showImage(image, window_size); }
 
 void cv::viz::Viz3d::setWidgetPose(const String &id, const Affine3d &pose) { impl_->setWidgetPose(id, pose); }
 void cv::viz::Viz3d::updateWidgetPose(const String &id, const Affine3d &pose) { impl_->updateWidgetPose(id, pose); }
@@ -145,6 +137,9 @@ void cv::viz::Viz3d::saveScreenshot(const String &file) { impl_->saveScreenshot(
 void cv::viz::Viz3d::setWindowPosition(const Point& window_position) { impl_->setWindowPosition(window_position); }
 void cv::viz::Viz3d::setFullScreen(bool mode) { impl_->setFullScreen(mode); }
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
+
+void cv::viz::Viz3d::setBackgroundTexture(InputArray image) { impl_->setBackgroundTexture(image); }
+void cv::viz::Viz3d::setBackgroundMeshLab() {impl_->setBackgroundMeshLab(); }
 
 void cv::viz::Viz3d::setRenderingProperty(const String &id, int property, double value) { getWidget(id).setRenderingProperty(property, value); }
 double cv::viz::Viz3d::getRenderingProperty(const String &id, int property) { return getWidget(id).getRenderingProperty(property); }
