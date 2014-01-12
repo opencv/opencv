@@ -269,6 +269,15 @@ void cv::viz::Viz3d::VizImpl::removeAllWidgets()
     widget_actor_map_->clear();
     renderer_->RemoveAllViewProps();
 }
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::showImage(InputArray image, const Size& window_size)
+{
+    removeAllWidgets();
+    if (window_size.width > 0 && window_size.height > 0)
+        setWindowSize(window_size);
+
+    showWidget("showImage", WImageOverlay(image, Rect(Point(0,0), getWindowSize())));
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> actor)
@@ -293,6 +302,55 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
 {
     Color c = vtkcolor(color);
     renderer_->SetBackground(c.val);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
+{
+    if (image.empty())
+    {
+        renderer_->SetBackgroundTexture(0);
+        renderer_->TexturedBackgroundOff();
+        return;
+    }
+
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
+
+    vtkSmartPointer<vtkImageFlip> image_flip = vtkSmartPointer<vtkImageFlip>::New();
+    image_flip->SetFilteredAxis(1); // Vertical flip
+    image_flip->SetInputConnection(source->GetOutputPort());
+
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(image_flip->GetOutputPort());
+    //texture->Update();
+
+    renderer_->SetBackgroundTexture(texture);
+    renderer_->TexturedBackgroundOn();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
+{
+    static Color up(2, 1, 1), down(240, 120, 120);
+    static Mat meshlab_texture;
+
+    if (meshlab_texture.empty())
+    {
+        meshlab_texture.create(2048, 2048, CV_8UC4);
+
+        for (int y = 0; y < meshlab_texture.rows; ++y)
+        {
+            double alpha = (y+1)/(double)meshlab_texture.rows;
+            Vec4b color = up * (1 - alpha) + down * alpha;
+
+            Vec4b *row = meshlab_texture.ptr<Vec4b>(y);
+            for(int x = 0; x < meshlab_texture.cols; ++x)
+                row[x] = color;
+        }
+
+    }
+    setBackgroundTexture(meshlab_texture);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

@@ -99,6 +99,8 @@ namespace cv
             void setWindowPosition(const Point& window_position);
             void setFullScreen(bool mode = true);
             void setBackgroundColor(const Color& color = Color::black());
+            void setBackgroundTexture(InputArray image = noArray());
+            void setBackgroundMeshLab();
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);

@@ -57,7 +57,7 @@ TEST(Viz, DISABLED_show_cloud_bluberry)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_cloud_random_color)
+TEST(Viz, show_cloud_random_color)
 {
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
@@ -67,6 +67,7 @@ TEST(Viz, DISABLED_show_cloud_random_color)
     Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
 
     Viz3d viz("show_cloud_random_color");
+    viz.setBackgroundMeshLab();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, colors), pose);
     viz.spin();
@@ -229,6 +230,7 @@ TEST(Viz, DISABLED_show_overlay_image)
     Size2d half_lsize = Size2d(lena.size()) * 0.5;
 
     Viz3d viz("show_overlay_image");
+    viz.setBackgroundMeshLab();
     Size vsz = viz.getWindowSize();
 
     viz.showWidget("coos", WCoordinateSystem());
@@ -264,12 +266,13 @@ TEST(Viz, DISABLED_show_image_method)
     cv::viz::imshow("show_image_method", make_gray(lena)).spin();
 }
 
-TEST(Viz, DISABLED_show_image_3d)
+TEST(Viz, show_image_3d)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
     Mat gray = make_gray(lena);
 
     Viz3d viz("show_image_3d");
+    viz.setBackgroundMeshLab();
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
     viz.showWidget("arr0", WArrow(Vec3d(0.5, 0.0, 0.0), Vec3d(1.5, 0.0, 0.0), 0.009, Color::raspberry()));
@@ -291,6 +294,7 @@ TEST(Viz, DISABLED_show_image_3d)
 TEST(Viz, show_simple_widgets)
 {
     Viz3d viz("show_simple_widgets");
+    viz.setBackgroundMeshLab();
 
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
@@ -317,15 +321,16 @@ TEST(Viz, show_simple_widgets)
     viz.spin();
 }
 
-TEST(Viz, DISABLED_show_follower)
+TEST(Viz, show_follower)
 {
     Viz3d viz("show_follower");
 
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
     viz.showWidget("t3d_2", WText3D("Simple 3D follower", Point3d(-0.5, -0.5, 0.5), 0.125, true,  Color::green()));
+    viz.setBackgroundMeshLab();
     viz.spinOnce(1500, true);
-    //viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");
+    viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");
     viz.spin();
 }
 
