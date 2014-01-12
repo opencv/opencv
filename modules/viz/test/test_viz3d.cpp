@@ -51,8 +51,9 @@ TEST(Viz_viz3d, develop)
     //theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
 
     cv::viz::Viz3d viz("abc");
-    viz.setBackgroundColor(cv::viz::Color::mlab());
+    viz.setBackgroundMeshLab();
     viz.showWidget("coo", cv::viz::WCoordinateSystem(1));
+    viz.showWidget("cloud", cv::viz::WCloud(cloud));
 
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
