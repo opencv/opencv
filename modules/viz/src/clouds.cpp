@@ -73,14 +73,49 @@ cv::viz::WCloud::WCloud(InputArray cloud, InputArray colors)
 
 cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
 {
+    WCloud cloud_widget(cloud, Mat(cloud.size(), CV_8UC3, color));
+    *this = cloud_widget;
+}
+
+
+template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<WCloud&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Painted Cloud Widget implementation
+
+cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud)
+{
     vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
     cloud_source->SetCloud(cloud);
     cloud_source->Update();
 
+    Vec6d bounds(cloud_source->GetOutput()->GetPoints()->GetBounds());
+
+    WPaintedCloud cloud_widget(cloud, Vec3d(bounds[0], bounds[2], bounds[4]), Vec3d(bounds[1], bounds[3], bounds[5]));
+    *this = cloud_widget;
+}
+
+cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2)
+{
+    vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
+    cloud_source->SetCloud(cloud);
+
+    vtkSmartPointer<vtkElevationFilter> elevation = vtkSmartPointer<vtkElevationFilter>::New();
+    elevation->SetInputConnection(cloud_source->GetOutputPort());
+    elevation->SetLowPoint(p1.x, p1.y, p1.z);
+    elevation->SetHighPoint(p2.x, p2.y, p2.z);
+    elevation->SetScalarRange(0.0, 1.0);
+    elevation->Update();
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, cloud_source->GetOutput());
+    VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
     mapper->ImmediateModeRenderingOff();
-    mapper->ScalarVisibilityOff();
+    mapper->ScalarVisibilityOn();
+    mapper->SetColorModeToMapScalars();
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->GetProperty()->SetInterpolationToFlat();
@@ -88,13 +123,52 @@ cv::viz::WCloud::WCloud(InputArray cloud, const Color &color)
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
-template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
+cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2, const Color& c1, const Color c2)
+{
+    vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
+    cloud_source->SetCloud(cloud);
+
+    vtkSmartPointer<vtkElevationFilter> elevation = vtkSmartPointer<vtkElevationFilter>::New();
+    elevation->SetInputConnection(cloud_source->GetOutputPort());
+    elevation->SetLowPoint(p1.x, p1.y, p1.z);
+    elevation->SetHighPoint(p2.x, p2.y, p2.z);
+    elevation->SetScalarRange(0.0, 1.0);
+    elevation->Update();
+
+    Color vc1 = vtkcolor(c1), vc2 = vtkcolor(c2);
+    vtkSmartPointer<vtkColorTransferFunction> color_transfer = vtkSmartPointer<vtkColorTransferFunction>::New();
+    color_transfer->SetColorSpaceToRGB();
+    color_transfer->AddRGBPoint(0.0, vc1[0], vc1[1], vc1[2]);
+    color_transfer->AddRGBPoint(1.0, vc2[0], vc2[1], vc2[2]);
+    color_transfer->SetScaleToLinear();
+    color_transfer->Build();
+
+    //if in future some need to replace color table with real scalars, then this can be done usine next calls:
+    //vtkDataArray *float_scalars = vtkPolyData::SafeDownCast(elevation->GetOutput())->GetPointData()->GetArray("Elevation");
+    //vtkSmartPointer<vtkPolyData> polydata = cloud_source->GetOutput();
+    //polydata->GetPointData()->SetScalars(color_transfer->MapScalars(float_scalars, VTK_COLOR_MODE_DEFAULT, 0));
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
+    mapper->ImmediateModeRenderingOff();
+    mapper->ScalarVisibilityOn();
+    mapper->SetColorModeToMapScalars();
+    mapper->SetLookupTable(color_transfer);
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->GetProperty()->SetInterpolationToFlat();
+    actor->GetProperty()->BackfaceCullingOn();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
+}
+
+template<> cv::viz::WPaintedCloud cv::viz::Widget::cast<cv::viz::WPaintedCloud>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<WCloud&>(widget);
+    return static_cast<WPaintedCloud&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

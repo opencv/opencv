@@ -95,13 +95,27 @@ TEST(Viz, show_cloud_collection)
     Mat cloud = readCloud(get_dragon_ply_file_path());
 
     WCloudCollection ccol;
-    ccol.addCloud(cloud, Color::white(), Affine3d().translate(Vec3d(0, 0, 0)).rotate(Vec3d(1.57, 0, 0)));
+    ccol.addCloud(cloud, Color::white(), Affine3d().translate(Vec3d(0, 0, 0)).rotate(Vec3d(CV_PI/2, 0, 0)));
     ccol.addCloud(cloud, Color::blue(),  Affine3d().translate(Vec3d(1, 0, 0)));
     ccol.addCloud(cloud, Color::red(),   Affine3d().translate(Vec3d(2, 0, 0)));
 
     Viz3d viz("show_cloud_collection");
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("ccol", ccol);
+    viz.spin();
+}
+
+TEST(Viz, show_painted_clouds)
+{
+    Mat cloud = readCloud(get_dragon_ply_file_path());
+
+    Viz3d viz("show_painted_clouds");
+    viz.setBackgroundMeshLab();
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("cloud1", WPaintedCloud(cloud), Affine3d(Vec3d(0.0, -CV_PI/2, 0.0), Vec3d(-1.5, 0.0, 0.0)));
+    viz.showWidget("cloud2", WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0)), Affine3d(Vec3d(0.0, CV_PI/2, 0.0), Vec3d(1.5, 0.0, 0.0)));
+    viz.showWidget("cloud3", WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0), Color::blue(), Color::red()));
+    viz.showWidget("arrow", WArrow(Vec3d(0.0, 1.0, -1.0), Vec3d(0.0, 1.0, 1.0), 0.009, Color::raspberry()));
     viz.spin();
 }
 

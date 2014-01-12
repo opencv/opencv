@@ -323,6 +323,19 @@ namespace cv
             WCloud(InputArray cloud, const Color &color = Color::white());
         };
 
+        class CV_EXPORTS WPaintedCloud: public Widget3D
+        {
+        public:
+            //! Paint cloud with default gradient between cloud bounds points
+            WPaintedCloud(InputArray cloud);
+
+            //! Paint cloud with default gradient between given points
+            WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2);
+
+            //! Paint cloud with gradient specified by given colors between given points
+            WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2, const Color& c1, const Color c2);
+        };
+
         class CV_EXPORTS WCloudCollection : public Widget3D
         {
         public:
@@ -372,6 +385,7 @@ namespace cv
         template<> CV_EXPORTS WTrajectoryFrustums Widget::cast<WTrajectoryFrustums>();
         template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>();
         template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
+        template<> CV_EXPORTS WPaintedCloud Widget::cast<WPaintedCloud>();
         template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
         template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
         template<> CV_EXPORTS WMesh Widget::cast<WMesh>();
