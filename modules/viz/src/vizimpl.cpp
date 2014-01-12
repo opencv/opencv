@@ -302,6 +302,21 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
 {
     Color c = vtkcolor(color);
     renderer_->SetBackground(c.val);
+    renderer_->GradientBackgroundOff();
+}
+
+void  cv::viz::Viz3d::VizImpl::setBackgroundGradient(const Color& up, const Color& down)
+{
+    Color vtkup = vtkcolor(up), vtkdown = vtkcolor(down);
+    renderer_->SetBackground(vtkdown.val);
+    renderer_->SetBackground2(vtkup.val);
+    renderer_->GradientBackgroundOn();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
+{
+    setBackgroundGradient(Color(2, 1, 1), Color(240, 120, 120));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,30 +342,6 @@ void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
 
     renderer_->SetBackgroundTexture(texture);
     renderer_->TexturedBackgroundOn();
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
-{
-    static Color up(2, 1, 1), down(240, 120, 120);
-    static Mat meshlab_texture;
-
-    if (meshlab_texture.empty())
-    {
-        meshlab_texture.create(2048, 2048, CV_8UC4);
-
-        for (int y = 0; y < meshlab_texture.rows; ++y)
-        {
-            double alpha = (y+1)/(double)meshlab_texture.rows;
-            Vec4b color = up * (1 - alpha) + down * alpha;
-
-            Vec4b *row = meshlab_texture.ptr<Vec4b>(y);
-            for(int x = 0; x < meshlab_texture.cols; ++x)
-                row[x] = color;
-        }
-
-    }
-    setBackgroundTexture(meshlab_texture);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

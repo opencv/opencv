@@ -100,6 +100,7 @@ namespace cv
             void setFullScreen(bool mode = true);
             void setBackgroundColor(const Color& color = Color::black());
             void setBackgroundTexture(InputArray image = noArray());
+            void setBackgroundGradient(const Color& up, const Color& down);
             void setBackgroundMeshLab();
 
             void spin();

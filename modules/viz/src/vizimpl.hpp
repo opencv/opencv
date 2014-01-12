@@ -110,7 +110,7 @@ public:
     void setFullScreen(bool mode);
     String getWindowName() const;
     void setBackgroundColor(const Color& color);
-
+    void setBackgroundGradient(const Color& up, const Color& down);
     void setBackgroundTexture(InputArray image);
     void setBackgroundMeshLab();
 
