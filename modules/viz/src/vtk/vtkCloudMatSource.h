@@ -62,8 +62,9 @@ namespace cv
             vtkTypeMacro(vtkCloudMatSource,vtkPolyDataAlgorithm)
 
             virtual int SetCloud(InputArray cloud);
-            virtual int SetColorCloud(InputArray cloud, InputArray colors = noArray());
-            virtual int SetColorCloudNormals(InputArray cloud, InputArray colors = noArray(), InputArray normals = noArray());
+            virtual int SetColorCloud(InputArray cloud, InputArray colors);
+            virtual int SetColorCloudNormals(InputArray cloud, InputArray colors, InputArray normals);
+            virtual int SetColorCloudNormalsTCoords(InputArray cloud, InputArray colors, InputArray normals, InputArray tcoords);
 
         protected:
             vtkCloudMatSource();
@@ -75,6 +76,7 @@ namespace cv
             vtkSmartPointer<vtkCellArray> vertices;
             vtkSmartPointer<vtkUnsignedCharArray> scalars;
             vtkSmartPointer<vtkDataArray> normals;
+            vtkSmartPointer<vtkDataArray> tcoords;
         private:
             vtkCloudMatSource(const vtkCloudMatSource&);  // Not implemented.
             void operator=(const vtkCloudMatSource&);  // Not implemented.
@@ -84,6 +86,9 @@ namespace cv
 
             template<typename _Tn, typename _Msk>
             void filterNanNormalsCopy(const Mat& cloud_normals, const Mat& mask, int total);
+
+            template<typename _Tn, typename _Msk>
+            void filterNanTCoordsCopy(const Mat& tcoords, const Mat& mask, int total);
         };
     }
 }

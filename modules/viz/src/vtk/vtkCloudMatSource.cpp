@@ -128,7 +128,34 @@ int cv::viz::vtkCloudMatSource::SetColorCloudNormals(InputArray _cloud, InputArr
     else if (normals.depth() == CV_64F && cloud.depth() == CV_64F)
         filterNanNormalsCopy<double, double>(normals, cloud, total);
     else
-        CV_Assert(!"Unsupported normals type");
+        CV_Assert(!"Unsupported normals/cloud type");
+
+    return total;
+}
+
+int cv::viz::vtkCloudMatSource::SetColorCloudNormalsTCoords(InputArray _cloud, InputArray _colors, InputArray _normals, InputArray _tcoords)
+{
+    int total = SetColorCloudNormals(_cloud, _colors, _normals);
+
+    if (_tcoords.empty())
+        return total;
+
+    CV_Assert(_tcoords.depth() == CV_32F || _tcoords.depth() == CV_64F);
+    CV_Assert(_tcoords.channels() == 2 && _tcoords.size() == _cloud.size());
+
+    Mat cloud = _cloud.getMat();
+    Mat tcoords = _tcoords.getMat();
+
+    if (tcoords.depth() == CV_32F && cloud.depth() == CV_32F)
+        filterNanTCoordsCopy<float, float>(tcoords, cloud, total);
+    else if (tcoords.depth() == CV_32F && cloud.depth() == CV_64F)
+        filterNanTCoordsCopy<float, double>(tcoords, cloud, total);
+    else if (tcoords.depth() == CV_64F && cloud.depth() == CV_32F)
+        filterNanTCoordsCopy<double, float>(tcoords, cloud, total);
+    else if (tcoords.depth() == CV_64F && cloud.depth() == CV_64F)
+        filterNanTCoordsCopy<double, double>(tcoords, cloud, total);
+    else
+        CV_Assert(!"Unsupported tcoords/cloud type");
 
     return total;
 }
@@ -145,6 +172,9 @@ int cv::viz::vtkCloudMatSource::RequestData(vtkInformation *vtkNotUsed(request),
 
     if (normals)
         output->GetPointData()->SetNormals(normals);
+
+    if (tcoords)
+        output->GetPointData()->SetTCoords(tcoords);
 
     return 1;
 }
@@ -230,5 +260,27 @@ void cv::viz::vtkCloudMatSource::filterNanNormalsCopy(const Mat& cloud_normals, 
         for (; srow != send; srow += s_chs, mrow += m_chs)
             if (!isNan(mrow))
                 normals->SetTuple(pos++, srow);
+    }
+}
+
+template<typename _Tn, typename _Msk>
+void cv::viz::vtkCloudMatSource::filterNanTCoordsCopy(const Mat& _tcoords, const Mat& mask, int total)
+{   
+    typedef Vec<_Tn, 2> Vec2;
+    tcoords = vtkSmartPointer< VtkDepthTraits<_Tn>::array_type >::New();
+    tcoords->SetName("TextureCoordinates");
+    tcoords->SetNumberOfComponents(2);
+    tcoords->SetNumberOfTuples(total);
+
+    int pos = 0;
+    for (int y = 0; y < mask.rows; ++y)
+    {
+        const Vec2* srow = _tcoords.ptr<Vec2>(y);
+        const Vec2* send = srow + _tcoords.cols;
+        const _Msk* mrow = mask.ptr<_Msk>(y);
+
+        for (; srow != send; ++srow, mrow += mask.channels())
+            if (!isNan(mrow))
+                tcoords->SetTuple(pos++, srow->val);
     }
 }
