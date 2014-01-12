@@ -291,13 +291,14 @@ Constructs a default plane with center point at origin and normal oriented along
     :param color: :ocv:class:`Color` of the plane.
 
 viz::WPlane::WPlane
+-------------------
 Constructs a repositioned plane
         
-.. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+.. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
 
     :param center: Center of the plane
     :param normal: Plane normal orientation
-    :param new_plane_yaxis: Up-vector. New orientation of plane y-axis.
+    :param new_yaxis: Up-vector. New orientation of plane y-axis.
     :param color: :ocv:class:`Color` of the plane.
 
 viz::WSphere
@@ -388,7 +389,7 @@ Constructs repositioned planar circle.
     
     
 viz::WCone
------------------
+-------------------------------
 .. ocv:class:: WCone
 
 This 3D Widget defines a cone. ::
@@ -527,28 +528,32 @@ This 3D Widget defines a grid. ::
     class CV_EXPORTS WGrid : public Widget3D
     {
     public:
-        //! Creates grid at the origin
-        WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-        //! Creates grid based on the plane equation
-        WGrid(const Vec4d &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+        //! Creates grid at the origin and normal oriented along z-axis
+        WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
+
+        //! Creates repositioned grid
+        WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,
+              const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
     };
 
 viz::WGrid::WGrid
 ---------------------------
 Constructs a WGrid.
 
-.. ocv:function:: WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
+.. ocv:function::  WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
 
-    :param dimensions: Number of columns and rows, respectively.
-    :param spacing: Size of each column and row, respectively.
+    :param cells: Number of cell columns and rows, respectively.
+    :param cells_spacing: Size of each cell, respectively.
     :param color: :ocv:class:`Color` of the grid.
 
-.. ocv:function:  WGrid(const Vec4d &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
+.. ocv:function:  WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis, Vec2i &cells, const Vec2d &cells_spacing, const Color &color;
 
-    :param coeffs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
-    :param dimensions: Number of columns and rows, respectively.
-    :param spacing: Size of each column and row, respectively.
-    :param color: :ocv:class:`Color` of the grid.
+    :param center: Center of the grid
+    :param normal: Grid normal orientation
+    :param new_yaxis: Up-vector. New orientation of grid y-axis.
+    :param cells: Number of cell columns and rows, respectively.
+    :param cells_spacing: Size of each cell, respectively.
+    :param color: :ocv:class:`Color` of the grid..
 
 viz::WText3D
 ------------

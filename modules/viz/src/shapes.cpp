@@ -144,60 +144,15 @@ cv::viz::WPlane::WPlane(const Size2d& size, const Color &color)
     setColor(color);
 }
 
-cv::viz::WPlane::WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis, const Size2d& size, const Color &color)
+cv::viz::WPlane::WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis, const Size2d& size, const Color &color)
 {
     Vec3d zvec = normalize(normal);
-    Vec3d xvec = normalize(new_plane_yaxis.cross(zvec));
+    Vec3d xvec = normalize(new_yaxis.cross(zvec));
     Vec3d yvec = zvec.cross(xvec);
 
     WPlane plane(size, color);
     plane.applyTransform(makeTransformToGlobal(xvec, yvec, zvec, center));
     *this = plane;
-}
-
-cv::viz::WPlane::WPlane(const Vec4d& coefs, double size, const Color &color)
-{
-    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-    plane->SetNormal(coefs[0], coefs[1], coefs[2]);
-    double norm = cv::norm(Vec3d(coefs.val));
-    plane->Push(-coefs[3] / norm);
-
-    Vec3d p_center;
-    plane->GetOrigin(p_center.val);
-
-
-    vtkSmartPointer<vtkTransformPolyDataFilter> filter = PlaneUtils::setSize(p_center, plane->GetOutputPort(), size);
-    filter->Update();
-
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, filter->GetOutput());
-
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    WidgetAccessor::setProp(*this, actor);
-    setColor(color);
-}
-
-cv::viz::WPlane::WPlane(const Vec4d& coefs, const Point3d& pt, double size, const Color &color)
-{
-    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
-    Point3d coefs3(coefs[0], coefs[1], coefs[2]);
-    double norm_sqr = 1.0 / coefs3.dot(coefs3);
-    plane->SetNormal(coefs[0], coefs[1], coefs[2]);
-
-    double t = coefs3.dot(pt) + coefs[3];
-    Vec3d p_center = pt - coefs3 * t * norm_sqr;
-    plane->SetCenter(p_center[0], p_center[1], p_center[2]);
-
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(PlaneUtils::setSize(p_center, plane->GetOutputPort(), size)->GetOutputPort());
-
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WPlane cv::viz::Widget::cast<cv::viz::WPlane>()
@@ -500,38 +455,26 @@ template<> cv::viz::WPolyLine cv::viz::Widget::cast<cv::viz::WPolyLine>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// grid widget implementation
 
-namespace cv { namespace viz { namespace
+
+cv::viz::WGrid::WGrid(const Vec2i &cells, const Vec2d &cells_spacing, const Color &color)
 {
-    struct GridUtils
-    {
-        static vtkSmartPointer<vtkPolyData> createGrid(const Vec2i &dimensions, const Vec2f &spacing)
-        {
-            // Create the grid using image data
-            vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
+    vtkSmartPointer<vtkImageData> grid_data = vtkSmartPointer<vtkImageData>::New();
 
-            // Add 1 to dimensions because in ImageData dimensions is the number of lines
-            // - however here it means number of cells
-            grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
-            grid->SetSpacing(spacing[0], spacing[1], 0.);
+    // Add 1 to dimensions because in ImageData dimensions is the number of lines
+    // - however here it means number of cells
+    grid_data->SetDimensions(cells[0]+1, cells[1]+1, 1);
+    grid_data->SetSpacing(cells_spacing[0], cells_spacing[1], 0.);
 
-            // Set origin of the grid to be the middle of the grid
-            grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0);
+    // Set origin of the grid to be the middle of the grid
+    grid_data->SetOrigin(cells[0] * cells_spacing[0] * (-0.5), cells[1] * cells_spacing[1] * (-0.5), 0);
 
-            // Extract the edges so we have the grid
-            vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-            filter->SetInputConnection(grid->GetProducerPort());
-            filter->Update();
-            return filter->GetOutput();
-        }
-    };
-}}}
-
-cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
-{
-    vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
+    // Extract the edges so we have the grid
+    vtkSmartPointer<vtkExtractEdges> extract_edges = vtkSmartPointer<vtkExtractEdges>::New();
+    extract_edges->SetInputConnection(grid_data->GetProducerPort());
+    extract_edges->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, grid);
+    VtkUtils::SetInputData(mapper, extract_edges->GetOutput());
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -540,37 +483,15 @@ cv::viz::WGrid::WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color
     setColor(color);
 }
 
-cv::viz::WGrid::WGrid(const Vec4d &coefs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
+cv::viz::WGrid::WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis, const Vec2i &cells, const Vec2d &cells_spacing, const Color &color)
 {
-    vtkSmartPointer<vtkPolyData> grid = GridUtils::createGrid(dimensions, spacing);
+    Vec3d zvec = normalize(normal);
+    Vec3d xvec = normalize(new_yaxis.cross(zvec));
+    Vec3d yvec = zvec.cross(xvec);
 
-    // Estimate the transform to set the normal based on the coefficients
-    Vec3d normal(coefs[0], coefs[1], coefs[2]);
-    Vec3d up_vector(0.0, 1.0, 0.0); // Just set as default
-    double push_distance = -coefs[3]/cv::norm(Vec3d(coefs.val));
-    Vec3d n = normalize(normal);
-    Vec3d u = normalize(up_vector.cross(n));
-    Vec3d v = n.cross(u);
-
-    Affine3d pose = makeTransformToGlobal(u, v, n, n * push_distance);
-
-    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-    transform->PreMultiply();
-    transform->SetMatrix(vtkmatrix(pose.matrix));
-
-    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-    transform_filter->SetTransform(transform);
-    transform_filter->SetInputConnection(grid->GetProducerPort());
-    transform_filter->Update();
-
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, transform_filter->GetOutput());
-
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    WidgetAccessor::setProp(*this, actor);
-    setColor(color);
+    WGrid grid(cells, cells_spacing, color);
+    grid.applyTransform(makeTransformToGlobal(xvec, yvec, zvec, center));
+    *this = grid;
 }
 
 template<> cv::viz::WGrid cv::viz::Widget::cast<cv::viz::WGrid>()
