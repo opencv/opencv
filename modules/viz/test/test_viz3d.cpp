@@ -53,7 +53,9 @@ TEST(Viz_viz3d, develop)
     cv::viz::Viz3d viz("abc");
     viz.setBackgroundMeshLab();
     viz.showWidget("coo", cv::viz::WCoordinateSystem(1));
-    viz.showWidget("cloud", cv::viz::WCloud(cloud));
+    //viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0)));
+    //viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0), cv::viz::Color::green(), cv::viz::Color::red()));
+    viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud));
 
     //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
     //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));

@@ -128,6 +128,8 @@
 #include <vtkImageAlgorithm.h>
 #include <vtkTransformFilter.h>
 #include <vtkConeSource.h>
+#include <vtkElevationFilter.h>
+#include <vtkColorTransferFunction.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
