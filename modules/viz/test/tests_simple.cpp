@@ -304,8 +304,10 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("con1", WCone(0.125, Point3d(0.5, -0.5, 0.5), Point3d(0.5, -1.0, 0.5), 6, Color::turquoise()));
 
     viz.showWidget("text2d", WText("Simple text", Point(20, 20), 20, Color::green()));
-
     viz.showWidget("text3d", WText3D("Simple 3D text", Point3d( 0.5,  0.5, 0.5), 0.125, false, Color::green()));
+
+    viz.showWidget("plane1", WPlane(Size2d(0.25, 0.75)));
+    viz.showWidget("plane2", WPlane(Vec3d(0.5, -0.5, -0.5), Vec3d(0.0, 1.0, 1.0), Vec3d(1.0, 1.0, 0.0), Size2d(1.0, 0.5), Color::gold()));
 
     viz.spinOnce(1500, true);
     viz.getWidget("text2d").cast<WText>().setText("New simple text");
@@ -313,7 +315,7 @@ TEST(Viz, show_simple_widgets)
     viz.spin();
 }
 
-TEST(Viz, show_follower)
+TEST(Viz, DISABLED_show_follower)
 {
     Viz3d viz("show_follower");
 

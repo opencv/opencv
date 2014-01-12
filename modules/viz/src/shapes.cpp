@@ -125,6 +125,36 @@ namespace cv { namespace viz { namespace
     };
 }}}
 
+cv::viz::WPlane::WPlane(const Size2d& size, const Color &color)
+{
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
+    plane->SetOrigin(-0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint1( 0.5 * size.width, -0.5 * size.height, 0.0);
+    plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
+    plane->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, plane->GetOutput());
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    actor->GetProperty()->LightingOff();
+
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+cv::viz::WPlane::WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_plane_yaxis, const Size2d& size, const Color &color)
+{
+    Vec3d zvec = normalize(normal);
+    Vec3d xvec = normalize(new_plane_yaxis.cross(zvec));
+    Vec3d yvec = zvec.cross(xvec);
+
+    WPlane plane(size, color);
+    plane.applyTransform(makeTransformToGlobal(xvec, yvec, zvec, center));
+    *this = plane;
+}
+
 cv::viz::WPlane::WPlane(const Vec4d& coefs, double size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
