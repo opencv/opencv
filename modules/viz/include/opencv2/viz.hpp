@@ -99,6 +99,11 @@ namespace cv
         CV_EXPORTS Mat  readCloud (const String& file, OutputArray colors = noArray(), OutputArray normals = noArray());
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
+        /// Read mesh. Only ply format is supported now
+
+        CV_EXPORTS Mesh readMesh (const String& file);
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write poses and trajectories
 
         CV_EXPORTS bool readPose(const String& file, Affine3d& pose, const String& tag = "pose");

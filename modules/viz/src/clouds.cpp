@@ -95,8 +95,25 @@ cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud)
 
     Vec6d bounds(cloud_source->GetOutput()->GetPoints()->GetBounds());
 
-    WPaintedCloud cloud_widget(cloud, Vec3d(bounds[0], bounds[2], bounds[4]), Vec3d(bounds[1], bounds[3], bounds[5]));
-    *this = cloud_widget;
+    vtkSmartPointer<vtkElevationFilter> elevation = vtkSmartPointer<vtkElevationFilter>::New();
+    elevation->SetInputConnection(cloud_source->GetOutputPort());
+    elevation->SetLowPoint(bounds[0], bounds[2], bounds[4]);
+    elevation->SetHighPoint(bounds[1], bounds[3], bounds[5]);
+    elevation->SetScalarRange(0.0, 1.0);
+    elevation->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    VtkUtils::SetInputData(mapper, vtkPolyData::SafeDownCast(elevation->GetOutput()));
+    mapper->ImmediateModeRenderingOff();
+    mapper->ScalarVisibilityOn();
+    mapper->SetColorModeToMapScalars();
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->GetProperty()->SetInterpolationToFlat();
+    actor->GetProperty()->BackfaceCullingOn();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
 }
 
 cv::viz::WPaintedCloud::WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2)
@@ -329,7 +346,7 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     CV_Assert(mesh.cloud.rows == 1 && mesh.polygons.type() == CV_32SC1);
 
     vtkSmartPointer<vtkCloudMatSource> source = vtkSmartPointer<vtkCloudMatSource>::New();
-    source->SetColorCloud(mesh.cloud, mesh.colors);
+    source->SetColorCloudNormalsTCoords(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
     source->Update();
 
     Mat lookup_buffer(1, mesh.cloud.total(), CV_32SC1);
@@ -393,6 +410,16 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     actor->GetProperty()->EdgeVisibilityOff();
     actor->GetProperty()->ShadingOff();
     actor->SetMapper(mapper);
+
+    if (!mesh.texture.empty())
+    {
+        vtkSmartPointer<vtkImageMatSource> image_source = vtkSmartPointer<vtkImageMatSource>::New();
+        image_source->SetImage(mesh.texture);
+
+        vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+        texture->SetInputConnection(image_source->GetOutputPort());
+        actor->SetTexture(texture);
+    }
 
     WidgetAccessor::setProp(*this, actor);
 }

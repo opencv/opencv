@@ -205,6 +205,8 @@ cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray n
     return cloud;
 }
 
+cv::viz::Mesh cv::viz::readMesh(const String& file) { return Mesh::load(file); }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Read/write poses and trajectories
 
