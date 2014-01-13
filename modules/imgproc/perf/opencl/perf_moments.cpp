@@ -26,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other Materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -52,52 +52,25 @@
 namespace cvtest {
 namespace ocl {
 
-///////////// PyrDown //////////////////////
+///////////// Moments ////////////////////////
 
-typedef Size_MatType PyrDownFixture;
+typedef tuple<Size, bool> MomentsParams;
+typedef TestBaseWithParam<MomentsParams> MomentsFixture;
 
-OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+OCL_PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TEST_SIZES, ::testing::Bool()))
 {
-    const Size_MatType_t params = GetParam();
+    const MomentsParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-    const Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
+    const bool binaryImage = get<1>(params);
 
-    checkDeviceMaxMemoryAllocSize(srcSize, type);
-    checkDeviceMaxMemoryAllocSize(dstSize, type);
+    cv::Moments m;
+    UMat src(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
 
-    UMat src(srcSize, type), dst(dstSize, type);
-    declare.in(src, WARMUP_RNG).out(dst);
+    OCL_TEST_CYCLE() m = cv::moments(src, binaryImage);
 
-    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
-
-    SANITY_CHECK(dst, eps);
-}
-
-///////////// PyrUp ////////////////////////
-
-typedef Size_MatType PyrUpFixture;
-
-OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-    const Size dstSize(srcSize.height << 1, srcSize.width << 1);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
-
-    checkDeviceMaxMemoryAllocSize(srcSize, type);
-    checkDeviceMaxMemoryAllocSize(dstSize, type);
-
-    UMat src(srcSize, type), dst(dstSize, type);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
-
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_MOMENTS(m, 1e-6, ERROR_RELATIVE);
 }
 
 } } // namespace cvtest::ocl
