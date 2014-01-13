@@ -105,31 +105,45 @@ PERF_TEST_P( Cascade_Image_MinSize, CascadeClassifier_UMat,
     const string imagePath   = get<1>(GetParam());
     const int min_size = get<2>(GetParam());
     Size minSize(min_size, min_size);
-
-    ocl::OclCascadeClassifier cc;
-    if (!cc.load( getDataPath(cascasePath) ))
-        FAIL() << "Can't load cascade file: " << getDataPath(cascasePath);
-
-    Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
-    if (img.empty())
-        FAIL() << "Can't load source image: " << getDataPath(imagePath);
-
     vector<Rect> faces;
 
+    Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
+    ASSERT_TRUE(!img.empty()) << "Can't load source image: " << getDataPath(imagePath);
     equalizeHist(img, img);
-    declare.in(img).time(60);
+    declare.in(img);
 
-    ocl::oclMat uimg(img);
-
-    while(next())
+    if (RUN_PLAIN_IMPL)
     {
-        faces.clear();
+        CascadeClassifier cc;
+        ASSERT_TRUE(cc.load(getDataPath(cascasePath))) << "Can't load cascade file: " << getDataPath(cascasePath);
 
-        startTimer();
-        cc.detectMultiScale(uimg, faces, 1.1, 3, 0, minSize);
-        stopTimer();
+        while (next())
+        {
+            faces.clear();
+
+            startTimer();
+            cc.detectMultiScale(img, faces, 1.1, 3, 0, minSize);
+            stopTimer();
+        }
     }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat uimg(img);
+        ocl::OclCascadeClassifier cc;
+        ASSERT_TRUE(cc.load(getDataPath(cascasePath))) << "Can't load cascade file: " << getDataPath(cascasePath);
 
-    //sort(faces.begin(), faces.end(), comparators::RectLess());
-    SANITY_CHECK_NOTHING();//(faces, min_size/5);
+        while (next())
+        {
+            faces.clear();
+
+            startTimer();
+            cc.detectMultiScale(uimg, faces, 1.1, 3, 0, minSize);
+            stopTimer();
+        }
+    }
+    else
+        OCL_PERF_ELSE
+
+        //sort(faces.begin(), faces.end(), comparators::RectLess());
+        SANITY_CHECK_NOTHING();//(faces, min_size/5);
 }
