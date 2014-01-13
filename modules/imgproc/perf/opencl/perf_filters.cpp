@@ -118,6 +118,28 @@ OCL_PERF_TEST_P(ErodeFixture, Erode,
     SANITY_CHECK(dst);
 }
 
+///////////// Dilate ////////////////////
+
+typedef Size_MatType DilateFixture;
+
+OCL_PERF_TEST_P(DilateFixture, Dilate,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = 3;
+    const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst).in(ker);
+
+    OCL_TEST_CYCLE() cv::dilate(src, dst, ker);
+
+    SANITY_CHECK(dst);
+}
+
 ///////////// Sobel ////////////////////////
 
 typedef Size_MatType SobelFixture;

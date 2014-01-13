@@ -199,4 +199,3 @@ OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
-
