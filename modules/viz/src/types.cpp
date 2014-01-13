@@ -57,80 +57,56 @@ cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, c
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::Mesh3d
 
-namespace cv { namespace viz { namespace
-{
-    struct MeshUtils
-    {
-        static Mesh loadMesh(const String &file)
-        {
-            Mesh mesh;
-
-            vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
-            reader->SetFileName(file.c_str());
-            reader->Update();
-
-            vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
-            CV_Assert("File does not exist or file format is not supported." && poly_data);
-
-            vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
-            vtkIdType nr_points = mesh_points->GetNumberOfPoints();
-
-            mesh.cloud.create(1, nr_points, CV_32FC3);
-
-            Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
-            for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
-            {
-                Vec3d point;
-                mesh_points->GetPoint(i, point.val);
-                mesh_cloud[i] = point;
-            }
-
-            // Then the color information, if any
-            vtkUnsignedCharArray* poly_colors = 0;
-            if (poly_data->GetPointData())
-                poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
-
-            if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
-            {
-                mesh.colors.create(1, nr_points, CV_8UC3);
-                Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
-
-                for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
-                {
-                    Vec3b point_color;
-                    poly_colors->GetTupleValue(i, point_color.val);
-
-                    std::swap(point_color[0], point_color[2]); // RGB -> BGR
-                    mesh_colors[i] = point_color;
-                }
-            }
-            else
-                mesh.colors.release();
-
-            // Now handle the polygons
-            vtkIdType* cell_points;
-            vtkIdType nr_cell_points;
-            vtkCellArray * mesh_polygons = poly_data->GetPolys();
-            mesh_polygons->InitTraversal();
-
-            mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
-
-            int* polygons = mesh.polygons.ptr<int>();
-            while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
-            {
-                *polygons++ = nr_cell_points;
-                for (int i = 0; i < nr_cell_points; ++i)
-                    *polygons++ = static_cast<int>(cell_points[i]);
-            }
-
-            return mesh;
-        }
-    };
-}}}
-
 cv::viz::Mesh cv::viz::Mesh::load(const String& file)
 {
-    return MeshUtils::loadMesh(file);
+    vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
+    reader->SetFileName(file.c_str());
+    reader->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = reader->GetOutput();
+    CV_Assert("File does not exist or file format is not supported." && polydata);
+
+    Mesh mesh;
+    vtkSmartPointer<vtkCloudMatSink> sink = vtkSmartPointer<vtkCloudMatSink>::New();
+    sink->SetOutput(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
+    sink->SetInputConnection(reader->GetOutputPort());
+    sink->Write();
+
+    // Now handle the polygons
+
+    vtkSmartPointer<vtkCellArray> polygons = polydata->GetPolys();
+    mesh.polygons.create(1, polygons->GetSize(), CV_32SC1);
+    int* poly_ptr = mesh.polygons.ptr<int>();
+
+    polygons->InitTraversal();
+    vtkIdType nr_cell_points, *cell_points;
+    while (polygons->GetNextCell(nr_cell_points, cell_points))
+    {
+        *poly_ptr++ = nr_cell_points;
+        for (vtkIdType i = 0; i < nr_cell_points; ++i)
+            *poly_ptr++ = (int)cell_points[i];
+    }
+
+    String::size_type pos = file.find_last_of('.');
+    String png = (pos == String::npos) ? file : file.substr(0, pos+1) + "png";
+
+    vtkSmartPointer<vtkPNGReader> png_reader = vtkSmartPointer<vtkPNGReader>::New();
+
+    if (png_reader->CanReadFile(png.c_str()))
+    {
+        png_reader->SetFileName(png.c_str());
+        png_reader->Update();
+        vtkSmartPointer<vtkImageData> imagedata = png_reader->GetOutput();
+
+        Size sz(imagedata->GetDimensions()[0], imagedata->GetDimensions()[1]);
+        int channels = imagedata->GetNumberOfScalarComponents();
+        CV_Assert(imagedata->GetScalarType() == VTK_UNSIGNED_CHAR);
+
+        void *ptr = imagedata->GetScalarPointer(0,0,0);
+        Mat(sz, CV_8UC(channels), ptr).copyTo(mesh.texture);
+    }
+
+    return mesh;
 }
 
 ////////////////////////////////////////////////////////////////////
