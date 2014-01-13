@@ -137,10 +137,13 @@ OCL_PERF_TEST_P(MixChannelsFixture, MixChannels,
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    UMat templ(srcSize, type);
-    std::vector<UMat> src(n, templ), dst(n, templ);
+    std::vector<UMat> src(n), dst(n);
     for (int i = 0; i < n; ++i)
+    {
+        src[i] = UMat(srcSize, type);
+        dst[i] = UMat(srcSize, type);
         declare.in(src[i], WARMUP_RNG).out(dst[i]);
+    }
 
     int fromTo[] = { 1,2, 2,0, 0,3, 3,1 };
 

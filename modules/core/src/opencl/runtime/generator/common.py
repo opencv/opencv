@@ -161,7 +161,6 @@ def generateListOfDefinitions(fns, name='opencl_fn_list'):
         else:
             print '    NULL/*&%s_definition*/,' % (fn['name'])
         first = False
-    print '    ADDITIONAL_FN_DEFINITIONS // macro for custom functions'
     print '};'
 
 @outputToString
