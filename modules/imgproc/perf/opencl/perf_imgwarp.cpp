@@ -178,6 +178,8 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
     const int type = get<1>(params), interpolation = get<2>(params), borderMode = BORDER_CONSTANT;
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-4;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     UMat src(srcSize, type), dst(srcSize, type);
     UMat xmap(srcSize, CV_32FC1), ymap(srcSize, CV_32FC1);
 
