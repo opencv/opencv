@@ -59,7 +59,7 @@ namespace cv
           vtkTypeMacro(vtkCloudMatSink,vtkPolyDataWriter)
           void PrintSelf(ostream& os, vtkIndent indent);
 
-          void SetOutput(OutputArray cloud, OutputArray colors = noArray(), OutputArray normals = noArray());
+          void SetOutput(OutputArray cloud, OutputArray colors = noArray(), OutputArray normals = noArray(), OutputArray tcoords = noArray());
 
         protected:
           vtkCloudMatSink();
@@ -67,7 +67,7 @@ namespace cv
 
           void WriteData();
 
-          _OutputArray cloud, colors, normals;
+          _OutputArray cloud, colors, normals, tcoords;
 
         private:
           vtkCloudMatSink(const vtkCloudMatSink&);  // Not implemented.

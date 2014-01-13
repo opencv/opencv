@@ -122,6 +122,7 @@
 #include <vtkPLYReader.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
+#include <vtkPNGReader.h>
 #include <vtkOBJExporter.h>
 #include <vtkVRMLExporter.h>
 #include <vtkTensorGlyph.h>

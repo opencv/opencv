@@ -99,9 +99,10 @@ namespace cv
         CV_EXPORTS Mat  readCloud (const String& file, OutputArray colors = noArray(), OutputArray normals = noArray());
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
-        /// Read mesh. Only ply format is supported now
+        /// Reads mesh. Only ply format is supported now. The function tries to read texture from png-file,
+        /// and in case of faulure, just leaves the texture field empty.
 
-        CV_EXPORTS Mesh readMesh (const String& file);
+        CV_EXPORTS Mesh readMesh(const String& file);
 
         ///////////////////////////////////////////////////////////////////////////////////////////////
         /// Read/write poses and trajectories
