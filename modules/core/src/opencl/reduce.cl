@@ -51,7 +51,12 @@
 #endif
 
 #define noconvert
+
+#ifdef HAVE_MASK
+#define EXTRA_PARAMS , __global const uchar * mask, int mask_step, int mask_offset
+#else
 #define EXTRA_PARAMS
+#endif
 
 #if defined OP_SUM || defined OP_SUM_ABS || defined OP_SUM_SQR
 #if OP_SUM
@@ -65,11 +70,19 @@
     __local dstT localmem[WGS2_ALIGNED]
 #define DEFINE_ACCUMULATOR \
     dstT accumulator = (dstT)(0)
+#ifdef HAVE_MASK
+#define REDUCE_GLOBAL \
+    dstT temp = convertToDT(src[0]); \
+    int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols)); \
+    if (mask[mask_index]) \
+        FUNC(accumulator, temp)
+#else
 #define REDUCE_GLOBAL \
     dstT temp = convertToDT(src[0]); \
     FUNC(accumulator, temp)
+#endif
 #define SET_LOCAL_1 \
-        localmem[lid] = accumulator
+    localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
     localmem[lid - WGS2_ALIGNED] += accumulator
 #define REDUCE_LOCAL_2 \
@@ -88,7 +101,7 @@
 #define REDUCE_GLOBAL \
     accumulator += src[0] == zero ? zero : one
 #define SET_LOCAL_1 \
-        localmem[lid] = accumulator
+    localmem[lid] = accumulator
 #define REDUCE_LOCAL_1 \
     localmem[lid - WGS2_ALIGNED] += accumulator
 #define REDUCE_LOCAL_2 \

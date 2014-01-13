@@ -651,13 +651,13 @@ OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
 
 typedef Size_MatType MeanStdDevFixture;
 
-OCL_PERF_TEST_P(MeanStdDevFixture, DISABLED_MeanStdDev,
+OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
                 ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const double eps = 1e-5;
+    const double eps = 2e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -687,7 +687,7 @@ CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
 typedef std::tr1::tuple<Size, MatType, NormType> NormParams;
 typedef TestBaseWithParam<NormParams> NormFixture;
 
-OCL_PERF_TEST_P(NormFixture, DISABLED_Norm,
+OCL_PERF_TEST_P(NormFixture, Norm,
                 ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES, NormType::all()))
 {
     const NormParams params = GetParam();
@@ -703,7 +703,7 @@ OCL_PERF_TEST_P(NormFixture, DISABLED_Norm,
 
     OCL_TEST_CYCLE() res = cv::norm(src1, src2, normType);
 
-    SANITY_CHECK(res, 1e-6, ERROR_RELATIVE);
+    SANITY_CHECK(res, 1e-5, ERROR_RELATIVE);
 }
 
 ///////////// Repeat ////////////////////////
@@ -812,6 +812,104 @@ OCL_PERF_TEST_P(NormalizeFixture, Normalize,
     OCL_TEST_CYCLE() cv::normalize(src, dst, 10, 110, mode);
 
     SANITY_CHECK(dst, 5e-2);
+}
+
+///////////// ConvertScaleAbs ////////////////////////
+
+typedef Size_MatType ConvertScaleAbsFixture;
+
+OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, CV_8UC(cn));
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::convertScaleAbs(src, dst, 0.5, 2);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// PatchNaNs ////////////////////////
+
+typedef Size_MatType PatchNaNsFixture;
+
+OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    // generating NaNs
+    {
+        Mat src_ = src.getMat(ACCESS_RW);
+        srcSize.width *= cn;
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float * const ptr = src_.ptr<float>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+                ptr[x] = (x + y) % 2 == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+        }
+    }
+
+    OCL_TEST_CYCLE() cv::patchNaNs(src, 17.7);
+
+    SANITY_CHECK(src);
+}
+
+
+///////////// ScaleAdd ////////////////////////
+
+typedef Size_MatType ScaleAddFixture;
+
+OCL_PERF_TEST_P(ScaleAddFixture, ScaleAdd,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::scaleAdd(src1, 0.6, src2, dst);
+
+    SANITY_CHECK(dst, 1e-6);
+}
+
+///////////// PSNR ////////////////////////
+
+typedef Size_MatType PSNRFixture;
+
+OCL_PERF_TEST_P(PSNRFixture, PSNR,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    double psnr = 0;
+    UMat src1(srcSize, type), src2(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG);
+
+    OCL_TEST_CYCLE() psnr = cv::PSNR(src1, src2);
+
+    SANITY_CHECK(psnr, 1e-4, ERROR_RELATIVE);
 }
 
 } } // namespace cvtest::ocl

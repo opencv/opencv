@@ -924,6 +924,44 @@ OCL_TEST_P(MeanStdDev, Mat)
     }
 }
 
+OCL_TEST_P(MeanStdDev, Mat_Mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        Scalar cpu_mean, cpu_stddev;
+        Scalar gpu_mean, gpu_stddev;
+
+        OCL_OFF(cv::meanStdDev(src1_roi, cpu_mean, cpu_stddev, mask_roi));
+        OCL_ON(cv::meanStdDev(usrc1_roi, gpu_mean, gpu_stddev, umask_roi));
+
+        for (int i = 0; i < cn; ++i)
+        {
+            EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 0.1);
+            EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
+        }
+    }
+}
+
+OCL_TEST(MeanStdDev_, ZeroMask)
+{
+    Size size(5, 5);
+    UMat um(size, CV_32SC1), umask(size, CV_8UC1, Scalar::all(0));
+    Mat m(size, CV_32SC1), mask(size, CV_8UC1, Scalar::all(0));
+
+    Scalar cpu_mean, cpu_stddev;
+    Scalar gpu_mean, gpu_stddev;
+
+    OCL_OFF(cv::meanStdDev(m, cpu_mean, cpu_stddev, mask));
+    OCL_ON(cv::meanStdDev(um, gpu_mean, gpu_stddev, umask));
+
+    for (int i = 0; i < 4; ++i)
+    {
+        EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 0.1);
+        EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
+    }
+}
 
 //////////////////////////////////////// Log /////////////////////////////////////////
 
@@ -1124,6 +1162,19 @@ OCL_TEST_P(Norm, NORM_INF_1arg)
     }
 }
 
+OCL_TEST_P(Norm, NORM_INF_1arg_mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_INF, mask_roi));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_INF, umask_roi));
+
+        EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+    }
+}
+
 OCL_TEST_P(Norm, NORM_L1_1arg)
 {
     for (int j = 0; j < test_loop_times; j++)
@@ -1137,6 +1188,19 @@ OCL_TEST_P(Norm, NORM_L1_1arg)
     }
 }
 
+OCL_TEST_P(Norm, NORM_L1_1arg_mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_L1, mask_roi));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_L1, umask_roi));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
 OCL_TEST_P(Norm, NORM_L2_1arg)
 {
     for (int j = 0; j < test_loop_times; j++)
@@ -1145,6 +1209,19 @@ OCL_TEST_P(Norm, NORM_L2_1arg)
 
         OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_L2));
         OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_L2));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
+OCL_TEST_P(Norm, NORM_L2_1arg_mask)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = cv::norm(src1_roi, NORM_L2, mask_roi));
+        OCL_ON(const double gpuRes = cv::norm(usrc1_roi, NORM_L2, umask_roi));
 
         EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
     }
@@ -1168,6 +1245,24 @@ OCL_TEST_P(Norm, NORM_INF_2args)
         }
 }
 
+OCL_TEST_P(Norm, NORM_INF_2args_mask)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_INF;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
 OCL_TEST_P(Norm, NORM_L1_2args)
 {
     for (int relative = 0; relative < 2; ++relative)
@@ -1186,6 +1281,24 @@ OCL_TEST_P(Norm, NORM_L1_2args)
         }
 }
 
+OCL_TEST_P(Norm, NORM_L1_2args_mask)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_L1;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
+
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        }
+}
+
 OCL_TEST_P(Norm, NORM_L2_2args)
 {
     for (int relative = 0; relative < 2; ++relative)
@@ -1199,6 +1312,24 @@ OCL_TEST_P(Norm, NORM_L2_2args)
 
             OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type));
             OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type));
+
+            EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+        }
+}
+
+OCL_TEST_P(Norm, NORM_L2_2args_mask)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            int type = NORM_L2;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            OCL_OFF(const double cpuRes = cv::norm(src1_roi, src2_roi, type, mask_roi));
+            OCL_ON(const double gpuRes = cv::norm(usrc1_roi, usrc2_roi, type, umask_roi));
 
             EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
         }
@@ -1355,7 +1486,7 @@ OCL_TEST_P(ScaleAdd, Mat)
         OCL_OFF(cv::scaleAdd(src1_roi, val[0], src2_roi, dst1_roi));
         OCL_ON(cv::scaleAdd(usrc1_roi, val[0], usrc2_roi, udst1_roi));
 
-        Near(depth <= CV_32S ? 1 : 1e-6);
+        Near(depth <= CV_32S ? 1 : 1e-3);
     }
 }
 
@@ -1416,6 +1547,25 @@ OCL_TEST_P(PatchNaNs, Mat)
     }
 }
 
+//////////////////////////////// Psnr ////////////////////////////////////////////////
+
+typedef ArithmTestBase Psnr;
+
+OCL_TEST_P(Psnr, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        double cpuRes = 0, gpuRes = 0;
+
+        OCL_OFF(cpuRes = cv::PSNR(src1_roi, src2_roi));
+        OCL_ON(gpuRes = cv::PSNR(usrc1_roi, usrc2_roi));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
@@ -1455,6 +1605,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHA
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 
 } } // namespace cvtest::ocl
 
