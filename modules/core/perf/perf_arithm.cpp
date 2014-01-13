@@ -207,9 +207,7 @@ PERF_TEST_P(Size_MatType, multiply, TYPICAL_MATS_CORE_ARITHM)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
-    cv::Mat a = Mat(sz, type);
-    cv::Mat b = Mat(sz, type);
-    cv::Mat c = Mat(sz, type);
+    cv::Mat a(sz, type), b(sz, type), c(sz, type);
 
     declare.in(a, b, WARMUP_RNG).out(c);
     if (CV_MAT_DEPTH(type) == CV_32S)
@@ -228,9 +226,7 @@ PERF_TEST_P(Size_MatType, multiplyScale, TYPICAL_MATS_CORE_ARITHM)
 {
     Size sz = get<0>(GetParam());
     int type = get<1>(GetParam());
-    cv::Mat a = Mat(sz, type);
-    cv::Mat b = Mat(sz, type);
-    cv::Mat c = Mat(sz, type);
+    cv::Mat a(sz, type), b(sz, type), c(sz, type);
     double scale = 0.5;
 
     declare.in(a, b, WARMUP_RNG).out(c);
