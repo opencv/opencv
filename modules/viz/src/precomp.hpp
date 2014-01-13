@@ -230,6 +230,25 @@ namespace cv
                 filter->SetInputData(polydata);
             #endif
             }
+            template<class Filter>
+            static void SetSourceData(vtkSmartPointer<Filter> filter, vtkPolyData* polydata)
+            {
+            #if VTK_MAJOR_VERSION <= 5
+                filter->SetSource(polydata);
+            #else
+                filter->SetSourceData(polydata);
+            #endif
+            }
+
+            template<class Filter>
+            static void SetInputData(vtkSmartPointer<Filter> filter, vtkImageData* polydata)
+            {
+            #if VTK_MAJOR_VERSION <= 5
+                filter->SetInput(polydata);
+            #else
+                filter->SetInputData(polydata);
+            #endif
+            }
 
             template<class Filter>
             static void AddInputData(vtkSmartPointer<Filter> filter, vtkPolyData *polydata)
@@ -285,7 +304,14 @@ namespace cv
 
             static vtkSmartPointer<vtkPolyData> TransformPolydata(vtkSmartPointer<vtkPolyData> polydata, const Affine3d& pose)
             {
-                return TransformPolydata(polydata->GetProducerPort(), pose);
+                vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+                transform->SetMatrix(vtkmatrix(pose.matrix));
+
+                vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                VtkUtils::SetInputData(transform_filter, polydata);
+                transform_filter->SetTransform(transform);
+                transform_filter->Update();
+                return transform_filter->GetOutput();
             }
         };
     }
