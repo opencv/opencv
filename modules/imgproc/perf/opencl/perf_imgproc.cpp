@@ -132,7 +132,7 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
 
     OCL_TEST_CYCLE() cv::cornerHarris(src, dst, 5, 7, 0.1, borderType);
 
-    SANITY_CHECK(dst, 3e-5);
+    SANITY_CHECK(dst, 5e-5);
 }
 
 ///////////// Integral ////////////////////////
@@ -211,6 +211,32 @@ OCL_PERF_TEST_P(SqrBoxFilterFixture, SqrBoxFilter, OCL_TEST_SIZES)
 
     SANITY_CHECK(dst);
 }
+
+///////////// Canny ////////////////////////
+
+typedef tuple<int, bool> CannyParams;
+typedef TestBaseWithParam<CannyParams> CannyFixture;
+
+OCL_PERF_TEST_P(CannyFixture, Canny, ::testing::Combine(OCL_PERF_ENUM(3, 5), Bool()))
+{
+    const CannyParams params = GetParam();
+    int apertureSize = get<0>(params);
+    bool L2Grad = get<1>(params);
+
+    Mat _img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_TRUE(!_img.empty()) << "can't open aloe-L.png";
+
+    UMat img;
+    _img.copyTo(img);
+    UMat edges(img.size(), CV_8UC1);
+
+    declare.in(img, WARMUP_RNG).out(edges);
+
+    OCL_TEST_CYCLE() cv::Canny(img, edges, 50.0, 100.0, apertureSize, L2Grad);
+
+    SANITY_CHECK(edges);
+}
+
 
 } } // namespace cvtest::ocl
 

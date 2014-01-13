@@ -52,16 +52,19 @@
 namespace cvtest {
 namespace ocl {
 
+typedef tuple<Size, MatType, int> FilterParams;
+typedef TestBaseWithParam<FilterParams> FilterFixture;
+
 ///////////// Blur ////////////////////////
 
-typedef Size_MatType BlurFixture;
+typedef FilterFixture BlurFixture;
 
 OCL_PERF_TEST_P(BlurFixture, Blur,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params), ksize(3, 3);
-    const int type = get<1>(params), bordertype = BORDER_CONSTANT;
+    const FilterParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params), bordertype = BORDER_CONSTANT;
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -69,21 +72,21 @@ OCL_PERF_TEST_P(BlurFixture, Blur,
     UMat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::blur(src, dst, ksize, Point(-1, -1), bordertype);
+    OCL_TEST_CYCLE() cv::blur(src, dst, Size(ksize, ksize), Point(-1, -1), bordertype);
 
     SANITY_CHECK(dst, eps);
 }
 
 ///////////// Laplacian////////////////////////
 
-typedef Size_MatType LaplacianFixture;
+typedef FilterFixture LaplacianFixture;
 
 OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -98,14 +101,14 @@ OCL_PERF_TEST_P(LaplacianFixture, Laplacian,
 
 ///////////// Erode ////////////////////
 
-typedef Size_MatType ErodeFixture;
+typedef FilterFixture ErodeFixture;
 
 OCL_PERF_TEST_P(ErodeFixture, Erode,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -120,14 +123,14 @@ OCL_PERF_TEST_P(ErodeFixture, Erode,
 
 ///////////// Dilate ////////////////////
 
-typedef Size_MatType DilateFixture;
+typedef FilterFixture DilateFixture;
 
 OCL_PERF_TEST_P(DilateFixture, Dilate,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -144,15 +147,15 @@ OCL_PERF_TEST_P(DilateFixture, Dilate,
 
 CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
 
-typedef tuple<Size, MatType, MorphOp> MorphologyExParams;
+typedef tuple<Size, MatType, MorphOp, int> MorphologyExParams;
 typedef TestBaseWithParam<MorphologyExParams> MorphologyExFixture;
 
 OCL_PERF_TEST_P(MorphologyExFixture, MorphologyEx,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, MorphOp::all()))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, MorphOp::all(), OCL_PERF_ENUM(3, 5)))
 {
     const MorphologyExParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), op = get<2>(params), ksize = 3;
+    const int type = get<1>(params), op = get<2>(params), ksize = get<3>(params);
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -210,14 +213,14 @@ OCL_PERF_TEST_P(ScharrFixture, Scharr,
 
 ///////////// GaussianBlur ////////////////////////
 
-typedef Size_MatType GaussianBlurFixture;
+typedef FilterFixture GaussianBlurFixture;
 
 OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5, 7)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 7;
+    const int type = get<1>(params), ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 + DBL_EPSILON : 3e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
@@ -232,14 +235,14 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
 
 ///////////// Filter2D ////////////////////////
 
-typedef Size_MatType Filter2DFixture;
+typedef FilterFixture Filter2DFixture;
 
 OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5)))
 {
-    const Size_MatType_t params = GetParam();
+    const FilterParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params), ksize = 3;
+    const int type = get<1>(params), ksize = get<2>(params);
     const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
