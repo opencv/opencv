@@ -140,6 +140,31 @@ OCL_PERF_TEST_P(DilateFixture, Dilate,
     SANITY_CHECK(dst);
 }
 
+///////////// MorphologyEx ////////////////////////
+
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
+
+typedef tuple<Size, MatType, MorphOp> MorphologyExParams;
+typedef TestBaseWithParam<MorphologyExParams> MorphologyExFixture;
+
+OCL_PERF_TEST_P(MorphologyExFixture, MorphologyEx,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, MorphOp::all()))
+{
+    const MorphologyExParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), op = get<2>(params), ksize = 3;
+    const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst).in(ker);
+
+    OCL_TEST_CYCLE() cv::morphologyEx(src, dst, op, ker);
+
+    SANITY_CHECK(dst);
+}
+
 ///////////// Sobel ////////////////////////
 
 typedef Size_MatType SobelFixture;
