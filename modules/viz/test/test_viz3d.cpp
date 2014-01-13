@@ -47,18 +47,10 @@ TEST(Viz_viz3d, develop)
 {
     cv::Mat cloud = cv::viz::readCloud(get_dragon_ply_file_path());
 
-    //cv::viz::Mesh3d mesh = cv::viz::Mesh3d::load(get_dragon_ply_file_path());
-    //theRNG().fill(mesh.colors, RNG::UNIFORM, 0, 255);
-
     cv::viz::Viz3d viz("abc");
     viz.setBackgroundMeshLab();
     viz.showWidget("coo", cv::viz::WCoordinateSystem(1));
-    //viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0)));
-    //viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0), cv::viz::Color::green(), cv::viz::Color::red()));
     viz.showWidget("cloud", cv::viz::WPaintedCloud(cloud));
-
-    //viz.showWidget("h", cv::viz::Widget::fromPlyFile("d:/horse-red.ply"));
-    //viz.showWidget("a", cv::viz::WArrow(cv::Point3f(0,0,0), cv::Point3f(1,1,1)));
 
     //---->>>>> <to_test_in_future>
     //std::vector<cv::Affine3d> gt, es;
@@ -67,12 +59,5 @@ TEST(Viz_viz3d, develop)
     //cv::Mat cloud = cv::viz::readCloud(get_dragon_ply_file_path());
     //---->>>>> </to_test_in_future>
 
-    //theRNG().fill(colors, cv::RNG::UNIFORM, 0, 255);
-    //viz.showWidget("c", cv::viz::WCloud(cloud, colors));
-    //viz.showWidget("c", cv::viz::WCloud(cloud, cv::viz::Color::bluberry()));
-
-    //viz.showWidget("l", cv::viz::WLine(Point3f(0,0,0), Point3f(1,1,1)));
-    //viz.showWidget("s", cv::viz::WSphere(Point3f(0,0,0), 1));
-    //viz.showWidget("d", cv::viz::WCircle(Point3f(0,0,0), 1));
     viz.spin();
 }

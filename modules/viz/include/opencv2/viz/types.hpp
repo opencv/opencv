@@ -115,7 +115,7 @@ namespace cv
 
             Mat texture, tcoords;
 
-            //! Loads mesh from a given ply file
+            //! Loads mesh from a given ply file (no texture load support for now)
             static Mesh load(const String& file);
         };
 
