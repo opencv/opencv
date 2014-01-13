@@ -33,10 +33,10 @@ int main( int /*argc*/, char** /*argv*/ )
     {
         int k, clusterCount = rng.uniform(2, MAX_CLUSTERS+1);
         int i, sampleCount = rng.uniform(1, 1001);
-        Mat points(sampleCount, 1, CV_32FC2), labels;
+        Mat points(sampleCount, 2, CV_32F), labels;
 
         clusterCount = MIN(clusterCount, sampleCount);
-        Mat centers(clusterCount, 1, points.type());
+        Mat centers;
 
         /* generate random sample from multigaussian distribution */
         for( k = 0; k < clusterCount; k++ )

@@ -2565,15 +2565,15 @@ struct RemapVec_8u
     int operator()( const Mat& _src, void* _dst, const short* XY,
                     const ushort* FXY, const void* _wtab, int width ) const
     {
-        int cn = _src.channels();
+        int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) )
+        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) ||
+                sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.data, *S1 = _src.data + _src.step;
         const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
-        int x = 0, sstep = (int)_src.step;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
         __m128i xy2ofs = _mm_set1_epi32(cn + (sstep << 16));
         __m128i z = _mm_setzero_si128();
