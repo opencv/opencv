@@ -24,7 +24,8 @@ if(PYTHONINTERP_FOUND)
 
   if(NOT ANDROID AND NOT IOS)
     ocv_check_environment_variables(PYTHON_LIBRARY PYTHON_INCLUDE_DIR)
-    find_host_package(PythonLibs "${PYTHON_VERSION_STRING}" EXACT)
+    # not using PYTHON_VERSION_STRING here, because it might not conform to the CMake version format
+    find_host_package(PythonLibs "${PYTHON_VERSION_MAJOR_MINOR}.${PYTHON_VERSION_PATCH}" EXACT)
   endif()
 
   if(NOT ANDROID AND NOT IOS)
