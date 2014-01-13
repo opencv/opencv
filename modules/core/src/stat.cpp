@@ -1902,7 +1902,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
 
-    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) ||
+    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F) || (normType == NORM_INF && haveMask && cn != 1))
         return false;
 
@@ -1937,12 +1937,12 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
         cv::minMaxIdx(haveMask ? abssrc : abssrc.reshape(1), NULL, &result, NULL, NULL, _mask);
     }
-    else if (normType == NORM_L1 || normType == NORM_L2)
+    else if (normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR)
     {
         Scalar sc;
         bool unstype = depth == CV_8U || depth == CV_16U;
 
-        if ( !ocl_sum(haveMask ? src : src.reshape(1), sc, normType == NORM_L2 ?
+        if ( !ocl_sum(haveMask ? src : src.reshape(1), sc, normType == NORM_L2 || normType == NORM_L2SQR ?
                     OCL_OP_SUM_SQR : (unstype ? OCL_OP_SUM : OCL_OP_SUM_ABS), _mask) )
             return false;
 
@@ -1953,7 +1953,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
         for (int i = 0; i < cn; ++i)
             s += sc[i];
 
-        result = normType == NORM_L1 ? s : std::sqrt(s);
+        result = normType == NORM_L1 || normType == NORM_L2SQR ? s : std::sqrt(s);
     }
 
     return true;
@@ -2261,7 +2261,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double &
     bool relative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
 
-    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2) ||
+    if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F))
         return false;
 
