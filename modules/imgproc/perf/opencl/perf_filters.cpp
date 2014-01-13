@@ -273,6 +273,27 @@ OCL_PERF_TEST_P(BilateralFixture, Bilateral, OCL_TEST_SIZES)
     SANITY_CHECK(dst);
 }
 
+///////////// MedianBlur ////////////////////////
+
+typedef tuple<Size, int> MedianBlurParams;
+typedef TestBaseWithParam<MedianBlurParams> MedianBlurFixture;
+
+OCL_PERF_TEST_P(MedianBlurFixture, Bilateral, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(3, 5)))
+{
+    MedianBlurParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int ksize = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
+
+    UMat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::medianBlur(src, dst, ksize);
+
+    SANITY_CHECK(dst);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
