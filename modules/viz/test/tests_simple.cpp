@@ -113,7 +113,7 @@ TEST(Viz, show_painted_clouds)
     viz.setBackgroundMeshLab();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("cloud1", WPaintedCloud(cloud), Affine3d(Vec3d(0.0, -CV_PI/2, 0.0), Vec3d(-1.5, 0.0, 0.0)));
-    viz.showWidget("cloud2", WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0)), Affine3d(Vec3d(0.0, CV_PI/2, 0.0), Vec3d(1.5, 0.0, 0.0)));
+    viz.showWidget("cloud2", WPaintedCloud(cloud, Vec3d(0.0, -0.75, -1.0), Vec3d(0.0, 0.75, 0.0)), Affine3d(Vec3d(0.0, CV_PI/2, 0.0), Vec3d(1.5, 0.0, 0.0)));
     viz.showWidget("cloud3", WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0), Color::blue(), Color::red()));
     viz.showWidget("arrow", WArrow(Vec3d(0.0, 1.0, -1.0), Vec3d(0.0, 1.0, 1.0), 0.009, Color::raspberry()));
     viz.spin();

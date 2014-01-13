@@ -355,7 +355,7 @@ cv::viz::WCoordinateSystem::WCoordinateSystem(double scale)
     polydata->GetPointData()->SetScalars(colors);
 
     vtkSmartPointer<vtkTubeFilter> tube_filter = vtkSmartPointer<vtkTubeFilter>::New();
-    tube_filter->SetInputConnection(polydata->GetProducerPort());
+    VtkUtils::SetInputData(tube_filter, polydata);
     tube_filter->SetRadius(axes->GetScaleFactor() / 50.0);
     tube_filter->SetNumberOfSides(6);
     tube_filter->Update();
@@ -447,7 +447,7 @@ cv::viz::WGrid::WGrid(const Vec2i &cells, const Vec2d &cells_spacing, const Colo
 
     // Extract the edges so we have the grid
     vtkSmartPointer<vtkExtractEdges> extract_edges = vtkSmartPointer<vtkExtractEdges>::New();
-    extract_edges->SetInputConnection(grid_data->GetProducerPort());
+    VtkUtils::SetInputData(extract_edges, grid_data);
     extract_edges->Update();
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -854,13 +854,13 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, InputArray _image, d
 
     // Frustum needs to be textured or else it can't be combined with image
     vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
-    frustum_texture->SetInputConnection(frustum->GetProducerPort());
+    VtkUtils::SetInputData(frustum_texture, frustum);
     frustum_texture->SetSRange(0.0, 0.0); // Texture mapping with only one pixel
     frustum_texture->SetTRange(0.0, 0.0); // from the image to have constant color
 
     vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
     append_filter->AddInputConnection(frustum_texture->GetOutputPort());
-    append_filter->AddInputConnection(plane->GetProducerPort());
+    VtkUtils::AddInputData(append_filter, plane);
 
     vtkSmartPointer<vtkActor> actor = getActor(image_widget);
     actor->GetMapper()->SetInputConnection(append_filter->GetOutputPort());
@@ -886,13 +886,13 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, InputArray _image, d
 
     // Frustum needs to be textured or else it can't be combined with image
     vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
-    frustum_texture->SetInputConnection(frustum->GetProducerPort());
+    VtkUtils::SetInputData(frustum_texture, frustum);
     frustum_texture->SetSRange(0.0, 0.0); // Texture mapping with only one pixel
     frustum_texture->SetTRange(0.0, 0.0); // from the image to have constant color
 
     vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
     append_filter->AddInputConnection(frustum_texture->GetOutputPort());
-    append_filter->AddInputConnection(plane->GetProducerPort());
+    VtkUtils::AddInputData(append_filter, plane);
 
     vtkSmartPointer<vtkActor> actor = getActor(image_widget);
     actor->GetMapper()->SetInputConnection(append_filter->GetOutputPort());
@@ -917,7 +917,7 @@ cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double sca
     {
         Mat points = vtkTrajectorySource::ExtractPoints(_path);
         vtkSmartPointer<vtkPolyData> polydata = getPolyData(WPolyLine(points, color));
-        append_filter->AddInputConnection(polydata->GetProducerPort());
+        VtkUtils::AddInputData(append_filter, polydata);
     }
 
     if (display_mode & WTrajectory::FRAMES)
@@ -929,7 +929,7 @@ cv::viz::WTrajectory::WTrajectory(InputArray _path, int display_mode, double sca
 
         vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
         tensor_glyph->SetInputConnection(source->GetOutputPort());
-        tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+        VtkUtils::SetSourceData(tensor_glyph, glyph);
         tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
         tensor_glyph->ThreeGlyphsOff();
         tensor_glyph->SymmetricOff();
@@ -968,7 +968,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Matx33
 
     vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
     tensor_glyph->SetInputConnection(source->GetOutputPort());
-    tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+    VtkUtils::SetSourceData(tensor_glyph, glyph);
     tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
     tensor_glyph->ThreeGlyphsOff();
     tensor_glyph->SymmetricOff();
@@ -994,7 +994,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d 
 
     vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
     tensor_glyph->SetInputConnection(source->GetOutputPort());
-    tensor_glyph->SetSourceConnection(glyph->GetProducerPort());
+    VtkUtils::SetSourceData(tensor_glyph, glyph);
     tensor_glyph->ExtractEigenvaluesOff();  // Treat as a rotation matrix, not as something with eigenvalues
     tensor_glyph->ThreeGlyphsOff();
     tensor_glyph->SymmetricOff();
@@ -1046,7 +1046,7 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(InputArray _path, double line_le
 
         vtkSmartPointer<vtkPolyData> polydata = sphere_source->GetOutput();
         polydata->GetCellData()->SetScalars(VtkUtils::FillScalars(polydata->GetNumberOfCells(), c));
-        append_filter->AddInputConnection(polydata->GetProducerPort());
+        VtkUtils::AddInputData(append_filter, polydata);
 
         if (i > 0)
         {
@@ -1064,7 +1064,7 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(InputArray _path, double line_le
             line_source->Update();
             vtkSmartPointer<vtkPolyData> polydata = line_source->GetOutput();
             polydata->GetCellData()->SetScalars(VtkUtils::FillScalars(polydata->GetNumberOfCells(), c));
-            append_filter->AddInputConnection(polydata->GetProducerPort());
+            VtkUtils::AddInputData(append_filter, polydata);
         }
     }
     append_filter->Update();
