@@ -90,10 +90,10 @@ using namespace perf;
 using std::tr1::make_tuple;
 using std::tr1::get;
 
-typedef std::tr1::tuple<std::string, std::string, int> Cascade_Image_MinSize_t;
-typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
+typedef std::tr1::tuple<std::string, std::string, int> OCL_Cascade_Image_MinSize_t;
+typedef perf::TestBaseWithParam<OCL_Cascade_Image_MinSize_t> OCL_Cascade_Image_MinSize;
 
-PERF_TEST_P( Cascade_Image_MinSize, CascadeClassifier_UMat,
+PERF_TEST_P( OCL_Cascade_Image_MinSize, CascadeClassifier,
              testing::Combine(
                 testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml") ),
                 testing::Values( string("cv/shared/lena.png"),
@@ -135,6 +135,7 @@ PERF_TEST_P( Cascade_Image_MinSize, CascadeClassifier_UMat,
         while (next())
         {
             faces.clear();
+            ocl::finish();
 
             startTimer();
             cc.detectMultiScale(uimg, faces, 1.1, 3, 0, minSize);
@@ -146,4 +147,5 @@ PERF_TEST_P( Cascade_Image_MinSize, CascadeClassifier_UMat,
 
         //sort(faces.begin(), faces.end(), comparators::RectLess());
         SANITY_CHECK_NOTHING();//(faces, min_size/5);
+        // using SANITY_CHECK_NOTHING() since OCL and PLAIN version may find different faces number
 }
