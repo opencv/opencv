@@ -145,6 +145,42 @@ TEST(Viz, show_mesh_random_colors)
     viz.spin();
 }
 
+TEST(Viz, show_textured_mesh)
+{
+    Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
+
+    std::vector<Vec3d> points;
+    std::vector<Vec2d> tcoords;
+    std::vector<int> polygons;
+    for(size_t i = 0; i < 64; ++i)
+    {
+        double angle = CV_PI/2 * i/64.0;
+        points.push_back(Vec3d(0.00, cos(angle), sin(angle))*0.75);
+        points.push_back(Vec3d(1.57, cos(angle), sin(angle))*0.75);
+        tcoords.push_back(Vec2d(0.0, i/64.0));
+        tcoords.push_back(Vec2d(1.0, i/64.0));
+    }
+
+    for(size_t i = 0; i < points.size()/2-1; ++i)
+    {
+        int polys[] = {3, 2*i, 2*i+1, 2*i+2, 3, 2*i+1, 2*i+2, 2*i+3};
+        polygons.insert(polygons.end(), polys, polys + sizeof(polys)/sizeof(polys[0]));
+    }
+
+    cv::viz::Mesh mesh;
+    mesh.cloud = Mat(points, true).reshape(3, 1);
+    mesh.tcoords = Mat(tcoords, true).reshape(2, 1);
+    mesh.polygons = Mat(polygons, true).reshape(1, 1);
+    mesh.texture = lena;
+
+    Viz3d viz("show_textured_mesh");
+    viz.setBackgroundMeshLab();
+    viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("mesh", WMesh(mesh));
+    viz.setRenderingProperty("mesh", SHADING, SHADING_PHONG);
+    viz.spin();
+}
+
 TEST(Viz, show_polyline)
 {
     Mat polyline(1, 32, CV_64FC3);

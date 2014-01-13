@@ -73,7 +73,6 @@ cv::viz::Mesh cv::viz::Mesh::load(const String& file)
     sink->Write();
 
     // Now handle the polygons
-
     vtkSmartPointer<vtkCellArray> polygons = polydata->GetPolys();
     mesh.polygons.create(1, polygons->GetSize(), CV_32SC1);
     int* poly_ptr = mesh.polygons.ptr<int>();
@@ -85,25 +84,6 @@ cv::viz::Mesh cv::viz::Mesh::load(const String& file)
         *poly_ptr++ = nr_cell_points;
         for (vtkIdType i = 0; i < nr_cell_points; ++i)
             *poly_ptr++ = (int)cell_points[i];
-    }
-
-    String::size_type pos = file.find_last_of('.');
-    String png = (pos == String::npos) ? file : file.substr(0, pos+1) + "png";
-
-    vtkSmartPointer<vtkPNGReader> png_reader = vtkSmartPointer<vtkPNGReader>::New();
-
-    if (png_reader->CanReadFile(png.c_str()))
-    {
-        png_reader->SetFileName(png.c_str());
-        png_reader->Update();
-        vtkSmartPointer<vtkImageData> imagedata = png_reader->GetOutput();
-
-        Size sz(imagedata->GetDimensions()[0], imagedata->GetDimensions()[1]);
-        int channels = imagedata->GetNumberOfScalarComponents();
-        CV_Assert(imagedata->GetScalarType() == VTK_UNSIGNED_CHAR);
-
-        void *ptr = imagedata->GetScalarPointer(0,0,0);
-        Mat(sz, CV_8UC(channels), ptr).copyTo(mesh.texture);
     }
 
     return mesh;
