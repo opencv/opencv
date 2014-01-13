@@ -52,11 +52,12 @@ namespace cv { namespace viz
 cv::viz::vtkCloudMatSink::vtkCloudMatSink() {}
 cv::viz::vtkCloudMatSink::~vtkCloudMatSink() {}
 
-void cv::viz::vtkCloudMatSink::SetOutput(OutputArray _cloud, OutputArray _colors, OutputArray _normals)
+void cv::viz::vtkCloudMatSink::SetOutput(OutputArray _cloud, OutputArray _colors, OutputArray _normals, OutputArray _tcoords)
 {
     cloud = _cloud;
     colors = _colors;
     normals = _normals;
+    tcoords = _tcoords;
 }
 
 void cv::viz::vtkCloudMatSink::WriteData()
@@ -120,12 +121,32 @@ void cv::viz::vtkCloudMatSink::WriteData()
         Mat buffer(cloud.size(), CV_64FC(channels));
         Vec3d *cptr = buffer.ptr<Vec3d>();
         for(size_t i = 0; i < buffer.total(); ++i)
-            *cptr++ = Vec3d(scalars_data->GetTuple(i));
+            *cptr++ = Vec3d(normals_data->GetTuple(i));
 
         buffer.convertTo(normals, vtktype == VTK_FLOAT ? CV_32F : CV_64F);
     }
     else
         normals.release();
+
+    vtkSmartPointer<vtkDataArray> coords_data = input->GetPointData() ? input->GetPointData()->GetTCoords() : 0;
+
+    if (tcoords.needed() && coords_data)
+    {
+        int vtktype = coords_data->GetDataType();
+
+        CV_Assert(vtktype == VTK_FLOAT || VTK_FLOAT == VTK_DOUBLE);
+        CV_Assert(cloud.total() == (size_t)coords_data->GetNumberOfTuples());
+
+        Mat buffer(cloud.size(), CV_64FC2);
+        Vec2d *cptr = buffer.ptr<Vec2d>();
+        for(size_t i = 0; i < buffer.total(); ++i)
+            *cptr++ = Vec2d(coords_data->GetTuple(i));
+
+        buffer.convertTo(tcoords, vtktype == VTK_FLOAT ? CV_32F : CV_64F);
+
+    }
+    else
+        tcoords.release();
 }
 
 void cv::viz::vtkCloudMatSink::PrintSelf(ostream& os, vtkIndent indent)
