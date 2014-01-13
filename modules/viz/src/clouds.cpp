@@ -230,8 +230,8 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     CV_Assert("Cloud Widget without data" && currdata);
 
     vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
-    append_filter->AddInputConnection(currdata->GetProducerPort());
-    append_filter->AddInputConnection(polydata->GetProducerPort());
+    VtkUtils::AddInputData(append_filter, currdata);
+    VtkUtils::AddInputData(append_filter, polydata);
     append_filter->Update();
 
     VtkUtils::SetInputData(mapper, append_filter->GetOutput());
