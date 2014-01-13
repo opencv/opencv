@@ -987,72 +987,67 @@ MatIterator_<_Tp> Mat::end()
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(Functor operation) {
+    if (false) {
+        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int *>(0));
+        // If your compiler fail in this line.
+        // Please check that your functor signature is (_Tp&, const int*)
+    }
+
+    const size_t LINES = this->total() / this->size[this->dims - 1];
     const int ROWS = this->rows;
     const int COLS = this->cols;
 
-    for (int r = 0; r < ROWS; ++r) {
-        _Tp* pixel_reference = &(this->at<_Tp>(r, 0));
-        const _Tp* pixel_reference_end = pixel_reference + COLS;
-        int c = 0;
 
-        while (pixel_reference < pixel_reference_end) {
-            operation(*pixel_reference++, r, c++);
-        }
-    }
-};
+    class PixelOperationWrapper :public ParallelLoopBody
+    {
+    public:
+        PixelOperationWrapper(Mat_<_Tp> * const frame, Functor& _operation)
+            : mat(frame), op(_operation) {};
+        virtual ~PixelOperationWrapper(){};
+        virtual void operator()(const Range &range) const {
+            // Overloaded virtual operator
+            // convert range call to row call
+            const int dim = mat->dims;
+            const int cols = mat->size[dim - 1];
+            int idx[10] = {};
+            idx[dim - 2] = range.start - 1;
 
-template<typename _Tp, typename Functor> inline
-void Mat::forEachParallel(Functor operation) {
-#ifdef HAVE_TBB
-    struct TbbFunctor {
-        TbbFunctor(Mat * m, Functor *op) : mat(m), COLS(m->cols), tbbOperation(op) {
-        }
-
-        Mat * const mat;
-        const int COLS;
-        Functor * const tbbOperation;
-        void operator()(const tbb::blocked_range<int>& range) const {
-            const int r_END = range.end();
-
-            for (int r = range.begin(); r < range.end(); ++r) {
-                _Tp * pixel_reference = &(mat->at<_Tp>(r, 0));
-                const _Tp * const pixel_reference_end = pixel_reference + COLS;
-                int c = 0;
-                while (pixel_reference < pixel_reference_end) {
-                    (*tbbOperation)(*pixel_reference++, r, c++);
+            for (int line_num = range.start; line_num < range.end; ++line_num) {
+                idx[dim - 2]++;
+                for (int i = dim - 2; i >= 0; --i) {
+                    if (idx[i] >= mat->size[i]) {
+                        idx[i - 1] += idx[i] / mat->size[i];
+                        idx[i] %= mat->size[i];
+                        continue; // carry-over;
+                    }
+                    else {
+                        break;
+                    }
                 }
+
+                _Tp* line_start = &(mat->at<_Tp>(&idx[0]));
+                this->rowCall(line_start, idx, cols, dim);
             }
-        }
+        };
+    private:
+        Mat_<_Tp>* const mat;
+        Functor op;
+
+        void rowCall(_Tp * pixel, int idx[], const int cols, const int dims) const {
+            int &col = idx[dims - 1];
+            for (col = 0; col < cols; ++col) {
+                op(*pixel++, const_cast<const int*>(idx));
+            }
+        };
     };
-
-    tbb::parallel_for(tbb::blocked_range<int>(0, this->rows), TbbFunctor(this, &operation));
-#elif defined HAVE_OPENMP
-    const int ROWS = this->rows;
-    const int COLS = this->cols;
-
-#pragma omp parallel for
-    for (int r = 0; r < ROWS; ++r) {
-        _Tp* pixel_reference = &(this->at<_Tp>(r, 0));
-        const _Tp* pixel_reference_end = pixel_reference + COLS;
-        int c = 0;
-
-        while (pixel_reference < pixel_reference_end) {
-            operation(*pixel_reference++, r, c++);
-        }
-    }
-#else
-    this->forEach<_Tp>(operation);
-#endif
+    
+    cv::parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
 };
 
 template<typename _Tp, typename Functor> inline
 void Mat::forEach(Functor operation) const {
-    if (false) {
-        // test for arguments is const.
-        operation(*reinterpret_cast<const _Tp*>(0));
-    }
     // call as not const
-    (const_cast<Mat*>(this))->forEach<_Tp>(operation);
+    (const_cast<Mat*>(this))->forEach<const _Tp>(operation);
 };
 
 template<typename _Tp> inline
@@ -1646,15 +1641,9 @@ void Mat_<_Tp>::forEach(Functor operation) {
 }
 
 template<typename _Tp> template<typename Functor> inline
-void Mat_<_Tp>::forEachParallel(Functor operation) {
-    Mat::forEachParallel<_Tp, Functor>(operation);
-}
-
-template<typename _Tp> template<typename Functor> inline
 void Mat_<_Tp>::forEach(Functor operation) const {
     Mat::forEach<_Tp, Functor>(operation);
 }
-
 
 ///////////////////////////// SparseMat /////////////////////////////
 
