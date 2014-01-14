@@ -12,6 +12,8 @@ using std::tr1::get;
 typedef std::tr1::tuple<std::string, std::string, int> Cascade_Image_MinSize_t;
 typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
 
+#ifdef HAVE_OPENCL
+
 OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
                  testing::Combine(
                     testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml"),
@@ -54,3 +56,5 @@ OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
     sort(faces.begin(), faces.end(), comparators::RectLess());
     SANITY_CHECK(faces, min_size/5);
 }
+
+#endif //HAVE_OPENCL
