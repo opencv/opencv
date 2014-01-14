@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 /*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
@@ -48,9 +49,11 @@
 #undef USE_IPP_CANNY
 #endif
 */
-#ifdef USE_IPP_CANNY
+
 namespace cv
 {
+
+#ifdef USE_IPP_CANNY
 static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 {
     int size = 0, size1 = 0;
@@ -83,22 +86,165 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
         return false;
     return true;
 }
-}
 #endif
+
+static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float high_thresh,
+                      int aperture_size, bool L2gradient, int cn, const Size & size)
+{
+    UMat dx(size, CV_16SC(cn)), dy(size, CV_16SC(cn));
+
+    if (L2gradient)
+    {
+        low_thresh = std::min(32767.0f, low_thresh);
+        high_thresh = std::min(32767.0f, high_thresh);
+
+        if (low_thresh > 0) low_thresh *= low_thresh;
+        if (high_thresh > 0) high_thresh *= high_thresh;
+    }
+    int low = cvFloor(low_thresh), high = cvFloor(high_thresh);
+    Size esize(size.width + 2, size.height + 2);
+
+    UMat mag;
+    size_t globalsize[2] = { size.width * cn, size.height }, localsize[2] = { 16, 16 };
+
+    if (aperture_size == 3 && !_src.isSubmatrix())
+    {
+        // Sobel calculation
+        ocl::Kernel calcSobelRowPassKernel("calcSobelRowPass", ocl::imgproc::canny_oclsrc);
+        if (calcSobelRowPassKernel.empty())
+            return false;
+
+        UMat src = _src.getUMat(), dxBuf(size, CV_16SC(cn)), dyBuf(size, CV_16SC(cn));
+        calcSobelRowPassKernel.args(ocl::KernelArg::ReadOnly(src),
+                                    ocl::KernelArg::WriteOnlyNoSize(dxBuf),
+                                    ocl::KernelArg::WriteOnlyNoSize(dyBuf));
+
+        if (!calcSobelRowPassKernel.run(2, globalsize, localsize, false))
+            return false;
+
+        // magnitude calculation
+        ocl::Kernel magnitudeKernel("calcMagnitude_buf", ocl::imgproc::canny_oclsrc,
+                                    L2gradient ? " -D L2GRAD" : "");
+        if (magnitudeKernel.empty())
+            return false;
+
+        mag = UMat(esize, CV_32SC(cn), Scalar::all(0));
+        dx.create(size, CV_16SC(cn));
+        dy.create(size, CV_16SC(cn));
+
+        magnitudeKernel.args(ocl::KernelArg::ReadOnlyNoSize(dxBuf), ocl::KernelArg::ReadOnlyNoSize(dyBuf),
+                             ocl::KernelArg::WriteOnlyNoSize(dx), ocl::KernelArg::WriteOnlyNoSize(dy),
+                             ocl::KernelArg::WriteOnlyNoSize(mag, cn), size.height, size.width);
+
+        if (!magnitudeKernel.run(2, globalsize, localsize, false))
+            return false;
+    }
+    else
+    {
+        dx.create(size, CV_16SC(cn));
+        dy.create(size, CV_16SC(cn));
+
+        Sobel(_src, dx, CV_16SC1, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
+        Sobel(_src, dy, CV_16SC1, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
+
+        // magnitude calculation
+        ocl::Kernel magnitudeKernel("calcMagnitude", ocl::imgproc::canny_oclsrc,
+                                    L2gradient ? " -D L2GRAD" : "");
+        if (magnitudeKernel.empty())
+            return false;
+
+        mag = UMat(esize, CV_32SC(cn), Scalar::all(0));
+        magnitudeKernel.args(ocl::KernelArg::ReadOnlyNoSize(dx), ocl::KernelArg::ReadOnlyNoSize(dy),
+                             ocl::KernelArg::WriteOnlyNoSize(mag, cn), size.height, size.width);
+
+        if (!magnitudeKernel.run(2, globalsize, NULL, false))
+            return false;
+    }
+
+    // map calculation
+    ocl::Kernel calcMapKernel("calcMap", ocl::imgproc::canny_oclsrc);
+    if (calcMapKernel.empty())
+        return false;
+
+    UMat map(esize, CV_32SC(cn));
+    calcMapKernel.args(ocl::KernelArg::ReadOnlyNoSize(dx), ocl::KernelArg::ReadOnlyNoSize(dy),
+                       ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::WriteOnlyNoSize(map, cn),
+                       size.height, size.width, low, high);
+
+    if (!calcMapKernel.run(2, globalsize, localsize, false))
+        return false;
+
+    // local hysteresis thresholding
+    ocl::Kernel edgesHysteresisLocalKernel("edgesHysteresisLocal", ocl::imgproc::canny_oclsrc);
+    if (edgesHysteresisLocalKernel.empty())
+        return false;
+
+    UMat stack(1, size.area(), CV_16UC2), counter(1, 1, CV_32SC1, Scalar::all(0));
+    edgesHysteresisLocalKernel.args(ocl::KernelArg::ReadOnlyNoSize(map), ocl::KernelArg::PtrReadWrite(stack),
+                                    ocl::KernelArg::PtrReadWrite(counter), size.height, size.width);
+    if (!edgesHysteresisLocalKernel.run(2, globalsize, localsize, false))
+        return false;
+
+    // global hysteresis thresholding
+    UMat stack2(1, size.area(), CV_16UC2);
+    int count;
+
+    for ( ; ; )
+    {
+        ocl::Kernel edgesHysteresisGlobalKernel("edgesHysteresisGlobal", ocl::imgproc::canny_oclsrc);
+        if (edgesHysteresisGlobalKernel.empty())
+            return false;
+
+        {
+            Mat _counter = counter.getMat(ACCESS_RW);
+            count = _counter.at<int>(0, 0);
+            if (count == 0)
+                break;
+
+            _counter.at<int>(0, 0) = 0;
+        }
+
+        edgesHysteresisGlobalKernel.args(ocl::KernelArg::ReadOnlyNoSize(map), ocl::KernelArg::PtrReadWrite(stack),
+                                         ocl::KernelArg::PtrReadWrite(stack2), ocl::KernelArg::PtrReadWrite(counter),
+                                         size.height, size.width, count);
+
+#define divUp(total, grain) ((total + grain - 1) / grain)
+        size_t localsize2[2] = { 128, 1 }, globalsize2[2] = { std::min(count, 65535) * 128, divUp(count, 65535) };
+#undef divUp
+
+        if (!edgesHysteresisGlobalKernel.run(2, globalsize2, localsize2, false))
+            return false;
+
+        std::swap(stack, stack2);
+    }
+
+    // get edges
+    ocl::Kernel getEdgesKernel("getEdges", ocl::imgproc::canny_oclsrc);
+    if (getEdgesKernel.empty())
+        return false;
+
+    _dst.create(size, CV_8UC(cn));
+    UMat dst = _dst.getUMat();
+
+    getEdgesKernel.args(ocl::KernelArg::ReadOnlyNoSize(map), ocl::KernelArg::WriteOnly(dst));
+    return getEdgesKernel.run(2, globalsize, NULL, false);
+}
+
+}
 
 void cv::Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
                 int aperture_size, bool L2gradient )
 {
-    Mat src = _src.getMat();
-    CV_Assert( src.depth() == CV_8U );
+    const int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    const Size size = _src.size();
 
-    _dst.create(src.size(), CV_8U);
-    Mat dst = _dst.getMat();
+    CV_Assert( depth == CV_8U );
+    _dst.create(size, CV_8U);
 
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
-        //backward compatibility
+        // backward compatibility
         aperture_size &= ~CV_CANNY_L2_GRADIENT;
         L2gradient = true;
     }
@@ -108,6 +254,12 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
+
+    if (ocl::useOpenCL() && _dst.isUMat() && cn == 1 &&
+            ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
+        return;
+
+    Mat src = _src.getMat(), dst = _dst.getMat();
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
@@ -120,12 +272,11 @@ void cv::Canny( InputArray _src, OutputArray _dst,
         return;
 #endif
 
-    const int cn = src.channels();
     Mat dx(src.rows, src.cols, CV_16SC(cn));
     Mat dy(src.rows, src.cols, CV_16SC(cn));
 
-    Sobel(src, dx, CV_16S, 1, 0, aperture_size, 1, 0, cv::BORDER_REPLICATE);
-    Sobel(src, dy, CV_16S, 0, 1, aperture_size, 1, 0, cv::BORDER_REPLICATE);
+    Sobel(src, dx, CV_16S, 1, 0, aperture_size, 1, 0, BORDER_REPLICATE);
+    Sobel(src, dy, CV_16S, 0, 1, aperture_size, 1, 0, BORDER_REPLICATE);
 
     if (L2gradient)
     {

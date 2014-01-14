@@ -96,18 +96,18 @@ extern int test_loop_times;
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
 { \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNorm(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(checkNorm(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
 { \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNormRelative(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(checkNormRelative(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
@@ -134,8 +134,8 @@ extern int test_loop_times;
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
-        << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    EXPECT_LE(checkSimilarity(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 using perf::MatDepth;

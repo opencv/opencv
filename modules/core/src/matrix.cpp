@@ -1808,6 +1808,37 @@ bool _InputArray::isContinuous(int i) const
     return false;
 }
 
+bool _InputArray::isSubmatrix(int i) const
+{
+    int k = kind();
+
+    if( k == MAT )
+        return i < 0 ? ((const Mat*)obj)->isSubmatrix() : false;
+
+    if( k == UMAT )
+        return i < 0 ? ((const UMat*)obj)->isSubmatrix() : false;
+
+    if( k == EXPR || k == MATX || k == STD_VECTOR || k == NONE || k == STD_VECTOR_VECTOR)
+        return false;
+
+    if( k == STD_VECTOR_MAT )
+    {
+        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isSubmatrix();
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        CV_Assert((size_t)i < vv.size());
+        return vv[i].isSubmatrix();
+    }
+
+    CV_Error(CV_StsNotImplemented, "");
+    return false;
+}
+
 size_t _InputArray::offset(int i) const
 {
     int k = kind();
