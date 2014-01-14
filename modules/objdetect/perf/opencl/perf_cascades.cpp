@@ -17,6 +17,7 @@ typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
 OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
                  testing::Combine(
                     testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml"),
+                                     string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt_old.xml"),
                                      string("cv/cascadeandhog/cascades/lbpcascade_frontalface.xml") ),
                     testing::Values( string("cv/shared/lena.png"),
                                      string("cv/cascadeandhog/images/bttf301.png"),
