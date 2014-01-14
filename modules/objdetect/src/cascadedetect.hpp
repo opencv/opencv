@@ -3,6 +3,31 @@
 namespace cv
 {
 
+class FeatureEvaluator
+{
+public:
+    enum { HAAR = 0,
+        LBP  = 1,
+        HOG  = 2
+    };
+
+    virtual ~FeatureEvaluator();
+
+    virtual bool read(const FileNode& node);
+    virtual Ptr<FeatureEvaluator> clone() const;
+    virtual int getFeatureType() const;
+
+    virtual bool setImage(InputArray img, Size origWinSize,
+                          const std::vector<double>& scales);
+    virtual bool setWindow(Point p, int scaleIdx);
+
+    virtual double calcOrd(int featureIdx) const;
+    virtual int calcCat(int featureIdx) const;
+    
+    static Ptr<FeatureEvaluator> create(int type);
+};
+
+
 class CascadeClassifierImpl : public BaseCascadeClassifier
 {
 public:
@@ -85,7 +110,7 @@ protected:
     template<class FEval>
     friend int predictCategoricalStump( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
-    int runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight );
+    int runAt( Ptr<FeatureEvaluator>& feval, Point pt, int scaleIdx, double& weight );
 
     class Data
     {
@@ -269,10 +294,20 @@ public:
         enum { RECT_NUM = Feature::RECT_NUM };
         float calc( const int* pwin ) const;
 
-        void setOffsets( const Feature& _f, int step, int tofs );
+        void setOffsets( const Feature& _f, int step, int tofs,
+                         double scale, double nscale,
+                         Size winSize );
 
         int ofs[RECT_NUM][4];
         float weight[4];
+    };
+
+    struct ScaleData
+    {
+        int nofs[4];
+        float scale, nscale;
+        Size winSize;
+        Rect normrect;
     };
 
     HaarEvaluator();
@@ -282,9 +317,9 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(InputArray, Size origWinSize, Size sumSize);
-    virtual bool setWindow(Point pt);
-    virtual Rect getNormRect() const;
+    virtual bool setImage(InputArray img, Size origWinSize,
+                          const std::vector<double>& scales);
+    virtual bool setWindow(Point p, int scaleIdx);
     virtual void getUMats(std::vector<UMat>& bufs);
 
     double operator()(int featureIdx) const
@@ -296,16 +331,14 @@ protected:
     Size origWinSize, sumSize0;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
-    OptFeature* optfeaturesPtr; // optimization
+    Ptr<std::vector<ScaleData> > scaleData;
     bool hasTiltedFeatures;
 
     Mat sum0, sum, sqsum0, sqsum;
     UMat usum0, usum, usqsum0, usqsum, ufbuf;
 
-    Rect normrect;
-    int nofs[4];
-
     const int* pwin;
+    OptFeature* optfeaturesPtr; // optimization
     double varianceNormFactor;
 };
 
@@ -336,28 +369,6 @@ inline float HaarEvaluator::OptFeature :: calc( const int* ptr ) const
     return ret;
 }
 
-inline void HaarEvaluator::OptFeature :: setOffsets( const Feature& _f, int step, int tofs )
-{
-    weight[0] = _f.rect[0].weight;
-    weight[1] = _f.rect[1].weight;
-    weight[2] = _f.rect[2].weight;
-
-    Rect r2 = weight[2] > 0 ? _f.rect[2].r : Rect(0,0,0,0);
-    if (_f.tilted)
-    {
-        CV_TILTED_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], tofs, _f.rect[0].r, step );
-        CV_TILTED_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], tofs, _f.rect[1].r, step );
-        CV_TILTED_PTRS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, r2, step );
-    }
-    else
-    {
-        CV_SUM_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], 0, _f.rect[0].r, step );
-        CV_SUM_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], 0, _f.rect[1].r, step );
-        CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, r2, step );
-    }
-}
-
-
 //----------------------------------------------  LBPEvaluator -------------------------------------
 
 class LBPEvaluator : public FeatureEvaluator
@@ -367,7 +378,7 @@ public:
     {
         Feature();
         Feature( int x, int y, int _block_w, int _block_h  ) :
-            rect(x, y, _block_w, _block_h) {}
+                 rect(x, y, _block_w, _block_h) {}
 
         bool read(const FileNode& node );
 
@@ -379,8 +390,14 @@ public:
         OptFeature();
 
         int calc( const int* pwin ) const;
-        void setOffsets( const Feature& _f, int step );
+        void setOffsets( const Feature& _f, int step, double scale, Size winSize );
         int ofs[16];
+    };
+
+    struct ScaleData
+    {
+        float scale;
+        Size winSize;
     };
 
     LBPEvaluator();
@@ -390,8 +407,9 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
-    virtual bool setImage(InputArray image, Size _origWinSize, Size);
-    virtual bool setWindow(Point pt);
+    virtual bool setImage(InputArray img, Size origWinSize,
+                          const std::vector<double>& scales);
+    virtual bool setWindow(Point p, int scaleIdx);
     virtual void getUMats(std::vector<UMat>& bufs);
 
     int operator()(int featureIdx) const
@@ -402,6 +420,7 @@ protected:
     Size origWinSize, sumSize0;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
+    Ptr<std::vector<ScaleData> > scaleData;
     OptFeature* optfeaturesPtr; // optimization
 
     Mat sum0, sum;
@@ -436,18 +455,6 @@ inline int LBPEvaluator::OptFeature :: calc( const int* p ) const
            (CALC_SUM_OFS_( ofs[4], ofs[5], ofs[8], ofs[9], p ) >= cval ? 1 : 0);
 }
 
-inline void LBPEvaluator::OptFeature :: setOffsets( const Feature& _f, int step )
-{
-    Rect tr = _f.rect;
-    CV_SUM_OFS( ofs[0], ofs[1], ofs[4], ofs[5], 0, tr, step );
-    tr.x += 2*_f.rect.width;
-    CV_SUM_OFS( ofs[2], ofs[3], ofs[6], ofs[7], 0, tr, step );
-    tr.y += 2*_f.rect.height;
-    CV_SUM_OFS( ofs[10], ofs[11], ofs[14], ofs[15], 0, tr, step );
-    tr.x -= 2*_f.rect.width;
-    CV_SUM_OFS( ofs[8], ofs[9], ofs[12], ofs[13], 0, tr, step );
-}
-
 //---------------------------------------------- HOGEvaluator -------------------------------------------
 
 class HOGEvaluator : public FeatureEvaluator
@@ -472,8 +479,9 @@ public:
     virtual bool read( const FileNode& node );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
-    virtual bool setImage( InputArray image, Size winSize, Size );
-    virtual bool setWindow( Point pt );
+    virtual bool setImage(InputArray img, Size origWinSize,
+                          const std::vector<double>& scales);
+    virtual bool setWindow(Point p, int scaleIdx);
     double operator()(int featureIdx) const
     {
         return featuresPtr[featureIdx].calc(offset);
