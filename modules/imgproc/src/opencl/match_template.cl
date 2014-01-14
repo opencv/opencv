@@ -93,7 +93,7 @@ __kernel void matchTemplate_Naive_CCORR (__global const uchar * img,int img_step
                 for (int c = 0; c < CN; c++)
 
                     sum += (float)(img_ptr[j*CN+c] * tpl_ptr[j*CN+c]);
-           
+
         }
         __global float * result = (__global float *)(res)+res_idx;
         *result = sum;
@@ -300,7 +300,7 @@ __kernel void matchTemplate_CCOEFF_NORMED_C1 (__global const uchar * img_sums, i
         __global ELEM_TYPE* sum = (__global ELEM_TYPE*)(img_sums);
         __global float * sqsum = (__global float*)(img_sqsums);
 
-        float image_sum_ =  (float)((sum[SUMS_PTR(t_cols, t_rows)] - sum[SUMS_PTR(t_cols, 0)]) - 
+        float image_sum_ =  (float)((sum[SUMS_PTR(t_cols, t_rows)] - sum[SUMS_PTR(t_cols, 0)]) -
                                     (sum[SUMS_PTR(0, t_rows)] - sum[SUMS_PTR(0, 0)]));
 
         float image_sqsum_ = (float)((sqsum[SQSUMS_PTR(t_cols, t_rows)] - sqsum[SQSUMS_PTR(t_cols, 0)]) -

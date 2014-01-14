@@ -273,7 +273,7 @@ namespace cv
         else
             kernelName = "matchTemplate_CCOEFF_NORMED_C4";
 
-        ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc, 
+        ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc,
             format("-D type=%s -D elem_type=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
         if (k.empty())
             return false;
