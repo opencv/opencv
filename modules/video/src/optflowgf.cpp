@@ -605,7 +605,7 @@ public:
     double polySigma;
     int flags;
 
-    void operator ()(const UMat &frame0, const UMat &frame1, UMat &flowx, UMat &flowy)
+    bool operator ()(const UMat &frame0, const UMat &frame1, UMat &flowx, UMat &flowy)
     {
         CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
         CV_Assert(frame0.size() == frame1.size());
@@ -714,8 +714,10 @@ public:
 
             if (fastPyramids)
             {
-                polynomialExpansionOcl(pyramid0_[k], R[0]);
-                polynomialExpansionOcl(pyramid1_[k], R[1]);
+                if (!polynomialExpansionOcl(pyramid0_[k], R[0]))
+                    return false;
+                if (!polynomialExpansionOcl(pyramid1_[k], R[1]))
+                    return false;
             }
             else
             {
@@ -734,22 +736,31 @@ public:
 
                 for (int i = 0; i < 2; i++)
                 {
-                    gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]);
+                    if (!gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]))
+                        return false;
                     resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR);
-                    polynomialExpansionOcl(pyrLevel[i], R[i]);
+                    if (!polynomialExpansionOcl(pyrLevel[i], R[i]))
+                        return false;
                 }
             }
 
-            updateMatricesOcl(curFlowX, curFlowY, R[0], R[1], M);
+            if (!updateMatricesOcl(curFlowX, curFlowY, R[0], R[1], M))
+                return false;
 
             if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
                 setGaussianBlurKernel(winSize, winSize/2*0.3f);
             for (int i = 0; i < numIters; i++)
             {
                 if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
-                    updateFlow_gaussianBlur(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1);
+                {
+                    if (!updateFlow_gaussianBlur(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                        return false;
+                }
                 else
-                    updateFlow_boxFilter(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1);
+                {
+                    if (!updateFlow_boxFilter(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                        return false;
+                }
             }
 
             prevFlowX = curFlowX;
@@ -758,6 +769,7 @@ public:
 
         flowx = curFlowX;
         flowy = curFlowY;
+        return true;
     }
 
     void releaseMemory()
@@ -884,7 +896,7 @@ private:
         size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], src.rows};
 
         const cv::ocl::Device &device = cv::ocl::Device::getDefault();
-        int useDouble = (0 != device.doubleFPConfig());
+        bool useDouble = (0 != device.doubleFPConfig());
 
         cv::String build_options = cv::format("-D polyN=%d -D USE_DOUBLE=%d", polyN, useDouble ? 1 : 0);
         ocl::Kernel kernel;
@@ -990,25 +1002,33 @@ private:
         return kernel.run(2, globalsize, localsize, false);
     }
 
-    void updateFlow_boxFilter(
+    bool updateFlow_boxFilter(
         const UMat& R0, const UMat& R1, UMat& flowx, UMat &flowy,
         UMat& M, UMat &bufM, int blockSize, bool updateMatrices)
     {
-        boxFilter5Ocl(M, blockSize/2, bufM);
+        if (!boxFilter5Ocl(M, blockSize/2, bufM))
+            return false;
         swap(M, bufM);
-        updateFlowOcl(M, flowx, flowy);
+        if (!updateFlowOcl(M, flowx, flowy))
+            return false;
         if (updateMatrices)
-            updateMatricesOcl(flowx, flowy, R0, R1, M);
+            if (!updateMatricesOcl(flowx, flowy, R0, R1, M))
+                return false;
+        return true;
     }
-    void updateFlow_gaussianBlur(
+    bool updateFlow_gaussianBlur(
         const UMat& R0, const UMat& R1, UMat& flowx, UMat& flowy,
         UMat& M, UMat &bufM, int blockSize, bool updateMatrices)
     {
-        gaussianBlur5Ocl(M, blockSize/2, bufM);
+        if (!gaussianBlur5Ocl(M, blockSize/2, bufM))
+            return false;
         swap(M, bufM);
-        updateFlowOcl(M, flowx, flowy);
+        if (!updateFlowOcl(M, flowx, flowy))
+            return false;
         if (updateMatrices)
-            updateMatricesOcl(flowx, flowy, R0, R1, M);
+            if (!updateMatricesOcl(flowx, flowy, R0, R1, M))
+                return false;
+        return true;
     }
 };
 
@@ -1043,7 +1063,8 @@ static bool ocl_calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         flowar.push_back(UMat());
         flowar.push_back(UMat());
     }
-    opticalFlow(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1]);
+    if (!opticalFlow(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1]))
+        return false;
     merge(flowar, _flow0);
     return true;
 }
