@@ -405,23 +405,3 @@ __kernel void matchTemplate_CCOEFF_NORMED_C4 (__global const uchar * img_sums, i
         *result = normAcc((*result) - num, denum);
     }
 }
-
-//////////////////////////////////////////// extractFirstChannel/////////////////////////////
-__kernel void extractFirstChannel( const __global float4* img, int img_step, int img_offset,
-                                   __global float* res, int res_step, int res_offset, int rows, int cols)
-{
-    img_step   /= sizeof(float4);
-    img_offset /= sizeof(float4);
-    res_step   /= sizeof(float);
-    res_offset /= sizeof(float);
-
-    int gidx = get_global_id(0);
-    int gidy = get_global_id(1);
-
-    if(gidx < cols && gidy < rows)
-    {
-        __global const float4 * image = (__global const float4 *)(img) + mad24(gidy, img_step, img_offset + gidx);
-        __global float * result = (__global float *)(res)+ mad24(gidy, res_step, res_offset + gidx);
-        *result = image[0].x;
-    }
-}
