@@ -285,7 +285,7 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id )
     case CV_CAP_PROP_GAIN:
         PvAttrUint32Get(Camera.Handle, "GainValue", &nTemp);
         return (double)nTemp;
-    case CV_CAP_PROP_FRAMESTARTTRIGGERMODE:
+    case CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE:
         char triggerMode[256];
         PvAttrEnumGet(Camera.Handle, "FrameStartTriggerMode", triggerMode, 256, NULL);
         if (strcmp(triggerMode, "Freerun")==0)
@@ -388,7 +388,7 @@ bool CvCaptureCAM_PvAPI::setProperty( int property_id, double value )
             return false;
         }
         break;
-    case CV_CAP_PROP_FRAMESTARTTRIGGERMODE:
+    case CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE:
         tPvErr error;
         if (value==0)
             error = PvAttrEnumSet(Camera.Handle, "FrameStartTriggerMode", "Freerun");
