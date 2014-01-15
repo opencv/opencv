@@ -337,7 +337,7 @@ void CV_CameraCalibrationTest::run( int start_from )
     int progress = 0;
     int values_read = -1;
 
-    sprintf( filepath, "%scameracalibration/", ts->get_data_path().c_str() );
+    sprintf( filepath, "%scv/cameracalibration/", ts->get_data_path().c_str() );
     sprintf( filename, "%sdatafiles.txt", filepath );
     datafile = fopen( filename, "r" );
     if( datafile == 0 )
@@ -1384,7 +1384,7 @@ void CV_StereoCalibrationTest::run( int )
     {
         char filepath[1000];
         char buf[1000];
-        sprintf( filepath, "%sstereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
+        sprintf( filepath, "%scv/stereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
         f = fopen(filepath, "rt");
         Size patternSize;
         vector<string> imglist;
@@ -1405,7 +1405,7 @@ void CV_StereoCalibrationTest::run( int )
                 buf[--len] = '\0';
             if( buf[0] == '#')
                 continue;
-            sprintf(filepath, "%sstereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
+            sprintf(filepath, "%scv/stereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
             imglist.push_back(string(filepath));
         }
         fclose(f);
