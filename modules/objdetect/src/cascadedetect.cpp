@@ -1125,11 +1125,10 @@ void CascadeClassifierImpl::read(const FileNode& node)
 
 int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, int scaleIdx, double& weight )
 {
-    CV_Assert( !oldCascade );
-
-    assert( data.featureType == FeatureEvaluator::HAAR ||
+    assert( !oldCascade &&
+            (data.featureType == FeatureEvaluator::HAAR ||
             data.featureType == FeatureEvaluator::LBP ||
-            data.featureType == FeatureEvaluator::HOG );
+            data.featureType == FeatureEvaluator::HOG) );
 
     if( !evaluator->setWindow(pt, scaleIdx) )
         return -1;
@@ -1204,17 +1203,16 @@ public:
         uchar* mdata = mask.data;
         double gypWeight = 0.;
 
-        for( int t = range.start; t < range.end; t++ )
+        for( int scaleIdx = 0; scaleIdx < nScales; scaleIdx++ )
         {
-            int x0 = (t % xTiles)*tileSize.width;
-            int y0 = (t / xTiles)*tileSize.height;
-
-            for( int scaleIdx = 0; scaleIdx < nScales; scaleIdx++ )
+            double scalingFactor = scales[scaleIdx];
+            double yStep = max(2., scalingFactor);
+            Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor),
+                         cvRound(classifier->data.origWinSize.height * scalingFactor));
+            for( int t = range.start; t < range.end; t++ )
             {
-                double scalingFactor = scales[scaleIdx];
-                double yStep = max(2., scalingFactor);
-                Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor),
-                             cvRound(classifier->data.origWinSize.height * scalingFactor));
+                int x0 = (t % xTiles)*tileSize.width;
+                int y0 = (t / xTiles)*tileSize.height;
 
                 double startX = cvCeil(x0/yStep)*yStep;
                 double startY = cvCeil(y0/yStep)*yStep;
@@ -1495,7 +1493,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         if (maskGenerator)
             currentMask = maskGenerator->generateMask(grayImage);
 
-        Size tileSize(128, 128);
+        Size tileSize(64, 64);
         int nTiles = ((imgsz.width + tileSize.width - 1)/tileSize.width)*((imgsz.height + tileSize.height - 1)/tileSize.height);
 
         parallel_for_(Range(0, nTiles),
