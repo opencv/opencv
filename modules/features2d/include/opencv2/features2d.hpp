@@ -998,7 +998,7 @@ public:
      * Add descriptors to train descriptor collection.
      * descriptors      Descriptors to add. Each descriptors[i] is a descriptors set from one image.
      */
-    CV_WRAP virtual void add( InputArray descriptors );
+    CV_WRAP virtual void add( InputArrayOfArrays descriptors );
     /*
      * Get train descriptors collection.
      */
