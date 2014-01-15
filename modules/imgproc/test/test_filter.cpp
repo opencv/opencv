@@ -1901,7 +1901,7 @@ TEST(Imgproc_Blur, borderTypes)
     EXPECT_EQ(227, dst.at<uchar>(0, 0));
 
     // should work like BORDER_ISOLATED
-    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_ISOLATED);
+    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE | BORDER_ISOLATED);
     EXPECT_EQ(0, dst.at<uchar>(0, 0));
 
     /// ksize <= src_roi.size()
