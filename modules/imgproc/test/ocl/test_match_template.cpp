@@ -75,20 +75,19 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, int, bool)
     virtual void generateTestData()
     {
         Size image_roiSize = randomSize(2, 20);
-        Size templ_roiSize = Size (randomInt(1,image_roiSize.width), randomInt(1,image_roiSize.height));
+        Size templ_roiSize = Size(randomInt(1,image_roiSize.width), randomInt(1,image_roiSize.height));
         Size result_roiSize = Size(image_roiSize.width - templ_roiSize.width + 1,
                                    image_roiSize.height - templ_roiSize.height + 1);
 
         const double upValue = 256;
-        const double max_val = 100;
 
-        Border imageBorder = randomBorder(0, use_roi ? max_val : 0);
+        Border imageBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(image, image_roi, image_roiSize, imageBorder, type, -upValue, upValue);
 
-        Border templBorder = randomBorder(0, use_roi ? max_val : 0);
+        Border templBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(templ, templ_roi, templ_roiSize, templBorder, type, -upValue, upValue);
 
-        Border resultBorder = randomBorder(0, use_roi ? max_val : 0);
+        Border resultBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(result, result_roi, result_roiSize, resultBorder, CV_32F, -upValue, upValue);
 
         UMAT_UPLOAD_INPUT_PARAMETER(image)
