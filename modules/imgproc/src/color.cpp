@@ -2878,6 +2878,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("RGB2XYZ", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=%d -D dcn=3 -D bidx=%d", depth, scn, bidx));
+        if (k.empty())
+            return false;
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
         return k.run(2, globalsize, 0, false);
     }
@@ -2927,6 +2929,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         k.create("XYZ2RGB", ocl::imgproc::cvtcolor_oclsrc,
                  format("-D depth=%d -D scn=3 -D dcn=%d -D bidx=%d", depth, dcn, bidx));
+        if (k.empty())
+            return false;
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(c));
         return k.run(2, globalsize, 0, false);
     }
@@ -2981,6 +2985,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             k.create("RGB2HSV", ocl::imgproc::cvtcolor_oclsrc, format("-D depth=%d -D hrange=%d -D bidx=%d -D dcn=3 -D scn=%d",
                                                                       depth, hrange, bidx, scn));
+            if (k.empty())
+                return false;
 
             k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
                    ocl::KernelArg::PtrReadOnly(sdiv_data), hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
