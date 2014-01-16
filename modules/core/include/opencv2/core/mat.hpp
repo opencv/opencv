@@ -1661,10 +1661,6 @@ public:
     //! returns the typed read-only sparse matrix iterator at the matrix end
     template<typename _Tp> SparseMatConstIterator_<_Tp> end() const;
 
-    //! template methods for for operation over all matrix elements.
-    template<typename _Tp, typename Functor> void forEach(Functor operation);
-    template<typename _Tp, typename Functor> void forEach(Functor operation) const;
-
     //! returns the value stored in the sparse martix node
     template<typename _Tp> _Tp& value(Node* n);
     //! returns the value stored in the sparse martix node
@@ -1764,10 +1760,6 @@ public:
     SparseMatIterator_<_Tp> end();
     //! returns read-only sparse matrix iterator pointing to the element following the last sparse matrix element
     SparseMatConstIterator_<_Tp> end() const;
-
-    //! template methods for for operation over all matrix elements.
-    template<typename Functor> void forEach(Functor operation);
-    template<typename Functor> void forEach(Functor operation) const;
 };
 
 

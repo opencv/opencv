@@ -1965,27 +1965,6 @@ SparseMatConstIterator_<_Tp> SparseMat::end() const
     return it;
 }
 
-template<typename _Tp, typename Functor> inline
-void SparseMat::forEach(Functor operation)
-{
-    std::for_each(
-        this->begin<_Tp>(),
-        this->end<_Tp>(),
-        operation
-        );
-}
-
-template<typename _Tp, typename Functor> inline
-void SparseMat::forEach(Functor operation) const
-{
-    if (false) {
-        operation(*reinterpret_cast<const _Tp*>(0));
-        // If your compiler repots error on this line.
-        // Please check your arguments of functor(function object, pointer or lambda)
-        // is declared with "const" keyword.
-    }
-    const_cast<SparseMat*>(this)->forEach<_Tp>(operation);
-}
 
 
 ///////////////////////////// SparseMat_ ////////////////////////////
@@ -2162,17 +2141,7 @@ SparseMatConstIterator_<_Tp> SparseMat_<_Tp>::end() const
     return it;
 }
 
-template<typename _Tp> template<typename Functor> inline
-void SparseMat_<_Tp>::forEach(Functor operation)
-{
-    return SparseMat::forEach<_Tp>(operation);
-}
 
-template<typename _Tp> template<typename Functor> inline
-void SparseMat_<_Tp>::forEach(Functor operation) const
-{
-    return SparseMat::forEach<_Tp>(operation);
-}
 
 ////////////////////////// MatConstIterator /////////////////////////
 
