@@ -311,11 +311,7 @@ public:
     explicit Vec(const _Tp* values);
 
     Vec(const Vec<_Tp, cn>& v);
-
-    static Vec all(_Tp alpha);
-
-    //! per-element multiplication
-    Vec mul(const Vec<_Tp, cn>& v) const;
+    Vec(const Matx<_Tp, cn, 1>& m);
 
     //! conjugation (makes sense for complex numbers and quaternions)
     Vec conj() const;
@@ -920,6 +916,10 @@ Vec<_Tp, cn>::Vec(const Vec<_Tp, cn>& m)
     : Matx<_Tp, cn, 1>(m.val) {}
 
 template<typename _Tp, int cn> inline
+Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& m)
+    : Matx<_Tp, cn, 1>(m.val) {}
+
+template<typename _Tp, int cn> inline
 Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_AddOp op)
     : Matx<_Tp, cn, 1>(a, b, op) {}
 
@@ -930,22 +930,6 @@ Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, const Matx<_Tp, cn, 1>& b, Matx_Sub
 template<typename _Tp, int cn> template<typename _T2> inline
 Vec<_Tp, cn>::Vec(const Matx<_Tp, cn, 1>& a, _T2 alpha, Matx_ScaleOp op)
     : Matx<_Tp, cn, 1>(a, alpha, op) {}
-
-template<typename _Tp, int cn> inline
-Vec<_Tp, cn> Vec<_Tp, cn>::all(_Tp alpha)
-{
-    Vec v;
-    for( int i = 0; i < cn; i++ ) v.val[i] = alpha;
-    return v;
-}
-
-template<typename _Tp, int cn> inline
-Vec<_Tp, cn> Vec<_Tp, cn>::mul(const Vec<_Tp, cn>& v) const
-{
-    Vec<_Tp, cn> w;
-    for( int i = 0; i < cn; i++ ) w.val[i] = saturate_cast<_Tp>(this->val[i]*v.val[i]);
-    return w;
-}
 
 template<> inline
 Vec<float, 2> Vec<float, 2>::conj() const
