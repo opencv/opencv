@@ -385,8 +385,8 @@ enum { CAP_PROP_GSTREAMER_QUEUE_LENGTH = 200 // default is 1
 
 
 // PVAPI
-enum { CAP_PROP_PVAPI_MULTICASTIP               = 300 // ip for anable multicast master mode. 0 for disable multicast
-       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE     = 301 // FrameStartTriggerMode: Determines how a frame is initiated
+enum { CAP_PROP_PVAPI_MULTICASTIP               = 300, // ip for anable multicast master mode. 0 for disable multicast
+       CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE     = 301  // FrameStartTriggerMode: Determines how a frame is initiated
      };
 
 // PVAPI: FrameStartTriggerMode
