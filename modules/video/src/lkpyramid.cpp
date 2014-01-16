@@ -43,6 +43,7 @@
 #include <float.h>
 #include <stdio.h>
 #include "lkpyramid.hpp"
+#include "opencl_kernels.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -590,6 +591,231 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     return maxLevel;
 }
 
+namespace cv
+{
+    class PyrLKOpticalFlow
+    {
+        struct dim3
+        {
+            unsigned int x, y, z;
+        };
+    public:
+        PyrLKOpticalFlow()
+        {
+            winSize = Size(21, 21);
+            maxLevel = 3;
+            iters = 30;
+            derivLambda = 0.5;
+            useInitialFlow = false;
+            //minEigThreshold = 1e-4f;
+            //getMinEigenVals = false;
+        }
+
+        bool sparse(const UMat &prevImg, const UMat &nextImg, const UMat &prevPts, UMat &nextPts, UMat &status, UMat &err)
+        {
+            if (prevPts.empty())
+            {
+                nextPts.release();
+                status.release();
+                return false;
+            }
+
+            derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
+            if (derivLambda < 0)
+                return false;
+            if (maxLevel < 0 || winSize.width <= 2 || winSize.height <= 2)
+                return false;
+            iters = std::min(std::max(iters, 0), 100);
+            if (prevPts.rows != 1 || prevPts.type() != CV_32FC2)
+                return false;
+
+            dim3 patch;
+            calcPatchSize(patch);
+            if (patch.x <= 0 || patch.x >= 6 || patch.y <= 0 || patch.y >= 6)
+                return false;
+            if (!initWaveSize())
+                return false;
+            if (useInitialFlow)
+            {
+                if (nextPts.size() != prevPts.size() || nextPts.type() != CV_32FC2)
+                    return false;
+            }
+            else
+                ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+
+            UMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
+            UMat temp2 = nextPts.reshape(1);
+            multiply(1.0f / (1 << maxLevel) /2.0f, temp1, temp2);
+
+            ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
+            status.setTo(Scalar::all(1));
+
+            ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, err);
+
+            // build the image pyramids.
+            std::vector<UMat> prevPyr; prevPyr.resize(maxLevel + 1);
+            std::vector<UMat> nextPyr; nextPyr.resize(maxLevel + 1);
+
+            prevImg.convertTo(prevPyr[0], CV_32F);
+            nextImg.convertTo(nextPyr[0], CV_32F);
+
+            for (int level = 1; level <= maxLevel; ++level)
+            {
+                pyrDown(prevPyr[level - 1], prevPyr[level]);
+                pyrDown(nextPyr[level - 1], nextPyr[level]);
+            }
+
+            // dI/dx ~ Ix, dI/dy ~ Iy
+            for (int level = maxLevel; level >= 0; level--)
+            {
+                lkSparse_run(prevPyr[level], nextPyr[level],
+                             prevPts, nextPts, status, err, prevPts.cols,
+                             level, patch);
+            }
+            return true;
+        }
+
+        Size winSize;
+        int maxLevel;
+        int iters;
+        double derivLambda;
+        bool useInitialFlow;
+        //float minEigThreshold;
+        //bool getMinEigenVals;
+
+    private:
+        void calcPatchSize(dim3 &patch)
+        {
+            dim3 block;
+            //winSize.width *= cn;
+
+            if (winSize.width > 32 && winSize.width > 2 * winSize.height)
+            {
+                block.x = 32;
+                block.y = 8;
+            }
+            else
+            {
+                block.x = 16;
+                block.y = 16;
+            }
+
+            patch.x = (winSize.width  + block.x - 1) / block.x;
+            patch.y = (winSize.height + block.y - 1) / block.y;
+
+            block.z = patch.z = 1;
+        }
+    private:
+        int waveSize;
+        bool initWaveSize()
+        {
+            waveSize = 1;
+            if (isDeviceCPU())
+                return true;
+
+            ocl::Kernel kernel;
+            if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, ""))
+                return false;
+            waveSize = (int)kernel.preferedWorkGroupSizeMultiple();
+            return true;
+        }
+        bool lkSparse_run(UMat &I, UMat &J, const UMat &prevPts, UMat &nextPts, UMat &status, UMat& err,
+            int ptcount, int level, dim3 patch)
+        {
+            size_t localThreads[3]  = { 8, 8};
+            size_t globalThreads[3] = { 8 * ptcount, 8};
+            char calcErr = (0 == level) ? 1 : 0;
+
+            cv::String build_options;
+            if (isDeviceCPU())
+                build_options = " -D CPU";
+            else
+                build_options = cv::format("-D WAVE_SIZE=%d", waveSize);
+
+            ocl::Kernel kernel;
+            if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, build_options))
+                return false;
+
+            ocl::Image2D imageI(I);
+            ocl::Image2D imageJ(J);
+            int idxArg = 0;
+            idxArg = kernel.set(idxArg, imageI); //image2d_t I
+            idxArg = kernel.set(idxArg, imageJ); //image2d_t J
+            idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(prevPts)); // __global const float2* prevPts
+            idxArg = kernel.set(idxArg, (int)prevPts.step); // int prevPtsStep
+            idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(nextPts)); // __global const float2* nextPts
+            idxArg = kernel.set(idxArg, (int)nextPts.step); //  int nextPtsStep
+            idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(status)); // __global uchar* status
+            idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(err)); // __global float* err
+            idxArg = kernel.set(idxArg, (int)level); // const int level
+            idxArg = kernel.set(idxArg, (int)I.rows); // const int rows
+            idxArg = kernel.set(idxArg, (int)I.cols); // const int cols
+            idxArg = kernel.set(idxArg, (int)patch.x); // int PATCH_X
+            idxArg = kernel.set(idxArg, (int)patch.y); // int PATCH_Y
+            idxArg = kernel.set(idxArg, (int)winSize.width); // int c_winSize_x
+            idxArg = kernel.set(idxArg, (int)winSize.height); // int c_winSize_y
+            idxArg = kernel.set(idxArg, (int)iters); // int c_iters
+            idxArg = kernel.set(idxArg, (char)calcErr); //char calcErr
+
+            return kernel.run(2, globalThreads, localThreads, true);
+        }
+    private:
+        inline static bool isDeviceCPU()
+        {
+            return (cv::ocl::Device::TYPE_CPU == cv::ocl::Device::getDefault().type());
+        }
+        inline static void ensureSizeIsEnough(int rows, int cols, int type, UMat &m)
+        {
+            if (m.type() == type && m.rows >= rows && m.cols >= cols)
+                m = m(Rect(0, 0, cols, rows));
+            else
+                m.create(rows, cols, type);
+        }
+    };
+
+
+    bool ocl_calcOpticalFlowPyrLK(InputArray _prevImg, InputArray _nextImg,
+                                  InputArray _prevPts, InputOutputArray _nextPts,
+                                  OutputArray _status, OutputArray _err,
+                                  Size winSize, int maxLevel,
+                                  TermCriteria criteria,
+                                  int flags/*, double minEigThreshold*/ )
+    {
+        if (0 != (OPTFLOW_LK_GET_MIN_EIGENVALS & flags))
+            return false;
+        if (!cv::ocl::Device::getDefault().imageSupport())
+            return false;
+        if (_nextImg.size() != _prevImg.size())
+            return false;
+        int typePrev = _prevImg.type();
+        int typeNext = _nextImg.type();
+        if ((1 != CV_MAT_CN(typePrev)) || (1 != CV_MAT_CN(typeNext)))
+            return false;
+        if ((0 != CV_MAT_DEPTH(typePrev)) || (0 != CV_MAT_DEPTH(typeNext)))
+            return false;
+
+        PyrLKOpticalFlow opticalFlow;
+        opticalFlow.winSize     = winSize;
+        opticalFlow.maxLevel    = maxLevel;
+        opticalFlow.iters       = criteria.maxCount;
+        opticalFlow.derivLambda = criteria.epsilon;
+        opticalFlow.useInitialFlow  = (0 != (flags & OPTFLOW_USE_INITIAL_FLOW));
+
+        UMat umatErr;
+        if (_err.needed())
+        {
+            _err.create(_prevPts.size(), CV_8UC1);
+            umatErr = _err.getUMat();
+        }
+
+        _nextPts.create(_prevPts.size(), _prevPts.type());
+        _status.create(_prevPts.size(), CV_8UC1);
+        UMat umatNextPts = _nextPts.getUMat();
+        UMat umatStatus = _status.getUMat();
+        return opticalFlow.sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
+    }
+};
+
 void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            InputArray _prevPts, InputOutputArray _nextPts,
                            OutputArray _status, OutputArray _err,
@@ -597,6 +823,10 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
                            TermCriteria criteria,
                            int flags, double minEigThreshold )
 {
+    bool use_opencl = ocl::useOpenCL() && (_prevImg.isUMat() || _nextImg.isUMat());
+    if ( use_opencl && ocl_calcOpticalFlowPyrLK(_prevImg, _nextImg, _prevPts, _nextPts, _status, _err, winSize, maxLevel, criteria, flags/*, minEigThreshold*/))
+        return;
+
     Mat prevPtsMat = _prevPts.getMat();
     const int derivDepth = DataType<cv::detail::deriv_type>::depth;
 
