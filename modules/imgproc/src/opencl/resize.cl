@@ -50,7 +50,6 @@
 #define INTER_RESIZE_COEF_BITS 11
 #define INTER_RESIZE_COEF_SCALE (1 << INTER_RESIZE_COEF_BITS)
 #define CAST_BITS (INTER_RESIZE_COEF_BITS << 1)
-#define CAST_SCALE (1.0f/(1<<CAST_BITS))
 #define INC(x,l) min(x+1,l-1)
 
 #define PIXSIZE ((int)sizeof(PIXTYPE))
