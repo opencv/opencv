@@ -620,7 +620,7 @@ namespace cv
                 return false;
             if (maxLevel < 0 || winSize.width <= 2 || winSize.height <= 2)
                 return false;
-            calcPatchSize(patch);
+            calcPatchSize();
             if (patch.x <= 0 || patch.x >= 6 || patch.y <= 0 || patch.y >= 6)
                 return false;
             if (!initWaveSize())
@@ -672,7 +672,21 @@ namespace cv
         //bool getMinEigenVals;
 
     private:
-        void calcPatchSize(dim3 &patch)
+        int waveSize;
+        bool initWaveSize()
+        {
+            waveSize = 1;
+            if (isDeviceCPU())
+                return true;
+
+            ocl::Kernel kernel;
+            if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, ""))
+                return false;
+            waveSize = (int)kernel.preferedWorkGroupSizeMultiple();
+            return true;
+        }
+        dim3 patch;
+        void calcPatchSize()
         {
             dim3 block;
             //winSize.width *= cn;
@@ -693,21 +707,7 @@ namespace cv
 
             block.z = patch.z = 1;
         }
-    private:
-        int waveSize;
-        dim3 patch;
-        bool initWaveSize()
-        {
-            waveSize = 1;
-            if (isDeviceCPU())
-                return true;
 
-            ocl::Kernel kernel;
-            if (!kernel.create("lkSparse", cv::ocl::video::pyrlk_oclsrc, ""))
-                return false;
-            waveSize = (int)kernel.preferedWorkGroupSizeMultiple();
-            return true;
-        }
         bool lkSparse_run(UMat &I, UMat &J, const UMat &prevPts, UMat &nextPts, UMat &status, UMat& err,
             int ptcount, int level, dim3 patch)
         {
