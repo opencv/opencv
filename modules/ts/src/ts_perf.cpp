@@ -115,6 +115,14 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
     return instance()(name, array, eps, err);
 }
 
+Regression& Regression::addMoments(TestBase* test, const std::string& name, const cv::Moments& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)sizeof(cv::Moments) / sizeof(double);
+    cv::Mat m(1, len, CV_64F, (void*)&array);
+
+    return Regression::add(test, name, m, eps, err);
+}
+
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
