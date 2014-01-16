@@ -8,13 +8,13 @@
     haarold1 haarold2 haarold3 haar1 haar3 lbp1 lbp3</detector_names>
   <detectors>
     <haarold1>
-      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt.xml</fn>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt_old.xml</fn>
       <scale_cascade>0</scale_cascade></haarold1>
     <haarold2>
-      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt2.xml</fn>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_alt2_old.xml</fn>
       <scale_cascade>1</scale_cascade></haarold2>
     <haarold3>
-      <fn>cascadeandhog/cascades/haarcascade_frontalface_default.xml</fn>
+      <fn>cascadeandhog/cascades/haarcascade_frontalface_default_old.xml</fn>
       <scale_cascade>1</scale_cascade></haarold3>  
     <haar1>
       <fn>cascadeandhog/cascades/haarcascade_1.xml</fn>
