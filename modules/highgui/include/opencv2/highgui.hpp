@@ -76,9 +76,9 @@ enum { EVENT_MOUSEMOVE      = 0,
        EVENT_MBUTTONUP      = 6,
        EVENT_LBUTTONDBLCLK  = 7,
        EVENT_RBUTTONDBLCLK  = 8,
-       EVENT_MBUTTONDBLCLK  =9,
-       EVENT_MOUSEWHEEL     =10,
-       EVENT_MOUSEHWHEEL    =11
+       EVENT_MBUTTONDBLCLK  = 9,
+       EVENT_MOUSEWHEEL     = 10,
+       EVENT_MOUSEHWHEEL    = 11
      };
 
 enum { EVENT_FLAG_LBUTTON   = 1,
