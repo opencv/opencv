@@ -208,6 +208,24 @@ Sets mouse handler for the specified window
     :param userdata: The optional parameter passed to the callback.
 
 
+getMouseWheelDelta
+------------------
+Gets the mouse-wheel motion delta, when handling mouse-wheel events EVENT_MOUSEWHEEL and EVENT_MOUSEHWHEEL.
+
+.. ocv:function:: int getMouseWheelDelta(int flags)
+
+.. ocv:cfunction:: CV_GET_WHEEL_DELTA(flags)
+
+    :param flags: The mouse callback flags parameter.
+
+
+For EVENT_MOUSEWHEEL positive and negative values mean forward and backward scrolling, respectively.
+For EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and left scrolling, respectively.
+
+.. note::
+
+    Mouse-wheel event are currently available only on Windows. On Windows Units are usually multiples of 120.
+
 setTrackbarPos
 ------------------
 Sets the trackbar position.
