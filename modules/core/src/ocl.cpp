@@ -3841,6 +3841,8 @@ struct Image2D::Impl
 {
     Impl(const UMat &src)
     {
+        handle = 0;
+        refcount = 1;
         init(src);
     }
     ~Impl()
