@@ -616,13 +616,6 @@ protected:
    The matrix iterators are random-access iterators, so they can be passed
    to any STL algorithm, including std::sort().
 */
-
-
-template<bool Cond, class T = void>
-struct enable_if{};
-template<class T>
-struct enable_if<true, T> { typedef T type; };
-
 class CV_EXPORTS Mat
 {
 public:
@@ -882,7 +875,6 @@ public:
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
 
-
     //! template methods for for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename _Tp, typename Functor> void forEach(Functor operation);
@@ -1035,7 +1027,6 @@ public:
     // the operations take care of skipping gaps in the end of rows (if any)
     template<typename Function> void forEach(Function operation);
     template<typename Function> void forEach(Function operation) const;
-
 
     //! equivalent to Mat::create(_rows, _cols, DataType<_Tp>::type)
     void create(int _rows, int _cols);

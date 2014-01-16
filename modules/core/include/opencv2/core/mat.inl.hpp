@@ -47,10 +47,6 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
-#ifdef HAVE_TBB
-#include <tbb/parallel_for.h>
-#endif
-
 namespace cv
 {
 
