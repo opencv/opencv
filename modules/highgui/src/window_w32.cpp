@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() marco
+#include <windowsx.h> // required for GET_X_LPARAM() and GET_Y_LPARAM() macros
 
 #if defined WIN32 || defined _WIN32
 
@@ -1395,13 +1395,9 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
           flags |= (delta << 16);
 
           POINT pt;
-          {
-             // since The coordinates are relative to screen so get screen size.
-             RECT windowRect;
-             ::GetWindowRect( window->hwnd, &windowRect );
-             pt.x = GET_X_LPARAM( lParam ) - windowRect.left;
-             pt.y = GET_Y_LPARAM( lParam ) - windowRect.top;
-          }
+          pt.x = GET_X_LPARAM( lParam );
+          pt.y = GET_Y_LPARAM( lParam );
+          ::ScreenToClient(hwnd, &pt); // Convert screen coordinates to client coordinates.
 
           RECT rect;
           GetClientRect( window->hwnd, &rect );
