@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
 
+#include "bufferpool.impl.hpp"
+
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
 \****************************************************************************************/
@@ -155,6 +157,12 @@ void MatAllocator::copy(UMatData* usrc, UMatData* udst, int dims, const size_t s
 
     for( j = 0; j < it.nplanes; j++, ++it )
         memcpy(ptrs[1], ptrs[0], planesz);
+}
+
+BufferPoolController* MatAllocator::getBufferPoolController() const
+{
+    static DummyBufferPoolController dummy;
+    return &dummy;
 }
 
 class StdMatAllocator : public MatAllocator

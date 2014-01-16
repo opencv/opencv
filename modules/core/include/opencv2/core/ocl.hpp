@@ -596,6 +596,9 @@ protected:
     Impl* p;
 };
 
+
+CV_EXPORTS MatAllocator* getOpenCLAllocator();
+
 }}
 
 #endif
