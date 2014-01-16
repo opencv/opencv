@@ -611,46 +611,33 @@ namespace cv
             //getMinEigenVals = false;
         }
 
-        bool sparse(const UMat &prevImg, const UMat &nextImg, const UMat &prevPts, UMat &nextPts, UMat &status, UMat &err)
+        bool checkParam()
         {
-            if (prevPts.empty())
-            {
-                nextPts.release();
-                status.release();
-                return false;
-            }
+            iters = std::min(std::max(iters, 0), 100);
 
             derivLambda = std::min(std::max(derivLambda, 0.0), 1.0);
             if (derivLambda < 0)
                 return false;
             if (maxLevel < 0 || winSize.width <= 2 || winSize.height <= 2)
                 return false;
-            iters = std::min(std::max(iters, 0), 100);
-            if (prevPts.rows != 1 || prevPts.type() != CV_32FC2)
-                return false;
-
-            dim3 patch;
             calcPatchSize(patch);
             if (patch.x <= 0 || patch.x >= 6 || patch.y <= 0 || patch.y >= 6)
                 return false;
             if (!initWaveSize())
                 return false;
-            if (useInitialFlow)
-            {
-                if (nextPts.size() != prevPts.size() || nextPts.type() != CV_32FC2)
-                    return false;
-            }
-            else
-                ensureSizeIsEnough(1, prevPts.cols, prevPts.type(), nextPts);
+            return true;
+        }
+
+        bool sparse(const UMat &prevImg, const UMat &nextImg, const UMat &prevPts, UMat &nextPts, UMat &status, UMat &err)
+        {
+            if (!checkParam())
+                return false;
 
             UMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
             UMat temp2 = nextPts.reshape(1);
             multiply(1.0f / (1 << maxLevel) /2.0f, temp1, temp2);
 
-            ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
             status.setTo(Scalar::all(1));
-
-            ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, err);
 
             // build the image pyramids.
             std::vector<UMat> prevPyr; prevPyr.resize(maxLevel + 1);
@@ -668,9 +655,10 @@ namespace cv
             // dI/dx ~ Ix, dI/dy ~ Iy
             for (int level = maxLevel; level >= 0; level--)
             {
-                lkSparse_run(prevPyr[level], nextPyr[level],
-                             prevPts, nextPts, status, err, prevPts.cols,
-                             level, patch);
+                if (!lkSparse_run(prevPyr[level], nextPyr[level], prevPts,
+                                  nextPts, status, err,
+                                  prevPts.cols, level, patch))
+                    return false;
             }
             return true;
         }
@@ -707,6 +695,7 @@ namespace cv
         }
     private:
         int waveSize;
+        dim3 patch;
         bool initWaveSize()
         {
             waveSize = 1;
@@ -764,13 +753,6 @@ namespace cv
         {
             return (cv::ocl::Device::TYPE_CPU == cv::ocl::Device::getDefault().type());
         }
-        inline static void ensureSizeIsEnough(int rows, int cols, int type, UMat &m)
-        {
-            if (m.type() == type && m.rows >= rows && m.cols >= cols)
-                m = m(Rect(0, 0, cols, rows));
-            else
-                m.create(rows, cols, type);
-        }
     };
 
 
@@ -794,19 +776,33 @@ namespace cv
         if ((0 != CV_MAT_DEPTH(typePrev)) || (0 != CV_MAT_DEPTH(typeNext)))
             return false;
 
+        if (_prevPts.empty() || _prevPts.size().height != 1 || _prevPts.type() != CV_32FC2)
+            return false;
+        bool useInitialFlow  = (0 != (flags & OPTFLOW_USE_INITIAL_FLOW));
+        if (useInitialFlow)
+        {
+            if (_nextPts.size() != _prevPts.size() || _nextPts.type() != CV_32FC2)
+                return false;
+        }
+
         PyrLKOpticalFlow opticalFlow;
         opticalFlow.winSize     = winSize;
         opticalFlow.maxLevel    = maxLevel;
         opticalFlow.iters       = criteria.maxCount;
         opticalFlow.derivLambda = criteria.epsilon;
-        opticalFlow.useInitialFlow  = (0 != (flags & OPTFLOW_USE_INITIAL_FLOW));
+        opticalFlow.useInitialFlow  = useInitialFlow;
+
+        if (!opticalFlow.checkParam())
+            return false;
 
         UMat umatErr;
         if (_err.needed())
         {
-            _err.create(_prevPts.size(), CV_8UC1);
+            _err.create(_prevPts.size(), CV_32FC1);
             umatErr = _err.getUMat();
         }
+        else
+            umatErr.create(_prevPts.size(), CV_32FC1);
 
         _nextPts.create(_prevPts.size(), _prevPts.type());
         _status.create(_prevPts.size(), CV_8UC1);

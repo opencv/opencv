@@ -86,10 +86,10 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
     std::vector<cv::Point2f> pts;
     cv::goodFeaturesToTrack(frame0, pts, 1000, 0.01, 0.0);
 
-    std::vector<cv::Point2f> nextPtsCPU;
-    std::vector<unsigned char> statusCPU;
-    std::vector<float> errCPU;
-    OCL_OFF(cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPtsCPU, statusCPU, errCPU, winSize, maxLevel, criteria, flags, minEigThreshold));
+    std::vector<cv::Point2f> cpuNextPts;
+    std::vector<unsigned char> cpuStatusCPU;
+    std::vector<float> cpuErr;
+    OCL_OFF(cv::calcOpticalFlowPyrLK(frame0, frame1, pts, cpuNextPts, cpuStatusCPU, cpuErr, winSize, maxLevel, criteria, flags, minEigThreshold));
 
     UMat umatNextPts, umatStatus, umatErr;
     OCL_ON(cv::calcOpticalFlowPyrLK(umatFrame0, umatFrame1, pts, umatNextPts, umatStatus, umatErr, winSize, maxLevel, criteria, flags, minEigThreshold));
@@ -97,13 +97,13 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
     std::vector<unsigned char> status; umatStatus.copyTo(status);
     std::vector<float> err; umatErr.copyTo(err);
 
-    ASSERT_EQ(nextPtsCPU.size(), nextPts.size());
-    ASSERT_EQ(statusCPU.size(), status.size());
+    ASSERT_EQ(cpuNextPts.size(), nextPts.size());
+    ASSERT_EQ(cpuStatusCPU.size(), status.size());
 
     size_t mistmatch = 0;
     for (size_t i = 0; i < nextPts.size(); ++i)
     {
-        if (status[i] != statusCPU[i])
+        if (status[i] != cpuStatusCPU[i])
         {
             ++mistmatch;
             continue;
@@ -112,7 +112,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
         if (status[i])
         {
             cv::Point2i a = nextPts[i];
-            cv::Point2i b = nextPtsCPU[i];
+            cv::Point2i b = cpuNextPts[i];
 
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
             float errdiff = 0.0f;
