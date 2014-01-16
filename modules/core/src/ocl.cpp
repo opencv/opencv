@@ -821,6 +821,7 @@ OCL_FUNC_P(cl_mem, clCreateSubBuffer,
     const void * buffer_create_info,
     cl_int * errcode_ret),
     (buffer, flags, buffer_create_type, buffer_create_info, errcode_ret))
+*/
 
 OCL_FUNC_P(cl_mem, clCreateImage,
     (cl_context context,
@@ -831,6 +832,18 @@ OCL_FUNC_P(cl_mem, clCreateImage,
     cl_int * errcode_ret),
     (context, flags, image_format, image_desc, host_ptr, errcode_ret))
 
+OCL_FUNC_P(cl_mem, clCreateImage2D,
+    (cl_context context,
+    cl_mem_flags flags,
+    const cl_image_format * image_format,
+    size_t image_width,
+    size_t image_height,
+    size_t image_row_pitch,
+    void * host_ptr,
+    cl_int *errcode_ret),
+    (context, flags, image_format, image_width, image_height, image_row_pitch, host_ptr, errcode_ret))
+
+/*
 OCL_FUNC(cl_int, clGetSupportedImageFormats,
  (cl_context context,
  cl_mem_flags flags,
@@ -945,21 +958,26 @@ OCL_FUNC(cl_int, clEnqueueCopyImageToBuffer,
  cl_event * event),
  (command_queue, src_image, dst_buffer, src_origin, region, dst_offset,
  num_events_in_wait_list, event_wait_list, event))
+*/
 
 OCL_FUNC(cl_int, clEnqueueCopyBufferToImage,
  (cl_command_queue command_queue,
  cl_mem src_buffer,
  cl_mem dst_image,
  size_t src_offset,
- const size_t * dst_origin[3],
- const size_t * region[3],
+ const size_t dst_origin[3],
+ const size_t region[3],
  cl_uint num_events_in_wait_list,
  const cl_event * event_wait_list,
  cl_event * event),
  (command_queue, src_buffer, dst_image, src_offset, dst_origin,
  region, num_events_in_wait_list, event_wait_list, event))
 
+ OCL_FUNC(cl_int, clFlush,
+ (cl_command_queue command_queue),
+ (command_queue))
 
+/*
 OCL_FUNC_P(void*, clEnqueueMapImage,
  (cl_command_queue command_queue,
  cl_mem image,
@@ -976,7 +994,9 @@ OCL_FUNC_P(void*, clEnqueueMapImage,
  (command_queue, image, blocking_map, map_flags, origin, region,
  image_row_pitch, image_slice_pitch, num_events_in_wait_list,
  event_wait_list, event, errcode_ret))
+*/
 
+/*
 OCL_FUNC(cl_int, clRetainProgram, (cl_program program), (program))
 
 OCL_FUNC(cl_int, clGetKernelInfo,

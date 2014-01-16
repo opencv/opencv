@@ -774,7 +774,7 @@ namespace cv
     };
 
 
-    bool ocl_calcOpticalFlowPyrLK(InputArray _prevImg, InputArray _nextImg,
+    static bool ocl_calcOpticalFlowPyrLK(InputArray _prevImg, InputArray _nextImg,
                                   InputArray _prevPts, InputOutputArray _nextPts,
                                   OutputArray _status, OutputArray _err,
                                   Size winSize, int maxLevel,
