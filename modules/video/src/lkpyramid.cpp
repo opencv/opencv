@@ -657,7 +657,7 @@ namespace cv
             {
                 if (!lkSparse_run(prevPyr[level], nextPyr[level], prevPts,
                                   nextPts, status, err,
-                                  prevPts.cols, level, patch))
+                                  prevPts.cols, level))
                     return false;
             }
             return true;
@@ -709,7 +709,7 @@ namespace cv
         }
 
         bool lkSparse_run(UMat &I, UMat &J, const UMat &prevPts, UMat &nextPts, UMat &status, UMat& err,
-            int ptcount, int level, dim3 patch)
+            int ptcount, int level)
         {
             size_t localThreads[3]  = { 8, 8};
             size_t globalThreads[3] = { 8 * ptcount, 8};
