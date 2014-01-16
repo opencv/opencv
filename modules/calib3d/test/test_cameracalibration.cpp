@@ -290,8 +290,8 @@ int CV_CameraCalibrationTest::compare(double* val, double* ref_val, int len,
 void CV_CameraCalibrationTest::run( int start_from )
 {
     int code = cvtest::TS::OK;
-    cv::String            filepath;
-    cv::String            filename;
+    char            filepath[200];
+    char            filename[200];
 
     CvSize          imageSize;
     CvSize          etalonSize;
@@ -337,9 +337,9 @@ void CV_CameraCalibrationTest::run( int start_from )
     int progress = 0;
     int values_read = -1;
 
-    filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
-    filename = cv::format("%sdatafiles.txt", filepath.c_str() );
-    datafile = fopen( filename.c_str(), "r" );
+    sprintf( filepath, "%scv/cameracalibration/", ts->get_data_path().c_str() );
+    sprintf( filename, "%sdatafiles.txt", filepath );
+    datafile = fopen( filename, "r" );
     if( datafile == 0 )
     {
         ts->printf( cvtest::TS::LOG, "Could not open file with list of test files: %s\n", filename );
@@ -354,8 +354,8 @@ void CV_CameraCalibrationTest::run( int start_from )
     {
         values_read = fscanf(datafile,"%s",i_dat_file);
         CV_Assert(values_read == 1);
-        filename = cv::format("%s%s", filepath.c_str(), i_dat_file);
-        file = fopen(filename.c_str(),"r");
+        sprintf(filename, "%s%s", filepath, i_dat_file);
+        file = fopen(filename,"r");
 
         ts->update_context( this, currTest, true );
 
@@ -1382,10 +1382,10 @@ void CV_StereoCalibrationTest::run( int )
 
     for(int testcase = 1; testcase <= ntests; testcase++)
     {
-        cv::String filepath;
+        char filepath[1000];
         char buf[1000];
-        filepath = cv::format("%scv/stereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
-        f = fopen(filepath.c_str(), "rt");
+        sprintf( filepath, "%scv/stereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
+        f = fopen(filepath, "rt");
         Size patternSize;
         vector<string> imglist;
 
@@ -1405,7 +1405,7 @@ void CV_StereoCalibrationTest::run( int )
                 buf[--len] = '\0';
             if( buf[0] == '#')
                 continue;
-            filepath = cv::format("%scv/stereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
+            sprintf(filepath, "%scv/stereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
             imglist.push_back(string(filepath));
         }
         fclose(f);
