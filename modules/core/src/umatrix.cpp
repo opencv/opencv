@@ -56,7 +56,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     prevAllocator = currAllocator = allocator;
     urefcount = refcount = 0;
     data = origdata = 0;
-    size = 0;
+    size = 0; capacity = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
@@ -67,7 +67,7 @@ UMatData::~UMatData()
     prevAllocator = currAllocator = 0;
     urefcount = refcount = 0;
     data = origdata = 0;
-    size = 0;
+    size = 0; capacity = 0;
     flags = 0;
     handle = 0;
     userdata = 0;
