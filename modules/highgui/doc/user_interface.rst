@@ -214,8 +214,6 @@ Gets the mouse-wheel motion delta, when handling mouse-wheel events EVENT_MOUSEW
 
 .. ocv:function:: int getMouseWheelDelta(int flags)
 
-.. ocv:cfunction:: CV_GET_WHEEL_DELTA(flags)
-
     :param flags: The mouse callback flags parameter.
 
 For regular mice with a scroll-wheel, delta will be a multiple of 120. The value 120 corresponds to a one notch rotation of the wheel or the threshold for action to be taken and one such action should occur for each delta.
@@ -223,6 +221,8 @@ Some high-precision mice with higher-resolution freely-rotating wheels may gener
 
 For EVENT_MOUSEWHEEL positive and negative values mean forward and backward scrolling, respectively.
 For EVENT_MOUSEHWHEEL, where available, positive and negative values mean right and left scrolling, respectively.
+
+With the C API, the macro CV_GET_WHEEL_DELTA(flags) can be used alternatively.
 
 .. note::
 
