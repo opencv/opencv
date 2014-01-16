@@ -62,8 +62,8 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     int code = cvtest::TS::OK;
 
     /* test parameters */
-    char   filepath[1000];
-    char   filename[1000];
+    std::string   filepath;
+    std::string   filename;
 
     CvMat*  _v = 0;
     CvPoint2D32f* v;
@@ -75,9 +75,9 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     int  idx, max_idx;
     int  progress = 0;
 
-    sprintf( filepath, "%scv/cameracalibration/", ts->get_data_path().c_str() );
-    sprintf( filename, "%schessboard_timing_list.dat", filepath );
-    CvFileStorage* fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ );
+    filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
+    filename = cv::format("%schessboard_timing_list.dat", filepath.c_str() );
+    CvFileStorage* fs = cvOpenFileStorage( filename.c_str(), 0, CV_STORAGE_READ );
     CvFileNode* board_list = fs ? cvGetFileNodeByName( fs, 0, "boards" ) : 0;
 
     if( !fs || !board_list || !CV_NODE_IS_SEQ(board_list->tag) ||
@@ -105,14 +105,14 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
         ts->update_context( this, idx-1, true );
 
         /* read the image */
-        sprintf( filename, "%s%s", filepath, imgname );
+        filename = cv::format("%s%s", filepath.c_str(), imgname );
 
         cv::Mat img2 = cv::imread( filename );
         img = img2;
 
         if( img2.empty() )
         {
-            ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename );
+            ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
             if( max_idx == 1 )
             {
                 code = cvtest::TS::FAIL_MISSING_TEST_DATA;
