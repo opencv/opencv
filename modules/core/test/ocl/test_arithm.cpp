@@ -1615,7 +1615,7 @@ OCL_TEST_P(ReduceSum, Mat)
         OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_SUM, dtype));
         OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_SUM, dtype));
 
-        double eps = ddepth <= CV_32S ? 1 : 5e-5;
+        double eps = ddepth <= CV_32S ? 1 : 1e-4;
         OCL_EXPECT_MATS_NEAR(dst, eps)
     }
 }

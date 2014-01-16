@@ -3036,6 +3036,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( dtype < 0 )
         dtype = _dst.fixedType() ? _dst.type() : stype;
+    dtype = CV_MAKETYPE(dtype >= 0 ? dtype : stype, cn);
     int ddepth = CV_MAT_DEPTH(dtype);
 
     CV_Assert( cn == CV_MAT_CN(dtype) );
