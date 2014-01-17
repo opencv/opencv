@@ -46,6 +46,7 @@
 #ifndef WITH_MASK
 #define WITH_MASK 0
 #endif
+
 //macro to read eigenvalue matrix
 #define GET_SRC_32F(_x, _y) ((__global const float*)(eig + (_y)*eig_pitch))[_x]
 
@@ -106,47 +107,6 @@ __kernel
 }
 #undef GET_SRC_32F
 
-
-//bitonic sort
-__kernel
-    void sortCorners_bitonicSort
-    (
-        __global float2 * corners,
-        const int count,
-        const int stage,
-        const int passOfStage
-    )
-{
-    const int threadId = get_global_id(0);
-    if(threadId >= count / 2)
-    {
-        return;
-    }
-
-    const int sortOrder = (((threadId/(1 << stage)) % 2)) == 1 ? 1 : 0; // 0 is descent
-
-    const int pairDistance = 1 << (stage - passOfStage);
-    const int blockWidth   = 2 * pairDistance;
-
-    const int leftId = min( (threadId % pairDistance)
-                   + (threadId / pairDistance) * blockWidth, count );
-
-    const int rightId = min( leftId + pairDistance, count );
-
-    const float2 leftPt  = corners[leftId];
-    const float2 rightPt = corners[rightId];
-
-    const float leftVal  = leftPt.x;
-    const float rightVal = rightPt.x;
-
-    const bool compareResult = leftVal > rightVal;
-
-    float2 greater = compareResult ? leftPt:rightPt;
-    float2 lesser  = compareResult ? rightPt:leftPt;
-
-    corners[leftId]  = sortOrder ? lesser : greater;
-    corners[rightId] = sortOrder ? greater : lesser;
-}
 
 // this is simple short serial kernel that makes some short reduction and initialization work
 // it makes HOST like work to avoid additional sync with HOST to do this short work
