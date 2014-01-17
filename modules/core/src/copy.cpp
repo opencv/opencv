@@ -232,10 +232,7 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
-            // to handle the copying 1xn matrix => nx1 std vector.
-            Size sz = size() == dst.size() ?
-                getContinuousSize(*this, dst) :
-                getContinuousSize(*this);
+            Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
             for( ; sz.height--; sptr += step, dptr += dst.step )
