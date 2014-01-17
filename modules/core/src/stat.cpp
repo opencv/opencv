@@ -2295,7 +2295,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double &
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
-    CV_Assert( _src1.size() == _src2.size() && _src1.type() == _src2.type() );
+    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
     double _result = 0;
     if (ocl::useOpenCL() && _mask.empty() && _src1.isUMat() && _src2.isUMat() &&
