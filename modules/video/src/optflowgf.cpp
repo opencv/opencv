@@ -895,10 +895,14 @@ private:
 #endif
         size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], src.rows};
 
+#if 0
         const cv::ocl::Device &device = cv::ocl::Device::getDefault();
         bool useDouble = (0 != device.doubleFPConfig());
 
         cv::String build_options = cv::format("-D polyN=%d -D USE_DOUBLE=%d", polyN, useDouble ? 1 : 0);
+#else
+        cv::String build_options = cv::format("-D polyN=%d", polyN);
+#endif
         ocl::Kernel kernel;
         if (!kernel.create("polynomialExpansion", cv::ocl::video::optical_flow_farneback_oclsrc, build_options))
             return false;
@@ -915,9 +919,11 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xg));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xxg));
         idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+#if 0
         if (useDouble)
             idxArg = kernel.set(idxArg, (void *)m_igd, 4 * sizeof(double));
         else
+#endif
             idxArg = kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
         return kernel.run(2, globalsize, localsize, false);
     }
