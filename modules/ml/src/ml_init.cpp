@@ -52,7 +52,7 @@ CV_INIT_ALGORITHM(EM, "StatModel.EM",
                   obj.info()->addParam(obj, "epsilon", obj.epsilon);
                   obj.info()->addParam(obj, "weights", obj.weights, true);
                   obj.info()->addParam(obj, "means", obj.means, true);
-                  obj.info()->addParam(obj, "covs", obj.covs, true));
+                  obj.info()->addParam(obj, "covs", obj.covs, true))
 
 bool initModule_ml(void)
 {
