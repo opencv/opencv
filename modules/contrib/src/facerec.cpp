@@ -872,7 +872,7 @@ CV_INIT_ALGORITHM(Eigenfaces, "FaceRecognizer.Eigenfaces",
                   obj.info()->addParam(obj, "labels", obj._labels, true);
                   obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
                   obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
-                  obj.info()->addParam(obj, "mean", obj._mean, true));
+                  obj.info()->addParam(obj, "mean", obj._mean, true))
 
 CV_INIT_ALGORITHM(Fisherfaces, "FaceRecognizer.Fisherfaces",
                   obj.info()->addParam(obj, "ncomponents", obj._num_components);
@@ -881,7 +881,7 @@ CV_INIT_ALGORITHM(Fisherfaces, "FaceRecognizer.Fisherfaces",
                   obj.info()->addParam(obj, "labels", obj._labels, true);
                   obj.info()->addParam(obj, "eigenvectors", obj._eigenvectors, true);
                   obj.info()->addParam(obj, "eigenvalues", obj._eigenvalues, true);
-                  obj.info()->addParam(obj, "mean", obj._mean, true));
+                  obj.info()->addParam(obj, "mean", obj._mean, true))
 
 CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "radius", obj._radius);
@@ -890,7 +890,7 @@ CV_INIT_ALGORITHM(LBPH, "FaceRecognizer.LBPH",
                   obj.info()->addParam(obj, "grid_y", obj._grid_y);
                   obj.info()->addParam(obj, "threshold", obj._threshold);
                   obj.info()->addParam(obj, "histograms", obj._histograms, true);
-                  obj.info()->addParam(obj, "labels", obj._labels, true));
+                  obj.info()->addParam(obj, "labels", obj._labels, true))
 
 bool initModule_contrib()
 {

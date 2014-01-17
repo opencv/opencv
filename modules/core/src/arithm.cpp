@@ -1434,8 +1434,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool haveScalar = false, swapped12 = false;
 
     if( dims1 != dims2 || sz1 != sz2 || cn != cn2 ||
-        ((kind1 == _InputArray::MATX || kind2 == _InputArray::MATX) &&
-         (sz1 == Size(1,4) || sz2 == Size(1,4))) )
+        (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
+        (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
         if( checkScalar(*psrc1, type2, kind1, kind2) )
         {

@@ -849,7 +849,9 @@ public:
 };
 
 #ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
+#endif
 
 #ifdef HAVE_WINRT
     // using C++11 thread attribute for local thread data

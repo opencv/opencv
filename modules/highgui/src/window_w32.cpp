@@ -44,27 +44,11 @@
 
 #if defined WIN32 || defined _WIN32
 
-#define COMPILE_MULTIMON_STUBS // Required for multi-monitor support
-#ifndef _MULTIMON_USE_SECURE_CRT
-#  define _MULTIMON_USE_SECURE_CRT 0 // some MinGW platforms have no strncpy_s
-#endif
-
-#if defined SM_CMONITORS && !defined MONITOR_DEFAULTTONEAREST
-#  define MONITOR_DEFAULTTONULL       0x00000000
-#  define MONITOR_DEFAULTTOPRIMARY    0x00000001
-#  define MONITOR_DEFAULTTONEAREST    0x00000002
-#  define MONITORINFOF_PRIMARY        0x00000001
-#endif
-#ifndef __inout
-#  define __inout
-#endif
-
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #endif
 
 #include <commctrl.h>
-#include <winuser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

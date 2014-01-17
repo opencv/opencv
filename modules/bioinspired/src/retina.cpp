@@ -312,7 +312,7 @@ RetinaImpl::RetinaImpl(const cv::Size inputSz, const bool colorMode, int colorSa
 {
     _retinaFilter = 0;
     _init(inputSz, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
-};
+}
 
 RetinaImpl::~RetinaImpl()
 {
