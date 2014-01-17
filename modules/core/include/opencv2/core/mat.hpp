@@ -127,6 +127,7 @@ public:
     virtual int depth(int i=-1) const;
     virtual int channels(int i=-1) const;
     virtual bool isContinuous(int i=-1) const;
+    virtual bool isSubmatrix(int i=-1) const;
     virtual bool empty() const;
     virtual void copyTo(const _OutputArray& arr) const;
     virtual size_t offset(int i=-1) const;
