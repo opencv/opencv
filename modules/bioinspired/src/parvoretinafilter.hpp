@@ -150,7 +150,8 @@ public:
     * @param tau: time constant of the filter (unit is frame for video processing)
     * @param k: spatial constant of the filter (unit is pixels)
     */
-    void setGanglionCellsLocalAdaptationLPfilterParameters(const float tau, const float k){BasicRetinaFilter::setLPfilterParameters(0, tau, k, 2);}; // change the parameters of the filter
+    void setGanglionCellsLocalAdaptationLPfilterParameters(const float tau, const float k)
+    { BasicRetinaFilter::setLPfilterParameters(0, tau, k, 2); }  // change the parameters of the filter
 
 
     /**
@@ -167,42 +168,42 @@ public:
     /**
     * @return the output of the photoreceptors filtering step (high cut frequency spatio-temporal low pass filter)
     */
-    inline const std::valarray<float> &getPhotoreceptorsLPfilteringOutput() const {return _photoreceptorsOutput;};
+    inline const std::valarray<float> &getPhotoreceptorsLPfilteringOutput() const { return _photoreceptorsOutput; }
 
     /**
     * @return the output of the photoreceptors filtering step (low cut frequency spatio-temporal low pass filter)
     */
-    inline const std::valarray<float> &getHorizontalCellsOutput() const { return _horizontalCellsOutput;};
+    inline const std::valarray<float> &getHorizontalCellsOutput() const { return _horizontalCellsOutput; }
 
     /**
     * @return the output Parvocellular ON channel of the retina model
     */
-    inline const std::valarray<float> &getParvoON() const {return _parvocellularOutputON;};
+    inline const std::valarray<float> &getParvoON() const { return _parvocellularOutputON; }
 
     /**
     * @return the output Parvocellular OFF channel of the retina model
     */
-    inline const std::valarray<float> &getParvoOFF() const {return _parvocellularOutputOFF;};
+    inline const std::valarray<float> &getParvoOFF() const { return _parvocellularOutputOFF; }
 
     /**
     * @return the output of the Bipolar cells of the ON channel of the retina model same as function getParvoON() but without luminance local adaptation
     */
-    inline const std::valarray<float> &getBipolarCellsON() const {return _bipolarCellsOutputON;};
+    inline const std::valarray<float> &getBipolarCellsON() const { return _bipolarCellsOutputON; }
 
     /**
     * @return the output of the Bipolar cells of the OFF channel of the retina model same as function getParvoON() but without luminance local adaptation
     */
-    inline const std::valarray<float> &getBipolarCellsOFF() const {return _bipolarCellsOutputOFF;};
+    inline const std::valarray<float> &getBipolarCellsOFF() const { return _bipolarCellsOutputOFF; }
 
     /**
     * @return the photoreceptors's temporal constant
     */
-    inline float getPhotoreceptorsTemporalConstant(){return this->_filteringCoeficientsTable[2];};
+    inline float getPhotoreceptorsTemporalConstant() { return _filteringCoeficientsTable[2]; }
 
     /**
     * @return the horizontal cells' temporal constant
     */
-    inline float getHcellsTemporalConstant(){return this->_filteringCoeficientsTable[5];};
+    inline float getHcellsTemporalConstant(){return _filteringCoeficientsTable[5]; }
 
 private:
     // template buffers

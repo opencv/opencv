@@ -228,7 +228,7 @@ public:
         {
             m_BlobTrackerList.DelBlob(i-1);
         }
-    };
+    }
 
     CvBlob* AddBlob(CvBlob* pBlob, IplImage* pImg, IplImage* pImgFG )
     {   /* Create new tracker: */
@@ -244,7 +244,7 @@ public:
         F.pTracker->Init(pBlob,pImg, pImgFG);
         m_BlobTrackerList.AddBlob((CvBlob*)&F);
         return m_BlobTrackerList.GetBlob(m_BlobTrackerList.GetBlobNum()-1);
-    };
+    }
 
     void DelBlob(int BlobIndex)
     {
@@ -404,7 +404,7 @@ public:
         }   /* Update predictor. */
 #endif
         m_ClearHyp = 1;
-    };
+    }
 
 
     /* Process on blob (for multi hypothesis tracing) */
@@ -421,7 +421,7 @@ public:
             pBlob[0] = pF->blob;
         }
         pBlob->ID = ID;
-    };
+    }
 
     virtual double  GetConfidence(int BlobIndex, CvBlob* pBlob, IplImage* pImg, IplImage* pImgFG = NULL)
     {
@@ -429,7 +429,7 @@ public:
         if(pF==NULL) return 0;
         if(pF->pTracker==NULL) return 0;
         return pF->pTracker->GetConfidence(pBlob?pBlob:(&pF->blob), pImg, pImgFG, NULL);
-    };
+    }
 
     virtual double GetConfidenceList(CvBlobSeq* pBlobList, IplImage* pImg, IplImage* pImgFG = NULL)
     {
@@ -460,7 +460,7 @@ public:
 //            cvWaitKey(0);
         }
         return W;
-    };
+    }
 
     virtual void UpdateBlob(int BlobIndex, CvBlob* pBlob, IplImage* pImg, IplImage* /*pImgFG*/ = NULL)
     {
@@ -469,10 +469,10 @@ public:
         {
             pF->pTracker->Update(pBlob?pBlob:&(pF->blob),pImg,m_pImgFG);
         }
-    };
+    }
 
-    int     GetBlobNum(){return m_BlobTrackerList.GetBlobNum();};
-    CvBlob* GetBlob(int index){return m_BlobTrackerList.GetBlob(index);};
+    int     GetBlobNum(){return m_BlobTrackerList.GetBlobNum();}
+    CvBlob* GetBlob(int index){return m_BlobTrackerList.GetBlob(index);}
 
     void  SetBlob(int BlobIndex, CvBlob* pBlob)
     {
@@ -485,7 +485,7 @@ public:
         }
     }
 
-    void    Release(){delete this;};
+    void    Release(){delete this;}
 
     /* Additional functionality: */
     CvBlob* GetBlobByID(int BlobID){return m_BlobTrackerList.GetBlobByID(BlobID);}
@@ -497,7 +497,7 @@ public:
         DefBlobTrackerL* pF = (DefBlobTrackerL*)m_BlobTrackerList.GetBlob(BlobIdx);
         assert(pF->pBlobHyp);
         return pF->pBlobHyp->GetBlobNum();
-    };  /* CvBlobtrackerList::GetBlobHypNum() */
+    }  /* CvBlobtrackerList::GetBlobHypNum() */
 
     /* Return pointer to specified blob hypothesis by index blob: */
     virtual CvBlob* GetBlobHyp(int BlobIndex, int hypothesis)
@@ -505,7 +505,7 @@ public:
         DefBlobTrackerL* pF = (DefBlobTrackerL*)m_BlobTrackerList.GetBlob(BlobIndex);
         assert(pF->pBlobHyp);
         return pF->pBlobHyp->GetBlob(hypothesis);
-    };  /* CvBlobtrackerList::GetBlobHyp() */
+    }  /* CvBlobtrackerList::GetBlobHyp() */
 
     /* Set new parameters for specified (by index) blob hyp (can be called several times for each hyp )*/
     virtual void    SetBlobHyp(int BlobIndex, CvBlob* pBlob)
@@ -526,7 +526,7 @@ public:
             assert(pF->pBlobHyp);
             pF->pBlobHyp->AddBlob(pBlob);
         }
-    };  /* CvBlobtrackerList::SetBlobHyp */
+    }  /* CvBlobtrackerList::SetBlobHyp */
 
 private:
 public:

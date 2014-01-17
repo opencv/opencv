@@ -222,26 +222,26 @@ public:
     * setup the local luminance adaptation capability
     * @param V0CompressionParameter: the compression strengh of the photoreceptors local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 160
     */
-    inline void setPhotoreceptorsLocalAdaptationSensitivity(const float V0CompressionParameter){_photoreceptorsPrefilter.setV0CompressionParameter(1-V0CompressionParameter);_setInitPeriodCount();};
+    inline void setPhotoreceptorsLocalAdaptationSensitivity(const float V0CompressionParameter) { _photoreceptorsPrefilter.setV0CompressionParameter(1-V0CompressionParameter);_setInitPeriodCount(); }
 
     /**
     * setup the local luminance adaptation capability
     * @param V0CompressionParameter: the compression strengh of the parvocellular pathway (details) local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 160
     */
-    inline void setParvoGanglionCellsLocalAdaptationSensitivity(const float V0CompressionParameter){_ParvoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount();};
+    inline void setParvoGanglionCellsLocalAdaptationSensitivity(const float V0CompressionParameter) { _ParvoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount(); }
 
     /**
     * setup the local luminance adaptation area of integration
     * @param spatialResponse: the spatial constant of the low pass filter applied on the bipolar cells output in order to compute local contrast mean values
     * @param temporalResponse: the spatial constant of the low pass filter applied on the bipolar cells output in order to compute local contrast mean values (generally set to zero: immediate response)
     */
-    inline void setGanglionCellsLocalAdaptationLPfilterParameters(const float spatialResponse, const float temporalResponse){_ParvoRetinaFilter.setGanglionCellsLocalAdaptationLPfilterParameters(temporalResponse, spatialResponse);_setInitPeriodCount();};
+    inline void setGanglionCellsLocalAdaptationLPfilterParameters(const float spatialResponse, const float temporalResponse) { _ParvoRetinaFilter.setGanglionCellsLocalAdaptationLPfilterParameters(temporalResponse, spatialResponse);_setInitPeriodCount(); }
 
     /**
     * setup the local luminance adaptation capability
     * @param V0CompressionParameter: the compression strengh of the magnocellular pathway (motion) local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 160
     */
-    inline void setMagnoGanglionCellsLocalAdaptationSensitivity(const float V0CompressionParameter){_MagnoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount();};
+    inline void setMagnoGanglionCellsLocalAdaptationSensitivity(const float V0CompressionParameter) { _MagnoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount(); }
 
     /**
     * setup the OPL and IPL parvo channels
@@ -253,7 +253,7 @@ public:
     * @param k2: the spatial constant of the first order low pass filter of the horizontal cells, use it to cut low spatial frequencies (local luminance), unit is pixels, typical value is 5 pixel, this value is also used for local contrast computing when computing the local contrast adaptation at the ganglion cells level (Inner Plexiform Layer parvocellular channel model)
     * @param V0CompressionParameter: the compression strengh of the ganglion cells local adaptation output, set a value between 160 and 250 for best results, a high value increases more the low value sensitivity... and the output saturates faster, recommended value: 230
     */
-    void setOPLandParvoParameters(const float beta1, const float tau1, const float k1, const float beta2, const float tau2, const float k2, const float V0CompressionParameter){_ParvoRetinaFilter.setOPLandParvoFiltersParameters(beta1, tau1, k1, beta2, tau2, k2);_ParvoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount();};
+    void setOPLandParvoParameters(const float beta1, const float tau1, const float k1, const float beta2, const float tau2, const float k2, const float V0CompressionParameter) { _ParvoRetinaFilter.setOPLandParvoFiltersParameters(beta1, tau1, k1, beta2, tau2, k2);_ParvoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount(); }
 
     /**
     * set parameters values for the Inner Plexiform Layer (IPL) magnocellular channel
@@ -265,31 +265,31 @@ public:
     * @param localAdaptintegration_tau: specifies the temporal constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
     * @param localAdaptintegration_k: specifies the spatial constant of the low pas filter involved in the computation of the local "motion mean" for the local adaptation computation
     */
-    void setMagnoCoefficientsTable(const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float V0CompressionParameter, const float localAdaptintegration_tau, const float localAdaptintegration_k){_MagnoRetinaFilter.setCoefficientsTable(parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, localAdaptintegration_tau, localAdaptintegration_k);_MagnoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount();};
+    void setMagnoCoefficientsTable(const float parasolCells_beta, const float parasolCells_tau, const float parasolCells_k, const float amacrinCellsTemporalCutFrequency, const float V0CompressionParameter, const float localAdaptintegration_tau, const float localAdaptintegration_k) { _MagnoRetinaFilter.setCoefficientsTable(parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, localAdaptintegration_tau, localAdaptintegration_k);_MagnoRetinaFilter.setV0CompressionParameter(V0CompressionParameter);_setInitPeriodCount(); }
 
     /**
     * set if the parvo output should be or not normalized between 0 and 255 (for display purpose generally)
     * @param normalizeParvoOutput_0_maxOutputValue: true if normalization should be done
     */
-    inline void activateNormalizeParvoOutput_0_maxOutputValue(const bool normalizeParvoOutput_0_maxOutputValue){_normalizeParvoOutput_0_maxOutputValue=normalizeParvoOutput_0_maxOutputValue;};
+    inline void activateNormalizeParvoOutput_0_maxOutputValue(const bool normalizeParvoOutput_0_maxOutputValue) { _normalizeParvoOutput_0_maxOutputValue=normalizeParvoOutput_0_maxOutputValue; }
 
     /**
     * set if the magno output should be or not normalized between 0 and 255 (for display purpose generally), take care, if nothing is moving, then, the noise will be enanced !!!
     * @param normalizeMagnoOutput_0_maxOutputValue: true if normalization should be done
     */
-    inline void activateNormalizeMagnoOutput_0_maxOutputValue(const bool normalizeMagnoOutput_0_maxOutputValue){_normalizeMagnoOutput_0_maxOutputValue=normalizeMagnoOutput_0_maxOutputValue;};
+    inline void activateNormalizeMagnoOutput_0_maxOutputValue(const bool normalizeMagnoOutput_0_maxOutputValue) { _normalizeMagnoOutput_0_maxOutputValue=normalizeMagnoOutput_0_maxOutputValue; }
 
     /**
     * setup the maximum amplitude value of the normalized outputs (generally 255 for 8bit per channel pictures)
     * @param maxOutputValue: maximum amplitude value of the normalized outputs (generally 255 for 8bit per channel pictures)
     */
-    inline void setMaxOutputValue(const float maxOutputValue){_maxOutputValue=maxOutputValue;};
+    inline void setMaxOutputValue(const float maxOutputValue) { _maxOutputValue=maxOutputValue; }
 
     /**
     * sets the color mode of the frame grabber
     * @param desiredColorMode: true if the user needs color information, false for graylevels
     */
-    void setColorMode(const bool desiredColorMode){_useColorMode=desiredColorMode;};
+    void setColorMode(const bool desiredColorMode) { _useColorMode=desiredColorMode; }
 
     /**
     * activate color saturation as the final step of the color demultiplexing process
@@ -297,7 +297,7 @@ public:
     * @param saturateColors: boolean that activates color saturation (if true) or desactivate (if false)
     * @param colorSaturationValue: the saturation factor
     * */
-    inline void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0){_colorEngine.setColorSaturation(saturateColors, colorSaturationValue);};
+    inline void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0) { _colorEngine.setColorSaturation(saturateColors, colorSaturationValue); }
 
     /////////////////////////////////////////////////////////////////
     // function that retrieve the main retina outputs, one by one, or all in a structure
@@ -314,23 +314,23 @@ public:
     /**
     * @return photoreceptors output, locally adapted luminance only, no high frequency spatio-temporal noise reduction at the next retina processing stages, use getPhotoreceptors method to get complete photoreceptors output
     */
-    inline const std::valarray<float> &getLocalAdaptation() const {return _photoreceptorsPrefilter.getOutput();};
+    inline const std::valarray<float> &getLocalAdaptation() const {return _photoreceptorsPrefilter.getOutput(); }
 
     /**
     * @return photoreceptors output: locally adapted luminance and high frequency spatio-temporal noise reduction, high luminance is a little saturated at this stage, but this is corrected naturally at the next retina processing stages
     */
-    inline const std::valarray<float> &getPhotoreceptors() const {return _ParvoRetinaFilter.getPhotoreceptorsLPfilteringOutput();};
+    inline const std::valarray<float> &getPhotoreceptors() const {return _ParvoRetinaFilter.getPhotoreceptorsLPfilteringOutput(); }
 
     /**
     * @return the local luminance of the processed frame (it is the horizontal cells output)
     */
-    inline const std::valarray<float> &getHorizontalCells() const {return _ParvoRetinaFilter.getHorizontalCellsOutput();};
+    inline const std::valarray<float> &getHorizontalCells() const {return _ParvoRetinaFilter.getHorizontalCellsOutput(); }
 
     ///////// CONTOURS part, PARVOCELLULAR RETINA PATHWAY
     /**
     * @return true if Parvocellular output is activated, false if not
     */
-    inline bool areContoursProcessed(){return _useParvoOutput;};
+    inline bool areContoursProcessed() { return _useParvoOutput; }
 
     /**
     *  method to retrieve the foveal parvocellular pathway response (no details energy in parafovea)
@@ -342,7 +342,7 @@ public:
     /**
     * @param useParvoOutput: true if Parvocellular output should be activated, false if not
     */
-    inline void activateContoursProcessing(const bool useParvoOutput){_useParvoOutput=useParvoOutput;};
+    inline void activateContoursProcessing(const bool useParvoOutput) { _useParvoOutput=useParvoOutput; }
 
     /**
     * @return the parvocellular contours information (details), should be used at the fovea level
@@ -352,18 +352,18 @@ public:
     /**
     * @return the parvocellular contours ON information (details), should be used at the fovea level
     */
-    inline const std::valarray<float> &getContoursON() const {return _ParvoRetinaFilter.getParvoON();};// Parvocellular ON output
+    inline const std::valarray<float> &getContoursON() const {return _ParvoRetinaFilter.getParvoON(); } // Parvocellular ON output
 
     /**
     * @return the parvocellular contours OFF information (details), should be used at the fovea level
     */
-    inline const std::valarray<float> &getContoursOFF() const {return _ParvoRetinaFilter.getParvoOFF();};// Parvocellular OFF output
+    inline const std::valarray<float> &getContoursOFF() const {return _ParvoRetinaFilter.getParvoOFF(); } // Parvocellular OFF output
 
     ///////// MOVING CONTOURS part, MAGNOCELLULAR RETINA PATHWAY
     /**
     * @return true if Magnocellular output is activated, false if not
     */
-    inline bool areMovingContoursProcessed(){return _useMagnoOutput;};
+    inline bool areMovingContoursProcessed() { return _useMagnoOutput; }
 
     /**
     *  method to retrieve the parafoveal magnocellular pathway response (no motion energy in fovea)
@@ -375,87 +375,87 @@ public:
     /**
     * @param useMagnoOutput: true if Magnoocellular output should be activated, false if not
     */
-    inline void activateMovingContoursProcessing(const bool useMagnoOutput){_useMagnoOutput=useMagnoOutput;};
+    inline void activateMovingContoursProcessing(const bool useMagnoOutput) { _useMagnoOutput=useMagnoOutput; }
 
     /**
     * @return the magnocellular moving contours information (motion), should be used at the parafovea level without post-processing
     */
-    inline const std::valarray<float> &getMovingContours() const {return _MagnoRetinaFilter.getOutput();};// Magnocellular output
+    inline const std::valarray<float> &getMovingContours() const {return _MagnoRetinaFilter.getOutput(); } // Magnocellular output
 
     /**
     * @return the magnocellular moving contours information (motion), should be used at the parafovea level with assymetric sigmoide post-processing which saturates motion information
     */
-    inline const std::valarray<float> &getMovingContoursSaturated() const {return _MagnoRetinaFilter.getMagnoYsaturated();};// Saturated Magnocellular output
+    inline const std::valarray<float> &getMovingContoursSaturated() const {return _MagnoRetinaFilter.getMagnoYsaturated(); } // Saturated Magnocellular output
 
     /**
     * @return the magnocellular moving contours ON information (motion), should be used at the parafovea level without post-processing
     */
-    inline const std::valarray<float> &getMovingContoursON() const {return _MagnoRetinaFilter.getMagnoON();};// Magnocellular ON output
+    inline const std::valarray<float> &getMovingContoursON() const {return _MagnoRetinaFilter.getMagnoON(); } // Magnocellular ON output
 
     /**
     * @return the magnocellular moving contours OFF information (motion), should be used at the parafovea level without post-processing
     */
-    inline const std::valarray<float> &getMovingContoursOFF() const {return _MagnoRetinaFilter.getMagnoOFF();};// Magnocellular OFF output
+    inline const std::valarray<float> &getMovingContoursOFF() const {return _MagnoRetinaFilter.getMagnoOFF(); } // Magnocellular OFF output
 
     /**
     * @return a gray level image with center Parvo and peripheral Magno X channels, WARNING, the result will be ok if you called previously fucntion runFilter(imageInput, processRetinaParvoMagnoMapping=true);
     *    -> will be accessible even if color mode is activated (but the image is color sampled so quality is poor), but get the same thing but in color by the use of function getParvoColor()
     */
-    inline const std::valarray<float> &getRetinaParvoMagnoMappedOutput() const {return _retinaParvoMagnoMappedFrame;};// return image with center Parvo and peripheral Magno channels
+    inline const std::valarray<float> &getRetinaParvoMagnoMappedOutput() const {return _retinaParvoMagnoMappedFrame; } // return image with center Parvo and peripheral Magno channels
 
     /**
     * color processing dedicated functions
     * @return the parvo channel (contours, details) of the processed frame, grayscale output
     */
-    inline const std::valarray<float> &getParvoContoursChannel() const {return _colorEngine.getLuminance();};
+    inline const std::valarray<float> &getParvoContoursChannel() const {return _colorEngine.getLuminance(); }
 
     /**
     * color processing dedicated functions
     * @return the chrominance of the processed frame (same colorspace as the input output, usually RGB)
     */
-    inline const std::valarray<float> &getParvoChrominance() const {return _colorEngine.getChrominance();}; // only retreive chrominance
+    inline const std::valarray<float> &getParvoChrominance() const {return _colorEngine.getChrominance(); }  // only retreive chrominance
 
     /**
     * color processing dedicated functions
     * @return the parvo + chrominance channels of the processed frame (same colorspace as the input output, usually RGB)
     */
-    inline const std::valarray<float> &getColorOutput() const {return _colorEngine.getDemultiplexedColorFrame();};// retrieve luminance+chrominance
+    inline const std::valarray<float> &getColorOutput() const {return _colorEngine.getDemultiplexedColorFrame(); } // retrieve luminance+chrominance
 
     /**
     * apply to the retina color output the Krauskopf transformation which leads to an opponent color system: output colorspace if Acr1cr2 if input of the retina was LMS color space
     * @param result: the input buffer to fill with the transformed colorspace retina output
     * @return true if process ended successfully
     */
-    inline bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result){return _colorEngine.applyKrauskopfLMS2Acr1cr2Transform(result);};
+    inline bool applyKrauskopfLMS2Acr1cr2Transform(std::valarray<float> &result) { return _colorEngine.applyKrauskopfLMS2Acr1cr2Transform(result); }
 
     /**
     * apply to the retina color output the Krauskopf transformation which leads to an opponent color system: output colorspace if Acr1cr2 if input of the retina was LMS color space
     * @param result: the input buffer to fill with the transformed colorspace retina output
     * @return true if process ended successfully
     */
-    inline bool applyLMS2LabTransform(std::valarray<float> &result){return _colorEngine.applyLMS2LabTransform(result);};
+    inline bool applyLMS2LabTransform(std::valarray<float> &result) { return _colorEngine.applyLMS2LabTransform(result); }
 
     /**
     * color processing dedicated functions
     * @return the retina initialized mode, true if color mode (RGB), false if grayscale
     */
-    inline bool isColorMode(){return _useColorMode;}; // return true if RGB mode, false if gray level mode
+    inline bool isColorMode() { return _useColorMode; }  // return true if RGB mode, false if gray level mode
 
     /**
     * @return the irregular low pass filter ouput at the photoreceptors level
     */
-    inline const std::valarray<float> &getIrregularLPfilteredInputFrame() const {return _photoreceptorsLogSampling->getIrregularLPfilteredInputFrame();};
+    inline const std::valarray<float> &getIrregularLPfilteredInputFrame() const {return _photoreceptorsLogSampling->getIrregularLPfilteredInputFrame(); }
 
     /**
     * @return true if color mode is activated, false if gray levels processing
     */
-    bool getColorMode(){return _useColorMode;};
+    bool getColorMode() { return _useColorMode; }
 
     /**
     *
     * @return true if a sufficient number of processed frames has been done since the last parameters update in order to get the stable state (r�gime permanent)
     */
-    inline bool isInitTransitionDone(){if (_ellapsedFramesSinceLastReset<_globalTemporalConstant)return false; return true;};
+    inline bool isInitTransitionDone() { if (_ellapsedFramesSinceLastReset<_globalTemporalConstant)return false; return true; }
 
     /**
     * find a distance in the image input space when the distance is known in the retina log sampled space...read again if it is not clear enough....sorry, i should sleep
@@ -467,7 +467,7 @@ public:
         if (_photoreceptorsLogSampling)
             return (float)_photoreceptorsLogSampling->getOriginalRadiusLength(projectedRadiusLength);
         return projectedRadiusLength;
-    };
+    }
 
     /////////////////:
     // retina dimensions getters
@@ -475,32 +475,32 @@ public:
     /**
     * @return number of rows of the filter
     */
-    inline unsigned int getInputNBrows(){if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBrows();else return _photoreceptorsPrefilter.getNBrows();};
+    inline unsigned int getInputNBrows() { if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBrows();else return _photoreceptorsPrefilter.getNBrows(); }
 
     /**
     * @return number of columns of the filter
     */
-    inline unsigned int getInputNBcolumns(){if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBcolumns();else return _photoreceptorsPrefilter.getNBcolumns();};
+    inline unsigned int getInputNBcolumns() { if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBcolumns();else return _photoreceptorsPrefilter.getNBcolumns(); }
 
     /**
     * @return number of pixels of the filter
     */
-    inline unsigned int getInputNBpixels(){if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBpixels();else return _photoreceptorsPrefilter.getNBpixels();};
+    inline unsigned int getInputNBpixels() { if (_photoreceptorsLogSampling) return _photoreceptorsLogSampling->getNBpixels();else return _photoreceptorsPrefilter.getNBpixels(); }
 
     /**
     * @return the height of the frame output
     */
-    inline unsigned int getOutputNBrows(){return _photoreceptorsPrefilter.getNBrows();};
+    inline unsigned int getOutputNBrows() { return _photoreceptorsPrefilter.getNBrows(); }
 
     /**
     * @return the width of the frame output
     */
-    inline unsigned int getOutputNBcolumns(){return _photoreceptorsPrefilter.getNBcolumns();};
+    inline unsigned int getOutputNBcolumns() { return _photoreceptorsPrefilter.getNBcolumns(); }
 
     /**
     * @return the numbers of output pixels (width*height) of the images used by the object
     */
-    inline unsigned int getOutputNBpixels(){return _photoreceptorsPrefilter.getNBpixels();};
+    inline unsigned int getOutputNBpixels() { return _photoreceptorsPrefilter.getNBpixels(); }
 
 
 private:

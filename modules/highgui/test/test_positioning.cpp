@@ -67,7 +67,7 @@ private:
 class CV_VideoProgressivePositioningTest: public CV_VideoPositioningTest
 {
 public:
-    CV_VideoProgressivePositioningTest() : CV_VideoPositioningTest() {};
+    CV_VideoProgressivePositioningTest() : CV_VideoPositioningTest() { }
     ~CV_VideoProgressivePositioningTest();
     void run(int);
 };
@@ -75,7 +75,7 @@ public:
 class CV_VideoRandomPositioningTest: public CV_VideoPositioningTest
 {
 public:
-    CV_VideoRandomPositioningTest(): CV_VideoPositioningTest() {};
+    CV_VideoRandomPositioningTest(): CV_VideoPositioningTest() { }
     ~CV_VideoRandomPositioningTest();
     void run(int);
 };

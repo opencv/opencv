@@ -952,7 +952,7 @@ public:
  */
     CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
 
-    virtual ~LineSegmentDetector() {};
+    virtual ~LineSegmentDetector() { }
 };
 
 //! Returns a pointer to a LineSegmentDetector class.

@@ -9,7 +9,7 @@ using namespace std;
 class Core_ReduceTest : public cvtest::BaseTest
 {
 public:
-    Core_ReduceTest() {};
+    Core_ReduceTest() {}
 protected:
     void run( int);
     int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim );
