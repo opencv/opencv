@@ -3576,12 +3576,12 @@ public:
         UMatDataAutoLock src_autolock(src);
         UMatDataAutoLock dst_autolock(dst);
 
-        if( !src->handle || (src->data && src->hostCopyObsolete() <= src->deviceCopyObsolete()) )
+        if( !src->handle || (src->data && src->hostCopyObsolete() < src->deviceCopyObsolete()) )
         {
             upload(dst, src->data + srcrawofs, dims, sz, dstofs, dststep, srcstep);
             return;
         }
-        if( !dst->handle || (dst->data && dst->hostCopyObsolete() <= dst->deviceCopyObsolete()) )
+        if( !dst->handle || (dst->data && dst->hostCopyObsolete() < dst->deviceCopyObsolete()) )
         {
             download(src, dst->data + dstrawofs, dims, sz, srcofs, srcstep, dststep);
             dst->markHostCopyObsolete(false);
