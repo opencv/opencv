@@ -1404,10 +1404,10 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     int src_type = _src.type(), dst_type = _dst.type(),
         src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
 
-    bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
-        _src.dims()<=2 && (src_cn == 1 || src_cn == 4) && (anchor.x == -1) && (anchor.y == -1) &&
+    bool useOpenCL = cv::ocl::useOpenCL() && _dst.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
+        _src.dims() <= 2 && (src_cn == 1 || src_cn == 4) && anchor.x == -1 && anchor.y == -1 &&
         (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
-        (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue()) &&
+        borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
         (op == MORPH_ERODE || op == MORPH_DILATE);
 
     Mat kernel = _kernel.getMat();
@@ -1423,10 +1423,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 
     if( iterations == 0 || kernel.rows*kernel.cols == 1 )
     {
-        Mat src = _src.getMat();
-        _dst.create( src.size(), src.type() );
-        Mat dst = _dst.getMat();
-        src.copyTo(dst);
+        _src.copyTo(_dst);
         return;
     }
 
