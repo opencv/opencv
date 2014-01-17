@@ -50,7 +50,7 @@
 // MatchTemplate
 #define ALL_TEMPLATE_METHODS testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR), TemplateMethod(cv::TM_CCOEFF), TemplateMethod(cv::TM_SQDIFF_NORMED), TemplateMethod(cv::TM_CCORR_NORMED), TemplateMethod(cv::TM_CCOEFF_NORMED))
 
-IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size);
+IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size)
 
 #define MTEMP_SIZES testing::Values(cv::Size(128, 256), cv::Size(1024, 768))
 

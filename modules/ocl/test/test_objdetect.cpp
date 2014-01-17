@@ -180,7 +180,7 @@ INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
 
 
 ///////////////////////////// Haar //////////////////////////////
-IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
+IMPLEMENT_PARAM_CLASS(CascadeName, std::string)
 CascadeName cascade_frontalface_alt(std::string("haarcascade_frontalface_alt.xml"));
 CascadeName cascade_frontalface_alt2(std::string("haarcascade_frontalface_alt2.xml"));
 

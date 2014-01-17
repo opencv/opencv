@@ -41,7 +41,7 @@ CvFuzzyPoint::CvFuzzyPoint(double _x, double _y)
 {
     x = _x;
     y = _y;
-};
+}
 
 bool CvFuzzyCurve::between(double x, double x1, double x2)
 {
@@ -51,37 +51,37 @@ bool CvFuzzyCurve::between(double x, double x1, double x2)
         return true;
 
     return false;
-};
+}
 
 CvFuzzyCurve::CvFuzzyCurve()
 {
     value = 0;
-};
+}
 
 CvFuzzyCurve::~CvFuzzyCurve()
 {
     // nothing to do
-};
+}
 
 void CvFuzzyCurve::setCentre(double _centre)
 {
     centre = _centre;
-};
+}
 
 double CvFuzzyCurve::getCentre()
 {
     return centre;
-};
+}
 
 void CvFuzzyCurve::clear()
 {
     points.clear();
-};
+}
 
 void CvFuzzyCurve::addPoint(double x, double y)
 {
     points.push_back(CvFuzzyPoint(x, y));
-};
+}
 
 double CvFuzzyCurve::calcValue(double param)
 {
@@ -102,41 +102,41 @@ double CvFuzzyCurve::calcValue(double param)
         }
     }
     return 0;
-};
+}
 
 double CvFuzzyCurve::getValue()
 {
     return value;
-};
+}
 
 void CvFuzzyCurve::setValue(double _value)
 {
     value = _value;
-};
+}
 
 
 CvFuzzyFunction::CvFuzzyFunction()
 {
     // nothing to do
-};
+}
 
 CvFuzzyFunction::~CvFuzzyFunction()
 {
     curves.clear();
-};
+}
 
 void CvFuzzyFunction::addCurve(CvFuzzyCurve *curve, double value)
 {
     curves.push_back(*curve);
     curve->setValue(value);
-};
+}
 
 void CvFuzzyFunction::resetValues()
 {
     int numCurves = (int)curves.size();
     for (int i = 0; i < numCurves; i++)
         curves[i].setValue(0);
-};
+}
 
 double CvFuzzyFunction::calcValue()
 {
@@ -153,7 +153,7 @@ double CvFuzzyFunction::calcValue()
         return s1/s2;
     else
         return 0;
-};
+}
 
 CvFuzzyCurve *CvFuzzyFunction::newCurve()
 {
@@ -161,14 +161,14 @@ CvFuzzyCurve *CvFuzzyFunction::newCurve()
     c = new CvFuzzyCurve();
     addCurve(c);
     return c;
-};
+}
 
 CvFuzzyRule::CvFuzzyRule()
 {
     fuzzyInput1 = NULL;
     fuzzyInput2 = NULL;
     fuzzyOutput = NULL;
-};
+}
 
 CvFuzzyRule::~CvFuzzyRule()
 {
@@ -180,14 +180,14 @@ CvFuzzyRule::~CvFuzzyRule()
 
     if (fuzzyOutput != NULL)
         delete fuzzyOutput;
-};
+}
 
 void CvFuzzyRule::setRule(CvFuzzyCurve *c1, CvFuzzyCurve *c2, CvFuzzyCurve *o1)
 {
     fuzzyInput1 = c1;
     fuzzyInput2 = c2;
     fuzzyOutput = o1;
-};
+}
 
 double CvFuzzyRule::calcValue(double param1, double param2)
 {
@@ -203,31 +203,31 @@ double CvFuzzyRule::calcValue(double param1, double param2)
     }
     else
         return v1;
-};
+}
 
 CvFuzzyCurve *CvFuzzyRule::getOutputCurve()
 {
     return fuzzyOutput;
-};
+}
 
 CvFuzzyController::CvFuzzyController()
 {
     // nothing to do
-};
+}
 
 CvFuzzyController::~CvFuzzyController()
 {
     int size = (int)rules.size();
     for(int i = 0; i < size; i++)
         delete rules[i];
-};
+}
 
 void CvFuzzyController::addRule(CvFuzzyCurve *c1, CvFuzzyCurve *c2, CvFuzzyCurve *o1)
 {
     CvFuzzyRule *f = new CvFuzzyRule();
     rules.push_back(f);
     f->setRule(c1, c2, o1);
-};
+}
 
 double CvFuzzyController::calcOutput(double param1, double param2)
 {
@@ -243,7 +243,7 @@ double CvFuzzyController::calcOutput(double param1, double param2)
     }
     v = list.calcValue();
     return v;
-};
+}
 
 CvFuzzyMeanShiftTracker::FuzzyResizer::FuzzyResizer()
 {
@@ -299,12 +299,12 @@ CvFuzzyMeanShiftTracker::FuzzyResizer::FuzzyResizer()
     fuzzyController.addRule(i1L, NULL, oS);
     fuzzyController.addRule(i1M, NULL, oZE);
     fuzzyController.addRule(i1H, NULL, oE);
-};
+}
 
 int CvFuzzyMeanShiftTracker::FuzzyResizer::calcOutput(double edgeDensity, double density)
 {
     return (int)fuzzyController.calcOutput(edgeDensity, density);
-};
+}
 
 CvFuzzyMeanShiftTracker::SearchWindow::SearchWindow()
 {
@@ -329,7 +329,7 @@ CvFuzzyMeanShiftTracker::SearchWindow::SearchWindow()
     depthLow = 0;
     depthHigh = 0;
     fuzzyResizer = NULL;
-};
+}
 
 CvFuzzyMeanShiftTracker::SearchWindow::~SearchWindow()
 {
@@ -355,7 +355,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::setSize(int _x, int _y, int _width, 
 
     if (y + height > maxHeight)
         height = maxHeight - y;
-};
+}
 
 void CvFuzzyMeanShiftTracker::SearchWindow::initDepthValues(IplImage *maskImage, IplImage *depthMap)
 {
@@ -409,7 +409,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::initDepthValues(IplImage *maskImage,
         depthHigh = 32000;
         depthLow = 0;
     }
-};
+}
 
 bool CvFuzzyMeanShiftTracker::SearchWindow::shift()
 {
@@ -422,7 +422,7 @@ bool CvFuzzyMeanShiftTracker::SearchWindow::shift()
     {
         return false;
     }
-};
+}
 
 void CvFuzzyMeanShiftTracker::SearchWindow::extractInfo(IplImage *maskImage, IplImage *depthMap, bool initDepth)
 {
@@ -528,7 +528,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::extractInfo(IplImage *maskImage, Ipl
         ellipseAngle = 0;
         density = 0;
     }
-};
+}
 
 void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsEdgeDensityLinear(int &resizeDx, int &resizeDy, int &resizeDw, int &resizeDh) {
     int x1 = horizontalEdgeTop;
@@ -572,7 +572,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsEdgeDensityLinear(in
     } else {
         resizeDw = - resizeDx;
     }
-};
+}
 
 void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsInnerDensity(int &resizeDx, int &resizeDy, int &resizeDw, int &resizeDh)
 {
@@ -588,7 +588,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsInnerDensity(int &re
     resizeDy = (int)(py*dy);
     resizeDw = (int)((1-px)*dx);
     resizeDh = (int)((1-py)*dy);
-};
+}
 
 void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsEdgeDensityFuzzy(int &resizeDx, int &resizeDy, int &resizeDw, int &resizeDh)
 {
@@ -627,7 +627,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::getResizeAttribsEdgeDensityFuzzy(int
         resizeDy = int(-dy1);
         resizeDh = int(dy1+dy2);
     }
-};
+}
 
 bool CvFuzzyMeanShiftTracker::SearchWindow::meanShift(IplImage *maskImage, IplImage *depthMap, int maxIteration, bool initDepth)
 {
@@ -640,7 +640,7 @@ bool CvFuzzyMeanShiftTracker::SearchWindow::meanShift(IplImage *maskImage, IplIm
     } while (++numShifts < maxIteration);
 
     return false;
-};
+}
 
 void CvFuzzyMeanShiftTracker::findOptimumSearchWindow(SearchWindow &searchWindow, IplImage *maskImage, IplImage *depthMap, int maxIteration, int resizeMethod, bool initDepth)
 {
@@ -680,17 +680,17 @@ void CvFuzzyMeanShiftTracker::findOptimumSearchWindow(SearchWindow &searchWindow
 
         searchWindow.setSize(searchWindow.x + resizeDx, searchWindow.y + resizeDy, searchWindow.width + resizeDw, searchWindow.height + resizeDh);
     }
-};
+}
 
 CvFuzzyMeanShiftTracker::CvFuzzyMeanShiftTracker()
 {
     searchMode = tsSetWindow;
-};
+}
 
 CvFuzzyMeanShiftTracker::~CvFuzzyMeanShiftTracker()
 {
     // nothing to do
-};
+}
 
 void CvFuzzyMeanShiftTracker::track(IplImage *maskImage, IplImage *depthMap, int resizeMethod, bool resetSearch, int minKernelMass)
 {
@@ -718,4 +718,4 @@ void CvFuzzyMeanShiftTracker::track(IplImage *maskImage, IplImage *depthMap, int
             else
                 searchMode = tsTracking;
     }
-};
+}
