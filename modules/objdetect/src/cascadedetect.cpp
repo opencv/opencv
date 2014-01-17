@@ -512,7 +512,7 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->optfeatures = optfeatures;
-    ret->optfeaturesPtr = optfeatures->empty() ? 0 : &(*(ret->optfeatures))[0];
+    ret->optfeaturesPtr = (optfeatures.empty() || optfeatures->empty()) ? 0 : &(*(ret->optfeatures))[0];
     ret->hasTiltedFeatures = hasTiltedFeatures;
     ret->sum0 = sum0; ret->sqsum0 = sqsum0;
     ret->sum = sum; ret->sqsum = sqsum;
@@ -663,7 +663,7 @@ LBPEvaluator::~LBPEvaluator()
 bool LBPEvaluator::read( const FileNode& node )
 {
     features->resize(node.size());
-    optfeaturesPtr = &(*optfeatures)[0];
+    optfeaturesPtr = (optfeatures.empty() || optfeatures->empty()) ? 0 : &(*optfeatures)[0];
     FileNodeIterator it = node.begin(), it_end = node.end();
     std::vector<Feature>& ff = *features;
     for(int i = 0; it != it_end; ++it, i++)
@@ -680,7 +680,7 @@ Ptr<FeatureEvaluator> LBPEvaluator::clone() const
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->optfeatures = optfeatures;
-    ret->optfeaturesPtr = ret->optfeatures.empty() ? 0 : &(*ret->optfeatures)[0];
+    ret->optfeaturesPtr = (optfeatures.empty() || optfeatures->empty()) ? 0 : &(*ret->optfeatures)[0];
     ret->sum0 = sum0, ret->sum = sum;
     ret->pwin = pwin;
     return ret;
@@ -781,7 +781,7 @@ HOGEvaluator::~HOGEvaluator()
 bool HOGEvaluator::read( const FileNode& node )
 {
     features->resize(node.size());
-    featuresPtr = &(*features)[0];
+    featuresPtr = features->empty() ? 0 : &(*features)[0];
     FileNodeIterator it = node.begin(), it_end = node.end();
     for(int i = 0; it != it_end; ++it, i++)
     {
@@ -796,7 +796,7 @@ Ptr<FeatureEvaluator> HOGEvaluator::clone() const
     Ptr<HOGEvaluator> ret = makePtr<HOGEvaluator>();
     ret->origWinSize = origWinSize;
     ret->features = features;
-    ret->featuresPtr = &(*ret->features)[0];
+    ret->featuresPtr = (features.empty() || features->empty()) ? 0 : &(*ret->features)[0];
     ret->offset = offset;
     ret->hist = hist;
     ret->normSum = normSum;
