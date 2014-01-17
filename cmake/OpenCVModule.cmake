@@ -577,9 +577,9 @@ macro(ocv_create_module)
   endif()
 
   ocv_install_target(${the_module} EXPORT OpenCVModules
-    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main
-    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT dev
+    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs
+    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev
     )
 
   # only "public" headers need to be installed
@@ -587,7 +587,7 @@ macro(ocv_create_module)
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
       string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
       if(hdr2 MATCHES "^(opencv2/.*)/[^/]+.h(..)?$")
-        install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT main)
+        install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
       endif()
     endforeach()
   endif()
@@ -795,7 +795,7 @@ function(ocv_add_samples)
         endif()
 
         if(WIN32)
-          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT main)
+          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT samples)
         endif()
       endforeach()
     endif()
@@ -805,7 +805,7 @@ function(ocv_add_samples)
     file(GLOB sample_files "${samples_path}/*")
     install(FILES ${sample_files}
             DESTINATION share/OpenCV/samples/${module_id}
-            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
   endif()
 endfunction()
 
