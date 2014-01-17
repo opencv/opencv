@@ -571,7 +571,9 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     
     bool swapNotNeed = (_img.size().height >= _templ.size().height && _img.size().width >= _templ.size().width);
     if (!swapNotNeed)
+    {
         CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
+    }
 
     bool use_opencl = ocl::useOpenCL() && _result.isUMat();
     if ( use_opencl && (swapNotNeed ? ocl_matchTemplate(_img,_templ,_result,method) : ocl_matchTemplate(_templ,_img,_result,method)))
