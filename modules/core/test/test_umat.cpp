@@ -59,7 +59,7 @@ protected:
 
     struct test_excep
     {
-        test_excep(const string& _s=string("")) : s(_s) {};
+        test_excep(const string& _s=string("")) : s(_s) { }
         string s;
     };
 

@@ -3658,7 +3658,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 int ustepIdx = 0;
                 int vstepIdx = dstSz.height % 4 == 2 ? 1 : 0;
 
-                if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); };
+                if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
 
                 switch(dcn*10 + bIdx)
                 {

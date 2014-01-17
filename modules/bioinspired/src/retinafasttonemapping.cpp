@@ -124,7 +124,7 @@ public:
     /**
      * basic destructor
      */
-    virtual ~RetinaFastToneMappingImpl(){};
+    virtual ~RetinaFastToneMappingImpl() { }
 
     /**
      * method that applies a luminance correction (initially High Dynamic Range (HDR) tone mapping) using only the 2 local adaptation stages of the retina parvocellular channel : photoreceptors level and ganlion cells level. Spatio temporal filtering is applied but limited to temporal smoothing and eventually high frequencies attenuation. This is a lighter method than the one available using the regular retina::run method. It is then faster but it does not include complete temporal filtering nor retina spectral whitening. Then, it can have a more limited effect on images with a very high dynamic range. This is an adptation of the original still image HDR tone mapping algorithm of David Alleyson, Sabine Susstruck and Laurence Meylan's work, please cite:
@@ -142,7 +142,8 @@ public:
         {
             _runRGBToneMapping(_inputBuffer, _imageOutput, true);
             _convertValarrayBuffer2cvMat(_imageOutput, _multiuseFilter->getNBrows(), _multiuseFilter->getNBcolumns(), true, outputToneMappedImage);
-        }else
+        }
+        else
         {
             _runGrayToneMapping(_inputBuffer, _imageOutput);
             _convertValarrayBuffer2cvMat(_imageOutput, _multiuseFilter->getNBrows(), _multiuseFilter->getNBcolumns(), false, outputToneMappedImage);
@@ -193,7 +194,8 @@ void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConver
                 outMat.at<unsigned char>(pixel)=(unsigned char)*(valarrayPTR++);
             }
         }
-    }else
+    }
+    else
     {
         const unsigned int nbPixels=nbColumns*nbRows;
         const unsigned int doubleNBpixels=nbColumns*nbRows*2;
@@ -263,47 +265,47 @@ bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &out
         cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
         inputMatToConvert.convertTo(dst, dsttype);
     }
-        else
-            CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
+    else
+        CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
 
     return imageNumberOfChannels>1; // return bool : false for gray level image processing, true for color mode
 }
 
 
-    // run the initilized retina filter in order to perform gray image tone mapping, after this call all retina outputs are updated
-    void _runGrayToneMapping(const std::valarray<float> &grayImageInput, std::valarray<float> &grayImageOutput)
-    {
-         // apply tone mapping on the multiplexed image
-        // -> photoreceptors local adaptation (large area adaptation)
-        _multiuseFilter->runFilter_LPfilter(grayImageInput, grayImageOutput, 0); // compute low pass filtering modeling the horizontal cells filtering to acess local luminance
-        _multiuseFilter->setV0CompressionParameterToneMapping(1.f, grayImageOutput.max(), _meanLuminanceModulatorK*grayImageOutput.sum()/(float)_multiuseFilter->getNBpixels());
-        _multiuseFilter->runFilter_LocalAdapdation(grayImageInput, grayImageOutput, _temp2); // adapt contrast to local luminance
+// run the initilized retina filter in order to perform gray image tone mapping, after this call all retina outputs are updated
+void _runGrayToneMapping(const std::valarray<float> &grayImageInput, std::valarray<float> &grayImageOutput)
+{
+     // apply tone mapping on the multiplexed image
+    // -> photoreceptors local adaptation (large area adaptation)
+    _multiuseFilter->runFilter_LPfilter(grayImageInput, grayImageOutput, 0); // compute low pass filtering modeling the horizontal cells filtering to acess local luminance
+    _multiuseFilter->setV0CompressionParameterToneMapping(1.f, grayImageOutput.max(), _meanLuminanceModulatorK*grayImageOutput.sum()/(float)_multiuseFilter->getNBpixels());
+    _multiuseFilter->runFilter_LocalAdapdation(grayImageInput, grayImageOutput, _temp2); // adapt contrast to local luminance
 
-        // -> ganglion cells local adaptation (short area adaptation)
-        _multiuseFilter->runFilter_LPfilter(_temp2, grayImageOutput, 1); // compute low pass filtering (high cut frequency (remove spatio-temporal noise)
-        _multiuseFilter->setV0CompressionParameterToneMapping(1.f, _temp2.max(), _meanLuminanceModulatorK*grayImageOutput.sum()/(float)_multiuseFilter->getNBpixels());
-        _multiuseFilter->runFilter_LocalAdapdation(_temp2, grayImageOutput, grayImageOutput); // adapt contrast to local luminance
+    // -> ganglion cells local adaptation (short area adaptation)
+    _multiuseFilter->runFilter_LPfilter(_temp2, grayImageOutput, 1); // compute low pass filtering (high cut frequency (remove spatio-temporal noise)
+    _multiuseFilter->setV0CompressionParameterToneMapping(1.f, _temp2.max(), _meanLuminanceModulatorK*grayImageOutput.sum()/(float)_multiuseFilter->getNBpixels());
+    _multiuseFilter->runFilter_LocalAdapdation(_temp2, grayImageOutput, grayImageOutput); // adapt contrast to local luminance
 
-    }
+}
 
- // run the initilized retina filter in order to perform color tone mapping, after this call all retina outputs are updated
-    void _runRGBToneMapping(const std::valarray<float> &RGBimageInput, std::valarray<float> &RGBimageOutput, const bool useAdaptiveFiltering)
-    {
-        // multiplex the image with the color sampling method specified in the constructor
-        _colorEngine->runColorMultiplexing(RGBimageInput);
+// run the initilized retina filter in order to perform color tone mapping, after this call all retina outputs are updated
+void _runRGBToneMapping(const std::valarray<float> &RGBimageInput, std::valarray<float> &RGBimageOutput, const bool useAdaptiveFiltering)
+{
+    // multiplex the image with the color sampling method specified in the constructor
+    _colorEngine->runColorMultiplexing(RGBimageInput);
 
-        // apply tone mapping on the multiplexed image
-        _runGrayToneMapping(_colorEngine->getMultiplexedFrame(), RGBimageOutput);
+    // apply tone mapping on the multiplexed image
+    _runGrayToneMapping(_colorEngine->getMultiplexedFrame(), RGBimageOutput);
 
-        // demultiplex tone maped image
-        _colorEngine->runColorDemultiplexing(RGBimageOutput, useAdaptiveFiltering, _multiuseFilter->getMaxInputValue());//_ColorEngine->getMultiplexedFrame());//_ParvoRetinaFilter->getPhotoreceptorsLPfilteringOutput());
+    // demultiplex tone maped image
+    _colorEngine->runColorDemultiplexing(RGBimageOutput, useAdaptiveFiltering, _multiuseFilter->getMaxInputValue());//_ColorEngine->getMultiplexedFrame());//_ParvoRetinaFilter->getPhotoreceptorsLPfilteringOutput());
 
-        // rescaling result between 0 and 255
-        _colorEngine->normalizeRGBOutput_0_maxOutputValue(255.0);
+    // rescaling result between 0 and 255
+    _colorEngine->normalizeRGBOutput_0_maxOutputValue(255.0);
 
-        // return the result
-        RGBimageOutput=_colorEngine->getDemultiplexedColorFrame();
-    }
+    // return the result
+    RGBimageOutput=_colorEngine->getDemultiplexedColorFrame();
+}
 
 };
 

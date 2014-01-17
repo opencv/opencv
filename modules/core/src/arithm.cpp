@@ -251,16 +251,16 @@ void vBinOp64(const T* src1, size_t step1, const T* src2, size_t step2,
     template <>                                                                                  \
     struct name<template_arg>{                                                                   \
         typedef register_type reg_type;                                                          \
-        static reg_type load(const template_arg * p) { return load_body ((const reg_type *)p);}; \
-        static void store(template_arg * p, reg_type v) { store_body ((reg_type *)p, v);};       \
+        static reg_type load(const template_arg * p) { return load_body ((const reg_type *)p); } \
+        static void store(template_arg * p, reg_type v) { store_body ((reg_type *)p, v); }       \
     }
 
 #define FUNCTOR_LOADSTORE(name, template_arg, register_type, load_body, store_body)\
     template <>                                                                \
     struct name<template_arg>{                                                 \
         typedef register_type reg_type;                                        \
-        static reg_type load(const template_arg * p) { return load_body (p);}; \
-        static void store(template_arg * p, reg_type v) { store_body (p, v);}; \
+        static reg_type load(const template_arg * p) { return load_body (p); } \
+        static void store(template_arg * p, reg_type v) { store_body (p, v); } \
     }
 
 #define FUNCTOR_CLOSURE_2arg(name, template_arg, body)\

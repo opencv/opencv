@@ -1928,7 +1928,7 @@ inline cl_int getStringInfo(Functor f, ObjectType obj, cl_uint name, std::string
     }
 
     return CL_SUCCESS;
-};
+}
 
 static void split(const std::string &s, char delim, std::vector<std::string> &elems) {
     elems.clear();

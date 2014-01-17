@@ -98,7 +98,7 @@ public:
         m_pFileName = NULL;
 
         SetModuleName("Gen1");
-    };
+    }
 
     ~CvBlobTrackGen1()
     {
@@ -119,7 +119,7 @@ public:
         }   /* Check next track. */
     }   /*  Destructor. */
 
-    void    SetFileName(char* pFileName){m_pFileName = pFileName;};
+    void    SetFileName(char* pFileName){m_pFileName = pFileName;}
 
     void    AddBlob(CvBlob* pBlob)
     {
@@ -140,7 +140,7 @@ public:
         pTrack->FrameLast = m_Frame;
         assert(pTrack->pSeq);
         pTrack->pSeq->AddBlob(pBlob);
-    };
+    }
 
     void    Process(IplImage* /*pImg*/ = NULL, IplImage* /*pFG*/ = NULL)
     {

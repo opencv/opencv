@@ -57,8 +57,8 @@ namespace cv{
                 cvCopy(translation, m_translation);
             };
 
-            CvMat* GetRotation() {return m_rotation;};
-            CvMat* GetTranslation() {return m_translation;};
+            CvMat* GetRotation() {return m_rotation;}
+            CvMat* GetTranslation() {return m_translation;}
 
         protected:
             CvMat* m_rotation;

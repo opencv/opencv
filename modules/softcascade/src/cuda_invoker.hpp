@@ -110,7 +110,7 @@ struct Detection
 
     Detection(){}
     __device_inline__ Detection(int _x, int _y, uchar _w, uchar _h, float c)
-    : x(static_cast<ushort>(_x)), y(static_cast<ushort>(_y)), w(_w), h(_h), confidence(c), kind(0) {};
+    : x(static_cast<ushort>(_x)), y(static_cast<ushort>(_y)), w(_w), h(_h), confidence(c), kind(0) {}
 };
 
 struct GK107PolicyX4

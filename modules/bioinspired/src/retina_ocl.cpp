@@ -122,7 +122,7 @@ RetinaOCLImpl::RetinaOCLImpl(const cv::Size inputSz, const bool colorMode, int c
 {
     _retinaFilter = 0;
     _init(inputSz, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
-};
+}
 
 RetinaOCLImpl::~RetinaOCLImpl()
 {

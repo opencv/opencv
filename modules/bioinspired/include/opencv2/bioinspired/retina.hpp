@@ -122,7 +122,7 @@ public:
                                  horizontalCellsGain(0.01f),
                                  hcellsTemporalConstant(0.5f),
                                  hcellsSpatialConstant(7.f),
-                                 ganglionCellsSensitivity(0.75f){};// default setup
+                                 ganglionCellsSensitivity(0.75f) { } // default setup
                bool colorMode, normaliseOutput;
                float photoreceptorsLocalAdaptationSensitivity, photoreceptorsTemporalConstant, photoreceptorsSpatialConstant, horizontalCellsGain, hcellsTemporalConstant, hcellsSpatialConstant, ganglionCellsSensitivity;
            };
@@ -135,7 +135,7 @@ public:
                           amacrinCellsTemporalCutFrequency(2.0f),
                           V0CompressionParameter(0.95f),
                           localAdaptintegration_tau(0.f),
-                          localAdaptintegration_k(7.f){};// default setup
+                          localAdaptintegration_k(7.f) { } // default setup
                bool normaliseOutput;
                float parasolCells_beta, parasolCells_tau, parasolCells_k, amacrinCellsTemporalCutFrequency, V0CompressionParameter, localAdaptintegration_tau, localAdaptintegration_k;
            };
