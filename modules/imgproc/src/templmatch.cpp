@@ -568,7 +568,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     CV_Assert( (_img.depth() == CV_8U || _img.depth() == CV_32F) && _img.type() == _templ.type() );
 
     CV_Assert(_img.dims() <= 2);
-    
+
     bool swapNotNeed = (_img.size().height >= _templ.size().height && _img.size().width >= _templ.size().width);
     if (!swapNotNeed)
     {
