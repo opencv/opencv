@@ -729,11 +729,12 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
                              doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
         if (!k.empty())
         {
+            UMat src = *this;
             _dst.create( size(), _type );
             UMat dst = _dst.getUMat();
 
             float alphaf = (float)alpha, betaf = (float)beta;
-            k.args(ocl::KernelArg::ReadOnlyNoSize(*this), ocl::KernelArg::WriteOnly(dst, cn), alphaf, betaf);
+            k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn), alphaf, betaf);
 
             size_t globalsize[2] = { dst.cols * cn, dst.rows };
             if (k.run(2, globalsize, NULL, false))
