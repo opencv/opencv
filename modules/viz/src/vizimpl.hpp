@@ -122,6 +122,7 @@ private:
 
     vtkSmartPointer<vtkRenderWindow> window_;
     String window_name_;
+    Vec2i window_position_;
 
     vtkSmartPointer<TimerCallback> timer_callback_;
     vtkSmartPointer<ExitCallback> exit_callback_;
@@ -131,6 +132,7 @@ private:
     Ptr<WidgetActorMap> widget_actor_map_;
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
+    void recreateRenderWindow();
 };
 
 #endif
