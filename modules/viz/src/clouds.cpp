@@ -219,7 +219,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
         mapper->ImmediateModeRenderingOff();
         VtkUtils::SetInputData(mapper, polydata);
 
-        actor->SetNumberOfCloudPoints(std::max(1, polydata->GetNumberOfPoints()/10));
+        actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, polydata->GetNumberOfPoints()/10));
         actor->GetProperty()->SetInterpolationToFlat();
         actor->GetProperty()->BackfaceCullingOn();
         actor->SetMapper(mapper);
@@ -236,7 +236,7 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
 
     VtkUtils::SetInputData(mapper, append_filter->GetOutput());
 
-    actor->SetNumberOfCloudPoints(std::max(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
+    actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
 }
 
 void cv::viz::WCloudCollection::addCloud(InputArray cloud, const Color &color, const Affine3d &pose)
