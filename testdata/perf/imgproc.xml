@@ -71586,4 +71586,82 @@
       <x>326</x>
       <y>39</y>
       <val>0.</val></rng2></edges></OCL_CannyFixture_Canny--Canny---5--true->
+ <!-- resumed -->
+
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--false->
+  <dst>
+    <kind>720896</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>581.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>185.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>300</y>
+      <val>302.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>538</y>
+      <cn>1</cn>
+      <val>107.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--false->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--true->
+  <dst>
+    <kind>720896</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>579.</max>
+    <last>
+      <x>0</x>
+      <y>205</y>
+      <val>129.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>141</y>
+      <cn>1</cn>
+      <val>229.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>13</y>
+      <val>105.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--true->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--false->
+  <dst>
+    <kind>720896</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>581.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>73.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>896</y>
+      <val>445.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>554</y>
+      <val>501.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--false->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--true->
+  <dst>
+    <kind>720896</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>579.</max>
+    <last>
+      <x>0</x>
+      <y>197</y>
+      <val>129.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>163</y>
+      <cn>1</cn>
+      <val>191.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>6</y>
+      <cn>1</cn>
+      <val>77.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--true->
 </opencv_storage>
