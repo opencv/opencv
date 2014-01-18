@@ -45,24 +45,18 @@
 
 #include "precomp.hpp"
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false), widget_actor_map_(new WidgetActorMap)
+cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
+    window_position_(Vec2i(std::numeric_limits<int>::min())), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
+    window_name_ = VizStorage::generateWindowName(name);
 
     // Create render window
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
-    window_name_ = VizStorage::generateWindowName(name);
-
     cv::Vec2i window_size = cv::Vec2i(window_->GetScreenSize()) / 2;
     window_->SetSize(window_size.val);
-    window_->AddRenderer(renderer_);
-    window_->AlphaBitPlanesOff();
-    window_->PointSmoothingOff();
-    window_->LineSmoothingOff();
-    window_->PolygonSmoothingOff();
-    window_->SwapBuffersOn();
-    window_->SetStereoTypeToAnaglyph();
 
     // Create the interactor style
     style_ = vtkSmartPointer<InteractorStyle>::New();
@@ -111,9 +105,32 @@ void cv::viz::Viz3d::VizImpl::close()
     interactor_->TerminateApp(); // This tends to close the window...
 }
 
+void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
+{
+    //recreating is workaround for Ubuntu -- a crash in x-server
+    Vec2i window_size(window_->GetSize());
+    int fullscreen = window_->GetFullScreen();
+
+    window_ = vtkSmartPointer<vtkRenderWindow>::New();
+    if (window_position_[0] != std::numeric_limits<int>::min()) //also workaround
+        window_->SetPosition(window_position_.val);
+
+    window_->SetSize(window_size.val);
+    window_->SetFullScreen(fullscreen);
+    window_->AddRenderer(renderer_);
+    window_->AlphaBitPlanesOff();
+    window_->PointSmoothingOff();
+    window_->LineSmoothingOff();
+    window_->PolygonSmoothingOff();
+    window_->SwapBuffersOn();
+    window_->SetStereoTypeToAnaglyph();
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spin()
 {
+    recreateRenderWindow();
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
@@ -129,6 +146,7 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
     if (interactor_ == 0)
     {
         spin_once_state_ = true;
+        recreateRenderWindow();
         interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
         interactor_->SetRenderWindow(window_);
         interactor_->SetInteractorStyle(style_);
@@ -400,7 +418,6 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
     camera.SetViewUp(up_vec.val);
 
     renderer_->ResetCameraClippingRange();
-    renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -510,6 +527,6 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
 //////////////////////////////////////////////////////////////////////////////////////////////
 cv::String cv::viz::Viz3d::VizImpl::getWindowName() const { return window_name_; }
 void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode) { window_->SetFullScreen(mode); }
-void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_->SetPosition(position.x, position.y); }
+void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_position_ = position; window_->SetPosition(position.x, position.y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize(const Size& window_size) { window_->SetSize(window_size.width, window_size.height); }
 cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(Point(Vec2i(window_->GetSize()))); }

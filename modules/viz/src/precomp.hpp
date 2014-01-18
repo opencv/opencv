@@ -51,6 +51,7 @@
 #include <list>
 #include <vector>
 #include <iomanip>
+#include <limits>
 
 #include <vtkAppendPolyData.h>
 #include <vtkAssemblyPath.h>
