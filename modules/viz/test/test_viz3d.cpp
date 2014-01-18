@@ -43,7 +43,7 @@
 
 using namespace cv;
 
-TEST(Viz_viz3d, develop)
+TEST(Viz_viz3d, DISABLED_develop)
 {
     cv::Mat cloud = cv::viz::readCloud(get_dragon_ply_file_path());
 
@@ -58,6 +58,7 @@ TEST(Viz_viz3d, develop)
     //cv::viz::readTrajectory(es, "d:/Datasets/trajs/es%05d.xml");
     //cv::Mat cloud = cv::viz::readCloud(get_dragon_ply_file_path());
     //---->>>>> </to_test_in_future>
+
 
     viz.spin();
 }

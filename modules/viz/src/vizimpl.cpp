@@ -143,10 +143,9 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
     if (force_redraw)
         local->Render();
 
-    timer_callback_->timer_id = local->CreateOneShotTimer(std::max(1, time));
+    timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
     local->Start();
     local->DestroyTimer(timer_callback_->timer_id);
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,23 +294,26 @@ bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> a
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
+void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color, const Color& color2)
 {
-    Color c = vtkcolor(color);
-    renderer_->SetBackground(c.val);
-    renderer_->GradientBackgroundOff();
-}
+    Color c = vtkcolor(color), c2 = vtkcolor(color2);
+    bool gradient = color2[0] >= 0 && color2[1] >= 0 && color2[2] >= 0;
 
-void  cv::viz::Viz3d::VizImpl::setBackgroundGradient(const Color& up, const Color& down)
-{
-    Color vtkup = vtkcolor(up), vtkdown = vtkcolor(down);
-    renderer_->SetBackground(vtkdown.val);
-    renderer_->SetBackground2(vtkup.val);
-    renderer_->GradientBackgroundOn();
+    if (gradient)
+    {
+        renderer_->SetBackground(c2.val);
+        renderer_->SetBackground2(c.val);
+        renderer_->GradientBackgroundOn();
+    }
+    else
+    {
+        renderer_->SetBackground(c.val);
+        renderer_->GradientBackgroundOff();
+    }
 }
 
 void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
-{ setBackgroundGradient(Color(2, 1, 1), Color(240, 120, 120)); }
+{ setBackgroundColor(Color(2, 1, 1), Color(240, 120, 120)); }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)

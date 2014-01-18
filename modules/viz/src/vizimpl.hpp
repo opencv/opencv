@@ -95,8 +95,7 @@ public:
     void setWindowSize(const Size& window_size);
     void setFullScreen(bool mode);
     String getWindowName() const;
-    void setBackgroundColor(const Color& color);
-    void setBackgroundGradient(const Color& up, const Color& down);
+    void setBackgroundColor(const Color& color, const Color& color2);
     void setBackgroundTexture(InputArray image);
     void setBackgroundMeshLab();
 
