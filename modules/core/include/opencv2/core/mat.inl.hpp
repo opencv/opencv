@@ -47,6 +47,8 @@
 #  error mat.inl.hpp header must be compiled as C++
 #endif
 
+#include "opencv2/core/utility.hpp"
+
 namespace cv
 {
 
@@ -1037,7 +1039,7 @@ void Mat::forEach(Functor operation) {
         };
     };
     
-    cv::parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
+    parallel_for_(cv::Range(0, LINES), PixelOperationWrapper(reinterpret_cast<Mat_<_Tp>*>(this), operation));
 };
 
 template<typename _Tp, typename Functor> inline
