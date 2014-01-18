@@ -209,7 +209,7 @@ viz::Widget3D::applyTransform
 -------------------------------
 Transforms internal widget data (i.e. points, normals) using the given transform. 
 
-.. ocv:function::  void applyTransform(const Affine3d &transform);
+.. ocv:function::  void applyTransform(const Affine3d &transform)
 
     :param transform: Specified transformation to apply.
 
@@ -285,7 +285,7 @@ viz::WPlane::WPlane
 -------------------
 Constructs a default plane with center point at origin and normal oriented along z-axis.
 
-.. ocv:function:: WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+.. ocv:function:: WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white())
 
     :param size: Size of the plane
     :param color: :ocv:class:`Color` of the plane.
@@ -294,7 +294,7 @@ viz::WPlane::WPlane
 -------------------
 Constructs a repositioned plane
         
-.. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+.. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white())
 
     :param center: Center of the plane
     :param normal: Plane normal orientation
@@ -369,7 +369,7 @@ viz::WCircle::WCircle
 -------------------------------
 Constructs default planar circle centred at origin with plane normal along z-axis
 
-.. ocv:function:: WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
+.. ocv:function:: WCircle(double radius, double thickness = 0.01, const Color &color = Color::white())
 
     :param radius: Radius of the circle.    
     :param thickness: Thickness of the circle.
@@ -379,7 +379,7 @@ viz::WCircle::WCircle
 -------------------------------
 Constructs repositioned planar circle.
 
-.. ocv:function:: WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
+.. ocv:function:: WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white())
 
     :param radius: Radius of the circle.
     :param center: Center of the circle.
@@ -408,7 +408,7 @@ viz::WCone::WCone
 -------------------------------
 Constructs default cone oriented along x-axis with center of its base located at origin
 
-.. ocv:function:: WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
+.. ocv:function:: WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white())
 
     :param length: Length of the cone.    
     :param radius: Radius of the cone.    
@@ -419,7 +419,7 @@ viz::WCone::WCone
 -------------------------------
 Constructs repositioned planar cone.
 
-.. ocv:function:: WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
+.. ocv:function:: WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white())
 
     :param radius: Radius of the cone.    
     :param center: Center of the cone base.
@@ -540,7 +540,7 @@ viz::WGrid::WGrid
 ---------------------------
 Constructs a WGrid.
 
-.. ocv:function::  WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
+.. ocv:function::  WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white())
 
     :param cells: Number of cell columns and rows, respectively.
     :param cells_spacing: Size of each cell, respectively.
@@ -823,7 +823,7 @@ Constructs a WTrajectory.
     * PATH & FRAMES : Displays both poly line and coordinate frames.
 
 viz::WTrajectoryFrustums
-----------------
+------------------------
 .. ocv:class:: WTrajectoryFrustums
 
 This 3D Widget represents a trajectory. ::
@@ -838,7 +838,7 @@ This 3D Widget represents a trajectory. ::
     };
 
 viz::WTrajectoryFrustums::WTrajectoryFrustums
------------------------------
+---------------------------------------------
 Constructs a WTrajectoryFrustums.
 
 .. ocv:function:: WTrajectoryFrustums(const std::vector<Affine3d> &path, const Matx33d &K, double scale = 1.0, const Color &color = Color::white())
@@ -877,7 +877,7 @@ viz::WTrajectorySpheres::WTrajectorySpheres
 -------------------------------------------
 Constructs a WTrajectorySpheres.
 
-.. ocv:function:: WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007, const Color &from = Color::red(), const Color &to = Color::white());
+.. ocv:function:: WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007, const Color &from = Color::red(), const Color &to = Color::white())
 
     :param path: List of poses on a trajectory. Takes std::vector<Affine<T>> with T == [float | double]
     :param line_length: Max length of the lines which point to previous position
@@ -1012,7 +1012,7 @@ Constructs a WMesh.
 
     :param mesh: :ocv:class:`Mesh` object that will be displayed.
 	
-.. ocv:function:: WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
+.. ocv:function:: WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray())
 
     :param cloud: Points of the mesh object.
 	:param polygons: Points of the mesh object.
