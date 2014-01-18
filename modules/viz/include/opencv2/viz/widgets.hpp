@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_WIDGETS_HPP__
@@ -68,14 +65,14 @@ namespace cv
             SHADING
         };
 
-        enum RenderingRepresentationProperties
+        enum RepresentationValues
         {
             REPRESENTATION_POINTS,
             REPRESENTATION_WIREFRAME,
             REPRESENTATION_SURFACE
         };
 
-        enum ShadingRepresentationProperties
+        enum ShadingValues
         {
             SHADING_FLAT,
             SHADING_GOURAUD,
@@ -114,13 +111,15 @@ namespace cv
         public:
             Widget3D() {}
 
-            void setPose(const Affine3f &pose);
-            void updatePose(const Affine3f &pose);
-            Affine3f getPose() const;
+            //! widget position manipulation, i.e. place where it is rendered
+            void setPose(const Affine3d &pose);
+            void updatePose(const Affine3d &pose);
+            Affine3d getPose() const;
+
+            //! update internal widget data, i.e. points, normals, etc.
+            void applyTransform(const Affine3d &transform);
 
             void setColor(const Color &color);
-        private:
-            struct MatrixConverter;
 
         };
 
@@ -134,92 +133,94 @@ namespace cv
             void setColor(const Color &color);
         };
 
+        /////////////////////////////////////////////////////////////////////////////
+        /// Simple widgets
+
         class CV_EXPORTS WLine : public Widget3D
         {
         public:
-            WLine(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
+            WLine(const Point3d &pt1, const Point3d &pt2, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            WPlane(const Vec4f& coefs, float size = 1.f, const Color &color = Color::white());
-            WPlane(const Vec4f& coefs, const Point3f& pt, float size = 1.f, const Color &color = Color::white());
-        private:
-            struct SetSizeImpl;
+            //! created default plane with center point at origin and normal oriented along z-axis
+            WPlane(const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
+
+            //! repositioned plane
+            WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,
+                   const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white());
         };
 
         class CV_EXPORTS WSphere : public Widget3D
         {
         public:
-            WSphere(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
+            WSphere(const cv::Point3d &center, double radius, int sphere_resolution = 10, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WArrow : public Widget3D
         {
         public:
-            WArrow(const Point3f& pt1, const Point3f& pt2, float thickness = 0.03f, const Color &color = Color::white());
+            WArrow(const Point3d& pt1, const Point3d& pt2, double thickness = 0.03, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            WCircle(const Point3f& pt, float radius, float thickness = 0.01f, const Color &color = Color::white());
+            //! creates default planar circle centred at origin with plane normal along z-axis
+            WCircle(double radius, double thickness = 0.01, const Color &color = Color::white());
+
+            //! creates repositioned circle
+            WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness = 0.01, const Color &color = Color::white());
+        };
+
+        class CV_EXPORTS WCone : public Widget3D
+        {
+        public:
+            //! create default cone, oriented along x-axis with center of its base located at origin
+            WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
+
+            //! creates repositioned cone
+            WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
-            WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, float radius, int numsides = 30, const Color &color = Color::white());
+            WCylinder(const Point3d& axis_point1, const Point3d& axis_point2, double radius, int numsides = 30, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCube : public Widget3D
         {
         public:
-            WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
-        };
-
-        class CV_EXPORTS WCoordinateSystem : public Widget3D
-        {
-        public:
-            WCoordinateSystem(float scale = 1.f);
+            WCube(const Point3d& min_point = Vec3d::all(-0.5), const Point3d& max_point = Vec3d::all(0.5),
+                  bool wire_frame = true, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WPolyLine : public Widget3D
         {
         public:
             WPolyLine(InputArray points, const Color &color = Color::white());
-
-        private:
-            struct CopyImpl;
         };
 
-        class CV_EXPORTS WGrid : public Widget3D
+        /////////////////////////////////////////////////////////////////////////////
+        /// Text and image widgets
+
+        class CV_EXPORTS WText : public Widget2D
         {
         public:
-            //! Creates grid at the origin
-            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-            //! Creates grid based on the plane equation
-            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-
-        private:
-            struct GridImpl;
-
-        };
-
-        class CV_EXPORTS WText3D : public Widget3D
-        {
-        public:
-            WText3D(const String &text, const Point3f &position, float text_scale = 1.f, bool face_camera = true, const Color &color = Color::white());
+            WText(const String &text, const Point &pos, int font_size = 20, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
         };
 
-        class CV_EXPORTS WText : public Widget2D
+        class CV_EXPORTS WText3D : public Widget3D
         {
         public:
-            WText(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
+            //! creates text label in 3D. If face_camera = false, text plane normal is oriented along z-axis. Use widget pose to orient it properly
+            WText3D(const String &text, const Point3d &position, double text_scale = 1., bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
@@ -228,62 +229,90 @@ namespace cv
         class CV_EXPORTS WImageOverlay : public Widget2D
         {
         public:
-            WImageOverlay(const Mat &image, const Rect &rect);
-
-            void setImage(const Mat &image);
+            WImageOverlay(InputArray image, const Rect &rect);
+            void setImage(InputArray image);
         };
 
         class CV_EXPORTS WImage3D : public Widget3D
         {
         public:
-            //! Creates 3D image at the origin
-            WImage3D(const Mat &image, const Size &size);
-            //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-            WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
+            //! Creates 3D image in a plane centered at the origin with normal orientaion along z-axis,
+            //! image x- and y-axes are oriented along x- and y-axes of 3d world
+            WImage3D(InputArray image, const Size2d &size);
 
-            void setImage(const Mat &image);
+            //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
+            WImage3D(InputArray image, const Size2d &size, const Vec3d &center, const Vec3d &normal, const Vec3d &up_vector);
+
+            void setImage(InputArray image);
+        };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Compond widgets
+
+        class CV_EXPORTS WCoordinateSystem : public Widget3D
+        {
+        public:
+            WCoordinateSystem(double scale = 1.0);
+        };
+
+        class CV_EXPORTS WGrid : public Widget3D
+        {
+        public:
+            //! Creates grid at the origin and normal oriented along z-axis
+            WGrid(const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
+
+            //! Creates repositioned grid
+            WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,
+                  const Vec2i &cells = Vec2i::all(10), const Vec2d &cells_spacing = Vec2d::all(1.0), const Color &color = Color::white());
         };
 
         class CV_EXPORTS WCameraPosition : public Widget3D
         {
         public:
             //! Creates camera coordinate frame (axes) at the origin
-            WCameraPosition(float scale = 1.f);
+            WCameraPosition(double scale = 1.0);
             //! Creates frustum based on the intrinsic marix K at the origin
-            WCameraPosition(const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33d &K, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            WCameraPosition(const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Vec2d &fov, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Matx33f &K, const Mat &img, float scale = 1.f, const Color &color = Color::white());
+            WCameraPosition(const Matx33d &K, InputArray image, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            WCameraPosition(const Vec2f &fov, const Mat &img, float scale = 1.f, const Color &color = Color::white());
-
-        private:
-            struct ProjectImage;
+            WCameraPosition(const Vec2d &fov, InputArray image, double scale = 1.0, const Color &color = Color::white());
         };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Trajectories
 
         class CV_EXPORTS WTrajectory : public Widget3D
         {
         public:
-            enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
+            enum {FRAMES = 1, PATH = 2, BOTH = FRAMES + PATH };
 
-            //! Displays trajectory of the given path either by coordinate frames or polyline
-            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), float scale = 1.f);
-            //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, float scale = 1.f, const Color &color = Color::white());
-            //! Displays trajectory of the given path by frustums
-            WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, float scale = 1.f, const Color &color = Color::white());
-
-        private:
-            struct ApplyPath;
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path either by coordinate frames or polyline
+            WTrajectory(InputArray path, int display_mode = WTrajectory::PATH, double scale = 1.0, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS WSpheresTrajectory: public Widget3D
+        class CV_EXPORTS WTrajectoryFrustums : public Widget3D
         {
         public:
-            WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, float init_sphere_radius = 0.021f,
-                                    float sphere_radius = 0.007f, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path by frustums
+            WTrajectoryFrustums(InputArray path, const Matx33d &K, double scale = 1., const Color &color = Color::white());
+
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path by frustums
+            WTrajectoryFrustums(InputArray path, const Vec2d &fov, double scale = 1., const Color &color = Color::white());
         };
+
+        class CV_EXPORTS WTrajectorySpheres: public Widget3D
+        {
+        public:
+            //! Takes vector<Affine3<T>> and displays trajectory of the given path
+            WTrajectorySpheres(InputArray path, double line_length = 0.05, double radius = 0.007,
+                               const Color &from = Color::red(), const Color &to = Color::white());
+        };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Clouds
 
         class CV_EXPORTS WCloud: public Widget3D
         {
@@ -292,9 +321,19 @@ namespace cv
             WCloud(InputArray cloud, InputArray colors);
             //! All points in cloud have the same color
             WCloud(InputArray cloud, const Color &color = Color::white());
+        };
 
-        private:
-            struct CreateCloudWidget;
+        class CV_EXPORTS WPaintedCloud: public Widget3D
+        {
+        public:
+            //! Paint cloud with default gradient between cloud bounds points
+            WPaintedCloud(InputArray cloud);
+
+            //! Paint cloud with default gradient between given points
+            WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2);
+
+            //! Paint cloud with gradient specified by given colors between given points
+            WPaintedCloud(InputArray cloud, const Point3d& p1, const Point3d& p2, const Color& c1, const Color c2);
         };
 
         class CV_EXPORTS WCloudCollection : public Widget3D
@@ -303,31 +342,26 @@ namespace cv
             WCloudCollection();
 
             //! Each point in cloud is mapped to a color in colors
-            void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+            void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             //! All points in cloud have the same color
-            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
-
-        private:
-            struct CreateCloudWidget;
+            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity());
         };
 
         class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
-            WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
-
-        private:
-            struct ApplyCloudNormals;
+            WCloudNormals(InputArray cloud, InputArray normals, int level = 64, double scale = 0.1, const Color &color = Color::white());
         };
 
         class CV_EXPORTS WMesh : public Widget3D
         {
         public:
-            WMesh(const Mesh3d &mesh);
-
-        private:
-            struct CopyImpl;
+            WMesh(const Mesh &mesh);
+            WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
         };
+
+        /////////////////////////////////////////////////////////////////////////////
+        /// Utility exports
 
         template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
         template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
@@ -337,6 +371,7 @@ namespace cv
         template<> CV_EXPORTS WCylinder Widget::cast<WCylinder>();
         template<> CV_EXPORTS WArrow Widget::cast<WArrow>();
         template<> CV_EXPORTS WCircle Widget::cast<WCircle>();
+        template<> CV_EXPORTS WCone Widget::cast<WCone>();
         template<> CV_EXPORTS WCube Widget::cast<WCube>();
         template<> CV_EXPORTS WCoordinateSystem Widget::cast<WCoordinateSystem>();
         template<> CV_EXPORTS WPolyLine Widget::cast<WPolyLine>();
@@ -347,8 +382,10 @@ namespace cv
         template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>();
         template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>();
         template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>();
-        template<> CV_EXPORTS WSpheresTrajectory Widget::cast<WSpheresTrajectory>();
+        template<> CV_EXPORTS WTrajectoryFrustums Widget::cast<WTrajectoryFrustums>();
+        template<> CV_EXPORTS WTrajectorySpheres Widget::cast<WTrajectorySpheres>();
         template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
+        template<> CV_EXPORTS WPaintedCloud Widget::cast<WPaintedCloud>();
         template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
         template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
         template<> CV_EXPORTS WMesh Widget::cast<WMesh>();
