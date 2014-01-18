@@ -145,7 +145,4 @@ void cv::viz::Viz3d::setBackgroundMeshLab() {impl_->setBackgroundMeshLab(); }
 void cv::viz::Viz3d::setRenderingProperty(const String &id, int property, double value) { getWidget(id).setRenderingProperty(property, value); }
 double cv::viz::Viz3d::getRenderingProperty(const String &id, int property) { return getWidget(id).getRenderingProperty(property); }
 
-void cv::viz::Viz3d::setDesiredUpdateRate(double rate) { impl_->setDesiredUpdateRate(rate); }
-double cv::viz::Viz3d::getDesiredUpdateRate() { return impl_->getDesiredUpdateRate(); }
-
 void cv::viz::Viz3d::setRepresentation(int representation) { impl_->setRepresentation(representation); }

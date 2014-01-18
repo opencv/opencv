@@ -113,9 +113,6 @@ namespace cv
             void setRenderingProperty(const String &id, int property, double value);
             double getRenderingProperty(const String &id, int property);
 
-            void setDesiredUpdateRate(double rate);
-            double getDesiredUpdateRate();
-
             void setRepresentation(int representation);
         private:
 

@@ -46,25 +46,17 @@
 #include "precomp.hpp"
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
-    : s_lastDone_(0.0), style_(vtkSmartPointer<InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
+cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
-    window_ = vtkSmartPointer<vtkRenderWindow>::New();
 
-    // Set the window size as 1/2 of the screen size
+    // Create render window
+    window_ = vtkSmartPointer<vtkRenderWindow>::New();
+    window_name_ = VizStorage::generateWindowName(name);
+
     cv::Vec2i window_size = cv::Vec2i(window_->GetScreenSize()) / 2;
     window_->SetSize(window_size.val);
     window_->AddRenderer(renderer_);
-
-    // Create the interactor style
-    style_->Initialize();
-    style_->setRenderer(renderer_);
-    style_->setWidgetActorMap(widget_actor_map_);
-    style_->UseTimersOn();
-
-    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
     window_->LineSmoothingOff();
@@ -72,37 +64,89 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     window_->SwapBuffersOn();
     window_->SetStereoTypeToAnaglyph();
 
-    interactor_->SetRenderWindow(window_);
-    interactor_->SetInteractorStyle(style_);
-    interactor_->SetDesiredUpdateRate(24.0);
+    // Create the interactor style
+    style_ = vtkSmartPointer<InteractorStyle>::New();
+    style_->setWidgetActorMap(widget_actor_map_);
+    style_->UseTimersOn();
+    style_->Initialize();
 
-    // Initialize and create timer, also create window
-    interactor_->Initialize();
-    timer_id_ = interactor_->CreateRepeatingTimer(5000L);
-
-    exit_main_loop_timer_callback_ = vtkSmartPointer<ExitMainLoopTimerCallback>::New();
-    exit_main_loop_timer_callback_->viz_ = this;
-    exit_main_loop_timer_callback_->right_timer_id = -1;
-    interactor_->AddObserver(vtkCommand::TimerEvent, exit_main_loop_timer_callback_);
-
+    timer_callback_ = vtkSmartPointer<TimerCallback>::New();
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();
-    exit_callback_->viz_ = this;
-    interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
-
-    resetStoppedFlag();
-
-    //////////////////////////////
-    String window_name = VizStorage::generateWindowName(name);
-    window_->SetWindowName(window_name.c_str());
+    exit_callback_->viz = this;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::~VizImpl()
+void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
 {
-    if (interactor_)
-        interactor_->DestroyTimer(timer_id_);
-    if (renderer_)
-        renderer_->Clear();
+    if (event_id == vtkCommand::TimerEvent && timer_id == *reinterpret_cast<int*>(cookie))
+    {
+        vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkRenderWindowInteractor::SafeDownCast(caller);
+        interactor->TerminateApp();
+    }
+}
+
+void cv::viz::Viz3d::VizImpl::ExitCallback::Execute(vtkObject*, unsigned long event_id, void*)
+{
+    if (event_id == vtkCommand::ExitEvent)
+    {
+        viz->interactor_->TerminateApp();
+        viz->interactor_ = 0;
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+bool cv::viz::Viz3d::VizImpl::wasStopped() const
+{
+    bool stopped = spin_once_state_ ? interactor_ == 0 : false;
+    spin_once_state_ &= !stopped;
+    return stopped;
+}
+
+void cv::viz::Viz3d::VizImpl::close()
+{
+    if (!interactor_)
+        return;
+    interactor_->GetRenderWindow()->Finalize();
+    interactor_->TerminateApp(); // This tends to close the window...
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::spin()
+{
+    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    interactor_->SetRenderWindow(window_);
+    interactor_->SetInteractorStyle(style_);
+    window_->Render();
+    window_->SetWindowName(window_name_.c_str());
+    interactor_->Start();
+    interactor_ = 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
+{
+    if (interactor_ == 0)
+    {
+        spin_once_state_ = true;
+        interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+        interactor_->SetRenderWindow(window_);
+        interactor_->SetInteractorStyle(style_);
+        interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
+        interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
+        window_->Render();
+        window_->SetWindowName(window_name_.c_str());
+    }
+
+    vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
+
+    if (force_redraw)
+        local->Render();
+
+    timer_callback_->timer_id = local->CreateOneShotTimer(std::max(1, time));
+    local->Start();
+    local->DestroyTimer(timer_callback_->timer_id);
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -209,19 +253,6 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setDesiredUpdateRate(double rate)
-{
-    if (interactor_)
-        interactor_->SetDesiredUpdateRate(rate);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-double cv::viz::Viz3d::VizImpl::getDesiredUpdateRate()
-{
-    return interactor_ ? interactor_->GetDesiredUpdateRate() : 0.0;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::saveScreenshot(const String &file) { style_->saveScreenshot(file.c_str()); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -231,37 +262,6 @@ void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void
 void cv::viz::Viz3d::VizImpl::registerKeyboardCallback(KeyboardCallback callback, void* cookie)
 { style_->registerKeyboardCallback(callback, cookie); }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::spin()
-{
-    resetStoppedFlag();
-    window_->Render();
-    interactor_->Start();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
-{
-    resetStoppedFlag();
-
-    if (time <= 0)
-        time = 1;
-
-    if (force_redraw)
-        interactor_->Render();
-
-    double s_now_ = cv::getTickCount() / cv::getTickFrequency();
-    if (s_lastDone_ > s_now_)
-      s_lastDone_ = s_now_;
-
-    if ((s_now_ - s_lastDone_) > (1.0 / interactor_->GetDesiredUpdateRate()))
-    {
-        exit_main_loop_timer_callback_->right_timer_id = interactor_->CreateRepeatingTimer(time);
-        interactor_->Start();
-        interactor_->DestroyTimer(exit_main_loop_timer_callback_->right_timer_id);
-        s_lastDone_ = s_now_;
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::removeAllWidgets()
@@ -282,18 +282,15 @@ void cv::viz::Viz3d::VizImpl::showImage(InputArray image, const Size& window_siz
 /////////////////////////////////////////////////////////////////////////////////////////////
 bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> actor)
 {
-    vtkProp* actor_to_remove = vtkProp::SafeDownCast(actor);
-
     vtkPropCollection* actors = renderer_->GetViewProps();
     actors->InitTraversal();
     vtkProp* current_actor = NULL;
     while ((current_actor = actors->GetNextProp()) != NULL)
-    {
-        if (current_actor != actor_to_remove)
-            continue;
-        renderer_->RemoveActor(actor);
-        return true;
-    }
+        if (current_actor == actor)
+        {
+            renderer_->RemoveActor(actor);
+            return true;
+        }
     return false;
 }
 
@@ -313,11 +310,8 @@ void  cv::viz::Viz3d::VizImpl::setBackgroundGradient(const Color& up, const Colo
     renderer_->GradientBackgroundOn();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
-{
-    setBackgroundGradient(Color(2, 1, 1), Color(240, 120, 120));
-}
+{ setBackgroundGradient(Color(2, 1, 1), Color(240, 120, 120)); }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
@@ -512,14 +506,8 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode)
-{
-    if (window_)
-        window_->SetFullScreen(mode);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-cv::String cv::viz::Viz3d::VizImpl::getWindowName() const { return window_ ? window_->GetWindowName() : ""; }
+cv::String cv::viz::Viz3d::VizImpl::getWindowName() const { return window_name_; }
+void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode) { window_->SetFullScreen(mode); }
 void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_->SetPosition(position.x, position.y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize(const Size& window_size) { window_->SetSize(window_size.width, window_size.height); }
-cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }
+cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(Point(Vec2i(window_->GetSize()))); }

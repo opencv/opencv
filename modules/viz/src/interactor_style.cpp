@@ -220,8 +220,6 @@ int cv::viz::InteractorStyle::getModifiers()
 void cv::viz::InteractorStyle::OnKeyDown()
 {
     CV_Assert("Interactor style not initialized. Please call Initialize() before continuing" && init_);
-    CV_Assert("No renderer given! Use SetRendererCollection() before continuing." && renderer_);
-
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
 
     // Save the initial windows width/height
@@ -403,8 +401,8 @@ void cv::viz::InteractorStyle::OnKeyDown()
             vtkSmartPointer<vtkRenderWindow> window = Interactor->GetRenderWindow();
             if (!window->GetStereoRender())
             {
-                static Vec2i default_mask(4, 3), alternative_mask(2, 5);
-                window->SetAnaglyphColorMask (stereo_anaglyph_mask_default_ ? default_mask.val : alternative_mask.val);
+                static Vec2i red_blue(4, 3), magenta_green(2, 5);
+                window->SetAnaglyphColorMask (stereo_anaglyph_mask_default_ ? red_blue.val : magenta_green.val);
                 stereo_anaglyph_mask_default_ = !stereo_anaglyph_mask_default_;
             }
             window->SetStereoRender(!window->GetStereoRender());
@@ -637,6 +635,5 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
 void cv::viz::InteractorStyle::OnTimer()
 {
     CV_Assert("Interactor style not initialized." && init_);
-    CV_Assert("Renderer has not been set." && renderer_);
     Interactor->Render();
 }

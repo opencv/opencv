@@ -236,7 +236,7 @@ TEST(Viz, show_trajectories)
         viz.setViewerPose(makeCameraPose(pose * 7.5, Vec3d(0.0, 0.5, 0.0), Vec3d(0.0, 0.1, 0.0)));
         viz.spinOnce(20, true);
     }
-    //viz.spin();
+    viz.spin();
 }
 
 TEST(Viz, show_trajectory_reposition)
@@ -299,7 +299,7 @@ TEST(Viz, show_overlay_image)
         viz.getWidget("img1").cast<WImageOverlay>().setImage(lena * pow(sin(i*10*CV_PI/180) * 0.5 + 0.5, 1.0));
         viz.spinOnce(1, true);
     }
-    //viz.spin();
+    viz.spin();
 }
 
 
@@ -338,7 +338,7 @@ TEST(Viz, show_image_3d)
         viz.getWidget("img0").cast<WImage3D>().setImage(lena * pow(sin(i++*7.5*CV_PI/180) * 0.5 + 0.5, 1.0));
         viz.spinOnce(1, true);
     }
-    //viz.spin();
+    viz.spin();
 }
 
 TEST(Viz, show_simple_widgets)
@@ -365,7 +365,7 @@ TEST(Viz, show_simple_widgets)
 
     viz.showWidget("grid1", WGrid(Vec2i(7,7), Vec2d::all(0.75), Color::gray()), Affine3d().translate(Vec3d(0.0, 0.0, -1.0)));
 
-    viz.spinOnce(1500, true);
+    viz.spin();
     viz.getWidget("text2d").cast<WText>().setText("New simple text");
     viz.getWidget("text3d").cast<WText3D>().setText("Updated text 3D");
     viz.spin();
@@ -379,18 +379,7 @@ TEST(Viz, show_follower)
     viz.showWidget("cube", WCube());
     viz.showWidget("t3d_2", WText3D("Simple 3D follower", Point3d(-0.5, -0.5, 0.5), 0.125, true,  Color::green()));
     viz.setBackgroundMeshLab();
-    viz.spinOnce(1500, true);
+    viz.spin();
     viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");
-    viz.spin();
-}
-
-TEST(Viz, DISABLED_spin_twice_____________________________TODO_UI_BUG)
-{
-    Mesh mesh = Mesh::load(get_dragon_ply_file_path());
-
-    Viz3d viz("spin_twice");
-    viz.showWidget("coosys", WCoordinateSystem());
-    viz.showWidget("mesh", WMesh(mesh));
-    viz.spin();
     viz.spin();
 }
