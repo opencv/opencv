@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -25,7 +26,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other Materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,47 +44,35 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "perf_precomp.hpp"
+#include "opencv2/ts/ocl_perf.hpp"
+
 #ifdef HAVE_OPENCL
 
-////////////////////////////////////////////////////////
-// Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
-IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+namespace cvtest {
+namespace ocl {
 
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
+///////////// Moments ////////////////////////
+
+typedef tuple<Size, bool> MomentsParams;
+typedef TestBaseWithParam<MomentsParams> MomentsFixture;
+
+OCL_PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TEST_SIZES, ::testing::Bool()))
 {
-    int apperture_size;
-    bool useL2gradient;
+    const MomentsParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const bool binaryImage = get<1>(params);
 
-    cv::Mat edges_gold;
-    virtual void SetUp()
-    {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
-    }
-};
+    cv::Moments m;
+    UMat src(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG);
 
-OCL_TEST_P(Canny, Accuracy)
-{
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    OCL_TEST_CYCLE() m = cv::moments(src, binaryImage);
 
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
-
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
-
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat edges_gold;
-    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+    SANITY_CHECK_MOMENTS(m, 1e-6, ERROR_RELATIVE);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL

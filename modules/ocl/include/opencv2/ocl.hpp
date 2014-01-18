@@ -167,7 +167,7 @@ namespace cv
             CACHE_NONE    = 0,        // do not cache OpenCL binary
             CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode
             CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // cache opencl binary
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE // cache opencl binary
         };
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the

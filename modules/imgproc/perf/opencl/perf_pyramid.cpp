@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -43,47 +44,62 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "perf_precomp.hpp"
+#include "opencv2/ts/ocl_perf.hpp"
+
 #ifdef HAVE_OPENCL
 
-////////////////////////////////////////////////////////
-// Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
-IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+namespace cvtest {
+namespace ocl {
 
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
+///////////// PyrDown //////////////////////
+
+typedef Size_MatType PyrDownFixture;
+
+OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
-    int apperture_size;
-    bool useL2gradient;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
 
-    cv::Mat edges_gold;
-    virtual void SetUp()
-    {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
-    }
-};
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
 
-OCL_TEST_P(Canny, Accuracy)
-{
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    UMat src(srcSize, type), dst(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
+    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
 
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
-
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat edges_gold;
-    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+    SANITY_CHECK(dst, eps);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
+///////////// PyrUp ////////////////////////
+
+typedef Size_MatType PyrUpFixture;
+
+OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const Size dstSize(srcSize.height << 1, srcSize.width << 1);
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+    checkDeviceMaxMemoryAllocSize(dstSize, type);
+
+    UMat src(srcSize, type), dst(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::pyrDown(src, dst);
+
+    SANITY_CHECK(dst, eps);
+}
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL
