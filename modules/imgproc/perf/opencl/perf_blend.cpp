@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -43,47 +44,39 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "perf_precomp.hpp"
+#include "opencv2/ts/ocl_perf.hpp"
+
 #ifdef HAVE_OPENCL
 
-////////////////////////////////////////////////////////
-// Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int)
-IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+namespace cvtest {
+namespace ocl {
 
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
+///////////// BlendLinear ////////////////////////
+
+typedef Size_MatType BlendLinearFixture;
+
+OCL_PERF_TEST_P(BlendLinearFixture, BlendLinear, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    int apperture_size;
-    bool useL2gradient;
+    Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int srcType = get<1>(params);
+    const double eps = CV_MAT_DEPTH(srcType) <= CV_32S ? 1.0 : 0.2;
 
-    cv::Mat edges_gold;
-    virtual void SetUp()
-    {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
-    }
-};
+    checkDeviceMaxMemoryAllocSize(srcSize, srcType);
 
-OCL_TEST_P(Canny, Accuracy)
-{
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    UMat src1(srcSize, srcType), src2(srcSize, srcType), dst(srcSize, srcType);
+    UMat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
 
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
+    declare.in(src1, src2, WARMUP_RNG).in(weights1, weights2, WARMUP_READ).out(dst);
+    randu(weights1, 0, 1);
+    randu(weights2, 0, 1);
 
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
+    OCL_TEST_CYCLE() cv::blendLinear(src1, src2, weights1, weights2, dst);
 
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat edges_gold;
-    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+    SANITY_CHECK(dst, eps);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL

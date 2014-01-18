@@ -423,6 +423,12 @@ int print(const Mat& mtx, FILE* stream = stdout)
     return print(Formatter::get()->format(mtx), stream);
 }
 
+static inline
+int print(const UMat& mtx, FILE* stream = stdout)
+{
+    return print(Formatter::get()->format(mtx.getMat(ACCESS_READ)), stream);
+}
+
 template<typename _Tp> static inline
 int print(const std::vector<Point_<_Tp> >& vec, FILE* stream = stdout)
 {

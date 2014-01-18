@@ -709,7 +709,7 @@ void cv::SpinImageModel::defaultParams()
 
     T_GeometriccConsistency = 0.25f;
     T_GroupingCorespondances = 0.25f;
-};
+}
 
 Mat cv::SpinImageModel::packRandomScaledSpins(bool separateScale, size_t xCount, size_t yCount) const
 {

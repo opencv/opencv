@@ -947,7 +947,7 @@ CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
                                        "inner iterations (between outlier filtering) used in the numerical scheme");
                   obj.info()->addParam(obj, "outerIterations", obj.outerIterations, false, 0, 0,
                                        "outer iterations (number of inner loops) used in the numerical scheme");
-                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow));
+                  obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow))
 
 } // namespace
 

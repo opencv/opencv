@@ -44,46 +44,74 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp"
+
 #ifdef HAVE_OPENCL
+
+namespace cvtest {
+namespace ocl {
 
 ////////////////////////////////////////////////////////
 // Canny
+
 IMPLEMENT_PARAM_CLASS(AppertureSize, int)
 IMPLEMENT_PARAM_CLASS(L2gradient, bool)
+IMPLEMENT_PARAM_CLASS(UseRoi, bool)
 
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
+PARAM_TEST_CASE(Canny, AppertureSize, L2gradient, UseRoi)
 {
     int apperture_size;
-    bool useL2gradient;
+    bool useL2gradient, use_roi;
 
-    cv::Mat edges_gold;
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
     virtual void SetUp()
     {
         apperture_size = GET_PARAM(0);
         useL2gradient = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+    }
+
+    void generateTestData()
+    {
+        Mat img = readImage("shared/fruits.png", IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty()) << "cann't load shared/fruits.png";
+
+        Size roiSize = img.size();
+        int type = img.type();
+        ASSERT_EQ(CV_8UC1, type);
+
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 2, 100);
+        img.copyTo(src_roi);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
     }
 };
 
 OCL_TEST_P(Canny, Accuracy)
 {
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    generateTestData();
 
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
+    const double low_thresh = 50.0, high_thresh = 100.0;
 
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
+    OCL_OFF(cv::Canny(src_roi, dst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
+    OCL_ON(cv::Canny(usrc_roi, udst_roi, low_thresh, high_thresh, apperture_size, useL2gradient));
 
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat edges_gold;
-    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+    EXPECT_MAT_SIMILAR(dst_roi, udst_roi, 1e-2);
+    EXPECT_MAT_SIMILAR(dst, udst, 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
+OCL_INSTANTIATE_TEST_CASE_P(ImgProc, Canny, testing::Combine(
+                                testing::Values(AppertureSize(3), AppertureSize(5)),
+                                testing::Values(L2gradient(false), L2gradient(true)),
+                                testing::Values(UseRoi(false), UseRoi(true))));
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL
