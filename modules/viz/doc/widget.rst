@@ -207,7 +207,7 @@ Returns the current pose of the widget.
 
 viz::Widget3D::applyTransform
 -------------------------------
-Transforms internal widget data (i.e. points, normals) using the given transform. 
+Transforms internal widget data (i.e. points, normals) using the given transform.
 
 .. ocv:function::  void applyTransform(const Affine3d &transform)
 
@@ -293,7 +293,7 @@ Constructs a default plane with center point at origin and normal oriented along
 viz::WPlane::WPlane
 -------------------
 Constructs a repositioned plane
-        
+
 .. ocv:function:: WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis,const Size2d& size = Size2d(1.0, 1.0), const Color &color = Color::white())
 
     :param center: Center of the plane
@@ -371,7 +371,7 @@ Constructs default planar circle centred at origin with plane normal along z-axi
 
 .. ocv:function:: WCircle(double radius, double thickness = 0.01, const Color &color = Color::white())
 
-    :param radius: Radius of the circle.    
+    :param radius: Radius of the circle.
     :param thickness: Thickness of the circle.
     :param color: :ocv:class:`Color` of the circle.
 
@@ -385,9 +385,9 @@ Constructs repositioned planar circle.
     :param center: Center of the circle.
     :param normal: Normal of the plane in which the circle lies.
     :param thickness: Thickness of the circle.
-    :param color: :ocv:class:`Color` of the circle.    
-    
-    
+    :param color: :ocv:class:`Color` of the circle.
+
+
 viz::WCone
 -------------------------------
 .. ocv:class:: WCone
@@ -410,8 +410,8 @@ Constructs default cone oriented along x-axis with center of its base located at
 
 .. ocv:function:: WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white())
 
-    :param length: Length of the cone.    
-    :param radius: Radius of the cone.    
+    :param length: Length of the cone.
+    :param radius: Radius of the cone.
     :param resolution: Resolution of the cone.
     :param color: :ocv:class:`Color` of the cone.
 
@@ -421,12 +421,12 @@ Constructs repositioned planar cone.
 
 .. ocv:function:: WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white())
 
-    :param radius: Radius of the cone.    
+    :param radius: Radius of the cone.
     :param center: Center of the cone base.
     :param tip: Tip of the cone.
     :param resolution: Resolution of the cone.
-    :param color: :ocv:class:`Color` of the cone.    
-          
+    :param color: :ocv:class:`Color` of the cone.
+
 viz::WCylinder
 --------------
 .. ocv:class:: WCylinder
@@ -675,14 +675,14 @@ This 3D Widget represents an image in 3D space. ::
 
     class CV_EXPORTS WImage3D : public Widget3D
     {
-	public:
-		//! Creates 3D image at the origin
-		WImage3D(InputArray image, const Size2d &size);
-		//! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-		WImage3D(InputArray image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector);
+    public:
+        //! Creates 3D image at the origin
+        WImage3D(InputArray image, const Size2d &size);
+        //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
+        WImage3D(InputArray image, const Size2d &size, const Vec3d &position, const Vec3d &normal, const Vec3d &up_vector);
 
-		void setImage(InputArray image);
-	};
+        void setImage(InputArray image);
+    };
 
 viz::WImage3D::WImage3D
 -----------------------
@@ -1001,7 +1001,7 @@ This 3D Widget defines a mesh. ::
     {
     public:
         WMesh(const Mesh &mesh);
-		WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
+        WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
     };
 
 viz::WMesh::WMesh
@@ -1011,11 +1011,10 @@ Constructs a WMesh.
 .. ocv:function:: WMesh(const Mesh &mesh)
 
     :param mesh: :ocv:class:`Mesh` object that will be displayed.
-	
+
 .. ocv:function:: WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray())
 
     :param cloud: Points of the mesh object.
-	:param polygons: Points of the mesh object.
-	:param colors: Point colors.
-	:param normals: Point normals.
-	
+    :param polygons: Points of the mesh object.
+    :param colors: Point colors.
+    :param normals: Point normals.
