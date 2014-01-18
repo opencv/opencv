@@ -63,7 +63,6 @@ namespace cv
             virtual void Initialize();
 
             void setWidgetActorMap(const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
-            void setRenderer(vtkSmartPointer<vtkRenderer>& renderer) { renderer_ = renderer; }
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
             void saveScreenshot(const String &file);
@@ -73,7 +72,6 @@ namespace cv
             /** \brief Set to true after initialization is complete. */
             bool init_;
 
-            vtkSmartPointer<vtkRenderer> renderer_;
             Ptr<WidgetActorMap> widget_actor_map_;
 
             Vec2i win_size_;

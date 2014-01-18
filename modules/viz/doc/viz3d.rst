@@ -134,8 +134,6 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         void setRenderingProperty(const String &id, int property, double value);
         double getRenderingProperty(const String &id, int property);
 
-        void setDesiredUpdateRate(double rate);
-        double getDesiredUpdateRate();
 
         void setRepresentation(int representation);
     private:
@@ -424,20 +422,6 @@ Returns rendering property of a widget.
         * **SHADING_FLAT**
         * **SHADING_GOURAUD**
         * **SHADING_PHONG**
-
-viz::Viz3d::setDesiredUpdateRate
---------------------------------
-Sets desired update rate of the window.
-
-.. ocv:function:: void setDesiredUpdateRate(double rate)
-
-    :param rate: Desired update rate. The default is 30.
-
-viz::Viz3d::getDesiredUpdateRate
---------------------------------
-Returns desired update rate of the window.
-
-.. ocv:function:: double getDesiredUpdateRate()
 
 viz::Viz3d::setRepresentation
 -----------------------------
