@@ -3525,7 +3525,7 @@ public:
         // we can do it in 2 cases:
         //    1. we overwrite the whole content
         //    2. we overwrite part of the matrix, but the GPU copy is out-of-date
-        if( u->data && (u->hostCopyObsolete() <= u->deviceCopyObsolete() || total == u->size))
+        if( u->data && (u->hostCopyObsolete() < u->deviceCopyObsolete() || total == u->size))
         {
             Mat::getStdAllocator()->upload(u, srcptr, dims, sz, dstofs, dststep, srcstep);
             u->markHostCopyObsolete(false);
@@ -3538,9 +3538,6 @@ public:
 
         if( iscontinuous )
         {
-            int crc = 0;
-            for( size_t i = 0; i < total; i++ )
-                crc ^= ((uchar*)srcptr)[i];
             CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
                 CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) >= 0 );
         }
@@ -3576,12 +3573,12 @@ public:
         UMatDataAutoLock src_autolock(src);
         UMatDataAutoLock dst_autolock(dst);
 
-        if( !src->handle || (src->data && src->hostCopyObsolete() <= src->deviceCopyObsolete()) )
+        if( !src->handle || (src->data && src->hostCopyObsolete() < src->deviceCopyObsolete()) )
         {
             upload(dst, src->data + srcrawofs, dims, sz, dstofs, dststep, srcstep);
             return;
         }
-        if( !dst->handle || (dst->data && dst->hostCopyObsolete() <= dst->deviceCopyObsolete()) )
+        if( !dst->handle || (dst->data && dst->hostCopyObsolete() < dst->deviceCopyObsolete()) )
         {
             download(src, dst->data + dstrawofs, dims, sz, srcofs, srcstep, dststep);
             dst->markHostCopyObsolete(false);
