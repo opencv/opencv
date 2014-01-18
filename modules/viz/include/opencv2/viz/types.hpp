@@ -102,6 +102,8 @@ namespace cv
             static Color turquoise();
             static Color celestial_blue();
             static Color amethyst();
+
+            static Color not_set();
         };
 
         class CV_EXPORTS Mesh
@@ -228,5 +230,7 @@ inline cv::viz::Color cv::viz::Color::apricot()        { return Color(177, 206, 
 inline cv::viz::Color cv::viz::Color::turquoise()      { return Color(208, 224,  64); }
 inline cv::viz::Color cv::viz::Color::celestial_blue() { return Color(208, 151,  73); }
 inline cv::viz::Color cv::viz::Color::amethyst()       { return Color(204, 102, 153); }
+
+inline cv::viz::Color cv::viz::Color::not_set()        { return Color(-1, -1, -1); }
 
 #endif

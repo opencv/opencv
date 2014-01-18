@@ -136,8 +136,7 @@ cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName()
 void cv::viz::Viz3d::saveScreenshot(const String &file) { impl_->saveScreenshot(file); }
 void cv::viz::Viz3d::setWindowPosition(const Point& window_position) { impl_->setWindowPosition(window_position); }
 void cv::viz::Viz3d::setFullScreen(bool mode) { impl_->setFullScreen(mode); }
-void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
-void cv::viz::Viz3d::setBackgroundGradient(const Color& up, const Color& down) { impl_->setBackgroundGradient(up, down); }
+void cv::viz::Viz3d::setBackgroundColor(const Color& color, const Color& color2) { impl_->setBackgroundColor(color, color2); }
 
 void cv::viz::Viz3d::setBackgroundTexture(InputArray image) { impl_->setBackgroundTexture(image); }
 void cv::viz::Viz3d::setBackgroundMeshLab() {impl_->setBackgroundMeshLab(); }
