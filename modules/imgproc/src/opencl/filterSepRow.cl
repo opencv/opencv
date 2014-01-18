@@ -154,7 +154,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
      int radiusy,
-     __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+     __constant float * mat_kernel)
 {
     int x = get_global_id(0)<<2;
     int y = get_global_id(1);
@@ -298,7 +298,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
      int radiusy,
-     __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+     __constant float * mat_kernel)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -392,7 +392,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
      int radiusy,
-     __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+     __constant float * mat_kernel)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -485,7 +485,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
      int radiusy,
-     __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSX+1)))))
+     __constant float * mat_kernel)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
