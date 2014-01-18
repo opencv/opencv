@@ -54,6 +54,8 @@ TEST(Viz, show_cloud_bluberry)
     Viz3d viz("show_cloud_bluberry");
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, Color::bluberry()), pose);
+
+    viz.showWidget("text2d", WText("Bluberry cloud", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -70,6 +72,7 @@ TEST(Viz, show_cloud_random_color)
     viz.setBackgroundMeshLab();
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, colors), pose);
+    viz.showWidget("text2d", WText("Random color cloud", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -87,6 +90,7 @@ TEST(Viz, show_cloud_masked)
     Viz3d viz("show_cloud_masked");
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud), pose);
+    viz.showWidget("text2d", WText("Nan masked cloud", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -100,8 +104,10 @@ TEST(Viz, show_cloud_collection)
     ccol.addCloud(cloud, Color::red(),   Affine3d().translate(Vec3d(2, 0, 0)));
 
     Viz3d viz("show_cloud_collection");
+    viz.setBackgroundColor(Color::mlab());
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("ccol", ccol);
+    viz.showWidget("text2d", WText("Cloud collection", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -116,6 +122,7 @@ TEST(Viz, show_painted_clouds)
     viz.showWidget("cloud2", WPaintedCloud(cloud, Vec3d(0.0, -0.75, -1.0), Vec3d(0.0, 0.75, 0.0)), Affine3d(Vec3d(0.0, CV_PI/2, 0.0), Vec3d(1.5, 0.0, 0.0)));
     viz.showWidget("cloud3", WPaintedCloud(cloud, Vec3d(0.0, 0.0, -1.0), Vec3d(0.0, 0.0, 1.0), Color::blue(), Color::red()));
     viz.showWidget("arrow", WArrow(Vec3d(0.0, 1.0, -1.0), Vec3d(0.0, 1.0, 1.0), 0.009, Color::raspberry()));
+    viz.showWidget("text2d", WText("Painted clouds", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -128,6 +135,7 @@ TEST(Viz, show_mesh)
     Viz3d viz("show_mesh");
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("mesh", WMesh(mesh), pose);
+    viz.showWidget("text2d", WText("Just mesh", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -142,6 +150,7 @@ TEST(Viz, show_mesh_random_colors)
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("mesh", WMesh(mesh), pose);
     viz.setRenderingProperty("mesh", SHADING, SHADING_PHONG);
+    viz.showWidget("text2d", WText("Random color mesh", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -178,6 +187,7 @@ TEST(Viz, show_textured_mesh)
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("mesh", WMesh(mesh));
     viz.setRenderingProperty("mesh", SHADING, SHADING_PHONG);
+    viz.showWidget("text2d", WText("Textured mesh", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -190,6 +200,7 @@ TEST(Viz, show_polyline)
     Viz3d viz("show_polyline");
     viz.showWidget("polyline", WPolyLine(Mat(polyline), Color::apricot()));
     viz.showWidget("coosys", WCoordinateSystem());
+    viz.showWidget("text2d", WText("Polyline", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -204,6 +215,7 @@ TEST(Viz, show_sampled_normals)
     viz.showWidget("mesh", WMesh(mesh), pose);
     viz.showWidget("normals", WCloudNormals(mesh.cloud, mesh.normals, 30, 0.1f, Color::green()), pose);
     viz.setRenderingProperty("normals", LINE_WIDTH, 2.0);
+    viz.showWidget("text2d", WText("Cloud or mesh normals", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -227,6 +239,7 @@ TEST(Viz, show_trajectories)
     viz.showWidget("sub3", WTrajectory(sub3, WTrajectory::BOTH, 0.2, Color::green()));
     viz.showWidget("sub4", WTrajectoryFrustums(sub4, K, 0.3, Color::yellow()));
     viz.showWidget("sub5", WTrajectoryFrustums(sub5, Vec2d(0.78, 0.78), 0.15));
+    viz.showWidget("text2d", WText("Different kinds of supported trajectories", Point(20, 20), 20, Color::green()));
 
     int i = 0;
     while(!viz.wasStopped())
@@ -236,6 +249,7 @@ TEST(Viz, show_trajectories)
         viz.setViewerPose(makeCameraPose(pose * 7.5, Vec3d(0.0, 0.5, 0.0), Vec3d(0.0, 0.1, 0.0)));
         viz.spinOnce(20, true);
     }
+    viz.resetCamera();
     viz.spin();
 }
 
@@ -246,6 +260,7 @@ TEST(Viz, show_trajectory_reposition)
     Viz3d viz("show_trajectory_reposition_to_origin");
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("sub3", WTrajectory(Mat(path).rowRange(0, path.size()/3), WTrajectory::BOTH, 0.2, Color::brown()), path.front().inv());
+    viz.showWidget("text2d", WText("Trajectory resposition to origin", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -269,6 +284,7 @@ TEST(Viz, show_camera_positions)
     viz.showWidget("pos2", WCameraPosition(Vec2d(0.78, 0.78), lena, 2.2, Color::green()), poses[0]);
     viz.showWidget("pos3", WCameraPosition(0.75), poses[1]);
     viz.showWidget("pos4", WCameraPosition(K, gray, 3, Color::indigo()), poses[1]);
+    viz.showWidget("text2d", WText("Camera positions with images", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 
@@ -289,6 +305,7 @@ TEST(Viz, show_overlay_image)
     viz.showWidget("img2", WImageOverlay(gray, Rect(Point(vsz.width-10-lena.cols/2, 10), half_lsize)));
     viz.showWidget("img3", WImageOverlay(gray, Rect(Point(10, vsz.height-10-lena.rows/2), half_lsize)));
     viz.showWidget("img5", WImageOverlay(lena, Rect(Point(vsz.width-10-lena.cols/2, vsz.height-10-lena.rows/2), half_lsize)));
+    viz.showWidget("text2d", WText("Overlay images", Point(20, 20), 20, Color::green()));
 
     int i = 0;
     while(!viz.wasStopped())
@@ -299,7 +316,6 @@ TEST(Viz, show_overlay_image)
         viz.getWidget("img1").cast<WImageOverlay>().setImage(lena * pow(sin(i*10*CV_PI/180) * 0.5 + 0.5, 1.0));
         viz.spinOnce(1, true);
     }
-    viz.spin();
 }
 
 
@@ -332,6 +348,8 @@ TEST(Viz, show_image_3d)
 
     viz.showWidget("arr3", WArrow(Vec3d::all(-0.5), Vec3d::all(0.5), 0.009, Color::raspberry()));
 
+    viz.showWidget("text2d", WText("Images in 3D", Point(20, 20), 20, Color::green()));
+
     int i = 0;
     while(!viz.wasStopped())
     {
@@ -357,7 +375,7 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("con0", WCone(0.25, 0.125, 6, Color::azure()));
     viz.showWidget("con1", WCone(0.125, Point3d(0.5, -0.5, 0.5), Point3d(0.5, -1.0, 0.5), 6, Color::turquoise()));
 
-    viz.showWidget("text2d", WText("Simple text", Point(20, 20), 20, Color::green()));
+    viz.showWidget("text2d", WText("Different simple widgets", Point(20, 20), 20, Color::green()));
     viz.showWidget("text3d", WText3D("Simple 3D text", Point3d( 0.5,  0.5, 0.5), 0.125, false, Color::green()));
 
     viz.showWidget("plane1", WPlane(Size2d(0.25, 0.75)));
@@ -366,7 +384,7 @@ TEST(Viz, show_simple_widgets)
     viz.showWidget("grid1", WGrid(Vec2i(7,7), Vec2d::all(0.75), Color::gray()), Affine3d().translate(Vec3d(0.0, 0.0, -1.0)));
 
     viz.spin();
-    viz.getWidget("text2d").cast<WText>().setText("New simple text");
+    viz.getWidget("text2d").cast<WText>().setText("Different simple widgets (updated)");
     viz.getWidget("text3d").cast<WText3D>().setText("Updated text 3D");
     viz.spin();
 }
@@ -378,6 +396,7 @@ TEST(Viz, show_follower)
     viz.showWidget("coos", WCoordinateSystem());
     viz.showWidget("cube", WCube());
     viz.showWidget("t3d_2", WText3D("Simple 3D follower", Point3d(-0.5, -0.5, 0.5), 0.125, true,  Color::green()));
+    viz.showWidget("text2d", WText("Follower: text always facing camera", Point(20, 20), 20, Color::green()));
     viz.setBackgroundMeshLab();
     viz.spin();
     viz.getWidget("t3d_2").cast<WText3D>().setText("Updated follower 3D");

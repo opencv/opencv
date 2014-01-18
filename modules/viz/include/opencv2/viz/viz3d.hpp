@@ -98,9 +98,8 @@ namespace cv
             void saveScreenshot(const String &file);
             void setWindowPosition(const Point& window_position);
             void setFullScreen(bool mode = true);
-            void setBackgroundColor(const Color& color = Color::black());
+            void setBackgroundColor(const Color& color = Color::black(), const Color& color2 = Color::not_set());
             void setBackgroundTexture(InputArray image = noArray());
-            void setBackgroundGradient(const Color& up, const Color& down);
             void setBackgroundMeshLab();
 
             void spin();

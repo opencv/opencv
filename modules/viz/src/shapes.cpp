@@ -549,12 +549,14 @@ template<> cv::viz::WText3D cv::viz::Widget::cast<cv::viz::WText3D>()
 cv::viz::WText::WText(const String &text, const Point &pos, int font_size, const Color &color)
 {
     vtkSmartPointer<vtkTextActor> actor = vtkSmartPointer<vtkTextActor>::New();
-    actor->SetPosition(pos.x, pos.y);
+    actor->SetDisplayPosition(pos.x, pos.y);
     actor->SetInput(text.c_str());
+
+    actor->GetProperty()->SetDisplayLocationToForeground();
 
     vtkSmartPointer<vtkTextProperty> tprop = actor->GetTextProperty();
     tprop->SetFontSize(font_size);
-    tprop->SetFontFamilyToArial();
+    tprop->SetFontFamilyToCourier();
     tprop->SetJustificationToLeft();
     tprop->BoldOn();
 
