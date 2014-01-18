@@ -316,6 +316,8 @@ TEST(Viz, show_overlay_image)
         viz.getWidget("img1").cast<WImageOverlay>().setImage(lena * pow(sin(i*10*CV_PI/180) * 0.5 + 0.5, 1.0));
         viz.spinOnce(1, true);
     }
+    viz.showWidget("text2d", WText("Overlay images (stopped)", Point(20, 20), 20, Color::green()));
+    viz.spin();
 }
 
 
@@ -356,6 +358,7 @@ TEST(Viz, show_image_3d)
         viz.getWidget("img0").cast<WImage3D>().setImage(lena * pow(sin(i++*7.5*CV_PI/180) * 0.5 + 0.5, 1.0));
         viz.spinOnce(1, true);
     }
+    viz.showWidget("text2d", WText("Images in 3D (stopped)", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
 

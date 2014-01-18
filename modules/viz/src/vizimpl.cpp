@@ -57,6 +57,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
     cv::Vec2i window_size = cv::Vec2i(window_->GetScreenSize()) / 2;
     window_->SetSize(window_size.val);
+    window_->AddRenderer(renderer_);
 
     // Create the interactor style
     style_ = vtkSmartPointer<InteractorStyle>::New();
@@ -107,6 +108,7 @@ void cv::viz::Viz3d::VizImpl::close()
 
 void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 {
+#if !defined _MSC_VER
     //recreating is workaround for Ubuntu -- a crash in x-server
     Vec2i window_size(window_->GetSize());
     int fullscreen = window_->GetFullScreen();
@@ -118,12 +120,7 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
     window_->SetSize(window_size.val);
     window_->SetFullScreen(fullscreen);
     window_->AddRenderer(renderer_);
-    window_->AlphaBitPlanesOff();
-    window_->PointSmoothingOff();
-    window_->LineSmoothingOff();
-    window_->PolygonSmoothingOff();
-    window_->SwapBuffersOn();
-    window_->SetStereoTypeToAnaglyph();
+#endif
 }
 
 
@@ -134,6 +131,12 @@ void cv::viz::Viz3d::VizImpl::spin()
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
+    window_->AlphaBitPlanesOff();
+    window_->PointSmoothingOff();
+    window_->LineSmoothingOff();
+    window_->PolygonSmoothingOff();
+    window_->SwapBuffersOn();
+    window_->SetStereoTypeToAnaglyph();
     window_->Render();
     window_->SetWindowName(window_name_.c_str());
     interactor_->Start();
@@ -152,6 +155,12 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
         interactor_->SetInteractorStyle(style_);
         interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
         interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
+        window_->AlphaBitPlanesOff();
+        window_->PointSmoothingOff();
+        window_->LineSmoothingOff();
+        window_->PolygonSmoothingOff();
+        window_->SwapBuffersOn();
+        window_->SetStereoTypeToAnaglyph();
         window_->Render();
         window_->SetWindowName(window_name_.c_str());
     }
