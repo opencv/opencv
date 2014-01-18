@@ -265,7 +265,7 @@ void cv::viz::vtkCloudMatSource::filterNanNormalsCopy(const Mat& cloud_normals, 
 
 template<typename _Tn, typename _Msk>
 void cv::viz::vtkCloudMatSource::filterNanTCoordsCopy(const Mat& _tcoords, const Mat& mask, int total)
-{   
+{
     typedef Vec<_Tn, 2> Vec2;
     tcoords = vtkSmartPointer< typename VtkDepthTraits<_Tn>::array_type >::New();
     tcoords->SetName("TextureCoordinates");

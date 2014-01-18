@@ -80,5 +80,3 @@ namespace cv
 
 
 #endif
-
-

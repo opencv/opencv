@@ -310,7 +310,3 @@ void cv::viz::computeNormals(const Mesh& mesh, OutputArray _normals)
     else
         _normals.release();
 }
-
-
-
-
