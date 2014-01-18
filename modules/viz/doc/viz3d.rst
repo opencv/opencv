@@ -102,7 +102,7 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         void setWidgetPose(const String &id, const Affine3d &pose);
         void updateWidgetPose(const String &id, const Affine3d &pose);
         Affine3d getWidgetPose(const String &id) const;
-        
+
         void showImage(InputArray image, const Size& window_size = Size(-1, -1));
 
         void setCamera(const Camera &camera);
@@ -474,7 +474,7 @@ This class wraps mesh attributes, and it can load a mesh from a ``ply`` file. ::
     public:
 
         Mat cloud, colors, normals;
-        
+
         //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
         //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
         Mat polygons;
@@ -522,7 +522,7 @@ Constructs a KeyboardEvent.
     :param symbol: Name of the key.
     :param code: Code of the key.
     :param modifiers: Signals if ``alt``, ``ctrl`` or ``shift`` are pressed or their combination.
-    
+
 
 viz::MouseEvent
 ---------------
