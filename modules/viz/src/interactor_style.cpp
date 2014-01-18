@@ -275,7 +275,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
         for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
             for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
             {
-                vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
+                vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                 apart->GetProperty()->SetRepresentationToPoints();
             }
         break;
@@ -328,7 +328,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
-                    vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
+                    vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                     float psize = apart->GetProperty()->GetPointSize();
                     if (psize < 63.0f)
                         apart->GetProperty()->SetPointSize(psize + 1.0f);
@@ -347,7 +347,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
-                    vtkActor* apart = static_cast<vtkActor*>(path->GetLastNode()->GetViewProp());
+                    vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                     float psize = apart->GetProperty()->GetPointSize();
                     if (psize > 1.0f)
                         apart->GetProperty()->SetPointSize(psize - 1.0f);
@@ -386,13 +386,11 @@ void cv::viz::InteractorStyle::OnKeyDown()
         else
         {
             AnimState = VTKIS_ANIM_ON;
-            vtkAssemblyPath *path = NULL;
             Interactor->GetPicker()->Pick(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1], 0.0, CurrentRenderer);
-            vtkAbstractPropPicker *picker;
-            if ((picker = vtkAbstractPropPicker::SafeDownCast(Interactor->GetPicker())))
-                path = picker->GetPath();
-            if (path != NULL)
-                Interactor->FlyTo(CurrentRenderer, picker->GetPickPosition());
+            vtkSmartPointer<vtkAbstractPropPicker> picker = vtkAbstractPropPicker::SafeDownCast(Interactor->GetPicker());
+            if (picker)
+                if (picker->GetPath())
+                    Interactor->FlyTo(CurrentRenderer, picker->GetPickPosition());
             AnimState = VTKIS_ANIM_OFF;
         }
         break;
@@ -402,22 +400,14 @@ void cv::viz::InteractorStyle::OnKeyDown()
     {
         if (alt)
         {
-            int stereo_render = Interactor->GetRenderWindow()->GetStereoRender();
-            if (!stereo_render)
+            vtkSmartPointer<vtkRenderWindow> window = Interactor->GetRenderWindow();
+            if (!window->GetStereoRender())
             {
-                if (stereo_anaglyph_mask_default_)
-                {
-                    Interactor->GetRenderWindow()->SetAnaglyphColorMask(4, 3);
-                    stereo_anaglyph_mask_default_ = false;
-                }
-                else
-                {
-                    Interactor->GetRenderWindow()->SetAnaglyphColorMask(2, 5);
-                    stereo_anaglyph_mask_default_ = true;
-                }
+                static Vec2i default_mask(4, 3), alternative_mask(2, 5);
+                window->SetAnaglyphColorMask (stereo_anaglyph_mask_default_ ? default_mask.val : alternative_mask.val);
+                stereo_anaglyph_mask_default_ = !stereo_anaglyph_mask_default_;
             }
-            Interactor->GetRenderWindow()->SetStereoRender(!stereo_render);
-            Interactor->GetRenderWindow()->Render();
+            window->SetStereoRender(!window->GetStereoRender());
             Interactor->Render();
         }
         else
@@ -429,7 +419,6 @@ void cv::viz::InteractorStyle::OnKeyDown()
     {
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
         cam->SetParallelProjection(!cam->GetParallelProjection());
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->Render();
         break;
     }
@@ -443,27 +432,19 @@ void cv::viz::InteractorStyle::OnKeyDown()
             break;
         }
 
-        static WidgetActorMap::iterator it = widget_actor_map_->begin();
+        WidgetActorMap::iterator it = widget_actor_map_->begin();
         // it might be that some actors don't have a valid transformation set -> we skip them to avoid a seg fault.
-        bool found_transformation = false;
-
-        for (size_t idx = 0; idx < widget_actor_map_->size(); ++idx, ++it)
+        for (; it != widget_actor_map_->end();  ++it)
         {
-            if (it == widget_actor_map_->end())
-                it = widget_actor_map_->begin();
-
             vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
             if (actor && actor->GetUserMatrix())
-            {
-                found_transformation = true;
                 break;
-            }
         }
 
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
 
         // if a valid transformation was found, use it otherwise fall back to default view point.
-        if (found_transformation)
+        if (it != widget_actor_map_->end())
         {
             vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
 
@@ -506,11 +487,8 @@ void cv::viz::InteractorStyle::OnKeyDown()
     }
 
     KeyboardEvent event(KeyboardEvent::KEY_DOWN, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
-    // Check if there is a keyboard callback registered
     if (keyboardCallback_)
         keyboardCallback_(event, keyboard_callback_cookie_);
-
-    renderer_->Render();
     Interactor->Render();
 }
 
@@ -518,10 +496,8 @@ void cv::viz::InteractorStyle::OnKeyDown()
 void cv::viz::InteractorStyle::OnKeyUp()
 {
     KeyboardEvent event(KeyboardEvent::KEY_UP, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
-    // Check if there is a keyboard callback registered
     if (keyboardCallback_)
         keyboardCallback_(event, keyboard_callback_cookie_);
-
     Superclass::OnKeyUp();
 }
 
@@ -603,7 +579,6 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getModifiers());
-    // If a mouse callback registered, call it!
     if (mouseCallback_)
         mouseCallback_(event, mouse_callback_cookie_);
     if (Interactor->GetRepeatCount() && mouseCallback_)
@@ -619,11 +594,9 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 
         cam->SetViewAngle(opening_angle);
         cam->Modified();
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
         CurrentRenderer->Render();
-        renderer_->Render();
         Interactor->Render();
     }
     else
@@ -635,7 +608,6 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getModifiers());
-    // If a mouse callback registered, call it!
     if (mouseCallback_)
         mouseCallback_(event, mouse_callback_cookie_);
 
@@ -652,11 +624,9 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
 
         cam->SetViewAngle(opening_angle);
         cam->Modified();
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
         CurrentRenderer->Render();
-        renderer_->Render();
         Interactor->Render();
     }
     else
@@ -668,6 +638,5 @@ void cv::viz::InteractorStyle::OnTimer()
 {
     CV_Assert("Interactor style not initialized." && init_);
     CV_Assert("Renderer has not been set." && renderer_);
-    renderer_->Render();
     Interactor->Render();
 }
