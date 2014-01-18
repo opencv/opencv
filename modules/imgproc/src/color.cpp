@@ -2996,7 +2996,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         }
         else
             k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
-                     format("-D depth=%d -D hscale=%f -D bidx=%d -D scn=%d -D dcn=3", depth, hrange*(1.f/360.f), bidx, scn));
+                     format("-D depth=%d -D hscale=%ff -D bidx=%d -D scn=%d -D dcn=3", depth, hrange*(1.f/360.f), bidx, scn));
         break;
     }
     case COLOR_HSV2BGR: case COLOR_HSV2RGB: case COLOR_HSV2BGR_FULL: case COLOR_HSV2RGB_FULL:
@@ -3014,7 +3014,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         String kernelName = String(is_hsv ? "HSV" : "HLS") + "2RGB";
         k.create(kernelName.c_str(), ocl::imgproc::cvtcolor_oclsrc,
-                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d -D hrange=%d -D hscale=%f",
+                 format("-D depth=%d -D dcn=%d -D scn=3 -D bidx=%d -D hrange=%d -D hscale=%ff",
                         depth, dcn, bidx, hrange, 6.f/hrange));
         break;
     }
