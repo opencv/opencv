@@ -96,3 +96,42 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
 
     SANITY_CHECK(destination, 1);
 }
+
+template <typename _Tp>
+struct FirstChannelInitializer{
+    void operator()(_Tp& pixel, void*) const {
+        pixel = 0;
+    }
+};
+
+PERF_TEST_P(Size_MatType, Mat_forEach,
+            testing::Combine(testing::Values(TYPICAL_MAT_SIZES),
+            testing::Values(CV_8UC1, CV_8UC4, CV_32FC1))
+
+            )
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+
+    unsigned int width = size.width;
+    unsigned int height = size.height;
+    Mat source(height, width, type);
+
+
+    TEST_CYCLE()
+    {
+        switch (type) {
+        case CV_8UC1:
+            source.forEach<unsigned char>(FirstChannelInitializer<unsigned char>());
+            break;
+        case CV_8UC4:
+            source.forEach<cv::Vec4b>(FirstChannelInitializer<cv::Vec4b>());
+            break;
+        case CV_32FC1:
+            source.forEach<float>(FirstChannelInitializer<float>());
+            break;
+        }
+    }
+
+    return;
+}

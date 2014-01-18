@@ -686,6 +686,51 @@ void Core_ArrayOpTest::run( int /* start_from */)
             errcount++;
         }
     }
+    // test cv::Mat::forEach
+    {
+        const int dims[3] = { 101, 107, 7 };
+        typedef cv::Point3i Pixel;
+        struct Functor{
+            void operator()(Pixel & pixel, const int * idx) const {
+                pixel.x = idx[0];
+                pixel.y = idx[1];
+                pixel.z = idx[2];
+            }
+        };
+
+        cv::Mat a = cv::Mat::zeros(3, dims, CV_32SC3);
+
+        a.forEach<Pixel>(Functor());
+
+        uint64 total = 0;
+        bool error_reported = false;
+        for (int i0 = 0; i0 < dims[0]; ++i0) {
+            for (int i1 = 0; i1 < dims[1]; ++i1) {
+                for (int i2 = 0; i2 < dims[2]; ++i2) {
+                    Pixel& pixel = a.at<Pixel>(i0, i1, i2);
+                    if (pixel.x != i0 || pixel.y != i1 || pixel.z != i2) {
+                        if (!error_reported) {
+                            ts->printf(cvtest::TS::LOG, "forEach is not correct.\n"
+                                "First error detected at (%d, %d, %d).\n", pixel.x, pixel.y, pixel.z);
+                            error_reported = true;
+                        }
+                        errcount++;
+                    }
+                    total += pixel.x;
+                    total += pixel.y;
+                    total += pixel.z;
+                }
+            }
+        }
+        uint64 average = 1;
+        for (int i = 0; i < sizeof(dims) / sizeof(dims[0]); ++i) {
+            average *= dims[0] * (dims[0] + 1) / 2;
+        }
+        if (total != (average /* <- 1 pixel average */ * dims[0] * dims[1] * dims[2] * 3)) {
+            ts->printf(cvtest::TS::LOG, "forEach is not correct because total is invalid.\n");
+            errcount++;
+        }
+    }
 
     RNG rng;
     const int MAX_DIM = 5, MAX_DIM_SZ = 10;
