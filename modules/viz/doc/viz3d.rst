@@ -35,7 +35,7 @@ Constructs camera pose from position, focal_point and up_vector (see gluLookAt()
 This function returns pose of the camera in global coordinate frame.
 
 viz::getWindowByName
---------
+--------------------
 Retrieves a window by its name.
 
 .. ocv:function:: Viz3d getWindowByName(const String &window_name)
@@ -186,7 +186,7 @@ viz::Viz3d::showImage
 ---------------------
 Removed all widgets and displays image scaled to whole window area.
 
-.. ocv:function:: void showImage(InputArray image, const Size& window_size = Size(-1, -1));
+.. ocv:function:: void showImage(InputArray image, const Size& window_size = Size(-1, -1))
 
     :param image: Image to be displayed.
     :param size: Size of Viz3d window. Default value means no change.
