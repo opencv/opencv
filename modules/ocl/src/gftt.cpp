@@ -196,7 +196,6 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
 
     // sort detected corners on cpu side.
     tmp.resize(total);
-    printf("total: %d\n", total);
     std::sort(tmp.begin(), tmp.end(), DefCornerCompare());
 
     // estimate maximal size of final output array
