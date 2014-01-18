@@ -1064,9 +1064,9 @@ cv::viz::WTrajectorySpheres::WTrajectorySpheres(InputArray _path, double line_le
             line_source->SetPoint1(curr.val);
             line_source->SetPoint2(lend.val);
             line_source->Update();
-            vtkSmartPointer<vtkPolyData> polydata = line_source->GetOutput();
-            polydata->GetCellData()->SetScalars(VtkUtils::FillScalars(polydata->GetNumberOfCells(), c));
-            VtkUtils::AddInputData(append_filter, polydata);
+            vtkSmartPointer<vtkPolyData> polydata_ = line_source->GetOutput();
+            polydata_->GetCellData()->SetScalars(VtkUtils::FillScalars(polydata_->GetNumberOfCells(), c));
+            VtkUtils::AddInputData(append_filter, polydata_);
         }
     }
     append_filter->Update();

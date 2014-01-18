@@ -78,7 +78,7 @@ int cv::viz::vtkImageMatSource::RequestData(vtkInformation*, vtkInformationVecto
 
 void cv::viz::vtkImageMatSource::SetImage(InputArray _image)
 {
-    CV_Assert(_image.depth() == CV_8U && _image.channels() == 1 || _image.channels() == 3 || _image.channels() == 4);
+    CV_Assert(_image.depth() == CV_8U && (_image.channels() == 1 || _image.channels() == 3 || _image.channels() == 4));
 
     Mat image = _image.getMat();
 
