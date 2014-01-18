@@ -55,7 +55,13 @@ public:
     int ref_counter;
 
     VizImpl(const String &name);
-    virtual ~VizImpl();
+    virtual ~VizImpl() {};
+
+    bool wasStopped() const;
+    void close();
+
+    void spin();
+    void spinOnce(int time = 1, bool force_redraw = false);
 
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
@@ -67,26 +73,6 @@ public:
     void setWidgetPose(const String &id, const Affine3d &pose);
     void updateWidgetPose(const String &id, const Affine3d &pose);
     Affine3d getWidgetPose(const String &id) const;
-
-    void setDesiredUpdateRate(double rate);
-    double getDesiredUpdateRate();
-
-    /** \brief Returns true when the user tried to close the window */
-    bool wasStopped() const { return interactor_ ? stopped_ : true; }
-
-    /** \brief Set the stopped flag back to false */
-    void resetStoppedFlag() { if (interactor_) stopped_ = false; }
-
-    /** \brief Stop the interaction and close the visualizaton window. */
-    void close()
-    {
-        stopped_ = true;
-        if (interactor_)
-        {
-            interactor_->GetRenderWindow()->Finalize();
-            interactor_->TerminateApp(); // This tends to close the window...
-        }
-    }
 
     void setRepresentation(int representation);
 
@@ -114,72 +100,36 @@ public:
     void setBackgroundTexture(InputArray image);
     void setBackgroundMeshLab();
 
-    void spin();
-    void spinOnce(int time = 1, bool force_redraw = false);
-
     void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
     void registerMouseCallback(MouseCallback callback, void* cookie = 0);
 
 private:
-    vtkSmartPointer<vtkRenderWindowInteractor> interactor_;
-
-    struct ExitMainLoopTimerCallback : public vtkCommand
+    struct TimerCallback : public vtkCommand
     {
-        static ExitMainLoopTimerCallback* New() { return new ExitMainLoopTimerCallback; }
-        virtual void Execute(vtkObject* vtkNotUsed(caller), unsigned long event_id, void* call_data)
-        {
-            if (event_id != vtkCommand::TimerEvent)
-                return;
-
-            int timer_id = *reinterpret_cast<int*>(call_data);
-            if (timer_id != right_timer_id)
-                return;
-
-            // Stop vtk loop and send notification to app to wake it up
-            viz_->interactor_->TerminateApp();
-        }
-        int right_timer_id;
-        VizImpl* viz_;
+        static TimerCallback* New() { return new TimerCallback; }
+        virtual void Execute(vtkObject* caller, unsigned long event_id, void* cookie);
+        int timer_id;
     };
 
     struct ExitCallback : public vtkCommand
     {
         static ExitCallback* New() { return new ExitCallback; }
-        virtual void Execute(vtkObject*, unsigned long event_id, void*)
-        {
-            if (event_id == vtkCommand::ExitEvent)
-            {
-                viz_->stopped_ = true;
-                viz_->interactor_->GetRenderWindow()->Finalize();
-                viz_->interactor_->TerminateApp();
-            }
-        }
-        VizImpl* viz_;
+        virtual void Execute(vtkObject*, unsigned long event_id, void*);
+        VizImpl* viz;
     };
 
-    /** \brief Set to false if the interaction loop is running. */
-    bool stopped_;
+    mutable bool spin_once_state_;
+    vtkSmartPointer<vtkRenderWindowInteractor> interactor_;
 
-    double s_lastDone_;
+    vtkSmartPointer<vtkRenderWindow> window_;
+    String window_name_;
 
-    /** \brief Global timer ID. Used in destructor only. */
-    int timer_id_;
-
-    /** \brief Callback object enabling us to leave the main loop, when a timer fires. */
-    vtkSmartPointer<ExitMainLoopTimerCallback> exit_main_loop_timer_callback_;
+    vtkSmartPointer<TimerCallback> timer_callback_;
     vtkSmartPointer<ExitCallback> exit_callback_;
 
     vtkSmartPointer<vtkRenderer> renderer_;
-    vtkSmartPointer<vtkRenderWindow> window_;
-
-    /** \brief The render window interactor style. */
     vtkSmartPointer<InteractorStyle> style_;
-
-    /** \brief Internal list with actor pointers and name IDs for all widget actors */
-    cv::Ptr<WidgetActorMap> widget_actor_map_;
-
-    /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
-    bool camera_set_;
+    Ptr<WidgetActorMap> widget_actor_map_;
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
 };
