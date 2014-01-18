@@ -116,17 +116,17 @@ int cv::viz::vtkCloudMatSource::SetColorCloudNormals(InputArray _cloud, InputArr
     CV_Assert(_normals.channels() == 3 || _normals.channels() == 4);
     CV_Assert(_normals.size() == _cloud.size());
 
-    Mat cloud = _cloud.getMat();
-    Mat normals = _normals.getMat();
+    Mat c = _cloud.getMat();
+    Mat n = _normals.getMat();
 
-    if (normals.depth() == CV_32F && cloud.depth() == CV_32F)
-        filterNanNormalsCopy<float, float>(normals, cloud, total);
-    else if (normals.depth() == CV_32F && cloud.depth() == CV_64F)
-        filterNanNormalsCopy<float, double>(normals, cloud, total);
-    else if (normals.depth() == CV_64F && cloud.depth() == CV_32F)
-        filterNanNormalsCopy<double, float>(normals, cloud, total);
-    else if (normals.depth() == CV_64F && cloud.depth() == CV_64F)
-        filterNanNormalsCopy<double, double>(normals, cloud, total);
+    if (n.depth() == CV_32F && c.depth() == CV_32F)
+        filterNanNormalsCopy<float, float>(n, c, total);
+    else if (n.depth() == CV_32F && c.depth() == CV_64F)
+        filterNanNormalsCopy<float, double>(n, c, total);
+    else if (n.depth() == CV_64F && c.depth() == CV_32F)
+        filterNanNormalsCopy<double, float>(n, c, total);
+    else if (n.depth() == CV_64F && c.depth() == CV_64F)
+        filterNanNormalsCopy<double, double>(n, c, total);
     else
         CV_Assert(!"Unsupported normals/cloud type");
 
@@ -143,17 +143,17 @@ int cv::viz::vtkCloudMatSource::SetColorCloudNormalsTCoords(InputArray _cloud, I
     CV_Assert(_tcoords.depth() == CV_32F || _tcoords.depth() == CV_64F);
     CV_Assert(_tcoords.channels() == 2 && _tcoords.size() == _cloud.size());
 
-    Mat cloud = _cloud.getMat();
-    Mat tcoords = _tcoords.getMat();
+    Mat cl = _cloud.getMat();
+    Mat tc = _tcoords.getMat();
 
-    if (tcoords.depth() == CV_32F && cloud.depth() == CV_32F)
-        filterNanTCoordsCopy<float, float>(tcoords, cloud, total);
-    else if (tcoords.depth() == CV_32F && cloud.depth() == CV_64F)
-        filterNanTCoordsCopy<float, double>(tcoords, cloud, total);
-    else if (tcoords.depth() == CV_64F && cloud.depth() == CV_32F)
-        filterNanTCoordsCopy<double, float>(tcoords, cloud, total);
-    else if (tcoords.depth() == CV_64F && cloud.depth() == CV_64F)
-        filterNanTCoordsCopy<double, double>(tcoords, cloud, total);
+    if (tc.depth() == CV_32F && cl.depth() == CV_32F)
+        filterNanTCoordsCopy<float, float>(tc, cl, total);
+    else if (tc.depth() == CV_32F && cl.depth() == CV_64F)
+        filterNanTCoordsCopy<float, double>(tc, cl, total);
+    else if (tc.depth() == CV_64F && cl.depth() == CV_32F)
+        filterNanTCoordsCopy<double, float>(tc, cl, total);
+    else if (tc.depth() == CV_64F && cl.depth() == CV_64F)
+        filterNanTCoordsCopy<double, double>(tc, cl, total);
     else
         CV_Assert(!"Unsupported tcoords/cloud type");
 
@@ -241,7 +241,7 @@ void cv::viz::vtkCloudMatSource::filterNanColorsCopy(const Mat& cloud_colors, co
 template<typename _Tn, typename _Msk>
 void cv::viz::vtkCloudMatSource::filterNanNormalsCopy(const Mat& cloud_normals, const Mat& mask, int total)
 {
-    normals = vtkSmartPointer< VtkDepthTraits<_Tn>::array_type >::New();
+    normals = vtkSmartPointer< typename VtkDepthTraits<_Tn>::array_type >::New();
     normals->SetName("Normals");
     normals->SetNumberOfComponents(3);
     normals->SetNumberOfTuples(total);
@@ -267,7 +267,7 @@ template<typename _Tn, typename _Msk>
 void cv::viz::vtkCloudMatSource::filterNanTCoordsCopy(const Mat& _tcoords, const Mat& mask, int total)
 {   
     typedef Vec<_Tn, 2> Vec2;
-    tcoords = vtkSmartPointer< VtkDepthTraits<_Tn>::array_type >::New();
+    tcoords = vtkSmartPointer< typename VtkDepthTraits<_Tn>::array_type >::New();
     tcoords->SetName("TextureCoordinates");
     tcoords->SetNumberOfComponents(2);
     tcoords->SetNumberOfTuples(total);
