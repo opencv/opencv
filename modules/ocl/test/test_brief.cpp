@@ -79,11 +79,11 @@ OCL_TEST_P( BRIEF, Accuracy )
     BriefDescriptorExtractor brief( bytes );
     brief.compute( img, keypoints, descriptorsGold );
 
-    Mat kpMat( 2, keypoints.size( ), CV_32FC1 );
+    Mat kpMat( 2, int( keypoints.size() ), CV_32FC1 );
     for ( size_t i = 0; i < keypoints.size( ); ++i )
     {
-        kpMat.col( i ).row( 0 ) = keypoints[i].pt.x;
-        kpMat.col( i ).row( 1 ) = keypoints[i].pt.y;
+        kpMat.col( i ).row( 0 ) = int( keypoints[i].pt.x );
+        kpMat.col( i ).row( 1 ) = int( keypoints[i].pt.y );
     }
     oclMat imgOcl( img ), keypointsOcl( kpMat ), descriptorsOcl, maskOcl;
 
@@ -96,7 +96,7 @@ OCL_TEST_P( BRIEF, Accuracy )
     const int numDesc = cv::countNonZero( mask );
     if ( numDesc != descriptors.cols )
     {
-        size_t idx = 0;
+        int idx = 0;
         Mat tmp( numDesc, bytes, CV_8UC1 );
         for ( int i = 0; i < descriptors.rows; ++i )
         {

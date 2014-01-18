@@ -78,11 +78,11 @@ PERF_TEST_P( OCL_BRIEF, extract, testing::Combine(
 
     if ( RUN_OCL_IMPL )
     {
-        Mat kpMat( 2, keypoints.size( ), CV_32FC1 );
+        Mat kpMat( 2, int( keypoints.size() ), CV_32FC1 );
         for ( size_t i = 0; i < keypoints.size( ); ++i )
         {
-            kpMat.col( i ).row( 0 ) = keypoints[i].pt.x;
-            kpMat.col( i ).row( 1 ) = keypoints[i].pt.y;
+            kpMat.col( int( i ) ).row( 0 ) = keypoints[i].pt.x;
+            kpMat.col( int( i ) ).row( 1 ) = keypoints[i].pt.y;
         }
         BRIEF_OCL brief( bytes );
         oclMat imgCL( img ), keypointsCL(kpMat), mask;
