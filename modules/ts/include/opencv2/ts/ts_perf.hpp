@@ -389,6 +389,7 @@ CV_EXPORTS void PrintTo(const MatType& t, std::ostream* os);
 namespace cv
 {
 
+CV_EXPORTS void PrintTo(const String& str, ::std::ostream* os);
 CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 
 } //namespace cv

@@ -1199,7 +1199,7 @@ void TestBase::validateMetrics()
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("    samples = %d, mean = %.2f, stddev = %.2f (%.1f%%)\n", (int)metrics.samples, mean, stddev, percents);
+        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, stddev, percents);
     }
     else
     {
@@ -1610,6 +1610,11 @@ void PrintTo(const MatType& t, ::std::ostream* os)
 *                                  ::cv::PrintTo
 \*****************************************************************************************/
 namespace cv {
+
+void PrintTo(const String& str, ::std::ostream* os)
+{
+    *os << str;
+}
 
 void PrintTo(const Size& sz, ::std::ostream* os)
 {

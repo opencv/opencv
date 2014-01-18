@@ -96,7 +96,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             return false;
 
         UMat counter(1, 1, CV_32SC1, Scalar::all(0)),
-                corners(1, possibleCornersCount * sizeof(Corner), CV_8UC1);
+                corners(1, (int)(possibleCornersCount * sizeof(Corner)), CV_8UC1);
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
                 tmparg = ocl::KernelArg::ReadOnlyNoSize(tmp),
                 cornersarg = ocl::KernelArg::PtrWriteOnly(corners),
@@ -117,7 +117,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             return false;
 
         total = counter.getMat(ACCESS_READ).at<int>(0, 0);
-        size_t totalb = sizeof(Corner) * total;
+        int totalb = (int)(sizeof(Corner) * total);
 
         tmpCorners.resize(total);
         Mat mcorners(1, totalb, CV_8UC1, &tmpCorners[0]);
@@ -221,12 +221,10 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
     CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );
 
-    if (ocl::useOpenCL() && _image.dims() <= 2 && _image.isUMat())
-    {
-        CV_Assert(ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,
-                                          _mask, blockSize, useHarrisDetector, harrisK));
+    if (ocl::useOpenCL() && _image.dims() <= 2 && _image.isUMat() &&
+            ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,
+                                    _mask, blockSize, useHarrisDetector, harrisK))
         return;
-    }
 
     Mat image = _image.getMat(), eig, tmp;
     if( useHarrisDetector )
