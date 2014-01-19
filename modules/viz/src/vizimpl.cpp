@@ -104,6 +104,7 @@ void cv::viz::Viz3d::VizImpl::close()
         return;
     interactor_->GetRenderWindow()->Finalize();
     interactor_->TerminateApp(); // This tends to close the window...
+    interactor_ = 0;
 }
 
 void cv::viz::Viz3d::VizImpl::recreateRenderWindow()

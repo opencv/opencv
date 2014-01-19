@@ -105,6 +105,7 @@ namespace cv
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
             bool wasStopped() const;
+            void close();
 
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
