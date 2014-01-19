@@ -90,6 +90,10 @@ static const char* trackbar_text =
 
 #endif
 
+#ifndef WM_MOUSEHWHEEL
+    #define WM_MOUSEHWHEEL 0x020E
+#endif
+
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
 {
     assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
@@ -1363,9 +1367,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
         break;
 
     case WM_MOUSEWHEEL:
-#if defined WM_MOUSEHWHEEL
     case WM_MOUSEHWHEEL:
-#endif
        if( window->on_mouse )
        {
           int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
