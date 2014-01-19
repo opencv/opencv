@@ -88,7 +88,7 @@ namespace clahe
         return true;
     }
 
-    static bool transform(const cv::InputArray _src, cv::OutputArray _dst, const cv::InputArray _lut,
+    static bool transform(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _lut,
         const int tilesX, const int tilesY, const cv::Size & tileSize)
     {
 
