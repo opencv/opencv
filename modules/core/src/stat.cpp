@@ -2295,7 +2295,7 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double &
 
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
-    CV_Assert( _src1.size() == _src2.size() && _src1.type() == _src2.type() );
+    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
     double _result = 0;
     if (ocl::useOpenCL() && _mask.empty() && _src1.isUMat() && _src2.isUMat() &&
@@ -2306,8 +2306,6 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
         Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-
-        CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
 
         normType &= 7;
         CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
@@ -2386,8 +2384,6 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
-
-    CV_Assert( src1.size == src2.size );
 
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
