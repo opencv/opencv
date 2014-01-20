@@ -1366,8 +1366,11 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
             SetFocus(window->hwnd);
         break;
 
+#if defined(WM_MOUSEWHEEL)
     case WM_MOUSEWHEEL:
+#if defined(WM_MOUSEHWHEEL)
     case WM_MOUSEHWHEEL:
+#endif
        if( window->on_mouse )
        {
           int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
@@ -1398,6 +1401,7 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
                                    window->on_mouse_param );
        }
        break;
+#endif
 
     case WM_ERASEBKGND:
         {
