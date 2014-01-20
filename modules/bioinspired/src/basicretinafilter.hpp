@@ -137,17 +137,17 @@ namespace bioinspired
         /**
         * function which clears the output buffer of the object
         */
-        inline void clearOutputBuffer(){_filterOutput=0;};
+        inline void clearOutputBuffer() { _filterOutput = 0; }
 
         /**
         * function which clears the secondary buffer of the object
         */
-        inline void clearSecondaryBuffer(){_localBuffer=0;};
+        inline void clearSecondaryBuffer() { _localBuffer = 0; }
 
         /**
         * function which clears the output and the secondary buffer of the object
         */
-        inline void clearAllBuffers(){clearOutputBuffer();clearSecondaryBuffer();};
+        inline void clearAllBuffers() { clearOutputBuffer(); clearSecondaryBuffer(); }
 
         /**
         * resize basic retina filter object (resize all allocated buffers
@@ -160,7 +160,7 @@ namespace bioinspired
         * forbiden method inherited from parent std::valarray
         * prefer not to use this method since the filter matrix become vectors
         */
-        void resize(const unsigned int){std::cerr<<"error, not accessible method"<<std::endl;};
+        void resize(const unsigned int) { std::cerr<<"error, not accessible method"<<std::endl; }
 
         /**
         *  low pass filter call and run (models the homogeneous cells network at the retina level, for example horizontal cells or photoreceptors)
@@ -221,7 +221,7 @@ namespace bioinspired
         * @param filterIndex: the index which specifies the parameter set that should be used for the filtering
         * @return the processed image, the output is reachable later by using function getOutput() if outputFrame is NULL
         */
-        inline void runProgressiveFilter(std::valarray<float> &inputFrame, const unsigned int filterIndex=0){_spatiotemporalLPfilter_Irregular(&inputFrame[0], filterIndex);};
+        inline void runProgressiveFilter(std::valarray<float> &inputFrame, const unsigned int filterIndex=0) { _spatiotemporalLPfilter_Irregular(&inputFrame[0], filterIndex); }
 
         /**
         * run low pass filtering with progressive parameters (models the retina log sampling of the photoreceptors and its low pass filtering effect consequence: more powerfull low pass filtering effect on the corners)
@@ -232,7 +232,7 @@ namespace bioinspired
         inline void runProgressiveFilter(const std::valarray<float> &inputFrame,
             std::valarray<float> &outputFrame,
             const unsigned int filterIndex=0)
-        {_spatiotemporalLPfilter_Irregular(get_data(inputFrame), &outputFrame[0], filterIndex);};
+        {_spatiotemporalLPfilter_Irregular(get_data(inputFrame), &outputFrame[0], filterIndex); }
 
         /**
         * first order spatio-temporal low pass filter setup function
@@ -268,20 +268,31 @@ namespace bioinspired
         * @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
         * @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
         */
-        void setV0CompressionParameter(const float v0, const float maxInputValue, const float){ _v0=v0*maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=maxInputValue*(1.0f-v0); _maxInputValue=maxInputValue;};
+        void setV0CompressionParameter(const float v0, const float maxInputValue, const float)
+        {
+            _v0=v0*maxInputValue;
+            _localLuminanceFactor=v0;
+            _localLuminanceAddon=maxInputValue*(1.0f-v0);
+            _maxInputValue=maxInputValue;
+        }
 
         /**
         * update local luminance adaptation setup, initial maxInputValue is kept. This function should be applied for normal local adaptation (not for tone mapping operation)
         * @param v0: compression effect for the local luminance adaptation processing, set a value between 0.6 and 0.9 for best results, a high value yields to a high compression effect
         * @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
         */
-        void setV0CompressionParameter(const float v0, const float meanLuminance){ this->setV0CompressionParameter(v0, _maxInputValue, meanLuminance);};
+        void setV0CompressionParameter(const float v0, const float meanLuminance) { this->setV0CompressionParameter(v0, _maxInputValue, meanLuminance); }
 
         /**
         * local luminance adaptation setup, this function should be applied for normal local adaptation (not for tone mapping operation)
         * @param v0: compression effect for the local luminance adaptation processing, set a value between 0.6 and 0.9 for best results, a high value yields to a high compression effect
         */
-        void setV0CompressionParameter(const float v0){ _v0=v0*_maxInputValue; _localLuminanceFactor=v0; _localLuminanceAddon=_maxInputValue*(1.0f-v0);};
+        void setV0CompressionParameter(const float v0)
+        {
+            _v0=v0*_maxInputValue;
+            _localLuminanceFactor=v0;
+            _localLuminanceAddon=_maxInputValue*(1.0f-v0);
+        }
 
         /**
         * local luminance adaptation setup, this function should be applied for local adaptation applied to tone mapping operation
@@ -289,66 +300,76 @@ namespace bioinspired
         * @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
         * @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
         */
-        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f){ _v0=v0*maxInputValue; _localLuminanceFactor=1.0f; _localLuminanceAddon=meanLuminance*v0; _maxInputValue=maxInputValue;};
+        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f)
+        {
+            _v0=v0*maxInputValue;
+            _localLuminanceFactor=1.0f;
+            _localLuminanceAddon=meanLuminance*v0;
+            _maxInputValue=maxInputValue;
+        }
 
         /**
         * update compression parameters while keeping v0 parameter value
         * @param meanLuminance the input frame mean luminance
         */
-        inline void updateCompressionParameter(const float meanLuminance){_localLuminanceFactor=1; _localLuminanceAddon=meanLuminance*_v0;};
+        inline void updateCompressionParameter(const float meanLuminance)
+        {
+            _localLuminanceFactor=1;
+            _localLuminanceAddon=meanLuminance*_v0;
+        }
 
         /**
         * @return the v0 compression parameter used to compute the local adaptation
         */
-        float getV0CompressionParameter(){ return _v0/_maxInputValue;};
+        float getV0CompressionParameter() { return _v0/_maxInputValue; }
 
         /**
         * @return the output result of the object
         */
-        inline const std::valarray<float> &getOutput() const {return _filterOutput;};
+        inline const std::valarray<float> &getOutput() const { return _filterOutput; }
 
         /**
         * @return number of rows of the filter
         */
-        inline unsigned int getNBrows(){return _filterOutput.getNBrows();};
+        inline unsigned int getNBrows() { return _filterOutput.getNBrows(); }
 
         /**
         * @return number of columns of the filter
         */
-        inline unsigned int getNBcolumns(){return _filterOutput.getNBcolumns();};
+        inline unsigned int getNBcolumns() { return _filterOutput.getNBcolumns(); }
 
         /**
         * @return number of pixels of the filter
         */
-        inline unsigned int getNBpixels(){return _filterOutput.getNBpixels();};
+        inline unsigned int getNBpixels() { return _filterOutput.getNBpixels(); }
 
         /**
         * force filter output to be normalized between 0 and maxValue
         * @param maxValue: the maximum output value that is required
         */
-        inline void normalizeGrayOutput_0_maxOutputValue(const float maxValue){_filterOutput.normalizeGrayOutput_0_maxOutputValue(maxValue);};
+        inline void normalizeGrayOutput_0_maxOutputValue(const float maxValue) { _filterOutput.normalizeGrayOutput_0_maxOutputValue(maxValue); }
 
         /**
         * force filter output to be normalized around 0 and rescaled with a sigmoide effect (extrem values saturation)
         * @param maxValue: the maximum output value that is required
         */
-        inline void normalizeGrayOutputCentredSigmoide(){_filterOutput.normalizeGrayOutputCentredSigmoide();};
+        inline void normalizeGrayOutputCentredSigmoide() { _filterOutput.normalizeGrayOutputCentredSigmoide(); }
 
         /**
         * force filter output to be normalized : data centering and std normalisation
         * @param maxValue: the maximum output value that is required
         */
-        inline void centerReductImageLuminance(){_filterOutput.centerReductImageLuminance();};
+        inline void centerReductImageLuminance() { _filterOutput.centerReductImageLuminance(); }
 
         /**
         * @return the maximum input buffer value
         */
-        inline float getMaxInputValue(){return this->_maxInputValue;};
+        inline float getMaxInputValue() { return _maxInputValue; }
 
         /**
         * @return the maximum input buffer value
         */
-        inline void setMaxInputValue(const float newMaxInputValue){this->_maxInputValue=newMaxInputValue;};
+        inline void setMaxInputValue(const float newMaxInputValue) { this->_maxInputValue=newMaxInputValue; }
 
     protected:
 
@@ -577,7 +598,7 @@ namespace bioinspired
             float localLuminanceFactor, localLuminanceAddon, maxInputValue;
         public:
             Parallel_localAdaptation(const float *localLum, const float *inputImg, float *bufferToProcess, const float localLuminanceFact, const float localLuminanceAdd, const float maxInputVal)
-                :localLuminance(localLum), inputFrame(inputImg),outputFrame(bufferToProcess), localLuminanceFactor(localLuminanceFact), localLuminanceAddon(localLuminanceAdd), maxInputValue(maxInputVal) {};
+                :localLuminance(localLum), inputFrame(inputImg),outputFrame(bufferToProcess), localLuminanceFactor(localLuminanceFact), localLuminanceAddon(localLuminanceAdd), maxInputValue(maxInputVal) {}
 
             virtual void operator()( const Range& r ) const {
                 const float *localLuminancePTR=localLuminance+r.start;
