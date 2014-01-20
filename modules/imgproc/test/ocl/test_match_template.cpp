@@ -97,8 +97,7 @@ PARAM_TEST_CASE(MatchTemplate, MatDepth, Channels, int, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(result, uresult, threshold);
-        EXPECT_MAT_NEAR(result_roi, uresult_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(result,threshold);
     }
 };
 
