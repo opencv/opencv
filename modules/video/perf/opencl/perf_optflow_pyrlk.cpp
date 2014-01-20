@@ -83,10 +83,10 @@ OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
 
     const Size winSize = Size(21, 21);
     const int maxLevel = 3;
-    const TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.5);
+    const TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01);
     const int flags = 0;
     const float minEigThreshold = 1e-4f;
-    const double eps = 0.5;
+    const double eps = 1.0;
 
     const PyrLKOpticalFlowParams params = GetParam();
     const int pointsCount = get<0>(params);
