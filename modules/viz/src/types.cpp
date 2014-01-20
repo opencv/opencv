@@ -41,138 +41,63 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
 
 ////////////////////////////////////////////////////////////////////
-/// cv::viz::KeyboardEvent
+/// Events
 
-cv::viz::KeyboardEvent::KeyboardEvent(bool _action, const String& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
-  : action_(_action), modifiers_(0), key_code_(key), key_sym_(_key_sym)
-{
-  if (alt)
-    modifiers_ = Alt;
+cv::viz::KeyboardEvent::KeyboardEvent(Action _action, const String& _symbol, unsigned char _code, int _modifiers)
+  : action(_action), symbol(_symbol), code(_code), modifiers(_modifiers) {}
 
-  if (ctrl)
-    modifiers_ |= Ctrl;
-
-  if (shift)
-    modifiers_ |= Shift;
-}
-
-bool cv::viz::KeyboardEvent::isAltPressed() const { return (modifiers_ & Alt) != 0; }
-bool cv::viz::KeyboardEvent::isCtrlPressed() const { return (modifiers_ & Ctrl) != 0; }
-bool cv::viz::KeyboardEvent::isShiftPressed() const { return (modifiers_ & Shift) != 0; }
-unsigned char cv::viz::KeyboardEvent::getKeyCode() const { return key_code_; }
-const cv::String& cv::viz::KeyboardEvent::getKeySym() const { return key_sym_; }
-bool cv::viz::KeyboardEvent::keyDown() const { return action_; }
-bool cv::viz::KeyboardEvent::keyUp() const { return !action_; }
-
-////////////////////////////////////////////////////////////////////
-/// cv::viz::MouseEvent
-
-cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, const Point& _p,  bool alt, bool ctrl, bool shift)
-    : type(_type), button(_button), pointer(_p), key_state(0)
-{
-    if (alt)
-        key_state = KeyboardEvent::Alt;
-
-    if (ctrl)
-        key_state |= KeyboardEvent::Ctrl;
-
-    if (shift)
-        key_state |= KeyboardEvent::Shift;
-}
+cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, const Point& _pointer, int _modifiers)
+    : type(_type), button(_button), pointer(_pointer), modifiers(_modifiers) {}
 
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::Mesh3d
 
-struct cv::viz::Mesh3d::loadMeshImpl
+cv::viz::Mesh cv::viz::Mesh::load(const String& file)
 {
-    static cv::viz::Mesh3d loadMesh(const String &file)
+    vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
+    reader->SetFileName(file.c_str());
+    reader->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = reader->GetOutput();
+    CV_Assert("File does not exist or file format is not supported." && polydata);
+
+    Mesh mesh;
+    vtkSmartPointer<vtkCloudMatSink> sink = vtkSmartPointer<vtkCloudMatSink>::New();
+    sink->SetOutput(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
+    sink->SetInputConnection(reader->GetOutputPort());
+    sink->Write();
+
+    // Now handle the polygons
+    vtkSmartPointer<vtkCellArray> polygons = polydata->GetPolys();
+    mesh.polygons.create(1, polygons->GetSize(), CV_32SC1);
+    int* poly_ptr = mesh.polygons.ptr<int>();
+
+    polygons->InitTraversal();
+    vtkIdType nr_cell_points, *cell_points;
+    while (polygons->GetNextCell(nr_cell_points, cell_points))
     {
-        Mesh3d mesh;
-
-        vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
-        reader->SetFileName(file.c_str());
-        reader->Update();
-
-        vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
-        CV_Assert("File does not exist or file format is not supported." && poly_data);
-
-        vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
-        vtkIdType nr_points = mesh_points->GetNumberOfPoints();
-
-        mesh.cloud.create(1, nr_points, CV_32FC3);
-
-        Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
-        for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
-        {
-            Vec3d point;
-            mesh_points->GetPoint(i, point.val);
-            mesh_cloud[i] = point;
-        }
-
-        // Then the color information, if any
-        vtkUnsignedCharArray* poly_colors = 0;
-        if (poly_data->GetPointData())
-            poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
-
-        if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
-        {
-            mesh.colors.create(1, nr_points, CV_8UC3);
-            Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
-
-            for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
-            {
-                Vec3b point_color;
-                poly_colors->GetTupleValue(i, point_color.val);
-
-                std::swap(point_color[0], point_color[2]); // RGB -> BGR
-                mesh_colors[i] = point_color;
-            }
-        }
-        else
-            mesh.colors.release();
-
-        // Now handle the polygons
-        vtkIdType* cell_points;
-        vtkIdType nr_cell_points;
-        vtkCellArray * mesh_polygons = poly_data->GetPolys();
-        mesh_polygons->InitTraversal();
-
-        mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
-
-        int* polygons = mesh.polygons.ptr<int>();
-        while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
-        {
-            *polygons++ = nr_cell_points;
-            for (int i = 0; i < nr_cell_points; ++i)
-                *polygons++ = static_cast<int>(cell_points[i]);
-        }
-
-        return mesh;
+        *poly_ptr++ = nr_cell_points;
+        for (vtkIdType i = 0; i < nr_cell_points; ++i)
+            *poly_ptr++ = (int)cell_points[i];
     }
-};
 
-cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
-{
-    return loadMeshImpl::loadMesh(file);
+    return mesh;
 }
 
 ////////////////////////////////////////////////////////////////////
 /// Camera implementation
 
-cv::viz::Camera::Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+cv::viz::Camera::Camera(double fx, double fy, double cx, double cy, const Size &window_size)
 {
-    init(f_x, f_y, c_x, c_y, window_size);
+    init(fx, fy, cx, cy, window_size);
 }
 
-cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
+cv::viz::Camera::Camera(const Vec2d &fov, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
@@ -183,16 +108,16 @@ cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
     focal_ = Vec2f(principal_point_[0] / tan(fov_[0]*0.5f), principal_point_[1] / tan(fov_[1]*0.5f));
 }
 
-cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
+cv::viz::Camera::Camera(const cv::Matx33d & K, const Size &window_size)
 {
-    float f_x = K(0,0);
-    float f_y = K(1,1);
-    float c_x = K(0,2);
-    float c_y = K(1,2);
+    double f_x = K(0,0);
+    double f_y = K(1,1);
+    double c_x = K(0,2);
+    double c_y = K(1,2);
     init(f_x, f_y, c_x, c_y, window_size);
 }
 
-cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
+cv::viz::Camera::Camera(const Matx44d &proj, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
 
@@ -205,34 +130,32 @@ cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
 
     double epsilon = 2.2204460492503131e-16;
 
-    if (fabs(left-right) < epsilon) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
-    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right);
-    focal_[0] = -near * principal_point_[0] / left;
+    principal_point_[0] = fabs(left-right) < epsilon ? window_size.width  * 0.5 : (left * window_size.width) / (left - right);
+    principal_point_[1] = fabs(top-bottom) < epsilon ? window_size.height * 0.5 : (top * window_size.height) / (top - bottom);
 
-    if (fabs(top-bottom) < epsilon) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f;
-    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom);
-    focal_[1] = near * principal_point_[1] / top;
+    focal_[0] = -near * principal_point_[0] / left;
+    focal_[1] =  near * principal_point_[1] / top;
 
     setClip(Vec2d(near, far));
-    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
-    fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
+    fov_[0] = atan2(principal_point_[0], focal_[0]) + atan2(window_size.width-principal_point_[0],  focal_[0]);
+    fov_[1] = atan2(principal_point_[1], focal_[1]) + atan2(window_size.height-principal_point_[1], focal_[1]);
 
     window_size_ = window_size;
 }
 
-void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+void cv::viz::Camera::init(double fx, double fy, double cx, double cy, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
 
-    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x));
-    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y));
+    fov_[0] = atan2(cx, fx) + atan2(window_size.width  - cx, fx);
+    fov_[1] = atan2(cy, fy) + atan2(window_size.height - cy, fy);
 
-    principal_point_[0] = c_x;
-    principal_point_[1] = c_y;
+    principal_point_[0] = cx;
+    principal_point_[1] = cy;
 
-    focal_[0] = f_x;
-    focal_[1] = f_y;
+    focal_[0] = fx;
+    focal_[1] = fy;
 
     window_size_ = window_size;
 }
@@ -254,7 +177,7 @@ void cv::viz::Camera::setWindowSize(const Size &window_size)
     window_size_ = window_size;
 }
 
-void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
+void cv::viz::Camera::computeProjectionMatrix(Matx44d &proj) const
 {
     double top = clip_[0] * principal_point_[1] / focal_[1];
     double left = -clip_[0] * principal_point_[0] / focal_[0];
@@ -278,13 +201,6 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
-    // Without distortion, RGB Camera
-    // Received from http://nicolas.burrus.name/index.php/Research/KinectCalibration
-    Matx33f K = Matx33f::zeros();
-    K(0,0) = 5.2921508098293293e+02;
-    K(0,2) = 3.2894272028759258e+02;
-    K(1,1) = 5.2556393630057437e+02;
-    K(1,2) = 2.6748068171871557e+02;
-    K(2,2) = 1.0f;
+    Matx33d K(525.0, 0.0, 320.0, 0.0, 525.0, 240.0, 0.0, 0.0, 1.0);
     return Camera(K, window_size);
 }

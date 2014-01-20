@@ -38,12 +38,42 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 // Authors:
-//  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
-//
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
 //
 //M*/
 
-#include "precomp.hpp"
+#ifndef __vtkCloudMatSink_h
+#define __vtkCloudMatSink_h
+
+#include <opencv2/core.hpp>
+#include <vtkPolyDataWriter.h>
+
+namespace cv
+{
+    namespace viz
+    {
+        class vtkCloudMatSink : public vtkPolyDataWriter
+        {
+        public:
+          static vtkCloudMatSink *New();
+          vtkTypeMacro(vtkCloudMatSink,vtkPolyDataWriter)
+          void PrintSelf(ostream& os, vtkIndent indent);
+
+          void SetOutput(OutputArray cloud, OutputArray colors = noArray(), OutputArray normals = noArray(), OutputArray tcoords = noArray());
+
+        protected:
+          vtkCloudMatSink();
+          ~vtkCloudMatSink();
+
+          void WriteData();
+
+          _OutputArray cloud, colors, normals, tcoords;
+
+        private:
+          vtkCloudMatSink(const vtkCloudMatSink&);  // Not implemented.
+          void operator=(const vtkCloudMatSink&);  // Not implemented.
+        };
+    }
+}
+
+#endif

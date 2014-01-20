@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_INTERACTOR_STYLE_H__
@@ -56,9 +53,6 @@ namespace cv
         class InteractorStyle : public vtkInteractorStyleTrackballCamera
         {
         public:
-
-            enum KeyboardModifier { KB_MOD_ALT, KB_MOD_CTRL, KB_MOD_SHIFT };
-
             static InteractorStyle *New();
             virtual ~InteractorStyle() {}
 
@@ -69,30 +63,20 @@ namespace cv
             virtual void Initialize();
 
             void setWidgetActorMap(const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
-            void setRenderer(vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
             void saveScreenshot(const String &file);
-
-            /** \brief Change the default keyboard modified from ALT to a different special key.*/
-            inline void setKeyboardModifier(const KeyboardModifier &modifier) { modifier_ = modifier; }
+            void exportScene(const String &file);
 
         private:
             /** \brief Set to true after initialization is complete. */
             bool init_;
 
-            vtkSmartPointer<vtkRenderer> renderer_;
             Ptr<WidgetActorMap> widget_actor_map_;
 
             Vec2i win_size_;
             Vec2i win_pos_;
             Vec2i max_win_size_;
-
-            /** \brief A PNG writer for screenshot captures. */
-            vtkSmartPointer<vtkPNGWriter> snapshot_writer_;
-
-            /** \brief Internal window to image filter. Needed by \a snapshot_writer_. */
-            vtkSmartPointer<vtkWindowToImageFilter> wif_;
 
             /** \brief Interactor style internal method. Gets called whenever a key is pressed. */
             virtual void OnChar();
@@ -121,17 +105,13 @@ namespace cv
             /** \brief True if we're using red-blue colors for anaglyphic stereo, false if magenta-green. */
             bool stereo_anaglyph_mask_default_;
 
-            KeyboardModifier modifier_;
-
             void (*keyboardCallback_)(const KeyboardEvent&, void*);
             void *keyboard_callback_cookie_;
 
             void (*mouseCallback_)(const MouseEvent&, void*);
             void *mouse_callback_cookie_;
 
-            bool getAltKey();
-            bool getControlKey();
-            bool getShiftKey();
+            int getModifiers();
         };
     }
 }
