@@ -472,7 +472,7 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
         dst[0] = src[2];
         dst[1] = src[1];
         dst[2] = src[0];
-#elif defined ORDER
+#else
         dst[0] = src[0];
         dst[1] = src[1];
         dst[2] = src[2];
@@ -728,7 +728,7 @@ __kernel void RGB2HSV(__global const uchar* srcptr, int src_step, int src_offset
 
         diff = v - vmin;
         s = diff/(float)(fabs(v) + FLT_EPSILON);
-        diff = (float)(60./(diff + FLT_EPSILON));
+        diff = (float)(60.f/(diff + FLT_EPSILON));
         if( v == r )
             h = (g - b)*diff;
         else if( v == g )
