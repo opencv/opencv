@@ -81,6 +81,12 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
 
         UMAT_UPLOAD_INPUT_PARAMETER(src)
     }
+
+    void UMatToVector(const UMat & um, std::vector<Point2f> & v) const
+    {
+        v.resize(points.cols);
+        um.getMat(ACCESS_READ).copyTo(v);
+    }
 };
 
 const int GoodFeaturesToTrack::maxCorners = 1000;
@@ -96,13 +102,11 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
 
         OCL_OFF(cv::goodFeaturesToTrack(src_roi, points, maxCorners, qualityLevel, minDistance, noArray()));
         ASSERT_FALSE(points.empty());
-        pts.resize(points.cols);
-        points.copyTo(pts);
+        UMatToVector(points, pts);
 
         OCL_ON(cv::goodFeaturesToTrack(usrc_roi, upoints, maxCorners, qualityLevel, minDistance));
         ASSERT_FALSE(upoints.empty());
-        upts.resize(upoints.cols);
-        upoints.copyTo(upts);
+        UMatToVector(upoints, upts);
 
         ASSERT_EQ(upts.size(), pts.size());
 
@@ -117,7 +121,7 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
         }
 
         double bad_ratio = static_cast<double>(mistmatch) / pts.size();
-        ASSERT_GE(1e-3, bad_ratio);
+        ASSERT_GE(1e-2, bad_ratio);
     }
 }
 
