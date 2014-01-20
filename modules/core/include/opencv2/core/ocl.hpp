@@ -221,7 +221,7 @@ public:
     void* ptr() const;
 
     struct Impl;
-    inline struct Impl* _getImpl() const { return p; };
+    inline struct Impl* _getImpl() const { return p; }
 protected:
     Impl* p;
 };
@@ -242,7 +242,7 @@ public:
     static Platform& getDefault();
 
     struct Impl;
-    inline struct Impl* _getImpl() const { return p; };
+    inline struct Impl* _getImpl() const { return p; }
 protected:
     Impl* p;
 };

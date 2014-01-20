@@ -125,7 +125,7 @@ namespace bioinspired
         * @param inputRGBFrame: the input RGB frame to be processed
         * @return, nothing but the multiplexed frame is available by the use of the getMultiplexedFrame() function
         */
-        inline void runColorMultiplexing(const std::valarray<float> &inputRGBFrame){runColorMultiplexing(inputRGBFrame, *_multiplexedFrame);};
+        inline void runColorMultiplexing(const std::valarray<float> &inputRGBFrame) { runColorMultiplexing(inputRGBFrame, *_multiplexedFrame); }
 
         /**
         * color multiplexing function: a demultipleed RGB frame of size M*N*3 is transformed into a multiplexed M*N*1 pixels frame where each pixel is either Red, or Green or Blue if using RGB images
@@ -149,7 +149,7 @@ namespace bioinspired
         * @param saturateColors: boolean that activates color saturation (if true) or desactivate (if false)
         * @param colorSaturationValue: the saturation factor
         * */
-        void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0){_saturateColors=saturateColors; _colorSaturationValue=colorSaturationValue;};
+        void setColorSaturation(const bool saturateColors=true, const float colorSaturationValue=4.0) { _saturateColors=saturateColors; _colorSaturationValue=colorSaturationValue; }
 
         /**
         * set parameters of the low pass spatio-temporal filter used to retreive the low chrominance
@@ -157,7 +157,7 @@ namespace bioinspired
         * @param tau: time constant of the filter (unit is frame for video processing), typically 0 when considering static processing, 1 or more if a temporal smoothing effect is required
         * @param k: spatial constant of the filter (unit is pixels), typical value is 2.5
         */
-        void setChrominanceLPfilterParameters(const float beta, const float tau, const float k){setLPfilterParameters(beta, tau, k);};
+        void setChrominanceLPfilterParameters(const float beta, const float tau, const float k) { setLPfilterParameters(beta, tau, k); }
 
         /**
         * apply to the retina color output the Krauskopf transformation which leads to an opponent color system: output colorspace if Acr1cr2 if input of the retina was LMS color space
@@ -176,22 +176,22 @@ namespace bioinspired
         /**
         * @return the multiplexed frame result (use this after function runColorMultiplexing)
         */
-        inline const std::valarray<float> &getMultiplexedFrame() const {return *_multiplexedFrame;};
+        inline const std::valarray<float> &getMultiplexedFrame() const { return *_multiplexedFrame; }
 
         /**
         * @return the demultiplexed frame result (use this after function runColorDemultiplexing)
         */
-        inline const std::valarray<float> &getDemultiplexedColorFrame() const {return _demultiplexedColorFrame;};
+        inline const std::valarray<float> &getDemultiplexedColorFrame() const { return _demultiplexedColorFrame; }
 
         /**
         * @return the luminance of the processed frame (use this after function runColorDemultiplexing)
         */
-        inline const std::valarray<float> &getLuminance() const {return *_luminance;};
+        inline const std::valarray<float> &getLuminance() const { return *_luminance; }
 
         /**
         * @return the chrominance of the processed frame (use this after function runColorDemultiplexing)
         */
-        inline const std::valarray<float> &getChrominance() const {return _chrominance;};
+        inline const std::valarray<float> &getChrominance() const { return _chrominance; }
 
         /**
         * standard 0 to 255 image clipping function appled to RGB images (of size M*N*3 pixels)
@@ -209,13 +209,13 @@ namespace bioinspired
         /**
         * return the color sampling map: a Nrows*Mcolumns image in which each pixel value is the ofsset adress which gives the adress of the sampled pixel on an Nrows*Mcolumns*3 color image ordered by layers: layer1, layer2, layer3
         */
-        inline const std::valarray<unsigned int> &getSamplingMap() const {return _colorSampling;};
+        inline const std::valarray<unsigned int> &getSamplingMap() const { return _colorSampling; }
 
         /**
         * function used (to bypass processing) to manually set the color output
         * @param demultiplexedImage: the color image (luminance+chrominance) which has to be written in the object buffer
         */
-        inline void setDemultiplexedColorFrame(const std::valarray<float> &demultiplexedImage){_demultiplexedColorFrame=demultiplexedImage;};
+        inline void setDemultiplexedColorFrame(const std::valarray<float> &demultiplexedImage) { _demultiplexedColorFrame=demultiplexedImage; }
 
     protected:
 
@@ -287,9 +287,10 @@ namespace bioinspired
             unsigned int nbColumns;
         public:
             Parallel_adaptiveHorizontalCausalFilter_addInput(const float *inputImg, float *bufferToProcess, const float *imageGrad, const unsigned int nbCols)
-                :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) {};
+                :outputFrame(bufferToProcess), inputFrame(inputImg), imageGradient(imageGrad), nbColumns(nbCols) { }
 
-            virtual void operator()( const Range& r ) const {
+            virtual void operator()( const Range& r ) const
+            {
                 register float* outputPTR=outputFrame+r.start*nbColumns;
                 register const float* inputPTR=inputFrame+r.start*nbColumns;
                 register const float *imageGradientPTR= imageGradient+r.start*nbColumns;
@@ -314,7 +315,7 @@ namespace bioinspired
             float filterParam_gain;
         public:
             Parallel_adaptiveVerticalAnticausalFilter_multGain(float *bufferToProcess, const float *imageGrad, const unsigned int nbRws, const unsigned int nbCols, const float  gain)
-                :outputFrame(bufferToProcess), imageGradient(imageGrad), nbRows(nbRws), nbColumns(nbCols), filterParam_gain(gain){}
+                :outputFrame(bufferToProcess), imageGradient(imageGrad), nbRows(nbRws), nbColumns(nbCols), filterParam_gain(gain) { }
 
             virtual void operator()( const Range& r ) const {
                 float* offset=outputFrame+nbColumns*nbRows-nbColumns;
@@ -343,7 +344,7 @@ namespace bioinspired
             unsigned int nbColumns, doubleNbColumns, nbRows, nbPixels;
         public:
             Parallel_computeGradient(const unsigned int nbCols, const unsigned int nbRws, const float *lum, float *imageGrad)
-            :imageGradient(imageGrad), luminance(lum), nbColumns(nbCols), doubleNbColumns(2*nbCols), nbRows(nbRws), nbPixels(nbRws*nbCols){};
+            :imageGradient(imageGrad), luminance(lum), nbColumns(nbCols), doubleNbColumns(2*nbCols), nbRows(nbRws), nbPixels(nbRws*nbCols) { }
 
             virtual void operator()( const Range& r ) const {
                 for (int idLine=r.start;idLine!=r.end;++idLine)

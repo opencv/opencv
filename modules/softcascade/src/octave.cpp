@@ -445,7 +445,7 @@ void BoostedSoftCascadeOctave::write( CvFileStorage* fs, cv::String _name) const
 
 }
 
-CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "Octave.BoostedSoftCascadeOctave", );
+CV_INIT_ALGORITHM(BoostedSoftCascadeOctave, "Octave.BoostedSoftCascadeOctave", )
 
 Octave::~Octave(){}
 

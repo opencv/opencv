@@ -101,14 +101,14 @@ public:
 
     virtual ~RetinaImpl();
     /**
-        * retreive retina input buffer size
-        */
-        Size getInputSize();
+     * retreive retina input buffer size
+     */
+    Size getInputSize();
 
     /**
-        * retreive retina output buffer size
-        */
-        Size getOutputSize();
+     * retreive retina output buffer size
+     */
+    Size getOutputSize();
 
     /**
      * try to open an XML retina parameters file to adjust current retina instance setup
@@ -127,7 +127,7 @@ public:
      * @param fs : the open Filestorage which contains retina parameters
          * @param applyDefaultSetupOnFailure : set to true if an error must be thrown on error
      */
-        void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
+    void setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailure=true);
 
     /**
      * try to open an XML retina parameters file to adjust current retina instance setup
@@ -248,17 +248,17 @@ public:
      */
     void clearBuffers();
 
-        /**
-        * Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
-        * @param activate: true if Magnocellular output should be activated, false if not
-        */
-        void activateMovingContoursProcessing(const bool activate);
+    /**
+     * Activate/desactivate the Magnocellular pathway processing (motion information extraction), by default, it is activated
+     * @param activate: true if Magnocellular output should be activated, false if not
+     */
+    void activateMovingContoursProcessing(const bool activate);
 
-        /**
-        * Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
-        * @param activate: true if Parvocellular (contours information extraction) output should be activated, false if not
-        */
-        void activateContoursProcessing(const bool activate);
+    /**
+     * Activate/desactivate the Parvocellular pathway processing (contours information extraction), by default, it is activated
+     * @param activate: true if Parvocellular (contours information extraction) output should be activated, false if not
+     */
+    void activateContoursProcessing(const bool activate);
 private:
 
     // Parameteres setup members
@@ -399,7 +399,8 @@ void RetinaImpl::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailur
 
         setupIPLMagnoChannel(_retinaParameters.IplMagno.normaliseOutput, _retinaParameters.IplMagno.parasolCells_beta, _retinaParameters.IplMagno.parasolCells_tau, _retinaParameters.IplMagno.parasolCells_k, _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency,_retinaParameters.IplMagno.V0CompressionParameter, _retinaParameters.IplMagno.localAdaptintegration_tau, _retinaParameters.IplMagno.localAdaptintegration_k);
 
-    }catch(Exception &e)
+    }
+    catch(Exception &e)
     {
         printf("RetinaImpl::setup: resetting retina with default parameters\n");
         if (applyDefaultSetupOnFailure)
@@ -657,7 +658,8 @@ void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMa
                 outMat.at<unsigned char>(pixel)=(unsigned char)*(valarrayPTR++);
             }
         }
-    }else
+    }
+    else
     {
         const unsigned int nbPixels=nbColumns*nbRows;
         const unsigned int doubleNBpixels=nbColumns*nbRows*2;
@@ -727,17 +729,17 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray
         cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
         inputMatToConvert.convertTo(dst, dsttype);
     }
-        else
-            CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
+    else
+        CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
 
     return imageNumberOfChannels>1; // return bool : false for gray level image processing, true for color mode
 }
 
-void RetinaImpl::clearBuffers() {_retinaFilter->clearAllBuffers();}
+void RetinaImpl::clearBuffers() { _retinaFilter->clearAllBuffers(); }
 
-void RetinaImpl::activateMovingContoursProcessing(const bool activate){_retinaFilter->activateMovingContoursProcessing(activate);}
+void RetinaImpl::activateMovingContoursProcessing(const bool activate) { _retinaFilter->activateMovingContoursProcessing(activate); }
 
-void RetinaImpl::activateContoursProcessing(const bool activate){_retinaFilter->activateContoursProcessing(activate);}
+void RetinaImpl::activateContoursProcessing(const bool activate) { _retinaFilter->activateContoursProcessing(activate); }
 
 }// end of namespace bioinspired
 }// end of namespace cv

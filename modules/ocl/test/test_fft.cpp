@@ -202,8 +202,8 @@ void static convolveDFT(const cv::Mat& A, const cv::Mat& B, cv::Mat& C, bool cco
     tempA(cv::Rect(0, 0, C.cols, C.rows)).copyTo(C);
 }
 
-IMPLEMENT_PARAM_CLASS(KSize, int);
-IMPLEMENT_PARAM_CLASS(Ccorr, bool);
+IMPLEMENT_PARAM_CLASS(KSize, int)
+IMPLEMENT_PARAM_CLASS(Ccorr, bool)
 
 PARAM_TEST_CASE(Convolve_DFT, cv::Size, KSize, Ccorr)
 {

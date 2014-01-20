@@ -12,7 +12,7 @@ const int EPOCHS = 20;
 class LSDBase : public testing::Test
 {
 public:
-    LSDBase() {};
+    LSDBase() { }
 
 protected:
     Mat test_image;
@@ -30,7 +30,7 @@ protected:
 class Imgproc_LSD_ADV: public LSDBase
 {
 public:
-    Imgproc_LSD_ADV() {};
+    Imgproc_LSD_ADV() { }
 protected:
 
 };
@@ -38,7 +38,7 @@ protected:
 class Imgproc_LSD_STD: public LSDBase
 {
 public:
-    Imgproc_LSD_STD() {};
+    Imgproc_LSD_STD() { }
 protected:
 
 };
@@ -46,7 +46,7 @@ protected:
 class Imgproc_LSD_NONE: public LSDBase
 {
 public:
-    Imgproc_LSD_NONE() {};
+    Imgproc_LSD_NONE() { }
 protected:
 
 };
