@@ -195,7 +195,7 @@ struct CornerTestBase :
 {
     virtual void random_roi()
     {
-        Mat image = readImageType("gpu/stereobm/aloe-L.png", type);
+        Mat image = readImageType("../gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
 
         bool isFP = CV_MAT_DEPTH(type) >= CV_32F;
@@ -224,7 +224,7 @@ struct CornerTestBase :
 
 typedef CornerTestBase CornerMinEigenVal;
 
-OCL_TEST_P(CornerMinEigenVal, DISABLED_Mat)
+OCL_TEST_P(CornerMinEigenVal, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -243,7 +243,7 @@ OCL_TEST_P(CornerMinEigenVal, DISABLED_Mat)
 
 typedef CornerTestBase CornerHarris;
 
-OCL_TEST_P(CornerHarris, DISABLED_Mat)
+OCL_TEST_P(CornerHarris, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
