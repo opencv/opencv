@@ -2347,14 +2347,24 @@ void CvSVM::write_params( CvFileStorage* fs ) const
 }
 
 
+static bool isSvmModelApplicable(int sv_total, int var_all, int var_count, int class_count)
+{
+    return (sv_total > 0 && var_count > 0 && var_count <= var_all && class_count >= 0);
+}
+
+
 void CvSVM::write( CvFileStorage* fs, const char* name ) const
 {
     CV_FUNCNAME( "CvSVM::write" );
 
     __BEGIN__;
 
-    int i, var_count = get_var_count(), df_count, class_count;
+    int i, var_count = get_var_count(), df_count;
+    int class_count = class_labels ? class_labels->cols :
+                      params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
     const CvSVMDecisionFunc* df = decision_func;
+    if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
+        CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_SVM );
 
@@ -2362,9 +2372,6 @@ void CvSVM::write( CvFileStorage* fs, const char* name ) const
 
     cvWriteInt( fs, "var_all", var_all );
     cvWriteInt( fs, "var_count", var_count );
-
-    class_count = class_labels ? class_labels->cols :
-                  params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
 
     if( class_count )
     {
@@ -2503,7 +2510,6 @@ void CvSVM::read_params( CvFileStorage* fs, CvFileNode* svm_node )
     __END__;
 }
 
-
 void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
 {
     const double not_found_dbl = DBL_MAX;
@@ -2532,7 +2538,7 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
     var_count = cvReadIntByName( fs, svm_node, "var_count", var_all );
     class_count = cvReadIntByName( fs, svm_node, "class_count", 0 );
 
-    if( sv_total <= 0 || var_all <= 0 || var_count <= 0 || var_count > var_all || class_count < 0 )
+    if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
         CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
     CV_CALL( class_labels = (CvMat*)cvReadByName( fs, svm_node, "class_labels" ));
