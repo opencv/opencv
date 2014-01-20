@@ -78,7 +78,6 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     int y_ = INC(y,srcrows);
     int x_ = INC(x,srccols);
-    __global const PIXTYPE* src = (__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE));
 
 #if depth <= 4
 
