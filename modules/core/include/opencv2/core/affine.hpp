@@ -55,9 +55,9 @@ namespace cv
     {
     public:
         typedef T float_type;
-        typedef cv::Matx<float_type, 3, 3> Mat3;
-        typedef cv::Matx<float_type, 4, 4> Mat4;
-        typedef cv::Vec<float_type, 3> Vec3;
+        typedef Matx<float_type, 3, 3> Mat3;
+        typedef Matx<float_type, 4, 4> Mat4;
+        typedef Vec<float_type, 3> Vec3;
 
         Affine3();
 
@@ -70,11 +70,11 @@ namespace cv
         //Rodrigues vector
         Affine3(const Vec3& rvec, const Vec3& t = Vec3::all(0));
 
-        //Combines all contructors above. Supports 4x4, 3x3, 1x3, 3x1 sizes of data matrix
-        explicit Affine3(const cv::Mat& data, const Vec3& t = Vec3::all(0));
+        //Combines all contructors above. Supports 4x4, 3x4, 3x3, 1x3, 3x1 sizes of data matrix
+        explicit Affine3(const Mat& data, const Vec3& t = Vec3::all(0));
 
         //From 16th element array
-        Affine3(const float_type* vals);
+        explicit Affine3(const float_type* vals);
 
         static Affine3 Identity();
 
@@ -134,8 +134,8 @@ namespace cv
     typedef Affine3<float> Affine3f;
     typedef Affine3<double> Affine3d;
 
-    static cv::Vec3f operator*(const cv::Affine3f& affine, const cv::Vec3f& vector);
-    static cv::Vec3d operator*(const cv::Affine3d& affine, const cv::Vec3d& vector);
+    static Vec3f operator*(const Affine3f& affine, const Vec3f& vector);
+    static Vec3d operator*(const Affine3d& affine, const Vec3d& vector);
 
     template<typename _Tp> class DataType< Affine3<_Tp> >
     {
