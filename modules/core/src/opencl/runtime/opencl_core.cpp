@@ -125,7 +125,7 @@ static void* WinGetProcAddress(const char* name)
 #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
 #endif // _WIN32
 
-#if defined(linux)
+#if defined(__linux__)
 #include <dlfcn.h>
 #include <stdio.h>
 
