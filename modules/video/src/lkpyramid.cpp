@@ -713,7 +713,7 @@ namespace cv
             int idxNew = kernel.set(idx, arg);\
             if (-1 == idxNew)\
             {\
-                printf("lkSparse_run can't setup argument index = %d to kernel\n");\
+                printf("lkSparse_run can't setup argument index = %d to kernel\n", idx);\
                 return false;\
             }\
             idx = idxNew;\
