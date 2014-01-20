@@ -196,12 +196,12 @@
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
         workT tmp = atan2(srcelem2, srcelem1); \
-        if(tmp < 0) tmp += 6.283185307179586232; \
+        if(tmp < 0) tmp += 6.283185307179586232f; \
         dstelem = tmp
 
 #elif defined OP_PHASE_DEGREES
     #define PROCESS_ELEM \
-    workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465; \
+    workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465f; \
     if(tmp < 0) tmp += 360; \
     dstelem = tmp
 
@@ -223,7 +223,6 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #define dstT uchar
 #define srcT2 srcT1
 #define convertToWT1
-#define convertToWT2
 #define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
 
 #elif defined OP_CONVERT_SCALE_ABS
@@ -313,7 +312,9 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
     if (x < cols && y < rows)
     {
         int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+#if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
         int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
+#endif
         int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
         EXTRA_INDEX;
 

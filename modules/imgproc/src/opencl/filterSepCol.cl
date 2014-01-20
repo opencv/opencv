@@ -71,7 +71,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void col_filter
                          const int dst_step_in_pixel,
                          const int dst_cols,
                          const int dst_rows,
-                         __constant float * mat_kernel __attribute__((max_constant_size(4*(2*RADIUSY+1)))))
+                         __constant float * mat_kernel)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
