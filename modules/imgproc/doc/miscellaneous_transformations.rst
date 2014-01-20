@@ -110,6 +110,8 @@ But in case of a non-linear transformation, an input RGB image should be normali
 
 If you use ``cvtColor`` with 8-bit images, the conversion will have some information lost. For many applications, this will not be noticeable but it is recommended to use 32-bit images in applications that need the full range of colors or that convert an image before an operation and then convert back.
 
+If conversion adds the alpha channel, its value will set to the maximum of corresponding channel range: 255 for ``CV_8U``, 65535 for ``CV_16U``, 1 for ``CV_32F``.
+
 The function can do the following transformations:
 
 *
@@ -124,7 +126,7 @@ The function can do the following transformations:
 
     .. math::
 
-        \text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow 0
+        \text{Gray to RGB[A]:} \quad R  \leftarrow Y, G  \leftarrow Y, B  \leftarrow Y, A  \leftarrow \max (ChannelRange)
 
     The conversion from a RGB image to gray is done with:
 
