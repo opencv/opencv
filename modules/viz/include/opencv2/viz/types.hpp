@@ -41,9 +41,6 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #ifndef __OPENCV_VIZ_TYPES_HPP__
@@ -77,49 +74,99 @@ namespace cv
             static Color white();
 
             static Color gray();
+
+            static Color mlab();
+
+            static Color navy();
+            static Color olive();
+            static Color maroon();
+            static Color teal();
+            static Color rose();
+            static Color azure();
+            static Color lime();
+            static Color gold();
+            static Color brown();
+            static Color orange();
+            static Color chartreuse();
+            static Color orange_red();
+            static Color purple();
+            static Color indigo();
+
+            static Color pink();
+            static Color cherry();
+            static Color bluberry();
+            static Color raspberry();
+            static Color silver();
+            static Color violet();
+            static Color apricot();
+            static Color turquoise();
+            static Color celestial_blue();
+            static Color amethyst();
+
+            static Color not_set();
         };
 
-        class CV_EXPORTS Mesh3d
+        class CV_EXPORTS Mesh
         {
         public:
+            Mat cloud, colors, normals;
 
-            Mat cloud, colors;
+            //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
+            //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
             Mat polygons;
 
-            //! Loads mesh from a given ply file
-            static cv::viz::Mesh3d loadMesh(const String& file);
+            Mat texture, tcoords;
+
+            //! Loads mesh from a given ply file (no texture load support for now)
+            static Mesh load(const String& file);
+        };
+
+        class CV_EXPORTS Camera
+        {
+        public:
+            Camera(double fx, double fy, double cx, double cy, const Size &window_size);
+            explicit Camera(const Vec2d &fov, const Size &window_size);
+            explicit Camera(const Matx33d &K, const Size &window_size);
+            explicit Camera(const Matx44d &proj, const Size &window_size);
+
+            const Vec2d & getClip() const { return clip_; }
+            void setClip(const Vec2d &clip) { clip_ = clip; }
+
+            const Size & getWindowSize() const { return window_size_; }
+            void setWindowSize(const Size &window_size);
+
+            const Vec2d& getFov() const { return fov_; }
+            void setFov(const Vec2d& fov) { fov_ = fov; }
+
+            const Vec2d& getPrincipalPoint() const { return principal_point_; }
+            const Vec2d& getFocalLength() const { return focal_; }
+
+            void computeProjectionMatrix(Matx44d &proj) const;
+
+            static Camera KinectCamera(const Size &window_size);
 
         private:
-            struct loadMeshImpl;
+            void init(double fx, double fy, double cx, double cy, const Size &window_size);
+
+            Vec2d clip_;
+            Vec2d fov_;
+            Size window_size_;
+            Vec2d principal_point_;
+            Vec2d focal_;
         };
 
         class CV_EXPORTS KeyboardEvent
         {
         public:
-            static const unsigned int Alt   = 1;
-            static const unsigned int Ctrl  = 2;
-            static const unsigned int Shift = 4;
+            enum { NONE = 0, ALT = 1, CTRL = 2, SHIFT = 4 };
+            enum Action { KEY_UP = 0, KEY_DOWN = 1 };
 
-            //! Create a keyboard event
-            //! - Note that action is true if key is pressed, false if released
-            KeyboardEvent(bool action, const String& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
+            KeyboardEvent(Action action, const String& symbol, unsigned char code, int modifiers);
 
-            bool isAltPressed() const;
-            bool isCtrlPressed() const;
-            bool isShiftPressed() const;
-
-            unsigned char getKeyCode() const;
-
-            const String& getKeySym() const;
-            bool keyDown() const;
-            bool keyUp() const;
-
-        protected:
-
-            bool action_;
-            unsigned int modifiers_;
-            unsigned char key_code_;
-            String key_sym_;
+            Action action;
+            String symbol;
+            unsigned char code;
+            int modifiers;
         };
 
         class CV_EXPORTS MouseEvent
@@ -128,46 +175,12 @@ namespace cv
             enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
             enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
 
-            MouseEvent(const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift);
+            MouseEvent(const Type& type, const MouseButton& button, const Point& pointer, int modifiers);
 
             Type type;
             MouseButton button;
             Point pointer;
-            unsigned int key_state;
-        };
-
-        class CV_EXPORTS Camera
-        {
-        public:
-            Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-            Camera(const Vec2f &fov, const Size &window_size);
-            Camera(const cv::Matx33f &K, const Size &window_size);
-            Camera(const cv::Matx44f &proj, const Size &window_size);
-
-            inline const Vec2d & getClip() const { return clip_; }
-            inline void setClip(const Vec2d &clip) { clip_ = clip; }
-
-            inline const Size & getWindowSize() const { return window_size_; }
-            void setWindowSize(const Size &window_size);
-
-            inline const Vec2f & getFov() const { return fov_; }
-            inline void setFov(const Vec2f & fov) { fov_ = fov; }
-
-            inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
-            inline const Vec2f & getFocalLength() const { return focal_; }
-
-            void computeProjectionMatrix(Matx44f &proj) const;
-
-            static Camera KinectCamera(const Size &window_size);
-
-        private:
-            void init(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-
-            Vec2d clip_;
-            Vec2f fov_;
-            Size window_size_;
-            Vec2f principal_point_;
-            Vec2f focal_;
+            int modifiers;
         };
     } /* namespace viz */
 } /* namespace cv */
@@ -180,15 +193,44 @@ inline cv::viz::Color::Color(double _gray) : Scalar(_gray, _gray, _gray) {}
 inline cv::viz::Color::Color(double _blue, double _green, double _red) : Scalar(_blue, _green, _red) {}
 inline cv::viz::Color::Color(const Scalar& color) : Scalar(color) {}
 
-inline cv::viz::Color cv::viz::Color::black()   { return Color(  0,   0, 0); }
-inline cv::viz::Color cv::viz::Color::green()   { return Color(  0, 255, 0); }
-inline cv::viz::Color cv::viz::Color::blue()    { return Color(255,   0, 0); }
-inline cv::viz::Color cv::viz::Color::cyan()    { return Color(255, 255, 0); }
+inline cv::viz::Color cv::viz::Color::black()   { return Color(  0,   0,   0); }
+inline cv::viz::Color cv::viz::Color::green()   { return Color(  0, 255,   0); }
+inline cv::viz::Color cv::viz::Color::blue()    { return Color(255,   0,   0); }
+inline cv::viz::Color cv::viz::Color::cyan()    { return Color(255, 255,   0); }
 inline cv::viz::Color cv::viz::Color::red()     { return Color(  0,   0, 255); }
 inline cv::viz::Color cv::viz::Color::yellow()  { return Color(  0, 255, 255); }
 inline cv::viz::Color cv::viz::Color::magenta() { return Color(255,   0, 255); }
 inline cv::viz::Color cv::viz::Color::white()   { return Color(255, 255, 255); }
 inline cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
 
+inline cv::viz::Color cv::viz::Color::mlab()    { return Color(255, 128, 128); }
+
+inline cv::viz::Color cv::viz::Color::navy()       { return Color(0,     0, 128); }
+inline cv::viz::Color cv::viz::Color::olive()      { return Color(0,   128, 128); }
+inline cv::viz::Color cv::viz::Color::maroon()     { return Color(0,     0, 128); }
+inline cv::viz::Color cv::viz::Color::teal()       { return Color(128, 128,   0); }
+inline cv::viz::Color cv::viz::Color::rose()       { return Color(128,   0, 255); }
+inline cv::viz::Color cv::viz::Color::azure()      { return Color(255, 128,   0); }
+inline cv::viz::Color cv::viz::Color::lime()       { return Color(0,   255, 191); }
+inline cv::viz::Color cv::viz::Color::gold()       { return Color(0,   215, 255); }
+inline cv::viz::Color cv::viz::Color::brown()      { return Color(0,    75, 150); }
+inline cv::viz::Color cv::viz::Color::orange()     { return Color(0,   165, 255); }
+inline cv::viz::Color cv::viz::Color::chartreuse() { return Color(0,   255, 128); }
+inline cv::viz::Color cv::viz::Color::orange_red() { return Color(0,    69, 255); }
+inline cv::viz::Color cv::viz::Color::purple()     { return Color(128,   0, 128); }
+inline cv::viz::Color cv::viz::Color::indigo()     { return Color(130,   0,  75); }
+
+inline cv::viz::Color cv::viz::Color::pink()           { return Color(203, 192, 255); }
+inline cv::viz::Color cv::viz::Color::cherry()         { return Color( 99,  29, 222); }
+inline cv::viz::Color cv::viz::Color::bluberry()       { return Color(247, 134,  79); }
+inline cv::viz::Color cv::viz::Color::raspberry()      { return Color( 92,  11, 227); }
+inline cv::viz::Color cv::viz::Color::silver()         { return Color(192, 192, 192); }
+inline cv::viz::Color cv::viz::Color::violet()         { return Color(226,  43, 138); }
+inline cv::viz::Color cv::viz::Color::apricot()        { return Color(177, 206, 251); }
+inline cv::viz::Color cv::viz::Color::turquoise()      { return Color(208, 224,  64); }
+inline cv::viz::Color cv::viz::Color::celestial_blue() { return Color(208, 151,  73); }
+inline cv::viz::Color cv::viz::Color::amethyst()       { return Color(204, 102, 153); }
+
+inline cv::viz::Color cv::viz::Color::not_set()        { return Color(-1, -1, -1); }
 
 #endif

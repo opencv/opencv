@@ -41,94 +41,143 @@
 //  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
-//
 //M*/
 
 #include "precomp.hpp"
 
-vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew();
-
-#if 1 || !defined __APPLE__
-vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
-{
-  return vtkRenderWindowInteractor::New();
-}
-#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
-    :  s_lastDone_(0.0), style_(vtkSmartPointer<cv::viz::InteractorStyle>::New()), widget_actor_map_(new WidgetActorMap)
+cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
+    window_position_(Vec2i(std::numeric_limits<int>::min())), widget_actor_map_(new WidgetActorMap)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New();
+    window_name_ = VizStorage::generateWindowName(name);
 
-    // Create a RendererWindow
+    // Create render window
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
-
-    // Set the window size as 1/2 of the screen size
     cv::Vec2i window_size = cv::Vec2i(window_->GetScreenSize()) / 2;
     window_->SetSize(window_size.val);
-
     window_->AddRenderer(renderer_);
 
     // Create the interactor style
-    style_->Initialize();
-    style_->setRenderer(renderer_);
+    style_ = vtkSmartPointer<InteractorStyle>::New();
     style_->setWidgetActorMap(widget_actor_map_);
     style_->UseTimersOn();
+    style_->Initialize();
 
-    /////////////////////////////////////////////////
-    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::Take(vtkRenderWindowInteractorFixNew());
+    timer_callback_ = vtkSmartPointer<TimerCallback>::New();
+    exit_callback_ = vtkSmartPointer<ExitCallback>::New();
+    exit_callback_->viz = this;
+}
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
+{
+    if (event_id == vtkCommand::TimerEvent && timer_id == *reinterpret_cast<int*>(cookie))
+    {
+        vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkRenderWindowInteractor::SafeDownCast(caller);
+        interactor->TerminateApp();
+    }
+}
+
+void cv::viz::Viz3d::VizImpl::ExitCallback::Execute(vtkObject*, unsigned long event_id, void*)
+{
+    if (event_id == vtkCommand::ExitEvent)
+    {
+        viz->interactor_->TerminateApp();
+        viz->interactor_ = 0;
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+bool cv::viz::Viz3d::VizImpl::wasStopped() const
+{
+    bool stopped = spin_once_state_ ? interactor_ == 0 : false;
+    spin_once_state_ &= !stopped;
+    return stopped;
+}
+
+void cv::viz::Viz3d::VizImpl::close()
+{
+    if (!interactor_)
+        return;
+    interactor_->GetRenderWindow()->Finalize();
+    interactor_->TerminateApp(); // This tends to close the window...
+    interactor_ = 0;
+}
+
+void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
+{
+#if !defined _MSC_VER
+    //recreating is workaround for Ubuntu -- a crash in x-server
+    Vec2i window_size(window_->GetSize());
+    int fullscreen = window_->GetFullScreen();
+
+    window_ = vtkSmartPointer<vtkRenderWindow>::New();
+    if (window_position_[0] != std::numeric_limits<int>::min()) //also workaround
+        window_->SetPosition(window_position_.val);
+
+    window_->SetSize(window_size.val);
+    window_->SetFullScreen(fullscreen);
+    window_->AddRenderer(renderer_);
+#endif
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::spin()
+{
+    recreateRenderWindow();
+    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    interactor_->SetRenderWindow(window_);
+    interactor_->SetInteractorStyle(style_);
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
     window_->LineSmoothingOff();
     window_->PolygonSmoothingOff();
     window_->SwapBuffersOn();
     window_->SetStereoTypeToAnaglyph();
-
-    interactor_->SetRenderWindow(window_);
-    interactor_->SetInteractorStyle(style_);
-    interactor_->SetDesiredUpdateRate(30.0);
-
-    // Initialize and create timer, also create window
-    interactor_->Initialize();
-    timer_id_ = interactor_->CreateRepeatingTimer(5000L);
-
-    // Set a simple PointPicker
-    //vtkSmartPointer<vtkPointPicker> pp = vtkSmartPointer<vtkPointPicker>::New();
-    //pp->SetTolerance(pp->GetTolerance() * 2);
-    //interactor_->SetPicker(pp);
-
-    exit_main_loop_timer_callback_ = vtkSmartPointer<ExitMainLoopTimerCallback>::New();
-    exit_main_loop_timer_callback_->viz_ = this;
-    exit_main_loop_timer_callback_->right_timer_id = -1;
-    interactor_->AddObserver(vtkCommand::TimerEvent, exit_main_loop_timer_callback_);
-
-    exit_callback_ = vtkSmartPointer<ExitCallback>::New();
-    exit_callback_->viz_ = this;
-    interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
-
-    resetStoppedFlag();
-
-
-    //////////////////////////////
-    String window_name = VizStorage::generateWindowName(name);
-    window_->SetWindowName(window_name.c_str());
+    window_->Render();
+    window_->SetWindowName(window_name_.c_str());
+    interactor_->Start();
+    interactor_ = 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::~VizImpl()
+void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
 {
-    if (interactor_)
-        interactor_->DestroyTimer(timer_id_);
-    if (renderer_)
-        renderer_->Clear();
+    if (interactor_ == 0)
+    {
+        spin_once_state_ = true;
+        recreateRenderWindow();
+        interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+        interactor_->SetRenderWindow(window_);
+        interactor_->SetInteractorStyle(style_);
+        interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
+        interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
+        window_->AlphaBitPlanesOff();
+        window_->PointSmoothingOff();
+        window_->LineSmoothingOff();
+        window_->PolygonSmoothingOff();
+        window_->SwapBuffersOn();
+        window_->SetStereoTypeToAnaglyph();
+        window_->Render();
+        window_->SetWindowName(window_name_.c_str());
+    }
+
+    vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
+
+    if (force_redraw)
+        local->Render();
+
+    timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
+    local->Start();
+    local->DestroyTimer(timer_callback_->timer_id);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -142,7 +191,7 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     if (actor)
     {
         // If the actor is 3D, apply pose
-        vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+        vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
         actor->SetUserMatrix(matrix);
         actor->Modified();
     }
@@ -180,7 +229,7 @@ cv::viz::Widget cv::viz::Viz3d::VizImpl::getWidget(const String &id) const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -189,13 +238,13 @@ void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &po
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkmatrix(pose.matrix);
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -210,16 +259,15 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f 
         setWidgetPose(id, pose);
         return ;
     }
-    Matx44f matrix_cv = convertToMatx(matrix);
-    Affine3f updated_pose = pose * Affine3f(matrix_cv);
-    matrix = convertToVtkMatrix(updated_pose.matrix);
+    Affine3d updated_pose = pose * Affine3d(*matrix->Element);
+    matrix = vtkmatrix(updated_pose.matrix);
 
     actor->SetUserMatrix(matrix);
     actor->Modified();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
+cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -228,24 +276,7 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert("Widget is not 3D." && actor);
 
-    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    Matx44f matrix_cv = convertToMatx(matrix);
-    return Affine3f(matrix_cv);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setDesiredUpdateRate(double rate)
-{
-    if (interactor_)
-        interactor_->SetDesiredUpdateRate(rate);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-double cv::viz::Viz3d::VizImpl::getDesiredUpdateRate()
-{
-    if (interactor_)
-        return interactor_->GetDesiredUpdateRate();
-    return 0.0;
+    return Affine3d(*actor->GetUserMatrix()->Element);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,37 +289,6 @@ void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void
 void cv::viz::Viz3d::VizImpl::registerKeyboardCallback(KeyboardCallback callback, void* cookie)
 { style_->registerKeyboardCallback(callback, cookie); }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::spin()
-{
-    resetStoppedFlag();
-    window_->Render();
-    interactor_->Start();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
-{
-    resetStoppedFlag();
-
-    if (time <= 0)
-        time = 1;
-
-    if (force_redraw)
-        interactor_->Render();
-
-    double s_now_ = cv::getTickCount() / cv::getTickFrequency();
-    if (s_lastDone_ > s_now_)
-      s_lastDone_ = s_now_;
-
-    if ((s_now_ - s_lastDone_) > (1.0 / interactor_->GetDesiredUpdateRate()))
-    {
-        exit_main_loop_timer_callback_->right_timer_id = interactor_->CreateRepeatingTimer(time);
-        interactor_->Start();
-        interactor_->DestroyTimer(exit_main_loop_timer_callback_->right_timer_id);
-        s_lastDone_ = s_now_;
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::removeAllWidgets()
@@ -296,50 +296,98 @@ void cv::viz::Viz3d::VizImpl::removeAllWidgets()
     widget_actor_map_->clear();
     renderer_->RemoveAllViewProps();
 }
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::showImage(InputArray image, const Size& window_size)
+{
+    removeAllWidgets();
+    if (window_size.width > 0 && window_size.height > 0)
+        setWindowSize(window_size);
+
+    showWidget("showImage", WImageOverlay(image, Rect(Point(0,0), getWindowSize())));
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor)
+bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer(vtkSmartPointer<vtkProp> actor)
 {
-    vtkProp* actor_to_remove = vtkProp::SafeDownCast(actor);
-
     vtkPropCollection* actors = renderer_->GetViewProps();
     actors->InitTraversal();
     vtkProp* current_actor = NULL;
     while ((current_actor = actors->GetNextProp()) != NULL)
-    {
-        if (current_actor != actor_to_remove)
-            continue;
-        renderer_->RemoveActor(actor);
-        return true;
-    }
+        if (current_actor == actor)
+        {
+            renderer_->RemoveActor(actor);
+            return true;
+        }
     return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
+void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color, const Color& color2)
 {
-    Color c = vtkcolor(color);
-    renderer_->SetBackground(c.val);
+    Color c = vtkcolor(color), c2 = vtkcolor(color2);
+    bool gradient = color2[0] >= 0 && color2[1] >= 0 && color2[2] >= 0;
+
+    if (gradient)
+    {
+        renderer_->SetBackground(c2.val);
+        renderer_->SetBackground2(c.val);
+        renderer_->GradientBackgroundOn();
+    }
+    else
+    {
+        renderer_->SetBackground(c.val);
+        renderer_->GradientBackgroundOff();
+    }
+}
+
+void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
+{ setBackgroundColor(Color(2, 1, 1), Color(240, 120, 120)); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
+{
+    if (image.empty())
+    {
+        renderer_->SetBackgroundTexture(0);
+        renderer_->TexturedBackgroundOff();
+        return;
+    }
+
+    vtkSmartPointer<vtkImageMatSource> source = vtkSmartPointer<vtkImageMatSource>::New();
+    source->SetImage(image);
+
+    vtkSmartPointer<vtkImageFlip> image_flip = vtkSmartPointer<vtkImageFlip>::New();
+    image_flip->SetFilteredAxis(1); // Vertical flip
+    image_flip->SetInputConnection(source->GetOutputPort());
+
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(image_flip->GetOutputPort());
+    //texture->Update();
+
+    renderer_->SetBackgroundTexture(texture);
+    renderer_->TexturedBackgroundOn();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
-    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
 
     // Set the intrinsic parameters of the camera
     window_->SetSize(camera.getWindowSize().width, camera.getWindowSize().height);
     double aspect_ratio = static_cast<double>(camera.getWindowSize().width)/static_cast<double>(camera.getWindowSize().height);
 
-    Matx44f proj_mat;
+    Matx44d proj_mat;
     camera.computeProjectionMatrix(proj_mat);
+
     // Use the intrinsic parameters of the camera to simulate more realistically
-    Matx44f old_proj_mat = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0));
-    vtkTransform *transform = vtkTransform::New();
+    vtkSmartPointer<vtkMatrix4x4> vtk_matrix = active_camera->GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0);
+    Matx44d old_proj_mat(*vtk_matrix->Element);
+
     // This is a hack around not being able to set Projection Matrix
-    transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
-    active_camera.SetUserTransform(transform);
-    transform->Delete();
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->SetMatrix(vtkmatrix(proj_mat * old_proj_mat.inv()));
+    active_camera->SetUserTransform(transform);
 
     renderer_->ResetCameraClippingRange();
     renderer_->Render();
@@ -348,44 +396,42 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
-    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
 
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
     double aspect_ratio = window_size.width / (double)window_size.height;
 
-    Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
-    Camera camera(proj_matrix, window_size);
-    return camera;
+    vtkSmartPointer<vtkMatrix4x4> proj_matrix = active_camera->GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f);
+    return Camera(Matx44d(*proj_matrix->Element), window_size);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
 
     // Position = extrinsic translation
-    cv::Vec3f pos_vec = pose.translation();
+    cv::Vec3d pos_vec = pose.translation();
 
     // Rotate the view vector
-    cv::Matx33f rotation = pose.rotation();
-    cv::Vec3f y_axis(0.f, 1.f, 0.f);
-    cv::Vec3f up_vec(rotation * y_axis);
+    cv::Matx33d rotation = pose.rotation();
+    cv::Vec3d y_axis(0.0, 1.0, 0.0);
+    cv::Vec3d up_vec(rotation * y_axis);
 
     // Compute the new focal point
-    cv::Vec3f z_axis(0.f, 0.f, 1.f);
-    cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
+    cv::Vec3d z_axis(0.0, 0.0, 1.0);
+    cv::Vec3d focal_vec = pos_vec + rotation * z_axis;
 
-    camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
-    camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
-    camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
+    camera.SetPosition(pos_vec.val);
+    camera.SetFocalPoint(focal_vec.val);
+    camera.SetViewUp(up_vec.val);
 
     renderer_->ResetCameraClippingRange();
-    renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose()
+cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
 
@@ -397,20 +443,7 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose()
     Vec3d z_axis = normalized(focal - pos);
     Vec3d x_axis = normalized(y_axis.cross(z_axis));
 
-    cv::Matx33d R;
-    R(0, 0) = x_axis[0];
-    R(0, 1) = y_axis[0];
-    R(0, 2) = z_axis[0];
-
-    R(1, 0) = x_axis[1];
-    R(1, 1) = y_axis[1];
-    R(1, 2) = z_axis[1];
-
-    R(2, 0) = x_axis[2];
-    R(2, 1) = y_axis[2];
-    R(2, 2) = z_axis[2];
-
-    return cv::Affine3f(R, pos);
+    return makeTransformToGlobal(x_axis, y_axis, z_axis, pos);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -426,10 +459,7 @@ void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d
 {
     Vec4d world_pt;
     vtkInteractorObserver::ComputeDisplayToWorld(renderer_, window_coord.x, window_coord.y, window_coord.z, world_pt.val);
-
-    vtkCamera &active_camera = *renderer_->GetActiveCamera();
-    Vec3d cam_pos;
-    active_camera.GetPosition(cam_pos.val);
+    Vec3d cam_pos(renderer_->GetActiveCamera()->GetPosition());
     origin = cam_pos;
     direction = normalize(Vec3d(world_pt.val) - cam_pos);
 }
@@ -504,21 +534,9 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode)
-{
-    if (window_)
-        window_->SetFullScreen(mode);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-cv::String cv::viz::Viz3d::VizImpl::getWindowName() const
-{
-    return (window_ ? window_->GetWindowName() : "");
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setWindowPosition(int x, int y) { window_->SetPosition(x, y); }
-void cv::viz::Viz3d::VizImpl::setWindowSize(int xw, int yw) { window_->SetSize(xw, yw); }
-cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }
+cv::String cv::viz::Viz3d::VizImpl::getWindowName() const { return window_name_; }
+void cv::viz::Viz3d::VizImpl::setFullScreen(bool mode) { window_->SetFullScreen(mode); }
+void cv::viz::Viz3d::VizImpl::setWindowPosition(const Point& position) { window_position_ = position; window_->SetPosition(position.x, position.y); }
+void cv::viz::Viz3d::VizImpl::setWindowSize(const Size& window_size) { window_->SetSize(window_size.width, window_size.height); }
+cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(Point(Vec2i(window_->GetSize()))); }

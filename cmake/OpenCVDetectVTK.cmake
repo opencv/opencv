@@ -2,7 +2,7 @@ if(NOT WITH_VTK OR ANDROID OR IOS)
   return()
 endif()
 
-find_package(VTK 6.0 QUIET COMPONENTS vtkRenderingCore vtkInteractionWidgets vtkInteractionStyle vtkIOLegacy vtkIOPLY vtkRenderingFreeType vtkRenderingLOD vtkFiltersTexture NO_MODULE)
+find_package(VTK 6.0 QUIET COMPONENTS vtkRenderingCore vtkInteractionWidgets vtkInteractionStyle vtkIOLegacy vtkIOPLY vtkRenderingFreeType vtkRenderingLOD vtkFiltersTexture vtkIOExport NO_MODULE)
 
 if(NOT DEFINED VTK_FOUND OR NOT VTK_FOUND)
   find_package(VTK 5.10 QUIET COMPONENTS vtkCommon vtkFiltering vtkRendering vtkWidgets vtkImaging NO_MODULE)
