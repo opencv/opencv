@@ -79,7 +79,7 @@ enum rgbe_error_codes {
   rgbe_read_error,
   rgbe_write_error,
   rgbe_format_error,
-  rgbe_memory_error,
+  rgbe_memory_error
 };
 
 /* default error routine.  change this to change error handling */

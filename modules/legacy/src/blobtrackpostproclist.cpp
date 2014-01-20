@@ -74,7 +74,7 @@ public:
             DefBlobFilter* pF = (DefBlobFilter*)m_BlobFilterList.GetBlob(i-1);
             pF->pFilter->Release();
         }
-    };
+    }
 
     virtual void    AddBlob(CvBlob* pBlob)
     {
@@ -93,7 +93,7 @@ public:
         assert(pF);
         pF->blob = pBlob[0];
         pF->m_LastFrame = m_Frame;
-    };
+    }
 
     virtual void    Process()
     {
@@ -115,11 +115,11 @@ public:
             }
         }   /* Next blob. */
         m_Frame++;
-    };
+    }
 
-    int     GetBlobNum(){return m_BlobFilterList.GetBlobNum();};
-    CvBlob* GetBlob(int index){return m_BlobFilterList.GetBlob(index);};
-    void    Release(){delete this;};
+    int     GetBlobNum(){return m_BlobFilterList.GetBlobNum();}
+    CvBlob* GetBlob(int index){return m_BlobFilterList.GetBlob(index);}
+    void    Release(){delete this;}
 
     /* Additional functionality: */
     CvBlob* GetBlobByID(int BlobID){return m_BlobFilterList.GetBlobByID(BlobID);}

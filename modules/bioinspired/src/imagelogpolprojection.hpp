@@ -158,38 +158,39 @@ public:
     /**
     * @return the numbers of rows (height) of the images OUTPUTS of the object
     */
-    inline unsigned int getOutputNBrows(){return _outputNBrows;};
+    inline unsigned int getOutputNBrows() { return _outputNBrows; }
 
     /**
     * @return the numbers of columns (width) of the images OUTPUTS of the object
     */
-    inline unsigned int getOutputNBcolumns(){return _outputNBcolumns;};
+    inline unsigned int getOutputNBcolumns() { return _outputNBcolumns; }
 
     /**
     * main funtion of the class: run projection function
     * @param size: one of the input frame initial dimensions to be processed
     * @return the output frame dimension
     */
-    inline static unsigned int predictOutputSize(const unsigned int size, const double reductionFactor){return (unsigned int)((double)size/reductionFactor);};
+    inline static unsigned int predictOutputSize(const unsigned int size, const double reductionFactor){return (unsigned int)((double)size/reductionFactor); }
 
     /**
     * @return the output of the filter which applies an irregular Low Pass spatial filter to the imag input (see function
     */
-    inline const std::valarray<float> &getIrregularLPfilteredInputFrame() const {return _irregularLPfilteredFrame;};
+    inline const std::valarray<float> &getIrregularLPfilteredInputFrame() const { return _irregularLPfilteredFrame; }
 
     /**
     * function which allows to retrieve the output frame which was updated after the "runProjection(...) function BasicRetinaFilter::runProgressiveFilter(...)
     * @return the projection result
     */
-    inline const std::valarray<float> &getSampledFrame() const {return _sampledFrame;};
+    inline const std::valarray<float> &getSampledFrame() const { return _sampledFrame; }
 
     /**
     * function which allows gives the tranformation table, its size is (getNBrows()*getNBcolumns()*2)
     * @return the transformation matrix [outputPixIndex_i, inputPixIndex_i, outputPixIndex_i+1, inputPixIndex_i+1....]
     */
-    inline const std::valarray<unsigned int> &getSamplingMap() const {return _transformTable;};
+    inline const std::valarray<unsigned int> &getSamplingMap() const { return _transformTable; }
 
-    inline double getOriginalRadiusLength(const double projectedRadiusLength){return _azero/(_alim-projectedRadiusLength*2.0/_minDimension);};
+    inline double getOriginalRadiusLength(const double projectedRadiusLength)
+    { return _azero/(_alim-projectedRadiusLength*2.0/_minDimension); }
 
     //    unsigned int getInputPixelIndex(const unsigned int ){ return  _transformTable[index*2+1]};
 

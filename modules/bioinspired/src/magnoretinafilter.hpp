@@ -151,27 +151,28 @@ namespace bioinspired
         /**
         * @return the Magnocellular ON channel filtering output
         */
-        inline const std::valarray<float> &getMagnoON() const {return _magnoXOutputON;};
+        inline const std::valarray<float> &getMagnoON() const { return _magnoXOutputON; }
 
         /**
         * @return the Magnocellular OFF channel filtering output
         */
-        inline const std::valarray<float> &getMagnoOFF() const {return _magnoXOutputOFF;};
+        inline const std::valarray<float> &getMagnoOFF() const { return _magnoXOutputOFF; }
 
         /**
         * @return the Magnocellular Y (sum of the ON and OFF magno channels) filtering output
         */
-        inline const std::valarray<float> &getMagnoYsaturated() const {return *_magnoYsaturated;};
+        inline const std::valarray<float> &getMagnoYsaturated() const { return *_magnoYsaturated; }
 
         /**
         * applies an image normalization which saturates the high output values by the use of an assymetric sigmoide
         */
-        inline void normalizeGrayOutputNearZeroCentreredSigmoide(){_filterOutput.normalizeGrayOutputNearZeroCentreredSigmoide(&(*_magnoYOutput)[0], &(*_magnoYsaturated)[0]);};
+        inline void normalizeGrayOutputNearZeroCentreredSigmoide()
+        { _filterOutput.normalizeGrayOutputNearZeroCentreredSigmoide(&(*_magnoYOutput)[0], &(*_magnoYsaturated)[0]); }
 
         /**
         * @return the horizontal cells' temporal constant
         */
-        inline float getTemporalConstant(){return this->_filteringCoeficientsTable[2];};
+        inline float getTemporalConstant() { return _filteringCoeficientsTable[2]; }
 
     private:
 
