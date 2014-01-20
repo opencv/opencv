@@ -763,20 +763,41 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
 
 void cv::extractChannel(InputArray _src, OutputArray _dst, int coi)
 {
-    Mat src = _src.getMat();
-    CV_Assert( 0 <= coi && coi < src.channels() );
-    _dst.create(src.dims, &src.size[0], src.depth());
-    Mat dst = _dst.getMat();
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    CV_Assert( 0 <= coi && coi < cn );
     int ch[] = { coi, 0 };
+
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat())
+    {
+        UMat src = _src.getUMat();
+        _dst.create(src.dims, &src.size[0], depth);
+        UMat dst = _dst.getUMat();
+        mixChannels(std::vector<UMat>(1, src), std::vector<UMat>(1, dst), ch, 1);
+        return;
+    }
+
+    Mat src = _src.getMat();
+    _dst.create(src.dims, &src.size[0], depth);
+    Mat dst = _dst.getMat();
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
 
 void cv::insertChannel(InputArray _src, InputOutputArray _dst, int coi)
 {
-    Mat src = _src.getMat(), dst = _dst.getMat();
-    CV_Assert( src.size == dst.size && src.depth() == dst.depth() );
-    CV_Assert( 0 <= coi && coi < dst.channels() && src.channels() == 1 );
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
+    CV_Assert( _src.sameSize(_dst) && sdepth == ddepth );
+    CV_Assert( 0 <= coi && coi < dcn && scn == 1 );
+
     int ch[] = { 0, coi };
+    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat())
+    {
+        UMat src = _src.getUMat(), dst = _dst.getUMat();
+        mixChannels(std::vector<UMat>(1, src), std::vector<UMat>(1, dst), ch, 1);
+        return;
+    }
+
+    Mat src = _src.getMat(), dst = _dst.getMat();
     mixChannels(&src, 1, &dst, 1, ch, 1);
 }
 

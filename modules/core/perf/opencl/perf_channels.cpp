@@ -154,6 +154,50 @@ OCL_PERF_TEST_P(MixChannelsFixture, MixChannels,
     SANITY_CHECK(dst1);
 }
 
+///////////// InsertChannel ////////////////////////
+
+typedef Size_MatDepth InsertChannelFixture;
+
+OCL_PERF_TEST_P(InsertChannelFixture, InsertChannel,
+                ::testing::Combine(Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(CV_8U, CV_32F)))
+{
+    const Size_MatDepth_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), type = CV_MAKE_TYPE(depth, 3);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, depth), dst(srcSize, type, Scalar::all(17));
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::insertChannel(src, dst, 1);
+
+    SANITY_CHECK(dst);
+}
+
+///////////// ExtractChannel ////////////////////////
+
+typedef Size_MatDepth ExtractChannelFixture;
+
+OCL_PERF_TEST_P(ExtractChannelFixture, ExtractChannel,
+                ::testing::Combine(Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(CV_8U, CV_32F)))
+{
+    const Size_MatDepth_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), type = CV_MAKE_TYPE(depth, 3);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, depth);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::extractChannel(src, dst, 1);
+
+    SANITY_CHECK(dst);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
