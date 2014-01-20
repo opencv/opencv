@@ -211,7 +211,7 @@ void Mat::create(int d, const int* _sizes, int _type)
 #endif
         if( !allocator )
         {
-            size_t totalsize = alignSize((step.p[0])*size.p[0], (int)sizeof(*refcount));
+            size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
             data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*refcount));
             refcount = (int*)(data + totalsize);
             *refcount = 1;
