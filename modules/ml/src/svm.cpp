@@ -1245,7 +1245,6 @@ const float* CvSVM::get_support_vector(int i) const
     return sv && (unsigned)i < (unsigned)sv_total ? sv[i] : 0;
 }
 
-
 bool CvSVM::set_params( const CvSVMParams& _params )
 {
     bool ok = false;
