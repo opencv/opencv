@@ -171,21 +171,6 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: gpu icon
 
-*  :ref:`Table-Of-Content-Bioinspired`
-
-   .. tabularcolumns:: m{100pt} m{300pt}
-   .. cssclass:: toctableopencv
-
-   ============= =======================================================
-   |Bioinspired|       Algorithms inspired from biological models.
-
-   ============= =======================================================
-
-   .. |Bioinspired| image:: images/retina.jpg
-                 :height: 80pt
-                 :width:  80pt
-                 :alt: gpu icon
-
 *  :ref:`Table-Of-Content-iOS`
 
    .. tabularcolumns:: m{100pt} m{300pt}
