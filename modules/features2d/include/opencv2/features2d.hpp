@@ -1512,12 +1512,15 @@ class CV_EXPORTS BOWImgDescriptorExtractor
 public:
     BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
+    BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
 
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const;
     void compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
+    void compute( const Mat& keypointDescriptors, Mat& imgDescriptor,
+                  std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
     int descriptorSize() const;
