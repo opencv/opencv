@@ -48,57 +48,24 @@
 using namespace cv;
 using namespace cv::ocl;
 
-// currently sort procedure on the host is more efficient
-static bool use_cpu_sorter = true;
-
 // compact structure for corners
 struct DefCorner
 {
     float eig;  //eigenvalue of corner
     short x;    //x coordinate of corner point
     short y;    //y coordinate of corner point
-} ;
+};
 
 // compare procedure for corner
 //it is used for sort on the host side
-struct DefCornerCompare
+struct DefCornerCompare :
+        public std::binary_function<DefCorner, DefCorner, bool>
 {
     bool operator()(const DefCorner a, const DefCorner b) const
     {
         return a.eig > b.eig;
     }
 };
-
-// sort corner point using opencl bitonicosrt implementation
-static void sortCorners_caller(oclMat& corners, const int count)
-{
-    Context * cxt = Context::getContext();
-    int     GS = count/2;
-    int     LS = min(255,GS);
-    size_t  globalThreads[3] = {GS, 1, 1};
-    size_t  localThreads[3]  = {LS, 1, 1};
-
-    // 2^numStages should be equal to count or the output is invalid
-    int numStages = 0;
-    for(int i = count; i > 1; i >>= 1)
-    {
-        ++numStages;
-    }
-    const int argc = 4;
-    std::vector< std::pair<size_t, const void *> > args(argc);
-    std::string kernelname = "sortCorners_bitonicSort";
-    args[0] = std::make_pair(sizeof(cl_mem), (void *)&corners.data);
-    args[1] = std::make_pair(sizeof(cl_int), (void *)&count);
-    for(int stage = 0; stage < numStages; ++stage)
-    {
-        args[2] = std::make_pair(sizeof(cl_int), (void *)&stage);
-        for(int passOfStage = 0; passOfStage < stage + 1; ++passOfStage)
-        {
-            args[3] = std::make_pair(sizeof(cl_int), (void *)&passOfStage);
-            openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1);
-        }
-    }
-}
 
 // find corners on matrix and put it into array
 static void findCorners_caller(
@@ -158,7 +125,8 @@ static void minMaxEig_caller(const oclMat &src, oclMat &dst, oclMat & tozero)
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;
     int offset = src.offset / src.elemSize();
 
-    {// first parallel pass
+    {
+        // first parallel pass
         std::vector<std::pair<size_t , const void *> > args;
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data));
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_data ));
@@ -173,7 +141,8 @@ static void minMaxEig_caller(const oclMat &src, oclMat &dst, oclMat & tozero)
                             args, -1, -1, "-D T=float -D DEPTH_5");
     }
 
-    {// run final "serial" kernel to find accumulate results from threads and reset corner counter
+    {
+        // run final "serial" kernel to find accumulate results from threads and reset corner counter
         std::vector<std::pair<size_t , const void *> > args;
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_data ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&groupnum ));
@@ -200,80 +169,53 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
     ensureSizeIsEnough(1,1, CV_32SC1, counter_);
 
     // find max eigenvalue and reset detected counters
-    minMaxEig_caller(eig_,eig_minmax_,counter_);
+    minMaxEig_caller(eig_, eig_minmax_, counter_);
 
     // allocate buffer for kernels
     int corner_array_size = std::max(1024, static_cast<int>(image.size().area() * 0.05));
-
-    if(!use_cpu_sorter)
-    {   // round to 2^n
-        unsigned int n=1;
-        for(n=1;n<(unsigned int)corner_array_size;n<<=1) ;
-        corner_array_size = (int)n;
-
-        ensureSizeIsEnough(1, corner_array_size , CV_32FC2, tmpCorners_);
-
-        // set to 0 to be able use bitonic sort on whole 2^n array
-        tmpCorners_.setTo(0);
-    }
-    else
-    {
-        ensureSizeIsEnough(1, corner_array_size , CV_32FC2, tmpCorners_);
-    }
+    ensureSizeIsEnough(1, corner_array_size , CV_32FC2, tmpCorners_);
 
     int total = tmpCorners_.cols; // by default the number of corner is full array
-    std::vector<DefCorner>   tmp(tmpCorners_.cols); // input buffer with corner for HOST part of algorithm
+    std::vector<DefCorner> tmp(tmpCorners_.cols); // input buffer with corner for HOST part of algorithm
 
-    //find points with high eigenvalue and put it into the output array
-    findCorners_caller(
-        eig_,
-        eig_minmax_,
-        static_cast<float>(qualityLevel),
-        mask,
-        tmpCorners_,
-        counter_);
+    // find points with high eigenvalue and put it into the output array
+    findCorners_caller(eig_, eig_minmax_, static_cast<float>(qualityLevel), mask, tmpCorners_, counter_);
 
-    if(!use_cpu_sorter)
-    {// sort detected corners on deivce side
-        sortCorners_caller(tmpCorners_, corner_array_size);
-    }
-    else
-    {// send non-blocking request to read real non-zero number of corners to sort it on the HOST side
-        openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(counter_.clCxt), (cl_mem)counter_.data, CL_FALSE, 0,sizeof(int), &total, 0, NULL, NULL));
-    }
-
-    //blocking read whole corners array (sorted or not sorted)
-    openCLReadBuffer(tmpCorners_.clCxt,(cl_mem)tmpCorners_.data,&tmp[0],tmpCorners_.cols*sizeof(DefCorner));
+    // send non-blocking request to read real non-zero number of corners to sort it on the HOST side
+    openCLVerifyCall(clEnqueueReadBuffer(getClCommandQueue(counter_.clCxt), (cl_mem)counter_.data, CL_FALSE, 0, sizeof(int), &total, 0, NULL, NULL));
 
     if (total == 0)
-    {// check for trivial case
+    {
+        // check for trivial case
         corners.release();
         return;
     }
 
-    if(use_cpu_sorter)
-    {// sort detected corners on cpu side.
-        tmp.resize(total);
-        std::sort(tmp.begin(), tmp.end(), DefCornerCompare());
-    }
+    // blocking read whole corners array (sorted or not sorted)
+    openCLReadBuffer(tmpCorners_.clCxt, (cl_mem)tmpCorners_.data, &tmp[0], tmpCorners_.cols * sizeof(DefCorner));
 
-    //estimate maximal size of final output array
+    // sort detected corners on cpu side.
+    tmp.resize(total);
+    std::sort(tmp.begin(), tmp.end(), DefCornerCompare());
+
+    // estimate maximal size of final output array
     int total_max = maxCorners > 0 ? std::min(maxCorners, total) : total;
     int D2 = (int)ceil(minDistance * minDistance);
+
     // allocate output buffer
     std::vector<Point2f> tmp2;
     tmp2.reserve(total_max);
 
 
     if (minDistance < 1)
-    {// we have not distance restriction. then just copy with conversion maximal allowed points into output array
-        for(int i=0;i<total_max && tmp[i].eig>0.0f;++i)
-        {
-            tmp2.push_back(Point2f(tmp[i].x,tmp[i].y));
-        }
+    {
+        // we have not distance restriction. then just copy with conversion maximal allowed points into output array
+        for (int i = 0; i < total_max; ++i)
+            tmp2.push_back(Point2f(tmp[i].x, tmp[i].y));
     }
     else
-    {// we have distance restriction. then start coping to output array from the first element and check distance for each next one
+    {
+        // we have distance restriction. then start coping to output array from the first element and check distance for each next one
         const int cell_size = cvRound(minDistance);
         const int grid_width = (image.cols + cell_size - 1) / cell_size;
         const int grid_height = (image.rows + cell_size - 1) / cell_size;
@@ -283,10 +225,6 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         for (int i = 0; i < total ; ++i)
         {
             DefCorner p = tmp[i];
-
-            if(p.eig<=0.0f)
-                break; // condition to stop that is needed for GPU bitonic sort usage.
-
             bool good = true;
 
             int x_cell = static_cast<int>(p.x / cell_size);
@@ -328,9 +266,8 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
 
             if(good)
             {
-                grid[y_cell * grid_width + x_cell].push_back(Point2i(p.x,p.y));
-
-                tmp2.push_back(Point2f(p.x,p.y));
+                grid[y_cell * grid_width + x_cell].push_back(Point2i(p.x, p.y));
+                tmp2.push_back(Point2f(p.x, p.y));
 
                 if (maxCorners > 0 && tmp2.size() == static_cast<size_t>(maxCorners))
                     break;
@@ -338,12 +275,14 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         }
 
     }
+
     int final_size = static_cast<int>(tmp2.size());
-    if(final_size>0)
+    if (final_size > 0)
         corners.upload(Mat(1, final_size, CV_32FC2, &tmp2[0]));
     else
         corners.release();
 }
+
 void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &points, std::vector<Point2f> &points_v)
 {
     CV_DbgAssert(points.type() == CV_32FC2);
