@@ -40,6 +40,8 @@
 //
 //M*/
 
+#define CUDA_DISABLER
+
 #include "precomp.hpp"
 
 using namespace std;
