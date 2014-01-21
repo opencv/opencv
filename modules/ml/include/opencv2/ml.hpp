@@ -518,6 +518,8 @@ public:
     virtual CvSVMParams get_params() const { return params; }
     CV_WRAP virtual void clear();
 
+    virtual const CvSVMDecisionFunc* get_decision_function() const { return decision_func; }
+
     static CvParamGrid get_default_grid( int param_id );
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
