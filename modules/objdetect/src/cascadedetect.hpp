@@ -11,6 +11,14 @@ public:
         HOG  = 2
     };
 
+    struct ScaleData
+    {
+        ScaleData() { scale = 0.f; layer_ofs = ystep = 0; }
+        float scale;
+        Size szi, szw;
+        int layer_ofs, ystep;
+    };
+
     virtual ~FeatureEvaluator();
 
     virtual bool read(const FileNode& node);
@@ -18,10 +26,11 @@ public:
     virtual int getFeatureType() const;
 
     virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<double>& scales);
+                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
+    virtual const ScaleData& getScaleData(int scaleIdx) const;
 
-    virtual double calcOrd(int featureIdx) const;
+    virtual float calcOrd(int featureIdx) const;
     virtual int calcCat(int featureIdx) const;
     
     static Ptr<FeatureEvaluator> create(int type);
@@ -293,21 +302,10 @@ public:
 
         enum { RECT_NUM = Feature::RECT_NUM };
         float calc( const int* pwin ) const;
-
-        void setOffsets( const Feature& _f, int step, int tofs,
-                         double scale, double nscale,
-                         Size winSize );
+        void setOffsets( const Feature& _f, int step, int tofs );
 
         int ofs[RECT_NUM][4];
         float weight[4];
-    };
-
-    struct ScaleData
-    {
-        int nofs[4];
-        float scale, nscale;
-        Size winSize;
-        Rect normrect;
     };
 
     HaarEvaluator();
@@ -318,28 +316,32 @@ public:
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
     virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<double>& scales);
+                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
+    virtual const ScaleData& getScaleData(int scaleIdx) const;
     virtual void getUMats(std::vector<UMat>& bufs);
+    Rect getNormRect() const;
 
     double operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
-    virtual double calcOrd(int featureIdx) const
+    virtual float calcOrd(int featureIdx) const
     { return (*this)(featureIdx); }
 
 protected:
-    Size origWinSize, sumSize0;
+    Size origWinSize, sbufSize;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
     Ptr<std::vector<ScaleData> > scaleData;
     bool hasTiltedFeatures;
 
-    Mat sum0, sum, sqsum0, sqsum;
-    UMat usum0, usum, usqsum0, usqsum, ufbuf;
+    Mat sbuf, rbuf0, rbuf1, sqbuf;
+    UMat usbuf, ufbuf;
 
+    int nofs[4], sqofs;
+    Rect normrect;
     const int* pwin;
     OptFeature* optfeaturesPtr; // optimization
-    double varianceNormFactor;
+    float varianceNormFactor;
 };
 
 inline HaarEvaluator::Feature :: Feature()
@@ -390,14 +392,8 @@ public:
         OptFeature();
 
         int calc( const int* pwin ) const;
-        void setOffsets( const Feature& _f, int step, double scale, Size winSize );
+        void setOffsets( const Feature& _f, int step );
         int ofs[16];
-    };
-
-    struct ScaleData
-    {
-        float scale;
-        Size winSize;
     };
 
     LBPEvaluator();
@@ -408,8 +404,9 @@ public:
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
     virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<double>& scales);
+                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
+    virtual const ScaleData& getScaleData(int scaleIdx) const;
     virtual void getUMats(std::vector<UMat>& bufs);
 
     int operator()(int featureIdx) const
@@ -417,14 +414,14 @@ public:
     virtual int calcCat(int featureIdx) const
     { return (*this)(featureIdx); }
 protected:
-    Size origWinSize, sumSize0;
+    Size origWinSize, sbufSize;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
     Ptr<std::vector<ScaleData> > scaleData;
     OptFeature* optfeaturesPtr; // optimization
 
-    Mat sum0, sum;
-    UMat usum0, usum, ufbuf;
+    Mat sbuf, rbuf0, rbuf1;
+    UMat usbuf, ufbuf;
 
     const int* pwin;
 };
@@ -480,13 +477,13 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
     virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<double>& scales);
+                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
     double operator()(int featureIdx) const
     {
         return featuresPtr[featureIdx].calc(offset);
     }
-    virtual double calcOrd( int featureIdx ) const
+    virtual float calcOrd( int featureIdx ) const
     {
         return (*this)(featureIdx);
     }

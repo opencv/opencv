@@ -378,9 +378,15 @@ FeatureEvaluator::~FeatureEvaluator() {}
 bool FeatureEvaluator::read(const FileNode&) {return true;}
 Ptr<FeatureEvaluator> FeatureEvaluator::clone() const { return Ptr<FeatureEvaluator>(); }
 int FeatureEvaluator::getFeatureType() const {return -1;}
-bool FeatureEvaluator::setImage(InputArray, Size, const std::vector<double>&) {return true;}
+bool FeatureEvaluator::setImage(InputArray, Size, const std::vector<float>&) {return true;}
 bool FeatureEvaluator::setWindow(Point, int) { return true; }
-double FeatureEvaluator::calcOrd(int) const { return 0.; }
+const FeatureEvaluator::ScaleData& FeatureEvaluator::getScaleData(int) const
+{
+    CV_Error(CV_StsNotImplemented, "");
+    static ScaleData dummy;
+    return dummy;
+}
+float FeatureEvaluator::calcOrd(int) const { return 0.; }
 int FeatureEvaluator::calcCat(int) const { return 0; }
 
 //----------------------------------------------  HaarEvaluator ---------------------------------------
@@ -431,7 +437,7 @@ bool HaarEvaluator::read(const FileNode& node)
     FileNodeIterator it = node.begin();
     hasTiltedFeatures = false;
     std::vector<Feature>& ff = *features;
-    sumSize0 = Size();
+    sbufSize = Size();
     ufbuf.release();
 
     for(i = 0; i < n; i++, ++it)
@@ -450,289 +456,202 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->optfeatures = optfeatures;
-    ret->optfeaturesPtr = 0;
+    ret->optfeaturesPtr = optfeaturesPtr;
     ret->scaleData = scaleData;
     ret->hasTiltedFeatures = hasTiltedFeatures;
-    ret->sum0 = sum0; ret->sqsum0 = sqsum0;
-    ret->sum = sum; ret->sqsum = sqsum;
-    ret->usum0 = usum0; ret->usqsum0 = usqsum0; ret->ufbuf = ufbuf;
+    ret->sbuf = sbuf;
+    ret->rbuf0 = rbuf0;
+    ret->rbuf1 = rbuf1;
+    ret->sqbuf = sqbuf;
+    ret->usbuf = usbuf;
+    ret->ufbuf = ufbuf;
     ret->pwin = 0;
     ret->varianceNormFactor = 0;
-    ret->sumSize0 = sumSize0;
+    ret->sbufSize = sbufSize;
     return ret;
 }
 
 
-bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
-                              const std::vector<double>& _scales )
+static bool updateScaleData( Size imgsz, Size origWinSize,
+                             const std::vector<float>& _scales,
+                             std::vector<FeatureEvaluator::ScaleData>& scaleData,
+                             Size& sbufsize )
 {
-    Size imgsz = _image.size();
-    int irows = imgsz.height+1, icols = imgsz.width+1;
-    int row_scale = hasTiltedFeatures ? 2 : 1;
-
-    Size prevSumSize = sumSize0;
-    sumSize0.width = (int)alignSize(std::max(sumSize0.width, icols), 32);
-    sumSize0.height = std::max(sumSize0.height, irows*row_scale);
-
-    origWinSize = _origWinSize;
-    int sumStep, tofs = 0;
-
-    if( _image.isUMat() )
-    {
-        usum0.create(sumSize0, CV_32S);
-        usqsum0.create(sumSize0, CV_64F);
-        usum = UMat(usum0, Rect(0, 0, icols, irows));
-        usqsum = UMat(usqsum0, Rect(0, 0, icols, irows));
-
-        if( hasTiltedFeatures )
-        {
-            UMat utilted(usum0, Rect(0, irows, icols, irows));
-            integral(_image, usum, usqsum, utilted, CV_32S);
-            tofs = (int)((utilted.offset - usum.offset)/sizeof(int));
-        }
-        else
-        {
-            integral(_image, usum, usqsum, noArray(), CV_32S);
-        }
-        sumStep = (int)(usum.step/usum.elemSize());
-    }
-    else
-    {
-        sum0.create(sumSize0, CV_32S);
-        sqsum0.create(sumSize0, CV_64F);
-        sum = Mat(sum0, Rect(0, 0, icols, irows));
-        sqsum = Mat(sqsum0, Rect(0, 0, icols, irows));
-
-        if( hasTiltedFeatures )
-        {
-            Mat tilted = sum0(Rect(0, irows, icols, irows));
-            integral(_image, sum, sqsum, tilted, CV_32S, CV_64F);
-            tofs = (int)((tilted.data - sum.data)/sizeof(int));
-        }
-        else
-            integral(_image, sum, sqsum, noArray(), CV_32S, CV_64F);
-        sumStep = (int)(sum.step/sum.elemSize());
-    }
-
-    size_t prevNScales = scaleData->size();
     size_t i, nscales = _scales.size();
-    scaleData->resize(nscales);
+    bool recalcOptFeatures = nscales != scaleData.size();
+    scaleData.resize(nscales);
 
-    bool recalcFeatures = prevSumSize != sumSize0 || prevNScales != nscales;
-    Rect normrect0(1, 1, origWinSize.width-2, origWinSize.height-2);
+    int layer_dy = 0;
+    Point layer_ofs(0,0);
+    Size prevBufSize = sbufsize;
+    sbufsize.width = std::max(sbufsize.width, (int)alignSize(cvRound(imgsz.width/_scales[0]) + 31, 32));
+    recalcOptFeatures = recalcOptFeatures || sbufsize.width != prevBufSize.width;
 
     for( i = 0; i < nscales; i++ )
     {
-        ScaleData& s = scaleData->at(i);
-        if( !recalcFeatures && fabs(s.scale - _scales[i]) > FLT_EPSILON*100*_scales[i] )
-            recalcFeatures = true;
-        double sc = _scales[i];
-        s.scale = (float)sc;
-        s.normrect.x = cvRound(normrect0.x*sc);
-        s.normrect.y = cvRound(normrect0.y*sc);
-        s.normrect.width = cvRound(normrect0.width*sc);
-        s.normrect.height = cvRound(normrect0.height*sc);
-        s.nscale = 1;//(float)(normrect0.area()/s.normrect.area());
-        s.winSize.width = cvRound(origWinSize.width*sc);
-        s.winSize.height = cvRound(origWinSize.height*sc);
-
-        CV_SUM_OFS( s.nofs[0], s.nofs[1], s.nofs[2], s.nofs[3], 0, s.normrect, sumStep );
-    }
-
-    size_t fi, nfeatures = features->size();
-    const std::vector<Feature>& ff = *features;
-
-    if( recalcFeatures )
-    {
-        optfeatures->resize(nfeatures*nscales);
-        optfeaturesPtr = &(*optfeatures)[0];
-        for( fi = 0; fi < nfeatures*nscales; fi++ )
+        FeatureEvaluator::ScaleData& s = scaleData[i];
+        if( !recalcOptFeatures && fabs(s.scale - _scales[i]) > FLT_EPSILON*100*_scales[i] )
+            recalcOptFeatures = true;
+        float sc = _scales[i];
+        Size sz;
+        sz.width = cvRound(imgsz.width/sc);
+        sz.height = cvRound(imgsz.height/sc);
+        s.ystep = sc >= 2 ? 1 : 2;
+        s.scale = sc;
+        s.szi = Size(sz.width+1, sz.height+1);
+        s.szw = Size(sz.width-origWinSize.width+1,sz.height-origWinSize.height);
+        /*s.szt_gpu = Size((s.szw.width/s.ystep + gpuTileSize-1)/gpuTileSize,
+                         (s.szw.height/s.ystep + gpuTileSize-1)/gpuTileSize);
+        s.szt_cpu = Size(1, (s.szw.height/s.ystep + cpuStripeSize-1)/cpuStripeSize);*/
+        if( layer_ofs.x + s.szi.width > sbufsize.width )
         {
-            const ScaleData& s = scaleData->at(fi/nfeatures);
-            optfeaturesPtr[fi].setOffsets( ff[fi%nfeatures], sumStep, tofs, s.scale, s.nscale, s.winSize );
+            layer_ofs = Point(0, layer_ofs.y + layer_dy);
+            layer_dy = s.szi.height;
         }
+        s.layer_ofs = layer_ofs.y*sbufsize.width + layer_ofs.x;
+        layer_ofs.x += s.szi.width;
     }
-    if( _image.isUMat() && (recalcFeatures || ufbuf.empty()) )
-        copyVectorToUMat(*optfeatures, ufbuf);
+
+    layer_ofs.y += layer_dy;
+    sbufsize.height = std::max(sbufsize.height, layer_ofs.y);
+    recalcOptFeatures = recalcOptFeatures || sbufsize.height != prevBufSize.height;
+    return recalcOptFeatures;
+}
+
+bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
+                              const std::vector<float>& _scales )
+{
+    Mat image;
+
+    if( _image.isUMat() )
+        _image.copyTo(image);
+    else
+        image = _image.getMat();
+    Size imgsz = image.size();
+
+    bool recalcOptFeatures = updateScaleData( imgsz, _origWinSize, _scales, *scaleData, sbufSize ) ||
+        _origWinSize != origWinSize;
+    origWinSize = _origWinSize;
+    sqofs = sbufSize.width*sbufSize.height;
+    int tofs = hasTiltedFeatures ? sqofs*2 : 0;
+
+    sbuf.create(sbufSize.height*(hasTiltedFeatures ? 3 : 2), sbufSize.width, CV_32S);
+    size_t i, nscales = scaleData->size();
+    Size sz0 = scaleData->at(0).szi;
+    sz0 = Size(std::max(rbuf0.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf0.rows, sz0.height));
+
+    rbuf0.create(sz0, CV_8U);
+    rbuf1.create(sz0, CV_8U);
+    sqbuf.create(sz0, CV_64F);
+    Mat prev = image;
+    float prevscale = 1.f;
+
+    for( i = 0; i < nscales; i++ )
+    {
+        const ScaleData& s = scaleData->at(i);
+        Mat& dbuf = i%2 == 0 ? rbuf0 : rbuf1;
+        Mat src = prev, dst(s.szi.height-1, s.szi.width-1, CV_8U, dbuf.data, dbuf.step);
+        resize(src, dst, dst.size(), prevscale/s.scale, prevscale/s.scale, INTER_LINEAR);
+        Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
+        Mat sqsum0(s.szi, CV_64F, sqbuf.data);
+        Mat sqsum(s.szi, CV_32F, sum.ptr<int>() + sqofs, sbuf.step);
+
+        if( hasTiltedFeatures )
+        {
+            Mat tilted(s.szi, CV_32S, sum.ptr<int>() + tofs, sbuf.step);
+            integral(dst, sum, sqsum0, tilted, CV_32S, CV_64F);
+        }
+        else
+            integral(dst, sum, sqsum0, noArray(), CV_32S, CV_64F);
+
+        sqsum0.convertTo(sqsum, CV_32F);
+        prev = dst;
+        prevscale = s.scale;
+    }
+
+    int sstep = (int)(sbuf.step/sizeof(int));
+    normrect = Rect(1, 1, origWinSize.width-2, origWinSize.height-2);
+    CV_SUM_OFS( nofs[0], nofs[1], nofs[2], nofs[3], 0, normrect, sstep );
+
+    if( recalcOptFeatures )
+    {
+        size_t fi, nfeatures = features->size();
+        const std::vector<Feature>& ff = *features;
+        optfeatures->resize(nfeatures);
+        optfeaturesPtr = &(*optfeatures)[0];
+        for( fi = 0; fi < nfeatures; fi++ )
+            optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
+    }
+
+    if( _image.isUMat() )
+    {
+        sbuf.copyTo(usbuf);
+        if(recalcOptFeatures || ufbuf.empty())
+            copyVectorToUMat(*optfeatures, ufbuf);
+    }
 
     return true;
 }
 
+const FeatureEvaluator::ScaleData& HaarEvaluator::getScaleData( int scaleIdx ) const
+{
+    CV_Assert(0 <= scaleIdx && scaleIdx < (int)scaleData->size());
+    return scaleData->at(scaleIdx);
+}
 
 bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
 {
     CV_Assert(0 <= scaleIdx && scaleIdx < (int)scaleData->size());
+    const ScaleData& s = scaleData->at(scaleIdx);
 
-    if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width >= sum.cols ||
-        pt.y + origWinSize.height >= sum.rows )
+    if( pt.x < 0 || pt.y < 0 || pt.x >= s.szw.width || pt.y >= s.szw.height )
         return false;
 
-    const int* p = &sum.at<int>(pt);
-    const double* pq = &sqsum.at<double>(pt);
-    const ScaleData& s = scaleData->at(scaleIdx);
-    const int* nofs = s.nofs;
-    int valsum = CALC_SUM_OFS(nofs, p);
+    pwin = &sbuf.at<int>(pt) + s.layer_ofs;
+    const float* pq = (const float*)(pwin + sqofs);
+    int valsum = CALC_SUM_OFS(nofs, pwin);
     double valsqsum = CALC_SUM_OFS(nofs, pq);
 
-    double nf = ((double)s.normrect.area() * valsqsum - (double)valsum * valsum)*s.nscale;
+    double nf = (double)normrect.area() * valsqsum - (double)valsum * valsum;
     if( nf > 0. )
         nf = std::sqrt(nf);
     else
         nf = 1.;
     varianceNormFactor = (1./nf);
-    pwin = p;
-    optfeaturesPtr = &(*optfeatures)[scaleIdx*features->size()];
 
     return true;
 }
 
 
-void HaarEvaluator::OptFeature::setOffsets( const Feature& _f, int step,
-                                            int tofs, double scale, double nscale,
-                                            Size winSize )
+void HaarEvaluator::OptFeature::setOffsets( const Feature& _f, int step, int tofs )
 {
-#if 0
-    double wsum0 = 0;
-    int area0 = 0;
-    for( int k = 0; k < Feature::RECT_NUM; k++ )
+    weight[0] = _f.rect[0].weight;
+    weight[1] = _f.rect[1].weight;
+    weight[2] = _f.rect[2].weight;
+
+    if( _f.tilted )
     {
-        Rect tr = _f.rect[k].r;
-        double area = tr.area();
-        if( fabs(_f.rect[k].weight) < FLT_EPSILON )
-            tr = Rect(0,0,0,0);
-
-        tr.x = cvRound(tr.x*scale);
-        tr.y = cvRound(tr.y*scale);
-        tr.width = cvRound(tr.width*scale);
-        tr.height = cvRound(tr.height*scale);
-        tr &= Rect(0, 0, winSize.width, winSize.height);
-        double correction_ratio = 0.;
-        if( area > 0 )
-            correction_ratio = nscale;
-
-        if( _f.tilted )
-        {
-            CV_TILTED_OFS( ofs[k][0], ofs[k][1], ofs[k][2], ofs[k][3], tofs, tr, step );
-            correction_ratio *= 0.5;
-        }
-        else
-        {
-            CV_SUM_OFS( ofs[k][0], ofs[k][1], ofs[k][2], ofs[k][3], 0, tr, step );
-        }
-        weight[k] = _f.rect[k].weight*correction_ratio;
-        if( k == 0 )
-            area0 = tr.area();
-        else
-            wsum0 += tr.area()*weight[k];
+        CV_TILTED_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], tofs, _f.rect[0].r, step );
+        CV_TILTED_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], tofs, _f.rect[1].r, step );
+        CV_TILTED_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, _f.rect[2].r, step );
     }
-    weight[0] = -wsum0/area0;
-#else
-    Rect r[Feature::RECT_NUM];
-    int base_w = -1, base_h = -1;
-    int new_base_w = 0, new_base_h = 0;
-    int flagx = 0, flagy = 0;
-    int k, x0 = 0, y0 = 0;
-
-    // align blocks
-    for( k = 0; k < Feature::RECT_NUM; k++ )
+    else
     {
-        if( fabs(_f.rect[k].weight) < FLT_EPSILON )
-            break;
-        r[k] = _f.rect[k].r;
-        base_w = (int)std::min( (unsigned)base_w, (unsigned)(r[k].width-1) );
-        base_w = (int)std::min( (unsigned)base_w, (unsigned)(r[k].x - r[0].x-1) );
-        base_h = (int)std::min( (unsigned)base_h, (unsigned)(r[k].height-1) );
-        base_h = (int)std::min( (unsigned)base_h, (unsigned)(r[k].y - r[0].y-1) );
+        CV_SUM_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], 0, _f.rect[0].r, step );
+        CV_SUM_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], 0, _f.rect[1].r, step );
+        CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, _f.rect[2].r, step );
     }
-
-    int nr = k;
-
-    base_w += 1;
-    base_h += 1;
-    int kx = r[0].width / base_w;
-    int ky = r[0].height / base_h;
-
-    if( kx <= 0 )
-    {
-        flagx = 1;
-        new_base_w = cvRound( r[0].width * scale ) / kx;
-        x0 = cvRound( r[0].x * scale );
-    }
-
-    if( ky <= 0 )
-    {
-        flagy = 1;
-        new_base_h = cvRound( r[0].height * scale ) / ky;
-        y0 = cvRound( r[0].y * scale );
-    }
-
-    int area0 = 0;
-    double wsum0 = 0;
-
-    for( k = 0; k < nr; k++ )
-    {
-        Rect tr;
-        if( fabs(_f.rect[k].weight) >= FLT_EPSILON )
-        {
-            if( flagx )
-            {
-                tr.x = (r[k].x - r[0].x) * new_base_w / base_w + x0;
-                tr.width = r[k].width * new_base_w / base_w;
-            }
-            else
-            {
-                tr.x = cvRound( r[k].x * scale );
-                tr.width = cvRound( r[k].width * scale );
-            }
-
-            if( flagy )
-            {
-                tr.y = (r[k].y - r[0].y) * new_base_h / base_h + y0;
-                tr.height = r[k].height * new_base_h / base_h;
-            }
-            else
-            {
-                tr.y = cvRound( r[k].y * scale );
-                tr.height = cvRound( r[k].height * scale );
-            }
-            tr &= Rect(0, 0, winSize.width, winSize.height);
-        }
-
-        double correction_ratio = nscale;
-
-        if( _f.tilted )
-        {
-            CV_TILTED_OFS( ofs[k][0], ofs[k][1], ofs[k][2], ofs[k][3], tofs, tr, step );
-            correction_ratio *= 0.5;
-        }
-        else
-        {
-            CV_SUM_OFS( ofs[k][0], ofs[k][1], ofs[k][2], ofs[k][3], 0, tr, step );
-        }
-
-        weight[k] = (float)(_f.rect[k].weight * correction_ratio);
-        
-        if( k == 0 )
-            area0 = tr.width * tr.height;
-        else
-            wsum0 += weight[k] * tr.width * tr.height;
-    }
-    
-    weight[0] = (float)(-wsum0/area0);
-#endif
 }
 
-/*Rect HaarEvaluator::getNormRect() const
+Rect HaarEvaluator::getNormRect() const
 {
     return normrect;
-}*/
+}
 
 void HaarEvaluator::getUMats(std::vector<UMat>& bufs)
 {
     bufs.clear();
-    bufs.push_back(usum);
-    bufs.push_back(usqsum);
+    bufs.push_back(usbuf);
     bufs.push_back(ufbuf);
 }
 
@@ -777,90 +696,78 @@ Ptr<FeatureEvaluator> LBPEvaluator::clone() const
     ret->features = features;
     ret->optfeatures = optfeatures;
     ret->scaleData = scaleData;
-    ret->optfeaturesPtr = 0;
-    ret->sum0 = sum0, ret->sum = sum;
+    ret->optfeaturesPtr = optfeaturesPtr;
+    ret->sbuf = sbuf;
+    ret->usbuf = usbuf;
+    ret->ufbuf = ufbuf;
     ret->pwin = pwin;
+    ret->sbufSize = sbufSize;
     return ret;
 }
 
-bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, const std::vector<double>& _scales )
+bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, const std::vector<float>& _scales )
 {
-    Size imgsz = _image.size();
-    int irows = imgsz.height+1, icols = imgsz.width+1;
-
-    Size prevSumSize = sumSize0;
-    sumSize0.width = (int)alignSize(std::max(sumSize0.width, icols), 32);
-    sumSize0.height = std::max(sumSize0.height, irows);
-
-    origWinSize = _origWinSize;
-    int sumStep;
+    Mat image;
 
     if( _image.isUMat() )
-    {
-        usum0.create(sumSize0, CV_32S);
-        usum = UMat(usum0, Rect(0, 0, icols, irows));
-
-        integral(_image, usum, noArray(), noArray(), CV_32S);
-        sumStep = (int)(usum.step/usum.elemSize());
-    }
+        _image.copyTo(image);
     else
-    {
-        sum0.create(sumSize0, CV_32S);
-        sum = Mat(sum0, Rect(0, 0, icols, irows));
+        image = _image.getMat();
+    Size imgsz = image.size();
 
-        integral(_image, sum, noArray(), noArray(), CV_32S);
-        sumStep = (int)(sum.step/sum.elemSize());
-    }
+    bool recalcOptFeatures = updateScaleData( imgsz, _origWinSize, _scales, *scaleData, sbufSize ) ||
+        _origWinSize != origWinSize;
+    origWinSize = _origWinSize;
 
-    size_t prevNScales = scaleData->size();
-    size_t i, nscales = _scales.size();
-    scaleData->resize(nscales);
+    sbuf.create(sbufSize.height, sbufSize.width, CV_32S);
+    size_t i, nscales = scaleData->size();
+    Size sz0 = scaleData->at(0).szi;
+    sz0 = Size(std::max(rbuf0.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf0.rows, sz0.height));
 
-    bool recalcFeatures = prevSumSize != sumSize0 || prevNScales != nscales;
-    Rect normrect0(1, 1, origWinSize.width-2, origWinSize.height-2);
+    rbuf0.create(sz0, CV_8U);
+    rbuf1.create(sz0, CV_8U);
+    Mat prev = image;
+    float prevscale = 1.f;
 
     for( i = 0; i < nscales; i++ )
     {
-        ScaleData& s = scaleData->at(i);
-        if( !recalcFeatures && fabs(s.scale - _scales[i]) > FLT_EPSILON*100*_scales[i] )
-            recalcFeatures = true;
-        double sc = _scales[i];
-        s.scale = (float)sc;
-        s.winSize.width = cvRound(origWinSize.width*sc);
-        s.winSize.height = cvRound(origWinSize.height*sc);
+        const ScaleData& s = scaleData->at(i);
+        Mat& dbuf = i%2 == 0 ? rbuf0 : rbuf1;
+        Mat src = prev, dst(s.szi.height-1, s.szi.width-1, CV_8U, dbuf.data, dbuf.step);
+        resize(src, dst, dst.size(), prevscale/s.scale, prevscale/s.scale, INTER_LINEAR);
+        Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
+
+        integral(dst, sum, noArray(), noArray(), CV_32S);
+
+        prev = dst;
+        prevscale = s.scale;
     }
 
-    size_t fi, nfeatures = features->size();
-    const std::vector<Feature>& ff = *features;
-
-    if( recalcFeatures )
+    if( recalcOptFeatures )
     {
-        optfeatures->resize(nfeatures*nscales);
+        size_t fi, nfeatures = features->size();
+        const std::vector<Feature>& ff = *features;
+        optfeatures->resize(nfeatures);
         optfeaturesPtr = &(*optfeatures)[0];
-        for( fi = 0; fi < nfeatures*nscales; fi++ )
-        {
-            const ScaleData& s = scaleData->at(fi/nfeatures);
-            optfeaturesPtr[fi].setOffsets( ff[fi%nfeatures], sumStep, s.scale, s.winSize );
-        }
+        int sstep = (int)(sbuf.step/sizeof(int));
+
+        for( fi = 0; fi < nfeatures; fi++ )
+            optfeaturesPtr[fi].setOffsets( ff[fi], sstep );
     }
-    if( _image.isUMat() && (recalcFeatures || ufbuf.empty()) )
-        copyVectorToUMat(*optfeatures, ufbuf);
+
+    if( _image.isUMat() )
+    {
+        sbuf.copyTo(usbuf);
+        if(recalcOptFeatures || ufbuf.empty())
+            copyVectorToUMat(*optfeatures, ufbuf);
+    }
     
     return true;
 }
 
-void LBPEvaluator::OptFeature::setOffsets( const Feature& _f, int step, double scale, Size winSize )
+void LBPEvaluator::OptFeature::setOffsets( const Feature& _f, int step )
 {
     Rect tr = _f.rect;
-    tr.x = cvRound(tr.x*scale);
-    tr.y = cvRound(tr.y*scale);
-    tr.width = cvRound(tr.width*scale);
-    tr.height = cvRound(tr.height*scale);
-    tr.width *= 3;
-    tr.height *= 3;
-    tr &= Rect(0, 0, winSize.width, winSize.height);
-    tr.width /= 3;
-    tr.height /= 3;
     int w0 = tr.width;
     int h0 = tr.height;
 
@@ -877,20 +784,25 @@ void LBPEvaluator::OptFeature::setOffsets( const Feature& _f, int step, double s
 bool LBPEvaluator::setWindow( Point pt, int scaleIdx )
 {
     CV_Assert(0 <= scaleIdx && scaleIdx < (int)scaleData->size());
-    if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width >= sum.cols ||
-        pt.y + origWinSize.height >= sum.rows )
+    const ScaleData& s = scaleData->at(scaleIdx);
+
+    if( pt.x < 0 || pt.y < 0 || pt.x >= s.szw.width || pt.y >= s.szw.height )
         return false;
-    pwin = &sum.at<int>(pt);
-    optfeaturesPtr = &(*optfeatures)[scaleIdx*features->size()];
+
+    pwin = &sbuf.at<int>(pt) + s.layer_ofs;
     return true;
 }
 
+const FeatureEvaluator::ScaleData& LBPEvaluator::getScaleData( int scaleIdx ) const
+{
+    CV_Assert(0 <= scaleIdx && scaleIdx < (int)scaleData->size());
+    return scaleData->at(scaleIdx);
+}
 
 void LBPEvaluator::getUMats(std::vector<UMat>& bufs)
 {
     bufs.clear();
-    bufs.push_back(usum);
+    bufs.push_back(usbuf);
     bufs.push_back(ufbuf);
 }
 
@@ -945,7 +857,7 @@ Ptr<FeatureEvaluator> HOGEvaluator::clone() const
     return ret;
 }
 
-bool HOGEvaluator::setImage( InputArray _image, Size winSize, const std::vector<double>& _scales )
+bool HOGEvaluator::setImage( InputArray _image, Size winSize, const std::vector<float>& _scales )
 {
     Mat image = _image.getMat();
     int rows = image.rows + 1;
@@ -1177,17 +1089,17 @@ Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator()
 class CascadeClassifierInvoker : public ParallelLoopBody
 {
 public:
-    CascadeClassifierInvoker( CascadeClassifierImpl& _cc,
-                              Size _imgSize, Size _tileSize,
-                              const std::vector<double>& _scales,
-                              std::vector<Rect>& _vec, std::vector<int>& _levels,
-                              std::vector<double>& _weights,
+    CascadeClassifierInvoker( CascadeClassifierImpl& _cc, int _nscales, int _nstripes,
+                              const FeatureEvaluator::ScaleData* _scaleData,
+                              const int* _stripeSizes, std::vector<Rect>& _vec,
+                              std::vector<int>& _levels, std::vector<double>& _weights,
                               bool outputLevels, const Mat& _mask, Mutex* _mtx)
     {
         classifier = &_cc;
-        imgSize = _imgSize;
-        tileSize = _tileSize;
-        scales = _scales;
+        nscales = _nscales;
+        nstripes = _nstripes;
+        scaleData = _scaleData;
+        stripeSizes = _stripeSizes;
         rectangles = &_vec;
         rejectLevels = outputLevels ? &_levels : 0;
         levelWeights = outputLevels ? &_weights : 0;
@@ -1198,61 +1110,50 @@ public:
     void operator()(const Range& range) const
     {
         Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
-        int nScales = (int)scales.size();
-        int xTiles = (imgSize.width + tileSize.width-1)/tileSize.width;
-        uchar* mdata = mask.data;
         double gypWeight = 0.;
 
-        for( int scaleIdx = 0; scaleIdx < nScales; scaleIdx++ )
+        for( int scaleIdx = 0; scaleIdx < nscales; scaleIdx++ )
         {
-            double scalingFactor = scales[scaleIdx];
-            double yStep = max(2., scalingFactor);
+            const FeatureEvaluator::ScaleData& s = scaleData[scaleIdx];
+            float scalingFactor = s.scale;
+            int yStep = s.ystep;
+            int stripeSize = stripeSizes[scaleIdx];
+            int y0 = range.start*stripeSize;
+            int y1 = std::min(range.end*stripeSize, s.szw.height);
+            int width = s.szw.width;
             Size winSize(cvRound(classifier->data.origWinSize.width * scalingFactor),
                          cvRound(classifier->data.origWinSize.height * scalingFactor));
-            for( int t = range.start; t < range.end; t++ )
+
+            for( int y = y0; y < y1; y += yStep )
             {
-                int x0 = (t % xTiles)*tileSize.width;
-                int y0 = (t / xTiles)*tileSize.height;
-
-                double startX = cvCeil(x0/yStep)*yStep;
-                double startY = cvCeil(y0/yStep)*yStep;
-                double fx, fy;
-
-                for( fy = startY; fy < y0 + tileSize.height; fy += yStep )
+                for( int x = 0; x < width; x += yStep )
                 {
-                    int y = cvRound(fy);
-                    if( y + winSize.height >= imgSize.height )
-                        break;
-                    for( fx = startX; fx < x0 + tileSize.width; fx += yStep )
+                    int result = classifier->runAt(evaluator, Point(x, y), scaleIdx, gypWeight);
+                    if( rejectLevels )
                     {
-                        int x = cvRound(fx);
-                        if( x + winSize.width >= imgSize.width )
-                            break;
-                        if( mdata && !mask.at<uchar>(y,x) )
-                            continue;
-                        int result = classifier->runAt(evaluator, Point(x, y), scaleIdx, gypWeight);
-                        if( rejectLevels )
-                        {
-                            if( result == 1 )
-                                result = -(int)classifier->data.stages.size();
-                            if( classifier->data.stages.size() + result == 0 )
-                            {
-                                mtx->lock();
-                                rectangles->push_back(Rect(x, y, winSize.width, winSize.height));
-                                rejectLevels->push_back(-result);
-                                levelWeights->push_back(gypWeight);
-                                mtx->unlock();
-                            }
-                        }
-                        else if( result > 0 )
+                        if( result == 1 )
+                            result = -(int)classifier->data.stages.size();
+                        if( classifier->data.stages.size() + result == 0 )
                         {
                             mtx->lock();
-                            rectangles->push_back(Rect(x, y, winSize.width, winSize.height));
+                            rectangles->push_back(Rect(cvRound(x*scalingFactor),
+                                                       cvRound(y*scalingFactor),
+                                                       winSize.width, winSize.height));
+                            rejectLevels->push_back(-result);
+                            levelWeights->push_back(gypWeight);
                             mtx->unlock();
                         }
-                        if( result == 0 )
-                            fx += yStep;
                     }
+                    else if( result > 0 )
+                    {
+                        mtx->lock();
+                        rectangles->push_back(Rect(cvRound(x*scalingFactor),
+                                                   cvRound(y*scalingFactor),
+                                                   winSize.width, winSize.height));
+                        mtx->unlock();
+                    }
+                    if( result == 0 )
+                        x += yStep;
                 }
             }
         }
@@ -1260,10 +1161,12 @@ public:
 
     CascadeClassifierImpl* classifier;
     std::vector<Rect>* rectangles;
-    Size imgSize, tileSize;
+    int nscales, nstripes;
+    const FeatureEvaluator::ScaleData* scaleData;
+    const int* stripeSizes;
     std::vector<int> *rejectLevels;
     std::vector<double> *levelWeights;
-    std::vector<double> scales;
+    std::vector<float> scales;
     Mat mask;
     Mutex* mtx;
 };
@@ -1467,7 +1370,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
     }
 
     Size sumSize0((imgsz.width + SUM_ALIGN) & -SUM_ALIGN, imgsz.height+1);
-    std::vector<double> scales;
+    std::vector<float> scales;
     scales.reserve(1024);
 
     for( double factor = 1; ; factor *= scaleFactor )
@@ -1480,7 +1383,7 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
             break;
         if( windowSize.width < minObjectSize.width || windowSize.height < minObjectSize.height )
             continue;
-        scales.push_back(factor);
+        scales.push_back((float)factor);
     }
 
     // CPU code
@@ -1493,13 +1396,21 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
         if (maskGenerator)
             currentMask = maskGenerator->generateMask(grayImage);
 
-        Size tileSize(64, 64);
-        int nTiles = ((imgsz.width + tileSize.width - 1)/tileSize.width)*((imgsz.height + tileSize.height - 1)/tileSize.height);
+        size_t i, nscales = scales.size();
+        std::vector<Size> tsizes(nscales);
+        cv::AutoBuffer<int> stripeSizeBuf(nscales);
+        int* stripeSizes = stripeSizeBuf;
+        const FeatureEvaluator::ScaleData* s = &featureEvaluator->getScaleData(0);
+        int nstripes = 16;
+        for( i = 0; i < nscales; i++ )
+        {
+            stripeSizes[i] = std::max(s[i].szw.height/s[i].ystep/nstripes, 1)*s[i].ystep;
+        }
 
-        parallel_for_(Range(0, nTiles),
-                      CascadeClassifierInvoker(*this, imgsz, tileSize, scales,
-                                               candidates, rejectLevels, levelWeights,
-                                               outputRejectLevels, currentMask, &mtx));
+        CascadeClassifierInvoker invoker(*this, (int)nscales, nstripes, s, stripeSizes,
+                                         candidates, rejectLevels, levelWeights,
+                                         outputRejectLevels, currentMask, &mtx);
+        parallel_for_(Range(0, nstripes), invoker);
     }
 }
 
