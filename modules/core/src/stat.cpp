@@ -1238,8 +1238,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d %s",
-        depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? "-D DOUBLE_SUPPORT" : "");
+    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+        depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -1248,13 +1248,13 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     UMat src = _src.getUMat(), minval(1, groupnum, src.type()),
         maxval(1, groupnum, src.type()), minloc( 1, groupnum, CV_32SC1),
         maxloc( 1, groupnum, CV_32SC1), mask;
-    if(!_mask.empty())
+    if (!_mask.empty())
         mask = _mask.getUMat();
 
-    if(src.channels()>1)
+    if (src.channels() > 1)
         src = src.reshape(1);
 
-    if(mask.empty())
+    if (mask.empty())
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
             groupnum, ocl::KernelArg::PtrWriteOnly(minval), ocl::KernelArg::PtrWriteOnly(maxval),
             ocl::KernelArg::PtrWriteOnly(minloc), ocl::KernelArg::PtrWriteOnly(maxloc));
