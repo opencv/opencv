@@ -282,7 +282,8 @@ TEST_F(SuperResolution, BTVL1_CUDA)
 
 TEST_F(SuperResolution, BTVL1_OCL)
 {
-    RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
+    if (cv::ocl::useOpenCL())
+        RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
 }
 
 #endif
