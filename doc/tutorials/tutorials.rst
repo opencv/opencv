@@ -250,7 +250,6 @@ As always, we would be happy to hear your comments and receive your contribution
    ml/table_of_content_ml/table_of_content_ml
    photo/table_of_content_photo/table_of_content_photo
    gpu/table_of_content_gpu/table_of_content_gpu
-   bioinspired/table_of_content_bioinspired/table_of_content_bioinspired
    ios/table_of_content_ios/table_of_content_ios
    viz/table_of_content_viz/table_of_content_viz
    general/table_of_content_general/table_of_content_general
