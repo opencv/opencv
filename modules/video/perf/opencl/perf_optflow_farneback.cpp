@@ -90,7 +90,7 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
     const double pyrScale = 0.5;
     int flags = get<1>(params);
     const bool useInitFlow = get<2>(params);
-    const double eps = 1.5;
+    const double eps = 0.01;
 
     UMat uFrame0; frame0.copyTo(uFrame0);
     UMat uFrame1; frame1.copyTo(uFrame1);
