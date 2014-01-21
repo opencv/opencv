@@ -27,9 +27,9 @@ namespace ocl {
         Size tmplSz = get<1>(GetParam());
         int method = get<2>(GetParam());
 
-        Mat img(imgSz, CV_8UC1);
-        Mat tmpl(tmplSz, CV_8UC1);
-        Mat result(imgSz - tmplSz + Size(1,1), CV_32F);
+        UMat img(imgSz, CV_8UC1);
+        UMat tmpl(tmplSz, CV_8UC1);
+        UMat result(imgSz - tmplSz + Size(1,1), CV_32F);
 
         declare
             .in(img, WARMUP_RNG)
