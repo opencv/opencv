@@ -132,6 +132,25 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
     SANITY_CHECK(dst, 5e-6, ERROR_RELATIVE);
 }
 
+///////////// PreCornerDetect ////////////////////////
+
+typedef Size_MatType PreCornerDetectFixture;
+
+OCL_PERF_TEST_P(PreCornerDetectFixture, PreCornerDetect,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), borderType = BORDER_REFLECT;
+
+    UMat src(srcSize, type), dst(srcSize, CV_32FC1);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::preCornerDetect(src, dst, 3, borderType);
+
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+}
+
 ///////////// Integral ////////////////////////
 
 typedef tuple<Size, MatDepth> IntegralParams;
