@@ -912,6 +912,70 @@ OCL_PERF_TEST_P(PSNRFixture, PSNR,
     SANITY_CHECK(psnr, 1e-4, ERROR_RELATIVE);
 }
 
+///////////// Reduce ////////////////////////
+
+CV_ENUM(ReduceMinMaxOp, CV_REDUCE_MIN, CV_REDUCE_MAX)
+
+typedef tuple<Size, std::pair<MatType, MatType>, int, ReduceMinMaxOp> ReduceMinMaxParams;
+typedef TestBaseWithParam<ReduceMinMaxParams> ReduceMinMaxFixture;
+
+OCL_PERF_TEST_P(ReduceMinMaxFixture, Reduce,
+                ::testing::Combine(OCL_TEST_SIZES,
+                                   OCL_PERF_ENUM(std::make_pair<MatType, MatType>(CV_8UC1, CV_8UC1),
+                                                 std::make_pair<MatType, MatType>(CV_32FC4, CV_32FC4)),
+                                   OCL_PERF_ENUM(0, 1),
+                                   ReduceMinMaxOp::all()))
+{
+    const ReduceMinMaxParams params = GetParam();
+    const std::pair<MatType, MatType> types = get<1>(params);
+    const int stype = types.first, dtype = types.second,
+            dim = get<2>(params), op = get<3>(params);
+    const Size srcSize = get<0>(params),
+            dstSize(dim == 0 ? srcSize.width : 1, dim == 0 ? 1 : srcSize.height);
+    const double eps = CV_MAT_DEPTH(dtype) <= CV_32S ? 1 : 1e-5;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, stype);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, stype), dst(dstSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, dtype);
+
+    SANITY_CHECK(dst, eps);
+}
+
+CV_ENUM(ReduceAccOp, CV_REDUCE_SUM, CV_REDUCE_AVG)
+
+typedef tuple<Size, std::pair<MatType, MatType>, int, ReduceAccOp> ReduceAccParams;
+typedef TestBaseWithParam<ReduceAccParams> ReduceAccFixture;
+
+OCL_PERF_TEST_P(ReduceAccFixture, Reduce,
+                ::testing::Combine(OCL_TEST_SIZES,
+                                   OCL_PERF_ENUM(std::make_pair<MatType, MatType>(CV_8UC4, CV_32SC4),
+                                                 std::make_pair<MatType, MatType>(CV_32FC1, CV_32FC1)),
+                                   OCL_PERF_ENUM(0, 1),
+                                   ReduceAccOp::all()))
+{
+    const ReduceAccParams params = GetParam();
+    const std::pair<MatType, MatType> types = get<1>(params);
+    const int stype = types.first, dtype = types.second,
+            dim = get<2>(params), op = get<3>(params);
+    const Size srcSize = get<0>(params),
+            dstSize(dim == 0 ? srcSize.width : 1, dim == 0 ? 1 : srcSize.height);
+    const double eps = CV_MAT_DEPTH(dtype) <= CV_32S ? 1 : 3e-4;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, stype);
+    checkDeviceMaxMemoryAllocSize(srcSize, dtype);
+
+    UMat src(srcSize, stype), dst(dstSize, dtype);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::reduce(src, dst, dim, op, dtype);
+
+    SANITY_CHECK(dst, eps);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
