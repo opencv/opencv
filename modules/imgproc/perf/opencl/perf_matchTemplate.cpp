@@ -12,7 +12,7 @@ namespace ocl {
     typedef std::tr1::tuple<Size, Size, MethodType> ImgSize_TmplSize_Method_t;
     typedef TestBaseWithParam<ImgSize_TmplSize_Method_t> ImgSize_TmplSize_Method;
 
-    OCL_PERF_TEST_P(ImgSize_TmplSize_Method, matchTemplate,
+    OCL_PERF_TEST_P(ImgSize_TmplSize_Method, MatchTemplate,
             ::testing::Combine(
                 testing::Values(szSmall128, cv::Size(320, 240),
                                 cv::Size(640, 480), cv::Size(800, 600),
@@ -43,10 +43,13 @@ namespace ocl {
             method == TM_CCORR_NORMED ||
             method == TM_SQDIFF_NORMED ||
             method == TM_CCOEFF_NORMED;
-        double eps = isNormed ? 1e-6
-            : 255 * 255 * tmpl.total() * 1e-6;
+        double eps = isNormed ? 1e-3
+            : 255 * 255 * tmpl.total() * 1e-3;
 
-        SANITY_CHECK(result, eps);
+        if (isNormed)
+            SANITY_CHECK(result,eps,ERROR_RELATIVE);
+        else
+            SANITY_CHECK(result, eps);
     }
 }
 }
