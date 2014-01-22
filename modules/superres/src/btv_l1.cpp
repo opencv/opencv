@@ -44,6 +44,7 @@
 // Dennis Mitzel, Thomas Pock, Thomas Schoenemann, Daniel Cremers. Video Super Resolution using Duality Based TV-L1 Optical Flow.
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::superres;
@@ -51,10 +52,17 @@ using namespace cv::superres::detail;
 
 namespace
 {
-    void calcRelativeMotions(const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions,
-                             std::vector<Mat>& relForwardMotions, std::vector<Mat>& relBackwardMotions,
-                             int baseIdx, Size size)
+#ifdef HAVE_OPENCL
+
+    bool ocl_calcRelativeMotions(InputArrayOfArrays _forwardMotions, InputArrayOfArrays _backwardMotions,
+                                 OutputArrayOfArrays _relForwardMotions, OutputArrayOfArrays _relBackwardMotions,
+                                 int baseIdx, const Size & size)
     {
+        std::vector<UMat> & forwardMotions = *(std::vector<UMat> *)_forwardMotions.getObj(),
+                & backwardMotions = *(std::vector<UMat> *)_backwardMotions.getObj(),
+                & relForwardMotions = *(std::vector<UMat> *)_relForwardMotions.getObj(),
+                & relBackwardMotions = *(std::vector<UMat> *)_relBackwardMotions.getObj();
+
         const int count = static_cast<int>(forwardMotions.size());
 
         relForwardMotions.resize(count);
@@ -68,20 +76,84 @@ namespace
         for (int i = baseIdx - 1; i >= 0; --i)
         {
             add(relForwardMotions[i + 1], forwardMotions[i], relForwardMotions[i]);
-
             add(relBackwardMotions[i + 1], backwardMotions[i + 1], relBackwardMotions[i]);
         }
 
         for (int i = baseIdx + 1; i < count; ++i)
         {
             add(relForwardMotions[i - 1], backwardMotions[i], relForwardMotions[i]);
+            add(relBackwardMotions[i - 1], forwardMotions[i - 1], relBackwardMotions[i]);
+        }
 
+        return true;
+    }
+
+#endif
+
+    void calcRelativeMotions(InputArrayOfArrays _forwardMotions, InputArrayOfArrays _backwardMotions,
+                             OutputArrayOfArrays _relForwardMotions, OutputArrayOfArrays _relBackwardMotions,
+                             int baseIdx, const Size & size)
+    {
+        CV_OCL_RUN(_forwardMotions.isUMatVector() && _backwardMotions.isUMatVector() &&
+                   _relForwardMotions.isUMatVector() && _relBackwardMotions.isUMatVector(),
+                   ocl_calcRelativeMotions(_forwardMotions, _backwardMotions, _relForwardMotions,
+                                           _relBackwardMotions, baseIdx, size))
+
+        std::vector<Mat> & forwardMotions = *(std::vector<Mat> *)_forwardMotions.getObj(),
+                & backwardMotions = *(std::vector<Mat> *)_backwardMotions.getObj(),
+                & relForwardMotions = *(std::vector<Mat> *)_relForwardMotions.getObj(),
+                & relBackwardMotions = *(std::vector<Mat> *)_relBackwardMotions.getObj();
+
+        const int count = static_cast<int>(forwardMotions.size());
+
+        relForwardMotions.resize(count);
+        relForwardMotions[baseIdx].create(size, CV_32FC2);
+        relForwardMotions[baseIdx].setTo(Scalar::all(0));
+
+        relBackwardMotions.resize(count);
+        relBackwardMotions[baseIdx].create(size, CV_32FC2);
+        relBackwardMotions[baseIdx].setTo(Scalar::all(0));
+
+        for (int i = baseIdx - 1; i >= 0; --i)
+        {
+            add(relForwardMotions[i + 1], forwardMotions[i], relForwardMotions[i]);
+            add(relBackwardMotions[i + 1], backwardMotions[i + 1], relBackwardMotions[i]);
+        }
+
+        for (int i = baseIdx + 1; i < count; ++i)
+        {
+            add(relForwardMotions[i - 1], backwardMotions[i], relForwardMotions[i]);
             add(relBackwardMotions[i - 1], forwardMotions[i - 1], relBackwardMotions[i]);
         }
     }
+#ifdef HAVE_OPENCL
 
-    void upscaleMotions(const std::vector<Mat>& lowResMotions, std::vector<Mat>& highResMotions, int scale)
+    bool ocl_upscaleMotions(InputArrayOfArrays _lowResMotions, OutputArrayOfArrays _highResMotions, int scale)
     {
+        std::vector<UMat> & lowResMotions = *(std::vector<UMat> *)_lowResMotions.getObj(),
+                & highResMotions = *(std::vector<UMat> *)_highResMotions.getObj();
+
+        highResMotions.resize(lowResMotions.size());
+
+        for (size_t i = 0; i < lowResMotions.size(); ++i)
+        {
+            resize(lowResMotions[i], highResMotions[i], Size(), scale, scale, INTER_LINEAR); // TODO
+            multiply(highResMotions[i], Scalar::all(scale), highResMotions[i]);
+        }
+
+        return true;
+    }
+
+#endif
+
+    void upscaleMotions(InputArrayOfArrays _lowResMotions, OutputArrayOfArrays _highResMotions, int scale)
+    {
+        CV_OCL_RUN(_lowResMotions.isUMatVector() && _highResMotions.isUMatVector(),
+                   ocl_upscaleMotions(_lowResMotions, _highResMotions, scale))
+
+        std::vector<Mat> & lowResMotions = *(std::vector<Mat> *)_lowResMotions.getObj(),
+                & highResMotions = *(std::vector<Mat> *)_highResMotions.getObj();
+
         highResMotions.resize(lowResMotions.size());
 
         for (size_t i = 0; i < lowResMotions.size(); ++i)
@@ -91,10 +163,47 @@ namespace
         }
     }
 
-    void buildMotionMaps(const Mat& forwardMotion, const Mat& backwardMotion, Mat& forwardMap, Mat& backwardMap)
+#ifdef HAVE_OPENCL
+
+    bool ocl_buildMotionMaps(InputArray _forwardMotion, InputArray _backwardMotion,
+                             OutputArray _forwardMap, OutputArray _backwardMap)
     {
-        forwardMap.create(forwardMotion.size(), CV_32FC2);
-        backwardMap.create(forwardMotion.size(), CV_32FC2);
+        ocl::Kernel k("buildMotionMaps", ocl::superres::superres_btvl1_oclsrc);
+        if (k.empty())
+            return false;
+
+        UMat forwardMotion = _forwardMotion.getUMat(), backwardMotion = _backwardMotion.getUMat();
+        Size size = forwardMotion.size();
+
+        _forwardMap.create(size, CV_32FC2);
+        _backwardMap.create(size, CV_32FC2);
+
+        UMat forwardMap = _forwardMap.getUMat(), backwardMap = _backwardMap.getUMat();
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(forwardMotion),
+               ocl::KernelArg::ReadOnlyNoSize(backwardMotion),
+               ocl::KernelArg::WriteOnlyNoSize(forwardMap),
+               ocl::KernelArg::WriteOnly(backwardMap));
+
+        size_t globalsize[2] = { size.width, size.height };
+        return k.run(2, globalsize, NULL, false);
+    }
+
+#endif
+
+    void buildMotionMaps(InputArray _forwardMotion, InputArray _backwardMotion,
+                         OutputArray _forwardMap, OutputArray _backwardMap)
+    {
+        CV_OCL_RUN(_forwardMap.isUMat() && _backwardMap.isUMat(),
+                   ocl_buildMotionMaps(_forwardMotion, _backwardMotion, _forwardMap,
+                                       _backwardMap));
+
+        Mat forwardMotion = _forwardMotion.getMat(), backwardMotion = _backwardMotion.getMat();
+
+        _forwardMap.create(forwardMotion.size(), CV_32FC2);
+        _backwardMap.create(forwardMotion.size(), CV_32FC2);
+
+        Mat forwardMap = _forwardMap.getMat(), backwardMap = _backwardMap.getMat();
 
         for (int y = 0; y < forwardMotion.rows; ++y)
         {
@@ -114,40 +223,73 @@ namespace
     }
 
     template <typename T>
-    void upscaleImpl(const Mat& src, Mat& dst, int scale)
+    void upscaleImpl(InputArray _src, OutputArray _dst, int scale)
     {
-        dst.create(src.rows * scale, src.cols * scale, src.type());
-        dst.setTo(Scalar::all(0));
+        Mat src = _src.getMat();
+        _dst.create(src.rows * scale, src.cols * scale, src.type());
+        _dst.setTo(Scalar::all(0));
+        Mat dst = _dst.getMat();
 
         for (int y = 0, Y = 0; y < src.rows; ++y, Y += scale)
         {
-            const T* srcRow = src.ptr<T>(y);
-            T* dstRow = dst.ptr<T>(Y);
+            const T * const srcRow = src.ptr<T>(y);
+            T * const dstRow = dst.ptr<T>(Y);
 
             for (int x = 0, X = 0; x < src.cols; ++x, X += scale)
                 dstRow[X] = srcRow[x];
         }
     }
 
-    void upscale(const Mat& src, Mat& dst, int scale)
+#ifdef HAVE_OPENCL
+
+    static bool ocl_upscale(InputArray _src, OutputArray _dst, int scale)
     {
-        typedef void (*func_t)(const Mat& src, Mat& dst, int scale);
-        static const func_t funcs[] =
-        {
-            0, upscaleImpl<float>, 0, upscaleImpl<Point3f>
-        };
+        int type = _src.type(), cn = CV_MAT_CN(type);
+        ocl::Kernel k("upscale", ocl::superres::superres_btvl1_oclsrc,
+                      format("-D cn=%d", cn));
+        if (k.empty())
+            return false;
 
-        CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
+        UMat src = _src.getUMat();
+        _dst.create(src.rows * scale, src.cols * scale, type);
+        _dst.setTo(Scalar::all(0));
+        UMat dst = _dst.getUMat();
 
-        const func_t func = funcs[src.channels()];
+        k.args(ocl::KernelArg::ReadOnly(src),
+               ocl::KernelArg::ReadWriteNoSize(dst), scale);
 
-        func(src, dst, scale);
+        size_t globalsize[2] = { src.cols, src.rows };
+        return k.run(2, globalsize, NULL, false);
     }
 
-    float diffSign(float a, float b)
+#endif
+
+    typedef struct _Point4f { float ar[4]; } Point4f;
+
+    void upscale(InputArray _src, OutputArray _dst, int scale)
+    {
+        int cn = _src.channels();
+        CV_Assert( cn == 1 || cn == 3 || cn == 4 );
+
+        CV_OCL_RUN(_dst.isUMat(),
+                   ocl_upscale(_src, _dst, scale))
+
+        typedef void (*func_t)(InputArray src, OutputArray dst, int scale);
+        static const func_t funcs[] =
+        {
+            0, upscaleImpl<float>, 0, upscaleImpl<Point3f>, upscaleImpl<Point4f>
+        };
+
+        const func_t func = funcs[cn];
+        CV_Assert(func != 0);
+        func(_src, _dst, scale);
+    }
+
+    inline float diffSign(float a, float b)
     {
         return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
     }
+
     Point3f diffSign(Point3f a, Point3f b)
     {
         return Point3f(
@@ -157,16 +299,44 @@ namespace
         );
     }
 
-    void diffSign(const Mat& src1, const Mat& src2, Mat& dst)
-    {
-        const int count = src1.cols * src1.channels();
+#ifdef HAVE_OPENCL
 
-        dst.create(src1.size(), src1.type());
+    static bool ocl_diffSign(InputArray _src1, OutputArray _src2, OutputArray _dst)
+    {
+        ocl::Kernel k("diffSign", ocl::superres::superres_btvl1_oclsrc);
+        if (k.empty())
+            return false;
+
+        UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+        _dst.create(src1.size(), src1.type());
+        UMat dst = _dst.getUMat();
+
+        int cn = src1.channels();
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
+               ocl::KernelArg::ReadOnlyNoSize(src2),
+               ocl::KernelArg::WriteOnly(dst, cn));
+
+        size_t globalsize[2] = { src1.cols * cn, src1.rows };
+        return k.run(2, globalsize, NULL, false);
+    }
+
+#endif
+
+    void diffSign(InputArray _src1, OutputArray _src2, OutputArray _dst)
+    {
+        CV_OCL_RUN(_dst.isUMat(),
+                   ocl_diffSign(_src1, _src2, _dst))
+
+        Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+        _dst.create(src1.size(), src1.type());
+        Mat dst = _dst.getMat();
+
+        const int count = src1.cols * src1.channels();
 
         for (int y = 0; y < src1.rows; ++y)
         {
-            const float* src1Ptr = src1.ptr<float>(y);
-            const float* src2Ptr = src2.ptr<float>(y);
+            const float * const src1Ptr = src1.ptr<float>(y);
+            const float * const src2Ptr = src2.ptr<float>(y);
             float* dstPtr = dst.ptr<float>(y);
 
             for (int x = 0; x < count; ++x)
@@ -206,8 +376,8 @@ namespace
     {
         for (int i = range.start; i < range.end; ++i)
         {
-            const T* srcRow = src.ptr<T>(i);
-            T* dstRow = dst.ptr<T>(i);
+            const T * const srcRow = src.ptr<T>(i);
+            T * const dstRow = dst.ptr<T>(i);
 
             for(int j = ksize; j < src.cols - ksize; ++j)
             {
@@ -219,19 +389,20 @@ namespace
                     const T* srcRow3 = src.ptr<T>(i + m);
 
                     for (int l = ksize; l + m >= 0; --l, ++ind)
-                    {
-                        dstRow[j] += btvWeights[ind] * (diffSign(srcVal, srcRow3[j + l]) - diffSign(srcRow2[j - l], srcVal));
-                    }
+                        dstRow[j] += btvWeights[ind] * (diffSign(srcVal, srcRow3[j + l])
+                                                        - diffSign(srcRow2[j - l], srcVal));
                 }
             }
         }
     }
 
     template <typename T>
-    void calcBtvRegularizationImpl(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights)
+    void calcBtvRegularizationImpl(InputArray _src, OutputArray _dst, int btvKernelSize, const std::vector<float>& btvWeights)
     {
-        dst.create(src.size(), src.type());
-        dst.setTo(Scalar::all(0));
+        Mat src = _src.getMat();
+        _dst.create(src.size(), src.type());
+        _dst.setTo(Scalar::all(0));
+        Mat dst = _dst.getMat();
 
         const int ksize = (btvKernelSize - 1) / 2;
 
@@ -245,17 +416,48 @@ namespace
         parallel_for_(Range(ksize, src.rows - ksize), body);
     }
 
-    void calcBtvRegularization(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights)
+#ifdef HAVE_OPENCL
+
+    static bool ocl_calcBtvRegularization(InputArray _src, OutputArray _dst, int btvKernelSize, const UMat & ubtvWeights)
     {
-        typedef void (*func_t)(const Mat& src, Mat& dst, int btvKernelSize, const std::vector<float>& btvWeights);
+        int cn = _src.channels();
+        ocl::Kernel k("calcBtvRegularization", ocl::superres::superres_btvl1_oclsrc,
+                      format("-D cn=%d", cn));
+        if (k.empty())
+            return false;
+
+        UMat src = _src.getUMat();
+        _dst.create(src.size(), src.type());
+        _dst.setTo(Scalar::all(0));
+        UMat dst = _dst.getUMat();
+
+        const int ksize = (btvKernelSize - 1) / 2;
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst),
+              ksize, ocl::KernelArg::PtrReadOnly(ubtvWeights));
+
+        size_t globalsize[2] = { src.cols, src.rows };
+        return k.run(2, globalsize, NULL, false);
+    }
+
+#endif
+
+    void calcBtvRegularization(InputArray _src, OutputArray _dst, int btvKernelSize,
+                               const std::vector<float>& btvWeights, const UMat & ubtvWeights)
+    {
+        CV_OCL_RUN(_dst.isUMat(),
+                   ocl_calcBtvRegularization(_src, _dst, btvKernelSize, ubtvWeights))
+        (void)ubtvWeights;
+
+        typedef void (*func_t)(InputArray _src, OutputArray _dst, int btvKernelSize, const std::vector<float>& btvWeights);
         static const func_t funcs[] =
         {
-            0, calcBtvRegularizationImpl<float>, 0, calcBtvRegularizationImpl<Point3f>
+            0, calcBtvRegularizationImpl<float>, 0, calcBtvRegularizationImpl<Point3f>, 0
         };
 
-        const func_t func = funcs[src.channels()];
-
-        func(src, dst, btvKernelSize, btvWeights);
+        const func_t func = funcs[_src.channels()];
+        CV_Assert(func != 0);
+        func(_src, _dst, btvKernelSize, btvWeights);
     }
 
     class BTVL1_Base
@@ -263,9 +465,8 @@ namespace
     public:
         BTVL1_Base();
 
-        void process(const std::vector<Mat>& src, Mat& dst,
-                     const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions,
-                     int baseIdx);
+        void process(InputArrayOfArrays src, OutputArray dst, InputArrayOfArrays forwardMotions,
+                     InputArrayOfArrays backwardMotions, int baseIdx);
 
         void collectGarbage();
 
@@ -281,15 +482,21 @@ namespace
         Ptr<DenseOpticalFlowExt> opticalFlow_;
 
     private:
+        bool ocl_process(InputArrayOfArrays src, OutputArray dst, InputArrayOfArrays forwardMotions,
+                         InputArrayOfArrays backwardMotions, int baseIdx);
+
         Ptr<FilterEngine> filter_;
         int curBlurKernelSize_;
         double curBlurSigma_;
         int curSrcType_;
 
         std::vector<float> btvWeights_;
+        UMat ubtvWeights_;
+
         int curBtvKernelSize_;
         double curAlpha_;
 
+        // Mat
         std::vector<Mat> lowResForwardMotions_;
         std::vector<Mat> lowResBackwardMotions_;
 
@@ -303,6 +510,23 @@ namespace
 
         Mat diffTerm_, regTerm_;
         Mat a_, b_, c_;
+
+#ifdef HAVE_OPENCL
+        // UMat
+        std::vector<UMat> ulowResForwardMotions_;
+        std::vector<UMat> ulowResBackwardMotions_;
+
+        std::vector<UMat> uhighResForwardMotions_;
+        std::vector<UMat> uhighResBackwardMotions_;
+
+        std::vector<UMat> uforwardMaps_;
+        std::vector<UMat> ubackwardMaps_;
+
+        UMat uhighRes_;
+
+        UMat udiffTerm_, uregTerm_;
+        UMat ua_, ub_, uc_;
+#endif
     };
 
     BTVL1_Base::BTVL1_Base()
@@ -325,7 +549,101 @@ namespace
         curAlpha_ = -1.0;
     }
 
-    void BTVL1_Base::process(const std::vector<Mat>& src, Mat& dst, const std::vector<Mat>& forwardMotions, const std::vector<Mat>& backwardMotions, int baseIdx)
+#ifdef HAVE_OPENCL
+
+    bool BTVL1_Base::ocl_process(InputArrayOfArrays _src, OutputArray _dst, InputArrayOfArrays _forwardMotions,
+                                 InputArrayOfArrays _backwardMotions, int baseIdx)
+    {
+        std::vector<UMat> & src = *(std::vector<UMat> *)_src.getObj(),
+                & forwardMotions = *(std::vector<UMat> *)_forwardMotions.getObj(),
+                & backwardMotions = *(std::vector<UMat> *)_backwardMotions.getObj();
+
+        // update blur filter and btv weights
+        if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
+        {
+            filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+            curBlurKernelSize_ = blurKernelSize_;
+            curBlurSigma_ = blurSigma_;
+            curSrcType_ = src[0].type();
+        }
+
+        if (btvWeights_.empty() || btvKernelSize_ != curBtvKernelSize_ || alpha_ != curAlpha_)
+        {
+            calcBtvWeights(btvKernelSize_, alpha_, btvWeights_);
+            Mat(btvWeights_, true).copyTo(ubtvWeights_);
+
+            curBtvKernelSize_ = btvKernelSize_;
+            curAlpha_ = alpha_;
+        }
+
+        // calc high res motions
+        calcRelativeMotions(forwardMotions, backwardMotions, ulowResForwardMotions_, ulowResBackwardMotions_, baseIdx, src[0].size());
+
+        upscaleMotions(ulowResForwardMotions_, uhighResForwardMotions_, scale_);
+        upscaleMotions(ulowResBackwardMotions_, uhighResBackwardMotions_, scale_);
+
+        uforwardMaps_.resize(uhighResForwardMotions_.size());
+        ubackwardMaps_.resize(uhighResForwardMotions_.size());
+        for (size_t i = 0; i < uhighResForwardMotions_.size(); ++i)
+            buildMotionMaps(uhighResForwardMotions_[i], uhighResBackwardMotions_[i], uforwardMaps_[i], ubackwardMaps_[i]);
+
+        // initial estimation
+        const Size lowResSize = src[0].size();
+        const Size highResSize(lowResSize.width * scale_, lowResSize.height * scale_);
+
+        resize(src[baseIdx], uhighRes_, highResSize, 0, 0, INTER_LINEAR); // TODO
+
+        // iterations
+        udiffTerm_.create(highResSize, uhighRes_.type());
+        ua_.create(highResSize, uhighRes_.type());
+        ub_.create(highResSize, uhighRes_.type());
+        uc_.create(lowResSize, uhighRes_.type());
+
+        for (int i = 0; i < iterations_; ++i)
+        {
+            udiffTerm_.setTo(Scalar::all(0));
+
+            for (size_t k = 0; k < src.size(); ++k)
+            {
+                // a = M * Ih
+                remap(uhighRes_, ua_, ubackwardMaps_[k], noArray(), INTER_NEAREST);
+                // b = HM * Ih
+                GaussianBlur(ua_, ub_, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+                // c = DHM * Ih
+                resize(ub_, uc_, lowResSize, 0, 0, INTER_NEAREST);
+
+                diffSign(src[k], uc_, uc_);
+
+                // a = Dt * diff
+                upscale(uc_, ua_, scale_);
+
+                // b = HtDt * diff
+                GaussianBlur(ua_, ub_, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+                // a = MtHtDt * diff
+                remap(ub_, ua_, uforwardMaps_[k], noArray(), INTER_NEAREST);
+
+                add(udiffTerm_, ua_, udiffTerm_);
+            }
+
+            if (lambda_ > 0)
+            {
+                calcBtvRegularization(uhighRes_, uregTerm_, btvKernelSize_, btvWeights_, ubtvWeights_);
+                addWeighted(udiffTerm_, 1.0, uregTerm_, -lambda_, 0.0, udiffTerm_);
+            }
+
+            addWeighted(uhighRes_, 1.0, udiffTerm_, tau_, 0.0, uhighRes_);
+        }
+
+        Rect inner(btvKernelSize_, btvKernelSize_, uhighRes_.cols - 2 * btvKernelSize_, uhighRes_.rows - 2 * btvKernelSize_);
+        uhighRes_(inner).copyTo(_dst);
+
+        return true;
+    }
+
+#endif
+
+    void BTVL1_Base::process(InputArrayOfArrays _src, OutputArray _dst, InputArrayOfArrays _forwardMotions,
+                             InputArrayOfArrays _backwardMotions, int baseIdx)
     {
         CV_Assert( scale_ > 1 );
         CV_Assert( iterations_ > 0 );
@@ -335,8 +653,15 @@ namespace
         CV_Assert( blurKernelSize_ > 0 );
         CV_Assert( blurSigma_ >= 0.0 );
 
-        // update blur filter and btv weights
+        CV_OCL_RUN(_src.isUMatVector() && _dst.isUMat() && _forwardMotions.isUMatVector() &&
+                   _backwardMotions.isUMatVector(),
+                   ocl_process(_src, _dst, _forwardMotions, _backwardMotions, baseIdx))
 
+        std::vector<Mat> & src = *(std::vector<Mat> *)_src.getObj(),
+                & forwardMotions = *(std::vector<Mat> *)_forwardMotions.getObj(),
+                & backwardMotions = *(std::vector<Mat> *)_backwardMotions.getObj();
+
+        // update blur filter and btv weights
         if (!filter_ || blurKernelSize_ != curBlurKernelSize_ || blurSigma_ != curBlurSigma_ || src[0].type() != curSrcType_)
         {
             filter_ = createGaussianFilter(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
@@ -353,7 +678,6 @@ namespace
         }
 
         // calc high res motions
-
         calcRelativeMotions(forwardMotions, backwardMotions, lowResForwardMotions_, lowResBackwardMotions_, baseIdx, src[0].size());
 
         upscaleMotions(lowResForwardMotions_, highResForwardMotions_, scale_);
@@ -365,14 +689,12 @@ namespace
             buildMotionMaps(highResForwardMotions_[i], highResBackwardMotions_[i], forwardMaps_[i], backwardMaps_[i]);
 
         // initial estimation
-
         const Size lowResSize = src[0].size();
         const Size highResSize(lowResSize.width * scale_, lowResSize.height * scale_);
 
         resize(src[baseIdx], highRes_, highResSize, 0, 0, INTER_CUBIC);
 
         // iterations
-
         diffTerm_.create(highResSize, highRes_.type());
         a_.create(highResSize, highRes_.type());
         b_.create(highResSize, highRes_.type());
@@ -405,7 +727,7 @@ namespace
 
             if (lambda_ > 0)
             {
-                calcBtvRegularization(highRes_, regTerm_, btvKernelSize_, btvWeights_);
+                calcBtvRegularization(highRes_, regTerm_, btvKernelSize_, btvWeights_, ubtvWeights_);
                 addWeighted(diffTerm_, 1.0, regTerm_, -lambda_, 0.0, diffTerm_);
             }
 
@@ -413,13 +735,14 @@ namespace
         }
 
         Rect inner(btvKernelSize_, btvKernelSize_, highRes_.cols - 2 * btvKernelSize_, highRes_.rows - 2 * btvKernelSize_);
-        highRes_(inner).copyTo(dst);
+        highRes_(inner).copyTo(_dst);
     }
 
     void BTVL1_Base::collectGarbage()
     {
         filter_.release();
 
+        // Mat
         lowResForwardMotions_.clear();
         lowResBackwardMotions_.clear();
 
@@ -436,11 +759,32 @@ namespace
         a_.release();
         b_.release();
         c_.release();
+
+#ifdef HAVE_OPENCL
+        // UMat
+        ulowResForwardMotions_.clear();
+        ulowResBackwardMotions_.clear();
+
+        uhighResForwardMotions_.clear();
+        uhighResBackwardMotions_.clear();
+
+        uforwardMaps_.clear();
+        ubackwardMaps_.clear();
+
+        uhighRes_.release();
+
+        udiffTerm_.release();
+        uregTerm_.release();
+        ua_.release();
+        ub_.release();
+        uc_.release();
+#endif
     }
 
 ////////////////////////////////////////////////////////////////////
 
-    class BTVL1 : public SuperResolution, private BTVL1_Base
+    class BTVL1 :
+            public SuperResolution, private BTVL1_Base
     {
     public:
         AlgorithmInfo* info() const;
@@ -451,14 +795,25 @@ namespace
 
     protected:
         void initImpl(Ptr<FrameSource>& frameSource);
+        bool ocl_initImpl(Ptr<FrameSource>& frameSource);
+
         void processImpl(Ptr<FrameSource>& frameSource, OutputArray output);
+        bool ocl_processImpl(Ptr<FrameSource>& frameSource, OutputArray output);
 
     private:
         int temporalAreaRadius_;
 
         void readNextFrame(Ptr<FrameSource>& frameSource);
-        void processFrame(int idx);
+        bool ocl_readNextFrame(Ptr<FrameSource>& frameSource);
 
+        void processFrame(int idx);
+        bool ocl_processFrame(int idx);
+
+        int storePos_;
+        int procPos_;
+        int outPos_;
+
+        // Mat
         Mat curFrame_;
         Mat prevFrame_;
 
@@ -467,14 +822,25 @@ namespace
         std::vector<Mat> backwardMotions_;
         std::vector<Mat> outputs_;
 
-        int storePos_;
-        int procPos_;
-        int outPos_;
-
         std::vector<Mat> srcFrames_;
         std::vector<Mat> srcForwardMotions_;
         std::vector<Mat> srcBackwardMotions_;
         Mat finalOutput_;
+
+#ifdef HAVE_OPENCL
+        // UMat
+        UMat ucurFrame_;
+        UMat uprevFrame_;
+
+        std::vector<UMat> uframes_;
+        std::vector<UMat> uforwardMotions_;
+        std::vector<UMat> ubackwardMotions_;
+        std::vector<UMat> uoutputs_;
+
+        std::vector<UMat> usrcFrames_;
+        std::vector<UMat> usrcForwardMotions_;
+        std::vector<UMat> usrcBackwardMotions_;
+#endif
     };
 
     CV_INIT_ALGORITHM(BTVL1, "SuperResolution.BTVL1",
@@ -496,6 +862,7 @@ namespace
 
     void BTVL1::collectGarbage()
     {
+        // Mat
         curFrame_.release();
         prevFrame_.release();
 
@@ -509,9 +876,51 @@ namespace
         srcBackwardMotions_.clear();
         finalOutput_.release();
 
+#ifdef HAVE_OPENCL
+        // UMat
+        ucurFrame_.release();
+        uprevFrame_.release();
+
+        uframes_.clear();
+        uforwardMotions_.clear();
+        ubackwardMotions_.clear();
+        uoutputs_.clear();
+
+        usrcFrames_.clear();
+        usrcForwardMotions_.clear();
+        usrcBackwardMotions_.clear();
+#endif
+
         SuperResolution::collectGarbage();
         BTVL1_Base::collectGarbage();
     }
+
+#ifdef HAVE_OPENCL
+
+    bool BTVL1::ocl_initImpl(Ptr<FrameSource>& frameSource)
+    {
+        const int cacheSize = 2 * temporalAreaRadius_ + 1;
+
+        uframes_.resize(cacheSize);
+        uforwardMotions_.resize(cacheSize);
+        ubackwardMotions_.resize(cacheSize);
+        uoutputs_.resize(cacheSize);
+
+        storePos_ = -1;
+
+        for (int t = -temporalAreaRadius_; t <= temporalAreaRadius_; ++t)
+            readNextFrame(frameSource);
+
+        for (int i = 0; i <= temporalAreaRadius_; ++i)
+            processFrame(i);
+
+        procPos_ = temporalAreaRadius_;
+        outPos_ = -1;
+
+        return true;
+    }
+
+#endif
 
     void BTVL1::initImpl(Ptr<FrameSource>& frameSource)
     {
@@ -521,6 +930,9 @@ namespace
         forwardMotions_.resize(cacheSize);
         backwardMotions_.resize(cacheSize);
         outputs_.resize(cacheSize);
+
+        CV_OCL_RUN(isUmat_,
+                   ocl_initImpl(frameSource))
 
         storePos_ = -1;
 
@@ -533,6 +945,18 @@ namespace
         procPos_ = temporalAreaRadius_;
         outPos_ = -1;
     }
+
+#ifdef HAVE_OPENCL
+
+    bool BTVL1::ocl_processImpl(Ptr<FrameSource>& /*frameSource*/, OutputArray _output)
+    {
+        const UMat& curOutput = at(outPos_, uoutputs_);
+        curOutput.convertTo(_output, CV_8U);
+
+        return true;
+    }
+
+#endif
 
     void BTVL1::processImpl(Ptr<FrameSource>& frameSource, OutputArray _output)
     {
@@ -549,11 +973,14 @@ namespace
             ++procPos_;
             processFrame(procPos_);
         }
-
         ++outPos_;
+
+        CV_OCL_RUN(isUmat_,
+                   ocl_processImpl(frameSource, _output))
+
         const Mat& curOutput = at(outPos_, outputs_);
 
-        if (_output.kind() < _InputArray::OPENGL_BUFFER)
+        if (_output.kind() < _InputArray::OPENGL_BUFFER || _output.isUMat())
             curOutput.convertTo(_output, CV_8U);
         else
         {
@@ -562,14 +989,41 @@ namespace
         }
     }
 
+#ifdef HAVE_OPENCL
+
+    bool BTVL1::ocl_readNextFrame(Ptr<FrameSource>& /*frameSource*/)
+    {
+        ucurFrame_.convertTo(at(storePos_, uframes_), CV_32F);
+
+        if (storePos_ > 0)
+        {
+            opticalFlow_->calc(uprevFrame_, ucurFrame_, at(storePos_ - 1, uforwardMotions_));
+            opticalFlow_->calc(ucurFrame_, uprevFrame_, at(storePos_, ubackwardMotions_));
+        }
+
+        ucurFrame_.copyTo(uprevFrame_);
+        return true;
+    }
+
+#endif
+
     void BTVL1::readNextFrame(Ptr<FrameSource>& frameSource)
     {
         frameSource->nextFrame(curFrame_);
-
         if (curFrame_.empty())
             return;
 
+#ifdef HAVE_OPENCL
+        if (isUmat_ && curFrame_.channels() == 1)
+            curFrame_.copyTo(ucurFrame_);
+        else
+            isUmat_ = false;
+#endif
         ++storePos_;
+
+        CV_OCL_RUN(isUmat_,
+                   ocl_readNextFrame(frameSource))
+
         curFrame_.convertTo(at(storePos_, frames_), CV_32F);
 
         if (storePos_ > 0)
@@ -581,8 +1035,47 @@ namespace
         curFrame_.copyTo(prevFrame_);
     }
 
+#ifdef HAVE_OPENCL
+
+    bool BTVL1::ocl_processFrame(int idx)
+    {
+        const int startIdx = std::max(idx - temporalAreaRadius_, 0);
+        const int procIdx = idx;
+        const int endIdx = std::min(startIdx + 2 * temporalAreaRadius_, storePos_);
+
+        const int count = endIdx - startIdx + 1;
+
+        usrcFrames_.resize(count);
+        usrcForwardMotions_.resize(count);
+        usrcBackwardMotions_.resize(count);
+
+        int baseIdx = -1;
+
+        for (int i = startIdx, k = 0; i <= endIdx; ++i, ++k)
+        {
+            if (i == procIdx)
+                baseIdx = k;
+
+            usrcFrames_[k] = at(i, uframes_);
+
+            if (i < endIdx)
+                usrcForwardMotions_[k] = at(i, uforwardMotions_);
+            if (i > startIdx)
+                usrcBackwardMotions_[k] = at(i, ubackwardMotions_);
+        }
+
+        process(usrcFrames_, at(idx, uoutputs_), usrcForwardMotions_, usrcBackwardMotions_, baseIdx);
+
+        return true;
+    }
+
+#endif
+
     void BTVL1::processFrame(int idx)
     {
+        CV_OCL_RUN(isUmat_,
+                   ocl_processFrame(idx))
+
         const int startIdx = std::max(idx - temporalAreaRadius_, 0);
         const int procIdx = idx;
         const int endIdx = std::min(startIdx + 2 * temporalAreaRadius_, storePos_);
