@@ -3007,23 +3007,80 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinC32f reduceC_<float, float, OpMin<float> >
 #define reduceMinC64f reduceC_<double,double,OpMin<double> >
 
+namespace cv {
+
+static bool ocl_reduce(InputArray _src, OutputArray _dst,
+                       int dim, int op, int op0, int stype, int dtype)
+{
+    int sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            ddepth = CV_MAT_DEPTH(dtype), ddepth0 = ddepth;
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    if (op == CV_REDUCE_AVG)
+    {
+        op = CV_REDUCE_SUM;
+        if (sdepth < CV_32S && ddepth < CV_32S)
+            ddepth = CV_32S;
+    }
+
+    const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
+                                  "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
+    char cvt[40];
+    ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc,
+                  format("-D %s -D dim=%d -D cn=%d -D ddepth=%d -D srcT=%s -D dstT=%s -D convertToDT=%s%s",
+                         ops[op], dim, cn, ddepth, ocl::typeToStr(sdepth), ocl::typeToStr(ddepth),
+                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    Size dsize(dim == 0 ? src.cols : 1, dim == 0 ? 1 : src.rows);
+    _dst.create(dsize, dtype);
+    UMat dst = _dst.getUMat(), temp = dst;
+
+    if (op0 == CV_REDUCE_AVG && sdepth < CV_32S && ddepth0 < CV_32S)
+        temp.create(dsize, CV_32SC(cn));
+
+    size_t globalsize = std::max(dsize.width, dsize.height);
+
+    k.args(ocl::KernelArg::ReadOnly(src),
+           ocl::KernelArg::WriteOnlyNoSize(temp));
+    if (!k.run(1, &globalsize, NULL, false))
+        return false;
+
+    if (op0 == CV_REDUCE_AVG)
+        temp.convertTo(dst, ddepth0, 1. / (dim == 0 ? src.rows : src.cols));
+
+    return true;
+}
+
+}
+
 void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
-    Mat src = _src.getMat();
-    CV_Assert( src.dims <= 2 );
+    CV_Assert( _src.dims() <= 2 );
     int op0 = op;
-    int stype = src.type(), sdepth = src.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( dtype < 0 )
         dtype = _dst.fixedType() ? _dst.type() : stype;
+    dtype = CV_MAKETYPE(dtype >= 0 ? dtype : stype, cn);
     int ddepth = CV_MAT_DEPTH(dtype);
 
-    _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1,
-                CV_MAKETYPE(dtype >= 0 ? dtype : stype, cn));
-    Mat dst = _dst.getMat(), temp = dst;
-
+    CV_Assert( cn == CV_MAT_CN(dtype) );
     CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
                op == CV_REDUCE_MIN || op == CV_REDUCE_AVG );
-    CV_Assert( src.channels() == dst.channels() );
+
+    if (ocl::useOpenCL() && _dst.isUMat() &&
+            ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
+        return;
+
+    Mat src = _src.getMat();
+    _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
+    Mat dst = _dst.getMat(), temp = dst;
 
     if( op == CV_REDUCE_AVG )
     {
