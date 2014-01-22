@@ -80,6 +80,25 @@ void static genSortBuildOption(const oclMat& keys, const oclMat& vals, bool isGr
         sprintf( build_opt_buf + strlen(build_opt_buf), "%d", vals.oclchannels());
     }
 }
+void static genSortBuildOption(const oclMat& vals, int row, int pow2Size, bool isGreaterThan, bool cmpAll, std::string& build_opt)
+{
+    std::stringstream ss;
+    ss
+      << " -D IS_GT=" << (isGreaterThan?1:0)
+      << " -D pow2Size=" << pow2Size
+      << " -D cols=" << vals.cols
+      << " -D rows=" << vals.rows
+      << " -D rowStep=" << vals.step/vals.elemSize()
+      << " -D rowKey=" << row
+      << " -D ch=" << vals.channels()
+      << " -D VEC_CMP=" << (cmpAll?"all":"any")
+      << " -D ValueT=" << depth_strings[vals.depth()];
+    if(vals.oclchannels() > 1)
+    {
+        ss << vals.oclchannels();
+    }
+    build_opt = ss.str();
+}
 inline bool isSizePowerOf2(size_t size)
 {
     return ((size - 1) & (size)) == 0;
@@ -121,6 +140,45 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreater
 #else
             size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
             openCLExecuteKernel(cxt, &kernel_sort_by_key, kernelname, globalThreads, localThreads, args, -1, -1, build_opt_buf);
+#endif
+        }
+    }
+}
+//bitonic sort that can handle non power of 2 sizes
+static void sortByRow(oclMat& vals, int row, bool isGreaterThan, bool cmpAll)
+{
+    int numStages = 0;
+    for(int i = vals.cols; i > 1; i >>= 1)
+    {
+        ++numStages;
+    }
+    if( vals.cols > (1<<numStages) ) //simulate ceil()
+    {
+        ++numStages;
+    }
+    const int pow2Size = 1 << numStages;
+    std::string build_opt;
+    genSortBuildOption(vals, row, pow2Size, isGreaterThan, cmpAll, build_opt);
+
+    const String kernelName = "bitonicSortByRow";
+    Context * cxt = Context::getContext();
+    size_t globalThreads[3] = {pow2Size / 2, 1, 1};
+
+    const int argc = 3;
+    std::vector< std::pair<size_t, const void *> > args(argc);
+    args[0] = std::make_pair(sizeof(cl_mem), (void *)&vals.data);
+
+    for(int stage = 0; stage < numStages; ++stage)
+    {
+        args[1] = std::make_pair(sizeof(cl_int), (void *)&stage);
+        for(int passOfStage = 0; passOfStage < stage + 1; ++passOfStage)
+        {
+            args[2] = std::make_pair(sizeof(cl_int), (void *)&passOfStage);
+#ifdef ANDROID
+            openCLExecuteKernel(cxt, &sort_by_row, kernelName, globalThreads, NULL, args, -1, -1, build_opt.c_str());
+#else
+            size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
+            openCLExecuteKernel(cxt, &sort_by_row, kernelName, globalThreads, localThreads, args, -1, -1, build_opt.c_str());
 #endif
         }
     }
@@ -469,4 +527,17 @@ void cv::ocl::sortByKey(oclMat& keys, oclMat& vals, int method, bool isGreaterTh
     CV_Assert( keys.rows == 1 ); // we only allow one dimensional input
     size_t vecSize = static_cast<size_t>(keys.cols);
     sortByKey(keys, vals, vecSize, method, isGreaterThan);
+}
+
+void cv::ocl::sortByRow(oclMat& values, int row, bool descending, int method, bool cmpAll)
+{
+    CV_Assert( row >= 0 && row < values.rows );
+    switch(method)
+    {
+    case SORT_BITONIC:
+        bitonic_sort::sortByRow(values, row, descending, cmpAll);
+        break;
+    default:
+        CV_Error(CV_StsBadArg, "Sort method not supported");
+    }
 }

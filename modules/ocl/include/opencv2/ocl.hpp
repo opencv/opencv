@@ -1976,6 +1976,17 @@ namespace cv
         //    keys   = {1,    2,   3}   (CV_8UC1)
         //    values = {6,2, 10,5, 4,3} (CV_8UC2)
         CV_EXPORTS void sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
+        //!Sorts the columns in the input matrix by the values in the specified row.
+        //
+        //The method supports single-channel as well as multi-channel matrices.
+        //When sorting multi-channel matrices the default behavior is that x>y is true if
+        //any element of x ist greater than it's corresponding element in y. When cmpAll is
+        //set to true x > y is true iff every element in x is greater than it's corresponding
+        //element in y.
+        //NOTICE: Most OpenCL implementations threat three channels as four channels
+        //with the last element set to 0. So it's very likely that you get wrong results for three channel
+        //matrices and cmpAll == true!
+        CV_EXPORTS void sortByRow(oclMat& values, int row, bool descending = false, int method = SORT_BITONIC, bool cmpAll = false);
         /*!Base class for MOG and MOG2!*/
         class CV_EXPORTS BackgroundSubtractor
         {

@@ -545,6 +545,42 @@ Example::
     keys   = {1,    2,   3}   (CV_8UC1)
     values = {6,2, 10,5, 4,3} (CV_8UC2)
 
+ocl::sortByRow
+------------------
+Returns void
+
+.. ocv:function:: void ocl::sortByRow(oclMat& values, int row, bool descending = false, int method = SORT_BITONIC, bool cmpAll = false)
+
+    :param values: the array to sort
+    :param row: Row that is used as key for sorting
+    :param descending: determine sorting order.
+    :param method: supported sorting methods:
+
+            * **SORT_BITONIC**   bitonic sort, can handle arbitrary column numbers.
+
+    :param cmpAll: Specifies the comparision behavior for multi-channel matrices. The default behavior (cmpAll == false)
+                   is that x>y (x<y) is true if any element of x is greater (smaller) than it's corresponding element in y.
+                   With cmpAll set to true, x>y (x<y) is only true iff every element in x is greater (smaller) than it's
+                   corresponding element in y.
+
+                   **NOTICE:** Most OpenCL implementations threat three channels as four channels
+                   with the last element set to 0. So it's very likely that you get wrong results for three channel
+                   matrices and cmpAll set to true!
+
+The functions sorts the columns of a matrix by the values of a given row in that matrix. The sort is done inplace.
+
+Example::
+
+    [1, 6, 5, 4, 3, 2;
+     1, 4, 6, 5, 3, 2;
+     3, 2, 5, 6, 1, 4]
+
+     sortByRow(values, 1, true);
+
+    [5, 4, 6, 3, 2, 1;
+     6, 5, 4, 3, 2, 1;
+     5, 6, 2, 1, 4, 3]
+
 ocl::split
 ------------------
 Returns void
