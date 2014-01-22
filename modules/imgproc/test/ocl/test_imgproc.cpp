@@ -103,7 +103,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
     }
 };
 
-////////////////////////////////copyMakeBorder////////////////////////////////////////////
+//////////////////////////////// copyMakeBorder ////////////////////////////////////////////
 
 PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
                 Channels, // channels
@@ -171,7 +171,7 @@ OCL_TEST_P(CopyMakeBorder, Mat)
     }
 }
 
-////////////////////////////////equalizeHist//////////////////////////////////////////////
+//////////////////////////////// equalizeHist //////////////////////////////////////////////
 
 typedef ImgprocTestBase EqualizeHist;
 
@@ -188,14 +188,14 @@ OCL_TEST_P(EqualizeHist, Mat)
     }
 }
 
-////////////////////////////////cornerMinEigenVal//////////////////////////////////////////
+//////////////////////////////// Corners test //////////////////////////////////////////
 
 struct CornerTestBase :
         public ImgprocTestBase
 {
     virtual void random_roi()
     {
-        Mat image = readImageType("gpu/stereobm/aloe-L.png", type);
+        Mat image = readImageType("../gpu/stereobm/aloe-L.png", type);
         ASSERT_FALSE(image.empty());
 
         bool isFP = CV_MAT_DEPTH(type) >= CV_32F;
@@ -224,7 +224,7 @@ struct CornerTestBase :
 
 typedef CornerTestBase CornerMinEigenVal;
 
-OCL_TEST_P(CornerMinEigenVal, DISABLED_Mat)
+OCL_TEST_P(CornerMinEigenVal, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -239,11 +239,11 @@ OCL_TEST_P(CornerMinEigenVal, DISABLED_Mat)
     }
 }
 
-////////////////////////////////cornerHarris//////////////////////////////////////////
+//////////////////////////////// cornerHarris //////////////////////////////////////////
 
 typedef CornerTestBase CornerHarris;
 
-OCL_TEST_P(CornerHarris, DISABLED_Mat)
+OCL_TEST_P(CornerHarris, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -255,11 +255,11 @@ OCL_TEST_P(CornerHarris, DISABLED_Mat)
         OCL_OFF(cv::cornerHarris(src_roi, dst_roi, blockSize, apertureSize, k, borderType));
         OCL_ON(cv::cornerHarris(usrc_roi, udst_roi, blockSize, apertureSize, k, borderType));
 
-        Near(1e-5, true);
+        Near(1e-6, true);
     }
 }
 
-//////////////////////////////////integral/////////////////////////////////////////////////
+////////////////////////////////// integral /////////////////////////////////////////////////
 
 struct Integral :
         public ImgprocTestBase
@@ -331,8 +331,7 @@ OCL_TEST_P(Integral, Mat2)
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//// threshold
+////////////////////////////////////////  threshold //////////////////////////////////////////////
 
 struct Threshold :
         public ImgprocTestBase
@@ -364,9 +363,7 @@ OCL_TEST_P(Threshold, Mat)
     }
 }
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-//// CLAHE
+/////////////////////////////////////////// CLAHE //////////////////////////////////////////////////
 
 PARAM_TEST_CASE(CLAHETest, Size, double, bool)
 {
