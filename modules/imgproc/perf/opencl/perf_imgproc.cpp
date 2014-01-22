@@ -108,12 +108,9 @@ OCL_PERF_TEST_P(CornerMinEigenValFixture, CornerMinEigenVal,
     UMat src(srcSize, type), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    const int depth = CV_MAT_DEPTH(type);
-    const ERROR_TYPE errorType = depth == CV_8U ? ERROR_ABSOLUTE : ERROR_RELATIVE;
-
     OCL_TEST_CYCLE() cv::cornerMinEigenVal(src, dst, blockSize, apertureSize, borderType);
 
-    SANITY_CHECK(dst, 1e-6, errorType);
+    SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
 }
 
 ///////////// CornerHarris ////////////////////////
@@ -132,7 +129,7 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
 
     OCL_TEST_CYCLE() cv::cornerHarris(src, dst, 5, 7, 0.1, borderType);
 
-    SANITY_CHECK(dst, 5e-5);
+    SANITY_CHECK(dst, 5e-6, ERROR_RELATIVE);
 }
 
 ///////////// Integral ////////////////////////
