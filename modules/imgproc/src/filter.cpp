@@ -3510,8 +3510,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
         return false;
 
     int type = _src.type();
-    if ((CV_8UC1 != type) && (CV_8UC4 == type) &&
-        (CV_32FC1 != type) && (CV_32FC4 == type))
+    if ( !( (CV_8UC1 == type || CV_8UC4 == type || CV_32FC1 == type || CV_32FC4 == type) &&
+            (ddepth == CV_32F || ddepth == CV_8U) ) )
         return false;
 
     int cn = CV_MAT_CN(type);
@@ -3531,8 +3531,6 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     if( ddepth < 0 )
         ddepth = sdepth;
-    else if (ddepth != sdepth)
-        return false;
 
     UMat src = _src.getUMat();
     Size srcWholeSize; Point srcOffset;
@@ -3541,9 +3539,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
          (0 != (src.cols % 4))      ||
          (0 != ((src.step / src.elemSize()) % 4))
        )
-    {
         return false;
-    }
 
     Size srcSize = src.size();
     Size bufSize(srcSize.width, srcSize.height + kernelY.cols - 1);
@@ -3723,7 +3719,7 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       double delta, int borderType )
 {
     bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-    if( use_opencl && ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
+    if (use_opencl && ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
         return;
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
