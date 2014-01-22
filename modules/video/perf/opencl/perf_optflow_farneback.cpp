@@ -90,7 +90,7 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
     const double pyrScale = 0.5;
     int flags = get<1>(params);
     const bool useInitFlow = get<2>(params);
-    const double eps = 0.01;
+    const double eps = 0.1;
 
     UMat uFrame0; frame0.copyTo(uFrame0);
     UMat uFrame1; frame1.copyTo(uFrame1);
@@ -106,7 +106,7 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
             cv::calcOpticalFlowFarneback(uFrame0, uFrame1, uFlow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags);
 
 
-    SANITY_CHECK(uFlow, eps);
+    SANITY_CHECK(uFlow, eps, ERROR_RELATIVE);
 }
 
 } } // namespace cvtest::ocl
