@@ -266,7 +266,7 @@ bool  TiffDecoder::readData( Mat& img )
                                 close();
                                 return false;
                             }
-                            
+
                             uchar * bstart = buffer + (tile_height0 - tile_height) * tile_width0 * 4;
 
                             for( i = 0; i < tile_height; i++ )
