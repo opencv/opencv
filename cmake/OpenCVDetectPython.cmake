@@ -84,11 +84,9 @@ if(PYTHON_EXECUTABLE)
       if(CMAKE_CROSSCOMPILING)
         message(STATUS "Cannot probe for Python/Numpy support (because we are cross-compiling OpenCV)")
         message(STATUS "If you want to enable Python/Numpy support, set the following variables:")
-        message(STATUS "  PYTHON_EXECUTABLE")
-        message(STATUS "  PYTHON_INCLUDE_DIR")
-        message(STATUS "  PYTHON_LIBRARY")
+        message(STATUS "  PYTHON_INCLUDE_PATH")
+        message(STATUS "  PYTHON_LIBRARIES")
         message(STATUS "  PYTHON_NUMPY_INCLUDE_DIR")
-        message(STATUS "  PYTHON_NUMPY_VERSION")
       else()
         # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
         execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
