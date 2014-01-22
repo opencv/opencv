@@ -1693,6 +1693,9 @@ String Device::name() const
 String Device::extensions() const
 { return p ? p->getStrProp(CL_DEVICE_EXTENSIONS) : String(); }
 
+String Device::version() const
+{ return p ? p->getStrProp(CL_DEVICE_VERSION) : String(); }
+
 String Device::vendor() const
 { return p ? p->getStrProp(CL_DEVICE_VENDOR) : String(); }
 
@@ -3619,6 +3622,110 @@ MatAllocator* getOpenCLAllocator()
 {
     static OpenCLAllocator allocator;
     return &allocator;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void getDevices(std::vector<cl_device_id>& devices,cl_platform_id& platform)
+{
+    cl_int status = CL_SUCCESS;
+    cl_uint numDevices = 0;
+    status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices);
+    CV_Assert(status == CL_SUCCESS);
+    if (numDevices == 0)
+        return;
+    devices.resize((size_t)numDevices);
+    status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, numDevices, &devices[0], &numDevices);
+    CV_Assert(status == CL_SUCCESS);
+    devices.resize(numDevices);
+}
+
+struct PlatformInform::Impl
+{
+    Impl(void* id)
+    {
+        handle = *(cl_platform_id*)id;
+        getDevices(devices, handle);
+    }
+
+    String getStrProp(cl_device_info prop) const
+    {
+        char buf[1024];
+        size_t sz=0;
+        return clGetPlatformInfo(handle, prop, sizeof(buf)-16, buf, &sz) >= 0 &&
+            sz < sizeof(buf) ? String(buf) : String();
+    }
+
+    IMPLEMENT_REFCOUNTABLE();
+    std::vector<cl_device_id> devices;
+    cl_platform_id handle;
+};
+
+PlatformInform::PlatformInform()
+{
+    p = 0;
+}
+
+PlatformInform::PlatformInform(void* platform_id)
+{
+    p = new Impl(platform_id);
+}
+
+PlatformInform::~PlatformInform()
+{
+    if(p)
+        p->release();
+}
+
+int PlatformInform::deviceNumber() const
+{
+    return p ? (int)p->devices.size() : 0;
+}
+
+void PlatformInform::getDevice(Device& device, int d) const
+{
+    CV_Assert(d < (int)p->devices.size() );
+    if(p)
+        device.set(p->devices[d]);
+}
+
+String PlatformInform::name() const
+{
+    return p ? p->getStrProp(CL_PLATFORM_NAME) : String();
+}
+
+String PlatformInform::vendor() const
+{
+    return p ? p->getStrProp(CL_PLATFORM_VENDOR) : String();
+}
+
+String PlatformInform::version() const
+{
+    return p ? p->getStrProp(CL_PLATFORM_VERSION) : String();
+}
+
+static void getPlatforms(std::vector<cl_platform_id>& platforms)
+{
+    cl_int status = CL_SUCCESS;
+    cl_uint numPlatforms = 0;
+    status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    CV_Assert(status == CL_SUCCESS);
+    if (numPlatforms == 0)
+        return;
+    platforms.resize((size_t)numPlatforms);
+    status = clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms);
+    CV_Assert(status == CL_SUCCESS);
+    platforms.resize(numPlatforms);
+}
+
+void getPlatfomsInfo(std::vector<PlatformInform>& platformsInfo)
+{
+    std::vector<cl_platform_id> platforms;
+    getPlatforms(platforms);
+    for (size_t i = 0; i < platforms.size(); i++)
+    {
+        platformsInfo.push_back( PlatformInform((void*)&platforms[i]) );
+    }
 }
 
 const char* typeToStr(int t)
