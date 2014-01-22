@@ -66,7 +66,7 @@ The structure of package contents looks as follows:
     |               |_ armeabi-v7a
     |               |_ x86
     |
-    |_ license.txt
+    |_ LICENSE
     |_ README.android
 
 * :file:`sdk` folder contains OpenCV API and libraries for Android:
