@@ -59,6 +59,7 @@ class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource2;
 class CV_EXPORTS Queue;
+class CV_EXPORTS PlatformInform;
 
 class CV_EXPORTS Device
 {
@@ -84,6 +85,7 @@ public:
 
     String name() const;
     String extensions() const;
+    String version() const;
     String vendor() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
@@ -549,9 +551,28 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS PlatformInform
+{
+public:
+    PlatformInform();
+    explicit PlatformInform(void* id);
+    ~PlatformInform();
+
+    String name() const;
+    String vendor() const;
+    String version() const;
+    int deviceNumber() const;
+    void getDevice(Device& device, int d) const;
+
+protected:
+    struct Impl;
+    Impl* p;
+};
+
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInform>& platform_info);
 
 }}
 
