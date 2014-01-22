@@ -6,7 +6,9 @@ namespace cv
 class FeatureEvaluator
 {
 public:
-    enum { HAAR = 0,
+    enum
+    {
+        HAAR = 0,
         LBP  = 1,
         HOG  = 2
     };
@@ -14,8 +16,14 @@ public:
     struct ScaleData
     {
         ScaleData() { scale = 0.f; layer_ofs = ystep = 0; }
+        Size getWorkingSize(Size winSize) const
+        {
+            return Size(std::max(szi.width - winSize.width + 1, 0),
+                        std::max(szi.height - winSize.height + 1, 0));
+        }
+
         float scale;
-        Size szi, szw;
+        Size szi;
         int layer_ofs, ystep;
     };
 
@@ -29,6 +37,7 @@ public:
                           const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
     virtual const ScaleData& getScaleData(int scaleIdx) const;
+    virtual void getUMats(std::vector<UMat>& bufs);
 
     virtual float calcOrd(int featureIdx) const;
     virtual int calcCat(int featureIdx) const;
@@ -88,9 +97,8 @@ protected:
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                             Size sumSize0, bool outputRejectLevels = false );
-    bool ocl_detectSingleScale( InputArray image, Size processingRectSize,
-                                int yStep, double factor, Size sumSize0 );
-
+    bool ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
+                                         std::vector<Rect>& candidates );
 
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
@@ -321,6 +329,7 @@ public:
     virtual const ScaleData& getScaleData(int scaleIdx) const;
     virtual void getUMats(std::vector<UMat>& bufs);
     Rect getNormRect() const;
+    int getSquaresOffset() const;
 
     double operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
@@ -334,10 +343,11 @@ protected:
     Ptr<std::vector<ScaleData> > scaleData;
     bool hasTiltedFeatures;
 
-    Mat sbuf, rbuf0, rbuf1, sqbuf;
-    UMat usbuf, ufbuf;
+    Mat sbuf, rbuf0, rbuf1;
+    UMat usbuf, ufbuf, uscaleData;
 
-    int nofs[4], sqofs;
+    int sqofs;
+    Vec4i nofs;
     Rect normrect;
     const int* pwin;
     OptFeature* optfeaturesPtr; // optimization
@@ -421,7 +431,7 @@ protected:
     OptFeature* optfeaturesPtr; // optimization
 
     Mat sbuf, rbuf0, rbuf1;
-    UMat usbuf, ufbuf;
+    UMat usbuf, ufbuf, uscaleData;
 
     const int* pwin;
 };
