@@ -13,7 +13,7 @@ Required Packages
 
        sudo apt-get install build-essential
 
-  * CMake 2.6 or higher;
+  * CMake 2.8.7 or higher;
   * Git;
   * GTK+2.x or higher, including headers (libgtk2.0-dev);
   * pkg-config;
