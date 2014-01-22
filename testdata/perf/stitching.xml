@@ -419,4 +419,582 @@
       <cols>1</cols>
       <dt>f</dt>
       <data></data></val></matches-distance></matchVector_bestOf2NearestVectorFeatures--bestOf2NearestVectorFeatures----orb---8->
+ <!-- resumed -->
+
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--SphericalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
+        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
+        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
+        1.41014223e+01</data></val></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
+        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
+        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
+        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--CylindricalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.4101420402526855e+01</max>
+    <last>
+      <x>3</x>
+      <y>958</y>
+      <val>1.4101420402526855e+01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>801</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>2</x>
+      <y>589</y>
+      <val>1.5574078559875488e+00</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>6.7715429687500000e+03</max>
+    <last>
+      <x>3</x>
+      <y>958</y>
+      <val>6.7715429687500000e+03</val></last>
+    <rng1>
+      <x>2</x>
+      <y>264</y>
+      <val>2.4430767822265625e+02</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>366</y>
+      <val>183.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--PlaneWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>639.</max>
+    <last>
+      <x>1278</x>
+      <y>958</y>
+      <val>639.</val></last>
+    <rng1>
+      <x>574</x>
+      <y>424</y>
+      <val>287.</val></rng1>
+    <rng2>
+      <x>1154</x>
+      <y>208</y>
+      <val>577.</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>479.</max>
+    <last>
+      <x>1278</x>
+      <y>958</y>
+      <val>479.</val></last>
+    <rng1>
+      <x>475</x>
+      <y>91</y>
+      <val>4.5500000000000000e+01</val></rng1>
+    <rng2>
+      <x>546</x>
+      <y>512</y>
+      <val>256.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--SphericalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
+        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
+        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
+        1.41014223e+01</data></val></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
+        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
+        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
+        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--CylindricalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.4101420402526855e+01</max>
+    <last>
+      <x>3</x>
+      <y>1438</y>
+      <val>1.4101420402526855e+01</val></last>
+    <rng1>
+      <x>1</x>
+      <y>491</y>
+      <val>5.4630249738693237e-01</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>1289</y>
+      <val>0.</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.0164382812500000e+04</max>
+    <last>
+      <x>3</x>
+      <y>1438</y>
+      <val>1.0164382812500000e+04</val></last>
+    <rng1>
+      <x>1</x>
+      <y>1293</y>
+      <val>7.3668286132812500e+02</val></rng1>
+    <rng2>
+      <x>1</x>
+      <y>452</y>
+      <val>2.5752563476562500e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--PlaneWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1279.</max>
+    <last>
+      <x>2558</x>
+      <y>1438</y>
+      <val>1279.</val></last>
+    <rng1>
+      <x>1748</x>
+      <y>1306</y>
+      <val>874.</val></rng1>
+    <rng2>
+      <x>820</x>
+      <y>524</y>
+      <val>410.</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>719.</max>
+    <last>
+      <x>2558</x>
+      <y>1438</y>
+      <val>719.</val></last>
+    <rng1>
+      <x>1657</x>
+      <y>727</y>
+      <val>3.6350000000000000e+02</val></rng1>
+    <rng2>
+      <x>2072</x>
+      <y>1158</y>
+      <val>579.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--SphericalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
+        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
+        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
+        1.41014223e+01</data></val></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
+        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
+        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
+        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--CylindricalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.4101420402526855e+01</max>
+    <last>
+      <x>3</x>
+      <y>2158</y>
+      <val>1.4101420402526855e+01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>1670</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1</x>
+      <y>1384</y>
+      <val>5.4630249738693237e-01</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.5253642578125000e+04</max>
+    <last>
+      <x>3</x>
+      <y>2158</y>
+      <val>1.5253642578125000e+04</val></last>
+    <rng1>
+      <x>1</x>
+      <y>1668</y>
+      <val>9.5033795166015625e+02</val></rng1>
+    <rng2>
+      <x>3</x>
+      <y>1930</y>
+      <val>1.3642043945312500e+04</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--PlaneWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1919.</max>
+    <last>
+      <x>3838</x>
+      <y>2158</y>
+      <val>1919.</val></last>
+    <rng1>
+      <x>1729</x>
+      <y>727</y>
+      <val>8.6450000000000000e+02</val></rng1>
+    <rng2>
+      <x>3780</x>
+      <y>1713</y>
+      <val>1890.</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1079.</max>
+    <last>
+      <x>3838</x>
+      <y>2158</y>
+      <val>1079.</val></last>
+    <rng1>
+      <x>324</x>
+      <y>170</y>
+      <val>85.</val></rng1>
+    <rng2>
+      <x>2387</x>
+      <y>32</y>
+      <val>16.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--SphericalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
+        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
+        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
+        1.41014223e+01</data></val></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
+        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
+        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
+        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--CylindricalWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.4101420402526855e+01</max>
+    <last>
+      <x>3</x>
+      <y>4318</y>
+      <val>1.4101420402526855e+01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>577</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1</x>
+      <y>2885</y>
+      <val>5.4630249738693237e-01</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>3.0521423828125000e+04</max>
+    <last>
+      <x>3</x>
+      <y>4318</y>
+      <val>3.0521423828125000e+04</val></last>
+    <rng1>
+      <x>0</x>
+      <y>2330</y>
+      <val>1165.</val></rng1>
+    <rng2>
+      <x>2</x>
+      <y>2071</y>
+      <val>1.9165197753906250e+03</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--PlaneWarperType->
+  <xmap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>3839.</max>
+    <last>
+      <x>7678</x>
+      <y>4318</y>
+      <val>3839.</val></last>
+    <rng1>
+      <x>2138</x>
+      <y>1826</y>
+      <val>1069.</val></rng1>
+    <rng2>
+      <x>3297</x>
+      <y>3501</y>
+      <val>1.6485000000000000e+03</val></rng2></xmap>
+  <ymap>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>2159.</max>
+    <last>
+      <x>7678</x>
+      <y>4318</y>
+      <val>2159.</val></last>
+    <rng1>
+      <x>5257</x>
+      <y>618</y>
+      <val>309.</val></rng1>
+    <rng2>
+      <x>58</x>
+      <y>520</y>
+      <val>260.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--SphericalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
+        2.75703728e-01 3.43715131e-01 6.28358603e-01 -3.27725172e-01
+        1.99247599e-01 2.88141757e-01 6.50436103e-01 -5.05576015e-01
+        6.50688589e-01 -1.93454176e-01 1.44313648e-02 -4.97053862e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--CylindricalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9176263809204102e-01</min>
+    <max>9.9849575757980347e-01</max>
+    <last>
+      <x>3</x>
+      <y>958</y>
+      <val>-8.8422864675521851e-01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>164</y>
+      <val>-6.4924257993698120e-01</val></rng1>
+    <rng2>
+      <x>2</x>
+      <y>538</y>
+      <val>7.3705530166625977e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--PlaneWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9999219179153442e-01</min>
+    <max>9.9995493888854980e-01</max>
+    <last>
+      <x>1278</x>
+      <y>958</y>
+      <val>6.8033063411712646e-01</val></last>
+    <rng1>
+      <x>341</x>
+      <y>633</y>
+      <val>-6.0177719593048096e-01</val></rng1>
+    <rng2>
+      <x>1114</x>
+      <y>621</y>
+      <val>7.2595417499542236e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--SphericalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
+        1.80823773e-01 1.62900805e-01 3.93110633e-01 -9.15733799e-02
+        -1.66874647e-01 1.54000625e-01 3.36789429e-01 2.37139970e-01
+        4.37882751e-01 2.31529936e-01 5.21142781e-01 5.12351274e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--CylindricalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9473565816879272e-01</min>
+    <max>9.9849575757980347e-01</max>
+    <last>
+      <x>3</x>
+      <y>1438</y>
+      <val>-3.5428860783576965e-01</val></last>
+    <rng1>
+      <x>2</x>
+      <y>347</y>
+      <val>3.7224924564361572e-01</val></rng1>
+    <rng2>
+      <x>1</x>
+      <y>1023</y>
+      <val>4.3119803071022034e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--PlaneWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9999803304672241e-01</min>
+    <max>9.9999505281448364e-01</max>
+    <last>
+      <x>2558</x>
+      <y>1438</y>
+      <val>-1.2874162197113037e-01</val></last>
+    <rng1>
+      <x>1960</x>
+      <y>487</y>
+      <val>-3.6662971973419189e-01</val></rng1>
+    <rng2>
+      <x>516</x>
+      <y>245</y>
+      <val>-5.9204876422882080e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--SphericalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
+        4.87657309e-01 4.43348467e-01 6.61378801e-01 5.65425277e-01
+        1.46625936e-01 3.49467933e-01 4.99868751e-01 3.80492836e-01
+        8.83258164e-01 -2.05467820e-01 -4.10400242e-01 9.65138450e-02</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--CylindricalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9439692497253418e-01</min>
+    <max>9.9994701147079468e-01</max>
+    <last>
+      <x>3</x>
+      <y>2158</y>
+      <val>1.6116951406002045e-01</val></last>
+    <rng1>
+      <x>1</x>
+      <y>1573</y>
+      <val>7.3714250326156616e-01</val></rng1>
+    <rng2>
+      <x>1</x>
+      <y>1894</y>
+      <val>-1.4121675491333008e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--PlaneWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9999940395355225e-01</min>
+    <max>9.9999940395355225e-01</max>
+    <last>
+      <x>3838</x>
+      <y>2158</y>
+      <val>2.7127766609191895e-01</val></last>
+    <rng1>
+      <x>349</x>
+      <y>429</y>
+      <val>1.5086723864078522e-01</val></rng1>
+    <rng2>
+      <x>3683</x>
+      <y>1185</y>
+      <val>1.5689258277416229e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--PlaneWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--SphericalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>4</cols>
+      <dt>f</dt>
+      <data>
+        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
+        -2.95571685e-01 1.36315256e-01 6.37116134e-01 3.51148695e-01
+        -9.61276054e-01 -2.52941787e-01 -8.80843252e-02 2.57447213e-01
+        -8.15622091e-01 -1.52166128e-01 -4.36902732e-01 1.94278434e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--SphericalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--CylindricalWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9950110912322998e-01</min>
+    <max>9.9901926517486572e-01</max>
+    <last>
+      <x>3</x>
+      <y>4318</y>
+      <val>4.1595599055290222e-01</val></last>
+    <rng1>
+      <x>3</x>
+      <y>1658</y>
+      <val>4.1595599055290222e-01</val></rng1>
+    <rng2>
+      <x>3</x>
+      <y>1330</y>
+      <val>4.1595599055290222e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--CylindricalWarperType->
+<OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
+  <dst>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>-9.9999994039535522e-01</min>
+    <max>9.9999976158142090e-01</max>
+    <last>
+      <x>7678</x>
+      <y>4318</y>
+      <val>-4.1626000404357910e-01</val></last>
+    <rng1>
+      <x>985</x>
+      <y>2694</y>
+      <val>5.4863244295120239e-02</val></rng1>
+    <rng2>
+      <x>299</x>
+      <y>3700</y>
+      <val>5.5946636199951172e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
 </opencv_storage>
