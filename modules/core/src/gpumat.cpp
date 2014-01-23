@@ -620,10 +620,18 @@ void cv::gpu::GpuMat::copyTo(GpuMat& m) const
 void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
 {
     if (mask.empty())
+    {
         copyTo(mat);
+    }
     else
     {
+        uchar* data0 = mat.data;
+
         mat.create(size(), type());
+
+        // do not leave dst uninitialized
+        if (mat.data != data0)
+            mat.setTo(Scalar::all(0));
 
         gpuFuncTable()->copyWithMask(*this, mat, mask);
     }
