@@ -297,6 +297,29 @@ OCL_PERF_TEST_P(MedianBlurFixture, Bilateral, ::testing::Combine(OCL_TEST_SIZES,
     SANITY_CHECK(dst);
 }
 
+///////////// AdaptiveBilateral////////////////////////
+
+typedef Size_MatType AdaptiveBilateralFixture;
+
+OCL_PERF_TEST_P(AdaptiveBilateralFixture, adaptiveBilateral,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2), OCL_PERF_ENUM((MatType)CV_8UC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const double sigmaspace = 10.0;
+    Size ksize(9, 9);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() adaptiveBilateralFilter(src, dst, ksize, sigmaspace);
+
+    SANITY_CHECK(dst, 1.0);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL

@@ -2927,22 +2927,128 @@ static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, do
     adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, maxSigmaColor, anchor);
     parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
+
+static bool ocl_adaptiveBilateralFilter(InputArray _src, OutputArray _dst, Size ksize, double sigmaSpace, double maxSigmaColor, Point anchor, int borderType)
+{
+    if( sigmaSpace <= 0 )
+        sigmaSpace = 1;
+    Mat lut(Size(ksize.width, ksize.height), CV_32FC1);
+    double sigma2 = sigmaSpace * sigmaSpace;
+    int idx = 0;
+    int w = ksize.width / 2;
+    int h = ksize.height / 2;
+
+    int ABF_GAUSSIAN_ocl = 1;
+
+    if(ABF_GAUSSIAN_ocl)
+    {
+        for(int y=-h; y<=h; y++)
+            for(int x=-w; x<=w; x++)
+        {
+            lut.at<float>(idx++) = expf( (float)(-0.5 * (x * x + y * y)/sigma2));
+        }
+    }
+    else
+    {
+        for(int y=-h; y<=h; y++)
+            for(int x=-w; x<=w; x++)
+        {
+            lut.at<float>(idx++) = (float) (sigma2 / (sigma2 + x * x + y * y));
+        }
+    }
+
+    UMat ulut;
+    lut.copyTo(ulut);
+
+    char btype[30];
+    switch(borderType)
+    {
+    case BORDER_CONSTANT:
+        sprintf(btype, "BORDER_CONSTANT");
+        break;
+    case BORDER_REPLICATE:
+        sprintf(btype, "BORDER_REPLICATE");
+        break;
+    case BORDER_REFLECT:
+        sprintf(btype, "BORDER_REFLECT");
+        break;
+    case BORDER_WRAP:
+        sprintf(btype, "BORDER_WRAP");
+        break;
+    case BORDER_REFLECT101:
+        sprintf(btype, "BORDER_REFLECT_101");
+        break;
+    default:
+        return false;
+        break;
+    }
+
+    //the following constants may be adjusted for performance concerns
+    const static size_t blockSizeX = 64, blockSizeY = 1, EXTRA = ksize.height - 1;
+
+    String build_options;
+
+    //LDATATYPESIZE is sizeof local data store. This is to exemplify effect of LDS on kernel performance
+    build_options = cv::format("-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d -D MAX_VAR_VAL=%f -D ABF_GAUSSIAN=%d"
+        " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
+        static_cast<int>(EXTRA), static_cast<float>(maxSigmaColor*maxSigmaColor), static_cast<int>(ABF_GAUSSIAN_ocl),
+        static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
+
+    ocl::Kernel k("adaptiveBilateralFilter_C1_D0", ocl::imgproc::adaptive_bilateral_oclsrc, build_options);
+    if(k.empty())
+        return false;
+
+    _dst.create(_src.size(), _src.type());
+    UMat src = _src.getUMat(), dst = _dst.getUMat();
+
+        //Normalize the result by default
+    const float alpha = (float)(ksize.height * ksize.width);
+
+    const size_t gSize = blockSizeX - ksize.width / 2 * 2;
+    const size_t globalSizeX = (src.cols) % gSize == 0 ?
+        src.cols / gSize * blockSizeX :
+        (src.cols / gSize + 1) * blockSizeX;
+    const size_t rows_per_thread = 1 + EXTRA;
+    const size_t globalSizeY = ((src.rows + rows_per_thread - 1) / rows_per_thread) % blockSizeY == 0 ?
+        ((src.rows + rows_per_thread - 1) / rows_per_thread) :
+        (((src.rows + rows_per_thread - 1) / rows_per_thread) / blockSizeY + 1) * blockSizeY;
+
+    size_t globalThreads[3] = { globalSizeX, globalSizeY, 1};
+    size_t localThreads[3]  = { blockSizeX, blockSizeY, 1};
+
+    Size src_whole_size;
+    Point p;
+    src.locateROI(src_whole_size, p);
+
+    int index = 0;
+    index = k.set(index, ocl::KernelArg::ReadOnlyNoSize(src) );
+    index = k.set(index, ocl::KernelArg::WriteOnly(dst) );
+    index = k.set(index, alpha );
+    index = k.set(index, src_whole_size.height );
+    index = k.set(index, src_whole_size.width );
+    index = k.set(index, ocl::KernelArg::PtrReadOnly(ulut) );
+    index = k.set(index, (int)ulut.step1() );
+
+    return k.run(2, globalThreads, localThreads, false);
+}
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
                                   double sigmaSpace, double maxSigmaColor, Point anchor, int borderType )
 {
+    int srcType = _src.type();
+    CV_Assert(srcType == CV_8UC1 || srcType == CV_8UC3);
+    anchor = normalizeAnchor(anchor,ksize);
+
+    if(ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 && (ksize.width & 1) && (ksize.height & 1) && srcType==CV_8UC1 &&
+        srcType == _dst.type() && _src.size() == _dst.size() &&
+        ocl_adaptiveBilateralFilter(_src, _dst, ksize, sigmaSpace, maxSigmaColor, anchor, borderType) )
+        return;
+
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
 
-    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);
-
-    anchor = normalizeAnchor(anchor,ksize);
-    if( src.depth() == CV_8U )
-        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, maxSigmaColor, anchor, borderType );
-    else
-        CV_Error( CV_StsUnsupportedFormat,
-        "Adaptive Bilateral filtering is only implemented for 8u images" );
+    adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, maxSigmaColor, anchor, borderType );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
