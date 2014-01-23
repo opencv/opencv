@@ -2,6 +2,11 @@ if(NOT WITH_VTK OR ANDROID OR IOS)
   return()
 endif()
 
+if (HAVE_QT5)
+  message(STATUS "VTK is disabled because OpenCV is linked with Q5. Some VTK disributives are compiled with Q4 and therefore can't be linked together Qt5.")
+  return()
+endif()
+
 find_package(VTK 6.0 QUIET COMPONENTS vtkRenderingCore vtkInteractionWidgets vtkInteractionStyle vtkIOLegacy vtkIOPLY vtkRenderingFreeType vtkRenderingLOD vtkFiltersTexture vtkIOExport NO_MODULE)
 
 if(NOT DEFINED VTK_FOUND OR NOT VTK_FOUND)
