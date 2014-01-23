@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/ts/ocl_test.hpp"
 
 #include <string>
 #include <iostream>
