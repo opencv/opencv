@@ -378,7 +378,7 @@ static bool ocl_moments( InputArray _src, Moments& m)
     int xtiles = (sz.width + TILE_SIZE-1)/TILE_SIZE;
     int ytiles = (sz.height + TILE_SIZE-1)/TILE_SIZE;
     int ntiles = xtiles*ytiles;
-    UMat umbuf(1, ntiles*K, CV_32S);
+    UMat umbuf(USAGE_CPU_READ, 1, ntiles*K, CV_32S);
 
     size_t globalsize[] = {xtiles, sz.height}, localsize[] = {1, TILE_SIZE};
     bool ok = k.args(ocl::KernelArg::ReadOnly(src),

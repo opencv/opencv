@@ -98,8 +98,8 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
         if (k.empty())
             return false;
 
-        UMat counter(1, 1, CV_32SC1, Scalar::all(0)),
-                corners(1, (int)(possibleCornersCount * sizeof(Corner)), CV_8UC1);
+        UMat counter(USAGE_CPU_READ, 1, 1, CV_32SC1, Scalar::all(0)),
+                corners(USAGE_CPU_READ, 1, (int)(possibleCornersCount * sizeof(Corner)), CV_8UC1);
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
                 tmparg = ocl::KernelArg::ReadOnlyNoSize(tmp),
                 cornersarg = ocl::KernelArg::PtrWriteOnly(corners),
