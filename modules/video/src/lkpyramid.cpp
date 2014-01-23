@@ -806,13 +806,24 @@ namespace cv
         if ((0 != CV_MAT_DEPTH(typePrev)) || (0 != CV_MAT_DEPTH(typeNext)))
             return false;
 
-        if (_prevPts.empty() || _prevPts.size().height != 1 || _prevPts.type() != CV_32FC2)
+        if (_prevPts.empty() || _prevPts.type() != CV_32FC2 || (!_prevPts.isContinuous()))
             return false;
+        if ((1 != _prevPts.size().height) && (1 != _prevPts.size().width))
+            return false;
+        size_t npoints = _prevPts.total();
         bool useInitialFlow  = (0 != (flags & OPTFLOW_USE_INITIAL_FLOW));
         if (useInitialFlow)
         {
-            if (_nextPts.size() != _prevPts.size() || _nextPts.type() != CV_32FC2)
+            if (_nextPts.empty() || _nextPts.type() != CV_32FC2 || (!_prevPts.isContinuous()))
                 return false;
+            if ((1 != _nextPts.size().height) && (1 != _nextPts.size().width))
+                return false;
+            if (_nextPts.total() != npoints)
+                return false;
+        }
+        else
+        {
+            _nextPts.create(_prevPts.size(), _prevPts.type());
         }
 
         PyrLKOpticalFlow opticalFlow;
@@ -828,14 +839,13 @@ namespace cv
         UMat umatErr;
         if (_err.needed())
         {
-            _err.create(_prevPts.size(), CV_32FC1);
+            _err.create((int)npoints, 1, CV_32FC1);
             umatErr = _err.getUMat();
         }
         else
-            umatErr.create(_prevPts.size(), CV_32FC1);
+            umatErr.create((int)npoints, 1, CV_32FC1);
 
-        _nextPts.create(_prevPts.size(), _prevPts.type());
-        _status.create(_prevPts.size(), CV_8UC1);
+        _status.create((int)npoints, 1, CV_8UC1);
         UMat umatNextPts = _nextPts.getUMat();
         UMat umatStatus = _status.getUMat();
         return opticalFlow.sparse(_prevImg.getUMat(), _nextImg.getUMat(), _prevPts.getUMat(), umatNextPts, umatStatus, umatErr);
