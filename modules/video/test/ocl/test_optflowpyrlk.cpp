@@ -75,16 +75,19 @@ PARAM_TEST_CASE(PyrLKOpticalFlow, int, int)
 
 OCL_TEST_P(PyrLKOpticalFlow, Mat)
 {
-    cv::Mat frame0 = readImage("optflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    static const int npoints = 1000;
+    static const float eps = 0.03f;
+
+    cv::Mat frame0 = readImage("optflow/RubberWhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
     UMat umatFrame0; frame0.copyTo(umatFrame0);
 
-    cv::Mat frame1 = readImage("optflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("optflow/RubberWhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
     UMat umatFrame1; frame1.copyTo(umatFrame1);
 
     std::vector<cv::Point2f> pts;
-    cv::goodFeaturesToTrack(frame0, pts, 1000, 0.01, 0.0);
+    cv::goodFeaturesToTrack(frame0, pts, npoints, 0.01, 0.0);
 
     std::vector<cv::Point2f> cpuNextPts;
     std::vector<unsigned char> cpuStatusCPU;
@@ -93,9 +96,9 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
 
     UMat umatNextPts, umatStatus, umatErr;
     OCL_ON(cv::calcOpticalFlowPyrLK(umatFrame0, umatFrame1, pts, umatNextPts, umatStatus, umatErr, winSize, maxLevel, criteria, flags, minEigThreshold));
-    std::vector<cv::Point2f> nextPts(umatNextPts.cols); umatNextPts.copyTo(nextPts);
-    std::vector<unsigned char> status; umatStatus.copyTo(status);
-    std::vector<float> err; umatErr.copyTo(err);
+    std::vector<cv::Point2f> nextPts; umatNextPts.reshape(2, 1).copyTo(nextPts);
+    std::vector<unsigned char> status; umatStatus.reshape(1, 1).copyTo(status);
+    std::vector<float> err; umatErr.reshape(1, 1).copyTo(err);
 
     ASSERT_EQ(cpuNextPts.size(), nextPts.size());
     ASSERT_EQ(cpuStatusCPU.size(), status.size());
@@ -124,7 +127,7 @@ OCL_TEST_P(PyrLKOpticalFlow, Mat)
 
     double bad_ratio = static_cast<double>(mistmatch) / (nextPts.size());
 
-    ASSERT_LE(bad_ratio, 0.02f);
+    ASSERT_LE(bad_ratio, eps);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(Video, PyrLKOpticalFlow,
