@@ -62,14 +62,6 @@ typedef TestBaseWithParam<PyrLKOpticalFlowParams> PyrLKOpticalFlowFixture;
 
 OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
                 ::testing::Values(1000, 2000, 4000)
-                //::testing::Combine(
-                //    ::testing::Values(
-                //                      make_tuple<int, double>(5, 1.1),
-                //                      make_tuple<int, double>(7, 1.5)
-                //                     ),
-                //    farneFlagType::all(),
-                //    ::testing::Bool()
-                //    )
                 )
 {
     Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
