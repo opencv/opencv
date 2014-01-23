@@ -607,8 +607,6 @@ namespace cv
             iters = 30;
             derivLambda = 0.5;
             useInitialFlow = false;
-            //minEigThreshold = 1e-4f;
-            //getMinEigenVals = false;
         }
 
         bool checkParam()
@@ -668,8 +666,6 @@ namespace cv
         int iters;
         double derivLambda;
         bool useInitialFlow;
-        //float minEigThreshold;
-        //bool getMinEigenVals;
 
     private:
         int waveSize;
@@ -689,7 +685,6 @@ namespace cv
         void calcPatchSize()
         {
             dim3 block;
-            //winSize.width *= cn;
 
             if (winSize.width > 32 && winSize.width > 2 * winSize.height)
             {
