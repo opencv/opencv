@@ -110,7 +110,7 @@ inline _InputArray::~_InputArray() {}
 
 inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
 inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
-inline bool _InputArray::isMatVectot() const { return kind() == _InputArray::STD_VECTOR_MAT; }
+inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
 inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::STD_VECTOR_UMAT; }
 inline bool _InputArray::isMatx()  { return kind() == _InputArray::MATX; }
 
