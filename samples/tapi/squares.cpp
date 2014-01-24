@@ -140,7 +140,7 @@ static UMat drawSquaresBoth( const UMat& image,
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ i input    |                    | specify input image }"
+        "{ i input    | pic1.png           | specify input image }"
         "{ o output   | squares_output.jpg | specify output save path}"
         "{ h help     | false              | print help message }"
         "{ m cpu_mode | false              | run without OpenCL }";
@@ -172,6 +172,7 @@ int main(int argc, char** argv)
     if( image.empty() )
     {
         cout << "Couldn't load " << inputName << endl;
+        cmd.printMessage();
         return EXIT_FAILURE;
     }
 

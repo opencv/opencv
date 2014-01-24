@@ -30,7 +30,7 @@ static void workEnd()
 
 static double getTime()
 {
-    return work_end /((double)getTickFrequency() * 1000.);
+    return work_end /((double)getTickFrequency() )* 1000.;
 }
 
 template<class KPDetector>
@@ -136,11 +136,11 @@ static Mat drawGoodMatches(
 int main(int argc, char* argv[])
 {
     const char* keys =
-        "{ h help     | false           | print help message  }"
-        "{ l left     |                 | specify left image  }"
-        "{ r right    |                 | specify right image }"
-        "{ o output   | SURF_output.jpg | specify output save path }"
-        "{ m cpu_mode | false           | run without OpenCL }";
+        "{ h help     | false            | print help message  }"
+        "{ l left     | box.png          | specify left image  }"
+        "{ r right    | box_in_scene.png | specify right image }"
+        "{ o output   | SURF_output.jpg  | specify output save path }"
+        "{ m cpu_mode | false            | run without OpenCL }";
 
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help"))
@@ -160,11 +160,23 @@ int main(int argc, char* argv[])
 
     std::string outpath = cmd.get<std::string>("o");
 
-    imread(cmd.get<std::string>("l"), IMREAD_GRAYSCALE).copyTo(img1);
-    CV_Assert(!img1.empty());
+    std::string leftName = cmd.get<std::string>("l");
+    imread(leftName, IMREAD_GRAYSCALE).copyTo(img1);
+    if(img1.empty())
+    {
+        std::cout << "Couldn't load " << leftName << std::endl;
+        cmd.printMessage();
+        return EXIT_FAILURE;
+    }
 
-    imread(cmd.get<std::string>("r"), IMREAD_GRAYSCALE).copyTo(img2);
-    CV_Assert(!img2.empty());
+    std::string rightName = cmd.get<std::string>("r");
+    imread(rightName, IMREAD_GRAYSCALE).copyTo(img2);
+    if(img2.empty())
+    {
+        std::cout << "Couldn't load " << rightName << std::endl;
+        cmd.printMessage();
+        return EXIT_FAILURE;
+    }
 
     double surf_time = 0.;
 

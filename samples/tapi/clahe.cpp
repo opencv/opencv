@@ -100,7 +100,7 @@ int main(int argc, char** argv)
         else if(key == 'm')
         {
             ocl::setUseOpenCL(!cv::ocl::useOpenCL());
-            cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL" : "CPU") << " mode\n";
+            cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL enabled" : "CPU") << " mode\n";
         }
     }
     return EXIT_SUCCESS;

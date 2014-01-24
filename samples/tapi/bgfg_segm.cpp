@@ -15,7 +15,7 @@ using namespace cv;
 
 int main(int argc, const char** argv)
 {
-    cv::CommandLineParser cmd(argc, argv,
+    CommandLineParser cmd(argc, argv,
         "{ c camera   | false       | use camera }"
         "{ f file     | 768x576.avi | input video file }"
         "{ t type     | mog         | method's type (mog, mog2) }"
@@ -58,8 +58,8 @@ int main(int argc, const char** argv)
     cap >> frame;
     fgimg.create(frame.size(), frame.type());
 
-    Ptr<cv::BackgroundSubtractorMOG> mog = createBackgroundSubtractorMOG();
-    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractorMOG> mog = createBackgroundSubtractorMOG();
+    Ptr<BackgroundSubtractorMOG2> mog2 = createBackgroundSubtractorMOG2();
 
     switch (m)
     {
@@ -80,7 +80,7 @@ int main(int argc, const char** argv)
         if (frame.empty())
             break;
 
-        int64 start = cv::getTickCount();
+        int64 start = getTickCount();
 
         //update the model
         switch (m)
@@ -94,7 +94,7 @@ int main(int argc, const char** argv)
             break;
         }
 
-        double fps = cv::getTickFrequency() / (cv::getTickCount() - start);
+        double fps = getTickFrequency() / (getTickCount() - start);
         std::cout << "FPS : " << fps << std::endl;
         std::cout << fgimg.size() << std::endl;
         fgimg.setTo(Scalar::all(0));
@@ -113,8 +113,8 @@ int main(int argc, const char** argv)
             break;
         case 'm':
         case 'M':
-            ocl::setUseOpenCL(!cv::ocl::useOpenCL());
-            cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL" : "CPU") << " mode\n";
+            ocl::setUseOpenCL(!ocl::useOpenCL());
+            cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL enabled" : "CPU") << " mode\n";
             break;
         }
     }
