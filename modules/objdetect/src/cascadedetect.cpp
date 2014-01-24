@@ -541,18 +541,13 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
     size_t i, nscales = scaleData->size();
     Size sz0 = scaleData->at(0).szi;
     sz0 = Size(std::max(rbuf0.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf0.rows, sz0.height));
-
     rbuf0.create(sz0, CV_8U);
-    rbuf1.create(sz0, CV_8U);
-    Mat prev = image;
-    float prevscale = 1.f;
 
     for( i = 0; i < nscales; i++ )
     {
         const ScaleData& s = scaleData->at(i);
-        Mat& dbuf = i%2 == 0 ? rbuf0 : rbuf1;
-        Mat src = prev, dst(s.szi.height-1, s.szi.width-1, CV_8U, dbuf.data, dbuf.step);
-        resize(src, dst, dst.size(), prevscale/s.scale, prevscale/s.scale, INTER_LINEAR);
+        Mat dst(s.szi.height-1, s.szi.width-1, CV_8U, rbuf0.data);
+        resize(image, dst, dst.size(), 1./s.scale, 1./s.scale, INTER_LINEAR);
         Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
         Mat sqsum(s.szi.height-1, s.szi.width-1, CV_32S, sum.ptr<int>() + sqofs, sbuf.step);
 
@@ -567,8 +562,6 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         sqrBoxFilter(dst, sqsum, CV_32S,
                      Size(origWinSize.width-2, origWinSize.height-2),
                      Point(0,0), false);
-        prev = dst;
-        prevscale = s.scale;
     }
 
     int sstep = (int)(sbuf.step/sizeof(int));
@@ -736,22 +729,15 @@ bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, const std::ve
     sz0 = Size(std::max(rbuf0.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf0.rows, sz0.height));
 
     rbuf0.create(sz0, CV_8U);
-    rbuf1.create(sz0, CV_8U);
-    Mat prev = image;
-    float prevscale = 1.f;
 
     for( i = 0; i < nscales; i++ )
     {
         const ScaleData& s = scaleData->at(i);
-        Mat& dbuf = i%2 == 0 ? rbuf0 : rbuf1;
-        Mat src = prev, dst(s.szi.height-1, s.szi.width-1, CV_8U, dbuf.data, dbuf.step);
-        resize(src, dst, dst.size(), prevscale/s.scale, prevscale/s.scale, INTER_LINEAR);
+        Mat dst(s.szi.height-1, s.szi.width-1, CV_8U, rbuf0.data);
+        resize(image, dst, dst.size(), 1./s.scale, 1./s.scale, INTER_LINEAR);
         Mat sum(s.szi, CV_32S, sbuf.ptr<int>() + s.layer_ofs, sbuf.step);
 
         integral(dst, sum, noArray(), noArray(), CV_32S);
-
-        prev = dst;
-        prevscale = s.scale;
     }
 
     if( recalcOptFeatures )
