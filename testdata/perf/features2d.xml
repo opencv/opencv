@@ -1638,4 +1638,627 @@
       <x>0</x>
       <y>36</y>
       <val>144.</val></rng2></ndix></Norm_Destination_CrossCheck_batchDistance_8U--batchDistance_8U---NORM_L2SQR--32SC1--true->
+ <!-- resumed -->
+
+<OCL_BruteForceMatcherFixture_Match--Match---640x480--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>479.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>479.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>263</y>
+      <val>263.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>465</y>
+      <val>465.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>477.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>429.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>222</y>
+      <val>327.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>15</y>
+      <val>246.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>213</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>258</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.8386501312255859e+001</min>
+    <max>1.9783681869506836e+001</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>1.9310592651367188e+001</val></last>
+    <rng1>
+      <x>0</x>
+      <y>334</y>
+      <val>1.9287355422973633e+001</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>255</y>
+      <val>1.9132394790649414e+001</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_Match--Match---1280x720--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>719.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>719.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>303</y>
+      <val>303.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>231</y>
+      <val>231.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>719.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>708.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>624</y>
+      <val>298.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>585</y>
+      <val>85.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>135</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>104</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>2.6952495574951172e+001</min>
+    <max>2.8463737487792969e+001</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>2.7971527099609375e+001</val></last>
+    <rng1>
+      <x>0</x>
+      <y>646</y>
+      <val>2.7812101364135742e+001</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>514</y>
+      <val>2.7912967681884766e+001</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_Match--Match---1920x1080--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>1079.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>1079.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>313</y>
+      <val>313.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>288</y>
+      <val>288.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>2.</min>
+    <max>1073.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>1004.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>882</y>
+      <val>333.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>791</y>
+      <val>595.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>226</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>353</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>3.3258090972900391e+001</min>
+    <max>3.4970947265625000e+001</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>3.4478725433349609e+001</val></last>
+    <rng1>
+      <x>0</x>
+      <y>31</y>
+      <val>3.4566837310791016e+001</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>490</y>
+      <val>3.4334178924560547e+001</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---1920x1080--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---640x480--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        152 171</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.93925419e+001 1.94321327e+001</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        205 4</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.90242825e+001 1.91116219e+001</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1280x720--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        101 322</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        2.76624546e+001 2.77897549e+001</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        268 455</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        2.76744385e+001 2.77065125e+001</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1920x1080--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        281 140</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        3.42883987e+001 3.43446198e+001</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        245 169</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        3.43958626e+001 3.44831734e+001</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1920x1080--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---640x480--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1280x720--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1920x1080--32FC1->
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1920x1080--32FC1->
 </opencv_storage>
