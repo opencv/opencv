@@ -264,6 +264,8 @@ void cv::split(const Mat& src, Mat* mv)
     }
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
@@ -302,11 +304,12 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
 
 }
 
+#endif
+
 void cv::split(InputArray _m, OutputArrayOfArrays _mv)
 {
-    if (ocl::useOpenCL() && _m.dims() <= 2 && _mv.isUMatVector() &&
-            ocl_split(_m, _mv))
-        return;
+    CV_OCL_RUN(_m.dims() <= 2 && _mv.isUMatVector(),
+               ocl_split(_m, _mv))
 
     Mat m = _m.getMat();
     if( m.empty() )
@@ -395,6 +398,8 @@ void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
     }
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
@@ -442,10 +447,12 @@ static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 
 }
 
+#endif
+
 void cv::merge(InputArrayOfArrays _mv, OutputArray _dst)
 {
-    if (ocl::useOpenCL() && _mv.isUMatVector() && _dst.isUMat() && ocl_merge(_mv, _dst))
-        return;
+    CV_OCL_RUN(_mv.isUMatVector() && _dst.isUMat(),
+               ocl_merge(_mv, _dst))
 
     std::vector<Mat> mv;
     _mv.getMatVector(mv);
@@ -612,6 +619,8 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     }
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & cnidx)
@@ -701,15 +710,16 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
 
 }
 
+#endif
+
 void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
                  const int* fromTo, size_t npairs)
 {
     if (npairs == 0 || fromTo == NULL)
         return;
 
-    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() &&
-            ocl_mixChannels(src, dst, fromTo, npairs))
-        return;
+    CV_OCL_RUN(src.isUMatVector() && dst.isUMatVector(),
+               ocl_mixChannels(src, dst, fromTo, npairs))
 
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
             src.kind() != _InputArray::STD_VECTOR_VECTOR &&
@@ -737,9 +747,8 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (fromTo.empty())
         return;
 
-    if (ocl::useOpenCL() && src.isUMatVector() && dst.isUMatVector() &&
-            ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
-        return;
+    CV_OCL_RUN(src.isUMatVector() && dst.isUMatVector(),
+               ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
 
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
             src.kind() != _InputArray::STD_VECTOR_VECTOR &&
@@ -1284,6 +1293,8 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
     return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
@@ -1319,13 +1330,14 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_convertScaleAbs(_src, _dst, alpha, beta))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_convertScaleAbs(_src, _dst, alpha, beta))
 
     Mat src = _src.getMat();
     int cn = src.channels();
@@ -1462,9 +1474,7 @@ static LUTFunc lutTab[] =
     (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
 };
 
-}
-
-namespace cv {
+#ifdef HAVE_OPENCL
 
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
@@ -1489,7 +1499,9 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     return k.run(2, globalSize, NULL, false);
 }
 
-} // cv
+#endif
+
+}
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
@@ -1500,8 +1512,8 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         _lut.total() == 256 && _lut.isContinuous() &&
         (depth == CV_8U || depth == CV_8S) );
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_LUT(_src, _lut, _dst))
-        return;
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
@@ -1521,6 +1533,8 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 
 namespace cv {
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, int rtype,
                            double scale, double shift )
 {
@@ -1537,6 +1551,8 @@ static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, 
 
     return true;
 }
+
+#endif
 
 }
 
@@ -1566,9 +1582,8 @@ void cv::normalize( InputArray _src, OutputArray _dst, double a, double b,
         rtype = _dst.fixedType() ? _dst.depth() : depth;
     _dst.createSameSize(_src, CV_MAKETYPE(rtype, cn));
 
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-            ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
-        return;
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     if( _mask.empty() )

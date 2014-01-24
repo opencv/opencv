@@ -31,4 +31,3 @@
 #else
 #define CV_OCL_RUN(condition, func)
 #endif
-
