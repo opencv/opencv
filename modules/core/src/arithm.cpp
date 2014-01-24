@@ -918,6 +918,8 @@ enum { OCL_OP_ADD=0, OCL_OP_SUB=1, OCL_OP_RSUB=2, OCL_OP_ABSDIFF=3, OCL_OP_MUL=4
        OCL_OP_AND=9, OCL_OP_OR=10, OCL_OP_XOR=11, OCL_OP_NOT=12, OCL_OP_MIN=13, OCL_OP_MAX=14,
        OCL_OP_RDIV_SCALE=15 };
 
+#ifdef HAVE_OPENCL
+
 static const char* oclop2str[] = { "OP_ADD", "OP_SUB", "OP_RSUB", "OP_ABSDIFF",
     "OP_MUL", "OP_MUL_SCALE", "OP_DIV_SCALE", "OP_RECIP_SCALE",
     "OP_ADDW", "OP_AND", "OP_OR", "OP_XOR", "OP_NOT", "OP_MIN", "OP_MAX", "OP_RDIV_SCALE", 0 };
@@ -989,6 +991,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     return k.run(2, globalsize, 0, false);
 }
 
+#endif
 
 static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        InputArray _mask, const BinaryFunc* tab,
@@ -1001,16 +1004,19 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
+#ifdef HAVE_OPENCL
     bool use_opencl = (kind1 == _InputArray::UMAT || kind2 == _InputArray::UMAT) &&
-                        ocl::useOpenCL() && dims1 <= 2 && dims2 <= 2;
+            dims1 <= 2 && dims2 <= 2;
+#endif
     bool haveMask = !_mask.empty(), haveScalar = false;
     BinaryFunc func;
 
     if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
     {
         _dst.create(sz1, type1);
-        if( use_opencl && ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false) )
-            return;
+        CV_OCL_RUN(use_opencl,
+                   ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
+
         if( bitwise )
         {
             func = *tab;
@@ -1077,8 +1083,9 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( haveMask && reallocate )
         _dst.setTo(0.);
 
-    if( use_opencl && ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, haveScalar ))
-        return;
+    CV_OCL_RUN(use_opencl,
+               ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, haveScalar))
+
 
     Mat src1 = psrc1->getMat(), src2 = psrc2->getMat();
     Mat dst = _dst.getMat(), mask = _mask.getMat();
@@ -1089,9 +1096,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
         cn = (int)esz;
     }
     else
-    {
         func = tab[depth1];
-    }
 
     if( !haveScalar )
     {
@@ -1278,6 +1283,7 @@ static int actualScalarDepth(const double* data, int len)
         CV_32S;
 }
 
+#ifdef HAVE_OPENCL
 
 static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                           InputArray _mask, int wtype,
@@ -1395,6 +1401,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFunc* tab, bool muldiv=false,
@@ -1409,7 +1416,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int wtype, dims1 = psrc1->dims(), dims2 = psrc2->dims();
     Size sz1 = dims1 <= 2 ? psrc1->size() : Size();
     Size sz2 = dims2 <= 2 ? psrc2->size() : Size();
-    bool use_opencl = _dst.isUMat() && ocl::useOpenCL() && dims1 <= 2 && dims2 <= 2;
+#ifdef HAVE_OPENCL
+    bool use_opencl = _dst.isUMat() && dims1 <= 2 && dims2 <= 2;
+#endif
     bool src1Scalar = checkScalar(*psrc1, type2, kind1, kind2);
     bool src2Scalar = checkScalar(*psrc2, type1, kind2, kind1);
 
@@ -1419,11 +1428,10 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
     {
         _dst.createSameSize(*psrc1, type1);
-        if( use_opencl &&
+        CV_OCL_RUN(use_opencl,
             ocl_arithm_op(*psrc1, *psrc2, _dst, _mask,
                           (!usrdata ? type1 : std::max(depth1, CV_32F)),
                           usrdata, oclop, false))
-            return;
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize(src1, src2, dst, src1.channels());
@@ -1520,10 +1528,9 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( reallocate )
         _dst.setTo(0.);
 
-    if( use_opencl &&
-        ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
-                      usrdata, oclop, haveScalar))
-        return;
+    CV_OCL_RUN(use_opencl,
+               ocl_arithm_op(*psrc1, *psrc2, _dst, _mask, wtype,
+               usrdata, oclop, haveScalar))
 
     BinaryFunc cvtsrc1 = type1 == wtype ? 0 : getConvertFunc(type1, wtype);
     BinaryFunc cvtsrc2 = type2 == type1 ? cvtsrc1 : type2 == wtype ? 0 : getConvertFunc(type2, wtype);
@@ -2600,6 +2607,8 @@ static double getMaxVal(int depth)
     return tab[depth];
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 {
     if ( !((_src1.isMat() || _src1.isUMat()) && (_src2.isMat() || _src2.isUMat())) )
@@ -2636,6 +2645,8 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
@@ -2643,9 +2654,8 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
-    if (ocl::useOpenCL() && _src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat() &&
-            ocl_compare(_src1, _src2, _dst, op))
-        return;
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
+               ocl_compare(_src1, _src2, _dst, op))
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
@@ -2877,6 +2887,8 @@ static InRangeFunc getInRangeFunc(int depth)
     return inRangeTab[depth];
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
@@ -2983,14 +2995,16 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     return ker.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::inRange(InputArray _src, InputArray _lowerb,
                  InputArray _upperb, OutputArray _dst)
 {
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _lowerb.dims() <= 2 &&
-            _upperb.dims() <= 2 && _dst.isUMat() && ocl_inRange(_src, _lowerb, _upperb, _dst))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _lowerb.dims() <= 2 &&
+               _upperb.dims() <= 2 && _dst.isUMat(),
+               ocl_inRange(_src, _lowerb, _upperb, _dst))
 
     int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();

@@ -785,10 +785,8 @@ void cv::gemm( InputArray matA, InputArray matB, double alpha,
            InputArray matC, double beta, OutputArray _matD, int flags )
 {
 #ifdef HAVE_CLAMDBLAS
-    if (ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 &&
-            ocl::useOpenCL() && _matD.isUMat() &&
+    CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat(),
             ocl_gemm(matA, matB, alpha, matC, beta, _matD, flags))
-        return;
 #endif
 
     const int block_lin_size = 128;
@@ -2155,6 +2153,8 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 
 typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, int len, const void* alpha);
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
@@ -2190,6 +2190,8 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst )
@@ -2197,9 +2199,8 @@ void cv::scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert( type == _src2.type() );
 
-    if (ocl::useOpenCL() && _src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat() &&
+    CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
             ocl_scaleAdd(_src1, alpha, _src2, _dst, type))
-        return;
 
     if( depth < CV_32F )
     {
