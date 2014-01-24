@@ -2558,6 +2558,8 @@ void cv::vconcat(InputArray _src, OutputArray dst)
 
 //////////////////////////////////////// set identity ////////////////////////////////////////////
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
@@ -2580,12 +2582,14 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
 
 }
 
+#endif
+
 void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 {
     CV_Assert( _m.dims() <= 2 );
 
-    if (ocl::useOpenCL() && _m.isUMat() && ocl_setIdentity(_m, s))
-        return;
+    CV_OCL_RUN(_m.isUMat(),
+               ocl_setIdentity(_m, s))
 
     Mat m = _m.getMat();
     int i, j, rows = m.rows, cols = m.cols, type = m.type();
@@ -2764,6 +2768,8 @@ static TransposeInplaceFunc transposeInplaceTab[] =
     0, 0, 0, 0, 0, 0, 0, transposeI_32sC6, 0, 0, 0, 0, 0, 0, 0, transposeI_32sC8
 };
 
+#ifdef HAVE_OPENCL
+
 static inline int divUp(int a, int b)
 {
     return (a + b - 1) / b;
@@ -2805,6 +2811,8 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     return k.run(2, globalsize, localsize, false);
 }
 
+#endif
+
 }
 
 void cv::transpose( InputArray _src, OutputArray _dst )
@@ -2812,8 +2820,8 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     int type = _src.type(), esz = CV_ELEM_SIZE(type);
     CV_Assert( _src.dims() <= 2 && esz <= 32 );
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_transpose(_src, _dst))
-        return;
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_transpose(_src, _dst))
 
     Mat src = _src.getMat();
     if( src.empty() )
@@ -3043,6 +3051,8 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceMinC32f reduceC_<float, float, OpMin<float> >
 #define reduceMinC64f reduceC_<double,double,OpMin<double> >
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_reduce(InputArray _src, OutputArray _dst,
@@ -3096,6 +3106,8 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
 
 }
 
+#endif
+
 void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 {
     CV_Assert( _src.dims() <= 2 );
@@ -3110,9 +3122,8 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
                op == CV_REDUCE_MIN || op == CV_REDUCE_AVG );
 
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-            ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
-        return;
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
 
     Mat src = _src.getMat();
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
