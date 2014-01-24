@@ -115,7 +115,7 @@ void dumpOpenCLDevice()
                         ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
                     DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
                     DUMP_PROPERTY_XML( cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j ),
-                        cv::format("(Platform=%sType=%sName=%sVersion=%s",
+                        cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
                         platform->name().c_str(), deviceTypeStr, current_device.name().c_str(), current_device.version().c_str()) );
                 }
             }
