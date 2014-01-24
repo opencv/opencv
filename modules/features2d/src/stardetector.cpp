@@ -426,9 +426,9 @@ StarDetector::StarDetector(int _maxSize, int _responseThreshold,
 {}
 
 
-void StarDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void StarDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
-    Mat grayImage = image;
+    Mat image = _image.getMat(), mask = _mask.getMat(), grayImage = image;
     if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     (*this)(grayImage, keypoints);
