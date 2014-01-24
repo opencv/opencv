@@ -39,6 +39,9 @@ public:
     virtual const ScaleData& getScaleData(int scaleIdx) const;
     virtual void getUMats(std::vector<UMat>& bufs);
 
+    virtual Size getLocalSize() const;
+    virtual Size getLocalBufSize() const;
+
     virtual float calcOrd(int featureIdx) const;
     virtual int calcCat(int featureIdx) const;
     
@@ -330,8 +333,10 @@ public:
     virtual void getUMats(std::vector<UMat>& bufs);
     Rect getNormRect() const;
     int getSquaresOffset() const;
+    Size getLocalSize() const;
+    Size getLocalBufSize() const;
 
-    double operator()(int featureIdx) const
+    float operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
     virtual float calcOrd(int featureIdx) const
     { return (*this)(featureIdx); }
@@ -340,6 +345,7 @@ protected:
     Size origWinSize, sbufSize;
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
+    Ptr<std::vector<OptFeature> > optfeatures_lbuf;
     Ptr<std::vector<ScaleData> > scaleData;
     bool hasTiltedFeatures;
 
@@ -347,6 +353,7 @@ protected:
     UMat usbuf, ufbuf, uscaleData;
 
     int sqofs;
+    Size localSize, lbufSize;
     Vec4i nofs;
     Rect normrect;
     const int* pwin;
@@ -489,7 +496,7 @@ public:
     virtual bool setImage(InputArray img, Size origWinSize,
                           const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
-    double operator()(int featureIdx) const
+    float operator()(int featureIdx) const
     {
         return featuresPtr[featureIdx].calc(offset);
     }

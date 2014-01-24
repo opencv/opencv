@@ -390,6 +390,14 @@ void FeatureEvaluator::getUMats(std::vector<UMat>& umats)
 {
     umats.clear();
 }
+Size FeatureEvaluator::getLocalSize() const
+{
+    return Size(8, 8);
+}
+Size FeatureEvaluator::getLocalBufSize() const
+{
+    return Size(0, 0);
+}
 
 float FeatureEvaluator::calcOrd(int) const { return 0.; }
 int FeatureEvaluator::calcCat(int) const { return 0; }
@@ -423,6 +431,7 @@ HaarEvaluator::HaarEvaluator()
 {
     optfeaturesPtr = 0;
     pwin = 0;
+    localSize = Size(8, 8);
 }
 HaarEvaluator::~HaarEvaluator()
 {
@@ -436,6 +445,8 @@ bool HaarEvaluator::read(const FileNode& node)
         features = makePtr<std::vector<Feature> >();
     if(optfeatures.empty())
         optfeatures = makePtr<std::vector<OptFeature> >();
+    if (optfeatures_lbuf.empty())
+        optfeatures_lbuf = makePtr<std::vector<OptFeature> >();
     if(scaleData.empty())
         scaleData = makePtr<std::vector<ScaleData> >();
     features->resize(n);
@@ -461,6 +472,7 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     ret->origWinSize = origWinSize;
     ret->features = features;
     ret->optfeatures = optfeatures;
+    ret->optfeatures_lbuf = optfeatures_lbuf;
     ret->optfeaturesPtr = optfeaturesPtr;
     ret->scaleData = scaleData;
     ret->hasTiltedFeatures = hasTiltedFeatures;
@@ -472,10 +484,13 @@ Ptr<FeatureEvaluator> HaarEvaluator::clone() const
     ret->uscaleData = uscaleData;
     ret->nofs = nofs;
     ret->sqofs = sqofs;
+    ret->lbufSize = lbufSize;
     ret->normrect = normrect;
     ret->pwin = 0;
     ret->varianceNormFactor = 0;
     ret->sbufSize = sbufSize;
+    ret->localSize = localSize;
+    ret->lbufSize = lbufSize;
     return ret;
 }
 
@@ -576,11 +591,28 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         optfeaturesPtr = &(*optfeatures)[0];
         for( fi = 0; fi < nfeatures; fi++ )
             optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
+        optfeatures_lbuf->resize(nfeatures);
+        /*int lsize;
+        for( lsize = 8; lsize >= 4; lsize -= 4 )
+        {
+            localSize = Size(lsize, lsize);
+            lbufSize = Size(origWinSize.width + lsize * scaleData->at(0).ystep, origWinSize.height + lsize * scaleData->at(0).ystep);
+            if (lbufSize.area() <= 2800)
+                break;
+        }
+        if (lsize < 4 || hasTiltedFeatures)*/
+        {
+            localSize = Size(8, 8);
+            lbufSize = Size(0, 0);
+        }
+
+        for( fi = 0; fi < nfeatures; fi++ )
+            optfeatures_lbuf->at(fi).setOffsets(ff[fi], lbufSize.width > 0 ? lbufSize.width : sstep, tofs);
     }
 
     if(recalcOptFeatures || ufbuf.empty())
     {
-        copyVectorToUMat(*optfeatures, ufbuf);
+        copyVectorToUMat(*optfeatures_lbuf, ufbuf);
         copyVectorToUMat(*scaleData, uscaleData);
     }
 
@@ -613,7 +645,7 @@ bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
         nf = std::sqrt(nf);
     else
         nf = 1.;
-    varianceNormFactor = (1./nf);
+    varianceNormFactor = (float)(1./nf);
 
     return true;
 }
@@ -647,6 +679,15 @@ Rect HaarEvaluator::getNormRect() const
 int HaarEvaluator::getSquaresOffset() const
 {
     return sqofs;
+}
+
+Size HaarEvaluator::getLocalSize() const
+{
+    return localSize;
+}
+Size HaarEvaluator::getLocalBufSize() const
+{
+    return lbufSize;
 }
 
 void HaarEvaluator::getUMats(std::vector<UMat>& bufs)
@@ -858,9 +899,9 @@ Ptr<FeatureEvaluator> HOGEvaluator::clone() const
     return ret;
 }
 
-bool HOGEvaluator::setImage( InputArray _image, Size winSize, const std::vector<float>& _scales )
+bool HOGEvaluator::setImage( InputArray /*_image*/, Size /*winSize*/, const std::vector<float>& /*_scales*/ )
 {
-    Mat image = _image.getMat();
+    /*Mat image = _image.getMat();
     int rows = image.rows + 1;
     int cols = image.cols + 1;
     origWinSize = winSize;
@@ -881,10 +922,12 @@ bool HOGEvaluator::setImage( InputArray _image, Size winSize, const std::vector<
     {
         featuresPtr[featIdx].updatePtrs( hist, normSum );
     }
-    return true;
+    return true;*/
+    CV_Error(CV_StsNotImplemented, "");
+    return false;
 }
 
-bool HOGEvaluator::setWindow(Point pt, int scaleIdx)
+bool HOGEvaluator::setWindow(Point pt, int /*scaleIdx*/)
 {
     if( pt.x < 0 || pt.y < 0 ||
         pt.x + origWinSize.width >= hist[0].cols-2 ||
@@ -1183,7 +1226,9 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     int featureType = getFeatureType();
     std::vector<UMat> bufs;
     featureEvaluator->getUMats(bufs);
-    size_t localsize[] = { 8, 8 };
+    Size localsz = featureEvaluator->getLocalSize();
+    Size lbufSize = featureEvaluator->getLocalBufSize();
+    size_t localsize[] = { localsz.width, localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
@@ -1194,6 +1239,10 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
     if( ustages.empty() )
     {
+        for (size_t i = 0; i < data.stages.size(); i++)
+        {
+            printf("%d. count=%d\n", (int)i, (int)data.stages[i].ntrees);
+        }
         copyVectorToUMat(data.stages, ustages);
         copyVectorToUMat(data.stumps, ustumps);
         if( !data.subsets.empty() )
@@ -1208,7 +1257,14 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
         if( haarKernel.empty() )
         {
-            haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "");
+            String opts;
+            printf("localsize = %d\n", localsz.width);
+            if (lbufSize.area())
+                opts = format("-D LOCAL_SIZE=%d -D SUM_BUF_SIZE=%d -D SUM_BUF_STEP=%d",
+                              localsz.width, lbufSize.area(), lbufSize.width);
+            else
+                opts = format("-D LOCAL_SIZE=%d", localsz.width);
+            haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( haarKernel.empty() )
                 return false;
         }
@@ -1238,7 +1294,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
         if( lbpKernel.empty() )
         {
-            lbpKernel.create("runLBPClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "");
+            lbpKernel.create("runLBPClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "-D LOCAL_SIZE=8");
             if( lbpKernel.empty() )
                 return false;
         }
