@@ -98,28 +98,25 @@ void dumpOpenCLDevice()
     using namespace cv::ocl;
     try
     {
-#if 0
-        Platforms platforms;
-        getOpenCLPlatforms(platforms);
+        std::vector<PlatformInfo2> platforms;
+        cv::ocl::getPlatfomsInfo(platforms);
         if (platforms.size() > 0)
         {
             DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
             for (size_t i = 0; i < platforms.size(); i++)
             {
-                const Platform* platform = platforms.at(i);
+                const PlatformInfo2* platform = &platforms[i];
                 DUMP_MESSAGE_STDOUT("    " << platform->name().c_str());
-                const Devices& devices = platform->devices();
-                for (size_t j = 0; j < devices.size(); j++)
+                Device current_device;
+                for (int j = 0; j < platform->deviceNumber(); j++)
                 {
-                    const Device& current_device = *devices.at(j);
+                    platform->getDevice(current_device, j);
                     const char* deviceTypeStr = current_device.type() == Device::TYPE_CPU
-                                ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+                        ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
                     DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
-                    DUMP_PROPERTY_XML(cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j),
-                            "(Platform=" << current_device.getPlatform().name().c_str()
-                            << ")(Type=" << deviceTypeStr
-                            << ")(Name=" << current_device.name().c_str()
-                            << ")(Version=" << current_device.version().c_str() << ")");
+                    DUMP_PROPERTY_XML( cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j ),
+                        cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
+                        platform->name().c_str(), deviceTypeStr, current_device.name().c_str(), current_device.version().c_str()) );
                 }
             }
         }
@@ -129,10 +126,9 @@ void dumpOpenCLDevice()
             DUMP_PROPERTY_XML("cv_ocl", "not available");
             return;
         }
-#endif
-        DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
 
         const Device& device = Device::getDefault();
+        DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
 
 #if 0
         DUMP_MESSAGE_STDOUT("    Platform = "<< device.getPlatform().name());
@@ -140,17 +136,15 @@ void dumpOpenCLDevice()
 #endif
 
         const char* deviceTypeStr = device.type() == Device::TYPE_CPU
-                        ? "CPU" : (device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+            ? ("CPU") : (device.type() == Device::TYPE_GPU ? device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
         DUMP_MESSAGE_STDOUT("    Type = "<< deviceTypeStr);
         DUMP_PROPERTY_XML("cv_ocl_current_deviceType", deviceTypeStr);
 
         DUMP_MESSAGE_STDOUT("    Name = "<< device.name());
         DUMP_PROPERTY_XML("cv_ocl_current_deviceName", device.name());
 
-#if 0
         DUMP_MESSAGE_STDOUT("    Version = " << device.version());
         DUMP_PROPERTY_XML("cv_ocl_current_deviceVersion", device.version());
-#endif
 
         DUMP_MESSAGE_STDOUT("    Compute units = "<< device.maxComputeUnits());
         DUMP_PROPERTY_XML("cv_ocl_current_maxComputeUnits", device.maxComputeUnits());

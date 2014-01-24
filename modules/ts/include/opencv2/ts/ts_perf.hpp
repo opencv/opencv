@@ -510,6 +510,15 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
 #endif
 #endif
 
+#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+namespace cvtest { namespace ocl {
+void dumpOpenCLDevice();
+}}
+#define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
+#else
+#define TEST_DUMP_OCL_INFO
+#endif
+
 #define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
     ::perf::Regression::Init(#modulename); \
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
@@ -519,6 +528,7 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     ::testing::Test::RecordProperty("cv_module_name", #modulename); \
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
+    TEST_DUMP_OCL_INFO \
     return RUN_ALL_TESTS();
 
 // impls must be an array, not a pointer; "plain" should always be one of the implementations
