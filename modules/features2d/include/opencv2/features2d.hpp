@@ -998,7 +998,7 @@ public:
      * Add descriptors to train descriptor collection.
      * descriptors      Descriptors to add. Each descriptors[i] is a descriptors set from one image.
      */
-    CV_WRAP virtual void add( const std::vector<Mat>& descriptors );
+    CV_WRAP virtual void add( InputArrayOfArrays descriptors );
     /*
      * Get train descriptors collection.
      */
@@ -1034,29 +1034,29 @@ public:
      * Method train() is run in this methods.
      */
     // Find one best match for each query descriptor (if mask is empty).
-    CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    CV_WRAP void match( InputArray queryDescriptors, InputArray trainDescriptors,
+                CV_OUT std::vector<DMatch>& matches, InputArray mask=Mat() ) const;
     // Find k best matches for each query descriptor (in increasing order of distances).
     // compactResult is used when mask is not empty. If compactResult is false matches
     // vector will have the same size as queryDescriptors rows. If compactResult is true
     // matches vector will not contain matches for fully masked out query descriptors.
-    CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    CV_WRAP void knnMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                    CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                   const Mat& mask=Mat(), bool compactResult=false ) const;
+                   InputArray mask=Mat(), bool compactResult=false ) const;
     // Find best matches for each query descriptor which have distance less than
     // maxDistance (in increasing order of distances).
-    void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                       std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const Mat& mask=Mat(), bool compactResult=false ) const;
+                      InputArray mask=Mat(), bool compactResult=false ) const;
     /*
      * Group of methods to match descriptors from one image to image set.
      * See description of similar methods for matching image pair above.
      */
-    CV_WRAP void match( const Mat& queryDescriptors, CV_OUT std::vector<DMatch>& matches,
+    CV_WRAP void match( InputArray queryDescriptors, CV_OUT std::vector<DMatch>& matches,
                 const std::vector<Mat>& masks=std::vector<Mat>() );
-    CV_WRAP void knnMatch( const Mat& queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
+    CV_WRAP void knnMatch( InputArray queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
            const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    void radiusMatch( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+    void radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
                    const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
 
     // Reads matcher object from a file node
@@ -1101,10 +1101,10 @@ protected:
     // In fact the matching is implemented only by the following two methods. These methods suppose
     // that the class object has been trained already. Public match methods call these methods
     // after calling train().
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false ) = 0;
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false ) = 0;
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false ) = 0;
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false ) = 0;
 
     static bool isPossibleMatch( const Mat& mask, int queryIdx, int trainIdx );
     static bool isMaskedOut( const std::vector<Mat>& masks, int queryIdx );
@@ -1114,6 +1114,7 @@ protected:
 
     // Collection of descriptors from train images.
     std::vector<Mat> trainDescCollection;
+    std::vector<UMat> utrainDescCollection;
 };
 
 /*
@@ -1137,10 +1138,16 @@ public:
 
     AlgorithmInfo* info() const;
 protected:
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false );
+
+    bool ocl_knnMatch(InputArray query, InputArray train, std::vector< std::vector<DMatch> > &matches,
+        int k, int dstType, bool compactResult=false);
+    bool ocl_radiusMatch(InputArray query, InputArray train, std::vector< std::vector<DMatch> > &matches,
+        float maxDistance, int dstType, bool compactResult=false);
+    bool ocl_match(InputArray query, InputArray train, std::vector< std::vector<DMatch> > &matches, int dstType);
 
     int normType;
     bool crossCheck;
@@ -1175,10 +1182,10 @@ protected:
                                    const Mat& indices, const Mat& distances,
                                    std::vector<std::vector<DMatch> >& matches );
 
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=std::vector<Mat>(), bool compactResult=false );
 
     Ptr<flann::IndexParams> indexParams;
     Ptr<flann::SearchParams> searchParams;
