@@ -55,7 +55,7 @@ public:
     int ref_counter;
 
     VizImpl(const String &name);
-    virtual ~VizImpl() {};
+    virtual ~VizImpl() {}
 
     bool wasStopped() const;
     void close();
