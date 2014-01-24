@@ -59,7 +59,7 @@ class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource2;
 class CV_EXPORTS Queue;
-class CV_EXPORTS PlatformInform;
+class CV_EXPORTS PlatformInfo2;
 
 class CV_EXPORTS Device
 {
@@ -551,12 +551,12 @@ protected:
     Impl* p;
 };
 
-class CV_EXPORTS PlatformInform
+class CV_EXPORTS PlatformInfo2
 {
 public:
-    PlatformInform();
-    explicit PlatformInform(void* id);
-    ~PlatformInform();
+    PlatformInfo2();
+    explicit PlatformInfo2(void* id);
+    ~PlatformInfo2();
 
     String name() const;
     String vendor() const;
@@ -572,7 +572,7 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
-CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInform>& platform_info);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo2>& platform_info);
 
 }}
 

@@ -98,21 +98,21 @@ void dumpOpenCLDevice()
     using namespace cv::ocl;
     try
     {
-        std::vector<PlatformInform> platforms;
+        std::vector<PlatformInfo2> platforms;
         cv::ocl::getPlatfomsInfo(platforms);
         if (platforms.size() > 0)
         {
             DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
             for (size_t i = 0; i < platforms.size(); i++)
             {
-                const PlatformInform* platform = &platforms[i];
+                const PlatformInfo2* platform = &platforms[i];
                 DUMP_MESSAGE_STDOUT("    " << platform->name().c_str());
                 Device current_device;
                 for (int j = 0; j < platform->deviceNumber(); j++)
                 {
                     platform->getDevice(current_device, j);
                     const char* deviceTypeStr = current_device.type() == Device::TYPE_CPU
-                                ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+                        ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
                     DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
                     DUMP_PROPERTY_XML( cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j ),
                         cv::format("(Platform=%sType=%sName=%sVersion=%s",
@@ -136,7 +136,7 @@ void dumpOpenCLDevice()
 #endif
 
         const char* deviceTypeStr = device.type() == Device::TYPE_CPU
-                        ? "CPU" : (device.type() == Device::TYPE_GPU ? "GPU" : "unknown");
+            ? ("CPU") : (device.type() == Device::TYPE_GPU ? device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
         DUMP_MESSAGE_STDOUT("    Type = "<< deviceTypeStr);
         DUMP_PROPERTY_XML("cv_ocl_current_deviceType", deviceTypeStr);
 
