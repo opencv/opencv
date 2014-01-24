@@ -43,8 +43,8 @@ namespace ocl {
             method == TM_CCORR_NORMED ||
             method == TM_SQDIFF_NORMED ||
             method == TM_CCOEFF_NORMED;
-        double eps = isNormed ? 1e-3
-            : 255 * 255 * tmpl.total() * 1e-3;
+        double eps = isNormed ? 3e-2
+            : 255 * 255 * tmpl.total() * 1e-4;
 
         if (isNormed)
             SANITY_CHECK(result,eps,ERROR_RELATIVE);
