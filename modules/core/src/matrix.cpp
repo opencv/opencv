@@ -1193,7 +1193,6 @@ Mat _InputArray::getMat(int i) const
     return Mat();
 }
 
-
 UMat _InputArray::getUMat(int i) const
 {
     int k = kind();
@@ -1225,7 +1224,6 @@ UMat _InputArray::getUMat(int i) const
 
     return getMat(i).getUMat(accessFlags);
 }
-
 
 void _InputArray::getMatVector(std::vector<Mat>& mv) const
 {
@@ -1504,7 +1502,6 @@ Size _InputArray::size(int i) const
     }
 }
 
-
 int _InputArray::sizend(int* arrsz, int i) const
 {
     int j, d=0, k = kind();
@@ -1562,7 +1559,6 @@ int _InputArray::sizend(int* arrsz, int i) const
 
     return d;
 }
-
 
 bool _InputArray::sameSize(const _InputArray& arr) const
 {
@@ -2305,7 +2301,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(!fixedType() || (CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
         }
         if(fixedSize())
         {
@@ -2364,7 +2360,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
             if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
-                CV_Assert(!fixedType() || (CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0));
+                CV_Assert(CV_MAT_TYPE(mtype) == m.type());
         }
         if(fixedSize())
         {
