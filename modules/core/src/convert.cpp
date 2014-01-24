@@ -289,10 +289,12 @@ static bool ocl_split( InputArray _m, OutputArrayOfArrays _mv )
         return false;
 
     Size size = _m.size();
-    std::vector<UMat> & dst = *(std::vector<UMat> *)_mv.getObj();
-    dst.resize(cn);
+    _mv.create(cn, 1, depth);
     for (int i = 0; i < cn; ++i)
-        dst[i].create(size, depth);
+        _mv.create(size, depth, i);
+
+    std::vector<UMat> dst;
+    _mv.getUMatVector(dst);
 
     int argidx = k.set(0, ocl::KernelArg::ReadOnly(_m.getUMat()));
     for (int i = 0; i < cn; ++i)
@@ -317,10 +319,19 @@ void cv::split(InputArray _m, OutputArrayOfArrays _mv)
         _mv.release();
         return;
     }
+
     CV_Assert( !_mv.fixedType() || _mv.empty() || _mv.type() == m.depth() );
-    _mv.create(m.channels(), 1, m.depth());
-    Mat* dst = &_mv.getMatRef(0);
-    split(m, dst);
+
+    Size size = m.size();
+    int depth = m.depth(), cn = m.channels();
+    _mv.create(cn, 1, depth);
+    for (int i = 0; i < cn; ++i)
+        _mv.create(size, depth, i);
+
+    std::vector<Mat> dst;
+    _mv.getMatVector(dst);
+
+    split(m, &dst[0]);
 }
 
 void cv::merge(const Mat* mv, size_t n, OutputArray _dst)
@@ -404,7 +415,8 @@ namespace cv {
 
 static bool ocl_merge( InputArrayOfArrays _mv, OutputArray _dst )
 {
-    const std::vector<UMat> & src = *(const std::vector<UMat> *)(_mv.getObj());
+    std::vector<UMat> src;
+    _mv.getUMatVector(src);
     CV_Assert(!src.empty());
 
     int type = src[0].type(), depth = CV_MAT_DEPTH(type);
@@ -651,8 +663,9 @@ static void getUMatIndex(const std::vector<UMat> & um, int cn, int & idx, int & 
 static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _dst,
                             const int* fromTo, size_t npairs)
 {
-    const std::vector<UMat> & src = *(const std::vector<UMat> *)_src.getObj();
-    std::vector<UMat> & dst = *(std::vector<UMat> *)_dst.getObj();
+    std::vector<UMat> src, dst;
+    _src.getUMatVector(src);
+    _dst.getUMatVector(dst);
 
     size_t nsrc = src.size(), ndst = dst.size();
     CV_Assert(nsrc > 0 && ndst > 0);
@@ -718,7 +731,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (npairs == 0 || fromTo == NULL)
         return;
 
-    CV_OCL_RUN(src.isUMatVector() && dst.isUMatVector(),
+    CV_OCL_RUN(dst.isUMatVector(),
                ocl_mixChannels(src, dst, fromTo, npairs))
 
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
@@ -747,7 +760,7 @@ void cv::mixChannels(InputArrayOfArrays src, InputOutputArrayOfArrays dst,
     if (fromTo.empty())
         return;
 
-    CV_OCL_RUN(src.isUMatVector() && dst.isUMatVector(),
+    CV_OCL_RUN(dst.isUMatVector(),
                ocl_mixChannels(src, dst, &fromTo[0], fromTo.size()>>1))
 
     bool src_is_mat = src.kind() != _InputArray::STD_VECTOR_MAT &&
