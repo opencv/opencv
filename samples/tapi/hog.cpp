@@ -269,7 +269,7 @@ void App::handleKey(char key)
     case 'm':
     case 'M':
         ocl::setUseOpenCL(!cv::ocl::useOpenCL());
-        cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL" : "CPU") << " mode\n";
+        cout << "Switched to " << (ocl::useOpenCL() ? "OpenCL enabled" : "CPU") << " mode\n";
         break;
     case 'g':
     case 'G':
