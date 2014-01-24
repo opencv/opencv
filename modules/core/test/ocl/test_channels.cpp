@@ -197,7 +197,7 @@ PARAM_TEST_CASE(Split, MatType, Channels, bool)
     }
 };
 
-OCL_TEST_P(Split, DISABLED_Accuracy)
+OCL_TEST_P(Split, Accuracy)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
