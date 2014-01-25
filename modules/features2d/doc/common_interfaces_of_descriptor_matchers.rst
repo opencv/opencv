@@ -41,7 +41,7 @@ with an image set. ::
          * Group of methods to match descriptors from an image pair.
          */
         void match( InputArray queryDescriptors, InputArray trainDescriptors,
-                    vector<DMatch>& matches, InputArray mask=Mat() ) const;
+                    vector<DMatch>& matches, InputArray mask=noArray() ) const;
         void knnMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                        vector<vector<DMatch> >& matches, int k,
                        InputArray mask=Mat(), bool compactResult=false ) const;
@@ -52,7 +52,7 @@ with an image set. ::
          * Group of methods to match descriptors from one image to an image set.
          */
         void match( InputArray queryDescriptors, vector<DMatch>& matches,
-                    const vector<Mat>& masks=vector<Mat>() );
+                    const vector<Mat>& masks=noArray() );
         void knnMatch( InputArray queryDescriptors, vector<vector<DMatch> >& matches,
                        int k, const vector<Mat>& masks=vector<Mat>(),
                        bool compactResult=false );
@@ -131,7 +131,7 @@ DescriptorMatcher::match
 ----------------------------
 Finds the best match for each descriptor from a query set.
 
-.. ocv:function:: void DescriptorMatcher::match( InputArray queryDescriptors, InputArray trainDescriptors, vector<DMatch>& matches, InputArray mask=Mat() ) const
+.. ocv:function:: void DescriptorMatcher::match( InputArray queryDescriptors, InputArray trainDescriptors, vector<DMatch>& matches, InputArray mask=noArray() ) const
 
 .. ocv:function:: void DescriptorMatcher::match(InputArray queryDescriptors, vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
 
@@ -153,7 +153,7 @@ DescriptorMatcher::knnMatch
 -------------------------------
 Finds the k best matches for each descriptor from a query set.
 
-.. ocv:function:: void DescriptorMatcher::knnMatch(InputArray queryDescriptors,   InputArray trainDescriptors,       vector<vector<DMatch> >& matches,       int k, InputArray mask=Mat(),       bool compactResult=false ) const
+.. ocv:function:: void DescriptorMatcher::knnMatch(InputArray queryDescriptors,   InputArray trainDescriptors,       vector<vector<DMatch> >& matches,       int k, InputArray mask=noArray(),       bool compactResult=false ) const
 
 .. ocv:function:: void DescriptorMatcher::knnMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches, int k,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
@@ -179,7 +179,7 @@ DescriptorMatcher::radiusMatch
 ----------------------------------
 For each query descriptor, finds the training descriptors not farther than the specified distance.
 
-.. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           InputArray trainDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance, InputArray mask=Mat(),           bool compactResult=false ) const
+.. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           InputArray trainDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance, InputArray mask=noArray(),           bool compactResult=false ) const
 
 .. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
