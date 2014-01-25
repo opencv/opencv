@@ -1515,6 +1515,26 @@ namespace cv
             int nonmaxSupressionOCL(oclMat& keypoints);
         };
 
+        ////////////////////////////////// BRIEF Feature Descriptor //////////////////////////////////
+
+        class CV_EXPORTS BRIEF_OCL
+        {
+        public:
+            static const int PATCH_SIZE = 48;
+            static const int KERNEL_SIZE = 9;
+
+            explicit BRIEF_OCL(int _bytes = 32);
+
+            //!computes the brief descriptor for a set of given keypoints
+            //! supports only CV_8UC1 images
+            void compute(const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors) const;
+
+            static int getBorderSize();
+        protected:
+
+            int bytes;
+        };
+
         ////////////////////////////////// ORB Descriptor Extractor //////////////////////////////////
         class CV_EXPORTS ORB_OCL
         {

@@ -119,35 +119,3 @@ them into a single color descriptor. ::
     protected:
         ...
     };
-
-
-
-BriefDescriptorExtractor
-------------------------
-.. ocv:class:: BriefDescriptorExtractor : public DescriptorExtractor
-
-Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
-Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
-11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
-
-    class BriefDescriptorExtractor : public DescriptorExtractor
-    {
-    public:
-        static const int PATCH_SIZE = 48;
-        static const int KERNEL_SIZE = 9;
-
-        // bytes is a length of descriptor in bytes. It can be equal 16, 32 or 64 bytes.
-        BriefDescriptorExtractor( int bytes = 32 );
-
-        virtual void read( const FileNode& );
-        virtual void write( FileStorage& ) const;
-        virtual int descriptorSize() const;
-        virtual int descriptorType() const;
-        virtual int defaultNorm() const;
-    protected:
-        ...
-    };
-
-.. note::
-
-   * A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp
