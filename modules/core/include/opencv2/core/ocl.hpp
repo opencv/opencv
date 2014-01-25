@@ -60,6 +60,7 @@ class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource2;
 class CV_EXPORTS Queue;
 class CV_EXPORTS PlatformInfo2;
+class CV_EXPORTS Image2D;
 
 class CV_EXPORTS Device
 {
@@ -89,6 +90,7 @@ public:
     String vendor() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
+    String deviceVersion() const;
     String driverVersion() const;
     void* ptr() const;
 
@@ -325,6 +327,7 @@ public:
                 const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
+    int set(int i, const Image2D& image2D);
     int set(int i, const UMat& m);
     int set(int i, const KernelArg& arg);
     template<typename _Tp> int set(int i, const _Tp& value)
@@ -573,6 +576,19 @@ CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo2>& platform_info);
+
+class CV_EXPORTS Image2D
+{
+public:
+    Image2D();
+    Image2D(const UMat &src);
+    ~Image2D();
+
+    void* ptr() const;
+protected:
+    struct Impl;
+    Impl* p;
+};
 
 }}
 
