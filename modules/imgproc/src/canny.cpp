@@ -88,6 +88,8 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 }
 #endif
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
@@ -230,6 +232,8 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     return getEdgesKernel.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::Canny( InputArray _src, OutputArray _dst,
@@ -255,9 +259,8 @@ void cv::Canny( InputArray _src, OutputArray _dst,
     if (low_thresh > high_thresh)
         std::swap(low_thresh, high_thresh);
 
-    if (ocl::useOpenCL() && _dst.isUMat() && cn == 1 &&
-            ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
-        return;
+    CV_OCL_RUN(_dst.isUMat() && cn == 1,
+               ocl_Canny(_src, _dst, (float)low_thresh, (float)high_thresh, aperture_size, L2gradient, cn, size))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 

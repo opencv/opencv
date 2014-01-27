@@ -45,6 +45,8 @@
 // ----------------------------------------------------------------------
 // CLAHE
 
+#ifdef HAVE_OPENCL
+
 namespace clahe
 {
     static bool calcLut(cv::InputArray _src, cv::OutputArray _dst,
@@ -123,6 +125,8 @@ namespace clahe
         return true;
     }
 }
+
+#endif
 
 namespace
 {
@@ -321,9 +325,12 @@ namespace
         int tilesY_;
 
         cv::Mat srcExt_;
-        cv::UMat usrcExt_;
         cv::Mat lut_;
+
+#ifdef HAVE_OPENCL
+        cv::UMat usrcExt_;
         cv::UMat ulut_;
+#endif
     };
 
     CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
@@ -340,7 +347,9 @@ namespace
     {
         CV_Assert( _src.type() == CV_8UC1 );
 
+#ifdef HAVE_OPENCL
         bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.dims()<=2;
+#endif
 
         const int histSize = 256;
 
@@ -354,6 +363,7 @@ namespace
         }
         else
         {
+#ifdef HAVE_OPENCL
             if(useOpenCL)
             {
                 cv::copyMakeBorder(_src, usrcExt_, 0, tilesY_ - (_src.size().height % tilesY_), 0, tilesX_ - (_src.size().width % tilesX_), cv::BORDER_REFLECT_101);
@@ -361,6 +371,7 @@ namespace
                 _srcForLut = usrcExt_;
             }
             else
+#endif
             {
                 cv::copyMakeBorder(_src, srcExt_, 0, tilesY_ - (_src.size().height % tilesY_), 0, tilesX_ - (_src.size().width % tilesX_), cv::BORDER_REFLECT_101);
                 tileSize = cv::Size(srcExt_.size().width / tilesX_, srcExt_.size().height / tilesY_);
@@ -378,9 +389,11 @@ namespace
             clipLimit = std::max(clipLimit, 1);
         }
 
-        if(useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
+#ifdef HAVE_OPENCL
+        if (useOpenCL && clahe::calcLut(_srcForLut, ulut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale) )
             if( clahe::transform(_src, _dst, ulut_, tilesX_, tilesY_, tileSize) )
                 return;
+#endif
 
         cv::Mat src = _src.getMat();
         _dst.create( src.size(), src.type() );
@@ -420,8 +433,10 @@ namespace
     {
         srcExt_.release();
         lut_.release();
+#ifdef HAVE_OPENCL
         usrcExt_.release();
         ulut_.release();
+#endif
     }
 }
 

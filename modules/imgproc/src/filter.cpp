@@ -3115,10 +3115,7 @@ template<typename ST, class CastOp, class VecOp> struct Filter2D : public BaseFi
     VecOp vecOp;
 };
 
-}
-
-namespace cv
-{
+#ifdef HAVE_OPENCL
 
 #define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
 #define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
@@ -3551,6 +3548,9 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     UMat dst = _dst.getUMat();
     return ocl_sepColFilter2D(buf, dst, kernelY, anchor.y, true);
 }
+
+#endif
+
 }
 
 cv::Ptr<cv::BaseFilter> cv::getLinearFilter(int srcType, int dstType,
@@ -3668,9 +3668,8 @@ void cv::filter2D( InputArray _src, OutputArray _dst, int ddepth,
                    InputArray _kernel, Point anchor,
                    double delta, int borderType )
 {
-    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-    if( use_opencl && ocl_filter2D(_src, _dst, ddepth, _kernel, anchor, delta, borderType))
-        return;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_filter2D(_src, _dst, ddepth, _kernel, anchor, delta, borderType))
 
     Mat src = _src.getMat(), kernel = _kernel.getMat();
 
@@ -3718,9 +3717,8 @@ void cv::sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
-    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-    if (use_opencl && ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
-        return;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_sepFilter2D(_src, _dst, ddepth, _kernelX, _kernelY, anchor, delta, borderType))
 
     Mat src = _src.getMat(), kernelX = _kernelX.getMat(), kernelY = _kernelY.getMat();
 

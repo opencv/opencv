@@ -1920,39 +1920,41 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
     }
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
+{
+    int type = _src.type();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
+        return false;
+
+    const char * kernelName;
+
+    if (m == 3)
+        kernelName = "medianFilter3";
+    else if (m == 5)
+        kernelName = "medianFilter5";
+    else
+        return false;
+
+    ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(_src.size(),type);
+    UMat dst = _dst.getUMat();
+
+    size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
+    size_t localsize[2] = {16, 16};
+
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
 }
 
-namespace cv
-{
-    static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
-    {
-        int type = _src.type();
-        int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+#endif
 
-        if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
-            return false;
-
-        const char * kernelName;
-
-        if (m==3)
-            kernelName = "medianFilter3";
-        else if (m==5)
-            kernelName = "medianFilter5";
-        else
-            return false;
-
-        ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
-        if (k.empty())
-            return false;
-
-        _dst.create(_src.size(),type);
-        UMat src = _src.getUMat(), dst = _dst.getUMat();
-
-        size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
-        size_t localsize[2] = {16, 16};
-
-        return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
-    }
 }
 
 void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
@@ -1961,16 +1963,12 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     if( ksize <= 1 )
     {
-        Mat src0 = _src0.getMat();
-        _dst.create( src0.size(), src0.type() );
-        Mat dst = _dst.getMat();
-        src0.copyTo(dst);
+        _src0.copyTo(_dst);
         return;
     }
 
-    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-    if ( use_opencl && ocl_medianFilter(_src0,_dst, ksize))
-        return;
+    CV_OCL_RUN(_src0.dims() <= 2 && _dst.isUMat(),
+               ocl_medianFilter(_src0,_dst, ksize))
 
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
@@ -2226,6 +2224,8 @@ private:
 };
 #endif
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
@@ -2300,6 +2300,8 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     size_t globalsize[2] = { dst.cols, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
+
+#endif
 
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
@@ -2651,9 +2653,8 @@ void cv::bilateralFilter( InputArray _src, OutputArray _dst, int d,
 {
     _dst.create( _src.size(), _src.type() );
 
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_bilateralFilter_8u(_src, _dst, d, sigmaColor, sigmaSpace, borderType))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_bilateralFilter_8u(_src, _dst, d, sigmaColor, sigmaSpace, borderType))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
