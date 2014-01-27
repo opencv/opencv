@@ -267,24 +267,26 @@ bool  TiffDecoder::readData( Mat& img )
                                 return false;
                             }
 
+                            uchar * bstart = buffer + (tile_height0 - tile_height) * tile_width0 * 4;
+
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
                                 {
                                     if (wanted_channels == 4)
                                     {
-                                        icvCvt_BGRA2RGBA_8u_C4R( buffer + i*tile_width*4, 0,
+                                        icvCvt_BGRA2RGBA_8u_C4R( bstart + i*tile_width0*4, 0,
                                                              data + x*4 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1) );
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                        icvCvt_BGRA2BGR_8u_C4C3R( bstart + i*tile_width0*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1), 2 );
                                     }
                                 }
                                 else
-                                    icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
+                                    icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
                                                               cvSize(tile_width,1), 2 );
                             break;
@@ -303,25 +305,27 @@ bool  TiffDecoder::readData( Mat& img )
                                 return false;
                             }
 
+                            uint16 * bstart = buffer16 + (tile_height0 - tile_height) * tile_width0 * ncn;
+
                             for( i = 0; i < tile_height; i++ )
                             {
                                 if( color )
                                 {
                                     if( ncn == 1 )
                                     {
-                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_Gray2BGR_16u_C1C3R(bstart + i*tile_width0*ncn, 0,
                                                                   (ushort*)(data + img.step*i) + x*3, 0,
                                                                   cvSize(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_RGB2BGR_16u_C3R(bstart + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1) );
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_BGRA2BGR_16u_C4C3R(bstart + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1), 2 );
                                     }
@@ -331,7 +335,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         memcpy((ushort*)(data + img.step*i)+x,
-                                               buffer16 + i*tile_width*ncn,
+                                               bstart + i*tile_width0*ncn,
                                                tile_width*sizeof(buffer16[0]));
                                     }
                                     else
@@ -359,18 +363,21 @@ bool  TiffDecoder::readData( Mat& img )
                                 return false;
                             }
 
+                            float * fstart = buffer32 + (tile_height0 - tile_height) * tile_width0 * sizeof(buffer32[0]);
+                            double * dstart = buffer64 + (tile_height0 - tile_height) * tile_width0 * sizeof(buffer64[0]);
+
                             for( i = 0; i < tile_height; i++ )
                             {
                                 if(dst_bpp == 32)
                                 {
                                     memcpy((float*)(data + img.step*i)+x,
-                                           buffer32 + i*tile_width*ncn,
+                                           fstart + i*tile_width0*ncn,
                                            tile_width*sizeof(buffer32[0]));
                                 }
                                 else
                                 {
                                     memcpy((double*)(data + img.step*i)+x,
-                                         buffer64 + i*tile_width*ncn,
+                                         dstart + i*tile_width0*ncn,
                                          tile_width*sizeof(buffer64[0]));
                                 }
                             }
