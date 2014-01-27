@@ -1287,8 +1287,8 @@ MainWindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
     switch(uMsg)
     {
     case WM_COPY:
-      ::WindowProc(hwnd, uMsg, wParam, lParam); // call highgui proc. There may be a better way to do this.
-      break;
+        ::WindowProc(hwnd, uMsg, wParam, lParam); // call highgui proc. There may be a better way to do this.
+        break;
 
     case WM_DESTROY:
 
@@ -1465,57 +1465,57 @@ static LRESULT CALLBACK HighGUIProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
             // Upon any error we can jump out of the single-time while scope to clean up the resources.
             do
             {
-               if (!::EmptyClipboard())
-                  break;
+                if (!::EmptyClipboard())
+                    break;
 
-               if(!window->image)
-                  break;
+                if(!window->image)
+                    break;
 
-               // Get window device context
-               if (0 == (hDC = ::GetDC(hwnd)))
-                  break;
+                // Get window device context
+                if (0 == (hDC = ::GetDC(hwnd)))
+                    break;
 
-               // Create another DC compatible with hDC
-               if (0 == (memDC = ::CreateCompatibleDC( hDC )))
-                  break;
+                // Create another DC compatible with hDC
+                if (0 == (memDC = ::CreateCompatibleDC( hDC )))
+                    break;
 
-               // Determine the bitmap's dimensions
-               int nchannels = 3;
-               SIZE size = {0,0};
-               icvGetBitmapData( window, &size, &nchannels, 0 );
+                // Determine the bitmap's dimensions
+                int nchannels = 3;
+                SIZE size = {0,0};
+                icvGetBitmapData( window, &size, &nchannels, 0 );
 
-               // Create bitmap to draw on and it in the new DC
-               if (0 == (memBM = ::CreateCompatibleBitmap ( hDC, size.cx, size.cy)))
-                  break;
+                // Create bitmap to draw on and it in the new DC
+                if (0 == (memBM = ::CreateCompatibleBitmap ( hDC, size.cx, size.cy)))
+                    break;
 
-               if (!::SelectObject( memDC, memBM ))
-                  break;
+                if (!::SelectObject( memDC, memBM ))
+                    break;
 
-               // Begin drawing to DC
-               if (!::SetStretchBltMode(memDC, COLORONCOLOR))
-                  break;
+                // Begin drawing to DC
+                if (!::SetStretchBltMode(memDC, COLORONCOLOR))
+                    break;
 
-               RGBQUAD table[256];
-               if( 1 == nchannels )
-               {
-                  for(int i = 0; i < 256; ++i)
-                  {
-                     table[i].rgbBlue = (unsigned char)i;
-                     table[i].rgbGreen = (unsigned char)i;
-                     table[i].rgbRed = (unsigned char)i;
-                  }
-                  if (!::SetDIBColorTable(window->dc, 0, 255, table))
-                     break;
-               }
+                RGBQUAD table[256];
+                if( 1 == nchannels )
+                {
+                    for(int i = 0; i < 256; ++i)
+                    {
+                        table[i].rgbBlue = (unsigned char)i;
+                        table[i].rgbGreen = (unsigned char)i;
+                        table[i].rgbRed = (unsigned char)i;
+                    }
+                    if (!::SetDIBColorTable(window->dc, 0, 255, table))
+                        break;
+                }
 
-               // The image copied to the clipboard will be in its original size, regardless if the window itself was resized.
+                // The image copied to the clipboard will be in its original size, regardless if the window itself was resized.
 
-               // Render the image to the dc/bitmap (at original size).
-               if (!::BitBlt( memDC, 0, 0, size.cx, size.cy, window->dc, 0, 0, SRCCOPY ))
-                  break;
+                // Render the image to the dc/bitmap (at original size).
+                if (!::BitBlt( memDC, 0, 0, size.cx, size.cy, window->dc, 0, 0, SRCCOPY ))
+                    break;
 
-               // Finally, set bitmap to clipboard
-               ::SetClipboardData(CF_BITMAP, memBM);
+                // Finally, set bitmap to clipboard
+                ::SetClipboardData(CF_BITMAP, memBM);
             } while (0,0); // (0,0) instead of (0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
 
             //////////////////////////////////////////////////////////////////////////
