@@ -711,6 +711,13 @@ function(ocv_add_perf_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+    if(INSTALL_TESTS)
+      if(ANDROID)
+        install(TARGETS ${the_target} RUNTIME DESTINATION sdk/etc/bin COMPONENT tests)
+      elseif(NOT WIN32)
+        install(TARGETS ${the_target} RUNTIME DESTINATION share/OpenCV/bin COMPONENT tests)
+      endif()
+    endif()
   endif()
 endfunction()
 
@@ -764,6 +771,14 @@ function(ocv_add_accuracy_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+
+    if(INSTALL_TESTS)
+      if(ANDROID)
+        install(TARGETS ${the_target} RUNTIME DESTINATION sdk/etc/bin COMPONENT tests)
+      elseif(NOT WIN32)
+        install(TARGETS ${the_target} RUNTIME DESTINATION share/OpenCV/bin COMPONENT tests)
+      endif()
+    endif()
   endif()
 endfunction()
 
