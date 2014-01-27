@@ -190,6 +190,16 @@ struct TSTestWithParam : public ::testing::TestWithParam<T>
 #endif
     }
 
+    Size randomSqrSize(int minVal, int maxVal)
+    {
+#if 1
+        int sz = (int)randomDoubleLog(minVal, maxVal);
+#else
+        int sz = randomInt(minVal, maxVal);
+#endif
+        return cv::Size(sz, sz);
+    }
+
     Scalar randomScalar(double minVal, double maxVal)
     {
         return Scalar(randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal), randomDouble(minVal, maxVal));
@@ -214,6 +224,13 @@ struct TSTestWithParam : public ::testing::TestWithParam<T>
                 (int)randomDoubleLog(minValue, maxValue),
                 (int)randomDoubleLog(minValue, maxValue)
         };
+        return border;
+    }
+
+    Border randomSymmBorder(int minValue = 0, int maxValue = MAX_VALUE)
+    {
+        int val = (int)randomDoubleLog(minValue, maxValue);
+        Border border = {val, val, val, val};
         return border;
     }
 

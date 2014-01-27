@@ -619,6 +619,9 @@ namespace cv
         //! fills the output array with repeated copies of the input array
         CV_EXPORTS void repeat(const oclMat & src, int ny, int nx, oclMat & dst);
 
+        //! Copies lower or upper half of a square matrix to the opposite half
+        CV_EXPORTS void completeSymm(oclMat& src, bool lowerToUpper = false);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!

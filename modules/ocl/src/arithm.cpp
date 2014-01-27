@@ -1625,6 +1625,42 @@ void cv::ocl::transpose(const oclMat &src, oclMat &dst)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// completeSymm /////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+void cv::ocl::completeSymm(oclMat& src, bool lowerToUpper)
+{
+    if (!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
+    {
+        CV_Error(Error::OpenCLDoubleNotSupported, "Selected device doesn't support double");
+        return;
+    }
+
+    CV_Assert(src.step % src.elemSize() == 0 && src.rows == src.cols);
+
+    int ltu = (lowerToUpper) ? 1 : 0;
+
+    int src_step = src.step / src.elemSize(), src_offset = src.offset / src.elemSize();
+    size_t local_threads[] = { 256, 1, 1 };
+    size_t global_threads[] = { ((src.cols*src.cols)-src.cols)/2, 1, 1 };
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    String buildOptions = format("-D T=%s%s", typeMap[src.depth()], channelMap[src.oclchannels()]);
+
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_step ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src_offset ));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&ltu));
+
+    openCLExecuteKernel(src.clCxt, &arithm_completeSymm, "completeSymm", global_threads, local_threads,
+                        args, -1, -1, buildOptions.c_str());
+}
+
+//////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// addWeighted ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 

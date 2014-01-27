@@ -187,6 +187,18 @@ Returns void
 
 Performs per-element comparison of two arrays or an array and scalar value. Supports all data types.
 
+ocl::completeSymm
+------------------
+Returns void
+
+.. ocv:function:: void ocl::completeSymm(oclMat& src, bool lowerToUpper = false)
+
+    :param src: array to be symmetrically completed.
+
+    :param lowerToUpper: If true, copies lower half to upper half, else, copies the upper half to lower half.
+
+Copies one half of the matrix symmetrically to another.
+
 ocl::dft
 ------------
 Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
