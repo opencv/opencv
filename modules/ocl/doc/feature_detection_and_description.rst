@@ -450,7 +450,59 @@ Gets final array of keypoints.
 
 The function performs non-max suppression if needed and returns the final amount of keypoints.
 
+ocl::BRIEF_OCL
+------------------
+.. ocv:class:: ocl::BRIEF_OCL
 
+Class for computing BRIEF descriptors described in a paper of Calonder M., Lepetit V.,
+Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
+11th European Conference on Computer Vision (ECCV), Heraklion, Crete. LNCS Springer, September 2010. ::
+
+        class CV_EXPORTS BRIEF_OCL
+        {
+        public:
+            static const int PATCH_SIZE = 48;
+            static const int KERNEL_SIZE = 9;
+
+            explicit BRIEF_OCL(int _bytes = 32);
+
+            //!computes the brief descriptor for a set of given keypoints
+            //! supports only CV_8UC1 images
+            void compute(const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors) const;
+
+            static int getBorderSize();
+        protected:
+            ...
+        };
+
+ocl::BRIEF_OCL::BRIEF_OCL
+--------------------------
+Constructor.
+
+.. ocv:function:: ocl::BRIEF_OCL::BRIEF_OCL(int _bytes = 32)
+
+    :param bytes: The length of the descriptor in bytes. Supported values are 16, 32 or 64 bytes.
+
+ocl::BRIEF_OCL::compute
+------------------------
+Computes BRIEF descriptors.
+
+.. ocv:function:: void ocl::BRIEF_OCL::compute(const oclMat& image, const oclMat& keypoints, oclMat& mask, oclMat& descriptors) const
+
+    :param image: Image The input 8-bit grayscale image.
+
+    :param keypoints: The keypoints.
+
+    :param mask: In and output mask. If mask has same cols as keypoints, descriptors are computed for keypoints with non-zero mask element.
+                On return it indicates for what keypoints a descriptor was computed or not(if a keypoint is near the image border).
+
+    :param descriptors: The computed descriptors. It has size keypoints.cols x bytes.
+
+ocl::BRIEF_OCL::getBorderSize
+-----------------------------
+Returns the size of the image border where descriptors cannot be computed
+
+.. ocv:function:: static int ocl::BRIEF_OCL::getBorderSize() const
 
 ocl::HOGDescriptor
 ----------------------
