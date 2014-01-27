@@ -401,6 +401,8 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
 typedef void (*PyrFunc)(const Mat&, Mat&, int);
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
@@ -484,13 +486,14 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     return k.run(2, globalThreads, localThreads, false);
 }
 
+#endif
+
 }
 
 void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-        ocl_pyrDown(_src, _dst, _dsz, borderType))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_pyrDown(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
     Size dsz = _dsz.area() == 0 ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
@@ -522,9 +525,8 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
 
 void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-        ocl_pyrUp(_src, _dst, _dsz, borderType))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_pyrUp(_src, _dst, _dsz, borderType))
 
     Mat src = _src.getMat();
     Size dsz = _dsz.area() == 0 ? Size(src.cols*2, src.rows*2) : _dsz;

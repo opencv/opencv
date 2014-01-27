@@ -29,7 +29,7 @@
 #endif
 
 #else
-#define CV_OCL_RUN_(condition, func, retval)
+#define CV_OCL_RUN_(condition, func, ...)
 #endif
 
 #define CV_OCL_RUN(condition, func) CV_OCL_RUN_(condition, func)
