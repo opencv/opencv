@@ -484,7 +484,8 @@ public:
         bool balanced=false );
 
     virtual float predict( const CvMat* sample, bool returnDFVal=false ) const;
-    virtual float predict( const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal=false ) const;
+    virtual float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
+    float predict_( const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal) const;
 
     CV_WRAP CvSVM( const cv::Mat& trainData, const cv::Mat& responses,
           const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),

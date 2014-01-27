@@ -234,7 +234,9 @@ Predicts the response for input sample(s).
 
 .. ocv:function:: float CvSVM::predict( const CvMat* sample, bool returnDFVal=false ) const
 
-.. ocv:function:: float CvSVM::predict( const CvMat* samples, CvMat* results, bool returnDFVal=false ) const
+.. ocv:function:: float CvSVM::predict( const CvMat* samples, CvMat* results ) const
+
+.. ocv:function:: float CvSVM::predict_( const CvMat* samples, CvMat* results, bool returnDFVal ) const
 
 .. ocv:pyfunction:: cv2.SVM.predict(sample[, returnDFVal]) -> retval
 
