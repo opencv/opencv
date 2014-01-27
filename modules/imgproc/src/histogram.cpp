@@ -1929,6 +1929,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+#ifdef HAVE_OPENCL
 
 namespace cv {
 
@@ -1962,7 +1963,9 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
                                  const std::vector<float>& ranges,
                                  float scale, size_t histdims )
 {
-    const std::vector<UMat> & images = *(const std::vector<UMat> *)_images.getObj();
+    std::vector<UMat> images;
+    _images.getUMatVector(images);
+
     size_t nimages = images.size(), totalcn = images[0].channels();
 
     CV_Assert(nimages > 0);
@@ -2066,19 +2069,22 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
 
 }
 
+#endif
+
 void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                           InputArray hist, OutputArray dst,
                           const std::vector<float>& ranges,
                           double scale )
 {
     Size histSize = hist.size();
+#ifdef HAVE_OPENCL
     bool _1D = histSize.height == 1 || histSize.width == 1;
     size_t histdims = _1D ? 1 : hist.dims();
+#endif
 
-    if (ocl::useOpenCL() && images.isUMatVector() && dst.isUMat() && hist.type() == CV_32FC1 &&
-            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size() &&
-            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
-        return;
+    CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
+               histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
+               ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
 
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
@@ -3280,6 +3286,8 @@ CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
     cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 enum
@@ -3340,6 +3348,8 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 
 }
 
+#endif
+
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     CV_Assert( _src.type() == CV_8UC1 );
@@ -3347,8 +3357,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     if (_src.empty())
         return;
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_equalizeHist(_src, _dst))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_equalizeHist(_src, _dst))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );

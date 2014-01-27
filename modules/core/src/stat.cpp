@@ -475,7 +475,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 || _src.dims() > 2 )
+    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 )
         return false;
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
@@ -533,8 +533,9 @@ cv::Scalar cv::sum( InputArray _src )
 {
 #ifdef HAVE_OPENCL
     Scalar _res;
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OCL_OP_SUM))
-        return _res;
+    CV_OCL_RUN_( _src.isUMat() && _src.dims() <= 2,
+                 ocl_sum(_src, _res, OCL_OP_SUM),
+                 _res)
 #endif
 
     Mat src = _src.getMat();
@@ -674,8 +675,9 @@ int cv::countNonZero( InputArray _src )
 
 #ifdef HAVE_OPENCL
     int res = -1;
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_countNonZero(_src, res))
-        return res;
+    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+                ocl_countNonZero(_src, res),
+                res)
 #endif
 
     Mat src = _src.getMat();
@@ -1985,8 +1987,9 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    if (ocl::useOpenCL() && _src.isUMat() && _src.dims() <= 2 && ocl_norm(_src, normType, _mask, _result))
-        return _result;
+    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+                ocl_norm(_src, normType, _mask, _result),
+                _result)
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
@@ -2320,9 +2323,10 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
 #ifdef HAVE_OPENCL
     double _result = 0;
-    if (ocl::useOpenCL() && _mask.empty() && _src1.isUMat() && _src2.isUMat() &&
-            _src1.dims() <= 2 && _src2.dims() <= 2 && ocl_norm(_src1, _src2, normType, _result))
-        return _result;
+    CV_OCL_RUN_(_mask.empty() && _src1.isUMat() && _src2.isUMat() &&
+                _src1.dims() <= 2 && _src2.dims() <= 2,
+                ocl_norm(_src1, _src2, normType, _result),
+                _result)
 #endif
 
     if( normType & CV_RELATIVE )

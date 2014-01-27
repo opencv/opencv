@@ -1900,6 +1900,8 @@ private:
 };
 #endif
 
+#ifdef HAVE_OPENCL
+
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                           float * const alpha_tab, int * const ofs_tab)
 {
@@ -2069,6 +2071,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     return k.run(2, globalsize, 0, false);
 }
 
+#endif
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -2196,9 +2200,8 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_y = (double)dsize.height/ssize.height;
     }
 
-    if( ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT &&
-            ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
 
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());
@@ -3390,6 +3393,8 @@ private:
     const void *ctab;
 };
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
                       int interpolation, int borderType, const Scalar& borderValue)
 {
@@ -3462,6 +3467,8 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::remap( InputArray _src, OutputArray _dst,
@@ -3504,8 +3511,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( _map1.size().area() > 0 );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
@@ -3870,6 +3877,8 @@ private:
 };
 #endif
 
+#ifdef HAVE_OPENCL
+
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
 
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
@@ -3953,6 +3962,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     return k.run(2, globalThreads, NULL, false);
 }
 
+#endif
+
 }
 
 
@@ -3960,10 +3971,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-        ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
-                                            borderValue, OCL_OP_AFFINE))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
+                                 borderValue, OCL_OP_AFFINE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
@@ -4206,10 +4216,9 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert( _src.total() > 0 );
 
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-            ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                               OCL_OP_PERSPECTIVE))
-        return;
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );

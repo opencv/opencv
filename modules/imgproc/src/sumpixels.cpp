@@ -231,6 +231,8 @@ typedef void (*IntegralFunc)(const uchar* src, size_t srcstep, uchar* sum, size_
                              uchar* sqsum, size_t sqsumstep, uchar* tilted, size_t tstep,
                              Size size, int cn );
 
+#ifdef HAVE_OPENCL
+
 enum { vlen = 4 };
 
 static bool ocl_integral( InputArray _src, OutputArray _sum, int sdepth )
@@ -324,6 +326,8 @@ static bool ocl_integral( InputArray _src, OutputArray _sum, OutputArray _sqsum,
     return k2.run(1, &gt2, &lt2, false);
 }
 
+#endif
+
 }
 
 
@@ -336,19 +340,17 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
          sqdepth = CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth), sqdepth = CV_MAT_DEPTH(sqdepth);
 
+#ifdef HAVE_OPENCL
     if (ocl::useOpenCL() && _sum.isUMat() && !_tilted.needed())
     {
         if (!_sqsum.needed())
         {
-            if (ocl_integral(_src, _sum, sdepth))
-                return;
+            CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, sdepth))
         }
         else if (_sqsum.isUMat())
-        {
-            if (ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth))
-                return;
-        }
+            CV_OCL_RUN(ocl::useOpenCL(), ocl_integral(_src, _sum, _sqsum, sdepth, sqdepth))
     }
+#endif
 
     Size ssize = _src.size(), isize(ssize.width + 1, ssize.height + 1);
     _sum.create( isize, CV_MAKETYPE(sdepth, cn) );

@@ -363,6 +363,8 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
     nu30 = mu30*s3; nu21 = mu21*s3; nu12 = mu12*s3; nu03 = mu03*s3;
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_moments( InputArray _src, Moments& m)
 {
     const int TILE_SIZE = 32;
@@ -427,6 +429,8 @@ static bool ocl_moments( InputArray _src, Moments& m)
     return true;
 }
 
+#endif
+
 }
 
 
@@ -444,10 +448,12 @@ cv::Moments cv::moments( InputArray _src, bool binary )
     if( size.width <= 0 || size.height <= 0 )
         return m;
 
+#ifdef HAVE_OPENCL
     if( ocl::useOpenCL() && type == CV_8UC1 && !binary &&
         _src.isUMat() && ocl_moments(_src, m) )
         ;
     else
+#endif
     {
         Mat mat = _src.getMat();
         if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
