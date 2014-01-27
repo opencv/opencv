@@ -53,13 +53,7 @@ endif()
 
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
-  if(ANDROID)
-    install(FILES ${install_list}
-            DESTINATION samples/native/ocl
-            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
-  else()
-    install(FILES ${install_list}
-            DESTINATION share/OpenCV/samples/ocl
-            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
-  endif()
+  install(FILES ${install_list}
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/ocl
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
