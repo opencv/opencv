@@ -1,0 +1,3 @@
+#!/bin/sh
+
+echo "export OPENCV_TEST_DATA_PATH=@prefix@/share/OpenCV/testdata" >> /etc/profile
