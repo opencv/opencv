@@ -37,7 +37,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       if(MSVC AND NOT BUILD_SHARED_LIBS)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
-      install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${project}" COMPONENT main)
+      install(TARGETS ${the_target} RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${project}" COMPONENT samples)
     endif()
   ENDMACRO()
 
@@ -54,5 +54,5 @@ if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
           DESTINATION share/OpenCV/samples/${project}
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
