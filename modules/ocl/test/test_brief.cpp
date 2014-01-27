@@ -80,7 +80,7 @@ OCL_TEST_P( BRIEF, Accuracy )
     brief.compute( img, keypoints, descriptorsGold );
 
     Mat kpMat( 2, int( keypoints.size() ), CV_32FC1 );
-    for ( size_t i = 0; i < keypoints.size( ); ++i )
+    for ( int i = 0, size = (int)keypoints.size( ); i < size; ++i )
     {
         kpMat.col( i ).row( 0 ) = int( keypoints[i].pt.x );
         kpMat.col( i ).row( 1 ) = int( keypoints[i].pt.y );
