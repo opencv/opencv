@@ -207,6 +207,7 @@ public:
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
+    virtual UMat& getUMatRef(int i=-1) const;
     virtual cuda::GpuMat& getGpuMatRef() const;
     virtual ogl::Buffer& getOGlBufferRef() const;
     virtual cuda::CudaMem& getCudaMemRef() const;
