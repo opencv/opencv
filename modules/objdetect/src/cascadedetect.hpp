@@ -93,6 +93,12 @@ public:
     void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();
 
+    struct Candidate
+    {
+        int scaleIdx;
+        Point pt;
+    };
+
 protected:
     enum { SUM_ALIGN = 64 };
 
@@ -108,7 +114,7 @@ protected:
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                     bool outputRejectLevels = false );
 
-    enum { MAX_FACES = 10000 };
+    enum { MAX_FACES = 100000 };
     enum { BOOST = 0 };
     enum { DO_CANNY_PRUNING    = CASCADE_DO_CANNY_PRUNING,
         SCALE_IMAGE         = CASCADE_SCALE_IMAGE,
@@ -117,6 +123,7 @@ protected:
     };
 
     friend class CascadeClassifierInvoker;
+    friend class SparseCascadeClassifierInvoker;
 
     template<class FEval>
     friend int predictOrdered( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);

@@ -49,6 +49,8 @@
 namespace cv
 {
 
+typedef CascadeClassifierImpl::Candidate Candidate;
+
 template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um)
 {
     if(v.empty())
@@ -593,16 +595,17 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
             optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
         optfeatures_lbuf->resize(nfeatures);
         /*int lsize;
-        for( lsize = 8; lsize >= 4; lsize -= 4 )
+        for( lsize = 8; lsize >= 4; lsize /= 2 )
         {
-            localSize = Size(lsize, lsize);
-            lbufSize = Size(origWinSize.width + lsize * scaleData->at(0).ystep, origWinSize.height + lsize * scaleData->at(0).ystep);
-            if (lbufSize.area() <= 2800)
+            localSize = Size(lsize, lsize/2);
+            lbufSize = Size(origWinSize.width + localSize.width * scaleData->at(0).ystep,
+                            origWinSize.height + localSize.height * scaleData->at(0).ystep);
+            if (lbufSize.area() <= 1500)
                 break;
         }
         if (lsize < 4 || hasTiltedFeatures)*/
         {
-            localSize = Size(8, 8);
+            localSize = Size(4, 16);
             lbufSize = Size(0, 0);
         }
 
@@ -1082,7 +1085,7 @@ void CascadeClassifierImpl::read(const FileNode& node)
 int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, int scaleIdx, double& weight )
 {
     assert( !oldCascade &&
-            (data.featureType == FeatureEvaluator::HAAR ||
+           (data.featureType == FeatureEvaluator::HAAR ||
             data.featureType == FeatureEvaluator::LBP ||
             data.featureType == FeatureEvaluator::HOG) );
 
@@ -1216,6 +1219,66 @@ public:
     Mutex* mtx;
 };
 
+
+class SparseCascadeClassifierInvoker : public ParallelLoopBody
+{
+public:
+    SparseCascadeClassifierInvoker( CascadeClassifierImpl& _cc, int _startstage,
+                                    const FeatureEvaluator::ScaleData* _scaleData,
+                                    const Candidate* _inputvec, int _ncandidates,
+                                    std::vector<Rect>& _outputvec, Mutex* _mtx)
+    {
+        classifier = &_cc;
+        startstage = _startstage;
+        scaleData = _scaleData;
+        input_rectangles = _inputvec;
+        ncandidates = _ncandidates;
+        output_rectangles = &_outputvec;
+        mtx = _mtx;
+    }
+
+    void operator()(const Range& range) const
+    {
+        Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
+        double gypWeight = 0.;
+        Size origWinSize = classifier->data.origWinSize;
+        int startc = range.start, endc = std::min(range.end, ncandidates);
+
+        for( int i = startc; i < endc; i++ )
+        {
+            const Candidate& c = input_rectangles[i];
+            int scaleIdx = c.scaleIdx;
+            const FeatureEvaluator::ScaleData& s = scaleData[scaleIdx];
+            Point pt = c.pt;
+
+            int result = classifier->runAt(evaluator, pt, scaleIdx, gypWeight);
+            if( result > 0 )
+            {
+                float scalingFactor = s.scale;
+                Size winSize(cvRound(origWinSize.width * scalingFactor),
+                             cvRound(origWinSize.height * scalingFactor));
+
+                mtx->lock();
+                output_rectangles->push_back(Rect(cvRound(pt.x*scalingFactor),
+                                                  cvRound(pt.y*scalingFactor),
+                                                  winSize.width, winSize.height));
+                mtx->unlock();
+            }
+        }
+    }
+
+    CascadeClassifierImpl* classifier;
+    const Candidate* input_rectangles;
+    int ncandidates;
+    std::vector<Rect>* output_rectangles;
+    int startstage;
+    const FeatureEvaluator::ScaleData* scaleData;
+    std::vector<float> scales;
+    Mutex* mtx;
+};
+
+
+
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
@@ -1228,26 +1291,28 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     featureEvaluator->getUMats(bufs);
     Size localsz = featureEvaluator->getLocalSize();
     Size lbufSize = featureEvaluator->getLocalBufSize();
-    size_t localsize[] = { localsz.width, localsz.height };
+    size_t localsize[] = { 16, 8 };//{ 1/*localsz.width*/, localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
 
-    ufacepos.create(1, MAX_FACES*4+1, CV_32S);
+    ufacepos.create(1, MAX_FACES*3+1, CV_32S);
     UMat ufacepos_count(ufacepos, Rect(0, 0, 1, 1));
     ufacepos_count.setTo(Scalar::all(0));
 
     if( ustages.empty() )
     {
-        for (size_t i = 0; i < data.stages.size(); i++)
+        /*for (size_t i = 0; i < data.stages.size(); i++)
         {
             printf("%d. count=%d\n", (int)i, (int)data.stages[i].ntrees);
-        }
+        }*/
         copyVectorToUMat(data.stages, ustages);
         copyVectorToUMat(data.stumps, ustumps);
         if( !data.subsets.empty() )
             copyVectorToUMat(data.subsets, usubsets);
     }
+
+    int nstages = (int)data.stages.size(), nstages_ocl = std::min(nstages-1, 7);
 
     if( featureType == FeatureEvaluator::HAAR )
     {
@@ -1258,12 +1323,11 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         if( haarKernel.empty() )
         {
             String opts;
-            printf("localsize = %d\n", localsz.width);
             if (lbufSize.area())
-                opts = format("-D LOCAL_SIZE=%d -D SUM_BUF_SIZE=%d -D SUM_BUF_STEP=%d",
-                              localsz.width, lbufSize.area(), lbufSize.width);
+                opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d -D SUM_BUF_SIZE=%d -D SUM_BUF_STEP=%d",
+                              localsz.width, localsz.height, lbufSize.area(), lbufSize.width);
             else
-                opts = format("-D LOCAL_SIZE=%d", localsz.width);
+                opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d", localsz.width, localsz.height);
             haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( haarKernel.empty() )
                 return false;
@@ -1278,7 +1342,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                         ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
 
                         // cascade classifier
-                        (int)data.stages.size(),
+                        nstages_ocl,
                         ocl::KernelArg::PtrReadOnly(ustages),
                         ocl::KernelArg::PtrReadOnly(ustumps),
 
@@ -1294,7 +1358,8 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
         if( lbpKernel.empty() )
         {
-            lbpKernel.create("runLBPClassifierStump", ocl::objdetect::cascadedetect_oclsrc, "-D LOCAL_SIZE=8");
+            lbpKernel.create("runLBPClassifierStump", ocl::objdetect::cascadedetect_oclsrc,
+                             format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d", localsz.width, localsz.height));
             if( lbpKernel.empty() )
                 return false;
         }
@@ -1306,7 +1371,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                        ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
 
                        // cascade classifier
-                       (int)data.stages.size(),
+                       nstages_ocl,
                        ocl::KernelArg::PtrReadOnly(ustages),
                        ocl::KernelArg::PtrReadOnly(ustumps),
                        ocl::KernelArg::PtrReadOnly(usubsets),
@@ -1321,11 +1386,28 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     {
         Mat facepos = ufacepos.getMat(ACCESS_READ);
         const int* fptr = facepos.ptr<int>();
-        int i, nfaces = fptr[0];
-        for( i = 0; i < nfaces; i++ )
+        int nfaces = fptr[0];
+        nfaces = std::min(nfaces, (int)MAX_FACES);
+        //printf("nfaces=%d\n", nfaces);
+        const Candidate* input_candidates = (const Candidate*)(fptr + 1);
+
+        SparseCascadeClassifierInvoker invoker( *this, nstages_ocl,
+                                                &featureEvaluator->getScaleData(0),
+                                                input_candidates, nfaces,
+                                                candidates, &mtx );
+        parallel_for_(Range(0, nfaces), invoker, 1000);
+
+        /*for( int i = 0; i < nfaces; i++ )
         {
-            candidates.push_back(Rect(fptr[i*4+1], fptr[i*4+2], fptr[i*4+3], fptr[i*4+4]));
-        }
+            const Candidate& c = input_candidates[i];
+            const FeatureEvaluator::ScaleData& s = featureEvaluator->getScaleData(c.scaleIdx);
+            //printf("(%.2f, %d, %d) ", s.scale, cvRound(c.pt.x*s.scale), cvRound(c.pt.y*s.scale));
+            candidates.push_back(Rect(cvRound(c.pt.x*s.scale),
+                                      cvRound(c.pt.y*s.scale),
+                                      cvRound(data.origWinSize.width*s.scale),
+                                      cvRound(data.origWinSize.height*s.scale)));
+        }*/
+        //printf("\n");
     }
     return ok;
 }

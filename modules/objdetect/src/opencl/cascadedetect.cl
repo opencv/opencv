@@ -41,7 +41,7 @@ ScaleData;
 #define SURV_BUF_SIZE 512
 //#define SPLIT_STAGE 3
 
-__kernel __attribute__((reqd_work_group_size(LOCAL_SIZE,LOCAL_SIZE,1)))
+__kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
 void runHaarClassifierStump(
     int nscales, __global const ScaleData* scaleData,
     __global const int* sum,
@@ -58,9 +58,8 @@ void runHaarClassifierStump(
     int lx = get_local_id(0);
     int ly = get_local_id(1);
     int groupIdx = get_group_id(0);
-    int i, ngroups = get_global_size(0)/LOCAL_SIZE;
+    int i, ngroups = get_global_size(0)/LOCAL_SIZE_X;
     int scaleIdx, tileIdx, stageIdx;
-    int startStage = 0, endStage = nstages;
     int sumstep = (int)(_sumstep/sizeof(int));
     int4 nofs0 = (int4)(mad24(normrect.y, sumstep, normrect.x),
                         mad24(normrect.y, sumstep, normrect.x + normrect.z),
@@ -71,7 +70,7 @@ void runHaarClassifierStump(
 
 #ifdef SUM_BUF_SIZE
     __local int ibuf[SUM_BUF_SIZE];
-    int lidx = ly*LOCAL_SIZE + lx;
+    int lidx = ly*LOCAL_SIZE_X + lx;
     int4 nofs = (int4)(mad24(normrect.y, SUM_BUF_STEP, normrect.x),
                        mad24(normrect.y, SUM_BUF_STEP, normrect.x + normrect.z),
                        mad24(normrect.y + normrect.w, SUM_BUF_STEP, normrect.x),
@@ -80,35 +79,23 @@ void runHaarClassifierStump(
     int4 nofs = nofs0;
 #endif
 
-#ifdef SPLIT_STAGE
-    int j, lidx = ly*LOCAL_SIZE + lx, sbuf_idx=0;
-    __local int4 survived[2][SURV_BUF_SIZE];
-    volatile __local int nsurvived_local[2];
-    int nsurvived;
-
-    if( lidx == 0 )
-        nsurvived_local[0] = 0;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    endStage = min(nstages, SPLIT_STAGE);
-#endif
-
     for( scaleIdx = nscales-1; scaleIdx >= 0; scaleIdx-- )
     {
         __global const ScaleData* s = scaleData + scaleIdx;
         int ystep = s->ystep;
         int2 worksize = (int2)(max(s->szi_width - windowsize.x, 0), max(s->szi_height - windowsize.y, 0));
-        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE-1)/LOCAL_SIZE,
-                             (worksize.y/ystep + LOCAL_SIZE-1)/LOCAL_SIZE);
+        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE_X-1)/LOCAL_SIZE_X,
+                             (worksize.y/ystep + LOCAL_SIZE_Y-1)/LOCAL_SIZE_Y);
         int totalTiles = ntiles.x*ntiles.y;
 #ifdef SUM_BUF_SIZE
-        int2 bufsize = (int2)(LOCAL_SIZE*ystep + windowsize.x, LOCAL_SIZE*ystep + windowsize.y);
+        int2 bufsize = (int2)(LOCAL_SIZE_X*ystep + windowsize.x, LOCAL_SIZE_Y*ystep + windowsize.y);
         int buftotal = bufsize.x*bufsize.y;
 #endif
 
         for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
         {
-            int ix0 = (tileIdx % ntiles.x)*LOCAL_SIZE*ystep;
-            int iy0 = (tileIdx / ntiles.x)*LOCAL_SIZE*ystep;
+            int ix0 = (tileIdx % ntiles.x)*LOCAL_SIZE_X*ystep;
+            int iy0 = (tileIdx / ntiles.x)*LOCAL_SIZE_Y*ystep;
             int ix = lx*ystep, iy = ly*ystep;
             __global const int* psum0 = sum + mad24(iy0, sumstep, ix0) + s->layer_ofs;
             __global const int* psum1 = psum0 + mad24(iy, sumstep, ix);
@@ -116,11 +103,16 @@ void runHaarClassifierStump(
         #ifdef SUM_BUF_SIZE
             if( ix0 >= worksize.x || iy0 >= worksize.y )
                 continue;
-            for( i = lidx; i < buftotal; i += LOCAL_SIZE*LOCAL_SIZE*4 )
+            for( i = lidx*4; i < buftotal; i += LOCAL_SIZE_X*LOCAL_SIZE_Y*4 )
             {
                 int dy = i/bufsize.x, dx = i - dy*bufsize.x;
-                vstore4(ibuf+mad24(dy, SUM_BUF_STEP, dx), 0, vload4(psum0 + mad24(dy, sumstep, dx), 0));
+                vstore4(vload4(0, psum0 + mad24(dy, sumstep, dx)), 0, ibuf+mad24(dy, SUM_BUF_STEP, dx));
             }
+            /*for( i = lidx; i < buftotal; i += LOCAL_SIZE_X*LOCAL_SIZE_Y )
+            {
+                int dy = i/bufsize.x, dx = i - dy*bufsize.x;
+                ibuf[mad24(dy, SUM_BUF_STEP, dx)] = psum0[mad24(dy, sumstep, dx)];
+            }*/
             barrier(CLK_LOCAL_MEM_FENCE);
         #endif
 
@@ -138,7 +130,7 @@ void runHaarClassifierStump(
                 float nf = (float)normarea * sqrt(max(sqval - sval * sval, 0.f));
                 nf = nf > 0 ? nf : 1.f;
 
-                for( stageIdx = 0; stageIdx < endStage; stageIdx++ )
+                for( stageIdx = 0; stageIdx < nstages; stageIdx++ )
                 {
                     int ntrees = stages[stageIdx].ntrees;
                     float s = 0.f;
@@ -165,121 +157,198 @@ void runHaarClassifierStump(
                         break;
                 }
 
-                if( stageIdx == endStage )
+                if( stageIdx == nstages )
                 {
-                #ifdef SPLIT_STAGE
-                    int nfaces = atomic_inc(&nsurvived_local[0]);
-                    if( nfaces < SURV_BUF_SIZE )
-                        survived[0][nfaces] = (int4)(ix+ix0, iy+iy0, scaleIdx, as_int(nf));
-                #else
                     int nfaces = atomic_inc(facepos);
                     if( nfaces < maxFaces )
                     {
-                        volatile __global int* face = facepos + 1 + nfaces*4;
-                        float factor = s->scale;
-                        face[0] = convert_int_rte((ix + ix0)*factor);
-                        face[1] = convert_int_rte((iy + iy0)*factor);
-                        face[2] = convert_int_rte(windowsize.x*factor);
-                        face[3] = convert_int_rte(windowsize.y*factor);
+                        volatile __global int* face = facepos + 1 + nfaces*3;
+                        face[0] = scaleIdx;
+                        face[1] = ix0 + ix;
+                        face[2] = iy0 + iy;
                     }
-                #endif
                 }
             }
         }
     }
-
-#ifdef SPLIT_STAGE
-    for(;;)
-    {
-    barrier(CLK_LOCAL_MEM_FENCE);
-    nsurvived = nsurvived_local[sbuf_idx];
-    //barrier(CLK_LOCAL_MEM_FENCE);
-    startStage = endStage;
-    endStage = nstages;
-    //2;
-    endStage = endStage < nstages ? endStage : nstages;
-    if( endStage < nstages )
-    {
-        if( lidx == 0 )
-            nsurvived_local[sbuf_idx^1] = 0;
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    for( j = lidx; j < nsurvived; j += LOCAL_SIZE*LOCAL_SIZE )
-    {
-        int4 si = survived[sbuf_idx][j];
-        int ix = si.x, iy = si.y;
-        float nf = as_float(si.w);
-        scaleIdx = si.z;
-
-        __global const ScaleData* s = scaleData + scaleIdx;
-        __global const int* psum = sum + mad24(iy, sumstep, ix) + s->layer_ofs;
-        __global const Stump* stump = stumps;
-
-        for( stageIdx = 0; stageIdx < endStage; stageIdx++ )
-        {
-            int ntrees = stages[stageIdx].ntrees;
-            float s = 0.f;
-            if( stageIdx < startStage )
-            {
-                stump += stages[stageIdx].ntrees;
-                continue;
-            }
-            for( i = 0; i < ntrees; i++, stump++ )
-            {
-                float4 st = stump->st;
-                __global const OptHaarFeature* f = optfeatures + as_int(st.x);
-                float4 weight = f->weight;
-
-                int4 ofs = f->ofs[0];
-                float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
-                ofs = f->ofs[1];
-                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
-                if( weight.z > 0 )
-                {
-                    ofs = f->ofs[2];
-                    sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
-                }
-
-                s += (sval < st.y*nf) ? st.z : st.w;
-            }
-
-            if( s < stages[stageIdx].threshold )
-            break;
-        }
-
-        if( stageIdx == endStage )
-        {
-            if( endStage < nstages )
-            {
-                int nfaces = atomic_inc(&nsurvived_local[sbuf_idx^1]);
-                if( nfaces < SURV_BUF_SIZE )
-                    survived[sbuf_idx^1][nfaces] = (int4)(ix, iy, scaleIdx, as_int(nf));
-            }
-            else
-            {
-                int nfaces = atomic_inc(facepos);
-                if( nfaces < maxFaces )
-                {
-                    volatile __global int* face = facepos + 1 + nfaces*4;
-                    float factor = s->scale;
-                    face[0] = convert_int_rte(ix*factor);
-                    face[1] = convert_int_rte(iy*factor);
-                    face[2] = convert_int_rte(windowsize.x*factor);
-                    face[3] = convert_int_rte(windowsize.y*factor);
-                }
-            }
-        }
-    }
-    if( endStage == nstages )
-        break;
-    sbuf_idx ^= 1;
-    }
-#endif
 }
 
 
-__kernel __attribute__((reqd_work_group_size(LOCAL_SIZE,LOCAL_SIZE,1)))
+#if LOCAL_SIZE_X == 4
+
+#define loadop(ofs, addr) (ystep == 1 ? vload4(ofs, addr) : vload8(ofs, addr).s0246)
+#define loadop_a(ofs, addr) (vload4(ofs, addr))
+#define loadop_e(ofs, addr) (vload8(ofs, addr).s0246)
+#define storeop(val, ofs, addr) vstore4(val, ofs, addr)
+#define setall(tp, x) (tp)(x, x, x, x)
+#define vectype_flt float4
+#define vectype_int int4
+#define convert_flt(x) convert_float4(x)
+
+#elif LOCAL_SIZE_X == 8
+
+#define loadop(ofs, addr) (ystep == 1 ? vload8(ofs, addr) : vload16(ofs, addr).s02468ace)
+#define storeop(val, ofs, addr) vstore8(val, ofs, addr)
+#define setall(tp, x) (tp)(x, x, x, x, x, x, x, x)
+#define vectype_flt float8
+#define vectype_int int8
+#define convert_flt(x) convert_float8(x)
+
+#endif
+
+__kernel __attribute__((reqd_work_group_size(1,LOCAL_SIZE_Y,1)))
+void runHaarClassifierStump2(
+    int nscales, __global const ScaleData* scaleData,
+    __global const int* sum,
+    int _sumstep, int sumoffset,
+    __global const OptHaarFeature* optfeatures,
+
+    int nstages,
+    __global const Stage* stages,
+    __global const Stump* stumps,
+
+    volatile __global int* facepos,
+    int4 normrect, int sqofs, int2 windowsize, int maxFaces)
+{
+    int ly = get_local_id(1);
+    int groupIdx = get_group_id(0);
+    int i, ngroups = get_global_size(0)/LOCAL_SIZE_X;
+    int scaleIdx, tileIdx, stageIdx;
+    int sumstep = (int)(_sumstep/sizeof(int));
+    int4 nofs = (int4)(mad24(normrect.y, sumstep, normrect.x),
+                       mad24(normrect.y, sumstep, normrect.x + normrect.z),
+                       mad24(normrect.y + normrect.w, sumstep, normrect.x),
+                       mad24(normrect.y + normrect.w, sumstep, normrect.x + normrect.z));
+    int normarea = normrect.z * normrect.w;
+    float invarea = 1.f/normarea;
+    vectype_flt z = setall(vectype_flt, 0.f);
+
+    for( scaleIdx = nscales-1; scaleIdx >= 0; scaleIdx-- )
+    {
+        __global const ScaleData* s = scaleData + scaleIdx;
+        int ystep = s->ystep;
+        int2 worksize = (int2)(max(s->szi_width - windowsize.x, 0), max(s->szi_height - windowsize.y, 0));
+        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE_X-1)/LOCAL_SIZE_X,
+                             (worksize.y/ystep + LOCAL_SIZE_Y-1)/LOCAL_SIZE_Y);
+        int totalTiles = ntiles.x*ntiles.y;
+
+        for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
+        {
+            int ix = (tileIdx % ntiles.x)*LOCAL_SIZE_X*ystep;
+            int iy = ((tileIdx / ntiles.x)*LOCAL_SIZE_Y + ly)*ystep;
+            __global const int* psum = sum + mad24(iy, sumstep, ix) + s->layer_ofs;
+
+            if( ix < worksize.x && iy < worksize.y )
+            {
+                __global const Stump* stump = stumps;
+                vectype_int mask = setall(vectype_int, -1);
+                vectype_flt sval, sqval, nf;
+
+                sval = convert_flt(loadop(0, psum + nofs.x) - loadop(0, psum + nofs.y) -
+                                   loadop(0, psum + nofs.z) + loadop(0, psum + nofs.w))*invarea;
+                sqval = convert_flt(loadop(0, psum + nofs.x + sqofs))*invarea;
+                nf = (float)normarea * sqrt(max(sqval - sval * sval, z));
+                nf = nf > 0 ? nf : 1.f;
+
+                for( stageIdx = 0; stageIdx < nstages; stageIdx++ )
+                {
+                    int ntrees = stages[stageIdx].ntrees;
+                    vectype_flt s = z;
+                    for( i = 0; i < ntrees; i++, stump++ )
+                    {
+                        float4 st = stump->st;
+                        __global const OptHaarFeature* f = optfeatures + as_int(st.x);
+                        float4 weight = f->weight;
+
+                        int4 ofs0 = f->ofs[0], ofs1 = f->ofs[1];
+                        vectype_int a0, b0, c0, d0, a1, b1, c1, d1;
+                        if( ystep == 1 )
+                        {
+                            a0 = loadop_a(0, psum + ofs0.x);
+                            b0 = loadop_a(0, psum + ofs0.y);
+                            c0 = loadop_a(0, psum + ofs0.z);
+                            d0 = loadop_a(0, psum + ofs0.w);
+
+                            a1 = loadop_a(0, psum + ofs1.x);
+                            b1 = loadop_a(0, psum + ofs1.y);
+                            c1 = loadop_a(0, psum + ofs1.z);
+                            d1 = loadop_a(0, psum + ofs1.w);
+                        }
+                        else
+                        {
+                            a0 = loadop_e(0, psum + ofs0.x);
+                            b0 = loadop_e(0, psum + ofs0.y);
+                            c0 = loadop_e(0, psum + ofs0.z);
+                            d0 = loadop_e(0, psum + ofs0.w);
+
+                            a1 = loadop_e(0, psum + ofs1.x);
+                            b1 = loadop_e(0, psum + ofs1.y);
+                            c1 = loadop_e(0, psum + ofs1.z);
+                            d1 = loadop_e(0, psum + ofs1.w);
+                        }
+                        sval = convert_flt(a0 - b0 - c0 + d0)*weight.x +
+                               convert_flt(a1 - b1 - c1 + d1)*weight.y;
+                        if( weight.z > 0 )
+                        {
+                            ofs0 = f->ofs[2];
+                            if( ystep == 1 )
+                            {
+                                a0 = loadop_a(0, psum + ofs0.x);
+                                b0 = loadop_a(0, psum + ofs0.y);
+                                c0 = loadop_a(0, psum + ofs0.z);
+                                d0 = loadop_a(0, psum + ofs0.w);
+                            }
+                            else
+                            {
+                                a0 = loadop_e(0, psum + ofs0.x);
+                                b0 = loadop_e(0, psum + ofs0.y);
+                                c0 = loadop_e(0, psum + ofs0.z);
+                                d0 = loadop_e(0, psum + ofs0.w);
+                            }
+                            sval += convert_flt(a0 - b0 - c0 + d0)*weight.z;
+                        }
+
+                        s += sval < st.y*nf ? setall(vectype_flt, st.z) : setall(vectype_flt, st.w);
+                    }
+
+                    mask &= s >= stages[stageIdx].threshold;
+                    if( !any(mask) )
+                        break;
+                }
+
+                if( stageIdx == nstages )
+                {
+                    int m[LOCAL_SIZE_X], n, nfaces;
+                    storeop(mask, 0, m);
+
+                    n = -(m[0] + m[1] + m[2] + m[3]
+                    #if LOCAL_SIZE_X > 4
+                    + m[4] + m[5] + m[6] + m[7]
+                    #endif
+                    );
+                    nfaces = atomic_add(facepos, n);
+                    if( nfaces <= maxFaces - n )
+                    {
+                        volatile __global int* face = facepos + 1 + nfaces*3;
+                        for( i = 0; i < LOCAL_SIZE_X; i++ )
+                        {
+                            if(m[i] && ix + i < worksize.x )
+                            {
+                                face[0] = scaleIdx;
+                                face[1] = ix + i;
+                                face[2] = iy;
+                                face += 3;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+__kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
 void runLBPClassifierStump(
     int nscales, __global const ScaleData* scaleData,
     __global const int* sum,
@@ -298,7 +367,7 @@ void runLBPClassifierStump(
     int lx = get_local_id(0);
     int ly = get_local_id(1);
     int groupIdx = get_group_id(0);
-    int ngroups = get_global_size(0)/LOCAL_SIZE;
+    int ngroups = get_global_size(0)/LOCAL_SIZE_X;
     int scaleIdx, tileIdx, stageIdx;
     int startStage = 0, endStage = nstages;
     int sumstep = (int)(_sumstep/sizeof(int));
@@ -308,14 +377,14 @@ void runLBPClassifierStump(
         __global const ScaleData* s = scaleData + scaleIdx;
         int ystep = s->ystep;
         int2 worksize = (int2)(max(s->szi_width - windowsize.x, 0), max(s->szi_height - windowsize.y, 0));
-        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE-1)/LOCAL_SIZE,
-                             (worksize.y/ystep + LOCAL_SIZE-1)/LOCAL_SIZE);
+        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE_X-1)/LOCAL_SIZE_X,
+                             (worksize.y/ystep + LOCAL_SIZE_Y-1)/LOCAL_SIZE_Y);
         int totalTiles = ntiles.x*ntiles.y;
 
         for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
         {
-            int iy = ((tileIdx / ntiles.x)*LOCAL_SIZE + ly)*ystep;
-            int ix = ((tileIdx % ntiles.x)*LOCAL_SIZE + lx)*ystep;
+            int iy = ((tileIdx / ntiles.x)*LOCAL_SIZE_X + ly)*ystep;
+            int ix = ((tileIdx % ntiles.x)*LOCAL_SIZE_Y + lx)*ystep;
 
             if( ix < worksize.x && iy < worksize.y )
             {
@@ -360,12 +429,10 @@ void runLBPClassifierStump(
                     int nfaces = atomic_inc(facepos);
                     if( nfaces < maxFaces )
                     {
-                        volatile __global int* face = facepos + 1 + nfaces*4;
-                        float factor = s->scale;
-                        face[0] = convert_int_rte(ix*factor);
-                        face[1] = convert_int_rte(iy*factor);
-                        face[2] = convert_int_rte(windowsize.x*factor);
-                        face[3] = convert_int_rte(windowsize.y*factor);
+                        volatile __global int* face = facepos + 1 + nfaces*3;
+                        face[0] = scaleIdx;
+                        face[1] = ix;
+                        face[2] = iy;
                     }
                 }
             }
