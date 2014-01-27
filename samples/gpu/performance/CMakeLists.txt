@@ -29,7 +29,7 @@ endif()
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB GPU_FILES performance/*.cpp performance/*.h)
   install(FILES ${GPU_FILES}
-          DESTINATION share/OpenCV/samples/gpu/performance
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu/performance
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
           COMPONENT samples)
 endif()

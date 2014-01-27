@@ -58,9 +58,9 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://opencv.org")
 if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
   set(prefix "${CMAKE_INSTALL_PREFIX}")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/postinst"
-                 "${CMAKE_BINARY_DIR}/junk/postinst" @ONLY IMMEDIATE)
-  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/junk/postinst")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
+                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" DESTINATION /etc/profile.d/ COMPONENT tests)
 endif()
 
 #depencencies
@@ -70,9 +70,7 @@ set(CPACK_COMPONENT_dev_DEPENDS libs)
 set(CPACK_COMPONENT_docs_DEPENDS libs)
 set(CPACK_COMPONENT_java_DEPENDS libs)
 set(CPACK_COMPONENT_python_DEPENDS libs)
-if(INSTALL_TESTS)
 set(CPACK_COMPONENT_tests_DEPENDS libs)
-endif()
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
