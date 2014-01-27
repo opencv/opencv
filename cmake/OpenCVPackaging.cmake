@@ -56,6 +56,12 @@ set(CPACK_DEB_COMPONENT_INSTALL TRUE)
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://opencv.org")
+if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH)
+  set(prefix "${CMAKE_INSTALL_PREFIX}")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
+                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" DESTINATION /etc/profile.d/ COMPONENT tests)
+endif()
 
 #depencencies
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS TRUE)
@@ -64,6 +70,7 @@ set(CPACK_COMPONENT_dev_DEPENDS libs)
 set(CPACK_COMPONENT_docs_DEPENDS libs)
 set(CPACK_COMPONENT_java_DEPENDS libs)
 set(CPACK_COMPONENT_python_DEPENDS libs)
+set(CPACK_COMPONENT_tests_DEPENDS libs)
 
 if(HAVE_CUDA)
   string(REPLACE "." "-" cuda_version_suffix ${CUDA_VERSION})
@@ -77,19 +84,22 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
   set(CPACK_COMPONENT_libs_DESCRIPTION "Open Computer Vision Library")
 
   set(CPACK_COMPONENT_python_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-python")
-  set(CPACK_COMPONENT_python_DESCRIPTION "Python bindings for Open Computer Vision Library")
+  set(CPACK_COMPONENT_python_DESCRIPTION "Python bindings for Open Source Computer Vision Library")
 
   set(CPACK_COMPONENT_java_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-java")
-  set(CPACK_COMPONENT_java_DESCRIPTION "Java bindings for Open Computer Vision Library")
+  set(CPACK_COMPONENT_java_DESCRIPTION "Java bindings for Open Source Computer Vision Library")
 
   set(CPACK_COMPONENT_dev_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-dev")
-  set(CPACK_COMPONENT_dev_DESCRIPTION "Development files for Open Computer Vision Library")
+  set(CPACK_COMPONENT_dev_DESCRIPTION "Development files for Open Source Computer Vision Library")
 
   set(CPACK_COMPONENT_docs_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-docs")
-  set(CPACK_COMPONENT_docs_DESCRIPTION "Documentation for Open Computer Vision Library")
+  set(CPACK_COMPONENT_docs_DESCRIPTION "Documentation for Open Source Computer Vision Library")
 
   set(CPACK_COMPONENT_samples_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-samples")
-  set(CPACK_COMPONENT_samples_DESCRIPTION "Samples for Open Computer Vision Library")
+  set(CPACK_COMPONENT_samples_DESCRIPTION "Samples for Open Source Computer Vision Library")
+
+  set(CPACK_COMPONENT_tests_DISPLAY_NAME "lib${CMAKE_PROJECT_NAME}-tests")
+  set(CPACK_COMPONENT_tests_DESCRIPTION "Accuracy and performance tests for Open Source Computer Vision Library")
 endif(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 
 if(NOT OPENCV_CUSTOM_PACKAGE_LAYOUT)
