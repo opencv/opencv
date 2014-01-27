@@ -148,11 +148,11 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   endif()
 
   foreach(f ${DOC_LIST})
-    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT main)
+    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" COMPONENT docs)
   endforeach()
 
   foreach(f ${OPTIONAL_DOC_LIST})
-    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL)
+    install(FILES "${f}" DESTINATION "${OPENCV_DOC_INSTALL_PATH}" OPTIONAL COMPONENT docs)
   endforeach()
 
 endif()

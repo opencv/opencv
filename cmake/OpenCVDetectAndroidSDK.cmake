@@ -344,20 +344,20 @@ macro(add_android_project target path)
     add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${android_proj_bin_dir}/bin/${target}-debug.apk" "${OpenCV_BINARY_DIR}/bin/${target}.apk")
     if(INSTALL_ANDROID_EXAMPLES AND "${target}" MATCHES "^example-")
       #apk
-      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT main)
+      install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT samples)
       get_filename_component(sample_dir "${path}" NAME)
       #java part
       list(REMOVE_ITEM android_proj_files ${ANDROID_MANIFEST_FILE})
       foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
         get_filename_component(install_subdir "${f}" PATH)
-        install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+        install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT samples)
       endforeach()
       #jni part + eclipse files
       file(GLOB_RECURSE jni_files RELATIVE "${path}" "${path}/jni/*" "${path}/.cproject")
       ocv_list_filterout(jni_files "\\\\.svn")
       foreach(f ${jni_files} ".classpath" ".project" ".settings/org.eclipse.jdt.core.prefs")
         get_filename_component(install_subdir "${f}" PATH)
-        install(FILES "${path}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)
+        install(FILES "${path}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT samples)
       endforeach()
       #update proj
       if(android_proj_lib_deps_commands)
@@ -365,9 +365,9 @@ macro(add_android_project target path)
       endif()
       install(CODE "EXECUTE_PROCESS(COMMAND ${ANDROID_EXECUTABLE} --silent update project --path . --target \"${android_proj_sdk_target}\" --name \"${target}\" ${inst_lib_opt}
                                     WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}\"
-                                   )"  COMPONENT main)
+                                   )"  COMPONENT dev)
       #empty 'gen'
-      install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT main)
+      install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT samples)
     endif()
   endif()
 endmacro()
