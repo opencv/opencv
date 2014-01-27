@@ -47,7 +47,7 @@
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
-static const char* funcToCheckOpenCL1_1 = "clEnqueueReadBufferRect";
+#define OPENCL_FUNC_TO_CHECK_1_1 "clEnqueueReadBufferRect"
 #define ERROR_MSG_CANT_LOAD "Failed to load OpenCL runtime\n"
 #define ERROR_MSG_INVALID_VERSION "Failed to load OpenCL runtime (expected version 1.1+)\n"
 
@@ -72,7 +72,7 @@ static void* AppleCLGetProcAddress(const char* name)
             {
                 fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
-            else if (dlsym(handle, funcToCheckOpenCL1_1) == NULL)
+            else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
             {
                 fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                 handle = NULL;
@@ -110,7 +110,7 @@ static void* WinGetProcAddress(const char* name)
                 {
                     fprintf(stderr, ERROR_MSG_CANT_LOAD);
                 }
-                else if (GetProcAddress(handle, funcToCheckOpenCL1_1) == NULL)
+                else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
                 {
                     fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                     handle = NULL;
@@ -147,7 +147,7 @@ static void* GetProcAddress(const char* name)
             {
                 fprintf(stderr, ERROR_MSG_CANT_LOAD);
             }
-            else if (dlsym(handle, funcToCheckOpenCL1_1) == NULL)
+            else if (dlsym(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
             {
                 fprintf(stderr, ERROR_MSG_INVALID_VERSION);
                 handle = NULL;
@@ -162,6 +162,11 @@ static void* GetProcAddress(const char* name)
 #endif
 
 #ifndef CV_CL_GET_PROC_ADDRESS
+#ifdef __GNUC__
+#warning("OPENCV: OpenCL dynamic library loader: check configuration")
+#else
+#pragma message("WARNING: OPENCV: OpenCL dynamic library loader: check configuration")
+#endif
 #define CV_CL_GET_PROC_ADDRESS(name) NULL
 #endif
 
