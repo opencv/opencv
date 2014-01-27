@@ -87,6 +87,11 @@
 #endif
 
 #ifndef CV_CL_GET_PROC_ADDRESS
+#ifdef __GNUC__
+#warning("OPENCV: OpenCL BLAS dynamic library loader: check configuration")
+#else
+#pragma message("WARNING: OPENCV: OpenCL BLAS dynamic library loader: check configuration")
+#endif
 #define CV_CL_GET_PROC_ADDRESS(name) NULL
 #endif
 
