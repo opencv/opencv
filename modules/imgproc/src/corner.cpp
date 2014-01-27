@@ -302,6 +302,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         calcEigenValsVecs( cov, eigenv );
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
                                       int aperture_size, double k, int borderType, int op_type)
 {
@@ -393,13 +395,14 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -410,9 +413,8 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
@@ -439,9 +441,8 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
     int type = _src.type();
     CV_Assert( type == CV_8UC1 || type == CV_32FC1 );
 
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_preCornerDetect(_src, _dst, ksize, borderType, CV_MAT_DEPTH(type)))
-        return;
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat(),
+                ocl_preCornerDetect(_src, _dst, ksize, borderType, CV_MAT_DEPTH(type)))
 
     Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );

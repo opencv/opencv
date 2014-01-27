@@ -66,6 +66,8 @@ struct Corner
     {  return val > c.val; }
 };
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray _mask, int blockSize,
@@ -211,6 +213,8 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     return true;
 }
 
+#endif
+
 }
 
 void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
@@ -221,10 +225,9 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
     CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );
 
-    if (ocl::useOpenCL() && _image.dims() <= 2 && _image.isUMat() &&
-            ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,
+    CV_OCL_RUN(_image.dims() <= 2 && _image.isUMat(),
+               ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,
                                     _mask, blockSize, useHarrisDetector, harrisK))
-        return;
 
     Mat image = _image.getMat(), eig, tmp;
     if( useHarrisDetector )

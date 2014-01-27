@@ -2688,6 +2688,7 @@ struct mRGBA2RGBA
     }
 };
 
+#ifdef HAVE_OPENCL
 
 static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
@@ -3041,6 +3042,8 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     return ok;
 }
 
+#endif
+
 }//namespace cv
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -3049,12 +3052,11 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 {
-    bool use_opencl = ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT;
     int stype = _src.type();
     int scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype), bidx;
 
-    if( use_opencl && ocl_cvtColor(_src, _dst, code, dcn) )
-        return;
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat(),
+                ocl_cvtColor(_src, _dst, code, dcn) )
 
     Mat src = _src.getMat(), dst;
     Size sz = src.size();
