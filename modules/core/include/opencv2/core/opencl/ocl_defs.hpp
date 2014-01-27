@@ -8,13 +8,13 @@
 #ifdef HAVE_OPENCL
 
 #ifdef CV_OPENCL_RUN_VERBOSE
-#define CV_OCL_RUN(condition, func)                                         \
+#define CV_OCL_RUN_(condition, func, ...)                                   \
     {                                                                       \
         if (cv::ocl::useOpenCL() && (condition) && func)                    \
         {                                                                   \
             printf("%s: OpenCL implementation is running\n", CV_Func);      \
             fflush(stdout);                                                 \
-            return;                                                         \
+            return __VA_ARGS__;                                             \
         }                                                                   \
         else                                                                \
         {                                                                   \
@@ -23,11 +23,13 @@
         }                                                                   \
     }
 #else
-#define CV_OCL_RUN(condition, func)                                         \
+#define CV_OCL_RUN_(condition, func, ...)                                   \
     if (cv::ocl::useOpenCL() && (condition) && func)                        \
-        return;
+        return __VA_ARGS__;
 #endif
 
 #else
-#define CV_OCL_RUN(condition, func)
+#define CV_OCL_RUN_(condition, func, retval)
 #endif
+
+#define CV_OCL_RUN(condition, func) CV_OCL_RUN_(condition, func)
