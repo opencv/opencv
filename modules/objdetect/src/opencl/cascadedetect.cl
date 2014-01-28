@@ -210,12 +210,9 @@ void runHaarClassifierStumpSplit(
     int4 nofs = nofs0;
     #endif
     #define LOCAL_SIZE (LOCAL_SIZE_X*LOCAL_SIZE_Y)
-    __local short lbuf[2][LOCAL_SIZE];
-    __local float lnf[2][LOCAL_SIZE], lsum[LOCAL_SIZE], lpartsum[LOCAL_SIZE];
-    __local int lcount[2];
-
-    if(lidx == 0)
-        lcount[0] = lcount[1] = 0;
+    __local short lbuf[LOCAL_SIZE];
+    __local float lnf[LOCAL_SIZE], lpartsum[LOCAL_SIZE];
+    __local int lcount;
 
     for( scaleIdx = nscales-1; scaleIdx >= 0; scaleIdx-- )
     {
@@ -250,7 +247,7 @@ void runHaarClassifierStumpSplit(
             #endif
 
             if( lidx == 0 )
-                lcount[0] = 0;
+                lcount = 0;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             if( ix0 + ix < worksize.x && iy0 + iy < worksize.y )
@@ -296,76 +293,82 @@ void runHaarClassifierStumpSplit(
 
                 if( stageIdx == splitstage )
                 {
-                    int count = atomic_inc(&lcount[0]);
-                    lbuf[0][count] = (int)(ix | (iy << 8));
-                    lnf[0][count] = nf;
+                    int count = atomic_inc(&lcount);
+                    lbuf[count] = (int)(ix | (iy << 8));
+                    lnf[count] = nf;
                 }
             }
-            barrier(CLK_LOCAL_MEM_FENCE);
+            //barrier(CLK_LOCAL_MEM_FENCE);
 
             for( stageIdx = splitstage; stageIdx < nstages; stageIdx++ )
             {
-                int t = (stageIdx - splitstage) & 1, new_t = t ^ 1;
-                int nr, nrects = lcount[t];
-                int ntrees = stages[stageIdx].ntrees;
-                __global const Stump* stump = stumps + stages[stageIdx].first;
-                int ntrees_l = (ntrees + LOCAL_SIZE - 1)/LOCAL_SIZE;
+                int nrects = lcount;
 
-                if( lidx == 0 )
-                    lcount[new_t] = 0;
+                barrier(CLK_LOCAL_MEM_FENCE);
                 if( nrects == 0 )
                     break;
-                barrier(CLK_LOCAL_MEM_FENCE);
+                if( lidx == 0 )
+                    lcount = 0;
 
-                for( nr = 0; nr < nrects; nr++ )
                 {
-                    float partsum = 0;
-                    int ntrees0 = ntrees_l*lidx;
-                    int ntrees1 = min(ntrees0 + ntrees_l, ntrees);
-                    float nf = lnf[t][nr];
-                    int n = LOCAL_SIZE/2, idxval = lbuf[t][nr], ix1 = idxval & 255, iy1 = idxval >> 8;
-                    #ifdef SUM_BUF_SIZE
-                    __local const int* psum = ibuf + mad24(iy1, SUM_BUF_STEP, ix1);
-                    #else
-                    __global const int* psum = psum0 + mad24(iy1, sumstep, ix1);
-                    #endif
-                    for( i = ntrees0; i < ntrees1; i++ )
+                    __global const Stump* stump = stumps + stages[stageIdx].first;
+                    int nparts = LOCAL_SIZE / nrects;
+                    int ntrees = stages[stageIdx].ntrees;
+                    int ntrees_p = (ntrees + nparts - 1)/nparts;
+                    int nr = lidx / nparts;
+                    int partidx = -1, idxval = 0;
+                    float partsum = 0.f, nf = 0.f;
+
+                    if( nr < nrects )
                     {
-                        float4 st = stump[i].st;
-                        __global const OptHaarFeature* f = optfeatures + as_int(st.x);
-                        float4 weight = f->weight;
+                        partidx = lidx % nparts;
+                        idxval = lbuf[nr];
+                        nf = lnf[nr];
 
-                        int4 ofs = f->ofs[0];
-                        float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
-                        ofs = f->ofs[1];
-                        sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
-                        //if( weight.z > 0 )
                         {
-                            ofs = f->ofs[2];
-                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
-                        }
+                        int ntrees0 = ntrees_p*partidx;
+                        int ntrees1 = min(ntrees0 + ntrees_p, ntrees);
+                        int ix1 = idxval & 255, iy1 = idxval >> 8;
+                        #ifdef SUM_BUF_SIZE
+                        __local const int* psum = ibuf + mad24(iy1, SUM_BUF_STEP, ix1);
+                        #else
+                        __global const int* psum = psum0 + mad24(iy1, sumstep, ix1);
+                        #endif
 
-                        partsum += (sval < st.y*nf) ? st.z : st.w;
+                        for( i = ntrees0; i < ntrees1; i++ )
+                        {
+                            float4 st = stump[i].st;
+                            __global const OptHaarFeature* f = optfeatures + as_int(st.x);
+                            float4 weight = f->weight;
+
+                            int4 ofs = f->ofs[0];
+                            float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
+                            ofs = f->ofs[1];
+                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            //if( weight.z > 0 )
+                            {
+                                ofs = f->ofs[2];
+                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                            }
+
+                            partsum += (sval < st.y*nf) ? st.z : st.w;
+                        }
+                        }
                     }
                     lpartsum[lidx] = partsum;
-                    for( ; n > 1; n >>= 1 )
-                    {
-                        barrier(CLK_LOCAL_MEM_FENCE);
-                        if( lidx < n )
-                            lpartsum[lidx] += lpartsum[lidx + n];
-                    }
                     barrier(CLK_LOCAL_MEM_FENCE);
-                    if( lidx < 1 )
-                        lsum[nr] = lpartsum[0] + lpartsum[1];
-                }
-                barrier(CLK_LOCAL_MEM_FENCE);
-                if( lidx < nrects )
-                {
-                    if( lsum[lidx] >= stages[stageIdx].threshold )
+
+                    if( partidx == 0 )
                     {
-                        int count = atomic_inc(&lcount[new_t]);
-                        lbuf[new_t][count] = lbuf[t][lidx];
-                        lnf[new_t][count] = lnf[t][lidx];
+                        float s = lpartsum[nr*nparts];
+                        for( i = 1; i < nparts; i++ )
+                            s += lpartsum[i + nr*nparts];
+                        if( s >= stages[stageIdx].threshold )
+                        {
+                            int count = atomic_inc(&lcount);
+                            lbuf[count] = idxval;
+                            lnf[count] = nf;
+                        }
                     }
                 }
             }
@@ -373,15 +376,14 @@ void runHaarClassifierStumpSplit(
             barrier(CLK_LOCAL_MEM_FENCE);
             if( stageIdx == nstages )
             {
-                int t = (nstages - splitstage) & 1;
-                int nrects = lcount[t];
+                int nrects = lcount;
                 if( lidx < nrects )
                 {
                     int nfaces = atomic_inc(facepos);
                     if( nfaces < maxFaces )
                     {
                         volatile __global int* face = facepos + 1 + nfaces*3;
-                        int val = lbuf[t][lidx];
+                        int val = lbuf[lidx];
                         face[0] = scaleIdx;
                         face[1] = ix0 + (val & 255);
                         face[2] = iy0 + (val >> 8);

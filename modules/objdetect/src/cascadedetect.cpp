@@ -594,18 +594,18 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         for( fi = 0; fi < nfeatures; fi++ )
             optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
         optfeatures_lbuf->resize(nfeatures);
-        /*int lsize;
+        int lsize;
         for( lsize = 8; lsize >= 4; lsize /= 2 )
         {
-            localSize = Size(lsize, lsize/2);
+            localSize = Size(lsize, lsize);
             lbufSize = Size(origWinSize.width + localSize.width * scaleData->at(0).ystep,
                             origWinSize.height + localSize.height * scaleData->at(0).ystep);
             if (lbufSize.area() <= 1500)
                 break;
         }
-        if (lsize < 4 || hasTiltedFeatures)*/
+        if (lsize < 4 || hasTiltedFeatures)
         {
-            localSize = Size(4, 2);
+            localSize = Size(8, 8);
             lbufSize = Size(0, 0);
         }
 
@@ -1312,7 +1312,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
             copyVectorToUMat(data.subsets, usubsets);
     }
 
-    int nstages = (int)data.stages.size(), splitstage_ocl = 5;
+    int nstages = (int)data.stages.size(), splitstage_ocl = 1;
 
     if( featureType == FeatureEvaluator::HAAR )
     {
