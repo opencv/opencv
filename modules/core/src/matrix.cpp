@@ -2484,6 +2484,23 @@ Mat& _OutputArray::getMatRef(int i) const
     }
 }
 
+UMat& _OutputArray::getUMatRef(int i) const
+{
+    int k = kind();
+    if( i < 0 )
+    {
+        CV_Assert( k == UMAT );
+        return *(UMat*)obj;
+    }
+    else
+    {
+        CV_Assert( k == STD_VECTOR_UMAT );
+        std::vector<UMat>& v = *(std::vector<UMat>*)obj;
+        CV_Assert( i < (int)v.size() );
+        return v[i];
+    }
+}
+
 cuda::GpuMat& _OutputArray::getGpuMatRef() const
 {
     int k = kind();
