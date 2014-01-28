@@ -561,6 +561,13 @@ include(cmake/OpenCVGenConfig.cmake)
 # Generate Info.plist for the IOS framework
 include(cmake/OpenCVGenInfoPlist.cmake)
 
+# Generate environment setup file
+if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX AND NOT ANDROID)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
+                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" DESTINATION /etc/profile.d/ COMPONENT tests)
+endif()
+
 # ----------------------------------------------------------------------------
 # Summary:
 # ----------------------------------------------------------------------------
