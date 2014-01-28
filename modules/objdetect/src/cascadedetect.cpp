@@ -605,7 +605,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         }
         if (lsize < 4 || hasTiltedFeatures)*/
         {
-            localSize = Size(4, 16);
+            localSize = Size(4, 4);
             lbufSize = Size(0, 0);
         }
 
@@ -1291,7 +1291,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     featureEvaluator->getUMats(bufs);
     Size localsz = featureEvaluator->getLocalSize();
     Size lbufSize = featureEvaluator->getLocalBufSize();
-    size_t localsize[] = { 16, 8 };//{ 1/*localsz.width*/, localsz.height };
+    size_t localsize[] = { localsz.width, localsz.height };
     const int grp_per_CU = 12;
     size_t globalsize[] = { grp_per_CU*ocl::Device::getDefault().maxComputeUnits()*localsize[0], localsize[1] };
     bool ok = false;
@@ -1312,7 +1312,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
             copyVectorToUMat(data.subsets, usubsets);
     }
 
-    int nstages = (int)data.stages.size(), nstages_ocl = std::min(nstages-1, 7);
+    int nstages = (int)data.stages.size(), splitstage_ocl = 15;
 
     if( featureType == FeatureEvaluator::HAAR )
     {
@@ -1328,7 +1328,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                               localsz.width, localsz.height, lbufSize.area(), lbufSize.width);
             else
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d", localsz.width, localsz.height);
-            haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, opts);
+            haarKernel.create("runHaarClassifierStumpSplit", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( haarKernel.empty() )
                 return false;
         }
@@ -1342,7 +1342,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                         ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
 
                         // cascade classifier
-                        nstages_ocl,
+                        splitstage_ocl, nstages,
                         ocl::KernelArg::PtrReadOnly(ustages),
                         ocl::KernelArg::PtrReadOnly(ustumps),
 
@@ -1371,7 +1371,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                        ocl::KernelArg::PtrReadOnly(bufs[2]), // optfeatures
 
                        // cascade classifier
-                       nstages_ocl,
+                       nstages,
                        ocl::KernelArg::PtrReadOnly(ustages),
                        ocl::KernelArg::PtrReadOnly(ustumps),
                        ocl::KernelArg::PtrReadOnly(usubsets),
@@ -1391,13 +1391,13 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         //printf("nfaces=%d\n", nfaces);
         const Candidate* input_candidates = (const Candidate*)(fptr + 1);
 
-        SparseCascadeClassifierInvoker invoker( *this, nstages_ocl,
+        /*SparseCascadeClassifierInvoker invoker( *this, nstages_ocl,
                                                 &featureEvaluator->getScaleData(0),
                                                 input_candidates, nfaces,
                                                 candidates, &mtx );
-        parallel_for_(Range(0, nfaces), invoker, 1000);
+        parallel_for_(Range(0, nfaces), invoker, 1000);*/
 
-        /*for( int i = 0; i < nfaces; i++ )
+        for( int i = 0; i < nfaces; i++ )
         {
             const Candidate& c = input_candidates[i];
             const FeatureEvaluator::ScaleData& s = featureEvaluator->getScaleData(c.scaleIdx);
@@ -1406,7 +1406,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                                       cvRound(c.pt.y*s.scale),
                                       cvRound(data.origWinSize.width*s.scale),
                                       cvRound(data.origWinSize.height*s.scale)));
-        }*/
+        }
         //printf("\n");
     }
     return ok;
