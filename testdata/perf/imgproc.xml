@@ -75841,4 +75841,42 @@
       <y>127</y>
       <cn>2</cn>
       <val>5.0136316567659378e-03</val></rng2></dst4></OCL_BuildPyramidFixture_BuildPyramid--BuildPyramid---3840x2160--32FC4->
+ <!-- resumed -->
+
+<CreateHanningWindowFixture_CreateHanningWindow--CreateHanningWindow--640x480>
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>9.9999159574508667e-01</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>108</x>
+      <y>344</y>
+      <val>3.9202350378036499e-01</val></rng1>
+    <rng2>
+      <x>95</x>
+      <y>172</y>
+      <val>4.0685525536537170e-01</val></rng2></dst></CreateHanningWindowFixture_CreateHanningWindow--CreateHanningWindow--640x480>
+<CreateHanningWindowFixture_CreateHanningWindow--CreateHanningWindow--1920x1080>
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>9.9999856948852539e-01</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1563</x>
+      <y>1022</y>
+      <val>9.0920642018318176e-02</val></rng1>
+    <rng2>
+      <x>615</x>
+      <y>192</y>
+      <val>4.4822371006011963e-01</val></rng2></dst></CreateHanningWindowFixture_CreateHanningWindow--CreateHanningWindow--1920x1080>
 </opencv_storage>
