@@ -114,7 +114,7 @@ protected:
                                     double scaleFactor, Size minObjectSize, Size maxObjectSize,
                                     bool outputRejectLevels = false );
 
-    enum { MAX_FACES = 100000 };
+    enum { MAX_FACES = 10000 };
     enum { BOOST = 0 };
     enum { DO_CANNY_PRUNING    = CASCADE_DO_CANNY_PRUNING,
         SCALE_IMAGE         = CASCADE_SCALE_IMAGE,
