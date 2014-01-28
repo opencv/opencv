@@ -189,7 +189,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
 
-GPU_TEST_P(GeneralizedHough, POSITION)
+GPU_TEST_P(GeneralizedHough, DISABLED_POSITION)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
