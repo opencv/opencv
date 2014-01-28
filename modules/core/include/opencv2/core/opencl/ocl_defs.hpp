@@ -22,6 +22,15 @@
             fflush(stdout);                                                 \
         }                                                                   \
     }
+#elif defined CV_OPENCL_RUN_ASSERT
+#define CV_OCL_RUN_(condition, func, ...)                                   \
+    {                                                                       \
+        if (cv::ocl::useOpenCL() && (condition))                            \
+        {                                                                   \
+            CV_Assert(func);                                                \
+            return;                                                         \
+        }                                                                   \
+    }
 #else
 #define CV_OCL_RUN_(condition, func, ...)                                   \
     if (cv::ocl::useOpenCL() && (condition) && func)                        \
