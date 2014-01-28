@@ -197,7 +197,7 @@ OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
 OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help with side by side installs." OFF IF (UNIX AND NOT ANDROID AND NOT IOS AND BUILD_SHARED_LIBS) )
-
+OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binaries and test data" OFF)
 
 # OpenCV build options
 # ===================================================
@@ -283,6 +283,7 @@ if(ANDROID)
   set(OPENCV_3P_LIB_INSTALL_PATH  sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME})
   set(OPENCV_CONFIG_INSTALL_PATH  sdk/native/jni)
   set(OPENCV_INCLUDE_INSTALL_PATH sdk/native/jni/include)
+  set(OPENCV_SAMPLES_SRC_INSTALL_PATH samples/native)
 else()
   set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib")
   set(3P_LIBRARY_OUTPUT_PATH      "${OpenCV_BINARY_DIR}/3rdparty/lib${LIB_SUFFIX}")
@@ -293,9 +294,11 @@ else()
       set(OPENCV_LIB_INSTALL_PATH   "${OpenCV_INSTALL_BINARIES_PREFIX}lib${LIB_SUFFIX}")
     endif()
     set(OPENCV_3P_LIB_INSTALL_PATH  "${OpenCV_INSTALL_BINARIES_PREFIX}staticlib${LIB_SUFFIX}")
+    set(OPENCV_SAMPLES_SRC_INSTALL_PATH    samples/native)
   else()
     set(OPENCV_LIB_INSTALL_PATH     lib${LIB_SUFFIX})
     set(OPENCV_3P_LIB_INSTALL_PATH  share/OpenCV/3rdparty/${OPENCV_LIB_INSTALL_PATH})
+    set(OPENCV_SAMPLES_SRC_INSTALL_PATH    share/OpenCV/samples)
   endif()
   set(OPENCV_INCLUDE_INSTALL_PATH "include")
 
@@ -975,3 +978,9 @@ ocv_finalize_status()
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
   message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
+
+# ----------------------------------------------------------------------------
+# CPack stuff
+# ----------------------------------------------------------------------------
+
+include(cmake/OpenCVPackaging.cmake)

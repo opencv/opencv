@@ -50,7 +50,7 @@ using namespace perf;
 // Remap
 
 enum { HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH };
-CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH);
+CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
 void generateMap(cv::Mat& map_x, cv::Mat& map_y, int remapMode)
 {
@@ -941,7 +941,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate8U,
 
         CPU_SANITY_CHECK(dst);
     }
-};
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F
@@ -981,7 +981,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, ImgProc_MatchTemplate32F,
 
         CPU_SANITY_CHECK(dst);
     }
-};
+}
 
 //////////////////////////////////////////////////////////////////////
 // MulSpectrums
@@ -1821,7 +1821,7 @@ PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
+CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION)
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 

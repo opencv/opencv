@@ -178,7 +178,7 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
     SANITY_CHECK(err, 2);
 }
 
-CV_ENUM(PyrBorderMode, BORDER_DEFAULT, BORDER_TRANSPARENT);
+CV_ENUM(PyrBorderMode, BORDER_DEFAULT, BORDER_TRANSPARENT)
 typedef tr1::tuple<std::string, int, bool, PyrBorderMode, bool> Path_Win_Deriv_Border_Reuse_t;
 typedef TestBaseWithParam<Path_Win_Deriv_Border_Reuse_t> Path_Win_Deriv_Border_Reuse;
 

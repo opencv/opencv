@@ -380,6 +380,6 @@ bool GCGraph<TWeight>::inSourceSegment( int i )
 {
     CV_Assert( i>=0 && i<(int)vtcs.size() );
     return vtcs[i].t == 0;
-};
+}
 
 #endif

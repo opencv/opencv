@@ -166,16 +166,16 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 }
 
 
-DEF_COPY_MASK(8u, uchar);
-DEF_COPY_MASK(16u, ushort);
-DEF_COPY_MASK(8uC3, Vec3b);
-DEF_COPY_MASK(32s, int);
-DEF_COPY_MASK(16uC3, Vec3s);
-DEF_COPY_MASK(32sC2, Vec2i);
-DEF_COPY_MASK(32sC3, Vec3i);
-DEF_COPY_MASK(32sC4, Vec4i);
-DEF_COPY_MASK(32sC6, Vec6i);
-DEF_COPY_MASK(32sC8, Vec8i);
+DEF_COPY_MASK(8u, uchar)
+DEF_COPY_MASK(16u, ushort)
+DEF_COPY_MASK(8uC3, Vec3b)
+DEF_COPY_MASK(32s, int)
+DEF_COPY_MASK(16uC3, Vec3s)
+DEF_COPY_MASK(32sC2, Vec2i)
+DEF_COPY_MASK(32sC3, Vec3i)
+DEF_COPY_MASK(32sC4, Vec4i)
+DEF_COPY_MASK(32sC6, Vec6i)
+DEF_COPY_MASK(32sC8, Vec8i)
 
 BinaryFunc copyMaskTab[] =
 {
@@ -232,10 +232,7 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
-            // to handle the copying 1xn matrix => nx1 std vector.
-            Size sz = size() == dst.size() ?
-                getContinuousSize(*this, dst) :
-                getContinuousSize(*this);
+            Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
             for( ; sz.height--; sptr += step, dptr += dst.step )
@@ -286,6 +283,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
     if( dims <= 2 )
     {
+        CV_Assert( size() == mask.size() );
         Size sz = getContinuousSize(*this, dst, mask, mcn);
         copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
