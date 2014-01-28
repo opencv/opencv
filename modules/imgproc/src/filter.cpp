@@ -3508,7 +3508,7 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     int type = _src.type();
     if ( !( (CV_8UC1 == type || CV_8UC4 == type || CV_32FC1 == type || CV_32FC4 == type) &&
-            (ddepth == CV_32F || ddepth == CV_8U) ) )
+            (ddepth == CV_32F || ddepth == CV_8U || ddepth < 0) ) )
         return false;
 
     int cn = CV_MAT_CN(type);
