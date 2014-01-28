@@ -852,7 +852,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
     {
         if (ocl_getBackgroundImage(backgroundImage));
             return;
-        
+
         opencl_ON = false;
         return;
     }
