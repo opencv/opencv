@@ -1914,5 +1914,7 @@ TEST(Imgproc_Blur, borderTypes)
     blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
     Mat expected_dst =
             (Mat_<uchar>(3, 3) << 170, 113, 170, 113, 28, 113, 170, 113, 170);
-    EXPECT_EQ(9 * 255, cv::sum(expected_dst == dst).val[0]);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
 }
