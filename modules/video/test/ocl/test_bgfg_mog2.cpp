@@ -28,7 +28,7 @@ namespace
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
 }
 
-PARAM_TEST_CASE(Mog2, UseGray, DetectShadow, bool)
+PARAM_TEST_CASE(Mog2, UseGray, DetectShadow)
 {
     bool useGray;
     bool detectShadow;
@@ -37,7 +37,6 @@ PARAM_TEST_CASE(Mog2, UseGray, DetectShadow, bool)
     {
         useGray = GET_PARAM(0);
         detectShadow = GET_PARAM(1);
-        useRoi = GET_PARAM(2);
     }
 };
 
@@ -116,8 +115,7 @@ OCL_TEST_P(Mog2, getBackgroundImage)
 
 OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2, Combine(
                                     Values(UseGray(true), UseGray(false)),
-                                    Values(DetectShadow(true), DetectShadow(false)),
-                                    Bool())
+                                    Values(DetectShadow(true), DetectShadow(false)))
                            );
 }}// namespace cvtest::ocl
 

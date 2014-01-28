@@ -67,7 +67,7 @@ __kernel void mog2_kernel(__global const uchar* frame, int frame_step, int frame
                           __global uchar* variance, int var_step, int var_offset,                                      //float
                           __global uchar* fgmask, int fgmask_step, int fgmask_offset,                                  //int
                           float alphaT, float alpha1, float prune,
-                          int detectShadows_flag, 
+                          int detectShadows_flag,
                           float c_Tb, float c_TB, float c_Tg, float c_varMin,                     //constants
                           float c_varMax, float c_varInit, float c_tau, uchar c_shadowVal)
 {
