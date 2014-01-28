@@ -100,6 +100,35 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
     SANITY_CHECK(dst, eps);
 }
 
+///////////// buildPyramid ////////////////////////
+
+typedef Size_MatType BuildPyramidFixture;
+
+OCL_PERF_TEST_P(BuildPyramidFixture, BuildPyramid,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), maxLevel = 5;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : 1e-5;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    std::vector<UMat> dst(maxLevel);
+    UMat src(srcSize, type);
+    declare.in(src, WARMUP_RNG);
+
+    OCL_TEST_CYCLE() cv::buildPyramid(src, dst, maxLevel);
+
+    UMat dst0 = dst[0], dst1 = dst[1], dst2 = dst[2], dst3 = dst[3], dst4 = dst[4];
+
+    SANITY_CHECK(dst0, eps);
+    SANITY_CHECK(dst1, eps);
+    SANITY_CHECK(dst2, eps);
+    SANITY_CHECK(dst3, eps);
+    SANITY_CHECK(dst4, eps);
+}
+
 } } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
