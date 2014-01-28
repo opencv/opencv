@@ -605,7 +605,7 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         }
         if (lsize < 4 || hasTiltedFeatures)*/
         {
-            localSize = Size(4, 4);
+            localSize = Size(4, 2);
             lbufSize = Size(0, 0);
         }
 
@@ -1312,7 +1312,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
             copyVectorToUMat(data.subsets, usubsets);
     }
 
-    int nstages = (int)data.stages.size(), splitstage_ocl = 15;
+    int nstages = (int)data.stages.size(), splitstage_ocl = 5;
 
     if( featureType == FeatureEvaluator::HAAR )
     {

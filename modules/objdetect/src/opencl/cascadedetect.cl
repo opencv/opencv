@@ -210,9 +210,12 @@ void runHaarClassifierStumpSplit(
     int4 nofs = nofs0;
     #endif
     #define LOCAL_SIZE (LOCAL_SIZE_X*LOCAL_SIZE_Y)
-    __local int lbuf[2][LOCAL_SIZE];
+    __local short lbuf[2][LOCAL_SIZE];
     __local float lnf[2][LOCAL_SIZE], lsum[LOCAL_SIZE], lpartsum[LOCAL_SIZE];
     __local int lcount[2];
+
+    if(lidx == 0)
+        lcount[0] = lcount[1] = 0;
 
     for( scaleIdx = nscales-1; scaleIdx >= 0; scaleIdx-- )
     {
@@ -345,22 +348,22 @@ void runHaarClassifierStumpSplit(
                         partsum += (sval < st.y*nf) ? st.z : st.w;
                     }
                     lpartsum[lidx] = partsum;
-                    for( ; n > 0; n >>= 1 )
+                    for( ; n > 1; n >>= 1 )
                     {
                         barrier(CLK_LOCAL_MEM_FENCE);
                         if( lidx < n )
                             lpartsum[lidx] += lpartsum[lidx + n];
                     }
                     barrier(CLK_LOCAL_MEM_FENCE);
-                    if( lidx == 0 )
-                        lsum[nr] = lpartsum[0];
+                    if( lidx < 1 )
+                        lsum[nr] = lpartsum[0] + lpartsum[1];
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
                 if( lidx < nrects )
                 {
                     if( lsum[lidx] >= stages[stageIdx].threshold )
                     {
-                        int count = atomic_inc(&lcount[t^1]);
+                        int count = atomic_inc(&lcount[new_t]);
                         lbuf[new_t][count] = lbuf[t][lidx];
                         lnf[new_t][count] = lnf[t][lidx];
                     }
@@ -368,6 +371,7 @@ void runHaarClassifierStumpSplit(
             }
 
             barrier(CLK_LOCAL_MEM_FENCE);
+            if( stageIdx == nstages )
             {
                 int t = (nstages - splitstage) & 1;
                 int nrects = lcount[t];
