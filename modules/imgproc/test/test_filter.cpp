@@ -1886,3 +1886,35 @@ protected:
 };
 
 TEST(Imgproc_Filtering, supportedFormats) { CV_FilterSupportedFormatsTest test; test.safe_run(); }
+
+TEST(Imgproc_Blur, borderTypes)
+{
+    Size kernelSize(3, 3);
+
+    /// ksize > src_roi.size()
+    Mat src(3, 3, CV_8UC1, cv::Scalar::all(255)), dst;
+    Mat src_roi = src(Rect(1, 1, 1, 1));
+    src_roi.setTo(cv::Scalar::all(0));
+
+    // should work like !BORDER_ISOLATED
+    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
+    EXPECT_EQ(227, dst.at<uchar>(0, 0));
+
+    // should work like BORDER_ISOLATED
+    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE | BORDER_ISOLATED);
+    EXPECT_EQ(0, dst.at<uchar>(0, 0));
+
+    /// ksize <= src_roi.size()
+    src = Mat(5, 5, CV_8UC1, cv::Scalar(255));
+    src_roi = src(Rect(1, 1, 3, 3));
+    src_roi.setTo(0);
+    src.at<uchar>(2, 2) = 255;
+
+    // should work like !BORDER_ISOLATED
+    blur(src_roi, dst, kernelSize, Point(-1, -1), BORDER_REPLICATE);
+    Mat expected_dst =
+            (Mat_<uchar>(3, 3) << 170, 113, 170, 113, 28, 113, 170, 113, 170);
+    EXPECT_EQ(expected_dst.type(), dst.type());
+    EXPECT_EQ(expected_dst.size(), dst.size());
+    EXPECT_DOUBLE_EQ(0.0, cvtest::norm(expected_dst, dst, NORM_INF));
+}
