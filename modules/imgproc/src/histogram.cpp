@@ -1414,7 +1414,7 @@ static bool ocl_calcHist1(InputArrayOfArrays _src, OutputArray _hist, int ddepth
     if (k1.empty())
         return false;
 
-    _hist.create(1, BINS, ddepth);
+    _hist.create(BINS, 1, ddepth);
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
             hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
 
