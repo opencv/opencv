@@ -3707,6 +3707,26 @@ PlatformInfo2::~PlatformInfo2()
         p->release();
 }
 
+PlatformInfo2::PlatformInfo2(const PlatformInfo2& i)
+{
+    if (i.p)
+        i.p->addref();
+    this->p = i.p;
+}
+
+PlatformInfo2& PlatformInfo2::operator =(const PlatformInfo2& i)
+{
+    if (i.p != this->p)
+    {
+        if (i.p)
+            i.p->addref();
+        if (this->p)
+            this->p->release();
+        this->p = i.p;
+    }
+    return *this;
+}
+
 int PlatformInfo2::deviceNumber() const
 {
     return p ? (int)p->devices.size() : 0;
