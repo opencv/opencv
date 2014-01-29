@@ -1650,6 +1650,16 @@ int _InputArray::dims(int i) const
         return vv[i].dims;
     }
 
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        if( i < 0 )
+            return 1;
+        CV_Assert( i < (int)vv.size() );
+
+        return vv[i].dims;
+    }
+
     if( k == OPENGL_BUFFER )
     {
         CV_Assert( i < 0 );
@@ -1701,6 +1711,16 @@ size_t _InputArray::total(int i) const
         return vv[i].total();
     }
 
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        if( i < 0 )
+            return vv.size();
+
+        CV_Assert( i < (int)vv.size() );
+        return vv[i].total();
+    }
+
     return size(i).area();
 }
 
@@ -1722,6 +1742,18 @@ int _InputArray::type(int i) const
 
     if( k == NONE )
         return -1;
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
+        if( vv.empty() )
+        {
+            CV_Assert((flags & FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
+        CV_Assert( i < (int)vv.size() );
+        return vv[i >= 0 ? i : 0].type();
+    }
 
     if( k == STD_VECTOR_MAT )
     {
@@ -1790,6 +1822,12 @@ bool _InputArray::empty() const
     if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
+        return vv.empty();
+    }
+
+    if( k == STD_VECTOR_UMAT )
+    {
+        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
         return vv.empty();
     }
 
