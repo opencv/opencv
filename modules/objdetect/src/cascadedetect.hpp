@@ -93,12 +93,6 @@ public:
     void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator);
     Ptr<MaskGenerator> getMaskGenerator();
 
-    struct Candidate
-    {
-        int scaleIdx;
-        Point pt;
-    };
-
 protected:
     enum { SUM_ALIGN = 64 };
 

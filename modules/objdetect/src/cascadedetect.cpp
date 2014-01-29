@@ -49,8 +49,6 @@
 namespace cv
 {
 
-typedef CascadeClassifierImpl::Candidate Candidate;
-
 template<typename _Tp> void copyVectorToUMat(const std::vector<_Tp>& v, UMat& um)
 {
     if(v.empty())
@@ -595,17 +593,17 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
             optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
         optfeatures_lbuf->resize(nfeatures);
         int lsize;
-        for( lsize = 8; lsize >= 4; lsize /= 2 )
+        for( lsize = 4; lsize >= 4; lsize /= 2 )
         {
-            localSize = Size(lsize, lsize);
-            lbufSize = Size(origWinSize.width + localSize.width * scaleData->at(0).ystep,
-                            origWinSize.height + localSize.height * scaleData->at(0).ystep);
+            localSize = Size(lsize, lsize/2);
+            lbufSize = Size(origWinSize.width + localSize.width,
+                            origWinSize.height + localSize.height);
             if (lbufSize.area() <= 1500)
                 break;
         }
         if (lsize < 4 || hasTiltedFeatures)
         {
-            localSize = Size(8, 8);
+            localSize = Size(4, 2);
             lbufSize = Size(0, 0);
         }
 
@@ -1220,65 +1218,6 @@ public:
 };
 
 
-class SparseCascadeClassifierInvoker : public ParallelLoopBody
-{
-public:
-    SparseCascadeClassifierInvoker( CascadeClassifierImpl& _cc, int _startstage,
-                                    const FeatureEvaluator::ScaleData* _scaleData,
-                                    const Candidate* _inputvec, int _ncandidates,
-                                    std::vector<Rect>& _outputvec, Mutex* _mtx)
-    {
-        classifier = &_cc;
-        startstage = _startstage;
-        scaleData = _scaleData;
-        input_rectangles = _inputvec;
-        ncandidates = _ncandidates;
-        output_rectangles = &_outputvec;
-        mtx = _mtx;
-    }
-
-    void operator()(const Range& range) const
-    {
-        Ptr<FeatureEvaluator> evaluator = classifier->featureEvaluator->clone();
-        double gypWeight = 0.;
-        Size origWinSize = classifier->data.origWinSize;
-        int startc = range.start, endc = std::min(range.end, ncandidates);
-
-        for( int i = startc; i < endc; i++ )
-        {
-            const Candidate& c = input_rectangles[i];
-            int scaleIdx = c.scaleIdx;
-            const FeatureEvaluator::ScaleData& s = scaleData[scaleIdx];
-            Point pt = c.pt;
-
-            int result = classifier->runAt(evaluator, pt, scaleIdx, gypWeight);
-            if( result > 0 )
-            {
-                float scalingFactor = s.scale;
-                Size winSize(cvRound(origWinSize.width * scalingFactor),
-                             cvRound(origWinSize.height * scalingFactor));
-
-                mtx->lock();
-                output_rectangles->push_back(Rect(cvRound(pt.x*scalingFactor),
-                                                  cvRound(pt.y*scalingFactor),
-                                                  winSize.width, winSize.height));
-                mtx->unlock();
-            }
-        }
-    }
-
-    CascadeClassifierImpl* classifier;
-    const Candidate* input_rectangles;
-    int ncandidates;
-    std::vector<Rect>* output_rectangles;
-    int startstage;
-    const FeatureEvaluator::ScaleData* scaleData;
-    std::vector<float> scales;
-    Mutex* mtx;
-};
-
-
-
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
@@ -1302,10 +1241,6 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
     if( ustages.empty() )
     {
-        /*for (size_t i = 0; i < data.stages.size(); i++)
-        {
-            printf("%d. count=%d\n", (int)i, (int)data.stages[i].ntrees);
-        }*/
         copyVectorToUMat(data.stages, ustages);
         copyVectorToUMat(data.stumps, ustumps);
         if( !data.subsets.empty() )
@@ -1328,7 +1263,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
                               localsz.width, localsz.height, lbufSize.area(), lbufSize.width);
             else
                 opts = format("-D LOCAL_SIZE_X=%d -D LOCAL_SIZE_Y=%d", localsz.width, localsz.height);
-            haarKernel.create("runHaarClassifierStumpSplit", ocl::objdetect::cascadedetect_oclsrc, opts);
+            haarKernel.create("runHaarClassifierStump", ocl::objdetect::cascadedetect_oclsrc, opts);
             if( haarKernel.empty() )
                 return false;
         }
@@ -1388,26 +1323,15 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
         const int* fptr = facepos.ptr<int>();
         int nfaces = fptr[0];
         nfaces = std::min(nfaces, (int)MAX_FACES);
-        //printf("nfaces=%d\n", nfaces);
-        const Candidate* input_candidates = (const Candidate*)(fptr + 1);
-
-        /*SparseCascadeClassifierInvoker invoker( *this, nstages_ocl,
-                                                &featureEvaluator->getScaleData(0),
-                                                input_candidates, nfaces,
-                                                candidates, &mtx );
-        parallel_for_(Range(0, nfaces), invoker, 1000);*/
 
         for( int i = 0; i < nfaces; i++ )
         {
-            const Candidate& c = input_candidates[i];
-            const FeatureEvaluator::ScaleData& s = featureEvaluator->getScaleData(c.scaleIdx);
-            //printf("(%.2f, %d, %d) ", s.scale, cvRound(c.pt.x*s.scale), cvRound(c.pt.y*s.scale));
-            candidates.push_back(Rect(cvRound(c.pt.x*s.scale),
-                                      cvRound(c.pt.y*s.scale),
+            const FeatureEvaluator::ScaleData& s = featureEvaluator->getScaleData(fptr[i*3 + 1]);
+            candidates.push_back(Rect(cvRound(fptr[i*3 + 2]*s.scale),
+                                      cvRound(fptr[i*3 + 3]*s.scale),
                                       cvRound(data.origWinSize.width*s.scale),
                                       cvRound(data.origWinSize.height*s.scale)));
         }
-        //printf("\n");
     }
     return ok;
 }
