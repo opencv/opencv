@@ -592,20 +592,19 @@ bool HaarEvaluator::setImage( InputArray _image, Size _origWinSize,
         for( fi = 0; fi < nfeatures; fi++ )
             optfeaturesPtr[fi].setOffsets( ff[fi], sstep, tofs );
         optfeatures_lbuf->resize(nfeatures);
-        int lsize;
-        for( lsize = 4; lsize >= 4; lsize /= 2 )
+
+        localSize = Size(4, 2); // this local size is known to work (not very efficiently sometimes)
+        if (ocl::useOpenCL())
         {
-            localSize = Size(lsize, lsize/2);
-            lbufSize = Size(origWinSize.width + localSize.width,
-                            origWinSize.height + localSize.height);
-            if (lbufSize.area() <= 1500)
-                break;
+            String vname = ocl::Device::getDefault().vendor();
+            if (vname == "Advanced Micro Devices, Inc." ||
+                vname == "AMD")
+                localSize = Size(8, 8);
         }
-        if (lsize < 4 || hasTiltedFeatures)
-        {
-            localSize = Size(4, 2);
+        lbufSize = Size(origWinSize.width + localSize.width,
+                        origWinSize.height + localSize.height);
+        if (lbufSize.area() > 1024)
             lbufSize = Size(0, 0);
-        }
 
         for( fi = 0; fi < nfeatures; fi++ )
             optfeatures_lbuf->at(fi).setOffsets(ff[fi], lbufSize.width > 0 ? lbufSize.width : sstep, tofs);
