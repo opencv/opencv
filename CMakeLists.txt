@@ -275,6 +275,9 @@ endif()
 set(OPENCV_SAMPLES_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}samples")
 
 set(OPENCV_BIN_INSTALL_PATH "${OpenCV_INSTALL_BINARIES_PREFIX}bin")
+if(NOT OPENCV_TEST_INSTALL_PATH)
+  set(OPENCV_TEST_INSTALL_PATH "${OPENCV_BIN_INSTALL_PATH}")
+endif()
 
 if(ANDROID)
   set(LIBRARY_OUTPUT_PATH         "${OpenCV_BINARY_DIR}/lib/${ANDROID_NDK_ABI_NAME}")
@@ -564,8 +567,14 @@ include(cmake/OpenCVGenInfoPlist.cmake)
 # Generate environment setup file
 if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX AND NOT ANDROID)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
-                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY IMMEDIATE)
-  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" DESTINATION /etc/profile.d/ COMPONENT tests)
+                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY)
+  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh"
+          DESTINATION /etc/profile.d/ COMPONENT tests)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests.sh.in"
+                 "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
+  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
+          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+          DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
 endif()
 
 # ----------------------------------------------------------------------------
