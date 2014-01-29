@@ -287,6 +287,10 @@ enum UMatUsageFlags
 
     USAGE_ALL_ACCESS = USAGE_CPU_ACCESS | USAGE_DEVICE_ACCESS,
 
+    // default allocation policy is platform and usage specific
+    USAGE_ALLOCATE_HOST_MEMORY = 1 << 8,
+    USAGE_ALLOCATE_DEVICE_MEMORY = 1 << 9,
+
     __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
 };
 

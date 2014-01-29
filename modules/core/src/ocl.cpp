@@ -3552,7 +3552,7 @@ public:
     {
         const Device& dev = ctx.device(0);
         createFlags = 0;
-        if ((usageFlags & USAGE_CPU_ACCESS) != 0)
+        if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
         if( dev.hostUnifiedMemory() )
