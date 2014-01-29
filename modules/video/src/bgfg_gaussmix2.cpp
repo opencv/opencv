@@ -371,7 +371,7 @@ protected:
     String name_;
 
     bool ocl_getBackgroundImage(OutputArray backgroundImage) const;
-    bool ocl_apply(InputArray _image, OutputArray _fgmask,  bool  needToInitialize, double learningRate=-1);
+    bool ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate=-1);
 };
 
 struct GaussBGStatModel2Params
@@ -736,7 +736,7 @@ public:
     uchar shadowVal;
 };
 
-bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgmask, bool  needToInitialize, double learningRate)
+bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
@@ -746,7 +746,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
 
     fgmask.setTo(cv::Scalar::all(1));
 
-    const float alpha1 = 1.0f - learningRate;
+    const double alpha1 = 1.0f - learningRate;
 
     int detectShadows_flag = 0;
     if(bShadowDetection)
@@ -800,7 +800,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
     if (opencl_ON)
     {
-        if (ocl_apply(_image,_fgmask, needToInitialize, learningRate))
+        if (ocl_apply(_image, _fgmask, learningRate))
             return;
         else
             initialize(_image.size(), _image.type());
@@ -850,7 +850,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
 {
     if (opencl_ON)
     {
-        if (ocl_getBackgroundImage(backgroundImage));
+        if (ocl_getBackgroundImage(backgroundImage))
             return;
 
         opencl_ON = false;
