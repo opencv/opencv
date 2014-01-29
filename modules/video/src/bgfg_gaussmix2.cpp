@@ -736,6 +736,8 @@ public:
     uchar shadowVal;
 };
 
+#ifdef HAVE_OPENCL
+
 bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     ++nframes;
@@ -791,6 +793,27 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     return true;
 }
 
+bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
+{
+    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3);
+
+    _backgroundImage.create(frameSize, frameType);
+    UMat dst = _backgroundImage.getUMat();
+
+    int idxArg = 0;
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnly(u_bgmodelUsedModes));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_weight));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_mean));
+    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
+    idxArg = kernel_getBg.set(idxArg, backgroundRatio);
+
+    size_t globalsize[2] = {u_bgmodelUsedModes.cols, u_bgmodelUsedModes.rows};
+
+    return kernel_getBg.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
 {
     bool needToInitialize = nframes == 0 || learningRate >= 1 || _image.size() != frameSize || _image.type() != frameType;
@@ -800,12 +823,11 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
     if (opencl_ON)
     {
-        if (ocl_apply(_image, _fgmask, learningRate))
-            return;
-        else
-            initialize(_image.size(), _image.type());
+        CV_OCL_RUN(opencl_ON, ocl_apply(_image, _fgmask, learningRate))
+
+        opencl_ON = false;
+        initialize(_image.size(), _image.type());
     }
-    opencl_ON = false;
 
     Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
@@ -827,31 +849,11 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               image.total()/(double)(1 << 16));
 }
 
-bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroundImage) const
-{
-    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3);
-
-    _backgroundImage.create(frameSize, frameType);
-    UMat dst = _backgroundImage.getUMat();
-
-    int idxArg = 0;
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnly(u_bgmodelUsedModes));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_weight));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_mean));
-    idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
-    idxArg = kernel_getBg.set(idxArg, backgroundRatio);
-
-    size_t globalsize[2] = {u_bgmodelUsedModes.cols, u_bgmodelUsedModes.rows};
-
-    return kernel_getBg.run(2, globalsize, NULL, false);
-}
-
 void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const
 {
     if (opencl_ON)
     {
-        if (ocl_getBackgroundImage(backgroundImage))
-            return;
+        CV_OCL_RUN(opencl_ON, ocl_getBackgroundImage(backgroundImage))
 
         opencl_ON = false;
         return;
