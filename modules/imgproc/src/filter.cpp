@@ -3595,12 +3595,12 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
     Size srcSize = src.size();
     Size bufSize(srcSize.width, srcSize.height + kernelY.cols - 1);
     UMat buf; buf.create(bufSize, CV_MAKETYPE(CV_32F, cn));
-    if (!ocl_sepRowFilter2D(src, buf, kernelX, anchor.x, borderType, true))
+    if (!ocl_sepRowFilter2D(src, buf, kernelX, anchor.x, borderType, false))
         return false;
 
     _dst.create(srcSize, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
-    return ocl_sepColFilter2D(buf, dst, kernelY, anchor.y, true);
+    return ocl_sepColFilter2D(buf, dst, kernelY, anchor.y, false);
 }
 
 #endif
