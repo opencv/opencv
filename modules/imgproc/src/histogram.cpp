@@ -1399,12 +1399,14 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     }
 }
 
+#ifdef HAVE_OPENCL
+
 enum
 {
     BINS = 256
 };
 
-static bool ocl_calcHist1(InputArrayOfArrays _src, OutputArray _hist, int ddepth = CV_32S)
+static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
 {
     int compunits = ocl::Device::getDefault().maxComputeUnits();
     size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
@@ -1449,6 +1451,8 @@ static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)
 
     return ocl_calcHist1(v[0], hist, CV_32F);
 }
+
+#endif
 
 }
 
