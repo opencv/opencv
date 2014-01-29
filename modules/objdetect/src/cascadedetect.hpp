@@ -44,7 +44,7 @@ public:
 
     virtual float calcOrd(int featureIdx) const;
     virtual int calcCat(int featureIdx) const;
-    
+
     static Ptr<FeatureEvaluator> create(int type);
 };
 

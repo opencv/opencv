@@ -1,6 +1,18 @@
 ///////////////////////////// OpenCL kernels for face detection //////////////////////////////
 ////////////////////////////// see the opencv/doc/license.txt ///////////////////////////////
 
+//
+// the code has been derived from the OpenCL Haar cascade kernel by
+//
+//    Niko Li, newlife20080214@gmail.com
+//    Wang Weiyan, wangweiyanster@gmail.com
+//    Jia Haipeng, jiahaipeng95@gmail.com
+//    Nathan, liujun@multicorewareinc.com
+//    Peng Xiao, pengxiao@outlook.com
+//    Erping Pang, erping@multicorewareinc.com
+//
+
+
 typedef struct __attribute__((aligned(4))) OptHaarFeature
 {
     int4 ofs[3] __attribute__((aligned (4)));

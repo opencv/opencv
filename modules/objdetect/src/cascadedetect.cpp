@@ -798,7 +798,7 @@ bool LBPEvaluator::setImage( InputArray _image, Size _origWinSize, const std::ve
         copyVectorToUMat(*optfeatures, ufbuf);
         copyVectorToUMat(*scaleData, uscaleData);
     }
-    
+
     return true;
 }
 

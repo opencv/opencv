@@ -418,7 +418,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                     {
                         stage_sum += passThres ? alpha3.z : alpha3.y;
                         nodecounter ++;
-                        nodeloop ++; 
+                        nodeloop ++;
                     }
 #endif
                 }
