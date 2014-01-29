@@ -3299,7 +3299,7 @@ public:
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
-            UMatDataAutoLock lock(u);
+//            UMatDataAutoLock lock(u);
             if( u->hostCopyObsolete() && u->refcount > 0 )
             {
                 cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
