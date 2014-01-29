@@ -2194,18 +2194,20 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
 }
 
 struct predict_body_svm : ParallelLoopBody {
-    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
+    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results, bool _returnDFVal)
     {
         pointer = _pointer;
         result = _result;
         samples = _samples;
         results = _results;
+        returnDFVal = _returnDFVal;
     }
 
     const CvSVM* pointer;
     float* result;
     const CvMat* samples;
     CvMat* results;
+    bool returnDFVal;
 
     void operator()( const cv::Range& range ) const
     {
@@ -2213,7 +2215,7 @@ struct predict_body_svm : ParallelLoopBody {
         {
             CvMat sample;
             cvGetRow( samples, &sample, i );
-            int r = (int)pointer->predict(&sample);
+            int r = (int)pointer->predict(&sample, returnDFVal);
             if (results)
                 results->data.fl[i] = (float)r;
             if (i == 0)
@@ -2222,11 +2224,11 @@ struct predict_body_svm : ParallelLoopBody {
     }
 };
 
-float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
+float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal) const
 {
     float result = 0;
     cv::parallel_for_(cv::Range(0, samples->rows),
-             predict_body_svm(this, &result, samples, results)
+             predict_body_svm(this, &result, samples, results, returnDFVal)
     );
     return result;
 }
