@@ -201,7 +201,7 @@ public:
     virtual bool train( const CvMat* trainData, const CvMat* responses,
         const CvMat* varIdx = 0, const CvMat* sampleIdx=0, bool update=false );
 
-    virtual float predict( const CvMat* samples, CV_OUT CvMat* results=0 ) const;
+    virtual float predict( const CvMat* samples, CV_OUT CvMat* results=0, CV_OUT CvMat* results_prob=0 ) const;
     CV_WRAP virtual void clear();
 
     CV_WRAP CvNormalBayesClassifier( const cv::Mat& trainData, const cv::Mat& responses,
@@ -209,7 +209,7 @@ public:
     CV_WRAP virtual bool train( const cv::Mat& trainData, const cv::Mat& responses,
                        const cv::Mat& varIdx = cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
                        bool update=false );
-    CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0 ) const;
+    CV_WRAP virtual float predict( const cv::Mat& samples, CV_OUT cv::Mat* results=0, CV_OUT cv::Mat* results_prob=0 ) const;
 
     virtual void write( CvFileStorage* storage, const char* name ) const;
     virtual void read( CvFileStorage* storage, CvFileNode* node );
