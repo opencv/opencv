@@ -75841,4 +75841,78 @@
       <y>127</y>
       <cn>2</cn>
       <val>5.0136316567659378e-03</val></rng2></dst4></OCL_BuildPyramidFixture_BuildPyramid--BuildPyramid---3840x2160--32FC4->
+ <!-- resumed -->
+
+<OCL_CalcHistFixture_CalcHist--CalcHist--640x480>
+  <hist>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>1091.</min>
+    <max>1294.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>1179.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>51</y>
+      <val>1239.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>17</y>
+      <val>1131.</val></rng2></hist></OCL_CalcHistFixture_CalcHist--CalcHist--640x480>
+<OCL_CalcHistFixture_CalcHist--CalcHist--1280x720>
+  <hist>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>3462.</min>
+    <max>3754.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>3545.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>154</y>
+      <val>3536.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>89</y>
+      <val>3553.</val></rng2></hist></OCL_CalcHistFixture_CalcHist--CalcHist--1280x720>
+<OCL_CalcHistFixture_CalcHist--CalcHist--1920x1080>
+  <hist>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>7862.</min>
+    <max>8328.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>7932.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>132</y>
+      <val>8088.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>200</y>
+      <val>8191.</val></rng2></hist></OCL_CalcHistFixture_CalcHist--CalcHist--1920x1080>
+<OCL_CalcHistFixture_CalcHist--CalcHist--3840x2160>
+  <hist>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>31848.</min>
+    <max>32919.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>32193.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>254</y>
+      <val>32519.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>6</y>
+      <val>32573.</val></rng2></hist></OCL_CalcHistFixture_CalcHist--CalcHist--3840x2160>
 </opencv_storage>
