@@ -3330,6 +3330,7 @@ static std::string kerToStr(const Mat & k)
     }
     else if (depth == CV_32F)
     {
+        stream.setf(std::ios_base::showpoint);
         for (int i = 0; i < width; ++i)
             stream << data[i] << "f,";
         stream << data[width] << "f";
