@@ -594,7 +594,7 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
             bShadowDetection,
             nShadowDetection
             );
-};
+}
 
 void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage) const
 {
@@ -640,12 +640,15 @@ void BackgroundSubtractorKNNImpl::getBackgroundImage(OutputArray backgroundImage
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
     }
-};
+}
 
 
-Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN(int _history, double _threshold2,bool _bShadowDetection)
+Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN(int _history, double _threshold2,
+                                                           bool _bShadowDetection)
 {
     return makePtr<BackgroundSubtractorKNNImpl>(_history, (float)_threshold2, _bShadowDetection);
-};
+}
 
-};//namespace cv
+}
+
+/* End of file. */
