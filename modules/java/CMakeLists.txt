@@ -266,7 +266,7 @@ if(ANDROID)
 else(ANDROID)
   set(JAR_NAME opencv-${LIB_NAME_SUFIX}.jar)
   set(JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" IMMEDIATE @ONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OpenCV_BINARY_DIR}/build.xml" @ONLY)
   list(APPEND step3_depends "${OpenCV_BINARY_DIR}/build.xml")
 
   add_custom_command(OUTPUT "${JAR_FILE}" "${JAR_FILE}.dephelper"
