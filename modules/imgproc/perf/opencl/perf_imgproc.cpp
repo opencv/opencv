@@ -61,12 +61,38 @@ OCL_PERF_TEST_P(EqualizeHistFixture, EqualizeHist, OCL_TEST_SIZES)
     const Size srcSize = GetParam();
     const double eps = 1;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
+
     UMat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::equalizeHist(src, dst);
 
     SANITY_CHECK(dst, eps);
+}
+
+///////////// calcHist ////////////////////////
+
+typedef TestBaseWithParam<Size> CalcHistFixture;
+
+OCL_PERF_TEST_P(CalcHistFixture, CalcHist, OCL_TEST_SIZES)
+{
+    const Size srcSize = GetParam();
+
+    const std::vector<int> channels(1, 0);
+    std::vector<float> ranges(2);
+    std::vector<int> histSize(1, 256);
+    ranges[0] = 0;
+    ranges[1] = 256;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
+
+    UMat src(srcSize, CV_8UC1), hist(256, 1, CV_32FC1);
+    declare.in(src, WARMUP_RNG).out(hist);
+
+    OCL_TEST_CYCLE() cv::calcHist(std::vector<UMat>(1, src), channels, noArray(), hist, histSize, ranges, false);
+
+    SANITY_CHECK(hist);
 }
 
 /////////// CopyMakeBorder //////////////////////
@@ -82,6 +108,8 @@ OCL_PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
     const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), dst;
     const Size dstSize = srcSize + Size(12, 12);
@@ -105,6 +133,8 @@ OCL_PERF_TEST_P(CornerMinEigenValFixture, CornerMinEigenVal,
     const int type = get<1>(params), borderType = BORDER_REFLECT;
     const int blockSize = 7, apertureSize = 1 + 2 * 3;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     UMat src(srcSize, type), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -123,6 +153,8 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = BORDER_REFLECT;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -143,6 +175,8 @@ OCL_PERF_TEST_P(PreCornerDetectFixture, PreCornerDetect,
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = BORDER_REFLECT;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
     UMat src(srcSize, type), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -161,6 +195,8 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
     const IntegralParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int ddepth = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
     UMat src(srcSize, CV_8UC1), dst(srcSize + Size(1, 1), ddepth);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -186,6 +222,8 @@ OCL_PERF_TEST_P(ThreshFixture, Threshold,
     const int threshType = get<2>(params);
     const double maxValue = 220.0, threshold = 50;
 
+    checkDeviceMaxMemoryAllocSize(srcSize, srcType);
+
     UMat src(srcSize, srcType), dst(srcSize, srcType);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -201,6 +239,8 @@ typedef TestBaseWithParam<Size> CLAHEFixture;
 OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
 {
     const Size srcSize = GetParam();
+
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_8UC1);
 
     UMat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     const double clipLimit = 40.0;
