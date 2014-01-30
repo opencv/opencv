@@ -59,7 +59,7 @@ namespace cvtest {
 namespace ocl {
 
 ///////////////////// HOG /////////////////////////////
-    PARAM_TEST_CASE(HOG, Size, MatType)
+PARAM_TEST_CASE(HOG, Size, MatType)
 {
     Size winSize;
     int type;
@@ -69,7 +69,7 @@ namespace ocl {
     {
         winSize = GET_PARAM(0);
         type = GET_PARAM(1);
-        img = readImage("C:/opencv_extra/testdata/gpu/hog/road.png", IMREAD_GRAYSCALE);
+        img = readImage("cascadeandhog/images/image_00000000_0.png", IMREAD_GRAYSCALE);
         ASSERT_FALSE(img.empty());
         img.copyTo(uimg);
     }
@@ -90,7 +90,7 @@ OCL_TEST_P(HOG, GetDescriptors)
 
     Mat cpu_desc(cpu_descriptors), gpu_desc(gpu_descriptors);
 
-    EXPECT_MAT_SIMILAR(cpu_desc, gpu_desc, 1e-2);
+    EXPECT_MAT_SIMILAR(cpu_desc, gpu_desc, 1e-1);
 }
 
 OCL_TEST_P(HOG, Detect)
@@ -110,6 +110,20 @@ OCL_TEST_P(HOG, Detect)
     OCL_OFF(hog.detectMultiScale(img, cpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
     OCL_ON(hog.detectMultiScale(uimg, gpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
 
+    for (size_t i = 0; i < cpu_found.size(); i++)
+    {
+        Rect r = cpu_found[i];
+        rectangle(img, r.tl(), r.br(), Scalar(0, 255, 0), 3);
+    }
+    imshow("cpu", img);
+    Mat imgs(img);
+    for (size_t i = 0; i < gpu_found.size(); i++)
+    {
+        Rect r = cpu_found[i];
+        rectangle(imgs, r.tl(), r.br(), Scalar(0, 255, 0), 3);
+    }
+    imshow("gpu", imgs);
+    waitKey(0);
     EXPECT_LT(checkRectSimilarity(img.size(), cpu_found, gpu_found), 1.0);
 }
 

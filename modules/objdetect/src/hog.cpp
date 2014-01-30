@@ -1377,7 +1377,7 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
-    if(ocl::useOpenCL() && _img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat() && 
+    if(ocl::useOpenCL() && _img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat() &&
         ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL))
         return;
 
@@ -1713,7 +1713,7 @@ bool HOGDescriptor::ocl_detect(const UMat& img, std::vector<Point> &hits,
         effect_size.width, block_hists, (float)L2HysThreshold)) return false;
 
     size_t descriptor_size = getDescriptorSize();
-    float free_coef = free_coef = svmDetector.size() > descriptor_size ? svmDetector[descriptor_size] : 0;
+    float free_coef = svmDetector.size() > descriptor_size ? svmDetector[descriptor_size] : 0;
 
     Size blocks_per_win = numPartsWithin(winSize, blockSize, blockStride);
 
