@@ -575,6 +575,7 @@ protected:
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo2>& platform_info);
 
 class CV_EXPORTS Image2D

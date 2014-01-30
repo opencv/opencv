@@ -3313,57 +3313,6 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     return kernel.run(2, globalsize, localsize, true);
 }
 
-template <typename T>
-static std::string kerToStr(const Mat & k)
-{
-    int width = k.cols - 1, depth = k.depth();
-    const T * const data = reinterpret_cast<const T *>(k.data);
-
-    std::ostringstream stream;
-    stream.precision(10);
-
-    if (depth <= CV_8S)
-    {
-        for (int i = 0; i < width; ++i)
-            stream << (int)data[i] << ",";
-        stream << (int)data[width];
-    }
-    else if (depth == CV_32F)
-    {
-        stream.setf(std::ios_base::showpoint);
-        for (int i = 0; i < width; ++i)
-            stream << data[i] << "f,";
-        stream << data[width] << "f";
-    }
-    else
-    {
-        for (int i = 0; i < width; ++i)
-            stream << data[i] << ",";
-    }
-
-    return stream.str();
-}
-
-static String kernelToStr(InputArray _kernel, int ddepth = -1)
-{
-    Mat kernel = _kernel.getMat().reshape(1, 1);
-
-    int depth = kernel.depth();
-    if (ddepth < 0)
-        ddepth = depth;
-
-    if (ddepth != depth)
-        kernel.convertTo(kernel, ddepth);
-
-    typedef std::string (*func_t)(const Mat &);
-    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>,kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
-    const func_t func = funcs[depth];
-    CV_Assert(func != 0);
-
-    return cv::format(" -D COEFF=%s", func(kernel).c_str());
-}
-
 static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, int borderType, bool sync)
 {
     int type = src.type();
@@ -3429,7 +3378,7 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
         btype,
         extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
         isIsolatedBorder ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED");
-    build_options += kernelToStr(kernelX, CV_32F);
+    build_options += ocl::kernelToStr(kernelX, CV_32F);
 
     Size srcWholeSize; Point srcOffset;
     src.locateROI(srcWholeSize, srcOffset);
@@ -3462,7 +3411,6 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
     idxArg = kernelRow.set(idxArg, buf.cols);
     idxArg = kernelRow.set(idxArg, buf.rows);
     idxArg = kernelRow.set(idxArg, radiusY);
-//    idxArg = kernelRow.set(idxArg, ocl::KernelArg::PtrReadOnly(kernelX.getUMat(ACCESS_READ)));
 
     return kernelRow.run(2, globalsize, localsize, sync);
 }
@@ -3532,7 +3480,7 @@ static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, b
         }
     }
 
-    build_options += kernelToStr(kernelY, CV_32F);
+    build_options += ocl::kernelToStr(kernelY, CV_32F);
 
     ocl::Kernel kernelCol;
     if (!kernelCol.create("col_filter", cv::ocl::imgproc::filterSepCol_oclsrc, build_options))
@@ -3549,7 +3497,6 @@ static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, b
     idxArg = kernelCol.set(idxArg, (int)(dst.step / dst.elemSize()));
     idxArg = kernelCol.set(idxArg, dst.cols);
     idxArg = kernelCol.set(idxArg, dst.rows);
-//    idxArg = kernelCol.set(idxArg, ocl::KernelArg::PtrReadOnly(kernelY.getUMat(ACCESS_READ)));
 
     return kernelCol.run(2, globalsize, localsize, sync);
 }
