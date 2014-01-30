@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -352,15 +353,83 @@ inline int getAccTabIdx(int sdepth, int ddepth)
            sdepth == CV_64F && ddepth == CV_64F ? 6 : -1;
 }
 
+#ifdef HAVE_OPENCL
+
+enum
+{
+    ACCUMULATE = 0,
+    ACCUMULATE_SQUARE = 1,
+    ACCUMULATE_PRODUCT = 2,
+    ACCUMULATE_WEIGHTED = 3
+};
+
+static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray _dst, double alpha,
+                            InputArray _mask, int op_type )
+{
+    CV_Assert(op_type == ACCUMULATE || op_type == ACCUMULATE_SQUARE ||
+              op_type == ACCUMULATE_PRODUCT || op_type == ACCUMULATE_WEIGHTED);
+
+    int stype = _src.type(), cn = CV_MAT_CN(stype);
+    int sdepth = CV_MAT_DEPTH(stype), ddepth = _dst.depth();
+
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0,
+            haveMask = !_mask.empty();
+
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
+        return false;
+
+    const char * const opMap[4] = { "ACCUMULATE", "ACCUMULATE_SQUARE", "ACCUMULATE_PRODUCT",
+                                   "ACCUMULATE_WEIGHTED" };
+
+    ocl::Kernel k("accumulate", ocl::imgproc::accumulate_oclsrc,
+                  format("-D %s%s -D srcT=%s -D cn=%d -D dstT=%s%s",
+                         opMap[op_type], haveMask ? " -D HAVE_MASK" : "",
+                         ocl::typeToStr(sdepth), cn, ocl::typeToStr(ddepth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat(), mask = _mask.getUMat();
+
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dstarg = ocl::KernelArg::ReadWrite(dst),
+            maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+
+    int argidx = k.set(0, srcarg);
+    if (op_type == ACCUMULATE_PRODUCT)
+        argidx = k.set(argidx, src2arg);
+    argidx = k.set(argidx, dstarg);
+    if (op_type == ACCUMULATE_WEIGHTED)
+    {
+        if (ddepth == CV_32F)
+            argidx = k.set(argidx, (float)alpha);
+        else
+            argidx = k.set(argidx, alpha);
+    }
+    if (haveMask)
+        argidx = k.set(argidx, maskarg);
+
+    size_t globalsize[2] = { src.cols, src.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accTab[fidx] : 0;
@@ -372,17 +441,21 @@ void cv::accumulate( InputArray _src, InputOutputArray _dst, InputArray _mask )
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
-
 
 void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, 0.0, _mask, ACCUMULATE_SQUARE))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccFunc func = fidx >= 0 ? accSqrTab[fidx] : 0;
@@ -394,18 +467,23 @@ void cv::accumulateSquare( InputArray _src, InputOutputArray _dst, InputArray _m
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn);
 }
 
 void cv::accumulateProduct( InputArray _src1, InputArray _src2,
                             InputOutputArray _dst, InputArray _mask )
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src1.depth(), ddepth = dst.depth(), cn = src1.channels();
+    int stype = _src1.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( src2.size && src1.size && src2.type() == src1.type() );
-    CV_Assert( dst.size == src1.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src1.size && mask.type() == CV_8U) );
+    CV_Assert( _src1.sameSize(_src2) && stype == _src2.type() );
+    CV_Assert( _src1.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src1.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src1.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src1, _src2, _dst, 0.0, _mask, ACCUMULATE_PRODUCT))
+
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccProdFunc func = fidx >= 0 ? accProdTab[fidx] : 0;
@@ -417,18 +495,22 @@ void cv::accumulateProduct( InputArray _src1, InputArray _src2,
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, cn);
+        func(ptrs[0], ptrs[1], ptrs[2], ptrs[3], len, scn);
 }
-
 
 void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
                              double alpha, InputArray _mask )
 {
-    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
-    int sdepth = src.depth(), ddepth = dst.depth(), cn = src.channels();
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), scn = CV_MAT_CN(stype);
+    int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), dcn = CV_MAT_CN(dtype);
 
-    CV_Assert( dst.size == src.size && dst.channels() == cn );
-    CV_Assert( mask.empty() || (mask.size == src.size && mask.type() == CV_8U) );
+    CV_Assert( _src.sameSize(_dst) && dcn == scn );
+    CV_Assert( _mask.empty() || (_src.sameSize(_mask) && _mask.type() == CV_8U) );
+
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_accumulate(_src, noArray(), _dst, alpha, _mask, ACCUMULATE_WEIGHTED))
+
+    Mat src = _src.getMat(), dst = _dst.getMat(), mask = _mask.getMat();
 
     int fidx = getAccTabIdx(sdepth, ddepth);
     AccWFunc func = fidx >= 0 ? accWTab[fidx] : 0;
@@ -440,7 +522,7 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
     int len = (int)it.size;
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
-        func(ptrs[0], ptrs[1], ptrs[2], len, cn, alpha);
+        func(ptrs[0], ptrs[1], ptrs[2], len, scn, alpha);
 }
 
 
