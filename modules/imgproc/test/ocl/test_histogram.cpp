@@ -144,11 +144,6 @@ PARAM_TEST_CASE(CalcBackProject, MatDepth, int, bool)
 
         scale = randomDouble(0.1, 1);
     }
-
-    void Near()
-    {
-        OCL_EXPECT_MATS_NEAR(dst, 0.0)
-    }
 };
 
 //////////////////////////////// CalcBackProject //////////////////////////////////////////////
@@ -162,13 +157,62 @@ OCL_TEST_P(CalcBackProject, Mat)
         OCL_OFF(cv::calcBackProject(images_roi, channels, hist_roi, dst_roi, ranges, scale));
         OCL_ON(cv::calcBackProject(uimages_roi, channels, uhist_roi, udst_roi, ranges, scale));
 
-        Near();
+        OCL_EXPECT_MATS_NEAR(dst, 0.0)
+    }
+}
+
+//////////////////////////////// CalcHist //////////////////////////////////////////////
+
+PARAM_TEST_CASE(CalcHist, bool)
+{
+    bool useRoi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(hist)
+
+    virtual void SetUp()
+    {
+        useRoi = GET_PARAM(0);
+    }
+
+    virtual void random_roi()
+    {
+        Size roiSize = randomSize(1, MAX_VALUE);
+
+        Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, CV_8UC1, 0, 256);
+
+        Border histBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        randomSubMat(hist, hist_roi, Size(1, 256), histBorder, CV_32SC1, 0, MAX_VALUE);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(hist)
+    }
+};
+
+OCL_TEST_P(CalcHist, Mat)
+{
+    const std::vector<int> channels(1, 0);
+    std::vector<float> ranges(2);
+    std::vector<int> histSize(1, 256);
+    ranges[0] = 0;
+    ranges[1] = 256;
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF(cv::calcHist(std::vector<Mat>(1, src_roi), channels, noArray(), hist_roi, histSize, ranges, false));
+        OCL_ON(cv::calcHist(std::vector<UMat>(1, usrc_roi), channels, noArray(), uhist_roi, histSize, ranges, false));
+
+        OCL_EXPECT_MATS_NEAR(hist, 0.0)
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CalcBackProject, Combine(Values((MatDepth)CV_8U), Values(1, 2), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, CalcHist, Values(true, false));
 
 } } // namespace cvtest::ocl
 
