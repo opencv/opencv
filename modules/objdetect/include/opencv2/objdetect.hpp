@@ -308,10 +308,13 @@ public:
     CV_WRAP virtual void save(const String& filename, const String& objname = String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
 
-    CV_WRAP virtual void compute(const Mat& img,
+    CV_WRAP virtual void compute(InputArray img,
                          CV_OUT std::vector<float>& descriptors,
                          Size winStride = Size(), Size padding = Size(),
                          const std::vector<Point>& locations = std::vector<Point>()) const;
+
+    virtual bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& descriptors, int descr_format) const;
+
     //with found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
@@ -323,16 +326,22 @@ public:
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
+    //ocl
+    virtual bool ocl_detect(const UMat& img, std::vector<Point> &hits,
+                       double hitThreshold = 0, Size winStride = Size()) const;
     //with result weights output
-    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   CV_OUT std::vector<double>& foundWeights, double hitThreshold = 0,
                                   Size winStride = Size(), Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0,bool useMeanshiftGrouping = false) const;
     //without found weights output
-    virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold = 0, Size winStride = Size(),
                                   Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0, bool useMeanshiftGrouping = false) const;
+    //ocl
+    virtual bool ocl_detectMultiScale(InputArray img, std::vector<Rect> &found_locations, std::vector<double>& level_scale,
+                                      double hit_threshold, Size winStride, double groupThreshold) const;
 
     CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL = Size(), Size paddingBR = Size()) const;
@@ -351,6 +360,7 @@ public:
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
     CV_PROP std::vector<float> svmDetector;
+    CV_PROP std::vector<float> oclSvmDetector;
     CV_PROP int nlevels;
 
 
