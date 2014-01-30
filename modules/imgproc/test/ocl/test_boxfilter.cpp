@@ -56,32 +56,34 @@ enum
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // boxFilter
-PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool)
+PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
 {
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
-    int type;
+    int depth, cn;
     Size ksize;
     Size dsize;
     Point anchor;
     int borderType;
-    bool useRoi;
+    bool normalize, useRoi;
 
     TEST_DECLARE_INPUT_PARAMETER(src)
     TEST_DECLARE_OUTPUT_PARAMETER(dst)
 
     virtual void SetUp()
     {
-        type = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
         borderType = GET_PARAM(2); // only not isolated border tested, because CPU module doesn't support isolated border case.
-        useRoi = GET_PARAM(3);
+        normalize = GET_PARAM(3);
+        useRoi = GET_PARAM(4);
     }
 
     void random_roi()
     {
+        int type = CV_MAKE_TYPE(depth, cn);
         dsize = randomSize(1, MAX_VALUE);
-
         ksize = randomSize(kernelMinSize, kernelMaxSize);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
@@ -100,8 +102,7 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool)
 
     void Near(double threshold = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, threshold);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, threshold);
+        OCL_EXPECT_MATS_NEAR(dst, threshold)
     }
 };
 
@@ -111,10 +112,10 @@ OCL_TEST_P(BoxFilter, Mat)
     {
         random_roi();
 
-        OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, true, borderType));
-        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, true, borderType));
+        OCL_OFF(cv::boxFilter(src_roi, dst_roi, -1, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::boxFilter(usrc_roi, udst_roi, -1, ksize, anchor, normalize, borderType));
 
-        Near(1.0);
+        Near(depth <= CV_32S ? 1 : 1e-3);
     }
 }
 
@@ -127,6 +128,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,
                                        (BorderType)BORDER_REFLECT_101),
+                                Bool(),
                                 Bool()  // ROI
                                 )
                            );
