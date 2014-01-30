@@ -631,8 +631,8 @@ bool HaarEvaluator::setWindow( Point pt, int scaleIdx )
     const ScaleData& s = scaleData->at(scaleIdx);
 
     if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width > s.szi.width ||
-        pt.y + origWinSize.height > s.szi.height )
+        pt.x + origWinSize.width >= s.szi.width ||
+        pt.y + origWinSize.height >= s.szi.height )
         return false;
 
     pwin = &sbuf.at<int>(pt) + s.layer_ofs;
@@ -824,8 +824,8 @@ bool LBPEvaluator::setWindow( Point pt, int scaleIdx )
     const ScaleData& s = scaleData->at(scaleIdx);
 
     if( pt.x < 0 || pt.y < 0 ||
-        pt.x + origWinSize.width > s.szi.width ||
-        pt.y + origWinSize.height > s.szi.height )
+        pt.x + origWinSize.width >= s.szi.width ||
+        pt.y + origWinSize.height >= s.szi.height )
         return false;
 
     pwin = &sbuf.at<int>(pt) + s.layer_ofs;

@@ -18,8 +18,8 @@ public:
         ScaleData() { scale = 0.f; layer_ofs = ystep = 0; }
         Size getWorkingSize(Size winSize) const
         {
-            return Size(std::max(szi.width - winSize.width + 1, 0),
-                        std::max(szi.height - winSize.height + 1, 0));
+            return Size(std::max(szi.width - winSize.width, 0),
+                        std::max(szi.height - winSize.height, 0));
         }
 
         float scale;
