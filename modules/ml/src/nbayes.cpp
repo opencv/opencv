@@ -407,7 +407,7 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results, Cv
         if( !CV_IS_MAT(results) || (CV_MAT_TYPE(results->type) != CV_32FC1 &&
                                     CV_MAT_TYPE(results->type) != CV_32SC1) ||
           (results->cols != 1 && results->rows != 1) ||
-          results->cols + results->rows - 1 != samples->rows )
+           results->cols + results->rows - 1 != samples->rows )
         CV_Error( CV_StsBadArg, "The output array must be integer or floating-point vector "
                  "with the number of elements = number of rows in the input matrix" );
     }
@@ -415,9 +415,9 @@ float CvNormalBayesClassifier::predict( const CvMat* samples, CvMat* results, Cv
     if( results_prob )
     {
         if( !CV_IS_MAT(results_prob) || (CV_MAT_TYPE(results_prob->type) != CV_32FC1 &&
-                                       CV_MAT_TYPE(results_prob->type) != CV_64FC1) ||
+                                         CV_MAT_TYPE(results_prob->type) != CV_64FC1) ||
           (results_prob->cols != 1 && results_prob->rows != 1) ||
-          results_prob->cols + results_prob->rows - 1 != samples->rows )
+           results_prob->cols + results_prob->rows - 1 != samples->rows )
         CV_Error( CV_StsBadArg, "The output array must be double or float vector "
                  "with the number of elements = number of rows in the input matrix" );
     }
