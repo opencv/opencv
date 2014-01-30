@@ -296,6 +296,26 @@ OCL_TEST_P(MorphologyEx, Mat)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// AdaptiveBilateralFilter
+
+typedef FilterTestBase AdaptiveBilateral;
+
+OCL_TEST_P(AdaptiveBilateral, Mat)
+{
+    Size kernelSize(ksize, ksize);
+
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        OCL_OFF( adaptiveBilateralFilter(src_roi, dst_roi, kernelSize, 5, 1, Point(-1, -1), borderType) );
+        OCL_ON( adaptiveBilateralFilter(usrc_roi, udst_roi, kernelSize, 5, 1, Point(-1, -1), borderType) );
+
+        Near();
+    }
+}
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -377,6 +397,14 @@ OCL_INSTANTIATE_TEST_CASE_P(Filter, MorphologyEx, Combine(
                             Values((BorderType)BORDER_CONSTANT),//not used
                             Values(1.0, 2.0, 3.0),
                             Bool() ) );
+
+OCL_INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
+                            Values((MatType)CV_8UC1),
+                            Values(5, 9), // kernel size
+                            Values(Size(0, 0)), // not used
+                            FILTER_BORDER_SET_NO_ISOLATED,
+                            Values(0.0), // not used
+                            Bool()));
 
 
 } } // namespace cvtest::ocl
