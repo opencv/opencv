@@ -1313,7 +1313,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
 
                        ocl::KernelArg::PtrWriteOnly(ufacepos), // positions
                        data.origWinSize, (int)MAX_FACES);
-        ok = lbpKernel.run(2, globalsize, localsize, true);
+        ok = lbpKernel.run(2, globalsize, 0, true);
     }
 
     if( ok )

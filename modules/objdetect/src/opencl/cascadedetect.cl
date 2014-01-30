@@ -278,8 +278,7 @@ void runHaarClassifierStump(
 }
 
 
-__kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
-void runLBPClassifierStump(
+__kernel void runLBPClassifierStump(
     int nscales, __global const ScaleData* scaleData,
     __global const int* sum,
     int _sumstep, int sumoffset,
@@ -296,8 +295,10 @@ void runLBPClassifierStump(
 {
     int lx = get_local_id(0);
     int ly = get_local_id(1);
-    int groupIdx = get_group_id(0);
-    int ngroups = get_global_size(0)/LOCAL_SIZE_X;
+    int local_size_x = get_local_size(0);
+    int local_size_y = get_local_size(1);
+    int groupIdx = get_group_id(1)*get_num_groups(0) + get_group_id(0);
+    int ngroups = get_num_groups(0)*get_num_groups(1);
     int scaleIdx, tileIdx, stageIdx;
     int startStage = 0, endStage = nstages;
     int sumstep = (int)(_sumstep/sizeof(int));
@@ -307,14 +308,14 @@ void runLBPClassifierStump(
         __global const ScaleData* s = scaleData + scaleIdx;
         int ystep = s->ystep;
         int2 worksize = (int2)(max(s->szi_width - windowsize.x, 0), max(s->szi_height - windowsize.y, 0));
-        int2 ntiles = (int2)((worksize.x/ystep + LOCAL_SIZE_X-1)/LOCAL_SIZE_X,
-                             (worksize.y/ystep + LOCAL_SIZE_Y-1)/LOCAL_SIZE_Y);
+        int2 ntiles = (int2)((worksize.x/ystep + local_size_x-1)/local_size_x,
+                             (worksize.y/ystep + local_size_y-1)/local_size_y);
         int totalTiles = ntiles.x*ntiles.y;
 
         for( tileIdx = groupIdx; tileIdx < totalTiles; tileIdx += ngroups )
         {
-            int iy = ((tileIdx / ntiles.x)*LOCAL_SIZE_X + ly)*ystep;
-            int ix = ((tileIdx % ntiles.x)*LOCAL_SIZE_Y + lx)*ystep;
+            int iy = ((tileIdx / ntiles.x)*local_size_y + ly)*ystep;
+            int ix = ((tileIdx % ntiles.x)*local_size_x + lx)*ystep;
 
             if( ix < worksize.x && iy < worksize.y )
             {
