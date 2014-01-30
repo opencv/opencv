@@ -144,6 +144,7 @@ Niko
 The info above maybe obsolete.
 ***********************************************************************************/
 
+#define DIG(a) a,
 __constant float mat_kernel[] = { COEFF };
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C1_D0

@@ -3826,20 +3826,21 @@ static std::string kerToStr(const Mat & k)
     if (depth <= CV_8S)
     {
         for (int i = 0; i < width; ++i)
-            stream << (int)data[i] << ", ";
-        stream << (int)data[width];
+            stream << "DIG(" << (int)data[i] << ")";
+        stream << "DIG(" << (int)data[width] << ")";
     }
     else if (depth == CV_32F)
     {
         stream.setf(std::ios_base::showpoint);
         for (int i = 0; i < width; ++i)
-            stream << data[i] << "f, ";
-        stream << data[width] << "f";
+            stream << "DIG(" << data[i] << "f)";
+        stream << "DIG(" << data[width] << "f)";
     }
     else
     {
         for (int i = 0; i < width; ++i)
-            stream << data[i] << ", ";
+            stream << "DIG(" << data[i] << ")";
+        stream << "DIG(" << data[width] << ")";
     }
 
     return stream.str();
