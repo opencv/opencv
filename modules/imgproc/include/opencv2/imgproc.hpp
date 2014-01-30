@@ -203,7 +203,8 @@ enum { HISTCMP_CORREL        = 0,
        HISTCMP_CHISQR        = 1,
        HISTCMP_INTERSECT     = 2,
        HISTCMP_BHATTACHARYYA = 3,
-       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA
+       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA,
+       HISTCMP_CHISQR_ALT    = 4
      };
 
 //! the color conversion code
