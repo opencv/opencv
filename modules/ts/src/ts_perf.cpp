@@ -115,6 +115,14 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
     return instance()(name, array, eps, err);
 }
 
+Regression& Regression::addMoments(TestBase* test, const std::string& name, const cv::Moments& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)sizeof(cv::Moments) / sizeof(double);
+    cv::Mat m(1, len, CV_64F, (void*)&array);
+
+    return Regression::add(test, name, m, eps, err);
+}
+
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
@@ -1191,7 +1199,7 @@ void TestBase::validateMetrics()
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("    samples = %d, mean = %.2f, stddev = %.2f (%.1f%%)\n", (int)metrics.samples, mean, stddev, percents);
+        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, stddev, percents);
     }
     else
     {
@@ -1602,6 +1610,11 @@ void PrintTo(const MatType& t, ::std::ostream* os)
 *                                  ::cv::PrintTo
 \*****************************************************************************************/
 namespace cv {
+
+void PrintTo(const String& str, ::std::ostream* os)
+{
+    *os << str;
+}
 
 void PrintTo(const Size& sz, ::std::ostream* os)
 {

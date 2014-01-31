@@ -67,7 +67,7 @@
     #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
 #endif // _WIN32
 
-#if defined(linux)
+#if defined(__linux__)
     #include <dlfcn.h>
     #include <stdio.h>
 
@@ -87,6 +87,11 @@
 #endif
 
 #ifndef CV_CL_GET_PROC_ADDRESS
+#ifdef __GNUC__
+#warning("OPENCV: OpenCL FFT dynamic library loader: check configuration")
+#else
+#pragma message("WARNING: OPENCV: OpenCL FFT dynamic library loader: check configuration")
+#endif
 #define CV_CL_GET_PROC_ADDRESS(name) NULL
 #endif
 

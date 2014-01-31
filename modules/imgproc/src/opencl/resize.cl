@@ -50,7 +50,6 @@
 #define INTER_RESIZE_COEF_BITS 11
 #define INTER_RESIZE_COEF_SCALE (1 << INTER_RESIZE_COEF_BITS)
 #define CAST_BITS (INTER_RESIZE_COEF_BITS << 1)
-#define CAST_SCALE (1.0f/(1<<CAST_BITS))
 #define INC(x,l) min(x+1,l-1)
 
 #define PIXSIZE ((int)sizeof(PIXTYPE))
@@ -79,7 +78,6 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     int y_ = INC(y,srcrows);
     int x_ = INC(x,srccols);
-    __global const PIXTYPE* src = (__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE));
 
 #if depth <= 4
 

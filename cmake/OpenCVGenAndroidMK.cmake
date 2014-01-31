@@ -102,5 +102,5 @@ if(ANDROID)
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(OPENCV_TARGET_ARCH_ABI)")
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
-  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH})
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
 endif(ANDROID)

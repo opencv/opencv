@@ -1726,9 +1726,9 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
 #ifdef HAVE_CLAMDFFT
-    if (ocl::useOpenCL() && ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
-            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0 && ocl_dft(_src0, _dst, flags))
-        return;
+    CV_OCL_RUN(ocl::haveAmdFft() && ocl::Device::getDefault().type() != ocl::Device::TYPE_CPU &&
+            _dst.isUMat() && _src0.dims() <= 2 && nonzero_rows == 0,
+               ocl_dft(_src0, _dst, flags))
 #endif
 
     static DFTFunc dft_tbl[6] =
@@ -2135,6 +2135,8 @@ void cv::idft( InputArray src, OutputArray dst, int flags, int nonzero_rows )
     dft( src, dst, flags | DFT_INVERSE, nonzero_rows );
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
@@ -2168,12 +2170,13 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
 
 }
 
+#endif
+
 void cv::mulSpectrums( InputArray _srcA, InputArray _srcB,
                        OutputArray _dst, int flags, bool conjB )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() &&
+    CV_OCL_RUN(_dst.isUMat() && _srcA.dims() <= 2 && _srcB.dims() <= 2,
             ocl_mulSpectrums(_srcA, _srcB, _dst, flags, conjB))
-        return;
 
     Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
     int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();

@@ -1284,7 +1284,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 }
 #endif
 
-static const char* op2str[] = {"ERODE", "DILATE"};
+#ifdef HAVE_OPENCL
 
 static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _kernel, Size &ksize, const Point anchor, int iterations, int op)
 {
@@ -1315,6 +1315,7 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
         return false;
 
     char compile_option[128];
+    static const char* op2str[] = {"ERODE", "DILATE"};
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D %s %s %s -D GENTYPE=%s -D DEPTH_%d",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op], doubleSupport?"-D DOUBLE_SUPPORT" :"", rectKernel?"-D RECTKERNEL":"",
         ocl::typeToStr(_src.type()), _src.depth() );
@@ -1396,19 +1397,17 @@ static bool ocl_morphology_op(InputArray _src, OutputArray _dst, InputArray _ker
     return true;
 }
 
+#endif
+
 static void morphOp( int op, InputArray _src, OutputArray _dst,
                      InputArray _kernel,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
+#ifdef HAVE_OPENCL
     int src_type = _src.type(), dst_type = _dst.type(),
         src_cn = CV_MAT_CN(src_type), src_depth = CV_MAT_DEPTH(src_type);
-
-    bool useOpenCL = cv::ocl::useOpenCL() && _src.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
-        _src.dims()<=2 && (src_cn == 1 || src_cn == 4) && (anchor.x == -1) && (anchor.y == -1) &&
-        (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
-        (borderType == cv::BORDER_CONSTANT) && (borderValue == morphologyDefaultBorderValue()) &&
-        (op == MORPH_ERODE || op == MORPH_DILATE);
+#endif
 
     Mat kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
@@ -1423,10 +1422,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 
     if( iterations == 0 || kernel.rows*kernel.cols == 1 )
     {
-        Mat src = _src.getMat();
-        _dst.create( src.size(), src.type() );
-        Mat dst = _dst.getMat();
-        src.copyTo(dst);
+        _src.copyTo(_dst);
         return;
     }
 
@@ -1446,8 +1442,12 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
         iterations = 1;
     }
 
-    if (useOpenCL && ocl_morphology_op(_src, _dst, kernel, ksize, anchor, iterations, op) )
-        return;
+    CV_OCL_RUN(_dst.isUMat() && _src.size() == _dst.size() && src_type == dst_type &&
+               _src.dims() <= 2 && (src_cn == 1 || src_cn == 4) && anchor.x == -1 && anchor.y == -1 &&
+               (src_depth == CV_8U || src_depth == CV_32F || src_depth == CV_64F ) &&
+               borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue() &&
+               (op == MORPH_ERODE || op == MORPH_DILATE),
+               ocl_morphology_op(_src, _dst, kernel, ksize, anchor, iterations, op) )
 
     Mat src = _src.getMat();
 

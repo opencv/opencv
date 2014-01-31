@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 //
 // 2D dense optical flow algorithm from the following paper:
@@ -52,47 +53,40 @@ namespace cv
 {
 
 static void
-FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
+FarnebackPrepareGaussian(int n, double sigma, float *g, float *xg, float *xxg,
+                         double &ig11, double &ig03, double &ig33, double &ig55)
 {
-    int k, x, y;
-
-    CV_Assert( src.type() == CV_32FC1 );
-    int width = src.cols;
-    int height = src.rows;
-    AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
-    float* g = kbuf + n;
-    float* xg = g + n*2 + 1;
-    float* xxg = xg + n*2 + 1;
-    float *row = (float*)_row + n*3;
-
     if( sigma < FLT_EPSILON )
         sigma = n*0.3;
 
     double s = 0.;
-    for( x = -n; x <= n; x++ )
+    for (int x = -n; x <= n; x++)
     {
         g[x] = (float)std::exp(-x*x/(2*sigma*sigma));
         s += g[x];
     }
 
     s = 1./s;
-    for( x = -n; x <= n; x++ )
+    for (int x = -n; x <= n; x++)
     {
         g[x] = (float)(g[x]*s);
         xg[x] = (float)(x*g[x]);
         xxg[x] = (float)(x*x*g[x]);
     }
 
-    Mat_<double> G = Mat_<double>::zeros(6, 6);
+    Mat_<double> G(6, 6);
+    G.setTo(0);
 
-    for( y = -n; y <= n; y++ )
-        for( x = -n; x <= n; x++ )
+    for (int y = -n; y <= n; y++)
+    {
+        for (int x = -n; x <= n; x++)
         {
             G(0,0) += g[y]*g[x];
             G(1,1) += g[y]*g[x]*x*x;
             G(3,3) += g[y]*g[x]*x*x*x*x;
             G(5,5) += g[y]*g[x]*x*x*y*y;
         }
+    }
 
     //G[0][0] = 1.;
     G(2,2) = G(0,3) = G(0,4) = G(3,0) = G(4,0) = G(1,1);
@@ -107,7 +101,29 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
     // [ e           z    ]
     // [                u ]
     Mat_<double> invG = G.inv(DECOMP_CHOLESKY);
-    double ig11 = invG(1,1), ig03 = invG(0,3), ig33 = invG(3,3), ig55 = invG(5,5);
+
+    ig11 = invG(1,1);
+    ig03 = invG(0,3);
+    ig33 = invG(3,3);
+    ig55 = invG(5,5);
+}
+
+static void
+FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
+{
+    int k, x, y;
+
+    CV_Assert( src.type() == CV_32FC1 );
+    int width = src.cols;
+    int height = src.rows;
+    AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
+    float* g = kbuf + n;
+    float* xg = g + n*2 + 1;
+    float* xxg = xg + n*2 + 1;
+    float *row = (float*)_row + n*3;
+    double ig11, ig03, ig33, ig55;
+
+    FarnebackPrepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
 
     dst.create( height, width, CV_32FC(5));
 
@@ -563,10 +579,511 @@ FarnebackUpdateFlow_GaussianBlur( const Mat& _R0, const Mat& _R1,
 
 }
 
+namespace cv
+{
+class FarnebackOpticalFlow
+{
+public:
+    FarnebackOpticalFlow()
+    {
+        numLevels = 5;
+        pyrScale = 0.5;
+        fastPyramids = false;
+        winSize = 13;
+        numIters = 10;
+        polyN = 5;
+        polySigma = 1.1;
+        flags = 0;
+    }
+
+    int numLevels;
+    double pyrScale;
+    bool fastPyramids;
+    int winSize;
+    int numIters;
+    int polyN;
+    double polySigma;
+    int flags;
+
+    bool operator ()(const UMat &frame0, const UMat &frame1, UMat &flowx, UMat &flowy)
+    {
+        CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
+        CV_Assert(frame0.size() == frame1.size());
+        CV_Assert(polyN == 5 || polyN == 7);
+        CV_Assert(!fastPyramids || std::abs(pyrScale - 0.5) < 1e-6);
+
+        const int min_size = 32;
+
+        Size size = frame0.size();
+        UMat prevFlowX, prevFlowY, curFlowX, curFlowY;
+
+        flowx.create(size, CV_32F);
+        flowy.create(size, CV_32F);
+        UMat flowx0 = flowx;
+        UMat flowy0 = flowy;
+
+        // Crop unnecessary levels
+        double scale = 1;
+        int numLevelsCropped = 0;
+        for (; numLevelsCropped < numLevels; numLevelsCropped++)
+        {
+            scale *= pyrScale;
+            if (size.width*scale < min_size || size.height*scale < min_size)
+                break;
+        }
+
+        frame0.convertTo(frames_[0], CV_32F);
+        frame1.convertTo(frames_[1], CV_32F);
+
+        if (fastPyramids)
+        {
+            // Build Gaussian pyramids using pyrDown()
+            pyramid0_.resize(numLevelsCropped + 1);
+            pyramid1_.resize(numLevelsCropped + 1);
+            pyramid0_[0] = frames_[0];
+            pyramid1_[0] = frames_[1];
+            for (int i = 1; i <= numLevelsCropped; ++i)
+            {
+                pyrDown(pyramid0_[i - 1], pyramid0_[i]);
+                pyrDown(pyramid1_[i - 1], pyramid1_[i]);
+            }
+        }
+
+        setPolynomialExpansionConsts(polyN, polySigma);
+
+        for (int k = numLevelsCropped; k >= 0; k--)
+        {
+            scale = 1;
+            for (int i = 0; i < k; i++)
+                scale *= pyrScale;
+
+            double sigma = (1./scale - 1) * 0.5;
+            int smoothSize = cvRound(sigma*5) | 1;
+            smoothSize = std::max(smoothSize, 3);
+
+            int width = cvRound(size.width*scale);
+            int height = cvRound(size.height*scale);
+
+            if (fastPyramids)
+            {
+                width = pyramid0_[k].cols;
+                height = pyramid0_[k].rows;
+            }
+
+            if (k > 0)
+            {
+                curFlowX.create(height, width, CV_32F);
+                curFlowY.create(height, width, CV_32F);
+            }
+            else
+            {
+                curFlowX = flowx0;
+                curFlowY = flowy0;
+            }
+
+            if (prevFlowX.empty())
+            {
+                if (flags & cv::OPTFLOW_USE_INITIAL_FLOW)
+                {
+                    resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR);
+                    resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR);
+                    multiply(scale, curFlowX, curFlowX);
+                    multiply(scale, curFlowY, curFlowY);
+                }
+                else
+                {
+                    curFlowX.setTo(0);
+                    curFlowY.setTo(0);
+                }
+            }
+            else
+            {
+                resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR);
+                resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR);
+                multiply(1./pyrScale, curFlowX, curFlowX);
+                multiply(1./pyrScale, curFlowY, curFlowY);
+            }
+
+            UMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
+            UMat bufM = allocMatFromBuf(5*height, width, CV_32F, bufM_);
+            UMat R[2] =
+            {
+                allocMatFromBuf(5*height, width, CV_32F, R_[0]),
+                allocMatFromBuf(5*height, width, CV_32F, R_[1])
+            };
+
+            if (fastPyramids)
+            {
+                if (!polynomialExpansionOcl(pyramid0_[k], R[0]))
+                    return false;
+                if (!polynomialExpansionOcl(pyramid1_[k], R[1]))
+                    return false;
+            }
+            else
+            {
+                UMat blurredFrame[2] =
+                {
+                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[0]),
+                    allocMatFromBuf(size.height, size.width, CV_32F, blurredFrame_[1])
+                };
+                UMat pyrLevel[2] =
+                {
+                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[0]),
+                    allocMatFromBuf(height, width, CV_32F, pyrLevel_[1])
+                };
+
+                setGaussianBlurKernel(smoothSize, sigma);
+
+                for (int i = 0; i < 2; i++)
+                {
+                    if (!gaussianBlurOcl(frames_[i], smoothSize/2, blurredFrame[i]))
+                        return false;
+                    resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR);
+                    if (!polynomialExpansionOcl(pyrLevel[i], R[i]))
+                        return false;
+                }
+            }
+
+            if (!updateMatricesOcl(curFlowX, curFlowY, R[0], R[1], M))
+                return false;
+
+            if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
+                setGaussianBlurKernel(winSize, winSize/2*0.3f);
+            for (int i = 0; i < numIters; i++)
+            {
+                if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
+                {
+                    if (!updateFlow_gaussianBlur(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                        return false;
+                }
+                else
+                {
+                    if (!updateFlow_boxFilter(R[0], R[1], curFlowX, curFlowY, M, bufM, winSize, i < numIters-1))
+                        return false;
+                }
+            }
+
+            prevFlowX = curFlowX;
+            prevFlowY = curFlowY;
+        }
+
+        flowx = curFlowX;
+        flowy = curFlowY;
+        return true;
+    }
+
+    void releaseMemory()
+    {
+        frames_[0].release();
+        frames_[1].release();
+        pyrLevel_[0].release();
+        pyrLevel_[1].release();
+        M_.release();
+        bufM_.release();
+        R_[0].release();
+        R_[1].release();
+        blurredFrame_[0].release();
+        blurredFrame_[1].release();
+        pyramid0_.clear();
+        pyramid1_.clear();
+    }
+private:
+    UMat m_g;
+    UMat m_xg;
+    UMat m_xxg;
+
+    double m_igd[4];
+    float  m_ig[4];
+    void setPolynomialExpansionConsts(int n, double sigma)
+    {
+        std::vector<float> buf(n*6 + 3);
+        float* g = &buf[0] + n;
+        float* xg = g + n*2 + 1;
+        float* xxg = xg + n*2 + 1;
+
+        FarnebackPrepareGaussian(n, sigma, g, xg, xxg, m_igd[0], m_igd[1], m_igd[2], m_igd[3]);
+
+        cv::Mat t_g(1, n + 1, CV_32FC1, g);     t_g.copyTo(m_g);
+        cv::Mat t_xg(1, n + 1, CV_32FC1, xg);   t_xg.copyTo(m_xg);
+        cv::Mat t_xxg(1, n + 1, CV_32FC1, xxg); t_xxg.copyTo(m_xxg);
+
+        m_ig[0] = static_cast<float>(m_igd[0]);
+        m_ig[1] = static_cast<float>(m_igd[1]);
+        m_ig[2] = static_cast<float>(m_igd[2]);
+        m_ig[3] = static_cast<float>(m_igd[3]);
+    }
+private:
+    UMat m_gKer;
+    inline void setGaussianBlurKernel(int smoothSize, double sigma)
+    {
+        Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
+        Mat gKer(1, smoothSize/2 + 1, CV_32FC1, g.ptr<float>(smoothSize/2));
+        gKer.copyTo(m_gKer);
+    }
+private:
+    UMat frames_[2];
+    UMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
+    std::vector<UMat> pyramid0_, pyramid1_;
+
+    static UMat allocMatFromBuf(int rows, int cols, int type, UMat &mat)
+    {
+        if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
+            return mat(Rect(0, 0, cols, rows));
+        return mat = UMat(rows, cols, type);
+    }
+private:
+#define DIVUP(total, grain) (((total) + (grain) - 1) / (grain))
+
+    bool gaussianBlurOcl(const UMat &src, int ksizeHalf, UMat &dst)
+    {
+#ifdef ANDROID
+        size_t localsize[2] = { 128, 1};
+#else
+        size_t localsize[2] = { 256, 1};
+#endif
+        size_t globalsize[2] = { src.cols, src.rows};
+        int smem_size = (int)((localsize[0] + 2*ksizeHalf) * sizeof(float));
+        ocl::Kernel kernel;
+        if (!kernel.create("gaussianBlur", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
+            return false;
+
+        CV_Assert(dst.size() == src.size());
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+        idxArg = kernel.set(idxArg, (int)(src.step / src.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+        idxArg = kernel.set(idxArg, (int)(dst.step / dst.elemSize()));
+        idxArg = kernel.set(idxArg, dst.rows);
+        idxArg = kernel.set(idxArg, dst.cols);
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
+        idxArg = kernel.set(idxArg, (int)ksizeHalf);
+        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        return kernel.run(2, globalsize, localsize, false);
+    }
+    bool gaussianBlur5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
+    {
+        int height = src.rows / 5;
+#ifdef ANDROID
+        size_t localsize[2] = { 128, 1};
+#else
+        size_t localsize[2] = { 256, 1};
+#endif
+        size_t globalsize[2] = { src.cols, height};
+        int smem_size = (int)((localsize[0] + 2*ksizeHalf) * 5 * sizeof(float));
+        ocl::Kernel kernel;
+        if (!kernel.create("gaussianBlur5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
+            return false;
+
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+        idxArg = kernel.set(idxArg, (int)(src.step / src.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+        idxArg = kernel.set(idxArg, (int)(dst.step / dst.elemSize()));
+        idxArg = kernel.set(idxArg, height);
+        idxArg = kernel.set(idxArg, src.cols);
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
+        idxArg = kernel.set(idxArg, (int)ksizeHalf);
+        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        return kernel.run(2, globalsize, localsize, false);
+    }
+    bool polynomialExpansionOcl(const UMat &src, UMat &dst)
+    {
+#ifdef ANDROID
+        size_t localsize[2] = { 128, 1};
+#else
+        size_t localsize[2] = { 256, 1};
+#endif
+        size_t globalsize[2] = { DIVUP(src.cols, localsize[0] - 2*polyN) * localsize[0], src.rows};
+
+#if 0
+        const cv::ocl::Device &device = cv::ocl::Device::getDefault();
+        bool useDouble = (0 != device.doubleFPConfig());
+
+        cv::String build_options = cv::format("-D polyN=%d -D USE_DOUBLE=%d", polyN, useDouble ? 1 : 0);
+#else
+        cv::String build_options = cv::format("-D polyN=%d", polyN);
+#endif
+        ocl::Kernel kernel;
+        if (!kernel.create("polynomialExpansion", cv::ocl::video::optical_flow_farneback_oclsrc, build_options))
+            return false;
+
+        int smem_size = (int)(3 * localsize[0] * sizeof(float));
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+        idxArg = kernel.set(idxArg, (int)(src.step / src.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+        idxArg = kernel.set(idxArg, (int)(dst.step / dst.elemSize()));
+        idxArg = kernel.set(idxArg, src.rows);
+        idxArg = kernel.set(idxArg, src.cols);
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_g));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xg));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xxg));
+        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+#if 0
+        if (useDouble)
+            idxArg = kernel.set(idxArg, (void *)m_igd, 4 * sizeof(double));
+        else
+#endif
+            idxArg = kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
+        return kernel.run(2, globalsize, localsize, false);
+    }
+    bool boxFilter5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
+    {
+        int height = src.rows / 5;
+#ifdef ANDROID
+        size_t localsize[2] = { 128, 1};
+#else
+        size_t localsize[2] = { 256, 1};
+#endif
+        size_t globalsize[2] = { src.cols, height};
+
+        ocl::Kernel kernel;
+        if (!kernel.create("boxFilter5", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
+            return false;
+
+        int smem_size = (int)((localsize[0] + 2*ksizeHalf) * 5 * sizeof(float));
+
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));
+        idxArg = kernel.set(idxArg, (int)(src.step / src.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dst));
+        idxArg = kernel.set(idxArg, (int)(dst.step / dst.elemSize()));
+        idxArg = kernel.set(idxArg, height);
+        idxArg = kernel.set(idxArg, src.cols);
+        idxArg = kernel.set(idxArg, (int)ksizeHalf);
+        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        return kernel.run(2, globalsize, localsize, false);
+    }
+
+    bool updateFlowOcl(const UMat &M, UMat &flowx, UMat &flowy)
+    {
+#ifdef ANDROID
+        size_t localsize[2] = { 32, 4};
+#else
+        size_t localsize[2] = { 32, 8};
+#endif
+        size_t globalsize[2] = { flowx.cols, flowx.rows};
+
+        ocl::Kernel kernel;
+        if (!kernel.create("updateFlow", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
+            return false;
+
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(M));
+        idxArg = kernel.set(idxArg, (int)(M.step / M.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowx));
+        idxArg = kernel.set(idxArg, (int)(flowx.step / flowx.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowy));
+        idxArg = kernel.set(idxArg, (int)(flowy.step / flowy.elemSize()));
+        idxArg = kernel.set(idxArg, (int)flowy.rows);
+        idxArg = kernel.set(idxArg, (int)flowy.cols);
+        return kernel.run(2, globalsize, localsize, false);
+    }
+    bool updateMatricesOcl(const UMat &flowx, const UMat &flowy, const UMat &R0, const UMat &R1, UMat &M)
+    {
+#ifdef ANDROID
+        size_t localsize[2] = { 32, 4};
+#else
+        size_t localsize[2] = { 32, 8};
+#endif
+        size_t globalsize[2] = { flowx.cols, flowx.rows};
+
+        ocl::Kernel kernel;
+        if (!kernel.create("updateMatrices", cv::ocl::video::optical_flow_farneback_oclsrc, ""))
+            return false;
+
+        int idxArg = 0;
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowx));
+        idxArg = kernel.set(idxArg, (int)(flowx.step / flowx.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowy));
+        idxArg = kernel.set(idxArg, (int)(flowy.step / flowy.elemSize()));
+        idxArg = kernel.set(idxArg, (int)flowx.rows);
+        idxArg = kernel.set(idxArg, (int)flowx.cols);
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(R0));
+        idxArg = kernel.set(idxArg, (int)(R0.step / R0.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(R1));
+        idxArg = kernel.set(idxArg, (int)(R1.step / R1.elemSize()));
+        idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(M));
+        idxArg = kernel.set(idxArg, (int)(M.step / M.elemSize()));
+        return kernel.run(2, globalsize, localsize, false);
+    }
+
+    bool updateFlow_boxFilter(
+        const UMat& R0, const UMat& R1, UMat& flowx, UMat &flowy,
+        UMat& M, UMat &bufM, int blockSize, bool updateMatrices)
+    {
+        if (!boxFilter5Ocl(M, blockSize/2, bufM))
+            return false;
+        swap(M, bufM);
+        if (!updateFlowOcl(M, flowx, flowy))
+            return false;
+        if (updateMatrices)
+            if (!updateMatricesOcl(flowx, flowy, R0, R1, M))
+                return false;
+        return true;
+    }
+    bool updateFlow_gaussianBlur(
+        const UMat& R0, const UMat& R1, UMat& flowx, UMat& flowy,
+        UMat& M, UMat &bufM, int blockSize, bool updateMatrices)
+    {
+        if (!gaussianBlur5Ocl(M, blockSize/2, bufM))
+            return false;
+        swap(M, bufM);
+        if (!updateFlowOcl(M, flowx, flowy))
+            return false;
+        if (updateMatrices)
+            if (!updateMatricesOcl(flowx, flowy, R0, R1, M))
+                return false;
+        return true;
+    }
+};
+
+static bool ocl_calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
+                            InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
+                            int iterations, int poly_n, double poly_sigma, int flags )
+{
+    if ((5 != poly_n) && (7 != poly_n))
+        return false;
+    if (_next0.size() != _prev0.size())
+        return false;
+    int typePrev = _prev0.type();
+    int typeNext = _next0.type();
+    if ((1 != CV_MAT_CN(typePrev)) || (1 != CV_MAT_CN(typeNext)))
+        return false;
+
+    FarnebackOpticalFlow opticalFlow;
+    opticalFlow.numLevels   = levels;
+    opticalFlow.pyrScale    = pyr_scale;
+    opticalFlow.fastPyramids= false;
+    opticalFlow.winSize     = winsize;
+    opticalFlow.numIters    = iterations;
+    opticalFlow.polyN       = poly_n;
+    opticalFlow.polySigma   = poly_sigma;
+    opticalFlow.flags       = flags;
+
+    std::vector<UMat> flowar;
+    if (!_flow0.empty())
+        split(_flow0, flowar);
+    else
+    {
+        flowar.push_back(UMat());
+        flowar.push_back(UMat());
+    }
+    if (!opticalFlow(_prev0.getUMat(), _next0.getUMat(), flowar[0], flowar[1]))
+        return false;
+    merge(flowar, _flow0);
+    return true;
+}
+}
+
 void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
                                InputOutputArray _flow0, double pyr_scale, int levels, int winsize,
                                int iterations, int poly_n, double poly_sigma, int flags )
 {
+    bool use_opencl = ocl::useOpenCL() && _flow0.isUMat();
+    if( use_opencl && ocl_calcOpticalFlowFarneback(_prev0, _next0, _flow0, pyr_scale, levels, winsize, iterations, poly_n, poly_sigma, flags))
+        return;
+
     Mat prev0 = _prev0.getMat(), next0 = _next0.getMat();
     const int min_size = 32;
     const Mat* img[2] = { &prev0, &next0 };

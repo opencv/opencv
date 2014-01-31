@@ -185,13 +185,13 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     switch( pattern )
     {
         case CHESSBOARD:
-            folder = string(ts->get_data_path()) + "cameracalibration/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/";
             break;
         case CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/circles/";
             break;
         case ASYMMETRIC_CIRCLES_GRID:
-            folder = string(ts->get_data_path()) + "cameracalibration/asymmetric_circles/";
+            folder = string(ts->get_data_path()) + "cv/cameracalibration/asymmetric_circles/";
             break;
     }
 

@@ -55,9 +55,9 @@ namespace cv
     {
     public:
         typedef T float_type;
-        typedef cv::Matx<float_type, 3, 3> Mat3;
-        typedef cv::Matx<float_type, 4, 4> Mat4;
-        typedef cv::Vec<float_type, 3> Vec3;
+        typedef Matx<float_type, 3, 3> Mat3;
+        typedef Matx<float_type, 4, 4> Mat4;
+        typedef Vec<float_type, 3> Vec3;
 
         Affine3();
 
@@ -70,11 +70,11 @@ namespace cv
         //Rodrigues vector
         Affine3(const Vec3& rvec, const Vec3& t = Vec3::all(0));
 
-        //Combines all contructors above. Supports 4x4, 3x3, 1x3, 3x1 sizes of data matrix
-        explicit Affine3(const cv::Mat& data, const Vec3& t = Vec3::all(0));
+        //Combines all contructors above. Supports 4x4, 3x4, 3x3, 1x3, 3x1 sizes of data matrix
+        explicit Affine3(const Mat& data, const Vec3& t = Vec3::all(0));
 
-        //Euler angles
-        Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t = Vec3::all(0));
+        //From 16th element array
+        explicit Affine3(const float_type* vals);
 
         static Affine3 Identity();
 
@@ -86,9 +86,6 @@ namespace cv
 
         //Combines rotation methods above. Suports 3x3, 1x3, 3x1 sizes of data matrix;
         void rotation(const Mat& data);
-
-        //Euler angles
-        void rotation(float_type alpha, float_type beta, float_type gamma);
 
         void linear(const Mat3& L);
         void translation(const Vec3& t);
@@ -105,6 +102,9 @@ namespace cv
         // a.rotate(R) is equivalent to Affine(R, 0) * a;
         Affine3 rotate(const Mat3& R) const;
 
+        // a.rotate(R) is equivalent to Affine(rvec, 0) * a;
+        Affine3 rotate(const Vec3& rvec) const;
+
         // a.translate(t) is equivalent to Affine(E, t) * a;
         Affine3 translate(const Vec3& t) const;
 
@@ -112,6 +112,8 @@ namespace cv
         Affine3 concatenate(const Affine3& affine) const;
 
         template <typename Y> operator Affine3<Y>() const;
+
+        template <typename Y> Affine3<Y> cast() const;
 
         Mat4 matrix;
 
@@ -132,10 +134,26 @@ namespace cv
     typedef Affine3<float> Affine3f;
     typedef Affine3<double> Affine3d;
 
-    static cv::Vec3f operator*(const cv::Affine3f& affine, const cv::Vec3f& vector);
-    static cv::Vec3d operator*(const cv::Affine3d& affine, const cv::Vec3d& vector);
-}
+    static Vec3f operator*(const Affine3f& affine, const Vec3f& vector);
+    static Vec3d operator*(const Affine3d& affine, const Vec3d& vector);
 
+    template<typename _Tp> class DataType< Affine3<_Tp> >
+    {
+    public:
+        typedef Affine3<_Tp>                               value_type;
+        typedef Affine3<typename DataType<_Tp>::work_type> work_type;
+        typedef _Tp                                        channel_type;
+
+        enum { generic_type = 0,
+               depth        = DataType<channel_type>::depth,
+               channels     = 16,
+               fmt          = DataType<channel_type>::fmt + ((channels - 1) << 8),
+               type         = CV_MAKETYPE(depth, channels)
+             };
+
+        typedef Vec<channel_type, channels> vec_type;
+    };
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -179,6 +197,12 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
         data.copyTo(matrix);
         return;
     }
+    else if (data.cols == 4 && data.rows == 3)
+    {
+        rotation(data(Rect(0, 0, 3, 3)));
+        translation(data(Rect(3, 0, 1, 3)));
+        return;
+    }
 
     rotation(data);
     translation(t);
@@ -187,13 +211,8 @@ cv::Affine3<T>::Affine3(const cv::Mat& data, const Vec3& t)
 }
 
 template<typename T> inline
-cv::Affine3<T>::Affine3(float_type alpha, float_type beta, float_type gamma, const Vec3& t)
-{
-    rotation(alpha, beta, gamma);
-    translation(t);
-    matrix.val[12] = matrix.val[13] = matrix.val[14] = 0;
-    matrix.val[15] = 1;
-}
+cv::Affine3<T>::Affine3(const float_type* vals) : matrix(vals)
+{}
 
 template<typename T> inline
 cv::Affine3<T> cv::Affine3<T>::Identity()
@@ -259,12 +278,6 @@ void cv::Affine3<T>::rotation(const cv::Mat& data)
     }
     else
         CV_Assert(!"Input marix can be 3x3, 1x3 or 3x1");
-}
-
-template<typename T> inline
-void cv::Affine3<T>::rotation(float_type alpha, float_type beta, float_type gamma)
-{
-    rotation(Vec3(alpha, beta, gamma));
 }
 
 template<typename T> inline
@@ -383,6 +396,12 @@ cv::Affine3<T> cv::Affine3<T>::rotate(const Mat3& R) const
 }
 
 template<typename T> inline
+cv::Affine3<T> cv::Affine3<T>::rotate(const Vec3& _rvec) const
+{
+    return rotate(Affine3f(_rvec).rotation());
+}
+
+template<typename T> inline
 cv::Affine3<T> cv::Affine3<T>::translate(const Vec3& t) const
 {
     Mat4 m = matrix;
@@ -400,6 +419,12 @@ cv::Affine3<T> cv::Affine3<T>::concatenate(const Affine3<T>& affine) const
 
 template<typename T> template <typename Y> inline
 cv::Affine3<T>::operator Affine3<Y>() const
+{
+    return Affine3<Y>(matrix);
+}
+
+template<typename T> template <typename Y> inline
+cv::Affine3<Y> cv::Affine3<T>::cast() const
 {
     return Affine3<Y>(matrix);
 }

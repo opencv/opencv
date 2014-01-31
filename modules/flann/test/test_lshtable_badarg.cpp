@@ -47,7 +47,7 @@ class CV_LshTableBadArgTest : public cvtest::BadArgTest
 {
 protected:
     void run(int);
-    void run_func(void) {};
+    void run_func(void) { }
 
     struct Caller
     {

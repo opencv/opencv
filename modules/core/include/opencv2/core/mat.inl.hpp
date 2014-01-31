@@ -110,7 +110,7 @@ inline _InputArray::~_InputArray() {}
 
 inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
 inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
-inline bool _InputArray::isMatVectot() const { return kind() == _InputArray::STD_VECTOR_MAT; }
+inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
 inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::STD_VECTOR_UMAT; }
 inline bool _InputArray::isMatx()  { return kind() == _InputArray::MATX; }
 
@@ -185,6 +185,12 @@ inline _OutputArray::_OutputArray(const Mat& m)
 
 inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
+
+inline _OutputArray::_OutputArray(const UMat& m)
+{ init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_WRITE, &m); }
+
+inline _OutputArray::_OutputArray(const std::vector<UMat>& vec)
+{ init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
 
 inline _OutputArray::_OutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + GPU_MAT + ACCESS_WRITE, &d_mat); }
@@ -1912,7 +1918,7 @@ SparseMat_<_Tp>::SparseMat_(const SparseMat& m)
     if( m.type() == DataType<_Tp>::type )
         *this = (const SparseMat_<_Tp>&)m;
     else
-        m.convertTo(this, DataType<_Tp>::type);
+        m.convertTo(*this, DataType<_Tp>::type);
 }
 
 template<typename _Tp> inline

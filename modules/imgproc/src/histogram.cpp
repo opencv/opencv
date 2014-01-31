@@ -1399,6 +1399,61 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
     }
 }
 
+#ifdef HAVE_OPENCL
+
+enum
+{
+    BINS = 256
+};
+
+static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
+{
+    int compunits = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
+                  format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, wgs));
+    if (k1.empty())
+        return false;
+
+    _hist.create(BINS, 1, ddepth);
+    UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
+            hist = ddepth == CV_32S ? _hist.getUMat() : UMat(BINS, 1, CV_32SC1);
+
+    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist),
+            (int)src.total());
+
+    size_t globalsize = compunits * wgs;
+    if (!k1.run(1, &globalsize, &wgs, false))
+        return false;
+
+    ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
+    if (k2.empty())
+        return false;
+
+    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
+    if (!k2.run(1, &wgs, &wgs, false))
+        return false;
+
+    if (hist.depth() != ddepth)
+        hist.convertTo(_hist, ddepth);
+    else
+        _hist.getUMatRef() = hist;
+
+    return true;
+}
+
+static bool ocl_calcHist(InputArrayOfArrays images, OutputArray hist)
+{
+    std::vector<UMat> v;
+    images.getUMatVector(v);
+
+    return ocl_calcHist1(v[0], hist, CV_32F);
+}
+
+#endif
+
 }
 
 void cv::calcHist( const Mat* images, int nimages, const int* channels,
@@ -1417,6 +1472,12 @@ void cv::calcHist( InputArrayOfArrays images, const std::vector<int>& channels,
                    const std::vector<float>& ranges,
                    bool accumulate )
 {
+    CV_OCL_RUN(images.total() == 1 && channels.size() == 1 && images.channels(0) == 1 &&
+               channels[0] == 0 && images.isUMatVector() && mask.empty() && !accumulate &&
+               histSize.size() == 1 && histSize[0] == BINS && ranges.size() == 2 &&
+               ranges[0] == 0 && ranges[1] == 256,
+               ocl_calcHist(images, hist))
+
     int i, dims = (int)histSize.size(), rsz = (int)ranges.size(), csz = (int)channels.size();
     int nimages = (int)images.total();
 
@@ -1929,6 +1990,7 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+#ifdef HAVE_OPENCL
 
 namespace cv {
 
@@ -1962,7 +2024,9 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
                                  const std::vector<float>& ranges,
                                  float scale, size_t histdims )
 {
-    const std::vector<UMat> & images = *(const std::vector<UMat> *)_images.getObj();
+    std::vector<UMat> images;
+    _images.getUMatVector(images);
+
     size_t nimages = images.size(), totalcn = images[0].channels();
 
     CV_Assert(nimages > 0);
@@ -2066,19 +2130,22 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
 
 }
 
+#endif
+
 void cv::calcBackProject( InputArrayOfArrays images, const std::vector<int>& channels,
                           InputArray hist, OutputArray dst,
                           const std::vector<float>& ranges,
                           double scale )
 {
     Size histSize = hist.size();
+#ifdef HAVE_OPENCL
     bool _1D = histSize.height == 1 || histSize.width == 1;
     size_t histdims = _1D ? 1 : hist.dims();
+#endif
 
-    if (ocl::useOpenCL() && images.isUMatVector() && dst.isUMat() && hist.type() == CV_32FC1 &&
-            histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size() &&
-            ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
-        return;
+    CV_OCL_RUN(dst.isUMat() && hist.type() == CV_32FC1 &&
+               histdims <= 2 && ranges.size() == histdims * 2 && histdims == channels.size(),
+               ocl_calcBackProject(images, channels, hist, dst, ranges, (float)scale, histdims))
 
     Mat H0 = hist.getMat(), H;
     int hcn = H0.channels();
@@ -3280,41 +3347,9 @@ CV_IMPL void cvEqualizeHist( const CvArr* srcarr, CvArr* dstarr )
     cv::equalizeHist(cv::cvarrToMat(srcarr), cv::cvarrToMat(dstarr));
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
-
-enum
-{
-    BINS = 256
-};
-
-static bool ocl_calcHist(InputArray _src, OutputArray _hist)
-{
-    int compunits = ocl::Device::getDefault().maxComputeUnits();
-    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
-
-    ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                  format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, wgs));
-    if (k1.empty())
-        return false;
-
-    _hist.create(1, BINS, CV_32SC1);
-    UMat src = _src.getUMat(), hist = _hist.getUMat(), ghist(1, BINS * compunits, CV_32SC1);
-
-    k1.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::PtrWriteOnly(ghist),
-            (int)src.total());
-
-    size_t globalsize = compunits * wgs;
-    if (!k1.run(1, &globalsize, &wgs, false))
-        return false;
-
-    ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d", BINS, compunits, (int)wgs));
-    if (k2.empty())
-        return false;
-
-    k2.args(ocl::KernelArg::PtrReadOnly(ghist), ocl::KernelArg::PtrWriteOnly(hist));
-    return k2.run(1, &wgs, &wgs, false);
-}
 
 static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 {
@@ -3322,7 +3357,7 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 
     // calculation of histogram
     UMat hist;
-    if (!ocl_calcHist(_src, hist))
+    if (!ocl_calcHist1(_src, hist))
         return false;
 
     UMat lut(1, 256, CV_8UC1);
@@ -3340,6 +3375,8 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 
 }
 
+#endif
+
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     CV_Assert( _src.type() == CV_8UC1 );
@@ -3347,8 +3384,8 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     if (_src.empty())
         return;
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_equalizeHist(_src, _dst))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_equalizeHist(_src, _dst))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
