@@ -851,6 +851,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear,
     }
 }
 
+#ifdef HAVE_CUFFT
+
 //////////////////////////////////////////////////////////////////////
 // Convolve
 
@@ -1084,6 +1086,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // CornerHarris
