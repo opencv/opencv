@@ -598,6 +598,7 @@ namespace cv
         struct dim3
         {
             unsigned int x, y, z;
+            dim3() : x(0), y(0), z(0) { }
         };
     public:
         PyrLKOpticalFlow()
@@ -607,6 +608,8 @@ namespace cv
             iters = 30;
             derivLambda = 0.5;
             useInitialFlow = false;
+
+            waveSize = 0;
         }
 
         bool checkParam()
