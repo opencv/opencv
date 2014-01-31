@@ -121,29 +121,6 @@ CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::ve
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
-class CV_EXPORTS FeatureEvaluator
-{
-public:
-    enum { HAAR = 0,
-           LBP  = 1,
-           HOG  = 2
-         };
-
-    virtual ~FeatureEvaluator();
-
-    virtual bool read(const FileNode& node);
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const;
-
-    virtual bool setImage(InputArray img, Size origWinSize, Size sumSize);
-    virtual bool setWindow(Point p);
-
-    virtual double calcOrd(int featureIdx) const;
-    virtual int calcCat(int featureIdx) const;
-
-    static Ptr<FeatureEvaluator> create(int type);
-};
-
 template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,

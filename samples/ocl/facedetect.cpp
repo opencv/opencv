@@ -35,6 +35,7 @@ const static Scalar colors[] =  { CV_RGB(0,0,255),
 int64 work_begin[MAX_THREADS] = {0};
 int64 work_total[MAX_THREADS] = {0};
 string inputName, outputName, cascadeName;
+bool useCPU = false;
 
 static void workBegin(int i = 0)
 {
@@ -69,7 +70,7 @@ static void Draw(Mat& img, vector<Rect>& faces, double scale);
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
 double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
 
-static int facedetect_one_thread(bool useCPU, double scale )
+static int facedetect_one_thread( double scale )
 {
     CvCapture* capture = 0;
     Mat frame, frameCopy0, frameCopy, image;
@@ -120,6 +121,7 @@ static int facedetect_one_thread(bool useCPU, double scale )
             else
                 resize(frameCopy0, frameCopy, Size(), 1./scale, 1./scale, INTER_LINEAR);
 
+            work_total[0] = 0;
             if(useCPU)
                 detectCPU(frameCopy, faces, cpu_cascade, 1);
             else
@@ -248,7 +250,7 @@ int main( int argc, const char** argv )
         "{ t template   | haarcascade_frontalface_alt.xml |"
         " specify template file path }"
         "{ c scale      |   1.0       | scale image }"
-        "{ s use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ s use_cpu    | 0       | use cpu or gpu to process the image }"
         "{ o output     | | specify output image save path(only works when input is images) }"
         "{ n thread_num |      1      | set number of threads >= 1 }";
 
@@ -260,7 +262,7 @@ int main( int argc, const char** argv )
         cmd.printMessage();
         return EXIT_SUCCESS;
     }
-    bool useCPU = cmd.get<bool>("s");
+    useCPU = cmd.get<int>("s") != 0;
     inputName = cmd.get<string>("i");
     outputName = cmd.get<string>("o");
     cascadeName = cmd.get<string>("t");
@@ -282,7 +284,7 @@ int main( int argc, const char** argv )
         std::cout<<"incorrect number of threads:" << n << ", running a single-threaded version" <<std::endl;
     else
         std::cout<<"single-threaded sample is running" <<std::endl;
-    return facedetect_one_thread(useCPU, scale);
+    return facedetect_one_thread(scale);
 
 }
 
@@ -322,6 +324,11 @@ void detectCPU( Mat& img, vector<Rect>& faces,
 
 void Draw(Mat& img, vector<Rect>& faces, double scale)
 {
+    double fps = getTickFrequency() / (double)work_total[0];
+
+    putText(img, format("OpenCL: %s, fps: %.1f", useCPU ? "OFF" : "ON", fps), Point(250, 50),
+        FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 255, 0), 3);
+
     int i = 0;
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
