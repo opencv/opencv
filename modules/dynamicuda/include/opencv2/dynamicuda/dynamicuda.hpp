@@ -129,15 +129,20 @@ public:
 
 #if defined(USE_CUDA)
 
-#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
-#define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
+// Disable NPP for this file
+//#define USE_NPP
+#undef USE_NPP
 
+#define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, CV_Func)
 inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
 {
     if (cudaSuccess != err)
         cv::gpu::error(cudaGetErrorString(err), file, line, func);
 }
 
+#ifdef USE_NPP
+
+#define nppSafeCall(expr)  ___nppSafeCall(expr, __FILE__, __LINE__, CV_Func)
 inline void ___nppSafeCall(int err, const char *file, const int line, const char *func = "")
 {
     if (err < 0)
@@ -147,6 +152,8 @@ inline void ___nppSafeCall(int err, const char *file, const int line, const char
         cv::gpu::error(msg.str().c_str(), file, line, func);
     }
 }
+
+#endif
 
 namespace cv { namespace gpu { namespace device
 {
@@ -173,6 +180,8 @@ template <typename T> void kernelSetCaller(GpuMat& src, Scalar s, const GpuMat& 
     cv::gpu::device::set_to_gpu(src, sf.val, mask, src.channels(), stream);
 }
 
+#ifdef USE_NPP
+
 template<int n> struct NPPTypeTraits;
 template<> struct NPPTypeTraits<CV_8U>  { typedef Npp8u npp_type; };
 template<> struct NPPTypeTraits<CV_8S>  { typedef Npp8s npp_type; };
@@ -182,8 +191,12 @@ template<> struct NPPTypeTraits<CV_32S> { typedef Npp32s npp_type; };
 template<> struct NPPTypeTraits<CV_32F> { typedef Npp32f npp_type; };
 template<> struct NPPTypeTraits<CV_64F> { typedef Npp64f npp_type; };
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // Convert
+
+#ifdef USE_NPP
 
 template<int SDEPTH, int DDEPTH> struct NppConvertFunc
 {
@@ -232,8 +245,12 @@ template<int DDEPTH, typename NppConvertFunc<CV_32F, DDEPTH>::func_ptr func> str
     }
 };
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // Set
+
+#ifdef USE_NPP
 
 template<int SDEPTH, int SCN> struct NppSetFunc
 {
@@ -339,8 +356,12 @@ template<int SDEPTH, typename NppSetMaskFunc<SDEPTH, 1>::func_ptr func> struct N
     }
 };
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // CopyMasked
+
+#ifdef USE_NPP
 
 template<int SDEPTH> struct NppCopyMaskedFunc
 {
@@ -364,6 +385,8 @@ template<int SDEPTH, typename NppCopyMaskedFunc<SDEPTH>::func_ptr func> struct N
         cudaSafeCall( cudaDeviceSynchronize() );
     }
 };
+
+#endif
 
 template <typename T> static inline bool isAligned(const T* ptr, size_t size)
 {
@@ -877,6 +900,8 @@ public:
         }
 
         typedef void (*func_t)(const GpuMat& src, GpuMat& dst, const GpuMat& mask, cudaStream_t stream);
+
+#ifdef USE_NPP
         static const func_t funcs[7][4] =
         {
             /*  8U */ {NppCopyMasked<CV_8U , nppiCopy_8u_C1MR >::call, cv::gpu::device::copyWithMask, NppCopyMasked<CV_8U , nppiCopy_8u_C3MR >::call, NppCopyMasked<CV_8U , nppiCopy_8u_C4MR >::call},
@@ -889,6 +914,9 @@ public:
          };
 
          const func_t func =  mask.channels() == src.channels() ? funcs[src.depth()][src.channels() - 1] : cv::gpu::device::copyWithMask;
+#else
+        const func_t func = cv::gpu::device::copyWithMask;
+#endif
 
          func(src, dst, mask, 0);
     }
@@ -896,6 +924,8 @@ public:
     void convert(const GpuMat& src, GpuMat& dst) const
     {
         typedef void (*func_t)(const GpuMat& src, GpuMat& dst);
+
+#ifdef USE_NPP
         static const func_t funcs[7][7][4] =
         {
             {
@@ -962,6 +992,7 @@ public:
                 /* 64F -> 64F */ {0,0,0,0}
             }
         };
+#endif
 
         CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
         CV_Assert(dst.depth() <= CV_64F);
@@ -980,8 +1011,12 @@ public:
             return;
         }
 
+#ifdef USE_NPP
         const func_t func = funcs[src.depth()][dst.depth()][src.channels() - 1];
         CV_DbgAssert(func != 0);
+#else
+        const func_t func = cv::gpu::device::convertTo;
+#endif
 
         func(src, dst);
     }
@@ -1023,6 +1058,8 @@ public:
             }
 
             typedef void (*func_t)(GpuMat& src, Scalar s);
+
+#ifdef USE_NPP
             static const func_t funcs[7][4] =
             {
                 {NppSet<CV_8U , 1, nppiSet_8u_C1R >::call, cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , NppSet<CV_8U , 4, nppiSet_8u_C4R >::call},
@@ -1033,6 +1070,7 @@ public:
                 {NppSet<CV_32F, 1, nppiSet_32f_C1R>::call, cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , NppSet<CV_32F, 4, nppiSet_32f_C4R>::call},
                 {cv::gpu::device::setTo                  , cv::gpu::device::setTo                  , cv::gpu::device::setTo                        , cv::gpu::device::setTo                          }
             };
+#endif
 
             CV_Assert(m.depth() <= CV_64F && m.channels() <= 4);
 
@@ -1042,14 +1080,22 @@ public:
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
+#ifdef USE_NPP
+        const func_t func = funcs[m.depth()][m.channels() - 1];
+#else
+        const func_t func = cv::gpu::device::setTo;
+#endif
+
             if (stream)
                 cv::gpu::device::setTo(m, s, stream);
             else
-                funcs[m.depth()][m.channels() - 1](m, s);
+                func(m, s);
         }
         else
         {
             typedef void (*func_t)(GpuMat& src, Scalar s, const GpuMat& mask);
+
+#ifdef USE_NPP
             static const func_t funcs[7][4] =
             {
                 {NppSetMask<CV_8U , 1, nppiSet_8u_C1MR >::call, cv::gpu::device::setTo, cv::gpu::device::setTo, NppSetMask<CV_8U , 4, nppiSet_8u_C4MR >::call},
@@ -1060,6 +1106,7 @@ public:
                 {NppSetMask<CV_32F, 1, nppiSet_32f_C1MR>::call, cv::gpu::device::setTo, cv::gpu::device::setTo, NppSetMask<CV_32F, 4, nppiSet_32f_C4MR>::call},
                 {cv::gpu::device::setTo                       , cv::gpu::device::setTo, cv::gpu::device::setTo, cv::gpu::device::setTo                               }
             };
+#endif
 
             CV_Assert(m.depth() <= CV_64F && m.channels() <= 4);
 
@@ -1069,10 +1116,16 @@ public:
                     CV_Error(CV_StsUnsupportedFormat, "The device doesn't support double");
             }
 
+#ifdef USE_NPP
+        const func_t func = funcs[m.depth()][m.channels() - 1];
+#else
+        const func_t func = cv::gpu::device::setTo;
+#endif
+
             if (stream)
                 cv::gpu::device::setTo(m, s, mask, stream);
             else
-                funcs[m.depth()][m.channels() - 1](m, s, mask);
+                func(m, s, mask);
         }
     }
 
