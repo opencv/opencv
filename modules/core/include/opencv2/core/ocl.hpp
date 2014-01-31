@@ -561,6 +561,9 @@ public:
     explicit PlatformInfo2(void* id);
     ~PlatformInfo2();
 
+    PlatformInfo2(const PlatformInfo2& i);
+    PlatformInfo2& operator =(const PlatformInfo2& i);
+
     String name() const;
     String vendor() const;
     String version() const;

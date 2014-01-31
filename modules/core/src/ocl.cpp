@@ -3691,6 +3691,7 @@ struct PlatformInfo2::Impl
 {
     Impl(void* id)
     {
+        refcount = 1;
         handle = *(cl_platform_id*)id;
         getDevices(devices, handle);
     }
@@ -3724,6 +3725,26 @@ PlatformInfo2::~PlatformInfo2()
         p->release();
 }
 
+PlatformInfo2::PlatformInfo2(const PlatformInfo2& i)
+{
+    if (i.p)
+        i.p->addref();
+    this->p = i.p;
+}
+
+PlatformInfo2& PlatformInfo2::operator =(const PlatformInfo2& i)
+{
+    if (i.p != this->p)
+    {
+        if (i.p)
+            i.p->addref();
+        if (this->p)
+            this->p->release();
+        this->p = i.p;
+    }
+    return *this;
+}
+
 int PlatformInfo2::deviceNumber() const
 {
     return p ? (int)p->devices.size() : 0;
@@ -3731,7 +3752,7 @@ int PlatformInfo2::deviceNumber() const
 
 void PlatformInfo2::getDevice(Device& device, int d) const
 {
-    CV_Assert(d < (int)p->devices.size() );
+    CV_Assert(p && d < (int)p->devices.size() );
     if(p)
         device.set(p->devices[d]);
 }
