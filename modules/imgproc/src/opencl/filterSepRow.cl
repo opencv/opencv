@@ -144,6 +144,9 @@ Niko
 The info above maybe obsolete.
 ***********************************************************************************/
 
+#define DIG(a) a,
+__constant float mat_kernel[] = { COEFF };
+
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_C1_D0
     (__global uchar * restrict src,
      int src_step_in_pixel,
@@ -153,8 +156,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      __global float * dst,
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
-     int radiusy,
-     __constant float * mat_kernel)
+     int radiusy)
 {
     int x = get_global_id(0)<<2;
     int y = get_global_id(1);
@@ -297,8 +299,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      __global float4 * dst,
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
-     int radiusy,
-     __constant float * mat_kernel)
+     int radiusy)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -391,8 +392,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      __global float * dst,
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
-     int radiusy,
-     __constant float * mat_kernel)
+     int radiusy)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -484,8 +484,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
      __global float4 * dst,
      int dst_step_in_pixel,
      int dst_cols, int dst_rows,
-     int radiusy,
-     __constant float * mat_kernel)
+     int radiusy)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);

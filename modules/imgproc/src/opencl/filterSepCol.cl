@@ -60,6 +60,8 @@ Niko
 The info above maybe obsolete.
 ***********************************************************************************/
 
+#define DIG(a) a,
+__constant float mat_kernel[] = { COEFF };
 
 __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void col_filter
                         (__global const GENTYPE_SRC * restrict src,
@@ -70,8 +72,7 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void col_filter
                          const int dst_offset_in_pixel,
                          const int dst_step_in_pixel,
                          const int dst_cols,
-                         const int dst_rows,
-                         __constant float * mat_kernel)
+                         const int dst_rows)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
