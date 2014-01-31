@@ -891,21 +891,25 @@ Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
     return matcher;
 }
 
-bool BFMatcher::ocl_match(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches, int dstType)
+static bool ocl_match(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches, int dstType)
 {
     UMat trainIdx, distance;
-    if(!ocl_matchSingle(query, _train, trainIdx, distance, dstType)) return false;
-    if(!ocl_matchDownload(trainIdx, distance, matches)) return false;
+    if (!ocl_matchSingle(query, _train, trainIdx, distance, dstType))
+        return false;
+    if (!ocl_matchDownload(trainIdx, distance, matches))
+        return false;
     return true;
 }
 
-bool BFMatcher::ocl_knnMatch(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches, int k, int dstType, bool compactResult)
+static bool ocl_knnMatch(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches, int k, int dstType, bool compactResult)
 {
     UMat trainIdx, distance;
     if (k != 2)
         return false;
-    if (!ocl_knnMatchSingle(query, _train, trainIdx, distance, dstType)) return false;
-    if( !ocl_knnMatchDownload(trainIdx, distance, matches, compactResult) ) return false;
+    if (!ocl_knnMatchSingle(query, _train, trainIdx, distance, dstType))
+        return false;
+    if (!ocl_knnMatchDownload(trainIdx, distance, matches, compactResult) )
+        return false;
     return true;
 }
 
@@ -1033,12 +1037,14 @@ void BFMatcher::knnMatchImpl( InputArray _queryDescriptors, std::vector<std::vec
     }
 }
 
-bool BFMatcher::ocl_radiusMatch(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches,
+static bool ocl_radiusMatch(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches,
         float maxDistance, int dstType, bool compactResult)
 {
     UMat trainIdx, distance, nMatches;
-    if(!ocl_radiusMatchSingle(query, _train, trainIdx, distance, nMatches, maxDistance, dstType)) return false;
-    if(!ocl_radiusMatchDownload(trainIdx, distance, nMatches, matches, compactResult)) return false;
+    if (!ocl_radiusMatchSingle(query, _train, trainIdx, distance, nMatches, maxDistance, dstType))
+        return false;
+    if (!ocl_radiusMatchDownload(trainIdx, distance, nMatches, matches, compactResult))
+        return false;
     return true;
 }
 
@@ -1076,14 +1082,14 @@ void BFMatcher::radiusMatchImpl( InputArray _queryDescriptors, std::vector<std::
         _queryDescriptors.type() == CV_32FC1 && _queryDescriptors.offset() == 0 && trainDescOffset == 0 &&
         trainDescSize.width == _queryDescriptors.size().width && masks.size() == 1 && masks[0].total() == 0 )
     {
-        if(trainDescCollection.empty())
+        if (trainDescCollection.empty())
         {
             if(ocl_radiusMatch(_queryDescriptors, utrainDescCollection[0], matches, maxDistance, normType, compactResult) )
                 return;
         }
         else
         {
-            if(ocl_radiusMatch(_queryDescriptors, trainDescCollection[0], matches, maxDistance, normType, compactResult) )
+            if (ocl_radiusMatch(_queryDescriptors, trainDescCollection[0], matches, maxDistance, normType, compactResult) )
                 return;
         }
     }
