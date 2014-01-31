@@ -283,10 +283,11 @@ FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppressio
 : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
 {}
 
-void FastFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void FastFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
-    Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
+    Mat image = _image.getMat(), mask = _mask.getMat(), grayImage = image;
+    if( image.type() != CV_8U )
+        cvtColor( image, grayImage, COLOR_BGR2GRAY );
     FAST( grayImage, keypoints, threshold, nonmaxSuppression, type );
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }

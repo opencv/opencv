@@ -54,8 +54,10 @@ bool DynamicAdaptedFeatureDetector::empty() const
     return !adjuster_ || adjuster_->empty();
 }
 
-void DynamicAdaptedFeatureDetector::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void DynamicAdaptedFeatureDetector::detectImpl(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask) const
 {
+    Mat image = _image.getMat(), mask = _mask.getMat();
+
     //for oscillation testing
     bool down = false;
     bool up = false;
@@ -98,7 +100,7 @@ FastAdjuster::FastAdjuster( int init_thresh, bool nonmax, int min_thresh, int ma
     min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
-void FastAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void FastAdjuster::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
     FastFeatureDetector(thresh_, nonmax_).detect(image, keypoints, mask);
 }
@@ -133,7 +135,7 @@ StarAdjuster::StarAdjuster(double initial_thresh, double min_thresh, double max_
     min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
-void StarAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void StarAdjuster::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
     StarFeatureDetector detector_tmp(16, cvRound(thresh_), 10, 8, 3);
     detector_tmp.detect(image, keypoints, mask);
@@ -167,7 +169,7 @@ SurfAdjuster::SurfAdjuster( double initial_thresh, double min_thresh, double max
     min_thresh_(min_thresh), max_thresh_(max_thresh)
 {}
 
-void SurfAdjuster::detectImpl(const Mat& image, std::vector<KeyPoint>& keypoints, const cv::Mat& mask) const
+void SurfAdjuster::detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
     Ptr<FeatureDetector> surf = FeatureDetector::create("SURF");
     surf->set("hessianThreshold", thresh_);

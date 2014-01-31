@@ -979,9 +979,9 @@ void SURF::operator()(InputArray _img, InputArray _mask,
 }
 
 
-void SURF::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+void SURF::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
-    (*this)(image, mask, keypoints, noArray(), false);
+    (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
 }
 
 void SURF::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
