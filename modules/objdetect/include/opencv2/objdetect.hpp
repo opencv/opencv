@@ -327,7 +327,7 @@ public:
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
     //ocl
-    virtual bool ocl_detect(const UMat& img, std::vector<Point> &hits,
+    virtual bool ocl_detect(InputArray img, std::vector<Point> &hits,
                        double hitThreshold = 0, Size winStride = Size()) const;
     //with result weights output
     CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
@@ -360,7 +360,7 @@ public:
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
     CV_PROP std::vector<float> svmDetector;
-    CV_PROP std::vector<float> oclSvmDetector;
+    UMat oclSvmDetector;
     CV_PROP int nlevels;
 
 
