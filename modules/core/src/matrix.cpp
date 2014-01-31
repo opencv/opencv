@@ -1496,11 +1496,6 @@ Size _InputArray::size(int i) const
         return d_mat->size();
     }
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
     CV_Assert( k == CUDA_MEM );
     //if( k == CUDA_MEM )
     {
@@ -1680,11 +1675,6 @@ int _InputArray::dims(int i) const
         return 2;
     }
 
-    if( k == OCL_MAT )
-    {
-        return 2;
-    }
-
     CV_Assert( k == CUDA_MEM );
     //if( k == CUDA_MEM )
     {
@@ -1842,11 +1832,6 @@ bool _InputArray::empty() const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->empty();
 
-    if( k == OCL_MAT )
-    {
-        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
-    }
-
     if( k == GPU_MAT )
         return ((const cuda::GpuMat*)obj)->empty();
 
@@ -1882,7 +1867,7 @@ bool _InputArray::isContinuous(int i) const
         return vv[i].isContinuous();
     }
 
-    CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    CV_Error(CV_StsNotImplemented, "Unknown/unsupported array type");
     return false;
 }
 

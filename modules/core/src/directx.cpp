@@ -736,7 +736,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
@@ -795,7 +795,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireD3D11ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D11ObjectsKHR failed");
@@ -884,7 +884,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
@@ -943,7 +943,7 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireD3D10ObjectsKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireD3D10ObjectsKHR failed");
@@ -1038,7 +1038,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
@@ -1104,7 +1104,7 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_WRITE);
 
-    cl_command_queue q = (cl_command_queue)CommandQueue::getDefault().ptr();
+    cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireDX9MediaSurfacesKHR(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireDX9MediaSurfacesKHR failed");
