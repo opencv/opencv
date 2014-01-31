@@ -32,20 +32,37 @@ public:
     virtual bool read(const FileNode& node);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
+    int getNumChannels() const { return nchannels; }
 
     virtual bool setImage(InputArray img, Size origWinSize,
                           const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
-    virtual const ScaleData& getScaleData(int scaleIdx) const;
+    const ScaleData& getScaleData(int scaleIdx) const
+    {
+        CV_Assert( 0 <= scaleIdx && scaleIdx < (int)scaleData->size());
+        return scaleData->at(scaleIdx);
+    }
     virtual void getUMats(std::vector<UMat>& bufs);
 
-    virtual Size getLocalSize() const;
-    virtual Size getLocalBufSize() const;
+    Size getLocalSize() const { return localSize; }
+    Size getLocalBufSize() const { return lbufSize; }
 
     virtual float calcOrd(int featureIdx) const;
     virtual int calcCat(int featureIdx) const;
 
     static Ptr<FeatureEvaluator> create(int type);
+
+protected:
+    bool updateScaleData( Size imgsz, const std::vector<float>& _scales );
+    virtual void computeChannels( int, InputArray ) {}
+    virtual void computeOptFeatures() {}
+
+    Size origWinSize, sbufSize, localSize, lbufSize;
+    int nchannels;
+    Mat sbuf, rbuf;
+    UMat usbuf, ufbuf, uscaleData;
+
+    Ptr<std::vector<ScaleData> > scaleData;
 };
 
 
@@ -327,15 +344,9 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
-    virtual const ScaleData& getScaleData(int scaleIdx) const;
-    virtual void getUMats(std::vector<UMat>& bufs);
     Rect getNormRect() const;
     int getSquaresOffset() const;
-    Size getLocalSize() const;
-    Size getLocalBufSize() const;
 
     float operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
@@ -343,18 +354,15 @@ public:
     { return (*this)(featureIdx); }
 
 protected:
-    Size origWinSize, sbufSize;
+    virtual void computeChannels( int i, InputArray img );
+    virtual void computeOptFeatures();
+
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
     Ptr<std::vector<OptFeature> > optfeatures_lbuf;
-    Ptr<std::vector<ScaleData> > scaleData;
     bool hasTiltedFeatures;
 
-    Mat sbuf, rbuf0, rbuf1;
-    UMat usbuf, ufbuf, uscaleData;
-
-    int sqofs;
-    Size localSize, lbufSize;
+    int tofs, sqofs;
     Vec4i nofs;
     Rect normrect;
     const int* pwin;
@@ -421,25 +429,20 @@ public:
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
-    virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
-    virtual const ScaleData& getScaleData(int scaleIdx) const;
-    virtual void getUMats(std::vector<UMat>& bufs);
 
     int operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin); }
     virtual int calcCat(int featureIdx) const
     { return (*this)(featureIdx); }
 protected:
-    Size origWinSize, sbufSize;
+    virtual void computeChannels( int i, InputArray img );
+    virtual void computeOptFeatures();
+
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
-    Ptr<std::vector<ScaleData> > scaleData;
+    Ptr<std::vector<OptFeature> > optfeatures_lbuf;
     OptFeature* optfeaturesPtr; // optimization
-
-    Mat sbuf, rbuf0, rbuf1;
-    UMat usbuf, ufbuf, uscaleData;
 
     const int* pwin;
 };
@@ -469,87 +472,6 @@ inline int LBPEvaluator::OptFeature :: calc( const int* p ) const
            (CALC_SUM_OFS_( ofs[8], ofs[9], ofs[12], ofs[13], p ) >= cval ? 2 : 0)|    // 6
            (CALC_SUM_OFS_( ofs[4], ofs[5], ofs[8], ofs[9], p ) >= cval ? 1 : 0);
 }
-
-//---------------------------------------------- HOGEvaluator -------------------------------------------
-
-class HOGEvaluator : public FeatureEvaluator
-{
-public:
-    struct Feature
-    {
-        Feature();
-        float calc( int offset ) const;
-        void updatePtrs( const std::vector<Mat>& _hist, const Mat &_normSum );
-        bool read( const FileNode& node );
-
-        enum { CELL_NUM = 4, BIN_NUM = 9 };
-
-        Rect rect[CELL_NUM];
-        int featComponent; //component index from 0 to 35
-        const float* pF[4]; //for feature calculation
-        const float* pN[4]; //for normalization calculation
-    };
-    HOGEvaluator();
-    virtual ~HOGEvaluator();
-    virtual bool read( const FileNode& node );
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
-    virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<float>& scales);
-    virtual bool setWindow(Point p, int scaleIdx);
-    float operator()(int featureIdx) const
-    {
-        return featuresPtr[featureIdx].calc(offset);
-    }
-    virtual float calcOrd( int featureIdx ) const
-    {
-        return (*this)(featureIdx);
-    }
-
-private:
-    virtual void integralHistogram( const Mat& srcImage, std::vector<Mat> &histogram, Mat &norm, int nbins ) const;
-
-    Size origWinSize;
-    Ptr<std::vector<Feature> > features;
-    Feature* featuresPtr;
-    std::vector<Mat> hist;
-    Mat normSum;
-    int offset;
-};
-
-inline HOGEvaluator::Feature :: Feature()
-{
-    rect[0] = rect[1] = rect[2] = rect[3] = Rect();
-    pF[0] = pF[1] = pF[2] = pF[3] = 0;
-    pN[0] = pN[1] = pN[2] = pN[3] = 0;
-    featComponent = 0;
-}
-
-inline float HOGEvaluator::Feature :: calc( int _offset ) const
-{
-    float res = CALC_SUM(pF, _offset);
-    float normFactor = CALC_SUM(pN, _offset);
-    res = (res > 0.001f) ? (res / ( normFactor + 0.001f) ) : 0.f;
-    return res;
-}
-
-inline void HOGEvaluator::Feature :: updatePtrs( const std::vector<Mat> &_hist, const Mat &_normSum )
-{
-    int binIdx = featComponent % BIN_NUM;
-    int cellIdx = featComponent / BIN_NUM;
-    Rect normRect = Rect( rect[0].x, rect[0].y, 2*rect[0].width, 2*rect[0].height );
-
-    const float* featBuf = (const float*)_hist[binIdx].data;
-    size_t featStep = _hist[0].step / sizeof(featBuf[0]);
-
-    const float* normBuf = (const float*)_normSum.data;
-    size_t normStep = _normSum.step / sizeof(normBuf[0]);
-
-    CV_SUM_PTRS( pF[0], pF[1], pF[2], pF[3], featBuf, rect[cellIdx], featStep );
-    CV_SUM_PTRS( pN[0], pN[1], pN[2], pN[3], normBuf, normRect, normStep );
-}
-
-
 
 
 //----------------------------------------------  predictor functions -------------------------------------
@@ -685,11 +607,7 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     const CascadeClassifierImpl::Data::Stump* cascadeStumps = &cascade.data.stumps[0];
     const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    float tmp = 0; // float accumulator -- float operations are quicker
-#else
-    double tmp = 0;
-#endif
+    float tmp = 0;
     for( int si = 0; si < nstages; si++ )
     {
         const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
