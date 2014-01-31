@@ -244,6 +244,10 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
+// Disable NPP for this file
+//#define USE_NPP
+#undef USE_NPP
+
 namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
@@ -279,6 +283,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
 
     cudaStream_t stream = StreamAccessor::getStream(s);
 
+#ifdef USE_NPP
     if (borderType == BORDER_CONSTANT && (src.type() == CV_8UC1 || src.type() == CV_8UC4 || src.type() == CV_32SC1 || src.type() == CV_32FC1))
     {
         NppiSize srcsz;
@@ -328,6 +333,7 @@ void cv::gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom
             cudaSafeCall( cudaDeviceSynchronize() );
     }
     else
+#endif
     {
         typedef void (*caller_t)(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream);
         static const caller_t callers[6][4] =
