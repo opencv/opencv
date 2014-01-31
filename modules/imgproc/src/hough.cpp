@@ -106,7 +106,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    float ang = min_theta;
+    float ang = static_cast<float>(min_theta);
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin((double)ang) * irho);
