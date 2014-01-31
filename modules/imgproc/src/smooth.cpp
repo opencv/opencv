@@ -67,15 +67,18 @@ namespace cv
                                          Box Filter
 \****************************************************************************************/
 
-template<typename T, typename ST> struct RowSum : public BaseRowFilter
+template<typename T, typename ST>
+struct RowSum :
+        public BaseRowFilter
 {
-    RowSum( int _ksize, int _anchor )
+    RowSum( int _ksize, int _anchor ) :
+        BaseRowFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -98,9 +101,12 @@ template<typename T, typename ST> struct RowSum : public BaseRowFilter
 };
 
 
-template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
+template<typename ST, typename T>
+struct ColumnSum :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -108,9 +114,9 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         ST* SUM;
@@ -198,9 +204,12 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 };
 
 
-template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, uchar> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -208,9 +217,9 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -339,9 +348,12 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
     std::vector<int> sum;
 };
 
-template<> struct ColumnSum<int, short> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, short> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -349,9 +361,9 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -477,9 +489,12 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
 };
 
 
-template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, ushort> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -487,9 +502,9 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -616,7 +631,7 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
 
 static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
-                           Size ksize, Point anchor, int borderType, bool normalize )
+                           Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
@@ -661,7 +676,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     ocl::Kernel kernel;
     for ( ; ; )
     {
-        int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = 8;
+        int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = std::min(ksize.height * 10, size.height);
 
         while (BLOCK_SIZE_X > 32 && BLOCK_SIZE_X >= ksize.width * 2 && BLOCK_SIZE_X > size.width * 2)
             BLOCK_SIZE_X /= 2;
@@ -673,14 +688,14 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
         char cvt[2][50];
         String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
-                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s",
+                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s",
                              BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                              ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
                              anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                              isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                             normalize ? " -D NORMALIZE" : "");
+                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
 
         localsize[0] = BLOCK_SIZE_X;
         globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
@@ -860,15 +875,18 @@ void cv::blur( InputArray src, OutputArray dst,
 namespace cv
 {
 
-template<typename T, typename ST> struct SqrRowSum : public BaseRowFilter
+template<typename T, typename ST>
+struct SqrRowSum :
+        public BaseRowFilter
 {
-    SqrRowSum( int _ksize, int _anchor )
+    SqrRowSum( int _ksize, int _anchor ) :
+        BaseRowFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -928,26 +946,31 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
                        Size ksize, Point anchor,
                        bool normalize, int borderType )
 {
-    Mat src = _src.getMat();
-    int sdepth = src.depth(), cn = src.channels();
+    int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
+    Size size = _src.size();
+
     if( ddepth < 0 )
         ddepth = sdepth < CV_32F ? CV_32F : CV_64F;
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
-    Mat dst = _dst.getMat();
+
     if( borderType != BORDER_CONSTANT && normalize )
     {
-        if( src.rows == 1 )
+        if( size.height == 1 )
             ksize.height = 1;
-        if( src.cols == 1 )
+        if( size.width == 1 )
             ksize.width = 1;
     }
 
-    int sumType = CV_64F;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize, true))
+
+    int sumDepth = CV_64F;
     if( sdepth == CV_8U )
-        sumType = CV_32S;
-    sumType = CV_MAKETYPE( sumType, cn );
-    int srcType = CV_MAKETYPE(sdepth, cn);
-    int dstType = CV_MAKETYPE(ddepth, cn);
+        sumDepth = CV_32S;
+    int sumType = CV_MAKETYPE( sumDepth, cn ), dstType = CV_MAKETYPE(ddepth, cn);
+
+    Mat src = _src.getMat();
+    _dst.create( size, dstType );
+    Mat dst = _dst.getMat();
 
     Ptr<BaseRowFilter> rowFilter = getSqrRowSumFilter(srcType, sumType, ksize.width, anchor.x );
     Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,

@@ -49,23 +49,16 @@
 namespace cvtest {
 namespace ocl {
 
-enum
-{
-    noType = -1
-};
+////////////////////////////////////////// boxFilter ///////////////////////////////////////////////////////
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// boxFilter
-PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
+PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
 {
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
-    int depth, cn;
-    Size ksize;
-    Size dsize;
+    int depth, cn, borderType;
+    Size ksize, dsize;
     Point anchor;
-    int borderType;
     bool normalize, useRoi;
 
     TEST_DECLARE_INPUT_PARAMETER(src)
@@ -106,6 +99,8 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
     }
 };
 
+typedef BoxFilterBase BoxFilter;
+
 OCL_TEST_P(BoxFilter, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
@@ -119,10 +114,39 @@ OCL_TEST_P(BoxFilter, Mat)
     }
 }
 
+typedef BoxFilterBase SqrBoxFilter;
+
+OCL_TEST_P(SqrBoxFilter, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        int ddepth = depth == CV_8U ? CV_32S : CV_64F;
+
+        OCL_OFF(cv::sqrBoxFilter(src_roi, dst_roi, ddepth, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::sqrBoxFilter(usrc_roi, udst_roi, ddepth, ksize, anchor, normalize, borderType));
+
+        Near(depth <= CV_32S ? 1 : 7e-2);
+    }
+}
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32S, CV_32F),
+                                Values(1, 2, 4),
+                                Values((BorderType)BORDER_CONSTANT,
+                                       (BorderType)BORDER_REPLICATE,
+                                       (BorderType)BORDER_REFLECT,
+                                       (BorderType)BORDER_REFLECT_101),
+                                Bool(),
+                                Bool()  // ROI
+                                )
+                           );
+
+OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
+                            Combine(
+                                Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
                                 Values(1, 2, 4),
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
