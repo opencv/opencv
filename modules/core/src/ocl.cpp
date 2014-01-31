@@ -3582,8 +3582,6 @@ public:
 
         u->markHostCopyObsolete(true);
         u->markDeviceCopyObsolete(false);
-
-        clFinish(q);
     }
 
     void copy(UMatData* src, UMatData* dst, int dims, const size_t sz[],
