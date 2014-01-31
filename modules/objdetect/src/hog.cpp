@@ -112,6 +112,7 @@ bool HOGDescriptor::checkDetectorSize() const
 void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 {
     _svmDetector.getMat().convertTo(svmDetector, CV_32F);
+    CV_Assert(checkDetectorSize());
 
     Mat detector_reordered(1, (int)svmDetector.size(), CV_32FC1);
 
@@ -126,8 +127,9 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
         }
+    size_t descriptor_size = getDescriptorSize();
+    free_coef = svmDetector.size() > descriptor_size ? svmDetector[descriptor_size] : 0;
     detector_reordered.copyTo(oclSvmDetector);
-    CV_Assert(checkDetectorSize());
 }
 
 #define CV_TYPE_NAME_HOG_DESCRIPTOR "opencv-object-detector-hog"
@@ -1068,6 +1070,8 @@ static inline int gcd(int a, int b)
     return a;
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, float angle_scale,
                                        UMat grad, UMat qangle, bool correct_gamma, int nbins)
 {
@@ -1309,7 +1313,8 @@ static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_
     return k.run(2, globalThreads, localThreads, false);
 }
 
-bool HOGDescriptor::ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format) const
+static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format, Size blockSize,
+                        Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold)
 {
      Size imgSize = _img.size();
     Size effect_size = imgSize;
@@ -1324,7 +1329,6 @@ bool HOGDescriptor::ocl_compute(InputArray _img, Size win_stride, std::vector<fl
     Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
     UMat labels(1, wins_per_img.area(), CV_8U);
 
-    float sigma = (float)getWinSigma();
     float scale = 1.f / (2.f * sigma * sigma);
     Mat gaussian_lut(1, 512, CV_32FC1);
     int idx = 0;
@@ -1335,16 +1339,18 @@ bool HOGDescriptor::ocl_compute(InputArray _img, Size win_stride, std::vector<fl
         for(int j=-8; j<8; j++)
             gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
 
+    if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection))
+        return false;
+
     UMat gauss_w_lut;
     gaussian_lut.copyTo(gauss_w_lut);
-
-    if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection)) return false;
-
     if(!ocl_compute_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
-        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size)) return false;
+        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size))
+        return false;
 
     if(!ocl_normalize_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
-        effect_size.width, block_hists, (float)L2HysThreshold)) return false;
+        effect_size.width, block_hists, (float)L2HysThreshold))
+        return false;
 
     Size blocks_per_win = numPartsWithin(winSize, blockSize, blockStride);
     wins_per_img = numPartsWithin(effect_size, winSize, win_stride);
@@ -1358,12 +1364,14 @@ bool HOGDescriptor::ocl_compute(InputArray _img, Size win_stride, std::vector<fl
     case DESCR_FORMAT_ROW_BY_ROW:
         if(!ocl_extract_descrs_by_rows(winSize.height, winSize.width,
             blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height,
-            effect_size.width, block_hists, descriptors, (int)block_hist_size, descr_size, descr_width)) return false;
+            effect_size.width, block_hists, descriptors, (int)block_hist_size, descr_size, descr_width))
+            return false;
         break;
     case DESCR_FORMAT_COL_BY_COL:
         if(!ocl_extract_descrs_by_cols(winSize.height, winSize.width,
             blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height, effect_size.width,
-            block_hists, descriptors, (int)block_hist_size, descr_size, blocks_per_win.width, blocks_per_win.height)) return false;
+            block_hists, descriptors, (int)block_hist_size, descr_size, blocks_per_win.width, blocks_per_win.height))
+            return false;
         break;
     default:
         return false;
@@ -1371,6 +1379,7 @@ bool HOGDescriptor::ocl_compute(InputArray _img, Size win_stride, std::vector<fl
     descriptors.reshape(1, (int)descriptors.total()).getMat(ACCESS_READ).copyTo(_descriptors);
     return true;
 }
+#endif //HAVE_OPENCL
 
 void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     Size winStride, Size padding, const std::vector<Point>& locations) const
@@ -1388,7 +1397,8 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
-        ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL))
+        ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL, blockSize,
+        cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold))
 
     Mat img = _img.getMat();
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
@@ -1612,6 +1622,8 @@ private:
     Mutex* mtx;
 };
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                int win_stride_y, int win_stride_x, int height, int width,
                                const UMat& block_hists, UMat detector,
@@ -1697,11 +1709,12 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     return k.run(2, globalThreads, localThreads, false);
 }
 
-bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
-                       double hit_threshold, Size win_stride) const
+static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_threshold, Size win_stride,
+                       const UMat& oclSvmDetector, Size blockSize, Size cellSize, int nbins, Size blockStride, Size winSize,
+                       bool gammaCorrection, double L2HysThreshold, float sigma, float free_coef)
 {
     hits.clear();
-    if (svmDetector.empty())
+    if (oclSvmDetector.empty())
         return false;
 
     Size imgSize = img.size();
@@ -1716,7 +1729,6 @@ bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
     Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
     UMat labels(1, wins_per_img.area(), CV_8U);
 
-    float sigma = (float)getWinSigma();
     float scale = 1.f / (2.f * sigma * sigma);
     Mat gaussian_lut(1, 512, CV_32FC1);
     int idx = 0;
@@ -1727,19 +1739,18 @@ bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
         for(int j=-8; j<8; j++)
             gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
 
+    if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection))
+        return false;
+
     UMat gauss_w_lut;
     gaussian_lut.copyTo(gauss_w_lut);
-
-    if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection)) return false;
-
     if(!ocl_compute_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
-        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size)) return false;
+        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size))
+        return false;
 
     if(!ocl_normalize_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
-        effect_size.width, block_hists, (float)L2HysThreshold)) return false;
-
-    size_t descriptor_size = getDescriptorSize();
-    float free_coef = svmDetector.size() > descriptor_size ? svmDetector[descriptor_size] : 0;
+        effect_size.width, block_hists, (float)L2HysThreshold))
+        return false;
 
     Size blocks_per_win = numPartsWithin(winSize, blockSize, blockStride);
 
@@ -1748,7 +1759,8 @@ bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
     if(!ocl_classify_hists(winSize.height, winSize.width, blockStride.height,
         blockStride.width, win_stride.height, win_stride.width,
         effect_size.height, effect_size.width, block_hists, oclSvmDetector,
-        (float)free_coef, (float)hit_threshold, labels, descr_size, (int)block_hist_size)) return false;
+        free_coef, (float)hit_threshold, labels, descr_size, (int)block_hist_size))
+        return false;
 
     Mat labels_host = labels.getMat(ACCESS_READ);
     unsigned char *vec = labels_host.ptr();
@@ -1764,8 +1776,11 @@ bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
     return true;
 }
 
-bool HOGDescriptor::ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locations, std::vector<double>& level_scale,
-                                              double hit_threshold, Size win_stride, double group_threshold) const
+static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locations, std::vector<double>& level_scale,
+                                              double hit_threshold, Size win_stride, double group_threshold,
+                                              const UMat& oclSvmDetector, Size blockSize, Size cellSize,
+                                              int nbins, Size blockStride, Size winSize, bool gammaCorrection,
+                                              double L2HysThreshold, float sigma, float free_coef)
 {
     std::vector<Rect> all_candidates;
     std::vector<Point> locations;
@@ -1779,12 +1794,16 @@ bool HOGDescriptor::ocl_detectMultiScale(InputArray _img, std::vector<Rect> &fou
         Size effect_size = Size(cvRound(imgSize.width / scale), cvRound(imgSize.height / scale));
         if (effect_size == imgSize)
         {
-            if(!ocl_detect(_img, locations, hit_threshold, win_stride)) return false;
+            if(!ocl_detect(_img, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                return false;
         }
         else
         {
             resize(_img, image_scale, effect_size);
-            if(!ocl_detect(image_scale, locations, hit_threshold, win_stride)) return false;
+            if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                return false;
         }
         Size scaled_win_size(cvRound(winSize.width * scale),
             cvRound(winSize.height * scale));
@@ -1795,6 +1814,7 @@ bool HOGDescriptor::ocl_detectMultiScale(InputArray _img, std::vector<Rect> &fou
     cv::groupRectangles(found_locations, (int)group_threshold, 0.2);
     return true;
 }
+#endif //HAVE_OPENCL
 
 void HOGDescriptor::detectMultiScale(
     InputArray _img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
@@ -1823,7 +1843,8 @@ void HOGDescriptor::detectMultiScale(
 
     CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
         winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
-        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold));
+        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold, oclSvmDetector,
+        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef));
 
     std::vector<Rect> allCandidates;
     std::vector<double> tempScales;
