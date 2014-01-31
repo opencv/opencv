@@ -6,7 +6,8 @@ export OPENCV_TEST_DATA_PATH=@CMAKE_INSTALL_PREFIX@/share/OpenCV/testdata
 SUMMARY_STATUS=0
 for t in "$OPENCV_TEST_PATH/"opencv_test_* "$OPENCV_TEST_PATH/"opencv_perf_*;
 do
-  "$t" --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:$t-`date --rfc-3339=date`.xml
+  report="`basename "$t"`-`date --rfc-3339=date`.xml"
+  "$t" --perf_min_samples=1 --perf_force_samples=1 --gtest_output=xml:"$report"
   TEST_STATUS=$?
   if [ $TEST_STATUS -ne 0 ]; then
     SUMMARY_STATUS=$TEST_STATUS
