@@ -3319,7 +3319,7 @@ public:
         CV_Assert(u->handle != 0 && u->urefcount == 0);
         if(u->tempUMat())
         {
-            UMatDataAutoLock lock(u);
+//            UMatDataAutoLock lock(u);
             if( u->hostCopyObsolete() && u->refcount > 0 )
             {
                 cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -3830,6 +3830,58 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
         sprintf(buf, "convert_%s_sat", typestr);
     }
     return buf;
+}
+
+template <typename T>
+static std::string kerToStr(const Mat & k)
+{
+    int width = k.cols - 1, depth = k.depth();
+    const T * const data = reinterpret_cast<const T *>(k.data);
+
+    std::ostringstream stream;
+    stream.precision(10);
+
+    if (depth <= CV_8S)
+    {
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << (int)data[i] << ")";
+        stream << "DIG(" << (int)data[width] << ")";
+    }
+    else if (depth == CV_32F)
+    {
+        stream.setf(std::ios_base::showpoint);
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << data[i] << "f)";
+        stream << "DIG(" << data[width] << "f)";
+    }
+    else
+    {
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << data[i] << ")";
+        stream << "DIG(" << data[width] << ")";
+    }
+
+    return stream.str();
+}
+
+String kernelToStr(InputArray _kernel, int ddepth)
+{
+    Mat kernel = _kernel.getMat().reshape(1, 1);
+
+    int depth = kernel.depth();
+    if (ddepth < 0)
+        ddepth = depth;
+
+    if (ddepth != depth)
+        kernel.convertTo(kernel, ddepth);
+
+    typedef std::string (*func_t)(const Mat &);
+    static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>,kerToStr<short>,
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
+    const func_t func = funcs[depth];
+    CV_Assert(func != 0);
+
+    return cv::format(" -D COEFF=%s", func(kernel).c_str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
