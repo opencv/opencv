@@ -40,9 +40,328 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
+////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
 namespace cv
 {
+
+#ifdef HAVE_OPENCL
+
+static bool useNaive(int method, int depth, Size size)
+{
+#ifdef HAVE_CLAMDFFT
+    if (method == TM_SQDIFF && depth == CV_32F)
+        return true;
+    else if(method == TM_CCORR || (method == TM_SQDIFF && depth == CV_8U))
+        return size.height < 18 && size.width < 18;
+    else
+        return false;
+#else
+#define UNUSED(x) (void)(x);
+        UNUSED(method) UNUSED(depth) UNUSED(size)
+#undef  UNUSED
+        return true;
+#endif
+}
+
+/////////////////////////////////////////////////// CCORR //////////////////////////////////////////////////////////////
+
+static bool matchTemplateNaive_CCORR (InputArray _image, InputArray _templ, OutputArray _result, int cn)
+{
+    int type = _image.type();
+    int depth = CV_MAT_DEPTH(type);
+
+    const char * kernelName = "matchTemplate_Naive_CCORR";
+
+    ocl::Kernel k (kernelName, ocl::imgproc::match_template_oclsrc, format("-D type=%s -D elem_type=%s -D cn=%d",ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat image = _image.getUMat();
+    UMat templ = _templ.getUMat(), result;
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ), ocl::KernelArg::WriteOnly(result)).run(2,globalsize,NULL,false);
+}
+
+static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+
+    int type = _image.type();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    const char * kernelName = "matchTemplate_CCORR_NORMED";
+
+    ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc, format("-D type=%s -D elem_type=%s -D cn=%d",ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat image = _image.getUMat();
+    UMat templ = _templ.getUMat(), result;
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    UMat image_sums, image_sqsums;
+    integral(image.reshape(1), image_sums, image_sqsums, CV_32F, CV_32F);
+
+    UMat templ_resh, temp;
+    templ.reshape(1).convertTo(templ_resh, CV_32F);
+
+    multiply(templ_resh, templ_resh, temp);
+    unsigned long long templ_sqsum = (unsigned long long)sum(temp)[0];
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, templ_sqsum).run(2,globalsize,NULL,false);
+}
+
+static bool matchTemplate_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    if (useNaive(TM_CCORR, _image.depth(), _templ.size())  )
+        return matchTemplateNaive_CCORR(_image, _templ, _result, _image.channels());
+    else
+        return false;
+}
+
+////////////////////////////////////// SQDIFF //////////////////////////////////////////////////////////////
+
+static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result, int cn)
+{
+    int type = _image.type();
+    int depth = CV_MAT_DEPTH(type);
+
+    const char * kernelName = "matchTemplate_Naive_SQDIFF";
+
+    ocl::Kernel k (kernelName, ocl::imgproc::match_template_oclsrc, format("-D type=%s -D elem_type=%s -D cn=%d",ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat image = _image.getUMat();
+    UMat templ = _templ.getUMat(), result;
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image), ocl::KernelArg::ReadOnly(templ), ocl::KernelArg::WriteOnly(result)).run(2,globalsize,NULL,false);
+}
+
+static bool matchTemplate_SQDIFF_NORMED (InputArray _image, InputArray _templ, OutputArray _result)
+{
+    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+
+    int type = _image.type();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    const char * kernelName = "matchTemplate_SQDIFF_NORMED";
+
+    ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc, format("-D type=%s -D elem_type=%s -D cn=%d",ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat image = _image.getUMat();
+    UMat templ = _templ.getUMat(), result;
+    _result.create(image.rows - templ.rows + 1, image.cols - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    UMat image_sums, image_sqsums;
+    integral(image.reshape(1), image_sums, image_sqsums, CV_32F, CV_32F);
+
+    UMat temp, templ_resh;
+    templ.reshape(1).convertTo(templ_resh, CV_32F);
+
+    multiply(templ_resh, templ_resh, temp);
+    unsigned long long templ_sqsum = (unsigned long long)sum(temp)[0];
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, templ_sqsum).run(2,globalsize,NULL,false);
+}
+
+static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    if (useNaive(TM_SQDIFF, _image.depth(), _templ.size()))
+        return matchTemplateNaive_SQDIFF(_image, _templ, _result, _image.channels());
+    else
+        return false;
+}
+
+///////////////////////////////////// CCOEFF /////////////////////////////////////////////////////////////////
+
+static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+
+    UMat image_sums;
+    integral(_image, image_sums);
+
+    int type = image_sums.type();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    const char * kernelName;
+
+    if (cn==1)
+        kernelName = "matchTemplate_Prepared_CCOEFF_C1";
+    else if (cn==2)
+        kernelName = "matchTemplate_Prepared_CCOEFF_C2";
+    else
+        kernelName = "matchTemplate_Prepared_CCOEFF_C4";
+
+    ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc, format("-D type=%s -D elem_type=%s -D cn=%d",ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat templ = _templ.getUMat(), result;
+    Size size = _image.size();
+    _result.create(size.height - templ.rows + 1, size.width - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    if (cn==1)
+    {
+        float templ_sum = (float)sum(_templ)[0]/ _templ.size().area();
+        return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, templ_sum).run(2,globalsize,NULL,false);
+    }
+    else
+    {
+        Vec4f templ_sum = Vec4f::all(0);
+        templ_sum = sum(templ)/ templ.size().area();
+        if (cn==2)
+            return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols,
+            templ_sum[0],templ_sum[1]).run(2,globalsize,NULL,false);
+
+        return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols,
+        templ_sum[0],templ_sum[1],templ_sum[2],templ_sum[3]).run(2,globalsize,NULL,false);
+    }
+}
+
+static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
+{
+    UMat imagef, templf;
+
+    _image.getUMat().convertTo(imagef, CV_32F);
+    _templ.getUMat().convertTo(templf, CV_32F);
+
+    matchTemplate(imagef, templf, _result, CV_TM_CCORR);
+
+    const char * kernelName;
+
+    UMat temp, image_sums, image_sqsums;
+    integral(_image,image_sums, image_sqsums, CV_32F, CV_32F);
+
+    int type = image_sums.type();
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (cn== 1)
+        kernelName = "matchTemplate_CCOEFF_NORMED_C1";
+    else if (cn==2)
+        kernelName = "matchTemplate_CCOEFF_NORMED_C2";
+    else
+        kernelName = "matchTemplate_CCOEFF_NORMED_C4";
+
+    ocl::Kernel k(kernelName, ocl::imgproc::match_template_oclsrc,
+        format("-D type=%s -D elem_type=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn));
+    if (k.empty())
+        return false;
+
+    UMat image = _image.getUMat();
+    UMat templ = _templ.getUMat(), result;
+    int image_rows = _image.size().height, image_cols = _image.size().width;
+    _result.create(image_rows - templ.rows + 1, image_cols - templ.cols + 1, CV_32F);
+    result = _result.getUMat();
+
+    size_t globalsize[2] = {result.cols, result.rows};
+
+    float scale = 1.f / templ.size().area();
+
+    if (cn==1)
+    {
+        float templ_sum = (float)sum(templ)[0];
+
+        multiply(templf, templf, temp);
+        float templ_sqsum = (float)sum(temp)[0];
+
+        templ_sqsum -= scale * templ_sum * templ_sum;
+        templ_sum   *= scale;
+
+        if (templ_sqsum < DBL_EPSILON)
+        {
+            result = Scalar::all(1);
+            return true;
+        }
+
+        return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums),ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
+                      ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, scale, templ_sum, templ_sqsum)
+                     .run(2,globalsize,NULL,false);
+    }
+    else
+    {
+        Vec4f templ_sum = Vec4f::all(0);
+        Vec4f templ_sqsum = Vec4f::all(0);
+
+        templ_sum = sum(templ);
+
+        multiply(templf, templf, temp);
+        templ_sqsum = sum(temp);
+
+        float templ_sqsum_sum = 0;
+            for(int i = 0; i < cn; i ++)
+            {
+                templ_sqsum_sum += templ_sqsum[i] - scale * templ_sum[i] * templ_sum[i];
+            }
+
+        templ_sum   *= scale;
+
+        if (templ_sqsum_sum < DBL_EPSILON)
+        {
+            result = Scalar::all(1);
+            return true;
+        }
+
+        if (cn==2)
+             return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
+                           ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, scale,
+                           templ_sum[0],templ_sum[1], templ_sqsum_sum)
+                           .run(2,globalsize,NULL,false);
+
+        return k.args(ocl::KernelArg::ReadOnlyNoSize(image_sums), ocl::KernelArg::ReadOnlyNoSize(image_sqsums),
+                      ocl::KernelArg::WriteOnly(result), templ.rows, templ.cols, scale,
+                      templ_sum[0],templ_sum[1],templ_sum[2],templ_sum[3], templ_sqsum_sum)
+                     .run(2,globalsize,NULL,false);
+    }
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static bool ocl_matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method)
+{
+    int cn = CV_MAT_CN(_img.type());
+
+    if (cn == 3 || cn > 4)
+        return false;
+
+    typedef bool (*Caller)(InputArray _img, InputArray _templ, OutputArray _result);
+
+    const Caller callers[] =
+    {
+        matchTemplate_SQDIFF, matchTemplate_SQDIFF_NORMED, matchTemplate_CCORR,
+        matchTemplate_CCORR_NORMED, matchTemplate_CCOEFF, matchTemplate_CCOEFF_NORMED
+    };
+
+    Caller caller = callers[method];
+
+    return caller(_img, _templ, _result);
+}
+
+#endif
 
 void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
                 Size corrsize, int ctype,
@@ -226,14 +545,24 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
         }
     }
 }
-
 }
 
-/*****************************************************************************************/
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method )
 {
     CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( (_img.depth() == CV_8U || _img.depth() == CV_32F) && _img.type() == _templ.type() );
+    CV_Assert(_img.dims() <= 2);
+
+    bool swapNotNeed = (_img.size().height >= _templ.size().height && _img.size().width >= _templ.size().width);
+    if (!swapNotNeed)
+    {
+        CV_Assert(_img.size().height <= _templ.size().height && _img.size().width <= _templ.size().width);
+    }
+
+    CV_OCL_RUN(_img.dims() <= 2 && _result.isUMat(),
+               (swapNotNeed ? ocl_matchTemplate(_img,_templ,_result,method) : ocl_matchTemplate(_templ,_img,_result,method)))
 
     int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
                   method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;
@@ -242,13 +571,8 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
                     method == CV_TM_CCOEFF_NORMED;
 
     Mat img = _img.getMat(), templ = _templ.getMat();
-    if( img.rows < templ.rows || img.cols < templ.cols )
+    if(!swapNotNeed )
         std::swap(img, templ);
-
-    CV_Assert( (img.depth() == CV_8U || img.depth() == CV_32F) &&
-               img.type() == templ.type() );
-
-    CV_Assert( img.rows >= templ.rows && img.cols >= templ.cols);
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
     _result.create(corrSize, CV_32F);

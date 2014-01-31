@@ -48,7 +48,7 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nBitmapToMat2
             }
             AndroidBitmap_unlockPixels(env, bitmap);
             return;
-        } catch(cv::Exception e) {
+        } catch(const cv::Exception& e) {
             AndroidBitmap_unlockPixels(env, bitmap);
             LOGE("nBitmapToMat catched cv::Exception: %s", e.what());
             jclass je = env->FindClass("org/opencv/core/CvException");
@@ -130,7 +130,7 @@ JNIEXPORT void JNICALL Java_org_opencv_android_Utils_nMatToBitmap2
             }
             AndroidBitmap_unlockPixels(env, bitmap);
             return;
-        } catch(cv::Exception e) {
+        } catch(const cv::Exception& e) {
             AndroidBitmap_unlockPixels(env, bitmap);
             LOGE("nMatToBitmap catched cv::Exception: %s", e.what());
             jclass je = env->FindClass("org/opencv/core/CvException");

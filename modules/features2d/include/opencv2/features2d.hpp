@@ -108,7 +108,7 @@ public:
      * mask         Mask specifying where to look for keypoints (optional). Must be a char
      *              matrix with non-zero values in the region of interest.
      */
-    CV_WRAP void detect( const Mat& image, CV_OUT std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    CV_WRAP void detect( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     /*
      * Detect keypoints in an image set.
@@ -116,7 +116,7 @@ public:
      * keypoints    Collection of keypoints detected in an input images. keypoints[i] is a set of keypoints detected in an images[i].
      * masks        Masks for image set. masks[i] is a mask for images[i].
      */
-    void detect( const std::vector<Mat>& images, std::vector<std::vector<KeyPoint> >& keypoints, const std::vector<Mat>& masks=std::vector<Mat>() ) const;
+    void detect( InputArrayOfArrays images, std::vector<std::vector<KeyPoint> >& keypoints, InputArrayOfArrays masks=noArray() ) const;
 
     // Return true if detector object is empty
     CV_WRAP virtual bool empty() const;
@@ -125,14 +125,14 @@ public:
     CV_WRAP static Ptr<FeatureDetector> create( const String& detectorType );
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const = 0;
 
     /*
      * Remove keypoints that are not in the mask.
      * Helper function, useful when wrapping a library call for keypoint detection that
      * does not support a mask argument.
      */
-    static void removeInvalidPoints( const Mat& mask, std::vector<KeyPoint>& keypoints );
+    static void removeInvalidPoints( const Mat & mask, std::vector<KeyPoint>& keypoints );
 };
 
 
@@ -253,7 +253,7 @@ public:
 protected:
 
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     void computeKeypointsNoOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
     void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
@@ -338,7 +338,7 @@ public:
 protected:
 
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     CV_PROP_RW int nfeatures;
     CV_PROP_RW double scaleFactor;
@@ -470,7 +470,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int delta;
     int minArea;
@@ -506,7 +506,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int maxSize;
     int responseThreshold;
@@ -535,7 +535,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int threshold;
     bool nonmaxSuppression;
@@ -551,7 +551,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int nfeatures;
     double qualityLevel;
@@ -608,7 +608,7 @@ protected:
       double confidence;
   };
 
-  virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+  virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
   virtual void findBlobs(const Mat &image, const Mat &binaryImage, std::vector<Center> &centers) const;
 
   Params params;
@@ -627,7 +627,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     double initFeatureScale;
     int featureScaleLevels;
@@ -664,7 +664,7 @@ public:
     AlgorithmInfo* info() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     Ptr<FeatureDetector> detector;
     int maxTotalKeypoints;
@@ -686,7 +686,7 @@ public:
     virtual bool empty() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     Ptr<FeatureDetector> detector;
     int maxLevel;
@@ -747,7 +747,7 @@ public:
     virtual bool empty() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
 private:
     DynamicAdaptedFeatureDetector& operator=(const DynamicAdaptedFeatureDetector&);
@@ -776,7 +776,7 @@ public:
     virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     int thresh_;
     bool nonmax_;
@@ -799,7 +799,7 @@ public:
     virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl(InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     double thresh_, init_thresh_, min_thresh_, max_thresh_;
 };
@@ -816,7 +816,7 @@ public:
     virtual Ptr<AdjusterAdapter> clone() const;
 
 protected:
-    virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const;
+    virtual void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) const;
 
     double thresh_, init_thresh_, min_thresh_, max_thresh_;
 };
@@ -998,7 +998,7 @@ public:
      * Add descriptors to train descriptor collection.
      * descriptors      Descriptors to add. Each descriptors[i] is a descriptors set from one image.
      */
-    CV_WRAP virtual void add( const std::vector<Mat>& descriptors );
+    CV_WRAP virtual void add( InputArrayOfArrays descriptors );
     /*
      * Get train descriptors collection.
      */
@@ -1034,30 +1034,30 @@ public:
      * Method train() is run in this methods.
      */
     // Find one best match for each query descriptor (if mask is empty).
-    CV_WRAP void match( const Mat& queryDescriptors, const Mat& trainDescriptors,
-                CV_OUT std::vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+    CV_WRAP void match( InputArray queryDescriptors, InputArray trainDescriptors,
+                CV_OUT std::vector<DMatch>& matches, InputArray mask=noArray() ) const;
     // Find k best matches for each query descriptor (in increasing order of distances).
     // compactResult is used when mask is not empty. If compactResult is false matches
     // vector will have the same size as queryDescriptors rows. If compactResult is true
     // matches vector will not contain matches for fully masked out query descriptors.
-    CV_WRAP void knnMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    CV_WRAP void knnMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                    CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                   const Mat& mask=Mat(), bool compactResult=false ) const;
+                   InputArray mask=noArray(), bool compactResult=false ) const;
     // Find best matches for each query descriptor which have distance less than
     // maxDistance (in increasing order of distances).
-    void radiusMatch( const Mat& queryDescriptors, const Mat& trainDescriptors,
+    void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                       std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const Mat& mask=Mat(), bool compactResult=false ) const;
+                      InputArray mask=noArray(), bool compactResult=false ) const;
     /*
      * Group of methods to match descriptors from one image to image set.
      * See description of similar methods for matching image pair above.
      */
-    CV_WRAP void match( const Mat& queryDescriptors, CV_OUT std::vector<DMatch>& matches,
-                const std::vector<Mat>& masks=std::vector<Mat>() );
-    CV_WRAP void knnMatch( const Mat& queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    void radiusMatch( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    CV_WRAP void match( InputArray queryDescriptors, CV_OUT std::vector<DMatch>& matches,
+                        const std::vector<Mat>& masks=std::vector<Mat>() );
+    CV_WRAP void knnMatch( InputArray queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
+                           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    void radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+                      const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
 
     // Reads matcher object from a file node
     virtual void read( const FileNode& );
@@ -1101,10 +1101,10 @@ protected:
     // In fact the matching is implemented only by the following two methods. These methods suppose
     // that the class object has been trained already. Public match methods call these methods
     // after calling train().
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false ) = 0;
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false ) = 0;
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) = 0;
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false ) = 0;
 
     static bool isPossibleMatch( const Mat& mask, int queryIdx, int trainIdx );
     static bool isMaskedOut( const std::vector<Mat>& masks, int queryIdx );
@@ -1114,6 +1114,7 @@ protected:
 
     // Collection of descriptors from train images.
     std::vector<Mat> trainDescCollection;
+    std::vector<UMat> utrainDescCollection;
 };
 
 /*
@@ -1137,10 +1138,10 @@ public:
 
     AlgorithmInfo* info() const;
 protected:
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
     int normType;
     bool crossCheck;
@@ -1175,10 +1176,10 @@ protected:
                                    const Mat& indices, const Mat& distances,
                                    std::vector<std::vector<DMatch> >& matches );
 
-    virtual void knnMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
-    virtual void radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+    virtual void knnMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, int k,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false );
+    virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
+        InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
     Ptr<flann::IndexParams> indexParams;
     Ptr<flann::SearchParams> searchParams;
@@ -1512,12 +1513,15 @@ class CV_EXPORTS BOWImgDescriptorExtractor
 public:
     BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
+    BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
 
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const;
     void compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
+    void compute( const Mat& keypointDescriptors, Mat& imgDescriptor,
+                  std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
     int descriptorSize() const;

@@ -751,9 +751,9 @@ BRISK::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::v
 
 
 void
-BRISK::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
+BRISK::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask) const
 {
-    (*this)(image, mask, keypoints);
+    (*this)(image.getMat(), mask.getMat(), keypoints);
 }
 
 void
@@ -2229,7 +2229,7 @@ BriskLayer::halfsample(const cv::Mat& srcimg, cv::Mat& dstimg)
   CV_Assert(srcimg.cols / 2 == dstimg.cols);
   CV_Assert(srcimg.rows / 2 == dstimg.rows);
 
-  // handle non-SSE case
+  // handle non-SSE case
   resize(srcimg, dstimg, dstimg.size(), 0, 0, INTER_AREA);
 }
 

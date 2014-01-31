@@ -2096,7 +2096,7 @@ enum
     VideoCodec_YV12   = (('Y'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,V,U (4:2:0)
     VideoCodec_NV12   = (('N'<<24)|('V'<<16)|('1'<<8)|('2')),   // Y,UV  (4:2:0)
     VideoCodec_YUYV   = (('Y'<<24)|('U'<<16)|('Y'<<8)|('V')),   // YUYV/YUY2 (4:2:2)
-    VideoCodec_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y')),   // UYVY (4:2:2)
+    VideoCodec_UYVY   = (('U'<<24)|('Y'<<16)|('V'<<8)|('Y'))    // UYVY (4:2:2)
 };
 
 enum
@@ -2104,7 +2104,7 @@ enum
     VideoChromaFormat_Monochrome = 0,
     VideoChromaFormat_YUV420,
     VideoChromaFormat_YUV422,
-    VideoChromaFormat_YUV444,
+    VideoChromaFormat_YUV444
 };
 
 struct InputMediaStream_FFMPEG

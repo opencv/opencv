@@ -190,7 +190,7 @@ public:
     public:
         virtual ~MaskGenerator() {}
         virtual Mat generateMask(const Mat& src)=0;
-        virtual void initializeMask(const Mat& /*src*/) {};
+        virtual void initializeMask(const Mat& /*src*/) { }
     };
     virtual void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) = 0;
     virtual Ptr<MaskGenerator> getMaskGenerator() = 0;

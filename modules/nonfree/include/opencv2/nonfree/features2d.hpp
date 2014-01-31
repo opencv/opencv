@@ -87,7 +87,7 @@ public:
                                 std::vector<KeyPoint>& keypoints ) const;
 
 protected:
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 
     CV_PROP_RW int nfeatures;
@@ -143,7 +143,7 @@ public:
 
 protected:
 
-    void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask = Mat() ) const;
+    void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 };
 

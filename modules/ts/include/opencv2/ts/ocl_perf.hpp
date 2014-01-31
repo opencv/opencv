@@ -57,19 +57,33 @@ using std::tr1::tuple;
 
 #define OCL_PERF_STRATEGY PERF_STRATEGY_SIMPLE
 
+#define OCL_PERF_TEST(fixture, name) SIMPLE_PERF_TEST(fixture, name)
 #define OCL_PERF_TEST_P(fixture, name, params) SIMPLE_PERF_TEST_P(fixture, name, params)
 
-#define SIMPLE_PERF_TEST_P(fixture, name, params)\
-    class OCL##_##fixture##_##name : public fixture {\
-    public:\
-        OCL##_##fixture##_##name() {}\
-    protected:\
-        virtual void PerfTestBody();\
-    };\
-    TEST_P(OCL##_##fixture##_##name, name){ declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); }\
-    INSTANTIATE_TEST_CASE_P(/*none*/, OCL##_##fixture##_##name, params);\
+#define SIMPLE_PERF_TEST(fixture, name) \
+    class OCL##_##fixture##_##name : \
+        public ::perf::TestBase \
+    { \
+    public: \
+        OCL##_##fixture##_##name() { } \
+    protected: \
+        virtual void PerfTestBody(); \
+    }; \
+    TEST_F(OCL##_##fixture##_##name, name) { declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
     void OCL##_##fixture##_##name::PerfTestBody()
 
+#define SIMPLE_PERF_TEST_P(fixture, name, params) \
+    class OCL##_##fixture##_##name : \
+        public fixture \
+    { \
+    public: \
+        OCL##_##fixture##_##name() { } \
+    protected: \
+        virtual void PerfTestBody(); \
+    }; \
+    TEST_P(OCL##_##fixture##_##name, name) { declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
+    INSTANTIATE_TEST_CASE_P(/*none*/, OCL##_##fixture##_##name, params); \
+    void OCL##_##fixture##_##name::PerfTestBody()
 
 #define OCL_SIZE_1 szVGA
 #define OCL_SIZE_2 sz720p

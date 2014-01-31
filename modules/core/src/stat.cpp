@@ -464,6 +464,8 @@ template <typename T> Scalar ocl_part_sum(Mat m)
     return s;
 }
 
+#ifdef HAVE_OPENCL
+
 enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
 
 static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask = noArray() )
@@ -473,7 +475,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 || _src.dims() > 2 )
+    if ( (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3 )
         return false;
 
     int dbsize = ocl::Device::getDefault().maxComputeUnits();
@@ -523,13 +525,18 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     return false;
 }
 
+#endif
+
 }
 
 cv::Scalar cv::sum( InputArray _src )
 {
+#ifdef HAVE_OPENCL
     Scalar _res;
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_sum(_src, _res, OCL_OP_SUM))
-        return _res;
+    CV_OCL_RUN_( _src.isUMat() && _src.dims() <= 2,
+                 ocl_sum(_src, _res, OCL_OP_SUM),
+                 _res)
+#endif
 
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
@@ -621,6 +628,8 @@ cv::Scalar cv::sum( InputArray _src )
     return s;
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_countNonZero( InputArray _src, int & res )
@@ -658,13 +667,18 @@ static bool ocl_countNonZero( InputArray _src, int & res )
 
 }
 
+#endif
+
 int cv::countNonZero( InputArray _src )
 {
     CV_Assert( _src.channels() == 1 );
 
+#ifdef HAVE_OPENCL
     int res = -1;
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_countNonZero(_src, res))
-        return res;
+    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+                ocl_countNonZero(_src, res),
+                res)
+#endif
 
     Mat src = _src.getMat();
     CountNonZeroFunc func = getCountNonZeroTab(src.depth());
@@ -815,6 +829,8 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     return s*(nz0 ? 1./nz0 : 0);
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
@@ -861,10 +877,12 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 
 }
 
+#endif
+
 void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray _mask )
 {
-    if (ocl::useOpenCL() && _src.isUMat() && ocl_meanStdDev(_src, _mean, _sdv, _mask))
-        return;
+    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2,
+               ocl_meanStdDev(_src, _mean, _sdv, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     CV_Assert( mask.empty() || mask.type() == CV_8U );
@@ -1171,10 +1189,7 @@ static void ofs2idx(const Mat& a, size_t ofs, int* idx)
     }
 }
 
-}
-
-namespace cv
-{
+#ifdef HAVE_OPENCL
 
 template <typename T>
 void getMinMaxRes(const Mat &minv, const Mat &maxv, const Mat &minl, const Mat &maxl, double* minVal,
@@ -1238,8 +1253,8 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d %s",
-        depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? "-D DOUBLE_SUPPORT" : "");
+    String opts = format("-D DEPTH_%d -D OP_MIN_MAX_LOC%s -D WGS=%d -D WGS2_ALIGNED=%d%s",
+        depth, _mask.empty() ? "" : "_MASK", (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -1248,13 +1263,13 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     UMat src = _src.getUMat(), minval(1, groupnum, src.type()),
         maxval(1, groupnum, src.type()), minloc( 1, groupnum, CV_32SC1),
         maxloc( 1, groupnum, CV_32SC1), mask;
-    if(!_mask.empty())
+    if (!_mask.empty())
         mask = _mask.getUMat();
 
-    if(src.channels()>1)
+    if (src.channels() > 1)
         src = src.reshape(1);
 
-    if(mask.empty())
+    if (mask.empty())
         k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
             groupnum, ocl::KernelArg::PtrWriteOnly(minval), ocl::KernelArg::PtrWriteOnly(maxval),
             ocl::KernelArg::PtrWriteOnly(minloc), ocl::KernelArg::PtrWriteOnly(maxloc));
@@ -1288,6 +1303,9 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
 
     return true;
 }
+
+#endif
+
 }
 
 void cv::minMaxIdx(InputArray _src, double* minVal,
@@ -1297,9 +1315,8 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_Assert( (_src.channels() == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
         (_src.channels() >= 1 && _mask.empty() && !minIdx && !maxIdx) );
 
-     if( ocl::useOpenCL() && _src.isUMat() && _src.dims() <= 2  && ( _mask.empty() || _src.size() == _mask.size() )
-         && ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask) )
-        return;
+    CV_OCL_RUN(_src.isUMat() && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
+               ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();
@@ -1892,9 +1909,7 @@ static NormDiffFunc getNormDiffFunc(int normType, int depth)
     return normDiffTab[normType][depth];
 }
 
-}
-
-namespace cv {
+#ifdef HAVE_OPENCL
 
 static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & result )
 {
@@ -1959,6 +1974,8 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     return true;
 }
 
+#endif
+
 }
 
 double cv::norm( InputArray _src, int normType, InputArray _mask )
@@ -1968,9 +1985,12 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
                normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && _src.type() == CV_8U) );
 
+#ifdef HAVE_OPENCL
     double _result = 0;
-    if (ocl::useOpenCL() && _src.isUMat() && _src.dims() <= 2 && ocl_norm(_src, normType, _mask, _result))
-        return _result;
+    CV_OCL_RUN_(_src.isUMat() && _src.dims() <= 2,
+                ocl_norm(_src, normType, _mask, _result),
+                _result)
+#endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
     int depth = src.depth(), cn = src.channels();
@@ -2252,6 +2272,8 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     return result.d;
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double & result )
@@ -2293,21 +2315,24 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double &
 
 }
 
+#endif
+
 double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
-    CV_Assert( _src1.size() == _src2.size() && _src1.type() == _src2.type() );
+    CV_Assert( _src1.sameSize(_src2) && _src1.type() == _src2.type() );
 
+#ifdef HAVE_OPENCL
     double _result = 0;
-    if (ocl::useOpenCL() && _mask.empty() && _src1.isUMat() && _src2.isUMat() &&
-            _src1.dims() <= 2 && _src2.dims() <= 2 && ocl_norm(_src1, _src2, normType, _result))
-        return _result;
+    CV_OCL_RUN_(_mask.empty() && _src1.isUMat() && _src2.isUMat() &&
+                _src1.dims() <= 2 && _src2.dims() <= 2,
+                ocl_norm(_src1, _src2, normType, _result),
+                _result)
+#endif
 
     if( normType & CV_RELATIVE )
     {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
         Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-
-        CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
 
         normType &= 7;
         CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
@@ -2386,8 +2411,6 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
     int depth = src1.depth(), cn = src1.channels();
-
-    CV_Assert( src1.size == src2.size );
 
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||

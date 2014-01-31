@@ -46,7 +46,7 @@ An ER is a 4-connected set of pixels with all its grey-level values smaller than
         //! Constructor
         explicit ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
         //! Destructor
-        ~ERStat(){};
+        ~ERStat() { }
 
         //! seed point and threshold (max grey-level value)
         int pixel;
@@ -105,7 +105,7 @@ Base class for 1st and 2nd stages of Neumann and Matas scene text detection algo
         class CV_EXPORTS Callback
         {
         public:
-            virtual ~Callback(){};
+            virtual ~Callback() { }
             //! The classifier must return probability measure for the region.
             virtual double eval(const ERStat& stat) = 0;
         };

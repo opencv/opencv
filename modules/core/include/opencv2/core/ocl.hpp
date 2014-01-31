@@ -59,6 +59,8 @@ class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
 class CV_EXPORTS ProgramSource2;
 class CV_EXPORTS Queue;
+class CV_EXPORTS PlatformInfo2;
+class CV_EXPORTS Image2D;
 
 class CV_EXPORTS Device
 {
@@ -84,9 +86,11 @@ public:
 
     String name() const;
     String extensions() const;
+    String version() const;
     String vendor() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
+    String deviceVersion() const;
     String driverVersion() const;
     void* ptr() const;
 
@@ -221,7 +225,7 @@ public:
     void* ptr() const;
 
     struct Impl;
-    inline struct Impl* _getImpl() const { return p; };
+    inline struct Impl* _getImpl() const { return p; }
 protected:
     Impl* p;
 };
@@ -242,7 +246,7 @@ public:
     static Platform& getDefault();
 
     struct Impl;
-    inline struct Impl* _getImpl() const { return p; };
+    inline struct Impl* _getImpl() const { return p; }
 protected:
     Impl* p;
 };
@@ -323,6 +327,7 @@ public:
                 const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
+    int set(int i, const Image2D& image2D);
     int set(int i, const UMat& m);
     int set(int i, const KernelArg& arg);
     template<typename _Tp> int set(int i, const _Tp& value)
@@ -549,9 +554,45 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS PlatformInfo2
+{
+public:
+    PlatformInfo2();
+    explicit PlatformInfo2(void* id);
+    ~PlatformInfo2();
+
+    PlatformInfo2(const PlatformInfo2& i);
+    PlatformInfo2& operator =(const PlatformInfo2& i);
+
+    String name() const;
+    String vendor() const;
+    String version() const;
+    int deviceNumber() const;
+    void getDevice(Device& device, int d) const;
+
+protected:
+    struct Impl;
+    Impl* p;
+};
+
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo2>& platform_info);
+
+class CV_EXPORTS Image2D
+{
+public:
+    Image2D();
+    Image2D(const UMat &src);
+    ~Image2D();
+
+    void* ptr() const;
+protected:
+    struct Impl;
+    Impl* p;
+};
 
 }}
 

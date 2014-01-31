@@ -113,6 +113,7 @@ public:
     virtual Mat getMat(int idx=-1) const;
     virtual UMat getUMat(int idx=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
+    virtual void getUMatVector(std::vector<UMat>& umv) const;
     virtual cuda::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
     void* getObj() const;
@@ -127,13 +128,14 @@ public:
     virtual int depth(int i=-1) const;
     virtual int channels(int i=-1) const;
     virtual bool isContinuous(int i=-1) const;
+    virtual bool isSubmatrix(int i=-1) const;
     virtual bool empty() const;
     virtual void copyTo(const _OutputArray& arr) const;
     virtual size_t offset(int i=-1) const;
     virtual size_t step(int i=-1) const;
     bool isMat() const;
     bool isUMat() const;
-    bool isMatVectot() const;
+    bool isMatVector() const;
     bool isUMatVector() const;
     bool isMatx();
 
@@ -205,6 +207,7 @@ public:
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
+    virtual UMat& getUMatRef(int i=-1) const;
     virtual cuda::GpuMat& getGpuMatRef() const;
     virtual ogl::Buffer& getOGlBufferRef() const;
     virtual cuda::CudaMem& getCudaMemRef() const;

@@ -76,7 +76,9 @@ enum { EVENT_MOUSEMOVE      = 0,
        EVENT_MBUTTONUP      = 6,
        EVENT_LBUTTONDBLCLK  = 7,
        EVENT_RBUTTONDBLCLK  = 8,
-       EVENT_MBUTTONDBLCLK  = 9
+       EVENT_MBUTTONDBLCLK  = 9,
+       EVENT_MOUSEWHEEL     = 10,
+       EVENT_MOUSEHWHEEL    = 11
      };
 
 enum { EVENT_FLAG_LBUTTON   = 1,
@@ -136,6 +138,8 @@ CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
 //! assigns callback for mouse events
 CV_EXPORTS void setMouseCallback(const String& winname, MouseCallback onMouse, void* userdata = 0);
+
+CV_EXPORTS int getMouseWheelDelta(int flags);
 
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,

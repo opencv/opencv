@@ -57,6 +57,6 @@ void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation);
 Mat RobertsonWeights();
 
 Mat linearResponse(int channels);
-};
+}
 
 #endif

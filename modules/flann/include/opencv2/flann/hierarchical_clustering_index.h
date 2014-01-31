@@ -413,12 +413,6 @@ public:
 
     void loadIndex(FILE* stream)
     {
-        load_value(stream, branching_);
-        load_value(stream, trees_);
-        load_value(stream, centers_init_);
-        load_value(stream, leaf_size_);
-        load_value(stream, memoryCounter);
-
         free_elements();
 
         if (root!=NULL) {
@@ -428,6 +422,12 @@ public:
         if (indices!=NULL) {
             delete[] indices;
         }
+
+        load_value(stream, branching_);
+        load_value(stream, trees_);
+        load_value(stream, centers_init_);
+        load_value(stream, leaf_size_);
+        load_value(stream, memoryCounter);
 
         indices = new int*[trees_];
         root = new NodePtr[trees_];
