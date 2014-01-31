@@ -1284,8 +1284,9 @@ void MSER::operator()( const Mat& image, std::vector<std::vector<Point> >& dstco
 }
 
 
-void MserFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
+void MserFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
+    Mat image = _image.getMat(), mask = _mask.getMat();
     std::vector<std::vector<Point> > msers;
 
     (*this)(image, msers, mask);
