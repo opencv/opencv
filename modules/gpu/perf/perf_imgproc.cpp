@@ -1825,7 +1825,7 @@ CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION)
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
-PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
+PERF_TEST_P(Method_Sz, DISABLED_ImgProc_GeneralizedHough,
             Combine(Values(GHMethod(cv::GHT_POSITION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE), GHMethod(cv::GHT_POSITION | cv::GHT_ROTATION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE | cv::GHT_ROTATION)),
                     GPU_TYPICAL_MAT_SIZES))
 {
