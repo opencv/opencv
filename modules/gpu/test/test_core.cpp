@@ -422,7 +422,7 @@ PARAM_TEST_CASE(Subtract_Array, cv::gpu::DeviceInfo, cv::Size, std::pair<MatDept
     }
 };
 
-GPU_TEST_P(Subtract_Array, Accuracy)
+GPU_TEST_P(Subtract_Array, DISABLED_Accuracy)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
