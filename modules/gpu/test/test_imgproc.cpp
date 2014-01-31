@@ -563,6 +563,8 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, testing::Combine(
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     WHOLE_SUBMAT));
 
+#ifdef HAVE_CUFFT
+
 ////////////////////////////////////////////////////////
 // Convolve
 
@@ -1089,6 +1091,8 @@ GPU_TEST_P(Dft, R2CThenC2R)
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Dft, ALL_DEVICES);
+
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CornerHarris
