@@ -32,6 +32,12 @@ typedef struct __attribute__((aligned(4))) Stump
 }
 Stump;
 
+typedef struct __attribute__((aligned(4))) Node
+{
+    int4 n __attribute__((aligned (4)));
+}
+Node;
+
 typedef struct __attribute__((aligned (4))) Stage
 {
     int first __attribute__((aligned (4)));
@@ -42,7 +48,7 @@ Stage;
 
 typedef struct __attribute__((aligned (4))) ScaleData
 {
-    float scale __attribute__((aligned (4)));;
+    float scale __attribute__((aligned (4)));
     int szi_width __attribute__((aligned (4)));
     int szi_height __attribute__((aligned (4)));
     int layer_ofs __attribute__((aligned (4)));
@@ -54,8 +60,12 @@ ScaleData;
 #define SUM_BUF_SIZE 0
 #endif
 
+#ifndef NODE_COUNT
+#define NODE_COUNT 1
+#endif
+
 __kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
-void runHaarClassifierStump(
+void runHaarClassifier(
     int nscales, __global const ScaleData* scaleData,
     __global const int* sum,
     int _sumstep, int sumoffset,
@@ -63,7 +73,8 @@ void runHaarClassifierStump(
 
     int splitstage, int nstages,
     __global const Stage* stages,
-    __global const Stump* stumps,
+    __global const Node* nodes,
+    __global const float* leaves0,
 
     volatile __global int* facepos,
     int4 normrect, int sqofs, int2 windowsize, int maxFaces)
@@ -75,9 +86,9 @@ void runHaarClassifierStump(
     int scaleIdx, tileIdx, stageIdx;
     int sumstep = (int)(_sumstep/sizeof(int));
     int4 nofs0 = (int4)(mad24(normrect.y, sumstep, normrect.x),
-    mad24(normrect.y, sumstep, normrect.x + normrect.z),
-    mad24(normrect.y + normrect.w, sumstep, normrect.x),
-    mad24(normrect.y + normrect.w, sumstep, normrect.x + normrect.z));
+                        mad24(normrect.y, sumstep, normrect.x + normrect.z),
+                        mad24(normrect.y + normrect.w, sumstep, normrect.x),
+                        mad24(normrect.y + normrect.w, sumstep, normrect.x + normrect.z));
     int normarea = normrect.z * normrect.w;
     float invarea = 1.f/normarea;
     int lidx = ly*LOCAL_SIZE_X + lx;
@@ -136,15 +147,21 @@ void runHaarClassifierStump(
 
             if( ix0 + ix < worksize.x && iy0 + iy < worksize.y )
             {
-                __global const Stump* stump = stumps;
+                #if NODE_COUNT==1
+                __global const Stump* stump = (__global const Stump*)nodes;
+                #else
+                __global const Node* node = nodes;
+                __global const float* leaves = leaves0;
+                #endif
                 #if SUM_BUF_SIZE > 0
                 __local const int* psum = ibuf + mad24(iy, SUM_BUF_STEP, ix);
                 #else
                 __global const int* psum = psum1;
                 #endif
 
+                __global const float* psqsum = (__global const float*)(psum1 + sqofs);
                 float sval = (psum[nofs.x] - psum[nofs.y] - psum[nofs.z] + psum[nofs.w])*invarea;
-                float sqval = psum1[nofs0.x + sqofs]*invarea;
+                float sqval = (psqsum[nofs0.x] - psqsum[nofs0.y] - psqsum[nofs0.z] + psqsum[nofs0.w])*invarea;
                 float nf = (float)normarea * sqrt(max(sqval - sval * sval, 0.f));
                 nf = nf > 0 ? nf : 1.f;
 
@@ -152,9 +169,10 @@ void runHaarClassifierStump(
                 {
                     int ntrees = stages[stageIdx].ntrees;
                     float s = 0.f;
-                    for( i = 0; i < ntrees; i++, stump++ )
+                    #if NODE_COUNT==1
+                    for( i = 0; i < ntrees; i++ )
                     {
-                        float4 st = stump->st;
+                        float4 st = stump[i].st;
                         __global const OptHaarFeature* f = optfeatures + as_int(st.x);
                         float4 weight = f->weight;
 
@@ -170,6 +188,34 @@ void runHaarClassifierStump(
 
                         s += (sval < st.y*nf) ? st.z : st.w;
                     }
+                    stump += ntrees;
+                    #else
+                    for( i = 0; i < ntrees; i++, node += NODE_COUNT, leaves += NODE_COUNT+1 )
+                    {
+                        int idx = 0;
+                        do
+                        {
+                            int4 n = node[idx].n;
+                            __global const OptHaarFeature* f = optfeatures + n.x;
+                            float4 weight = f->weight;
+
+                            int4 ofs = f->ofs[0];
+
+                            sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
+                            ofs = f->ofs[1];
+                            sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                            if( weight.z > 0 )
+                            {
+                                ofs = f->ofs[2];
+                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                            }
+
+                            idx = (sval < as_float(n.y)*nf) ? n.z : n.w;
+                        }
+                        while(idx > 0);
+                        s += leaves[-idx];
+                    }
+                    #endif
 
                     if( s < stages[stageIdx].threshold )
                         break;
@@ -194,7 +240,12 @@ void runHaarClassifierStump(
                     lcount[0] = 0;
 
                 {
-                    __global const Stump* stump = stumps + stages[stageIdx].first;
+                    #if NODE_COUNT == 1
+                    __global const Stump* stump = (__global const Stump*)nodes + stages[stageIdx].first;
+                    #else
+                    __global const Node* node = nodes + stages[stageIdx].first*NODE_COUNT;
+                    __global const float* leaves = leaves0 + stages[stageIdx].first*(NODE_COUNT+1);
+                    #endif
                     int nparts = LOCAL_SIZE / nrects;
                     int ntrees = stages[stageIdx].ntrees;
                     int ntrees_p = (ntrees + nparts - 1)/nparts;
@@ -218,6 +269,7 @@ void runHaarClassifierStump(
                         __global const int* psum = psum0 + mad24(iy1, sumstep, ix1);
                         #endif
 
+                        #if NODE_COUNT == 1
                         for( i = ntrees0; i < ntrees1; i++ )
                         {
                             float4 st = stump[i].st;
@@ -236,6 +288,32 @@ void runHaarClassifierStump(
 
                             partsum += (sval < st.y*nf) ? st.z : st.w;
                         }
+                        #else
+                        for( i = ntrees0; i < ntrees1; i++ )
+                        {
+                            int idx = 0;
+                            do
+                            {
+                                int4 n = node[i*2 + idx].n;
+                                __global const OptHaarFeature* f = optfeatures + n.x;
+                                float4 weight = f->weight;
+                                int4 ofs = f->ofs[0];
+
+                                float sval = (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.x;
+                                ofs = f->ofs[1];
+                                sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.y;
+                                if( weight.z > 0 )
+                                {
+                                    ofs = f->ofs[2];
+                                    sval += (psum[ofs.x] - psum[ofs.y] - psum[ofs.z] + psum[ofs.w])*weight.z;
+                                }
+
+                                idx = (sval < as_float(n.y)*nf) ? n.z : n.w;
+                            }
+                            while(idx > 0);
+                            partsum += leaves[i*3-idx];
+                        }
+                        #endif
                         }
                     }
                     lpartsum[lidx] = partsum;
@@ -277,15 +355,17 @@ void runHaarClassifierStump(
     }
 }
 
+#undef CALC_SUM_OFS_
+#define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
+    ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
 
-/*
-__kernel void runLBPClassifierStump(
+__kernel void runLBPClassifierStumpSimple(
     int nscales, __global const ScaleData* scaleData,
     __global const int* sum,
     int _sumstep, int sumoffset,
     __global const OptLBPFeature* optfeatures,
 
-    int nstages,
+    int splitstage, int nstages,
     __global const Stage* stages,
     __global const Stump* stumps,
     __global const int* bitsets,
@@ -334,9 +414,6 @@ __kernel void runLBPClassifierStump(
                         __global const OptLBPFeature* f = optfeatures + as_int(st.x);
                         int16 ofs = f->ofs;
 
-                        #define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
-                        ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
-
                         int cval = CALC_SUM_OFS_( ofs.s5, ofs.s6, ofs.s9, ofs.sa, p );
 
                         int mask, idx = (CALC_SUM_OFS_( ofs.s0, ofs.s1, ofs.s4, ofs.s5, p ) >= cval ? 4 : 0); // 0
@@ -370,11 +447,7 @@ __kernel void runLBPClassifierStump(
             }
         }
     }
-}*/
-
-#undef CALC_SUM_OFS_
-#define CALC_SUM_OFS_(p0, p1, p2, p3, ptr) \
-    ((ptr)[p0] - (ptr)[p1] - (ptr)[p2] + (ptr)[p3])
+}
 
 __kernel __attribute__((reqd_work_group_size(LOCAL_SIZE_X,LOCAL_SIZE_Y,1)))
 void runLBPClassifierStump(

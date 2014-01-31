@@ -28,14 +28,13 @@ public:
     };
 
     virtual ~FeatureEvaluator();
-
-    virtual bool read(const FileNode& node);
+    
+    virtual bool read(const FileNode& node, Size origWinSize);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
     int getNumChannels() const { return nchannels; }
 
-    virtual bool setImage(InputArray img, Size origWinSize,
-                          const std::vector<float>& scales);
+    virtual bool setImage(InputArray img, const std::vector<float>& scales);
     virtual bool setWindow(Point p, int scaleIdx);
     const ScaleData& getScaleData(int scaleIdx) const
     {
@@ -43,6 +42,7 @@ public:
         return scaleData->at(scaleIdx);
     }
     virtual void getUMats(std::vector<UMat>& bufs);
+    virtual void getMats();
 
     Size getLocalSize() const { return localSize; }
     Size getLocalBufSize() const { return lbufSize; }
@@ -53,6 +53,9 @@ public:
     static Ptr<FeatureEvaluator> create(int type);
 
 protected:
+    enum { SBUF_VALID=1, USBUF_VALID=2 };
+    int sbufFlag;
+
     bool updateScaleData( Size imgsz, const std::vector<float>& _scales );
     virtual void computeChannels( int, InputArray ) {}
     virtual void computeOptFeatures() {}
@@ -60,7 +63,7 @@ protected:
     Size origWinSize, sbufSize, localSize, lbufSize;
     int nchannels;
     Mat sbuf, rbuf;
-    UMat usbuf, ufbuf, uscaleData;
+    UMat urbuf, usbuf, ufbuf, uscaleData;
 
     Ptr<std::vector<ScaleData> > scaleData;
 };
@@ -189,12 +192,10 @@ protected:
 
         bool read(const FileNode &node);
 
-        bool isStumpBased() const { return maxNodesPerTree == 1; }
-
         int stageType;
         int featureType;
         int ncategories;
-        int maxNodesPerTree;
+        int minNodesPerTree, maxNodesPerTree;
         Size origWinSize;
 
         std::vector<Stage> stages;
@@ -211,7 +212,7 @@ protected:
 
     Ptr<MaskGenerator> maskGenerator;
     UMat ugrayImage, uimageBuffer;
-    UMat ufacepos, ustages, ustumps, usubsets;
+    UMat ufacepos, ustages, unodes, uleaves, usubsets;
     ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
 
@@ -340,7 +341,7 @@ public:
     HaarEvaluator();
     virtual ~HaarEvaluator();
 
-    virtual bool read( const FileNode& node );
+    virtual bool read( const FileNode& node, Size origWinSize);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
@@ -425,7 +426,7 @@ public:
     LBPEvaluator();
     virtual ~LBPEvaluator();
 
-    virtual bool read( const FileNode& node );
+    virtual bool read( const FileNode& node, Size origWinSize );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
