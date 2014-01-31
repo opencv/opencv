@@ -3365,7 +3365,7 @@ protected:
     {
         CV_DbgAssert(entry.clBuffer_ == NULL);
         entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
-        Context2& ctx = Context2::getDefault();
+        Context& ctx = Context::getDefault();
         cl_int retval = CL_SUCCESS;
         entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
         CV_Assert(retval == CL_SUCCESS);

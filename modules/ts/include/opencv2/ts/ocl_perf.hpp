@@ -119,7 +119,7 @@ CV_EXPORTS void randu(InputOutputArray dst);
 inline void safeFinish()
 {
     if (cv::ocl::useOpenCL())
-        cv::ocl::finish2();
+        cv::ocl::finish();
 }
 
 } // namespace perf
