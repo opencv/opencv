@@ -840,7 +840,7 @@ GPU_TEST_P(CvtColor, YCrCb42RGBA)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-GPU_TEST_P(CvtColor, BGR2HSV)
+GPU_TEST_P(CvtColor, DISABLED_BGR2HSV)
 {
     if (depth == CV_16U)
         return;
@@ -856,7 +856,7 @@ GPU_TEST_P(CvtColor, BGR2HSV)
     EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, RGB2HSV)
+GPU_TEST_P(CvtColor, DISABLED_RGB2HSV)
 {
     if (depth == CV_16U)
         return;
@@ -872,7 +872,7 @@ GPU_TEST_P(CvtColor, RGB2HSV)
     EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, RGB2HSV4)
+GPU_TEST_P(CvtColor, DISABLED_RGB2HSV4)
 {
     if (depth == CV_16U)
         return;
@@ -896,7 +896,7 @@ GPU_TEST_P(CvtColor, RGB2HSV4)
     EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, RGBA2HSV4)
+GPU_TEST_P(CvtColor, DISABLED_RGBA2HSV4)
 {
     if (depth == CV_16U)
         return;
