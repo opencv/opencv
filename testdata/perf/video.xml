@@ -12065,4 +12065,118 @@
       <y>0</y>
       <cn>1</cn>
       <val>3.2571044921875000e+002</val></rng2></uNextPts></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000->
+ <!-- resumed -->
+
+<OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---1->
+  <u_foreground>
+    <kind>720896</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>604</x>
+      <y>50</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>639</x>
+      <y>514</y>
+      <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---1->
+<OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---3->
+  <u_foreground>
+    <kind>720896</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>692</x>
+      <y>32</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>54</x>
+      <y>254</y>
+      <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---3->
+<OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---1->
+  <u_foreground>
+    <kind>720896</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>810</x>
+      <y>41</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>354</x>
+      <y>498</y>
+      <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---1->
+<OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---3->
+  <u_foreground>
+    <kind>720896</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1611</x>
+      <y>192</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1257</x>
+      <y>601</y>
+      <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---3->
+<OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-768x576-avi---3->
+  <u_background>
+    <kind>720896</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>44.</val></last>
+    <rng1>
+      <x>688</x>
+      <y>185</y>
+      <cn>1</cn>
+      <val>124.</val></rng1>
+    <rng2>
+      <x>183</x>
+      <y>95</y>
+      <cn>2</cn>
+      <val>109.</val></rng2></u_background></OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-768x576-avi---3->
+<OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-1920x1080-avi---3->
+  <u_background>
+    <kind>720896</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>117.</val></last>
+    <rng1>
+      <x>1059</x>
+      <y>234</y>
+      <cn>1</cn>
+      <val>153.</val></rng1>
+    <rng2>
+      <x>683</x>
+      <y>237</y>
+      <cn>2</cn>
+      <val>225.</val></rng2></u_background></OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-1920x1080-avi---3->
 </opencv_storage>
