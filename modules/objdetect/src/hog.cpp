@@ -113,10 +113,7 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 {
     _svmDetector.getMat().convertTo(svmDetector, CV_32F);
 
-    std::vector<float> detector;
-    _svmDetector.getMat().copyTo(detector);
-
-    std::vector<float> detector_reordered(detector.size());
+    Mat detector_reordered(1, (int)svmDetector.size(), CV_32FC1);
 
     size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
     cv::Size blocks_per_img = numPartsWithin(winSize, blockSize, blockStride);
@@ -124,12 +121,12 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
     for (int i = 0; i < blocks_per_img.height; ++i)
         for (int j = 0; j < blocks_per_img.width; ++j)
         {
-            const float *src = &detector[0] + (j * blocks_per_img.height + i) * block_hist_size;
-            float *dst = &detector_reordered[0] + (i * blocks_per_img.width + j) * block_hist_size;
+            const float *src = &svmDetector[0] + (j * blocks_per_img.height + i) * block_hist_size;
+            float *dst = (float*)detector_reordered.data + (i * blocks_per_img.width + j) * block_hist_size;
             for (size_t k = 0; k < block_hist_size; ++k)
                 dst[k] = src[k];
         }
-    Mat(detector_reordered).convertTo(oclSvmDetector, CV_32F);
+    detector_reordered.copyTo(oclSvmDetector);
     CV_Assert(checkDetectorSize());
 }
 
@@ -1119,14 +1116,16 @@ static bool ocl_computeGradient(InputArray img, UMat grad, UMat qangle, int nbin
 static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y, int height, int width,
                               UMat grad, UMat qangle, UMat gauss_w_lut, UMat block_hists, size_t block_hist_size)
 {
+    ocl::Kernel k("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc);
+    if(k.empty())
+        return false;
     bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
     cv::String opts;
     if(is_cpu)
        opts = "-D CPU ";
     else
-       opts = cv::format("-D WAVE_SIZE=%d", 32);
-
-    ocl::Kernel k("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+    k.create("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
     if(k.empty())
         return false;
 
@@ -1177,13 +1176,6 @@ static int power_2up(unsigned int n)
 static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_y,
                                 int height, int width, UMat block_hists, float threshold)
 {
-    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
-    cv::String opts;
-    if(is_cpu)
-       opts = "-D CPU ";
-    else
-       opts = cv::format("-D WAVE_SIZE=%d", 32);
-
     int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
     int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)
         / block_stride_x;
@@ -1194,12 +1186,22 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     size_t localThreads[3] = { 1, 1, 1  };
 
     int idx = 0;
+    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
+    cv::String opts;
     ocl::Kernel k;
     if ( nbins == 9 )
     {
+        k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
         k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
+
         int blocks_in_group = NTHREADS / block_hist_size;
         nthreads = blocks_in_group * block_hist_size;
         int num_groups = (img_block_width * img_block_height + blocks_in_group - 1)/blocks_in_group;
@@ -1208,9 +1210,17 @@ static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_
     }
     else
     {
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
         k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
+
         nthreads = power_2up(block_hist_size);
         globalThreads[0] = img_block_width * nthreads;
         globalThreads[1] = img_block_height;
@@ -1377,9 +1387,8 @@ void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
     Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
-    if(ocl::useOpenCL() && _img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat() &&
+    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
         ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL))
-        return;
 
     Mat img = _img.getMat();
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
@@ -1605,16 +1614,12 @@ private:
 
 static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                int win_stride_y, int win_stride_x, int height, int width,
-                               const UMat& block_hists, const std::vector<float>& _detector,
+                               const UMat& block_hists, UMat detector,
                                float free_coef, float threshold, UMat& labels, Size descr_size, int block_hist_size)
 {
     int nthreads;
     bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
     cv::String opts;
-    if(is_cpu)
-       opts = "-D CPU ";
-    else
-       opts = cv::format("-D WAVE_SIZE=%d", 32);
 
     ocl::Kernel k;
     int idx = 0;
@@ -1622,22 +1627,45 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     {
     case 180:
         nthreads = 180;
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.width);
         idx = k.set(idx, descr_size.height);
         break;
+
     case 252:
         nthreads = 256;
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
         idx = k.set(idx, descr_size.width);
         idx = k.set(idx, descr_size.height);
         break;
+
     default:
         nthreads = 256;
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
         k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
         if(k.empty())
             return false;
@@ -1655,8 +1683,6 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     size_t globalThreads[3] = { img_win_width * nthreads, img_win_height, 1 };
     size_t localThreads[3] = { nthreads, 1, 1 };
 
-    UMat detector(_detector, true);
-
     idx = k.set(idx, block_hist_size);
     idx = k.set(idx, img_win_width);
     idx = k.set(idx, img_block_width);
@@ -1671,7 +1697,7 @@ static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y
     return k.run(2, globalThreads, localThreads, false);
 }
 
-bool HOGDescriptor::ocl_detect(const UMat& img, std::vector<Point> &hits,
+bool HOGDescriptor::ocl_detect(InputArray img, std::vector<Point> &hits,
                        double hit_threshold, Size win_stride) const
 {
     hits.clear();
@@ -1743,20 +1769,21 @@ bool HOGDescriptor::ocl_detectMultiScale(InputArray _img, std::vector<Rect> &fou
 {
     std::vector<Rect> all_candidates;
     std::vector<Point> locations;
-    UMat img = _img.getUMat(), image_scale;
-    image_scale.create(img.size(), img.type());
+    UMat image_scale;
+    Size imgSize = _img.size();
+    image_scale.create(imgSize, _img.type());
 
     for (size_t i = 0; i<level_scale.size() ; i++)
     {
         double scale = level_scale[i];
-        Size effect_size = Size(cvRound(img.cols / scale), cvRound(img.rows / scale));
-        if (effect_size == img.size())
+        Size effect_size = Size(cvRound(imgSize.width / scale), cvRound(imgSize.height / scale));
+        if (effect_size == imgSize)
         {
-            if(!ocl_detect(img, locations, hit_threshold, win_stride)) return false;
+            if(!ocl_detect(_img, locations, hit_threshold, win_stride)) return false;
         }
         else
         {
-            resize(img, image_scale, effect_size);
+            resize(_img, image_scale, effect_size);
             if(!ocl_detect(image_scale, locations, hit_threshold, win_stride)) return false;
         }
         Size scaled_win_size(cvRound(winSize.width * scale),
@@ -1791,10 +1818,12 @@ void HOGDescriptor::detectMultiScale(
     levels = std::max(levels, 1);
     levelScale.resize(levels);
 
-    if(ocl::useOpenCL() && _img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
-        winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat() &&
-        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold))
-        return;
+    if(winStride == Size())
+        winStride = blockStride;
+
+    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
+        winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
+        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold));
 
     std::vector<Rect> allCandidates;
     std::vector<double> tempScales;

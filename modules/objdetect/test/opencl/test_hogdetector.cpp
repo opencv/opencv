@@ -110,20 +110,6 @@ OCL_TEST_P(HOG, Detect)
     OCL_OFF(hog.detectMultiScale(img, cpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
     OCL_ON(hog.detectMultiScale(uimg, gpu_found, 0, Size(8, 8), Size(0, 0), 1.05, 6));
 
-    for (size_t i = 0; i < cpu_found.size(); i++)
-    {
-        Rect r = cpu_found[i];
-        rectangle(img, r.tl(), r.br(), Scalar(0, 255, 0), 3);
-    }
-    imshow("cpu", img);
-    Mat imgs(img);
-    for (size_t i = 0; i < gpu_found.size(); i++)
-    {
-        Rect r = cpu_found[i];
-        rectangle(imgs, r.tl(), r.br(), Scalar(0, 255, 0), 3);
-    }
-    imshow("gpu", imgs);
-    waitKey(0);
     EXPECT_LT(checkRectSimilarity(img.size(), cpu_found, gpu_found), 1.0);
 }
 
