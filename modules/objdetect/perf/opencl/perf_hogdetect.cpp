@@ -74,10 +74,10 @@ OCL_PERF_TEST(HOGFixture, HOG)
 {
     UMat src;
     imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE).copyTo(src);
-    CV_Assert(!src.empty());
+    ASSERT_FALSE(src.empty());
 
     vector<cv::Rect> found_locations;
-    declare.in(src).time(5);
+    declare.in(src);
 
     HOGDescriptor hog;
     hog.setSVMDetector(hog.getDefaultPeopleDetector());
