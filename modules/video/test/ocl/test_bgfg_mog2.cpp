@@ -20,7 +20,7 @@ defined(WIN32)
 namespace cvtest {
 namespace ocl {
 
-////////////////////////// MOG2///////////////////////////////////
+//////////////////////////Mog2_Update///////////////////////////////////
 
 namespace
 {
@@ -28,11 +28,10 @@ namespace
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
 }
 
-PARAM_TEST_CASE(Mog2, UseGray, DetectShadow)
+PARAM_TEST_CASE(Mog2_Update, UseGray, DetectShadow)
 {
     bool useGray;
     bool detectShadow;
-    bool useRoi;
     virtual void SetUp()
     {
         useGray = GET_PARAM(0);
@@ -40,7 +39,7 @@ PARAM_TEST_CASE(Mog2, UseGray, DetectShadow)
     }
 };
 
-OCL_TEST_P(Mog2, Update)
+OCL_TEST_P(Mog2_Update, Accuracy)
 {
     string inputFile = string(TS::ptr()->get_data_path()) + "video/768x576.avi";
     VideoCapture cap(inputFile);
@@ -77,11 +76,19 @@ OCL_TEST_P(Mog2, Update)
     }
 }
 
-OCL_TEST_P(Mog2, getBackgroundImage)
-{
-    if (useGray)
-        return;
+//////////////////////////Mog2_getBackgroundImage///////////////////////////////////
 
+PARAM_TEST_CASE(Mog2_getBackgroundImage, DetectShadow)
+{
+    bool detectShadow;
+    virtual void SetUp()
+    {
+        detectShadow = GET_PARAM(0);
+    }
+};
+
+OCL_TEST_P(Mog2_getBackgroundImage, Accuracy)
+{
     string inputFile = string(TS::ptr()->get_data_path()) + "video/768x576.avi";
     VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -113,10 +120,16 @@ OCL_TEST_P(Mog2, getBackgroundImage)
     EXPECT_MAT_NEAR(background, u_background, 1.0);
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2, Combine(
+///////////////////////////////////////////////////////////////////////////////////////////
+
+OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_Update, Combine(
                                     Values(UseGray(true), UseGray(false)),
                                     Values(DetectShadow(true), DetectShadow(false)))
                            );
+
+OCL_INSTANTIATE_TEST_CASE_P(OCL_Video, Mog2_getBackgroundImage, (Values(DetectShadow(true), DetectShadow(false)))
+                           );
+
 }}// namespace cvtest::ocl
 
     #endif
