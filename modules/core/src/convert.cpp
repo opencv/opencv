@@ -1505,6 +1505,9 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
                   format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s%s", dcn, lcn,
                          ocl::typeToStr(src.depth()), ocl::typeToStr(ddepth),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::ReadOnlyNoSize(lut),
            ocl::KernelArg::WriteOnly(dst));
 
