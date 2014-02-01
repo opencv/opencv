@@ -1644,7 +1644,7 @@ struct Device::Impl
         _TpCL temp=_TpCL();
         size_t sz = 0;
 
-        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) >= 0 &&
+        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) == CL_SUCCESS &&
             sz == sizeof(temp) ? _TpOut(temp) : _TpOut();
     }
 
@@ -1653,7 +1653,7 @@ struct Device::Impl
         cl_bool temp = CL_FALSE;
         size_t sz = 0;
 
-        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) >= 0 &&
+        return clGetDeviceInfo(handle, prop, sizeof(temp), &temp, &sz) == CL_SUCCESS &&
             sz == sizeof(temp) ? temp != 0 : false;
     }
 
@@ -1661,7 +1661,7 @@ struct Device::Impl
     {
         char buf[1024];
         size_t sz=0;
-        return clGetDeviceInfo(handle, prop, sizeof(buf)-16, buf, &sz) >= 0 &&
+        return clGetDeviceInfo(handle, prop, sizeof(buf)-16, buf, &sz) == CL_SUCCESS &&
             sz < sizeof(buf) ? String(buf) : String();
     }
 
@@ -2006,13 +2006,9 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     if (parts.size() > 2)
         deviceNameOrID = parts[2];
     if (parts.size() > 1)
-    {
         split(parts[1], '|', deviceTypes);
-    }
     if (parts.size() > 0)
-    {
         platform = parts[0];
-    }
     return true;
 }
 
@@ -2096,29 +2092,19 @@ static cl_device_id selectOpenCLDevice()
             deviceTypes.push_back("CPU");
         }
         else
-        {
             deviceTypes.push_back("ALL");
-        }
     }
     for (size_t t = 0; t < deviceTypes.size(); t++)
     {
         int deviceType = 0;
         if (deviceTypes[t] == "GPU")
-        {
             deviceType = Device::TYPE_GPU;
-        }
         else if (deviceTypes[t] == "CPU")
-        {
             deviceType = Device::TYPE_CPU;
-        }
         else if (deviceTypes[t] == "ACCELERATOR")
-        {
             deviceType = Device::TYPE_ACCELERATOR;
-        }
         else if (deviceTypes[t] == "ALL")
-        {
             deviceType = Device::TYPE_ALL;
-        }
         else
         {
             std::cerr << "ERROR: Unsupported device type for OpenCL device (GPU, CPU, ACCELERATOR): " << deviceTypes[t] << std::endl;
@@ -2199,16 +2185,14 @@ struct Context2::Impl
 
         handle = clCreateContext(prop, nd, &d, 0, 0, &status);
         CV_Assert(status == CL_SUCCESS);
-        bool ok = handle != 0 && status >= 0;
+        bool ok = handle != 0 && status == CL_SUCCESS;
         if( ok )
         {
             devices.resize(nd);
             devices[0].set(d);
         }
         else
-        {
             handle = NULL;
-        }
     }
 
     Impl(int dtype0)
@@ -2258,7 +2242,7 @@ struct Context2::Impl
         nd = 1;
 
         handle = clCreateContext(prop, nd, dlist_new, 0, 0, &retval);
-        bool ok = handle != 0 && retval >= 0;
+        bool ok = handle != 0 && retval == CL_SUCCESS;
         if( ok )
         {
             devices.resize(nd);
@@ -2430,7 +2414,7 @@ void initializeContextFromHandle(Context2& ctx, void* platform, void* _context, 
     if (impl->handle)
     {
         cl_int status = clReleaseContext(impl->handle);
-        (void)status;
+        CV_Assert(status == CL_SUCCESS);
     }
     impl->devices.clear();
 
@@ -2461,6 +2445,7 @@ struct Queue::Impl
             dh = (cl_device_id)pc->device(0).ptr();
         cl_int retval = 0;
         handle = clCreateCommandQueue(ch, dh, 0, &retval);
+        CV_Assert(retval == CL_SUCCESS);
     }
 
     ~Impl()
@@ -2471,8 +2456,8 @@ struct Queue::Impl
         {
             if(handle)
             {
-                clFinish(handle);
-                clReleaseCommandQueue(handle);
+                CV_Assert(clFinish(handle) == CL_SUCCESS);
+                CV_Assert(clReleaseCommandQueue(handle) == CL_SUCCESS);
             }
         }
     }
@@ -2610,14 +2595,20 @@ struct Kernel::Impl
     void finit()
     {
         cleanupUMats();
-        if(e) { clReleaseEvent(e); e = 0; }
+        if (e)
+        {
+            CV_Assert(clReleaseEvent(e) == CL_SUCCESS);
+            e = 0;
+        }
         release();
     }
 
     ~Impl()
     {
-        if(handle)
-            clReleaseKernel(handle);
+        if (handle)
+        {
+            CV_Assert(clReleaseKernel(handle) == CL_SUCCESS);
+        }
     }
 
     IMPLEMENT_REFCOUNTABLE();
@@ -2707,7 +2698,8 @@ bool Kernel::create(const char* kname, const ProgramSource2& src,
         p = 0;
     }
     String tempmsg;
-    if( !errmsg ) errmsg = &tempmsg;
+    if( !errmsg )
+        errmsg = &tempmsg;
     const Program& prog = Context2::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
@@ -2727,8 +2719,10 @@ int Kernel::set(int i, const void* value, size_t sz)
     CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
-    if( !p || !p->handle || clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+    if( !p || !p->handle )
         return -1;
+    else
+        CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, sz, value) == CL_SUCCESS);
     return i+1;
 }
 
@@ -2758,44 +2752,44 @@ int Kernel::set(int i, const KernelArg& arg)
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
 
         if (ptronly)
-            clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h) == CL_SUCCESS);
         else if( arg.m->dims <= 2 )
         {
             UMat2D u2d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step);
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h) == CL_SUCCESS);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u2d.step), &u2d.step) == CL_SUCCESS);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u2d.offset), &u2d.offset) == CL_SUCCESS);
             i += 3;
 
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u2d.cols*arg.wscale;
-                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows);
-                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols);
+                CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows) == CL_SUCCESS);
+                CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols) == CL_SUCCESS);
                 i += 2;
             }
         }
         else
         {
             UMat3D u3d(*arg.m);
-            clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h);
-            clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep);
-            clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step);
-            clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(h), &h) == CL_SUCCESS);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.slicestep), &u3d.slicestep) == CL_SUCCESS);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.step), &u3d.step) == CL_SUCCESS);
+            CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+3), sizeof(u3d.offset), &u3d.offset) == CL_SUCCESS);
             i += 4;
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
                 int cols = u3d.cols*arg.wscale;
-                clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows);
-                clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows);
-                clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols);
+                CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
+                CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
+                CV_Assert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
                 i += 3;
             }
         }
         p->addUMat(*arg.m, (accessFlags & ACCESS_WRITE) != 0);
         return i;
     }
-    clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj);
+    CV_Assert(clSetKernelArg(p->handle, (cl_uint)i, arg.sz, arg.obj) == CL_SUCCESS);
     return i+1;
 }
 
@@ -2827,15 +2821,15 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
                                            sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
-        clFinish(qq);
+        CV_Assert(clFinish(qq) == CL_SUCCESS);
         p->cleanupUMats();
     }
     else
     {
         p->addref();
-        clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
+        CV_Assert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
     }
-    return retval >= 0;
+    return retval == CL_SUCCESS;
 }
 
 bool Kernel::runTask(bool sync, const Queue& q)
@@ -2847,15 +2841,15 @@ bool Kernel::runTask(bool sync, const Queue& q)
     cl_int retval = clEnqueueTask(qq, p->handle, 0, 0, sync ? 0 : &p->e);
     if( sync || retval < 0 )
     {
-        clFinish(qq);
+        CV_Assert(clFinish(qq) == CL_SUCCESS);
         p->cleanupUMats();
     }
     else
     {
         p->addref();
-        clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p);
+        CV_Assert(clSetEventCallback(p->e, CL_COMPLETE, oclCleanupCallback, p) == CL_SUCCESS);
     }
-    return retval >= 0;
+    return retval == CL_SUCCESS;
 }
 
 
@@ -2866,7 +2860,7 @@ size_t Kernel::workGroupSize() const
     size_t val = 0, retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_WORK_GROUP_SIZE,
-                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? val : 0;
 }
 
 size_t Kernel::preferedWorkGroupSizeMultiple() const
@@ -2876,7 +2870,7 @@ size_t Kernel::preferedWorkGroupSizeMultiple() const
     size_t val = 0, retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-                                    sizeof(val), &val, &retsz) >= 0 ? val : 0;
+                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? val : 0;
 }
 
 bool Kernel::compileWorkGroupSize(size_t wsz[]) const
@@ -2886,7 +2880,7 @@ bool Kernel::compileWorkGroupSize(size_t wsz[]) const
     size_t retsz = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_COMPILE_WORK_GROUP_SIZE,
-                                    sizeof(wsz[0]*3), wsz, &retsz) >= 0;
+                                    sizeof(wsz[0]*3), wsz, &retsz) == CL_SUCCESS;
 }
 
 size_t Kernel::localMemSize() const
@@ -2897,7 +2891,7 @@ size_t Kernel::localMemSize() const
     cl_ulong val = 0;
     cl_device_id dev = (cl_device_id)Device::getDefault().ptr();
     return clGetKernelWorkGroupInfo(p->handle, dev, CL_KERNEL_LOCAL_MEM_SIZE,
-                                    sizeof(val), &val, &retsz) >= 0 ? (size_t)val : 0;
+                                    sizeof(val), &val, &retsz) == CL_SUCCESS ? (size_t)val : 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -2917,7 +2911,7 @@ struct Program::Impl
         cl_int retval = 0;
 
         handle = clCreateProgramWithSource((cl_context)ctx.ptr(), 1, &srcptr, &srclen, &retval);
-        if( handle && retval >= 0 )
+        if( handle && retval == CL_SUCCESS )
         {
             int i, n = (int)ctx.ndevices();
             AutoBuffer<void*> deviceListBuf(n+1);
@@ -2933,13 +2927,13 @@ struct Program::Impl
                 size_t retsz = 0;
                 retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
                                                CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if( retval >= 0 && retsz > 1 )
+                if( retval == CL_SUCCESS && retsz > 1 )
                 {
                     AutoBuffer<char> bufbuf(retsz + 16);
                     char* buf = bufbuf;
                     retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
                                                    CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
-                    if( retval >= 0 )
+                    if( retval == CL_SUCCESS )
                     {
                         errmsg = String(buf);
                         printf("OpenCL program can not be built: %s", errmsg.c_str());
@@ -3325,8 +3319,8 @@ public:
                 cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
                 if( u->tempCopiedUMat() )
                 {
-                    clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                        u->size, u->origdata, 0, 0, 0);
+                    CV_Assert(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                        u->size, u->origdata, 0, 0, 0) == CL_SUCCESS);
                 }
                 else
                 {
@@ -3334,12 +3328,13 @@ public:
                     void* data = clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                     (CL_MAP_READ | CL_MAP_WRITE),
                                                     0, u->size, 0, 0, 0, &retval);
-                    clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0);
-                    clFinish(q);
+                    CV_Assert(retval == CL_SUCCESS);
+                    CV_Assert(clEnqueueUnmapMemObject(q, (cl_mem)u->handle, data, 0, 0, 0) == CL_SUCCESS);
+                    CV_Assert(clFinish(q) == CL_SUCCESS);
                 }
             }
             u->markHostCopyObsolete(false);
-            clReleaseMemObject((cl_mem)u->handle);
+            CV_Assert(clReleaseMemObject((cl_mem)u->handle) == CL_SUCCESS);
             u->handle = 0;
             u->currAllocator = u->prevAllocator;
             if(u->data && u->copyOnMap() && !(u->flags & UMatData::USER_ALLOCATED))
@@ -3356,7 +3351,7 @@ public:
                 fastFree(u->data);
                 u->data = 0;
             }
-            clReleaseMemObject((cl_mem)u->handle);
+            CV_Assert(clReleaseMemObject((cl_mem)u->handle) == CL_SUCCESS);
             u->handle = 0;
             delete u;
         }
@@ -3387,7 +3382,7 @@ public:
                 u->data = (uchar*)clEnqueueMapBuffer(q, (cl_mem)u->handle, CL_TRUE,
                                                      (CL_MAP_READ | CL_MAP_WRITE),
                                                      0, u->size, 0, 0, 0, &retval);
-                if(u->data && retval >= 0)
+                if(u->data && retval == CL_SUCCESS)
                 {
                     u->markHostCopyObsolete(false);
                     return;
@@ -3406,8 +3401,8 @@ public:
 
         if( (accessFlags & ACCESS_READ) != 0 && u->hostCopyObsolete() )
         {
-            CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                           u->size, u->data, 0, 0, 0) >= 0 );
+            CV_Assert(clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
+                                           u->size, u->data, 0, 0, 0) == CL_SUCCESS );
             u->markHostCopyObsolete(false);
         }
     }
@@ -3426,14 +3421,14 @@ public:
         if( !u->copyOnMap() && u->data )
         {
             CV_Assert( (retval = clEnqueueUnmapMemObject(q,
-                                (cl_mem)u->handle, u->data, 0, 0, 0)) >= 0 );
-            clFinish(q);
+                                (cl_mem)u->handle, u->data, 0, 0, 0)) == CL_SUCCESS );
+            CV_Assert(clFinish(q) == CL_SUCCESS);
             u->data = 0;
         }
         else if( u->copyOnMap() && u->deviceCopyObsolete() )
         {
             CV_Assert( (retval = clEnqueueWriteBuffer(q, (cl_mem)u->handle, CL_TRUE, 0,
-                                u->size, u->data, 0, 0, 0)) >= 0 );
+                                u->size, u->data, 0, 0, 0)) == CL_SUCCESS );
         }
         u->markDeviceCopyObsolete(false);
         u->markHostCopyObsolete(false);
@@ -3541,13 +3536,13 @@ public:
         if( iscontinuous )
         {
             CV_Assert( clEnqueueReadBuffer(q, (cl_mem)u->handle, CL_TRUE,
-                                           srcrawofs, total, dstptr, 0, 0, 0) >= 0 );
+                                           srcrawofs, total, dstptr, 0, 0, 0) == CL_SUCCESS );
         }
         else
         {
             CV_Assert( clEnqueueReadBufferRect(q, (cl_mem)u->handle, CL_TRUE,
                             new_srcofs, new_dstofs, new_sz, new_srcstep[0], new_srcstep[1],
-                            new_dststep[0], new_dststep[1], dstptr, 0, 0, 0) >= 0 );
+                            new_dststep[0], new_dststep[1], dstptr, 0, 0, 0) == CL_SUCCESS );
         }
     }
 
@@ -3591,13 +3586,13 @@ public:
         if( iscontinuous )
         {
             CV_Assert( clEnqueueWriteBuffer(q, (cl_mem)u->handle,
-                CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) >= 0 );
+                CL_TRUE, dstrawofs, total, srcptr, 0, 0, 0) == CL_SUCCESS );
         }
         else
         {
             CV_Assert( clEnqueueWriteBufferRect(q, (cl_mem)u->handle, CL_TRUE,
                 new_dstofs, new_srcofs, new_sz, new_dststep[0], new_dststep[1],
-                new_srcstep[0], new_srcstep[1], srcptr, 0, 0, 0) >= 0 );
+                new_srcstep[0], new_srcstep[1], srcptr, 0, 0, 0) == CL_SUCCESS );
         }
 
         u->markHostCopyObsolete(true);
@@ -3643,7 +3638,7 @@ public:
         if( iscontinuous )
         {
             CV_Assert( clEnqueueCopyBuffer(q, (cl_mem)src->handle, (cl_mem)dst->handle,
-                                           srcrawofs, dstrawofs, total, 0, 0, 0) >= 0 );
+                                           srcrawofs, dstrawofs, total, 0, 0, 0) == CL_SUCCESS );
         }
         else
         {
@@ -3652,7 +3647,7 @@ public:
                                                new_srcofs, new_dstofs, new_sz,
                                                new_srcstep[0], new_srcstep[1],
                                                new_dststep[0], new_dststep[1],
-                                               0, 0, 0)) >= 0 );
+                                               0, 0, 0)) == CL_SUCCESS );
         }
 
         dst->markHostCopyObsolete(true);
