@@ -2724,10 +2724,12 @@ bool Kernel::empty() const
 
 int Kernel::set(int i, const void* value, size_t sz)
 {
+    if (!p || !p->handle)
+        return -1;
     CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
-    if( !p || !p->handle || clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+    if( clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
         return -1;
     return i+1;
 }
@@ -2745,9 +2747,9 @@ int Kernel::set(int i, const UMat& m)
 
 int Kernel::set(int i, const KernelArg& arg)
 {
-    CV_Assert( i >= 0 );
     if( !p || !p->handle )
         return -1;
+    CV_Assert( i >= 0 );
     if( i == 0 )
         p->cleanupUMats();
     if( arg.m )
@@ -2756,6 +2758,13 @@ int Kernel::set(int i, const KernelArg& arg)
                           ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : 0);
         bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
         cl_mem h = (cl_mem)arg.m->handle(accessFlags);
+
+        if (!h)
+        {
+            p->release();
+            p = 0;
+            return -1;
+        }
 
         if (ptronly)
             clSetKernelArg(p->handle, (cl_uint)i++, sizeof(h), &h);
