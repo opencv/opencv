@@ -173,8 +173,8 @@ cv::Mat cv::viz::readCloud(const String& file, OutputArray colors, OutputArray n
     vtkSmartPointer<vtkPolyDataAlgorithm> reader;
     if (extention == ".xyz")
     {
-        reader = vtkSmartPointer<vtkSimplePointsReader>::New();
-        vtkSimplePointsReader::SafeDownCast(reader)->SetFileName(file.c_str());
+        reader = vtkSmartPointer<vtkXYZReader>::New();
+        vtkXYZReader::SafeDownCast(reader)->SetFileName(file.c_str());
     }
     else if (extention == ".ply")
     {

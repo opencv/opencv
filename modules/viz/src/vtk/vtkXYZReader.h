@@ -42,81 +42,39 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#ifndef __vtkXYZReader_h
+#define __vtkXYZReader_h
 
-namespace cv { namespace viz
+#include "vtkPolyDataAlgorithm.h"
+
+namespace cv
 {
-    vtkStandardNewMacro(vtkXYZWriter);
-}}
-
-cv::viz::vtkXYZWriter::vtkXYZWriter()
-{
-    std::ofstream fout; // only used to extract the default precision
-    this->DecimalPrecision = fout.precision();
-}
-
-void cv::viz::vtkXYZWriter::WriteData()
-{
-    vtkPolyData *input = this->GetInput();
-    if (!input)
-        return;
-
-    if (!this->FileName )
+    namespace viz
     {
-        vtkErrorMacro(<< "No FileName specified! Can't write!");
-        this->SetErrorCode(vtkErrorCode::NoFileNameError);
-        return;
-    }
+        class vtkXYZReader : public vtkPolyDataAlgorithm
+        {
+        public:
+          static vtkXYZReader* New();
+          vtkTypeMacro(vtkXYZReader,vtkPolyDataAlgorithm)
+          void PrintSelf(ostream& os, vtkIndent indent);
 
-    vtkDebugMacro(<<"Opening vtk file for writing...");
-    ostream *outfilep = new ofstream(this->FileName, ios::out);
-    if (outfilep->fail())
-    {
-        vtkErrorMacro(<< "Unable to open file: "<< this->FileName);
-        this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
-        delete outfilep;
-        return;
-    }
+          // Description:
+          // Set/Get the name of the file from which to read points.
+          vtkSetStringMacro(FileName)
+          vtkGetStringMacro(FileName)
 
-    ostream &outfile = *outfilep;
+        protected:
+          vtkXYZReader();
+          ~vtkXYZReader();
 
-    for(vtkIdType i = 0; i < input->GetNumberOfPoints(); ++i)
-    {
-        Vec3d p;
-        input->GetPoint(i, p.val);
-        outfile << std::setprecision(this->DecimalPrecision) << p[0] << " " << p[1] << " " << p[2] << std::endl;
-    }
+          char* FileName;
 
-    // Close the file
-    vtkDebugMacro(<<"Closing vtk file\n");
-    delete outfilep;
-
-    // Delete the file if an error occurred
-    if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
-    {
-        vtkErrorMacro("Ran out of disk space; deleting file: " << this->FileName);
-        unlink(this->FileName);
+          int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+        private:
+          vtkXYZReader(const vtkXYZReader&);  // Not implemented.
+          void operator=(const vtkXYZReader&);  // Not implemented.
+        };
     }
 }
 
-int cv::viz::vtkXYZWriter::FillInputPortInformation(int, vtkInformation *info)
-{
-    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
-    return 1;
-}
-
-void cv::viz::vtkXYZWriter::PrintSelf(ostream& os, vtkIndent indent)
-{
-    this->Superclass::PrintSelf(os,indent);
-    os << indent << "DecimalPrecision: " << this->DecimalPrecision << "\n";
-}
-
-vtkPolyData* cv::viz::vtkXYZWriter::GetInput()
-{
-    return vtkPolyData::SafeDownCast(this->Superclass::GetInput());
-}
-
-vtkPolyData* cv::viz::vtkXYZWriter::GetInput(int port)
-{
-    return vtkPolyData::SafeDownCast(this->Superclass::GetInput(port));
-}
+#endif

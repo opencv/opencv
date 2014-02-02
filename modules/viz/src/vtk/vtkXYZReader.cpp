@@ -46,77 +46,62 @@
 
 namespace cv { namespace viz
 {
-    vtkStandardNewMacro(vtkXYZWriter);
+    vtkStandardNewMacro(vtkXYZReader);
 }}
 
-cv::viz::vtkXYZWriter::vtkXYZWriter()
+
+cv::viz::vtkXYZReader::vtkXYZReader()
 {
-    std::ofstream fout; // only used to extract the default precision
-    this->DecimalPrecision = fout.precision();
+    this->FileName = 0;
+    this->SetNumberOfInputPorts(0);
 }
 
-void cv::viz::vtkXYZWriter::WriteData()
+cv::viz::vtkXYZReader::~vtkXYZReader()
 {
-    vtkPolyData *input = this->GetInput();
-    if (!input)
-        return;
-
-    if (!this->FileName )
-    {
-        vtkErrorMacro(<< "No FileName specified! Can't write!");
-        this->SetErrorCode(vtkErrorCode::NoFileNameError);
-        return;
-    }
-
-    vtkDebugMacro(<<"Opening vtk file for writing...");
-    ostream *outfilep = new ofstream(this->FileName, ios::out);
-    if (outfilep->fail())
-    {
-        vtkErrorMacro(<< "Unable to open file: "<< this->FileName);
-        this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
-        delete outfilep;
-        return;
-    }
-
-    ostream &outfile = *outfilep;
-
-    for(vtkIdType i = 0; i < input->GetNumberOfPoints(); ++i)
-    {
-        Vec3d p;
-        input->GetPoint(i, p.val);
-        outfile << std::setprecision(this->DecimalPrecision) << p[0] << " " << p[1] << " " << p[2] << std::endl;
-    }
-
-    // Close the file
-    vtkDebugMacro(<<"Closing vtk file\n");
-    delete outfilep;
-
-    // Delete the file if an error occurred
-    if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
-    {
-        vtkErrorMacro("Ran out of disk space; deleting file: " << this->FileName);
-        unlink(this->FileName);
-    }
+    this->SetFileName(0);
 }
 
-int cv::viz::vtkXYZWriter::FillInputPortInformation(int, vtkInformation *info)
-{
-    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
-    return 1;
-}
-
-void cv::viz::vtkXYZWriter::PrintSelf(ostream& os, vtkIndent indent)
+void cv::viz::vtkXYZReader::PrintSelf(ostream& os, vtkIndent indent)
 {
     this->Superclass::PrintSelf(os,indent);
-    os << indent << "DecimalPrecision: " << this->DecimalPrecision << "\n";
+    os << indent << "FileName: " << (this->FileName ? this->FileName : "(none)") << "\n";
 }
 
-vtkPolyData* cv::viz::vtkXYZWriter::GetInput()
+int cv::viz::vtkXYZReader::RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector* outputVector)
 {
-    return vtkPolyData::SafeDownCast(this->Superclass::GetInput());
-}
+    // Make sure we have a file to read.
+    if(!this->FileName)
+    {
+        vtkErrorMacro("A FileName must be specified.");
+        return 0;
+    }
 
-vtkPolyData* cv::viz::vtkXYZWriter::GetInput(int port)
-{
-    return vtkPolyData::SafeDownCast(this->Superclass::GetInput(port));
+    // Open the input file.
+    ifstream fin(this->FileName);
+    if(!fin)
+    {
+        vtkErrorMacro("Error opening file " << this->FileName);
+        return 0;
+    }
+
+    // Allocate objects to hold points and vertex cells.
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> verts = vtkSmartPointer<vtkCellArray>::New();
+
+    // Read points from the file.
+    vtkDebugMacro("Reading points from file " << this->FileName);
+    double x[3];
+    while(fin >> x[0] >> x[1] >> x[2])
+    {
+        vtkIdType id = points->InsertNextPoint(x);
+        verts->InsertNextCell(1, &id);
+    }
+    vtkDebugMacro("Read " << points->GetNumberOfPoints() << " points.");
+
+    // Store the points and cells in the output data object.
+    vtkPolyData* output = vtkPolyData::GetData(outputVector);
+    output->SetPoints(points);
+    output->SetVerts(verts);
+
+    return 1;
 }

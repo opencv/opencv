@@ -76,7 +76,6 @@
 #include <vtkDoubleArray.h>
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
-#include <vtkPolyDataReader.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkDataSetMapper.h>
 #include <vtkCellArray.h>
@@ -115,11 +114,9 @@
 #include <vtkObjectFactory.h>
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkMergeFilter.h>
-#include <vtkDataSetWriter.h>
 #include <vtkErrorCode.h>
 #include <vtkPLYWriter.h>
 #include <vtkSTLWriter.h>
-#include <vtkSimplePointsReader.h>
 #include <vtkPLYReader.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
@@ -142,6 +139,7 @@
 
 #include <vtk/vtkOBJWriter.h>
 #include <vtk/vtkXYZWriter.h>
+#include <vtk/vtkXYZReader.h>
 #include <vtk/vtkCloudMatSink.h>
 #include <vtk/vtkCloudMatSource.h>
 #include <vtk/vtkTrajectorySource.h>
