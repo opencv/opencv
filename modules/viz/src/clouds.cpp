@@ -347,7 +347,7 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     source->SetColorCloudNormalsTCoords(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
     source->Update();
 
-    Mat lookup_buffer(1, mesh.cloud.total(), CV_32SC1);
+    Mat lookup_buffer(1, (int)mesh.cloud.total(), CV_32SC1);
     int *lookup = lookup_buffer.ptr<int>();
     for(int y = 0, index = 0; y < mesh.cloud.rows; ++y)
     {
