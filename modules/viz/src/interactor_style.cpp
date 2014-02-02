@@ -366,7 +366,6 @@ void cv::viz::InteractorStyle::OnKeyDown()
             {
                 Interactor->GetRenderWindow()->SetSize(win_size_.val);
                 Interactor->GetRenderWindow()->SetPosition(win_pos_.val);
-                Interactor->GetRenderWindow()->Render();
                 Interactor->Render();
             }
             // Set to max
@@ -376,7 +375,6 @@ void cv::viz::InteractorStyle::OnKeyDown()
                 win_size_ = win_size;
 
                 Interactor->GetRenderWindow()->SetSize(screen_size.val);
-                Interactor->GetRenderWindow()->Render();
                 Interactor->Render();
                 max_win_size_ = Vec2i(Interactor->GetRenderWindow()->GetSize());
             }
@@ -417,7 +415,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
     {
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
         cam->SetParallelProjection(!cam->GetParallelProjection());
-        CurrentRenderer->Render();
+        Interactor->Render();
         break;
     }
 
@@ -468,7 +466,7 @@ void cv::viz::InteractorStyle::OnKeyDown()
 
         CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->ResetCameraClippingRange();
-        CurrentRenderer->Render();
+        Interactor->Render();
         break;
     }
 
@@ -594,7 +592,6 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
         cam->Modified();
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
-        CurrentRenderer->Render();
         Interactor->Render();
     }
     else
@@ -624,7 +621,6 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
         cam->Modified();
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
-        CurrentRenderer->Render();
         Interactor->Render();
     }
     else
