@@ -211,13 +211,16 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
     if (!mapper)
     {
+        vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+        VtkUtils::AddInputData(append_filter, polydata);
+
         // This is the first cloud
         mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
         mapper->SetScalarRange(0, 255);
         mapper->SetScalarModeToUsePointData();
         mapper->ScalarVisibilityOn();
         mapper->ImmediateModeRenderingOff();
-        VtkUtils::SetInputData(mapper, polydata);
+        mapper->SetInputConnection(append_filter->GetOutputPort());
 
         actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, polydata->GetNumberOfPoints()/10));
         actor->GetProperty()->SetInterpolationToFlat();
@@ -226,15 +229,10 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
         return;
     }
 
-    vtkPolyData *currdata = vtkPolyData::SafeDownCast(mapper->GetInput());
-    CV_Assert("Cloud Widget without data" && currdata);
-
-    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
-    VtkUtils::AddInputData(append_filter, currdata);
+    vtkSmartPointer<vtkAlgorithm> producer = mapper->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
     VtkUtils::AddInputData(append_filter, polydata);
-    append_filter->Update();
-
-    VtkUtils::SetInputData(mapper, append_filter->GetOutput());
+    append_filter->Modified();
 
     actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
 }
