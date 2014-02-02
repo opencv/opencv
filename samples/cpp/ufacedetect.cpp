@@ -1,4 +1,5 @@
 #include "opencv2/objdetect.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
@@ -231,9 +232,14 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
     smallImg.copyTo(canvas);
 
     double fps = getTickFrequency()/t;
+    static double avgfps = 0;
+    static int nframes = 0;
+    nframes++;
+    double alpha = nframes > 50 ? 0.01 : 1./nframes;
+    avgfps = avgfps*(1-alpha) + fps*alpha;
 
-    putText(canvas, format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", fps), Point(250, 50),
-            FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0), 3);
+    putText(canvas, format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", avgfps), Point(50, 30),
+            FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0,255,0), 2);
 
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {

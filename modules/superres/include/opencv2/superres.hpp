@@ -83,6 +83,8 @@ namespace cv
             virtual void initImpl(Ptr<FrameSource>& frameSource) = 0;
             virtual void processImpl(Ptr<FrameSource>& frameSource, OutputArray output) = 0;
 
+            bool isUmat_;
+
         private:
             Ptr<FrameSource> frameSource_;
             bool firstCall_;

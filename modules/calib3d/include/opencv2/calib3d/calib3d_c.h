@@ -276,9 +276,9 @@ CVAPI(double) cvStereoCalibrate( const CvMat* object_points, const CvMat* image_
                                CvMat* camera_matrix2, CvMat* dist_coeffs2,
                                CvSize image_size, CvMat* R, CvMat* T,
                                CvMat* E CV_DEFAULT(0), CvMat* F CV_DEFAULT(0),
+                               int flags CV_DEFAULT(CV_CALIB_FIX_INTRINSIC),
                                CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
-                                   CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6)),
-                               int flags CV_DEFAULT(CV_CALIB_FIX_INTRINSIC));
+                                   CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6)) );
 
 #define CV_CALIB_ZERO_DISPARITY 1024
 

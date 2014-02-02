@@ -734,7 +734,7 @@ CUDA_TEST_P(Normalize, WithOutMask)
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 CUDA_TEST_P(Normalize, WithMask)
@@ -850,7 +850,7 @@ CUDA_TEST_P(Integral, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Integral, testing::Combine(
     ALL_DEVICES,
-    DIFFERENT_SIZES,
+    testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(768, 1066)),
     WHOLE_SUBMAT));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

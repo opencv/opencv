@@ -75,6 +75,9 @@ CV_DefaultNewCameraMatrixTest::CV_DefaultNewCameraMatrixTest()
     test_array[INPUT].push_back(NULL);
     test_array[OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
+
+    matrix_type = 0;
+    center_principal_point = false;
 }
 
 void CV_DefaultNewCameraMatrixTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
@@ -200,6 +203,9 @@ CV_UndistortPointsTest::CV_UndistortPointsTest()
     test_array[OUTPUT].push_back(NULL); // distorted dst points
     test_array[TEMP].push_back(NULL); // dst points
     test_array[REF_OUTPUT].push_back(NULL);
+
+    useCPlus = useDstMat = false;
+    zero_new_cam = zero_distortion = zero_R = false;
 }
 
 void CV_UndistortPointsTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
@@ -605,6 +611,11 @@ CV_InitUndistortRectifyMapTest::CV_InitUndistortRectifyMapTest()
     test_array[INPUT].push_back(NULL); // new camera matrix
     test_array[OUTPUT].push_back(NULL); // distorted dst points
     test_array[REF_OUTPUT].push_back(NULL);
+
+    useCPlus = false;
+    zero_distortion = zero_new_cam = zero_R = false;
+    _mapx = _mapy = NULL;
+    mat_type = 0;
 }
 
 void CV_InitUndistortRectifyMapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )

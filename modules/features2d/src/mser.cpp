@@ -1266,11 +1266,11 @@ MSER::MSER( int _delta, int _min_area, int _max_area,
 {
 }
 
-void MSER::operator()( const Mat& image, std::vector<std::vector<Point> >& dstcontours, const Mat& mask ) const
+void MSER::operator()( InputArray image, std::vector<std::vector<Point> >& dstcontours, InputArray mask ) const
 {
-    CvMat _image = image, _mask, *pmask = 0;
-    if( mask.data )
-        pmask = &(_mask = mask);
+    CvMat _image = image.getMat(), _mask, *pmask = 0;
+    if( !mask.empty() )
+        pmask = &(_mask = mask.getMat());
     MemStorage storage(cvCreateMemStorage(0));
     Seq<CvSeq*> contours;
     extractMSER( &_image, pmask, &contours.seq, storage,

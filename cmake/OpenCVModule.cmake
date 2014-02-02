@@ -27,7 +27,8 @@
 # The verbose template for OpenCV module:
 #
 #   ocv_add_module(modname <dependencies>)
-#   ocv_glob_module_sources() or glob them manually and ocv_set_module_sources(...)
+#   ocv_glob_module_sources(([EXCLUDE_CUDA] <extra sources&headers>)
+#                          or glob them manually and ocv_set_module_sources(...)
 #   ocv_module_include_directories(<extra include directories>)
 #   ocv_create_module()
 #   <add extra link dependencies, compiler options, etc>
@@ -135,13 +136,13 @@ macro(ocv_add_module _name)
 
     # parse list of dependencies
     if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
-      set(OPENCV_MODULE_${the_module}_CLASS "${ARGV1}" CACHE INTERNAL "The cathegory of the module")
+      set(OPENCV_MODULE_${the_module}_CLASS "${ARGV1}" CACHE INTERNAL "The category of the module")
       set(__ocv_argn__ ${ARGN})
       list(REMOVE_AT __ocv_argn__ 0)
       ocv_add_dependencies(${the_module} ${__ocv_argn__})
       unset(__ocv_argn__)
     else()
-      set(OPENCV_MODULE_${the_module}_CLASS "PUBLIC" CACHE INTERNAL "The cathegory of the module")
+      set(OPENCV_MODULE_${the_module}_CLASS "PUBLIC" CACHE INTERNAL "The category of the module")
       ocv_add_dependencies(${the_module} ${ARGN})
       if(BUILD_${the_module})
         set(OPENCV_MODULES_PUBLIC ${OPENCV_MODULES_PUBLIC} "${the_module}" CACHE INTERNAL "List of OpenCV modules marked for export")
@@ -478,25 +479,41 @@ endmacro()
 
 # finds and sets headers and sources for the standard OpenCV module
 # Usage:
-# ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
+# ocv_glob_module_sources([EXCLUDE_CUDA] <extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
-  file(GLOB_RECURSE lib_srcs     "src/*.cpp")
+  set(_argn ${ARGN})
+  list(FIND _argn "EXCLUDE_CUDA" exclude_cuda)
+  if(NOT exclude_cuda EQUAL -1)
+    list(REMOVE_AT _argn ${exclude_cuda})
+  endif()
+
+  file(GLOB_RECURSE lib_srcs "src/*.cpp")
   file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
+  file(GLOB_RECURSE lib_srcs_apple "src/*.mm")
+  if (APPLE)
+    list(APPEND lib_srcs ${lib_srcs_apple})
+  endif()
 
   ocv_source_group("Src" DIRBASE "${CMAKE_CURRENT_SOURCE_DIR}/src" FILES ${lib_srcs} ${lib_int_hdrs})
   ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_SOURCE_DIR}/include" FILES ${lib_hdrs} ${lib_hdrs_detail})
 
-  file(GLOB lib_cuda_srcs "src/cuda/*.cu")
-  set(cuda_objs "")
-  set(lib_cuda_hdrs "")
-  if(HAVE_CUDA AND lib_cuda_srcs)
-    ocv_include_directories(${CUDA_INCLUDE_DIRS})
-    file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
+  if (exclude_cuda EQUAL -1)
+    file(GLOB lib_cuda_srcs "src/cuda/*.cu")
+    set(cuda_objs "")
+    set(lib_cuda_hdrs "")
+    if(HAVE_CUDA)
+      ocv_include_directories(${CUDA_INCLUDE_DIRS})
+      file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
-    ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
-    source_group("Src\\Cuda" FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+      ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
+      source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    endif()
+  else()
+    set(cuda_objs "")
+    set(lib_cuda_srcs "")
+    set(lib_cuda_hdrs "")
   endif()
 
   file(GLOB cl_kernels "src/opencl/*.cl")
@@ -512,8 +529,8 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
   endif()
 
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+  ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -618,11 +635,20 @@ endmacro()
 # short command for adding simple OpenCV module
 # see ocv_add_module for argument details
 # Usage:
-# ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+# ocv_define_module(module_name  [INTERNAL] [EXCLUDE_CUDA] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 macro(ocv_define_module module_name)
-  ocv_add_module(${module_name} ${ARGN})
+  set(_argn ${ARGN})
+  set(exclude_cuda "")
+  foreach(arg ${_argn})
+    if("${arg}" STREQUAL "EXCLUDE_CUDA")
+      set(exclude_cuda "${arg}")
+      list(REMOVE_ITEM _argn ${arg})
+    endif()
+  endforeach()
+
+  ocv_add_module(${module_name} ${_argn})
   ocv_module_include_directories()
-  ocv_glob_module_sources()
+  ocv_glob_module_sources(${exclude_cuda})
   ocv_create_module()
   ocv_add_precompiled_headers(${the_module})
 
@@ -678,8 +704,8 @@ function(ocv_add_perf_tests)
   if(BUILD_PERF_TESTS AND EXISTS "${perf_path}")
     __ocv_parse_test_sources(PERF ${ARGN})
 
-    # opencv_highgui is required for imread/imwrite
-    set(perf_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_PERF_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    # opencv_imgcodecs is required for imread/imwrite
+    set(perf_deps ${the_module} opencv_ts opencv_imgcodecs ${OPENCV_PERF_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${perf_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -717,6 +743,9 @@ function(ocv_add_perf_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+    if(INSTALL_TESTS)
+      install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+    endif()
   endif()
 endfunction()
 
@@ -728,8 +757,8 @@ function(ocv_add_accuracy_tests)
   if(BUILD_TESTS AND EXISTS "${test_path}")
     __ocv_parse_test_sources(TEST ${ARGN})
 
-    # opencv_highgui is required for imread/imwrite
-    set(test_deps ${the_module} opencv_ts opencv_highgui ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
+    # opencv_imgcodecs is required for imread/imwrite
+    set(test_deps ${the_module} opencv_ts opencv_imgcodecs opencv_highgui ${OPENCV_TEST_${the_module}_DEPS} ${OPENCV_MODULE_opencv_ts_DEPS})
     ocv_check_dependencies(${test_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -747,8 +776,8 @@ function(ocv_add_accuracy_tests)
       endif()
 
       get_native_precompiled_header(${the_target} test_precomp.hpp)
-
       add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
+
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
@@ -770,6 +799,10 @@ function(ocv_add_accuracy_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+
+    if(INSTALL_TESTS)
+      install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+    endif()
   endif()
 endfunction()
 
@@ -778,7 +811,7 @@ function(ocv_add_samples)
   string(REGEX REPLACE "^opencv_" "" module_id ${the_module})
 
   if(BUILD_EXAMPLES AND EXISTS "${samples_path}")
-    set(samples_deps ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} opencv_highgui ${ARGN})
+    set(samples_deps ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} opencv_imgcodecs opencv_highgui ${ARGN})
     ocv_check_dependencies(${samples_deps})
 
     if(OCV_DEPENDENCIES_FOUND)
@@ -810,7 +843,7 @@ function(ocv_add_samples)
   if(INSTALL_C_EXAMPLES AND NOT WIN32 AND EXISTS "${samples_path}")
     file(GLOB sample_files "${samples_path}/*")
     install(FILES ${sample_files}
-            DESTINATION share/OpenCV/samples/${module_id}
+            DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${module_id}
             PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
   endif()
 endfunction()

@@ -70,7 +70,7 @@ namespace cv
         //Rodrigues vector
         Affine3(const Vec3& rvec, const Vec3& t = Vec3::all(0));
 
-        //Combines all contructors above. Supports 4x4, 3x4, 3x3, 1x3, 3x1 sizes of data matrix
+        //Combines all contructors above. Supports 4x4, 4x3, 3x3, 1x3, 3x1 sizes of data matrix
         explicit Affine3(const Mat& data, const Vec3& t = Vec3::all(0));
 
         //From 16th element array

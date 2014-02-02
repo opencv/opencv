@@ -211,6 +211,7 @@ void CV_ChessboardSubpixelTest::run( int )
 
         progress = update_progress( progress, i-1, runs_count, 0 );
     }
+    ASSERT_NE(0, count);
     sum_dist /= count;
     ts->printf(cvtest::TS::LOG, "Average error after findCornerSubpix: %f\n", sum_dist);
 

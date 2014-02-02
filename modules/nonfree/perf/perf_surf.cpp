@@ -16,9 +16,7 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
-
-    if (frame.empty())
-        FAIL() << "Unable to load source image " << filename;
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
 
     Mat mask;
     declare.in(frame).time(90);
@@ -34,9 +32,7 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
-
-    if (frame.empty())
-        FAIL() << "Unable to load source image " << filename;
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
 
     Mat mask;
     declare.in(frame).time(90);
@@ -55,9 +51,7 @@ PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
 {
     string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
-
-    if (frame.empty())
-        FAIL() << "Unable to load source image " << filename;
+    ASSERT_FALSE(frame.empty()) << "Unable to load source image " << filename;
 
     Mat mask;
     declare.in(frame).time(90);

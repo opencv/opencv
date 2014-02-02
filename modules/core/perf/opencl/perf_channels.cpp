@@ -85,7 +85,7 @@ OCL_PERF_TEST_P(MergeFixture, Merge,
 typedef MergeParams SplitParams;
 typedef TestBaseWithParam<SplitParams> SplitFixture;
 
-OCL_PERF_TEST_P(SplitFixture, DISABLED_Split,
+OCL_PERF_TEST_P(SplitFixture, Split,
                 ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8U, CV_32F), Values(2, 3)))
 {
     const SplitParams params = GetParam();

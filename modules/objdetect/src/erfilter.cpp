@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <fstream>
+#include <queue>
 
 #if defined _MSC_VER && _MSC_VER == 1500
     typedef int int_fast32_t;
@@ -56,6 +57,27 @@ using namespace std;
 
 namespace cv
 {
+
+// Deletes a tree of ERStat regions starting at root. Used only
+// internally to this implementation.
+static void deleteERStatTree(ERStat* root) {
+    queue<ERStat*> to_delete;
+    to_delete.push(root);
+    while (!to_delete.empty()) {
+        ERStat* n = to_delete.front();
+        to_delete.pop();
+        ERStat* c = n->child;
+        if (c != NULL) {
+            to_delete.push(c);
+            ERStat* sibling = c->next;
+            while (sibling != NULL) {
+                to_delete.push(sibling);
+                sibling = sibling->next;
+            }
+        }
+        delete n;
+    }
+}
 
 ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(init_pixel),
                level(init_level), area(0), perimeter(0), euler(0), probability(1.0),
@@ -294,7 +316,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
         push_new_component = false;
 
         // explore the (remaining) edges to the neighbors to the current pixel
-        for (current_edge = current_edge; current_edge < 4; current_edge++)
+        for ( ; current_edge < 4; current_edge++)
         {
 
             int neighbour_pixel = current_pixel;
@@ -497,7 +519,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
                     delete(stat->crossings);
                     stat->crossings = NULL;
                 }
-                delete stat;
+                deleteERStatTree(stat);
             }
             er_stack.clear();
 
@@ -1949,7 +1971,6 @@ private:
     double (dissimilarity::*distfn) (const int_fast32_t, const int_fast32_t) const;
 
     auto_array_ptr<double> precomputed;
-    double * precomputed2;
 
     double * V;
     const double * V_data;
@@ -2935,7 +2956,6 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const
             float a1=((int)meaningful_clusters.at(i).size()*sumxy-sumx*sumy) /
                ((int)meaningful_clusters.at(i).size()*sumx2-sumx*sumx);
 
-            vector<float> data;
             if (a1 != a1)
                 data_arrays.at(i).push_back(1.f);
             else

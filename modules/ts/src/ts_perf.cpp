@@ -20,7 +20,7 @@ static std::vector<std::string> available_impls;
 static std::string  param_impl;
 
 static enum PERF_STRATEGY strategyForce = PERF_STRATEGY_DEFAULT;
-static enum PERF_STRATEGY strategyModule = PERF_STRATEGY_BASE;
+static enum PERF_STRATEGY strategyModule = PERF_STRATEGY_SIMPLE;
 
 static double       param_max_outliers;
 static double       param_max_deviation;
@@ -31,6 +31,7 @@ static double       param_time_limit;
 static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
+extern bool         test_ipp_check;
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
 #endif
@@ -670,6 +671,9 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
 #endif
         "{   perf_max_deviation          |1.0      |}"
+#ifdef HAVE_IPP
+        "{   perf_ipp_check              |false    |check whether IPP works without failures}"
+#endif
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
@@ -713,7 +717,8 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_force_samples = args.get<unsigned int>("perf_force_samples");
     param_write_sanity  = args.has("perf_write_sanity");
     param_verify_sanity = args.has("perf_verify_sanity");
-    param_threads  = args.get<int>("perf_threads");
+    test_ipp_check      = !args.has("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    param_threads       = args.get<int>("perf_threads");
 #ifdef ANDROID
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
@@ -855,6 +860,9 @@ int64 TestBase::_calibrate()
 #endif
 TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
+    lastTime = totalTime = timeLimit = 0;
+    nIters = currentIter = runsPerIteration = 0;
+    verified = false;
 }
 #ifdef _MSC_VER
 # pragma warning(pop)
@@ -876,22 +884,24 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
     if (a.empty())
         return;
-    else if (a.isUMat() && wtype != WARMUP_READ)
+    else if (a.isUMat())
     {
-        int depth = a.depth();
-        if (depth == CV_8U)
-            cv::randu(a, 0, 256);
-        else if (depth == CV_8S)
-            cv::randu(a, -128, 128);
-        else if (depth == CV_16U)
-            cv::randu(a, 0, 1024);
-        else if (depth == CV_32F || depth == CV_64F)
-            cv::randu(a, -1.0, 1.0);
-        else if (depth == CV_16S || depth == CV_32S)
-            cv::randu(a, -4096, 4096);
-        else
-            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
-
+        if (wtype == WARMUP_RNG || wtype == WARMUP_WRITE)
+        {
+            int depth = a.depth();
+            if (depth == CV_8U)
+                cv::randu(a, 0, 256);
+            else if (depth == CV_8S)
+                cv::randu(a, -128, 128);
+            else if (depth == CV_16U)
+                cv::randu(a, 0, 1024);
+            else if (depth == CV_32F || depth == CV_64F)
+                cv::randu(a, -1.0, 1.0);
+            else if (depth == CV_16S || depth == CV_32S)
+                cv::randu(a, -4096, 4096);
+            else
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
+        }
         return;
     }
     else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
@@ -1613,7 +1623,7 @@ namespace cv {
 
 void PrintTo(const String& str, ::std::ostream* os)
 {
-    *os << str;
+    *os << "\"" << str << "\"";
 }
 
 void PrintTo(const Size& sz, ::std::ostream* os)

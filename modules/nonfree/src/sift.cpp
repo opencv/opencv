@@ -111,21 +111,6 @@ namespace cv
 
 /******************************* Defs and macros *****************************/
 
-// default number of sampled intervals per octave
-static const int SIFT_INTVLS = 3;
-
-// default sigma for initial gaussian smoothing
-static const float SIFT_SIGMA = 1.6f;
-
-// default threshold on keypoint contrast |D(x)|
-static const float SIFT_CONTR_THR = 0.04f;
-
-// default threshold on keypoint ratio of principle curvatures
-static const float SIFT_CURV_THR = 10.f;
-
-// double image size before pyramid construction?
-static const bool SIFT_IMG_DBL = true;
-
 // default width of descriptor histogram array
 static const int SIFT_DESCR_WIDTH = 4;
 
@@ -823,7 +808,7 @@ void SIFT::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, Input
     (*this)(image.getMat(), mask.getMat(), keypoints, noArray());
 }
 
-void SIFT::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SIFT::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

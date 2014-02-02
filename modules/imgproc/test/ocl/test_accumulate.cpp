@@ -58,10 +58,10 @@ PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
     bool useRoi;
     double alpha;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_INPUT_PARAMETER(mask)
-    TEST_DECLARE_INPUT_PARAMETER(src2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_INPUT_PARAMETER(mask);
+    TEST_DECLARE_INPUT_PARAMETER(src2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -90,10 +90,10 @@ PARAM_TEST_CASE(AccumulateBase, std::pair<MatDepth, MatDepth>, Channels, bool)
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, dtype, -MAX_VALUE, MAX_VALUE);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_INPUT_PARAMETER(mask)
-        UMAT_UPLOAD_INPUT_PARAMETER(src2)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_INPUT_PARAMETER(mask);
+        UMAT_UPLOAD_INPUT_PARAMETER(src2);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
 
         alpha = randomDouble(-5, 5);
     }

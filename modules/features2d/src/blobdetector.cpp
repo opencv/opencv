@@ -163,8 +163,9 @@ void SimpleBlobDetector::write( cv::FileStorage& fs ) const
     params.write(fs);
 }
 
-void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const
+void SimpleBlobDetector::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
+    Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     (void)image;
     centers.clear();
 
@@ -335,7 +336,7 @@ void SimpleBlobDetector::detectImpl(InputArray image, std::vector<cv::KeyPoint>&
             normalizer += centers[i][j].confidence;
         }
         sumPoint *= (1. / normalizer);
-        KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius));
+        KeyPoint kpt(sumPoint, (float)(centers[i][centers[i].size() / 2].radius) * 2.0f);
         keypoints.push_back(kpt);
     }
 }

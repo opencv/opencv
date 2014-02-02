@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2014, Itseez, Inc, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -75,7 +76,8 @@ Functions return the actual number of found lines.
 */
 static void
 HoughLinesStandard( const Mat& img, float rho, float theta,
-                    int threshold, std::vector<Vec2f>& lines, int linesMax )
+                    int threshold, std::vector<Vec2f>& lines, int linesMax,
+                    double min_theta, double max_theta )
 {
     int i, j;
     float irho = 1 / rho;
@@ -87,8 +89,36 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     int width = img.cols;
     int height = img.rows;
 
-    int numangle = cvRound(CV_PI / theta);
+    if (max_theta < 0 || max_theta > CV_PI ) {
+        CV_Error( CV_StsBadArg, "max_theta must fall between 0 and pi" );
+    }
+    if (min_theta < 0 || min_theta > max_theta ) {
+        CV_Error( CV_StsBadArg, "min_theta must fall between 0 and max_theta" );
+    }
+    int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
+
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    IppiSize srcSize = { width, height };
+    IppPointPolar delta = { rho, theta };
+    IppPointPolar dstRoi[2] = {{(Ipp32f) -(width + height), (Ipp32f) min_theta},{(Ipp32f) (width + height), (Ipp32f) max_theta}};
+    int bufferSize;
+    int nz = countNonZero(img);
+    int ipp_linesMax = std::min(linesMax, nz*numangle/threshold);
+    int linesCount = 0;
+    lines.resize(ipp_linesMax);
+    IppStatus ok = ippiHoughLineGetSize_8u_C1R(srcSize, delta, ipp_linesMax, &bufferSize);
+    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+    if (ok >= 0) ok = ippiHoughLine_Region_8u32f_C1R(image, step, srcSize, (IppPointPolar*) &lines[0], dstRoi, ipp_linesMax, &linesCount, delta, threshold, buffer);
+    ippsFree(buffer);
+    if (ok >= 0)
+    {
+        lines.resize(linesCount);
+        return;
+    }
+    lines.clear();
+    setIppErrorStatus();
+#endif
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
     std::vector<int> _sort_buf;
@@ -99,7 +129,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
 
     memset( accum, 0, sizeof(accum[0]) * (numangle+2) * (numrho+2) );
 
-    float ang = 0;
+    float ang = static_cast<float>(min_theta);
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
         tabSin[n] = (float)(sin((double)ang) * irho);
@@ -166,7 +196,8 @@ static void
 HoughLinesSDiv( const Mat& img,
                 float rho, float theta, int threshold,
                 int srn, int stn,
-                std::vector<Vec2f>& lines, int linesMax )
+                std::vector<Vec2f>& lines, int linesMax,
+                double min_theta, double max_theta )
 {
     #define _POINT(row, column)\
         (image_src[(row)*step+(column)])
@@ -293,7 +324,7 @@ HoughLinesSDiv( const Mat& img,
 
     if( count * 100 > rn * tn )
     {
-        HoughLinesStandard( img, rho, theta, threshold, lines, linesMax );
+        HoughLinesStandard( img, rho, theta, threshold, lines, linesMax, min_theta, max_theta );
         return;
     }
 
@@ -395,6 +426,31 @@ HoughLinesProbabilistic( Mat& image,
 
     int numangle = cvRound(CV_PI / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
+
+#if (0 && defined(HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && IPP_VERSION_X100 >= 801)
+    IppiSize srcSize = { width, height };
+    IppPointPolar delta = { rho, theta };
+    IppiHoughProbSpec* pSpec;
+    int bufferSize, specSize;
+    int ipp_linesMax = std::min(linesMax, numangle*numrho);
+    int linesCount = 0;
+    lines.resize(ipp_linesMax);
+    IppStatus ok = ippiHoughProbLineGetSize_8u_C1R(srcSize, delta, &specSize, &bufferSize);
+    Ipp8u* buffer = ippsMalloc_8u(bufferSize);
+    pSpec = (IppiHoughProbSpec*) malloc(specSize);
+    if (ok >= 0) ok = ippiHoughProbLineInit_8u32f_C1R(srcSize, delta, ippAlgHintNone, pSpec);
+    if (ok >= 0) ok = ippiHoughProbLine_8u32f_C1R(image.data, image.step, srcSize, threshold, lineLength, lineGap, (IppiPoint*) &lines[0], ipp_linesMax, &linesCount, buffer, pSpec);
+
+    free(pSpec);
+    ippsFree(buffer);
+    if (ok >= 0)
+    {
+        lines.resize(linesCount);
+        return;
+    }
+    lines.clear();
+    setIppErrorStatus();
+#endif
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
@@ -601,15 +657,15 @@ HoughLinesProbabilistic( Mat& image,
 
 void cv::HoughLines( InputArray _image, OutputArray _lines,
                     double rho, double theta, int threshold,
-                    double srn, double stn )
+                    double srn, double stn, double min_theta, double max_theta )
 {
     Mat image = _image.getMat();
     std::vector<Vec2f> lines;
 
     if( srn == 0 && stn == 0 )
-        HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
+        HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX, min_theta, max_theta );
     else
-        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX);
+        HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX, min_theta, max_theta);
 
     Mat(lines).copyTo(_lines);
 }
@@ -631,7 +687,8 @@ void cv::HoughLinesP(InputArray _image, OutputArray _lines,
 CV_IMPL CvSeq*
 cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                double rho, double theta, int threshold,
-               double param1, double param2 )
+               double param1, double param2,
+               double min_theta, double max_theta )
 {
     cv::Mat image = cv::cvarrToMat(src_image);
     std::vector<cv::Vec2f> l2;
@@ -694,11 +751,11 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     {
     case CV_HOUGH_STANDARD:
         HoughLinesStandard( image, (float)rho,
-                (float)theta, threshold, l2, linesMax );
+                (float)theta, threshold, l2, linesMax, min_theta, max_theta );
         break;
     case CV_HOUGH_MULTI_SCALE:
         HoughLinesSDiv( image, (float)rho, (float)theta,
-                threshold, iparam1, iparam2, l2, linesMax );
+                threshold, iparam1, iparam2, l2, linesMax, min_theta, max_theta );
         break;
     case CV_HOUGH_PROBABILISTIC:
         HoughLinesProbabilistic( image, (float)rho, (float)theta,

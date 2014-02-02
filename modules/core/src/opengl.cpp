@@ -58,16 +58,9 @@ namespace
         inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support"); }
     #else
         inline void throw_no_ogl() { CV_Error(cv::Error::OpenGlApiCallError, "OpenGL context doesn't exist"); }
-    #endif
 
     bool checkError(const char* file, const int line, const char* func = 0)
     {
-    #ifndef HAVE_OPENGL
-        (void) file;
-        (void) line;
-        (void) func;
-        return true;
-    #else
         GLenum err = gl::GetError();
 
         if (err != gl::NO_ERROR_)
@@ -102,8 +95,8 @@ namespace
         }
 
         return true;
-    #endif
     }
+    #endif
 
     #define CV_CheckGlError() CV_DbgAssert( (checkError(__FILE__, __LINE__, CV_Func)) )
 } // namespace

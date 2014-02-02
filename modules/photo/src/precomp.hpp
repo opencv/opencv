@@ -46,6 +46,8 @@
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/core/ocl.hpp"
+#include "opencv2/imgproc.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
 #include "opencv2/photo/photo_tegra.hpp"

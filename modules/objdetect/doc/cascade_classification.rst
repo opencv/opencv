@@ -32,112 +32,6 @@ The following reference is for the detection part only. There is a separate appl
 .. [Lienhart02] Rainer Lienhart and Jochen Maydt. An Extended Set of Haar-like Features for Rapid Object Detection. IEEE ICIP 2002, Vol. 1, pp. 900-903, Sep. 2002. This paper, as well as the extended technical report, can be retrieved at http://www.multimedia-computing.de/mediawiki//images/5/52/MRL-TR-May02-revised-Dec02.pdf
 
 
-FeatureEvaluator
-----------------
-.. ocv:class:: FeatureEvaluator
-
-Base class for computing feature values in cascade classifiers. ::
-
-    class CV_EXPORTS FeatureEvaluator
-    {
-    public:
-        enum { HAAR = 0, LBP = 1 }; // supported feature types
-        virtual ~FeatureEvaluator(); // destructor
-        virtual bool read(const FileNode& node);
-        virtual Ptr<FeatureEvaluator> clone() const;
-        virtual int getFeatureType() const;
-
-        virtual bool setImage(const Mat& img, Size origWinSize);
-        virtual bool setWindow(Point p);
-
-        virtual double calcOrd(int featureIdx) const;
-        virtual int calcCat(int featureIdx) const;
-
-        static Ptr<FeatureEvaluator> create(int type);
-    };
-
-
-FeatureEvaluator::read
---------------------------
-Reads parameters of features from the ``FileStorage`` node.
-
-.. ocv:function:: bool FeatureEvaluator::read(const FileNode& node)
-
-    :param node: File node from which the feature parameters are read.
-
-
-
-FeatureEvaluator::clone
----------------------------
-Returns a full copy of the feature evaluator.
-
-.. ocv:function:: Ptr<FeatureEvaluator> FeatureEvaluator::clone() const
-
-
-
-FeatureEvaluator::getFeatureType
-------------------------------------
-Returns the feature type (``HAAR`` or ``LBP`` for now).
-
-.. ocv:function:: int FeatureEvaluator::getFeatureType() const
-
-
-FeatureEvaluator::setImage
-------------------------------
-Assigns an image to feature evaluator.
-
-.. ocv:function:: bool FeatureEvaluator::setImage(InputArray img, Size origWinSize, Size sumSize)
-
-    :param img: Matrix of the type ``CV_8UC1`` containing an image where the features are computed.
-
-    :param origWinSize: Size of training images.
-
-    :param sumSize: The requested size of integral images (so if the integral image is smaller, it resides in the top-left corner of the larger image of requested size). Because the features are represented using offsets from the image origin, using the same sumSize for all scales helps to avoid constant readjustments of the features to different scales.
-
-The method assigns an image, where the features will be computed, to the feature evaluator.
-
-
-
-FeatureEvaluator::setWindow
--------------------------------
-Assigns a window in the current image where the features will be computed.
-
-.. ocv:function:: bool FeatureEvaluator::setWindow(Point p)
-
-    :param p: Upper left point of the window where the features are computed. Size of the window is equal to the size of training images.
-
-FeatureEvaluator::calcOrd
------------------------------
-Computes the value of an ordered (numerical) feature.
-
-.. ocv:function:: double FeatureEvaluator::calcOrd(int featureIdx) const
-
-    :param featureIdx: Index of the feature whose value is computed.
-
-The function returns the computed value of an ordered feature.
-
-
-
-FeatureEvaluator::calcCat
------------------------------
-Computes the value of a categorical feature.
-
-.. ocv:function:: int FeatureEvaluator::calcCat(int featureIdx) const
-
-    :param featureIdx: Index of the feature whose value is computed.
-
-The function returns the computed label of a categorical feature, which is the value from [0,... (number of categories - 1)].
-
-
-FeatureEvaluator::create
-----------------------------
-Constructs the feature evaluator.
-
-.. ocv:function:: Ptr<FeatureEvaluator> FeatureEvaluator::create(int type)
-
-    :param type: Type of features evaluated by cascade (``HAAR`` or ``LBP`` for now).
-
-
 CascadeClassifier
 -----------------
 .. ocv:class:: CascadeClassifier
@@ -192,9 +86,11 @@ Detects objects of different sizes in the input image. The detected objects are 
 
 .. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, vector<Rect>& objects, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
 .. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, vector<Rect>& objects, vector<int>& numDetections, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
+.. ocv:function:: void CascadeClassifier::detectMultiScale( InputArray image, std::vector<Rect>& objects, std::vector<int>& rejectLevels, std::vector<double>& levelWeights, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size(), bool outputRejectLevels = false )
 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
-.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects, rejectLevels, levelWeights
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale2(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects, numDetections
+.. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale3(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects, rejectLevels, levelWeights
 
 .. ocv:cfunction:: CvSeq* cvHaarDetectObjects( const CvArr* image, CvHaarClassifierCascade* cascade, CvMemStorage* storage, double scale_factor=1.1, int min_neighbors=3, int flags=0, CvSize min_size=cvSize(0,0), CvSize max_size=cvSize(0,0) )
 
@@ -215,6 +111,8 @@ Detects objects of different sizes in the input image. The detected objects are 
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
     :param maxSize: Maximum possible object size. Objects larger than that are ignored.
+
+    :param outputRejectLevels: Boolean. If ``True``, it returns the rejectLevels and levelWeights. Default value is ``False``.
 
 The function is parallelized with the TBB library.
 

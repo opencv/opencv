@@ -596,7 +596,7 @@ Returns the number of gaussian components in the background model
 
 BackgroundSubtractorMOG2::setNMixtures
 --------------------------------------
-Sets the number of gaussian components in the background model
+Sets the number of gaussian components in the background model. The model needs to be reinitalized to reserve memory.
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setNMixtures(int nmixtures)
 
@@ -615,9 +615,23 @@ Sets the "background ratio" parameter of the algorithm
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setBackgroundRatio(double ratio)
 
+BackgroundSubtractorMOG2::getVarThreshold
+---------------------------------------------
+Returns the variance threshold for the pixel-model match
+
+.. ocv:function:: double BackgroundSubtractorMOG2::getVarThreshold() const
+
+The main threshold on the squared Mahalanobis distance to decide if the sample is well described by the background model or not. Related to Cthr from the paper.
+
+BackgroundSubtractorMOG2::setVarThreshold
+---------------------------------------------
+Sets the variance threshold for the pixel-model match
+
+.. ocv:function:: void BackgroundSubtractorMOG2::setVarThreshold(double varThreshold)
+
 BackgroundSubtractorMOG2::getVarThresholdGen
 ---------------------------------------------
-Returns the variance scale factor for the pixel-model match
+Returns the variance threshold for the pixel-model match used for new mixture component generation
 
 .. ocv:function:: double BackgroundSubtractorMOG2::getVarThresholdGen() const
 
@@ -625,7 +639,7 @@ Threshold for the squared Mahalanobis distance that helps decide when a sample i
 
 BackgroundSubtractorMOG2::setVarThresholdGen
 ---------------------------------------------
-Sets the variance scale factor for the pixel-model match
+Sets the variance threshold for the pixel-model match used for new mixture component generation
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setVarThresholdGen(double varThresholdGen)
 
@@ -698,6 +712,126 @@ BackgroundSubtractorMOG2::setShadowThreshold
 Sets the shadow threshold
 
 .. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(double threshold)
+
+
+BackgroundSubtractorKNN
+------------------------
+K-nearest neigbours - based Background/Foreground Segmentation Algorithm.
+
+.. ocv:class:: BackgroundSubtractorKNN : public BackgroundSubtractor
+
+The class implements the K-nearest neigbours background subtraction described in [Zivkovic2006]_ . Very efficient if number of foreground pixels is low.
+
+
+createBackgroundSubtractorKNN
+--------------------------------------------------
+Creates KNN Background Subtractor
+
+.. ocv:function:: Ptr<BackgroundSubtractorKNN> createBackgroundSubtractorKNN( int history=500, double dist2Threshold=400.0, bool detectShadows=true )
+
+  :param history: Length of the history.
+
+  :param dist2Threshold: Threshold on the squared distance between the pixel and the sample to decide whether a pixel is close to that sample. This parameter does not affect the background update.
+
+  :param detectShadows: If true, the algorithm will detect shadows and mark them. It decreases the speed a bit, so if you do not need this feature, set the parameter to false.
+
+
+BackgroundSubtractorKNN::getHistory
+--------------------------------------
+Returns the number of last frames that affect the background model
+
+.. ocv:function:: int BackgroundSubtractorKNN::getHistory() const
+
+
+BackgroundSubtractorKNN::setHistory
+--------------------------------------
+Sets the number of last frames that affect the background model
+
+.. ocv:function:: void BackgroundSubtractorKNN::setHistory(int history)
+
+
+BackgroundSubtractorKNN::getNSamples
+--------------------------------------
+Returns the number of data samples in the background model
+
+.. ocv:function:: int BackgroundSubtractorKNN::getNSamples() const
+
+
+BackgroundSubtractorKNN::setNSamples
+--------------------------------------
+Sets the number of data samples in the background model. The model needs to be reinitalized to reserve memory.
+
+.. ocv:function:: void BackgroundSubtractorKNN::setNSamples(int _nN)
+
+
+BackgroundSubtractorKNN::getDist2Threshold
+---------------------------------------------
+Returns the threshold on the squared distance between the pixel and the sample
+
+.. ocv:function:: double BackgroundSubtractorKNN::getDist2Threshold() const
+
+The threshold on the squared distance between the pixel and the sample to decide whether a pixel is close to a data sample.
+
+BackgroundSubtractorKNN::setDist2Threshold
+---------------------------------------------
+Sets the threshold on the squared distance
+
+.. ocv:function:: void BackgroundSubtractorKNN::setDist2Threshold(double _dist2Threshold)
+
+BackgroundSubtractorKNN::getkNNSamples
+---------------------------------------------
+Returns the number of neighbours, the k in the kNN. K is the number of samples that need to be within dist2Threshold in order to decide that that pixel is matching the kNN background model.
+
+.. ocv:function:: int BackgroundSubtractorKNN::getkNNSamples() const
+
+BackgroundSubtractorKNN::setkNNSamples
+---------------------------------------------
+Sets the k in the kNN. How many nearest neigbours need to match.
+
+.. ocv:function:: void BackgroundSubtractorKNN::setkNNSamples(int _nkNN)
+
+
+BackgroundSubtractorKNN::getDetectShadows
+---------------------------------------------
+Returns the shadow detection flag
+
+.. ocv:function:: bool BackgroundSubtractorKNN::getDetectShadows() const
+
+If true, the algorithm detects shadows and marks them. See createBackgroundSubtractorKNN for details.
+
+BackgroundSubtractorKNN::setDetectShadows
+---------------------------------------------
+Enables or disables shadow detection
+
+.. ocv:function:: void BackgroundSubtractorKNN::setDetectShadows(bool detectShadows)
+
+BackgroundSubtractorKNN::getShadowValue
+---------------------------------------------
+Returns the shadow value
+
+.. ocv:function:: int BackgroundSubtractorKNN::getShadowValue() const
+
+Shadow value is the value used to mark shadows in the foreground mask. Default value is 127. Value 0 in the mask always means background, 255 means foreground.
+
+BackgroundSubtractorKNN::setShadowValue
+---------------------------------------------
+Sets the shadow value
+
+.. ocv:function:: void BackgroundSubtractorKNN::setShadowValue(int value)
+
+BackgroundSubtractorKNN::getShadowThreshold
+---------------------------------------------
+Returns the shadow threshold
+
+.. ocv:function:: double BackgroundSubtractorKNN::getShadowThreshold() const
+
+A shadow is detected if pixel is a darker version of the background. The shadow threshold (``Tau`` in the paper) is a threshold defining how much darker the shadow can be. ``Tau= 0.5`` means that if a pixel is more than twice darker then it is not shadow. See Prati, Mikic, Trivedi and Cucchiarra, *Detecting Moving Shadows...*, IEEE PAMI,2003.
+
+BackgroundSubtractorKNN::setShadowThreshold
+---------------------------------------------
+Sets the shadow threshold
+
+.. ocv:function:: void BackgroundSubtractorKNN::setShadowThreshold(double threshold)
 
 
 BackgroundSubtractorGMG
@@ -974,9 +1108,9 @@ Releases all inner buffers.
 
 .. [Bradski98] Bradski, G.R. "Computer Vision Face Tracking for Use in a Perceptual User Interface", Intel, 1998
 
-.. [Bradski00] Davis, J.W. and Bradski, G.R. “Motion Segmentation and Pose Recognition with Motion History Gradients”, WACV00, 2000
+.. [Bradski00] Davis, J.W. and Bradski, G.R. "Motion Segmentation and Pose Recognition with Motion History Gradients", WACV00, 2000
 
-.. [Davis97] Davis, J.W. and Bobick, A.F. “The Representation and Recognition of Action Using Temporal Templates”, CVPR97, 1997
+.. [Davis97] Davis, J.W. and Bobick, A.F. "The Representation and Recognition of Action Using Temporal Templates", CVPR97, 1997
 
 .. [EP08] Evangelidis, G.D. and Psarakis E.Z. "Parametric Image Alignment using Enhanced Correlation Coefficient Maximization", IEEE Transactions on PAMI, vol. 32, no. 10, 2008
 
@@ -990,7 +1124,7 @@ Releases all inner buffers.
 
 .. [Lucas81] Lucas, B., and Kanade, T. An Iterative Image Registration Technique with an Application to Stereo Vision, Proc. of 7th International Joint Conference on Artificial Intelligence (IJCAI), pp. 674-679.
 
-.. [Welch95] Greg Welch and Gary Bishop “An Introduction to the Kalman Filter”, 1995
+.. [Welch95] Greg Welch and Gary Bishop "An Introduction to the Kalman Filter", 1995
 
 .. [Tao2012] Michael Tao, Jiamin Bai, Pushmeet Kohli and Sylvain Paris. SimpleFlow: A Non-iterative, Sublinear Optical Flow Algorithm. Computer Graphics Forum (Eurographics 2012)
 

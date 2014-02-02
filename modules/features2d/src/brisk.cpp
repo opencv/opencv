@@ -224,6 +224,8 @@ BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float
                                                    std::vector<int> indexChange)
 {
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
+  threshold = 20;
+  octaves = 3;
 }
 
 void
@@ -757,7 +759,7 @@ BRISK::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArra
 }
 
 void
-BRISK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+    BRISK::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

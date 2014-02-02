@@ -240,7 +240,7 @@ CV_EXPORTS_W void batchDistance(InputArray src1, InputArray src2,
                                 bool crosscheck = false);
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
-CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha = 1, double beta = 0,
+CV_EXPORTS_W void normalize( InputArray src, InputOutputArray dst, double alpha = 1, double beta = 0,
                              int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray());
 
 //! scales and shifts array elements so that either the specified norm (alpha) or the minimum (alpha) and maximum (beta) array values get the specified values
@@ -389,7 +389,7 @@ CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 //! implements generalized matrix product algorithm GEMM from BLAS
 CV_EXPORTS_W void gemm(InputArray src1, InputArray src2, double alpha,
-                       InputArray src3, double gamma, OutputArray dst, int flags = 0);
+                       InputArray src3, double beta, OutputArray dst, int flags = 0);
 
 //! multiplies matrix by its transposition from the left or from the right
 CV_EXPORTS_W void mulTransposed( InputArray src, OutputArray dst, bool aTa,
@@ -507,11 +507,11 @@ CV_EXPORTS_W void randn(InputOutputArray dst, InputArray mean, InputArray stddev
 CV_EXPORTS_W void randShuffle(InputOutputArray dst, double iterFactor = 1., RNG* rng = 0);
 
 //! draws the line segment (pt1, pt2) in the image
-CV_EXPORTS_W void line(CV_IN_OUT Mat& img, Point pt1, Point pt2, const Scalar& color,
+CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
                      int thickness = 1, int lineType = LINE_8, int shift = 0);
 
 //! draws the rectangle outline or a solid rectangle with the opposite corners pt1 and pt2 in the image
-CV_EXPORTS_W void rectangle(CV_IN_OUT Mat& img, Point pt1, Point pt2,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
@@ -521,18 +521,18 @@ CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
                           int lineType = LINE_8, int shift = 0);
 
 //! draws the circle outline or a solid circle in the image
-CV_EXPORTS_W void circle(CV_IN_OUT Mat& img, Point center, int radius,
+CV_EXPORTS_W void circle(InputOutputArray img, Point center, int radius,
                        const Scalar& color, int thickness = 1,
                        int lineType = LINE_8, int shift = 0);
 
 //! draws an elliptic arc, ellipse sector or a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, Point center, Size axes,
+CV_EXPORTS_W void ellipse(InputOutputArray img, Point center, Size axes,
                         double angle, double startAngle, double endAngle,
                         const Scalar& color, int thickness = 1,
                         int lineType = LINE_8, int shift = 0);
 
 //! draws a rotated ellipse in the image
-CV_EXPORTS_W void ellipse(CV_IN_OUT Mat& img, const RotatedRect& box, const Scalar& color,
+CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Scalar& color,
                         int thickness = 1, int lineType = LINE_8);
 
 //! draws a filled convex polygon in the image
@@ -582,7 +582,7 @@ CV_EXPORTS_W void ellipse2Poly( Point center, Size axes, int angle,
                                 CV_OUT std::vector<Point>& pts );
 
 //! renders text string in the image
-CV_EXPORTS_W void putText( Mat& img, const String& text, Point org,
+CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
                          int fontFace, double fontScale, Scalar color,
                          int thickness = 1, int lineType = LINE_8,
                          bool bottomLeftOrigin = false );
@@ -953,12 +953,12 @@ public:
 class CV_EXPORTS Formatter
 {
 public:
-    enum { FMT_MATLAB  = 0,
-           FMT_CSV     = 1,
-           FMT_PYTHON  = 2,
-           FMT_NUMPY   = 3,
-           FMT_C       = 4,
-           FMT_DEFAULT = FMT_MATLAB
+    enum { FMT_DEFAULT = 0,
+           FMT_MATLAB  = 1,
+           FMT_CSV     = 2,
+           FMT_PYTHON  = 3,
+           FMT_NUMPY   = 4,
+           FMT_C       = 5
          };
 
     virtual ~Formatter();

@@ -25,6 +25,7 @@
 #define GTEST_DONT_DEFINE_TEST      0
 
 #include "opencv2/ts/ts_gtest.h"
+#include "opencv2/ts/ts_ext.hpp"
 
 #ifndef GTEST_USES_SIMPLE_RE
 #  define GTEST_USES_SIMPLE_RE 0
@@ -47,6 +48,8 @@ using cv::Scalar;
 using cv::Size;
 using cv::Point;
 using cv::Rect;
+using cv::InputArray;
+using cv::noArray;
 
 class CV_EXPORTS TS;
 
@@ -124,9 +127,10 @@ CV_EXPORTS void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx
 
 CV_EXPORTS void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src, int normType, const Mat& mask=Mat());
-CV_EXPORTS double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask=Mat());
+CV_EXPORTS double norm(InputArray src, int normType, InputArray mask=noArray());
+CV_EXPORTS double norm(InputArray src1, InputArray src2, int normType, InputArray mask=noArray());
 CV_EXPORTS Scalar mean(const Mat& src, const Mat& mask=Mat());
+CV_EXPORTS double PSNR(InputArray src1, InputArray src2);
 
 CV_EXPORTS bool cmpUlps(const Mat& data, const Mat& refdata, int expMaxDiff, double* realMaxDiff, vector<int>* idx);
 
@@ -376,7 +380,7 @@ public:
         // processing time (in this case there should be possibility to interrupt such a function
         FAIL_HANG=-13,
 
-        // unexpected responce on passing bad arguments to the tested function
+        // unexpected response on passing bad arguments to the tested function
         // (the function crashed, proceed succesfully (while it should not), or returned
         // error code that is different from what is expected)
         FAIL_BAD_ARG_CHECK=-14,
@@ -550,14 +554,16 @@ CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 #endif
 #endif
 
-#if defined(HAVE_OPENCL) && !defined(CV_BUILD_OCL_MODULE)
+#ifdef HAVE_OPENCL
 namespace cvtest { namespace ocl {
 void dumpOpenCLDevice();
-}}
+} }
 #define TEST_DUMP_OCL_INFO cvtest::ocl::dumpOpenCLDevice();
 #else
 #define TEST_DUMP_OCL_INFO
 #endif
+
+void parseCustomOptions(int argc, char **argv);
 
 #define CV_TEST_MAIN(resourcesubdir, ...) \
 int main(int argc, char **argv) \
@@ -567,6 +573,7 @@ int main(int argc, char **argv) \
     cvtest::printVersionInfo(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     TEST_DUMP_OCL_INFO \
+    parseCustomOptions(argc, argv); \
     return RUN_ALL_TESTS(); \
 }
 

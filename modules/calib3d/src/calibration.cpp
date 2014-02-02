@@ -1635,8 +1635,8 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                         CvMat* _cameraMatrix2, CvMat* _distCoeffs2,
                         CvSize imageSize, CvMat* matR, CvMat* matT,
                         CvMat* matE, CvMat* matF,
-                        CvTermCriteria termCrit,
-                        int flags )
+                        int flags,
+                        CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 16;
     Ptr<CvMat> npoints, err, J_LR, Je, Ji, imagePoints[2], objectPoints, RT0;
@@ -3278,8 +3278,8 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
                           InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1,
                           InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2,
                           Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
-                          OutputArray _Emat, OutputArray _Fmat, TermCriteria criteria,
-                          int flags )
+                          OutputArray _Emat, OutputArray _Fmat, int flags ,
+                          TermCriteria criteria)
 {
     int rtype = CV_64F;
     Mat cameraMatrix1 = _cameraMatrix1.getMat();
@@ -3322,7 +3322,7 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
 
     double err = cvStereoCalibrate(&c_objPt, &c_imgPt, &c_imgPt2, &c_npoints, &c_cameraMatrix1,
         &c_distCoeffs1, &c_cameraMatrix2, &c_distCoeffs2, imageSize,
-        &c_matR, &c_matT, p_matE, p_matF, criteria, flags );
+        &c_matR, &c_matT, p_matE, p_matF, flags, criteria );
 
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);

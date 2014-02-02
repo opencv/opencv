@@ -120,7 +120,6 @@ public:
 
 private:
     float minMatchCost;
-    float betaAdditional;
 protected:
     void buildCostMatrix(const cv::Mat& descriptors1, const cv::Mat& descriptors2,
                                      cv::Mat& costMatrix, cv::Ptr<cv::HistogramCostExtractor>& comparer) const;

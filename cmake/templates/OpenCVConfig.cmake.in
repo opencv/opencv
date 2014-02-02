@@ -19,8 +19,8 @@
 #    This file will define the following variables:
 #      - OpenCV_LIBS                     : The list of all imported targets for OpenCV modules.
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
-#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
-#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API
+#      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability.
+#      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API.
 #      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
 #      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
 #      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
@@ -28,25 +28,41 @@
 #      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 #    Advanced variables:
-#      - OpenCV_SHARED
-#      - OpenCV_CONFIG_PATH
-#      - OpenCV_INSTALL_PATH  (not set on Windows)
-#      - OpenCV_LIB_COMPONENTS
-#      - OpenCV_USE_MANGLED_PATHS
-#      - OpenCV_HAVE_ANDROID_CAMERA
+#      - OpenCV_SHARED                   : Use OpenCV as shared library
+#      - OpenCV_CONFIG_PATH              : Path to this OpenCVConfig.cmake
+#      - OpenCV_INSTALL_PATH             : OpenCV location (not set on Windows)
+#      - OpenCV_LIB_COMPONENTS           : Present OpenCV modules list
+#      - OpenCV_USE_MANGLED_PATHS        : Mangled OpenCV path flag
+#      - OpenCV_MODULES_SUFFIX           : The suffix for OpenCVModules-XXX.cmake file
+#      - OpenCV_HAVE_ANDROID_CAMERA      : Presence of Android native camera wrappers
 #
 #    Deprecated variables:
 #      - OpenCV_VERSION_TWEAK            : Always "0"
 #
 # ===================================================================================
 
-set(modules_file_suffix "")
-if(ANDROID)
-  string(REPLACE - _ modules_file_suffix "_${ANDROID_NDK_ABI_NAME}")
+if(NOT DEFINED OpenCV_MODULES_SUFFIX)
+  if(ANDROID)
+    string(REPLACE - _ OpenCV_MODULES_SUFFIX "_${ANDROID_NDK_ABI_NAME}")
+  else()
+    set(OpenCV_MODULES_SUFFIX "")
+  endif()
+endif()
+
+if(@USE_IPPICV@) # value is defined by package builder
+  if(NOT TARGET ippicv)
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/@INSTALL_PATH_RELATIVE_IPPICV@")
+      add_library(ippicv STATIC IMPORTED)
+      set_target_properties(ippicv PROPERTIES
+        IMPORTED_LINK_INTERFACE_LIBRARIES ""
+        IMPORTED_LOCATION "${CMAKE_CURRENT_LIST_DIR}/@INSTALL_PATH_RELATIVE_IPPICV@"
+      )
+    endif()
+  endif()
 endif()
 
 if(NOT TARGET opencv_core)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${modules_file_suffix}.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
 
 # TODO All things below should be reviewed. What is about of moving this code into related modules (special vars/hooks/files)
@@ -60,7 +76,11 @@ set(OpenCV_USE_CUFFT    @HAVE_CUFFT@)
 set(OpenCV_USE_NVCUVID  @HAVE_NVCUVID@)
 
 # Android API level from which OpenCV has been compiled is remembered
-set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE@)
+if(ANDROID)
+  set(OpenCV_ANDROID_NATIVE_API_LEVEL @OpenCV_ANDROID_NATIVE_API_LEVEL_CONFIGCMAKE@)
+else()
+  set(OpenCV_ANDROID_NATIVE_API_LEVEL 0)
+endif()
 
 # Some additional settings are required if OpenCV is built as static libs
 set(OpenCV_SHARED @BUILD_SHARED_LIBS@)
@@ -71,8 +91,8 @@ set(OpenCV_USE_MANGLED_PATHS @OpenCV_USE_MANGLED_PATHS_CONFIGCMAKE@)
 # Extract the directory where *this* file has been installed (determined at cmake run-time)
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
 
-if(NOT WIN32 OR OpenCV_ANDROID_NATIVE_API_LEVEL GREATER 0)
-  if(OpenCV_ANDROID_NATIVE_API_LEVEL GREATER 0)
+if(NOT WIN32 OR ANDROID)
+  if(ANDROID)
     set(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../../..")
   else()
     set(OpenCV_INSTALL_PATH "${OpenCV_CONFIG_PATH}/../..")
@@ -209,7 +229,7 @@ foreach(__opttype OPT DBG)
   SET(OpenCV_EXTRA_LIBS_${__opttype} "")
 
   # CUDA
-  if(OpenCV_CUDA_VERSION AND (CMAKE_CROSSCOMPILING OR (WIN32 AND NOT OpenCV_SHARED)))
+  if(OpenCV_CUDA_VERSION)
     if(NOT CUDA_FOUND)
       find_package(CUDA ${OpenCV_CUDA_VERSION} EXACT REQUIRED)
     else()
@@ -218,32 +238,41 @@ foreach(__opttype OPT DBG)
       endif()
     endif()
 
-    list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_LIBRARIES})
+    set(OpenCV_CUDA_LIBS_ABSPATH ${CUDA_LIBRARIES})
 
     if(${CUDA_VERSION} VERSION_LESS "5.5")
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_npp_LIBRARY})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_npp_LIBRARY})
     else()
       find_cuda_helper_libs(nppc)
       find_cuda_helper_libs(nppi)
       find_cuda_helper_libs(npps)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
     endif()
 
     if(OpenCV_USE_CUBLAS)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUBLAS_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUBLAS_LIBRARIES})
     endif()
 
     if(OpenCV_USE_CUFFT)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_CUFFT_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_CUFFT_LIBRARIES})
     endif()
 
     if(OpenCV_USE_NVCUVID)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvid_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvid_LIBRARIES})
     endif()
 
     if(WIN32)
-      list(APPEND OpenCV_EXTRA_LIBS_${__opttype} ${CUDA_nvcuvenc_LIBRARIES})
+      list(APPEND OpenCV_CUDA_LIBS_ABSPATH ${CUDA_nvcuvenc_LIBRARIES})
     endif()
+
+    set(OpenCV_CUDA_LIBS_RELPATH "")
+    foreach(l ${OpenCV_CUDA_LIBS_ABSPATH})
+      get_filename_component(_tmp ${l} PATH)
+      list(APPEND OpenCV_CUDA_LIBS_RELPATH ${_tmp})
+    endforeach()
+
+    list(REMOVE_DUPLICATES OpenCV_CUDA_LIBS_RELPATH)
+    link_directories(${OpenCV_CUDA_LIBS_RELPATH})
   endif()
 endforeach()
 

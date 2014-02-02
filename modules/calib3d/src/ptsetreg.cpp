@@ -260,7 +260,6 @@ public:
 
     Ptr<PointSetRegistrator::Callback> cb;
     int modelPoints;
-    int maxBasicSolutions;
     bool checkPartialSubsets;
     double threshold;
     double confidence;

@@ -108,6 +108,7 @@ Modifications by Ian Mahon
 
 */
 #include "precomp.hpp"
+#include "surf.hpp"
 
 namespace cv
 {
@@ -897,11 +898,42 @@ void SURF::operator()(InputArray _img, InputArray _mask,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints) const
 {
-    Mat img = _img.getMat(), mask = _mask.getMat(), mask1, sum, msum;
+    int imgtype = _img.type(), imgcn = CV_MAT_CN(imgtype);
     bool doDescriptors = _descriptors.needed();
 
-    CV_Assert(!img.empty() && img.depth() == CV_8U);
-    if( img.channels() > 1 )
+    CV_Assert(!_img.empty() && CV_MAT_DEPTH(imgtype) == CV_8U && (imgcn == 1 || imgcn == 3 || imgcn == 4));
+    CV_Assert(_descriptors.needed() || !useProvidedKeypoints);
+
+    if( ocl::useOpenCL() )
+    {
+        SURF_OCL ocl_surf;
+        UMat gpu_kpt;
+        bool ok = ocl_surf.init(this);
+
+        if( ok )
+        {
+            if( !_descriptors.needed() )
+            {
+                ok = ocl_surf.detect(_img, _mask, gpu_kpt);
+            }
+            else
+            {
+                if(useProvidedKeypoints)
+                    ocl_surf.uploadKeypoints(keypoints, gpu_kpt);
+                ok = ocl_surf.detectAndCompute(_img, _mask, gpu_kpt, _descriptors, useProvidedKeypoints);
+            }
+        }
+        if( ok )
+        {
+            if(!useProvidedKeypoints)
+                ocl_surf.downloadKeypoints(gpu_kpt, keypoints);
+            return;
+        }
+    }
+
+    Mat img = _img.getMat(), mask = _mask.getMat(), mask1, sum, msum;
+
+    if( imgcn > 1 )
         cvtColor(img, img, COLOR_BGR2GRAY);
 
     CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.size() == img.size()));
@@ -984,7 +1016,7 @@ void SURF::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, Input
     (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
 }
 
-void SURF::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SURF::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

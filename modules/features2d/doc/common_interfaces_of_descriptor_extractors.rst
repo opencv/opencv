@@ -25,10 +25,10 @@ Abstract base class for computing descriptors for image keypoints. ::
     public:
         virtual ~DescriptorExtractor();
 
-        void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                      Mat& descriptors ) const;
-        void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints,
-                      vector<Mat>& descriptors ) const;
+        void compute( InputArray image, vector<KeyPoint>& keypoints,
+                      OutputArray descriptors ) const;
+        void compute( InputArrayOfArrays images, vector<vector<KeyPoint> >& keypoints,
+                      OutputArrayOfArrays descriptors ) const;
 
         virtual void read( const FileNode& );
         virtual void write( FileStorage& ) const;
@@ -57,9 +57,9 @@ DescriptorExtractor::compute
 --------------------------------
 Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
-.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArray image, vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 
-.. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArrayOfArrays  images, vector<vector<KeyPoint> >& keypoints, OutputArrayOfArrays descriptors ) const
 
 .. ocv:pyfunction:: cv2.DescriptorExtractor_create.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
 
@@ -69,7 +69,7 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
     :param keypoints: Input collection of keypoints. Keypoints for which a descriptor cannot be computed are removed. Sometimes new keypoints can be added, for example: ``SIFT`` duplicates keypoint with several dominant orientations (for each orientation).
 
-    :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]`. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
+    :param descriptors: Computed descriptors. In the second variant of the method ``descriptors[i]`` are descriptors computed for a ``keypoints[i]``. Row ``j`` is the ``keypoints`` (or ``keypoints[i]``) is the descriptor for keypoint ``j``-th keypoint.
 
 
 DescriptorExtractor::create

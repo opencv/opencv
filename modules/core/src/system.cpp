@@ -274,7 +274,14 @@ volatile bool useOptimizedFlag = true;
 #ifdef HAVE_IPP
 struct IPPInitializer
 {
-    IPPInitializer(void) { ippStaticInit(); }
+    IPPInitializer(void)
+    {
+#if IPP_VERSION_MAJOR >= 8
+        ippInit();
+#else
+        ippStaticInit();
+#endif
+    }
 };
 
 IPPInitializer ippInitializer;
@@ -390,17 +397,17 @@ int64 getCPUTickCount(void)
 
 #else
 
-#ifdef HAVE_IPP
-int64 getCPUTickCount(void)
-{
-    return ippGetCpuClocks();
-}
-#else
+//#ifdef HAVE_IPP
+//int64 getCPUTickCount(void)
+//{
+//    return ippGetCpuClocks();
+//}
+//#else
 int64 getCPUTickCount(void)
 {
     return getTickCount();
 }
-#endif
+//#endif
 
 #endif
 
@@ -414,48 +421,44 @@ const String& getBuildInformation()
 
 String format( const char* fmt, ... )
 {
-    char buf[1024];
+    AutoBuffer<char, 1024> buf;
 
-    va_list va;
-    va_start(va, fmt);
-    int len = vsnprintf(buf, sizeof(buf), fmt, va);
-    va_end(va);
-
-    if (len >= (int)sizeof(buf))
+    for ( ; ; )
     {
-        String s(len, '\0');
+        va_list va;
         va_start(va, fmt);
-        len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
+        int bsize = static_cast<int>(buf.size()),
+                len = vsnprintf((char *)buf, bsize, fmt, va);
         va_end(va);
-        return s;
-    }
 
-    return String(buf, len);
+        if (len < 0 || len >= bsize)
+        {
+            buf.resize(std::max(bsize << 1, len + 1));
+            continue;
+        }
+        return String((char *)buf, len);
+    }
 }
 
 String tempfile( const char* suffix )
 {
-#ifdef HAVE_WINRT
-    std::wstring temp_dir = L"";
-    const wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
-    if (opencv_temp_dir)
-        temp_dir = std::wstring(opencv_temp_dir);
-#else
-    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
     String fname;
+#ifndef HAVE_WINRT
+    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
 #endif
 
 #if defined WIN32 || defined _WIN32
 #ifdef HAVE_WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir2;
-    if (temp_dir.empty())
-        temp_dir = GetTempPathWinRT();
+    std::wstring temp_dir = L"";
+    const wchar_t* opencv_temp_dir = GetTempPathWinRT().c_str();
+    if (opencv_temp_dir)
+        temp_dir = std::wstring(opencv_temp_dir);
 
     std::wstring temp_file;
     temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
-        return std::string();
+        return String();
 
     temp_file = temp_dir + std::wstring(L"\\") + temp_file;
     DeleteFileW(temp_file.c_str());
@@ -463,7 +466,7 @@ String tempfile( const char* suffix )
     char aname[MAX_PATH];
     size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    fname = std::string(aname);
+    fname = String(aname);
     RoUninitialize();
 #else
     char temp_dir2[MAX_PATH] = { 0 };
@@ -911,16 +914,22 @@ public:
     #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
-BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID);
-
+extern "C"
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
     {
         if (lpReserved != NULL) // called after ExitProcess() call
+        {
             cv::__termination = true;
-        cv::deleteThreadAllocData();
-        cv::deleteThreadData();
+        }
+        else
+        {
+            // Not allowed to free resources if lpReserved is non-null
+            // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
+            cv::deleteThreadAllocData();
+            cv::deleteThreadData();
+        }
     }
     return TRUE;
 }
@@ -1049,6 +1058,33 @@ TLSStorage::~TLSStorage()
 }
 
 TLSData<CoreTLSData> coreTlsData;
+
+namespace ipp
+{
+
+static int ippStatus = 0; // 0 - all is ok, -1 - IPP functions failed
+static const char * funcname = NULL, * filename = NULL;
+static int linen = 0;
+
+void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
+{
+    ippStatus = status;
+    funcname = _funcname;
+    filename = _filename;
+    linen = _line;
+}
+
+int getIppStatus()
+{
+    return ippStatus;
+}
+
+String getIppErrorLocation()
+{
+    return format("%s:%d %s", filename ? filename : "", linen, funcname ? funcname : "");
+}
+
+} // namespace ipp
 
 } // namespace cv
 

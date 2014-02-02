@@ -398,7 +398,7 @@ This 3D Widget defines a cone. ::
     {
     public:
         //! create default cone, oriented along x-axis with center of its base located at origin
-        WCone(double lenght, double radius, int resolution = 6.0, const Color &color = Color::white());
+        WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
 
         //! creates repositioned cone
         WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
@@ -898,6 +898,10 @@ This 3D Widget defines a point cloud. ::
         WCloud(InputArray cloud, InputArray colors);
         //! All points in cloud have the same color
         WCloud(InputArray cloud, const Color &color = Color::white());
+        //! Each point in cloud is mapped to a color in colors, normals are used for shading
+        WCloud(InputArray cloud, InputArray colors, InputArray normals);
+        //! All points in cloud have the same color, normals are used for shading
+        WCloud(InputArray cloud, const Color &color, InputArray normals);
     };
 
 viz::WCloud::WCloud
@@ -918,6 +922,22 @@ Constructs a WCloud.
 
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
 
+.. ocv:function:: WCloud(InputArray cloud, InputArray colors, InputArray normals)
+
+    :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
+    :param colors: Set of colors. It has to be of the same size with cloud.
+    :param normals: Normals for each point in cloud. Size and type should match with the cloud parameter.
+
+    Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
+
+.. ocv:function:: WCloud(InputArray cloud, const Color &color, InputArray normals)
+
+    :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
+    :param color: A single :ocv:class:`Color` for the whole cloud.
+    :param normals: Normals for each point in cloud. Size and type should match with the cloud parameter.
+
+    Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
+
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
 
 viz::WCloudCollection
@@ -935,6 +955,8 @@ This 3D Widget defines a collection of clouds. ::
         void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
         //! All points in cloud have the same color
         void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3d &pose = Affine3d::Identity());
+        //! Repacks internal structure to single cloud
+        void finalize();
     };
 
 viz::WCloudCollection::WCloudCollection
@@ -964,6 +986,12 @@ Adds a cloud to the collection.
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
 
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
+
+viz::WCloudCollection::finalize
+-------------------------------
+Finalizes cloud data by repacking to single cloud. Useful for large cloud collections to reduce memory usage
+
+.. ocv:function:: void finalize()
 
 viz::WCloudNormals
 ------------------
@@ -1018,3 +1046,43 @@ Constructs a WMesh.
     :param polygons: Points of the mesh object.
     :param colors: Point colors.
     :param normals: Point normals.
+
+viz::WWidgetMerger
+---------------------
+.. ocv:class:: WWidgetMerger
+
+This class allows to merge several widgets to single one. It has quite limited functionality and can't merge widgets with different attributes. For instance,
+if widgetA has color array and widgetB has only global color defined, then result of merge won't have color at all. The class is suitable for merging large amount of similar widgets. ::
+
+    class CV_EXPORTS WWidgetMerger : public Widget3D
+    {
+    public:
+        WWidgetMerger();
+
+        //! Add widget to merge with optional position change
+        void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity());
+
+        //! Repacks internal structure to single widget
+        void finalize();
+    };
+
+viz::WWidgetMerger::WWidgetMerger
+---------------------------------------
+Constructs a WWidgetMerger.
+
+.. ocv:function:: WWidgetMerger()
+
+viz::WWidgetMerger::addCloud
+-------------------------------
+Adds a cloud to the collection.
+
+.. ocv:function:: void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity())
+
+    :param widget: Widget to merge.
+    :param pose: Pose of the widget.
+
+viz::WWidgetMerger::finalize
+-------------------------------
+Finalizes merger data and constructs final merged widget
+
+.. ocv:function:: void finalize()

@@ -1,4 +1,4 @@
-SET(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_video opencv_highgui opencv_objdetect opencv_features2d opencv_calib3d opencv_nonfree opencv_flann)
+SET(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS opencv_core opencv_imgproc opencv_video opencv_imgcodecs opencv_highgui opencv_objdetect opencv_features2d opencv_calib3d opencv_nonfree opencv_flann)
 
 ocv_check_dependencies(${OPENCV_TAPI_SAMPLES_REQUIRED_DEPS})
 
@@ -47,6 +47,6 @@ endif()
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
-          DESTINATION share/OpenCV/samples/${project}
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/tapi
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()

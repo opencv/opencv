@@ -264,7 +264,7 @@ namespace cvtest
             reference_dst.convertTo(reference_dst, type);
         }
 
-        double e = norm(reference_dst, _parallel_dst);
+        double e = cvtest::norm(reference_dst, _parallel_dst, NORM_L2);
         if (e > eps)
         {
             ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);

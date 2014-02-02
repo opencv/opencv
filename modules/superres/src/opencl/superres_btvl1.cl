@@ -43,160 +43,137 @@
 //
 //M*/
 
-__kernel void buildMotionMapsKernel(__global float* forwardMotionX,
-                                    __global float* forwardMotionY,
-                                    __global float* backwardMotionX,
-                                    __global float* backwardMotionY,
-                                    __global float* forwardMapX,
-                                    __global float* forwardMapY,
-                                    __global float* backwardMapX,
-                                    __global float* backwardMapY,
-                                    int forwardMotionX_row,
-                                    int forwardMotionX_col,
-                                    int forwardMotionX_step,
-                                    int forwardMotionY_step,
-                                    int backwardMotionX_step,
-                                    int backwardMotionY_step,
-                                    int forwardMapX_step,
-                                    int forwardMapY_step,
-                                    int backwardMapX_step,
-                                    int backwardMapY_step
-                                   )
+#ifndef cn
+#define cn 1
+#endif
+
+#define sz (int)sizeof(float)
+#define src_elem_at(_src, y, step, x) *(__global const float *)(_src + mad24(y, step, (x) * sz))
+#define dst_elem_at(_dst, y, step, x) *(__global float *)(_dst + mad24(y, step, (x) * sz))
+
+__kernel void buildMotionMaps(__global const uchar * forwardMotionPtr, int forwardMotion_step, int forwardMotion_offset,
+                              __global const uchar * backwardMotionPtr, int backwardMotion_step, int backwardMotion_offset,
+                              __global const uchar * forwardMapPtr, int forwardMap_step, int forwardMap_offset,
+                              __global const uchar * backwardMapPtr, int backwardMap_step, int backwardMap_offset,
+                              int rows, int cols)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < forwardMotionX_col && y < forwardMotionX_row)
+    if (x < cols && y < rows)
     {
-        float fx = forwardMotionX[y * forwardMotionX_step + x];
-        float fy = forwardMotionY[y * forwardMotionY_step + x];
+        int forwardMotion_index = mad24(forwardMotion_step, y, (int)sizeof(float2) * x + forwardMotion_offset);
+        int backwardMotion_index = mad24(backwardMotion_step, y, (int)sizeof(float2) * x + backwardMotion_offset);
+        int forwardMap_index = mad24(forwardMap_step, y, (int)sizeof(float2) * x + forwardMap_offset);
+        int backwardMap_index = mad24(backwardMap_step, y, (int)sizeof(float2) * x + backwardMap_offset);
 
-        float bx = backwardMotionX[y * backwardMotionX_step + x];
-        float by = backwardMotionY[y * backwardMotionY_step + x];
+        float2 forwardMotion = *(__global const float2 *)(forwardMotionPtr + forwardMotion_index);
+        float2 backwardMotion = *(__global const float2 *)(backwardMotionPtr + backwardMotion_index);
+        __global float2 * forwardMap = (__global float2 *)(forwardMapPtr + forwardMap_index);
+        __global float2 * backwardMap = (__global float2 *)(backwardMapPtr + backwardMap_index);
 
-        forwardMapX[y * forwardMapX_step + x] = x + bx;
-        forwardMapY[y * forwardMapY_step + x] = y + by;
+        float2 basePoint = (float2)(x, y);
 
-        backwardMapX[y * backwardMapX_step + x] = x + fx;
-        backwardMapY[y * backwardMapY_step + x] = y + fy;
+        forwardMap[0] = basePoint + backwardMotion;
+        backwardMap[0] = basePoint + forwardMotion;
     }
 }
 
-__kernel void upscaleKernel(__global float* src,
-                            __global float* dst,
-                            int src_step,
-                            int dst_step,
-                            int src_row,
-                            int src_col,
-                            int scale,
-                            int channels
-                           )
+__kernel void upscale(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
+                      __global uchar * dstptr, int dst_step, int dst_offset, int scale)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < src_col && y < src_row)
+    if (x < src_cols && y < src_rows)
     {
-        if(channels == 1)
-        {
-            dst[y * scale * dst_step + x * scale] = src[y * src_step + x];
-        }
-        else
-        {
-            vstore4(vload4(0, src + y * channels * src_step + 4 * x), 0, dst + y * channels * scale * dst_step + 4 * x * scale);
-        }
+        int src_index = mad24(y, src_step, sz * x * cn + src_offset);
+        int dst_index = mad24(y * scale, dst_step, sz * x * scale * cn + dst_offset);
+
+        __global const float * src = (__global const float *)(srcptr + src_index);
+        __global float * dst = (__global float *)(dstptr + dst_index);
+
+        #pragma unroll
+        for (int c = 0; c < cn; ++c)
+            dst[c] = src[c];
     }
 }
 
 
-float diffSign(float a, float b)
+inline float diffSign1(float a, float b)
 {
     return a > b ? 1.0f : a < b ? -1.0f : 0.0f;
 }
 
-float4 diffSign4(float4 a, float4 b)
+inline float3 diffSign3(float3 a, float3 b)
 {
-    float4 pos;
+    float3 pos;
     pos.x = a.x > b.x ? 1.0f : a.x < b.x ? -1.0f : 0.0f;
     pos.y = a.y > b.y ? 1.0f : a.y < b.y ? -1.0f : 0.0f;
     pos.z = a.z > b.z ? 1.0f : a.z < b.z ? -1.0f : 0.0f;
-    pos.w = 0.0f;
     return pos;
 }
 
-__kernel void diffSignKernel(__global float* src1,
-                             __global float* src2,
-                             __global float* dst,
-                             int src1_row,
-                             int src1_col,
-                             int dst_step,
-                             int src1_step,
-                             int src2_step)
+__kernel void diffSign(__global const uchar * src1, int src1_step, int src1_offset,
+                       __global const uchar * src2, int src2_step, int src2_offset,
+                       __global uchar * dst, int dst_step, int dst_offset, int rows, int cols)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < src1_col && y < src1_row)
-    {
-        dst[y * dst_step + x] = diffSign(src1[y * src1_step + x], src2[y * src2_step + x]);
-    }
+    if (x < cols && y < rows)
+        *(__global float *)(dst + mad24(y, dst_step, sz * x + dst_offset)) =
+            diffSign1(*(__global const float *)(src1 + mad24(y, src1_step, sz * x + src1_offset)),
+                      *(__global const float *)(src2 + mad24(y, src2_step, sz * x + src2_offset)));
 }
 
-__kernel void calcBtvRegularizationKernel(__global float* src,
-        __global float* dst,
-        int src_step,
-        int dst_step,
-        int src_row,
-        int src_col,
-        int ksize,
-        int channels,
-        __constant float* c_btvRegWeights
-                                         )
+__kernel void calcBtvRegularization(__global const uchar * src, int src_step, int src_offset,
+                                    __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                                    int ksize, __constant float * c_btvRegWeights)
 {
     int x = get_global_id(0) + ksize;
     int y = get_global_id(1) + ksize;
 
-    if ((y < src_row - ksize) && (x < src_col - ksize))
+    if (y < dst_rows - ksize && x < dst_cols - ksize)
     {
-        if(channels == 1)
-        {
-            const float srcVal = src[y * src_step + x];
-            float dstVal = 0.0f;
+        src += src_offset;
 
-            for (int m = 0, count = 0; m <= ksize; ++m)
+#if cn == 1
+        const float srcVal = src_elem_at(src, y, src_step, x);
+        float dstVal = 0.0f;
+
+        for (int m = 0, count = 0; m <= ksize; ++m)
+            for (int l = ksize; l + m >= 0; --l, ++count)
             {
-                for (int l = ksize; l + m >= 0; --l, ++count)
-                {
-                    dstVal = dstVal + c_btvRegWeights[count] * (diffSign(srcVal, src[(y + m) * src_step + (x + l)]) - diffSign(src[(y - m) * src_step + (x - l)], srcVal));
-                }
+                dstVal += c_btvRegWeights[count] * (diffSign1(srcVal, src_elem_at(src, y + m, src_step, x + l))
+                    - diffSign1(src_elem_at(src, y - m, src_step, x - l), srcVal));
             }
-            dst[y * dst_step + x] = dstVal;
-        }
-        else
+
+        dst_elem_at(dst, y, dst_step, x) = dstVal;
+#elif cn == 3
+        __global const float * src0ptr = (__global const float *)(src + mad24(y, src_step, 3 * sz * x + src_offset));
+        float3 srcVal = (float3)(src0ptr[0], src0ptr[1], src0ptr[2]), dstVal = 0.f;
+
+        for (int m = 0, count = 0; m <= ksize; ++m)
         {
-            float4 srcVal = vload4(0, src + y * src_step + 4 * x);
-            float4 dstVal = 0.f;
-
-            for (int m = 0, count = 0; m <= ksize; ++m)
+            for (int l = ksize; l + m >= 0; --l, ++count)
             {
-                for (int l = ksize; l + m >= 0; --l, ++count)
-                {
-                    float4 src1;
-                    src1.x = src[(y + m) * src_step + 4 * (x + l) + 0];
-                    src1.y = src[(y + m) * src_step + 4 * (x + l) + 1];
-                    src1.z = src[(y + m) * src_step + 4 * (x + l) + 2];
-                    src1.w = src[(y + m) * src_step + 4 * (x + l) + 3];
+                __global const float * src1ptr = (__global const float *)(src + mad24(y + m, src_step, 3 * sz * (x + l) + src_offset));
+                __global const float * src2ptr = (__global const float *)(src + mad24(y - m, src_step, 3 * sz * (x - l) + src_offset));
 
-                    float4 src2;
-                    src2.x = src[(y - m) * src_step + 4 * (x - l) + 0];
-                    src2.y = src[(y - m) * src_step + 4 * (x - l) + 1];
-                    src2.z = src[(y - m) * src_step + 4 * (x - l) + 2];
-                    src2.w = src[(y - m) * src_step + 4 * (x - l) + 3];
+                float3 src1 = (float3)(src1ptr[0], src1ptr[1], src1ptr[2]);
+                float3 src2 = (float3)(src2ptr[0], src2ptr[1], src2ptr[2]);
 
-                    dstVal = dstVal + c_btvRegWeights[count] * (diffSign4(srcVal, src1) - diffSign4(src2, srcVal));
-                }
+                dstVal += c_btvRegWeights[count] * (diffSign3(srcVal, src1) - diffSign3(src2, srcVal));
             }
-            vstore4(dstVal, 0, dst + y * dst_step + 4 * x);
         }
+
+        __global float * dstptr = (__global float *)(dst + mad24(y, dst_step, 3 * sz * x + dst_offset + 0));
+        dstptr[0] = dstVal.x;
+        dstptr[1] = dstVal.y;
+        dstptr[2] = dstVal.z;
+#else
+#error "Number of channels should be either 1 of 3"
+#endif
     }
 }

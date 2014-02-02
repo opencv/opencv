@@ -316,6 +316,7 @@ RotatedRect
         RotatedRect();
         RotatedRect(const Point2f& center, const Size2f& size, float angle);
         RotatedRect(const CvBox2D& box);
+        RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
         //! returns 4 vertices of the rectangle
         void points(Point2f pts[]) const;
@@ -338,7 +339,11 @@ The class represents rotated (i.e. not up-right) rectangles on a plane. Each rec
         :param size: Width and height of the rectangle.
         :param angle: The rotation angle in a clockwise direction. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
         :param box: The rotated rectangle parameters as the obsolete CvBox2D structure.
+    .. ocv:function:: RotatedRect::RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3)
 
+        :param point1:
+        :param point2:
+        :param point3: Any 3 end points of the RotatedRect. They must be given in order (either clockwise or anticlockwise).
     .. ocv:function:: void RotatedRect::points( Point2f pts[] ) const
     .. ocv:function:: Rect RotatedRect::boundingRect() const
 
@@ -1610,12 +1615,12 @@ Copies the matrix to another one.
 
 The method copies the matrix data to another matrix. Before copying the data, the method invokes ::
 
-    m.create(this->size(), this->type);
+    m.create(this->size(), this->type());
 
 
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
-When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+When the operation mask is specified, if the ``Mat::create`` call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
 
 .. _Mat::convertTo:
 
@@ -1705,7 +1710,7 @@ Transposes a matrix.
 
 The method performs matrix transposition by means of matrix expressions. It does not perform the actual transposition but returns a temporary matrix transposition object that can be further used as a part of more complex matrix expressions or can be assigned to a matrix: ::
 
-    Mat A1 = A + Mat::eye(A.size(), A.type)*lambda;
+    Mat A1 = A + Mat::eye(A.size(), A.type())*lambda;
     Mat C = A1.t()*A1; // compute (A + lambda*I)^t * (A + lamda*I)
 
 

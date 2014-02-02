@@ -1238,15 +1238,16 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
 }
 
 
-double norm(const Mat& src, int normType, const Mat& mask)
+double norm(InputArray _src, int normType, InputArray _mask)
 {
+    Mat src = _src.getMat(), mask = _mask.getMat();
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         if( !mask.empty() )
         {
             Mat temp;
             bitwise_and(src, mask, temp);
-            return norm(temp, normType, Mat());
+            return cvtest::norm(temp, normType, Mat());
         }
 
         CV_Assert( src.depth() == CV_8U );
@@ -1317,8 +1318,12 @@ double norm(const Mat& src, int normType, const Mat& mask)
 }
 
 
-double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
+double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    bool isRelative = (normType & NORM_RELATIVE) != 0;
+    normType &= ~NORM_RELATIVE;
+
     if( normType == NORM_HAMMING || normType == NORM_HAMMING2 )
     {
         Mat temp;
@@ -1391,9 +1396,15 @@ double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
     }
     if( normType0 == NORM_L2 )
         result = sqrt(result);
-    return result;
+    return isRelative ? result / (cvtest::norm(src2, normType) + DBL_EPSILON) : result;
 }
 
+double PSNR(InputArray _src1, InputArray _src2)
+{
+    CV_Assert( _src1.depth() == CV_8U );
+    double diff = std::sqrt(cvtest::norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
+    return 20*log10(255./(diff+DBL_EPSILON));
+}
 
 template<typename _Tp> static double
 crossCorr_(const _Tp* src1, const _Tp* src2, size_t total)
@@ -2897,7 +2908,7 @@ static std::ostream& operator << (std::ostream& out, const MatPart& m)
 }
 
 MatComparator::MatComparator(double _maxdiff, int _context)
-    : maxdiff(_maxdiff), context(_context) {}
+    : maxdiff(_maxdiff), realmaxdiff(DBL_MAX), context(_context) {}
 
 ::testing::AssertionResult
 MatComparator::operator()(const char* expr1, const char* expr2,

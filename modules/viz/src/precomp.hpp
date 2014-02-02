@@ -76,7 +76,6 @@
 #include <vtkDoubleArray.h>
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
-#include <vtkPolyDataReader.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkDataSetMapper.h>
 #include <vtkCellArray.h>
@@ -115,11 +114,9 @@
 #include <vtkObjectFactory.h>
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkMergeFilter.h>
-#include <vtkDataSetWriter.h>
 #include <vtkErrorCode.h>
 #include <vtkPLYWriter.h>
 #include <vtkSTLWriter.h>
-#include <vtkSimplePointsReader.h>
 #include <vtkPLYReader.h>
 #include <vtkOBJReader.h>
 #include <vtkSTLReader.h>
@@ -133,6 +130,7 @@
 #include <vtkElevationFilter.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
+#include "vtkCallbackCommand.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -142,10 +140,12 @@
 
 #include <vtk/vtkOBJWriter.h>
 #include <vtk/vtkXYZWriter.h>
+#include <vtk/vtkXYZReader.h>
 #include <vtk/vtkCloudMatSink.h>
 #include <vtk/vtkCloudMatSource.h>
 #include <vtk/vtkTrajectorySource.h>
 #include <vtk/vtkImageMatSource.h>
+
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
@@ -158,7 +158,16 @@ namespace cv
     namespace viz
     {
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
-        typedef std::map<String, Viz3d> VizMap;
+
+        struct VizMap
+        {
+            typedef std::map<String, Viz3d> type;
+            typedef type::iterator iterator;
+
+            type m;
+            ~VizMap();
+            void replace_clear();
+        };
 
         class VizStorage
         {
@@ -170,7 +179,6 @@ namespace cv
 
         private:
             VizStorage(); // Static
-            ~VizStorage();
 
             static void add(const Viz3d& window);
             static Viz3d& get(const String &window_name);
@@ -180,6 +188,8 @@ namespace cv
 
             static VizMap storage;
             friend class Viz3d;
+
+            static VizStorage init;
         };
 
         template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/norm(v); }
@@ -270,9 +280,14 @@ namespace cv
                 vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
                 scalars->SetName("Colors");
                 scalars->SetNumberOfComponents(3);
-                scalars->SetNumberOfTuples(size);
-                scalars->SetArray(color_data->val, size * 3, 0);
+                scalars->SetNumberOfTuples((vtkIdType)size);
+                scalars->SetArray(color_data->val, (vtkIdType)(size * 3), 0);
                 return scalars;
+            }
+
+            static vtkSmartPointer<vtkPolyData> FillScalars(vtkSmartPointer<vtkPolyData> polydata, const Color& color)
+            {
+                return polydata->GetPointData()->SetScalars(FillScalars(polydata->GetNumberOfPoints(), color)), polydata;
             }
 
             static vtkSmartPointer<vtkPolyData> ComputeNormals(vtkSmartPointer<vtkPolyData> polydata)
@@ -315,11 +330,12 @@ namespace cv
                 return transform_filter->GetOutput();
             }
         };
+
+        vtkSmartPointer<vtkRenderWindowInteractor> vtkCocoaRenderWindowInteractorNew();
     }
 }
 
-#include "interactor_style.hpp"
+#include "vtk/vtkVizInteractorStyle.hpp"
 #include "vizimpl.hpp"
-
 
 #endif

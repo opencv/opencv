@@ -54,16 +54,16 @@ namespace ocl {
 
 //////////////////////////////////////// Merge ///////////////////////////////////////////////
 
-PARAM_TEST_CASE(Merge, MatDepth, Channels, bool)
+PARAM_TEST_CASE(Merge, MatDepth, int, bool)
 {
-    int depth, cn;
+    int depth, nsrc;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src1)
-    TEST_DECLARE_INPUT_PARAMETER(src2)
-    TEST_DECLARE_INPUT_PARAMETER(src3)
-    TEST_DECLARE_INPUT_PARAMETER(src4)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src1);
+    TEST_DECLARE_INPUT_PARAMETER(src2);
+    TEST_DECLARE_INPUT_PARAMETER(src3);
+    TEST_DECLARE_INPUT_PARAMETER(src4);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     std::vector<Mat> src_roi;
     std::vector<UMat> usrc_roi;
@@ -71,10 +71,15 @@ PARAM_TEST_CASE(Merge, MatDepth, Channels, bool)
     virtual void SetUp()
     {
         depth = GET_PARAM(0);
-        cn = GET_PARAM(1);
+        nsrc = GET_PARAM(1);
         use_roi = GET_PARAM(2);
 
-        CV_Assert(cn >= 1 && cn <= 4);
+        CV_Assert(nsrc >= 1 && nsrc <= 4);
+    }
+
+    int type()
+    {
+        return CV_MAKE_TYPE(depth, randomInt(1, 3));
     }
 
     void generateTestData()
@@ -83,34 +88,39 @@ PARAM_TEST_CASE(Merge, MatDepth, Channels, bool)
 
         {
             Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-            randomSubMat(src1, src1_roi, roiSize, src1Border, depth, 2, 11);
+            randomSubMat(src1, src1_roi, roiSize, src1Border, type(), 2, 11);
 
             Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-            randomSubMat(src2, src2_roi, roiSize, src2Border, depth, -1540, 1740);
+            randomSubMat(src2, src2_roi, roiSize, src2Border, type(), -1540, 1740);
 
             Border src3Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-            randomSubMat(src3, src3_roi, roiSize, src3Border, depth, -1540, 1740);
+            randomSubMat(src3, src3_roi, roiSize, src3Border, type(), -1540, 1740);
 
             Border src4Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-            randomSubMat(src4, src4_roi, roiSize, src4Border, depth, -1540, 1740);
+            randomSubMat(src4, src4_roi, roiSize, src4Border, type(), -1540, 1740);
         }
 
-        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_MAKE_TYPE(depth, cn), 5, 16);
-
-        UMAT_UPLOAD_INPUT_PARAMETER(src1)
-        UMAT_UPLOAD_INPUT_PARAMETER(src2)
-        UMAT_UPLOAD_INPUT_PARAMETER(src3)
-        UMAT_UPLOAD_INPUT_PARAMETER(src4)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src1);
+        UMAT_UPLOAD_INPUT_PARAMETER(src2);
+        UMAT_UPLOAD_INPUT_PARAMETER(src3);
+        UMAT_UPLOAD_INPUT_PARAMETER(src4);
 
         src_roi.push_back(src1_roi), usrc_roi.push_back(usrc1_roi);
-        if (cn >= 2)
+        if (nsrc >= 2)
             src_roi.push_back(src2_roi), usrc_roi.push_back(usrc2_roi);
-        if (cn >= 3)
+        if (nsrc >= 3)
             src_roi.push_back(src3_roi), usrc_roi.push_back(usrc3_roi);
-        if (cn >= 4)
+        if (nsrc >= 4)
             src_roi.push_back(src4_roi), usrc_roi.push_back(usrc4_roi);
+
+        int dcn = 0;
+        for (int i = 0; i < nsrc; ++i)
+            dcn += src_roi[i].channels();
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_MAKE_TYPE(depth, dcn), 5, 16);
+
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.)
@@ -139,11 +149,11 @@ PARAM_TEST_CASE(Split, MatType, Channels, bool)
     int depth, cn;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst1)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst3)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst4)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst1);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst3);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst4);
 
     std::vector<Mat> dst_roi, dst;
     std::vector<UMat> udst_roi, udst;
@@ -177,11 +187,11 @@ PARAM_TEST_CASE(Split, MatType, Channels, bool)
             randomSubMat(dst4, dst4_roi, roiSize, dst4Border, depth, -1540, 1740);
         }
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4);
 
         dst_roi.push_back(dst1_roi), udst_roi.push_back(udst1_roi),
                 dst.push_back(dst1), udst.push_back(udst1);
@@ -221,14 +231,14 @@ PARAM_TEST_CASE(MixChannels, MatType, bool)
     int depth;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src1)
-    TEST_DECLARE_INPUT_PARAMETER(src2)
-    TEST_DECLARE_INPUT_PARAMETER(src3)
-    TEST_DECLARE_INPUT_PARAMETER(src4)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst1)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst3)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst4)
+    TEST_DECLARE_INPUT_PARAMETER(src1);
+    TEST_DECLARE_INPUT_PARAMETER(src2);
+    TEST_DECLARE_INPUT_PARAMETER(src3);
+    TEST_DECLARE_INPUT_PARAMETER(src4);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst1);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst3);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst4);
 
     std::vector<Mat> src_roi, dst_roi, dst;
     std::vector<UMat> usrc_roi, udst_roi, udst;
@@ -287,15 +297,15 @@ PARAM_TEST_CASE(MixChannels, MatType, bool)
             randomSubMat(dst4, dst4_roi, roiSize, dst4Border, type(), -1540, 1740);
         }
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src1)
-        UMAT_UPLOAD_INPUT_PARAMETER(src2)
-        UMAT_UPLOAD_INPUT_PARAMETER(src3)
-        UMAT_UPLOAD_INPUT_PARAMETER(src4)
+        UMAT_UPLOAD_INPUT_PARAMETER(src1);
+        UMAT_UPLOAD_INPUT_PARAMETER(src2);
+        UMAT_UPLOAD_INPUT_PARAMETER(src3);
+        UMAT_UPLOAD_INPUT_PARAMETER(src4);
 
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst1);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst3);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst4);
 
         int nsrc = randomInt(1, 5), ndst = randomInt(1, 5);
 
@@ -360,8 +370,8 @@ PARAM_TEST_CASE(InsertChannel, MatDepth, Channels, bool)
     int depth, cn, coi;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -381,8 +391,8 @@ PARAM_TEST_CASE(InsertChannel, MatDepth, Channels, bool)
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_MAKE_TYPE(depth, cn), 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -406,8 +416,8 @@ PARAM_TEST_CASE(ExtractChannel, MatDepth, Channels, bool)
     int depth, cn, coi;
     bool use_roi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -427,8 +437,8 @@ PARAM_TEST_CASE(ExtractChannel, MatDepth, Channels, bool)
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, depth, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -447,7 +457,7 @@ OCL_TEST_P(ExtractChannel, Accuracy)
 
 //////////////////////////////////////// Instantiation ///////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(Channels, Merge, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Channels, Merge, Combine(OCL_ALL_DEPTHS, Values(1, 2, 3, 4), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Channels, Split, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Channels, MixChannels, Combine(OCL_ALL_DEPTHS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Channels, InsertChannel, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));

@@ -88,7 +88,7 @@ public:
             stringstream s;
             s << tag;
 
-            const string filename = "output_"+s.str()+".avi";
+            const string filename = tempfile((s.str()+".avi").c_str());
 
             try
             {
@@ -163,7 +163,7 @@ public:
 
             CV_Assert( !img0.empty() && !img.empty() && img_next.empty() );
 
-            double diff = norm(img0, img, CV_C);
+            double diff = cvtest::norm(img0, img, CV_C);
             CV_Assert( diff == 0 );
         }
         catch(...)
@@ -329,7 +329,7 @@ public:
                 EXPECT_EQ(reference.depth(), actual.depth());
                 EXPECT_EQ(reference.channels(), actual.channels());
 
-                double psnr = PSNR(actual, reference);
+                double psnr = cvtest::PSNR(actual, reference);
                 if (psnr < eps)
                 {
     #define SUM cvtest::TS::SUMMARY

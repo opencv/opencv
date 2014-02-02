@@ -61,9 +61,10 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
     int borderType;
     bool useRoi;
     Mat kernelX, kernelY;
+    double delta;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -75,36 +76,28 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
     void random_roi()
     {
         Size ksize = randomSize(kernelMinSize, kernelMaxSize);
-        if (1 != (ksize.width % 2))
+        if (1 != ksize.width % 2)
             ksize.width++;
-        if (1 != (ksize.height % 2))
+        if (1 != ksize.height % 2)
             ksize.height++;
+
         Mat temp = randomMat(Size(ksize.width, 1), CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernelX, 1.0, 0.0, NORM_L1);
         temp = randomMat(Size(1, ksize.height),  CV_MAKE_TYPE(CV_32F, 1), -MAX_VALUE, MAX_VALUE);
         cv::normalize(temp, kernelY, 1.0, 0.0, NORM_L1);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
-        int rest = roiSize.width % 4;
-        if (0 != rest)
-            roiSize.width += (4 - rest);
         Border srcBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        rest = srcBorder.lef % 4;
-        if (0 != rest)
-            srcBorder.lef += (4 - rest);
-        rest = srcBorder.rig % 4;
-        if (0 != rest)
-            srcBorder.rig += (4 - rest);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        anchor.x = -1;
-        anchor.y = -1;
+        anchor.x = anchor.y = -1;
+        delta = randomDouble(-100, 100);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
@@ -115,22 +108,21 @@ PARAM_TEST_CASE(SepFilter2D, MatDepth, Channels, BorderType, bool, bool)
 
 OCL_TEST_P(SepFilter2D, Mat)
 {
-    for (int j = 0; j < test_loop_times; j++)
+    for (int j = 0; j < test_loop_times + 3; j++)
     {
         random_roi();
 
-        OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, 0.0, borderType));
-        OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, 0.0, borderType));
+        OCL_OFF(cv::sepFilter2D(src_roi, dst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
+        OCL_ON(cv::sepFilter2D(usrc_roi, udst_roi, -1, kernelX, kernelY, anchor, delta, borderType));
 
         Near(1.0);
     }
 }
 
-
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SepFilter2D,
                             Combine(
                                 Values(CV_8U, CV_32F),
-                                Values(1, 4),
+                                OCL_ALL_CHANNELS,
                                 Values(
                                         (BorderType)BORDER_CONSTANT,
                                         (BorderType)BORDER_REPLICATE,

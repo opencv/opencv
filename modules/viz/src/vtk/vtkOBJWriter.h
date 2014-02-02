@@ -45,29 +45,41 @@
 #ifndef __vtkOBJWriter_h
 #define __vtkOBJWriter_h
 
-#include <vtkPolyDataWriter.h>
+#include <vtkWriter.h>
 
 namespace cv
 {
     namespace viz
     {
-        class vtkOBJWriter : public vtkPolyDataWriter
+        class vtkOBJWriter : public vtkWriter
         {
         public:
           static vtkOBJWriter *New();
-          vtkTypeMacro(vtkOBJWriter,vtkPolyDataWriter)
+          vtkTypeMacro(vtkOBJWriter,vtkWriter)
           void PrintSelf(ostream& os, vtkIndent indent);
 
-          vtkGetMacro(DecimalPrecision, int);
-          vtkSetMacro(DecimalPrecision, int);
+          vtkGetMacro(DecimalPrecision, int)
+          vtkSetMacro(DecimalPrecision, int)
+
+          // Description:
+          // Specify file name of data file to write.
+          vtkSetStringMacro(FileName)
+          vtkGetStringMacro(FileName)
+
+          // Description:
+          // Get the input to this writer.
+          vtkPolyData* GetInput();
+          vtkPolyData* GetInput(int port);
 
         protected:
           vtkOBJWriter();
           ~vtkOBJWriter();
 
           void WriteData();
+          int FillInputPortInformation(int port, vtkInformation *info);
 
           int DecimalPrecision;
+          char *FileName;
 
         private:
           vtkOBJWriter(const vtkOBJWriter&);  // Not implemented.

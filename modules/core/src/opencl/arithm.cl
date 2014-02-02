@@ -63,15 +63,41 @@
 #elif defined cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-#define CV_EPSILON DBL_EPSILON
-#define CV_PI M_PI
-#else
-#define CV_EPSILON FLT_EPSILON
-#define CV_PI M_PI_F
 #endif
 
-#define dstelem *(__global dstT*)(dstptr + dst_index)
-#define dstelem2 *(__global dstT*)(dstptr2 + dst_index2)
+#ifdef INTEL_DEVICE
+#pragma OPENCL FP_CONTRACT ON
+#pragma OPENCL FP_FAST_FMAF ON
+#pragma OPENCL FP_FAST_FMA ON
+#endif
+
+#if depth <= 5
+#define CV_PI M_PI_F
+#else
+#define CV_PI M_PI
+#endif
+
+#ifndef cn
+#define cn 1
+#endif
+
+#if cn == 1
+#undef srcT1_C1
+#undef srcT2_C1
+#undef dstT_C1
+#define srcT1_C1 srcT1
+#define srcT2_C1 srcT2
+#define dstT_C1 dstT
+#endif
+
+#if cn != 3
+    #define storedst(val) *(__global dstT *)(dstptr + dst_index) = val
+    #define storedst2(val) *(__global dstT *)(dstptr2 + dst_index2) = val
+#else
+    #define storedst(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr + dst_index))
+    #define storedst2(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr2 + dst_index2))
+#endif
+
 #define noconvert
 
 #ifndef workT
@@ -79,12 +105,27 @@
     #ifndef srcT1
     #define srcT1 dstT
     #endif
+
+    #ifndef srcT1_C1
+    #define srcT1_C1 dstT_C1
+    #endif
+
     #ifndef srcT2
     #define srcT2 dstT
     #endif
+
+    #ifndef srcT2_C1
+    #define srcT2_C1 dstT_C1
+    #endif
+
     #define workT dstT
-    #define srcelem1 *(__global srcT1*)(srcptr1 + src1_index)
-    #define srcelem2 *(__global srcT2*)(srcptr2 + src2_index)
+    #if cn != 3
+        #define srcelem1 *(__global srcT1 *)(srcptr1 + src1_index)
+        #define srcelem2 *(__global srcT2 *)(srcptr2 + src2_index)
+    #else
+        #define srcelem1 vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index))
+        #define srcelem2 vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index))
+    #endif
     #ifndef convertToDT
     #define convertToDT noconvert
     #endif
@@ -94,152 +135,208 @@
     #ifndef convertToWT2
     #define convertToWT2 convertToWT1
     #endif
-    #define srcelem1 convertToWT1(*(__global srcT1*)(srcptr1 + src1_index))
-    #define srcelem2 convertToWT2(*(__global srcT2*)(srcptr2 + src2_index))
+    #if cn != 3
+        #define srcelem1 convertToWT1(*(__global srcT1 *)(srcptr1 + src1_index))
+        #define srcelem2 convertToWT2(*(__global srcT2 *)(srcptr2 + src2_index))
+    #else
+        #define srcelem1 convertToWT1(vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index)))
+        #define srcelem2 convertToWT2(vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index)))
+    #endif
 
+#endif
+
+#ifndef workST
+#define workST workT
 #endif
 
 #define EXTRA_PARAMS
 #define EXTRA_INDEX
+#define EXTRA_INDEX_ADD
 
 #if defined OP_ADD
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 + srcelem2)
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 + srcelem2))
 
 #elif defined OP_SUB
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 - srcelem2)
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 - srcelem2))
 
 #elif defined OP_RSUB
-#define PROCESS_ELEM dstelem = convertToDT(srcelem2 - srcelem1)
+#define PROCESS_ELEM storedst(convertToDT(srcelem2 - srcelem1))
 
 #elif defined OP_ABSDIFF
+#if wdepth <= 4
 #define PROCESS_ELEM \
-    workT v = srcelem1 - srcelem2; \
-    dstelem = convertToDT(v >= (workT)(0) ? v : -v);
+    storedst(convertToDT(convertFromU(abs_diff(srcelem1, srcelem2))))
+#else
+#define PROCESS_ELEM \
+    storedst(convertToDT(fabs(srcelem1 - srcelem2)))
+#endif
 
 #elif defined OP_AND
-#define PROCESS_ELEM dstelem = srcelem1 & srcelem2
+#define PROCESS_ELEM storedst(srcelem1 & srcelem2)
 
 #elif defined OP_OR
-#define PROCESS_ELEM dstelem = srcelem1 | srcelem2
+#define PROCESS_ELEM storedst(srcelem1 | srcelem2)
 
 #elif defined OP_XOR
-#define PROCESS_ELEM dstelem = srcelem1 ^ srcelem2
+#define PROCESS_ELEM storedst(srcelem1 ^ srcelem2)
 
 #elif defined OP_NOT
-#define PROCESS_ELEM dstelem = ~srcelem1
+#define PROCESS_ELEM storedst(~srcelem1)
 
 #elif defined OP_MIN
-#define PROCESS_ELEM dstelem = min(srcelem1, srcelem2)
+#define PROCESS_ELEM storedst(min(srcelem1, srcelem2))
 
 #elif defined OP_MAX
-#define PROCESS_ELEM dstelem = max(srcelem1, srcelem2)
+#define PROCESS_ELEM storedst(max(srcelem1, srcelem2))
 
 #elif defined OP_MUL
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * srcelem2)
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 * srcelem2))
 
 #elif defined OP_MUL_SCALE
 #undef EXTRA_PARAMS
 #ifdef UNARY_OP
-#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#define EXTRA_PARAMS , workST srcelem2_, scaleT scale
+#undef srcelem2
+#define srcelem2 srcelem2_
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * scale * srcelem2)
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 * scale * srcelem2))
 
 #elif defined OP_DIV
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
-        dstelem = convertToDT(e2 != zero ? srcelem1 / e2 : zero)
+        storedst(convertToDT(e2 != zero ? srcelem1 / e2 : zero))
 
 #elif defined OP_DIV_SCALE
 #undef EXTRA_PARAMS
 #ifdef UNARY_OP
-#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#define EXTRA_PARAMS , workST srcelem2_, scaleT scale
+#undef srcelem2
+#define srcelem2 srcelem2_
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
-        dstelem = convertToDT(e2 == zero ? zero : (srcelem1 * (workT)(scale) / e2))
+        storedst(convertToDT(e2 == zero ? zero : (srcelem1 * (workT)(scale) / e2)))
 
 #elif defined OP_RDIV_SCALE
 #undef EXTRA_PARAMS
 #ifdef UNARY_OP
-#define EXTRA_PARAMS , workT srcelem2, scaleT scale
+#define EXTRA_PARAMS , workST srcelem2_, scaleT scale
+#undef srcelem2
+#define srcelem2 srcelem2_
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
-        dstelem = convertToDT(e1 == zero ? zero : (srcelem2 * (workT)(scale) / e1))
+        storedst(convertToDT(e1 == zero ? zero : (srcelem2 * (workT)(scale) / e1)))
 
 #elif defined OP_RECIP_SCALE
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , scaleT scale
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
-        dstelem = convertToDT(e1 != zero ? scale / e1 : zero)
+        storedst(convertToDT(e1 != zero ? scale / e1 : zero))
 
 #elif defined OP_ADDW
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , scaleT alpha, scaleT beta, scaleT gamma
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1*alpha + srcelem2*beta + gamma)
+#if wdepth <= 4
+#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, mad24(srcelem2, beta, gamma))))
+#else
+#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, alpha, fma(srcelem2, beta, gamma))))
+#endif
 
 #elif defined OP_MAG
-#define PROCESS_ELEM dstelem = hypot(srcelem1, srcelem2)
-
-#elif defined OP_ABS_NOSAT
-#define PROCESS_ELEM \
-    dstT v = convertToDT(srcelem1); \
-    dstelem = v >= 0 ? v : -v
+#define PROCESS_ELEM storedst(hypot(srcelem1, srcelem2))
 
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
-        workT tmp = atan2(srcelem2, srcelem1); \
-        if(tmp < 0) tmp += 6.283185307179586232f; \
-        dstelem = tmp
+    workT tmp = atan2(srcelem2, srcelem1); \
+    if (tmp < 0) \
+        tmp += 2 * CV_PI; \
+    storedst(tmp)
 
 #elif defined OP_PHASE_DEGREES
     #define PROCESS_ELEM \
-    workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465f; \
-    if(tmp < 0) tmp += 360; \
-    dstelem = tmp
+    workT tmp = degrees(atan2(srcelem2, srcelem1)); \
+    if (tmp < 0) \
+        tmp += 360; \
+    storedst(tmp)
 
 #elif defined OP_EXP
-#define PROCESS_ELEM dstelem = exp(srcelem1)
+#if wdepth == 5
+#define PROCESS_ELEM storedst(native_exp(srcelem1))
+#else
+#define PROCESS_ELEM storedst(exp(srcelem1))
+#endif
 
 #elif defined OP_POW
-#define PROCESS_ELEM dstelem = pow(srcelem1, srcelem2)
+#define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))
+
+#elif defined OP_ROOTN
+#define PROCESS_ELEM storedst(rootn(srcelem1, srcelem2))
+
+#elif defined OP_POWR
+#if depth == 5
+#define PROCESS_ELEM storedst(native_powr(srcelem1, srcelem2))
+#else
+#define PROCESS_ELEM storedst(powr(srcelem1, srcelem2))
+#endif
+
+#elif defined OP_POWN
+#undef workT
+#define workT int
+#define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
 
 #elif defined OP_SQRT
-#define PROCESS_ELEM dstelem = sqrt(srcelem1)
+#define PROCESS_ELEM storedst(native_sqrt(srcelem1))
 
 #elif defined OP_LOG
 #define PROCESS_ELEM \
-dstT v = (dstT)(srcelem1);\
-dstelem = v > (dstT)(0) ? log(v) : log(-v)
+    storedst(log(fabs(srcelem1)))
 
 #elif defined OP_CMP
-#define dstT uchar
 #define srcT2 srcT1
+#ifndef convertToWT1
 #define convertToWT1
-#define PROCESS_ELEM dstelem = convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0)
+#endif
+#define PROCESS_ELEM \
+    storedst(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha, workT beta
+#define EXTRA_PARAMS , workT1 alpha, workT1 beta
+#if wdepth <= 4
 #define PROCESS_ELEM \
-    workT value = srcelem1 * alpha + beta; \
-    dstelem = convertToDT(value >= 0 ? value : -value)
+    workT value = mad24(srcelem1, (workT)(alpha), (workT)(beta)); \
+    storedst(convertToDT(abs(value)))
+#else
+#define PROCESS_ELEM \
+    workT value = fma(srcelem1, (workT)(alpha), (workT)(beta)); \
+    storedst(convertToDT(fabs(value)))
+#endif
 
 #elif defined OP_SCALE_ADD
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha
-#define PROCESS_ELEM dstelem = convertToDT(srcelem1 * alpha + srcelem2)
+#define EXTRA_PARAMS , workT1 alpha
+#if wdepth <= 4
+#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, (workT)(alpha), srcelem2)))
+#else
+#define PROCESS_ELEM storedst(convertToDT(fma(srcelem1, (workT)(alpha), srcelem2)))
+#endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
+#if depth <= 5
+#define CV_EPSILON FLT_EPSILON
+#else
+#define CV_EPSILON DBL_EPSILON
+#endif
 #ifdef OP_CTP_AD
-#define TO_DEGREE cartToPolar *= (180 / CV_PI);
+#define TO_DEGREE cartToPolar = degrees(cartToPolar);
 #elif defined OP_CTP_AR
 #define TO_DEGREE
 #endif
@@ -250,32 +347,29 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
     dstT tmp = y >= 0 ? 0 : CV_PI * 2; \
     tmp = x < 0 ? CV_PI : tmp; \
     dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
-    dstT cartToPolar = y2 <= x2 ? x * y / (x2 + 0.28f * y2 + CV_EPSILON) + tmp : (tmp1 - x * y / (y2 + 0.28f * x2 + CV_EPSILON)); \
+    dstT cartToPolar = y2 <= x2 ? x * y / mad((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp : (tmp1 - x * y / mad((dstT)(0.28f), x2, y2 + CV_EPSILON)); \
     TO_DEGREE \
-    dstelem = magnitude; \
-    dstelem2 = cartToPolar
+    storedst(magnitude); \
+    storedst2(cartToPolar)
 
 #elif defined OP_PTC_AD || defined OP_PTC_AR
 #ifdef OP_PTC_AD
-#define FROM_DEGREE \
-    dstT ascale = CV_PI/180.0f; \
-    dstT alpha = y * ascale
+#define FROM_DEGREE y = radians(y)
 #else
-#define FROM_DEGREE \
-    dstT alpha = y
+#define FROM_DEGREE
 #endif
 #define PROCESS_ELEM \
-    dstT x = srcelem1, y = srcelem2; \
+    dstT x = srcelem1, y = srcelem2, cosval; \
     FROM_DEGREE; \
-    dstelem = cos(alpha) * x; \
-    dstelem2 = sin(alpha) * x
+    storedst2(sincos(y, &cosval) * x); \
+    storedst(cosval * x);
 
 #elif defined OP_PATCH_NANS
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , int val
+#define EXTRA_PARAMS , dstT val
 #define PROCESS_ELEM \
-    if (( srcelem1 & 0x7fffffff) > 0x7f800000 ) \
-        dstelem = val
+    if (isnan(srcelem1)) \
+        storedst(val)
 
 #else
 #error "unknown op type"
@@ -285,107 +379,129 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , __global uchar* dstptr2, int dststep2, int dstoffset2
     #undef EXTRA_INDEX
-    #define EXTRA_INDEX int dst_index2 = mad24(y, dststep2, x*(int)sizeof(dstT) + dstoffset2)
+    #define EXTRA_INDEX int dst_index2 = mad24(y0, dststep2, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset2))
+    #undef EXTRA_INDEX_ADD
+    #define EXTRA_INDEX_ADD dst_index2 += dststep2
 #endif
 
 #if defined UNARY_OP || defined MASK_UNARY_OP
-#undef srcelem2
+
 #if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
     defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
     defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW || \
-    defined OP_MUL || defined OP_DIV
+    defined OP_MUL || defined OP_DIV || defined OP_POWN || defined OP_POWR || defined OP_ROOTN
     #undef EXTRA_PARAMS
-    #define EXTRA_PARAMS , workT srcelem2
+    #define EXTRA_PARAMS , workST srcelem2_
+    #undef srcelem2
+    #define srcelem2 srcelem2_
 #endif
+
+#if cn == 3
+#undef srcelem2
+#define srcelem2 (workT)(srcelem2_.x, srcelem2_.y, srcelem2_.z)
+#endif
+
 #endif
 
 #if defined BINARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * srcptr2, int srcstep2, int srcoffset2,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
+        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
 #if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
-        int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
+        int src2_index = mad24(y0, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
 #endif
-        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
         EXTRA_INDEX;
 
-        PROCESS_ELEM;
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, dst_index += dststep)
+        {
+            PROCESS_ELEM;
+#if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
+            src2_index += srcstep2;
+#endif
+            EXTRA_INDEX_ADD;
+        }
     }
 }
 
 #elif defined MASK_BINARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
-                 __global const uchar* mask, int maskstep, int maskoffset,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * srcptr2, int srcstep2, int srcoffset2,
+                 __global const uchar * mask, int maskstep, int maskoffset,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int mask_index = mad24(y, maskstep, x + maskoffset);
-        if( mask[mask_index] )
-        {
-            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
-            int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2) + srcoffset2);
-            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        int mask_index = mad24(y0, maskstep, x + maskoffset);
+        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int src2_index = mad24(y0, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-            PROCESS_ELEM;
-        }
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, src2_index += srcstep2,
+                                                                mask_index += maskstep, dst_index += dststep)
+            if (mask[mask_index])
+            {
+                PROCESS_ELEM;
+            }
     }
 }
 
 #elif defined UNARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
-        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
-        EXTRA_INDEX;
+        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-        PROCESS_ELEM;
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, dst_index += dststep)
+        {
+            PROCESS_ELEM;
+        }
     }
 }
 
 #elif defined MASK_UNARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* mask, int maskstep, int maskoffset,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * mask, int maskstep, int maskoffset,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
-    int y = get_global_id(1);
+    int y0 = get_global_id(1) * rowsPerWI;
 
-    if (x < cols && y < rows)
+    if (x < cols)
     {
-        int mask_index = mad24(y, maskstep, x + maskoffset);
-        if( mask[mask_index] )
-        {
-            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1) + srcoffset1);
-            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT) + dstoffset);
+        int mask_index = mad24(y0, maskstep, x + maskoffset);
+        int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int dst_index  = mad24(y0, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
-            PROCESS_ELEM;
-        }
+        for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src1_index += srcstep1, mask_index += maskstep, dst_index += dststep)
+            if (mask[mask_index])
+            {
+                PROCESS_ELEM;
+            }
     }
 }
 

@@ -17,21 +17,21 @@ typedef perf::TestBaseWithParam<Cascade_Image_MinSize_t> Cascade_Image_MinSize;
 OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
                  testing::Combine(
                     testing::Values( string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt.xml"),
-                                     string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt_old.xml"),
+                                     string("cv/cascadeandhog/cascades/haarcascade_frontalface_alt2.xml"),
                                      string("cv/cascadeandhog/cascades/lbpcascade_frontalface.xml") ),
                     testing::Values( string("cv/shared/lena.png"),
                                      string("cv/cascadeandhog/images/bttf301.png"),
                                      string("cv/cascadeandhog/images/class57.png") ),
                     testing::Values(30, 64, 90) ) )
 {
-    const string cascasePath = get<0>(GetParam());
+    const string cascadePath = get<0>(GetParam());
     const string imagePath   = get<1>(GetParam());
     int min_size = get<2>(GetParam());
     Size minSize(min_size, min_size);
 
-    CascadeClassifier cc( getDataPath(cascasePath) );
+    CascadeClassifier cc( getDataPath(cascadePath) );
     if (cc.empty())
-        FAIL() << "Can't load cascade file: " << getDataPath(cascasePath);
+        FAIL() << "Can't load cascade file: " << getDataPath(cascadePath);
 
     Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
     if (img.empty())

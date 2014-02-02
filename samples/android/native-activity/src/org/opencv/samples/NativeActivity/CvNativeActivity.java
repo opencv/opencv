@@ -21,6 +21,7 @@ public class CvNativeActivity extends Activity {
                     System.loadLibrary("native_activity");
                     Intent intent = new Intent(CvNativeActivity.this, android.app.NativeActivity.class);
                     CvNativeActivity.this.startActivity(intent);
+                    CvNativeActivity.this.finish();
                 } break;
                 default:
                 {
@@ -34,10 +35,16 @@ public class CvNativeActivity extends Activity {
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-   @Override
+    @Override
     public void onResume()
     {
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
     }
 }

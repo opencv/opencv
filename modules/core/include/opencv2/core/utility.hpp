@@ -340,6 +340,8 @@ class CV_EXPORTS CommandLineParser
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
 
+    ~CommandLineParser();
+
     String getPathToApplication() const;
 
     template <typename T>

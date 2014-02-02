@@ -4,6 +4,7 @@
 
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <stdio.h>
@@ -137,8 +138,8 @@ static bool run3Calibration( vector<vector<Point2f> > imagePoints1,
         double err = stereoCalibrate(objpt, imgpt, imgpt_right, cameraMatrix1, distCoeffs1,
                                      cameraMatrix, distCoeffs,
                                      imageSize, R, T, E, F,
-                                     TermCriteria(TermCriteria::COUNT, 30, 0),
-                                     CALIB_FIX_INTRINSIC);
+                                     CALIB_FIX_INTRINSIC,
+                                     TermCriteria(TermCriteria::COUNT, 30, 0));
         printf("Pair (1,%d) calibration reprojection error = %g\n", c, sqrt(err/(N*2)));
         if( c == 2 )
         {

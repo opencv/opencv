@@ -70,8 +70,8 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
     int type, borderType, blockSize;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -90,16 +90,16 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType,
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0, bool relative = false)
     {
         if (relative)
-            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst, threshold);
         else
-            OCL_EXPECT_MATS_NEAR(dst, threshold)
+            OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -117,8 +117,8 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
     TestUtils::Border border;
     Scalar val;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -148,13 +148,13 @@ PARAM_TEST_CASE(CopyMakeBorder, MatDepth, // depth
 
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near()
     {
-        OCL_EXPECT_MATS_NEAR(dst, 0)
+        OCL_EXPECT_MATS_NEAR(dst, 0);
     }
 };
 
@@ -217,8 +217,8 @@ struct CornerTestBase :
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_32FC1, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 };
 
@@ -286,7 +286,7 @@ struct Integral :
 {
     int sdepth, sqdepth;
 
-    TEST_DECLARE_OUTPUT_PARAMETER(dst2)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst2);
 
     virtual void SetUp()
     {
@@ -310,17 +310,17 @@ struct Integral :
         Border dst2Border = randomBorder(0, useRoi ? 2 : 0);
         randomSubMat(dst2, dst2_roi, isize, dst2Border, sqdepth, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst2);
     }
 
     void Near2(double threshold = 0.0, bool relative = false)
     {
         if (relative)
-            OCL_EXPECT_MATS_NEAR_RELATIVE(dst2, threshold)
+            OCL_EXPECT_MATS_NEAR_RELATIVE(dst2, threshold);
         else
-            OCL_EXPECT_MATS_NEAR(dst2, threshold)
+            OCL_EXPECT_MATS_NEAR(dst2, threshold);
     }
 };
 
@@ -390,8 +390,8 @@ PARAM_TEST_CASE(CLAHETest, Size, double, bool)
     double clipLimit;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -409,13 +409,13 @@ PARAM_TEST_CASE(CLAHETest, Size, double, bool)
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, CV_8UC1, 5, 16);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 

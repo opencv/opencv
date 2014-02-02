@@ -73,8 +73,8 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
     Size dsize;
     bool useRoi, mapInverse;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -98,13 +98,13 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -158,14 +158,15 @@ OCL_TEST_P(WarpPerspective, Mat)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //// resize
 
-PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
+PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool, int)
 {
     int type, interpolation;
+    int widthMultiple;
     double fx, fy;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -174,6 +175,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
         fy = GET_PARAM(2);
         interpolation = GET_PARAM(3);
         useRoi = GET_PARAM(4);
+        widthMultiple = GET_PARAM(5);
     }
 
     void random_roi()
@@ -181,6 +183,8 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
         CV_Assert(fx > 0 && fy > 0);
 
         Size srcRoiSize = randomSize(1, MAX_VALUE), dstRoiSize;
+        // Make sure the width is a multiple of the requested value, and no more
+        srcRoiSize.width += widthMultiple - 1 - (srcRoiSize.width - 1) % widthMultiple;
         dstRoiSize.width = cvRound(srcRoiSize.width * fx);
         dstRoiSize.height = cvRound(srcRoiSize.height * fy);
 
@@ -202,7 +206,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -210,12 +214,15 @@ OCL_TEST_P(Resize, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
+        int depth = CV_MAT_DEPTH(type);
+        double eps = depth <= CV_32S ? 1 : 1e-2;
+
         random_roi();
 
         OCL_OFF(cv::resize(src_roi, dst_roi, Size(), fx, fy, interpolation));
         OCL_ON(cv::resize(usrc_roi, udst_roi, Size(), fx, fy, interpolation));
 
-        Near(1.0);
+        Near(eps);
     }
 }
 
@@ -230,10 +237,10 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
 
     Scalar val;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_INPUT_PARAMETER(map1)
-    TEST_DECLARE_INPUT_PARAMETER(map2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_INPUT_PARAMETER(map1);
+    TEST_DECLARE_INPUT_PARAMETER(map2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -260,7 +267,7 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
         Border map1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(map1, map1_roi, dstROISize, map1Border, map1Type, -mapMaxValue, mapMaxValue);
 
-        Border map2Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
+        Border map2Border = randomBorder(0, useRoi ? MAX_VALUE + 1 : 0);
         if (map2Type != noType)
         {
             int mapMinValue = -mapMaxValue;
@@ -269,16 +276,16 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
             randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, mapMinValue, mapMaxValue);
         }
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_INPUT_PARAMETER(map1)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_INPUT_PARAMETER(map1);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
         if (noType != map2Type)
-            UMAT_UPLOAD_INPUT_PARAMETER(map2)
+            UMAT_UPLOAD_INPUT_PARAMETER(map2);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -328,21 +335,23 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpPerspective, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Resize, Combine(
                             Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, CV_32FC4),
-                            Values(0.5, 1.5, 2.0),
-                            Values(0.5, 1.5, 2.0),
+                            Values(0.5, 1.5, 2.0, 0.2),
+                            Values(0.5, 1.5, 2.0, 0.2),
                             Values((Interpolation)INTER_NEAREST, (Interpolation)INTER_LINEAR),
-                            Bool()));
+                            Bool(),
+                            Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
                             Values((MatType)CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                             Values(0.7, 0.4, 0.5),
                             Values(0.3, 0.6, 0.5),
                             Values((Interpolation)INTER_AREA),
-                            Bool()));
+                            Bool(),
+                            Values(1, 16)));
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
-                            Values(1, 4),
+                            Values(1, 3, 4),
                             Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType)),
@@ -355,7 +364,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
-                            Values(1, 4),
+                            Values(1, 3, 4),
                             Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),

@@ -1536,7 +1536,7 @@ CvWindow::CvWindow(QString name, int arg2)
     setWindowTitle(name);
         setObjectName(name);
 
-        setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not recieved without the explicit focus
+        setFocus( Qt::PopupFocusReason ); //#1695 arrow keys are not received without the explicit focus
 
     resize(400, 300);
     setMinimumSize(1, 1);

@@ -1318,9 +1318,9 @@ public:
         if( cascade->hid_cascade->ipp_stages )
         {
             IppiRect iequRect = {equRect.x, equRect.y, equRect.width, equRect.height};
-            ippiRectStdDev_32f_C1R(sum1.ptr<float>(y1), sum1.step,
-                                   sqsum1.ptr<double>(y1), sqsum1.step,
-                                   norm1->ptr<float>(y1), norm1->step,
+            ippiRectStdDev_32f_C1R(sum1.ptr<float>(y1), (int)sum1.step,
+                                   sqsum1.ptr<double>(y1), (int)sqsum1.step,
+                                   norm1->ptr<float>(y1), (int)norm1->step,
                                    ippiSize(ssz.width, ssz.height), iequRect );
 
             int positive = (ssz.width/ystep)*((ssz.height + ystep-1)/ystep);
@@ -1341,9 +1341,9 @@ public:
             for( int j = 0; j < cascade->count; j++ )
             {
                 if( ippiApplyHaarClassifier_32f_C1R(
-                            sum1.ptr<float>(y1), sum1.step,
-                            norm1->ptr<float>(y1), norm1->step,
-                            mask1->ptr<uchar>(y1), mask1->step,
+                            sum1.ptr<float>(y1), (int)sum1.step,
+                            norm1->ptr<float>(y1), (int)norm1->step,
+                            mask1->ptr<uchar>(y1), (int)mask1->step,
                             ippiSize(ssz.width, ssz.height), &positive,
                             cascade->hid_cascade->stage_classifier[j].threshold,
                             (IppiHaarClassifier_32f*)cascade->hid_cascade->ipp_stages[j]) < 0 )

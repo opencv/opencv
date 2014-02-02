@@ -228,6 +228,54 @@ public:
  */
     int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray());
 
+/**
+ * Find all line elements that are *not* fullfilling the angle and range requirenmnets.
+ * Take all lines, whose angle(line_segment) is outside [min_angle, max_angle] range.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines not containing those fulfilling the requirement.
+ * @param min_angle     The min angle to be considered in degrees. Should be in range [0..180].
+ * @param max_angle     The max angle to be considered in degrees. Should be >= min_angle and widthin range [0..180].
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    int filterOutAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle);
+
+/**
+ * Find all line elements that are fullfilling the angle and range requirenmnets.
+ * Take all lines, whose angle(line_segment) is inside [min_angle, max_angle] range.
+ * The opposite of the filterOutAngle method.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines not containing those fulfilling the requirement.
+ * @param min_angle     The min angle to be considered in degrees. Should be in range [0..180].
+ * @param max_angle     The max angle to be considered in degrees. Should be >= min_angle and widthin range [0..180].
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    int retainAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle);
+
+/**
+ * Find all line elements that *are* fullfilling the size requirenmnets.
+ * Lines which are shorter than max_length and longer than min_length.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines containing those fulfilling the requirement.
+ * @param max_length    Maximum length of the line segment.
+ * @param min_length    Minimum length of the line segment.
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    int filterSize(InputArray lines, OutputArray filtered, double min_length, double max_length = LSD_NO_SIZE_LIMIT);
+
+/*
+ * Find itnersection point of 2 lines.
+ *
+ * @param line1         First line in format Vec4i(x1, y1, x2, y2).
+ * @param line2         Second line in the same format as line1.
+ * @param P             The point where line1 and line2 intersect.
+ * @return              The value in variable P is only valid when the return value is true.
+ *                      Otherwise, the lines are parallel and the value can be ignored.
+ */
+    bool intersection(InputArray line1, InputArray line2, Point& P);
+
 private:
     Mat image;
     Mat_<double> scaled_image;
@@ -282,6 +330,11 @@ private:
     };
 
     LineSegmentDetectorImpl& operator= (const LineSegmentDetectorImpl&); // to quiet MSVC
+
+    // Used in the angle_filtering routine.
+    enum {RETAIN_IN  = 0,
+          RETAIN_OUT = 1
+         };
 
 /**
  * Detect lines in the whole input image.
@@ -384,6 +437,16 @@ private:
  * @return      Whether the point is aligned.
  */
     bool isAligned(const int& address, const double& theta, const double& prec) const;
+
+/**
+ * A helper funciton for filterOutAngle and retainAngle.
+ */
+    int angle_filtering(InputArray lines, OutputArray filtered, double min_angle, double max_angle, int retain_type);
+
+/*
+ * Finds the equation parameters of a line in the form of Ax + By = C.
+ */
+    void find_eq_params(const Vec4i& line, double& a, double& b, double& c);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -422,10 +485,10 @@ void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
     std::vector<double> w, p, n;
     w_needed = _width.needed();
     p_needed = _prec.needed();
-    n_needed = _nfa.needed();
-
-    CV_Assert((!_nfa.needed()) ||                              // NFA InputArray will be filled _only_ when
-              (_nfa.needed() && doRefine >= LSD_REFINE_ADV));  // REFINE_ADV type LineSegmentDetectorImpl object is created.
+    if (doRefine < LSD_REFINE_ADV)
+        n_needed = false;
+    else
+        n_needed = _nfa.needed();
 
     flsd(lines, w, p, n);
 
@@ -1067,13 +1130,17 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double left_x = min_y->p.x, right_x = min_y->p.x;
 
     // Loop around all points in the region and count those that are aligned.
-    int min_iter = std::max(min_y->p.y, 0);
-    int max_iter = std::min(max_y->p.y, img_height - 1);
+    int min_iter = min_y->p.y;
+    int max_iter = max_y->p.y;
     for(int y = min_iter; y <= max_iter; ++y)
     {
+        if (y < 0 || y >= img_height) continue;
+
         int adx = y * img_width + int(left_x);
         for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
         {
+            if (x < 0 || x >= img_width) continue;
+
             ++total_pts;
             if(isAligned(adx, rec.theta, rec.prec))
             {
@@ -1172,9 +1239,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
 
     Mat _lines;
     _lines = lines.getMat();
+    int N = _lines.checkVector(4);
 
     // Draw segments
-    for(int i = 0; i < _lines.size().width; ++i)
+    for(int i = 0; i < N; ++i)
     {
         const Vec4i& v = _lines.at<Vec4i>(i);
         Point b(v[0], v[1]);
@@ -1197,15 +1265,17 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     Mat _lines2;
     _lines1 = lines1.getMat();
     _lines2 = lines2.getMat();
+    int N1 = _lines1.checkVector(4);
+    int N2 = _lines2.checkVector(4);
+
     // Draw segments
-    std::vector<Mat> _lines;
-    for(int i = 0; i < _lines1.size().width; ++i)
+    for(int i = 0; i < N1; ++i)
     {
         Point b(_lines1.at<Vec4i>(i)[0], _lines1.at<Vec4i>(i)[1]);
         Point e(_lines1.at<Vec4i>(i)[2], _lines1.at<Vec4i>(i)[3]);
         line(I1, b, e, Scalar::all(255), 1);
     }
-    for(int i = 0; i < _lines2.size().width; ++i)
+    for(int i = 0; i < N2; ++i)
     {
         Point b(_lines2.at<Vec4i>(i)[0], _lines2.at<Vec4i>(i)[1]);
         Point e(_lines2.at<Vec4i>(i)[2], _lines2.at<Vec4i>(i)[3]);
@@ -1240,6 +1310,102 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
     }
 
     return N;
+}
+
+int LineSegmentDetectorImpl::angle_filtering(InputArray lines, OutputArray filtered, double min_angle, double max_angle, int retain_type)
+{
+    CV_Assert(min_angle >= 0.0 && min_angle < 180.0 &&
+              max_angle >= 0.0 && max_angle < 180.0);
+    int num_filtered = 0;
+    std::vector<Vec4i> f;
+    Mat _lines = lines.getMat();
+
+    for(int i = 0; i < _lines.size().width; ++i)
+    {
+        const Vec4i& v = _lines.at<Vec4i>(i);
+        Point b(v[0], v[1]);
+        Point e(v[2], v[3]);
+
+        Point2f dv = e - b;
+        double angle = fastAtan2(dv.y, dv.x); // returns in range [0..360]
+        if (angle >= 180) angle -= 180.f;
+
+        bool angle_in = (angle >= min_angle && angle <= max_angle);
+        if ((( angle_in) && (retain_type == RETAIN_IN)) ||
+            ((!angle_in) && (retain_type == RETAIN_OUT)))
+            f.push_back(v);
+        else
+            ++num_filtered;
+    }
+    Mat(f).copyTo(filtered);
+    return num_filtered;
+}
+
+int LineSegmentDetectorImpl::filterOutAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+{
+    return angle_filtering(lines, filtered, min_angle, max_angle, RETAIN_OUT);
+}
+
+int LineSegmentDetectorImpl::retainAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+{
+    return angle_filtering(lines, filtered, min_angle, max_angle, RETAIN_IN);
+}
+
+int LineSegmentDetectorImpl::filterSize(InputArray lines, OutputArray filtered, double min_length, double max_length)
+{
+    int num_filtered = 0;
+    std::vector<Vec4i> f;
+    Mat _lines = lines.getMat();
+
+    for(int i = 0; i < _lines.size().width; ++i)
+    {
+        const Vec4i& v = _lines.at<Vec4i>(i);
+        Point b(v[0], v[1]);
+        Point e(v[2], v[3]);
+
+        double len = norm(b - e);
+        if (((min_length == LSD_NO_SIZE_LIMIT) || (len >= min_length)) &&
+            ((max_length == LSD_NO_SIZE_LIMIT) || (len < max_length)))
+            f.push_back(v);
+        else
+            ++num_filtered;
+    }
+    Mat(f).copyTo(filtered);
+    return num_filtered;
+}
+
+void LineSegmentDetectorImpl::find_eq_params(const Vec4i& line, double& a, double& b, double& c)
+{
+    a = double(line[3] - line[1]);
+    b = double(line[0] - line[2]);
+    c = a * line[0] + b * line[1];
+}
+
+bool LineSegmentDetectorImpl::intersection(InputArray line1, InputArray line2, Point& P)
+{
+    CV_Assert(!line1.empty() && !line2.empty());
+
+    Vec4i l1 = line1.getMat().at<Vec4i>(0);
+    Vec4i l2 = line2.getMat().at<Vec4i>(0);
+
+    double x, y, a1, b1, a2, b2, c1, c2;
+
+    find_eq_params(l1, a1, b1, c1);
+    find_eq_params(l2, a2, b2, c2);
+
+    double det = a1 * b2 - a2 * b1;
+    if (det == 0)
+    {
+        return false;
+    }
+    else
+    {
+        x = (b2 * c1 - b1 * c2) / det;
+        y = (a1 * c2 - a2 * c1) / det;
+    }
+
+    P = Point(int(x), int(y));
+    return true;
 }
 
 } // namespace cv

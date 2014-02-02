@@ -199,10 +199,8 @@ enum { BLOCK_SIZE = 1024 };
 
 #if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
 #define ARITHM_USE_IPP 1
-#define IF_IPP(then_call, else_call) then_call
 #else
 #define ARITHM_USE_IPP 0
-#define IF_IPP(then_call, else_call) else_call
 #endif
 
 inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
@@ -259,11 +257,6 @@ extern TLSData<CoreTLSData> coreTlsData;
 #else
 #define CL_RUNTIME_EXPORT
 #endif
-
-namespace ocl
-{
-    MatAllocator* getOpenCLAllocator();
-}
 
 extern bool __termination; // skip some cleanups, because process is terminating
                            // (for example, if ExitProcess() was already called)

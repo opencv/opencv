@@ -60,11 +60,6 @@
 #  include "opencv2/cudaarithm.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_OCL
-#  include "opencv2/nonfree/ocl.hpp"
-#  include "opencv2/ocl/private/util.hpp"
-#endif
-
 #include "opencv2/core/private.hpp"
 
 #endif

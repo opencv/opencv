@@ -1009,7 +1009,7 @@ cvFindNextContour( CvContourScanner scanner )
     if( mode == CV_RETR_FLOODFILL )
     {
         prev = ((int*)img)[x - 1];
-        new_mask = INT_MIN >> 1;
+        new_mask = INT_MIN / 2;
     }
 
     for( ; y < height; y++, img += step )
@@ -1703,6 +1703,10 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
 void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
+    // Sanity check: output must be of type vector<vector<Point>>
+    CV_Assert( _contours.kind() == _InputArray::STD_VECTOR_VECTOR &&
+               _contours.channels() == 2 && _contours.depth() == CV_32S );
+
     Mat image = _image.getMat();
     MemStorage storage(cvCreateMemStorage());
     CvMat _cimage = image;

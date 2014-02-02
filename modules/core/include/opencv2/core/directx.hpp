@@ -67,10 +67,10 @@ namespace ocl {
 using namespace cv::ocl;
 
 // TODO static functions in the Context class
-CV_EXPORTS Context2& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device);
-CV_EXPORTS Context2& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device);
-CV_EXPORTS Context2& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex);
-CV_EXPORTS Context2& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9);
+CV_EXPORTS Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device);
+CV_EXPORTS Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device);
+CV_EXPORTS Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex);
+CV_EXPORTS Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9);
 
 } // namespace cv::directx::ocl
 

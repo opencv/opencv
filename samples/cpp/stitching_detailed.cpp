@@ -46,6 +46,7 @@
 #include <string>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
 #include "opencv2/stitching/detail/blenders.hpp"
@@ -73,9 +74,6 @@ static void printUsage()
         "      but output image will have lower resolution.\n"
         "  --try_cuda (yes|no)\n"
         "      Try to use CUDA. The default value is 'no'. All default values\n"
-        "      are for CPU mode.\n"
-        "  --try_ocl (yes|no)\n"
-        "      Try to use OpenCL. The default value is 'no'. All default values\n"
         "      are for CPU mode.\n"
         "\nMotion Estimation Flags:\n"
         "  --work_megapix <float>\n"
@@ -127,7 +125,6 @@ static void printUsage()
 vector<String> img_names;
 bool preview = false;
 bool try_cuda = false;
-bool try_ocl = false;
 double work_megapix = 0.6;
 double seam_megapix = 0.1;
 double compose_megapix = -1;
@@ -174,19 +171,6 @@ static int parseCmdArgs(int argc, char** argv)
             else
             {
                 cout << "Bad --try_cuda flag value\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--try_ocl")
-        {
-            if (string(argv[i + 1]) == "no")
-                try_ocl = false;
-            else if (string(argv[i + 1]) == "yes")
-                try_ocl = true;
-            else
-            {
-                cout << "Bad --try_ocl flag value\n";
                 return -1;
             }
             i++;
@@ -348,7 +332,9 @@ int main(int argc, char* argv[])
     int64 app_start_time = getTickCount();
 #endif
 
+#if 0
     cv::setBreakOnError(true);
+#endif
 
     int retval = parseCmdArgs(argc, argv);
     if (retval)
@@ -554,10 +540,10 @@ int main(int argc, char* argv[])
 #endif
 
     vector<Point> corners(num_images);
-    vector<Mat> masks_warped(num_images);
-    vector<Mat> images_warped(num_images);
+    vector<UMat> masks_warped(num_images);
+    vector<UMat> images_warped(num_images);
     vector<Size> sizes(num_images);
-    vector<Mat> masks(num_images);
+    vector<UMat> masks(num_images);
 
     // Preapre images masks
     for (int i = 0; i < num_images; ++i)
@@ -569,17 +555,8 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-    if (try_ocl)
-    {
-        if (warp_type == "plane")
-            warper_creator = makePtr<cv::PlaneWarperOcl>();
-        else if (warp_type == "cylindrical")
-            warper_creator = makePtr<cv::CylindricalWarperOcl>();
-        else if (warp_type == "spherical")
-            warper_creator = makePtr<cv::SphericalWarperOcl>();
-    }
 #ifdef HAVE_OPENCV_CUDAWARPING
-    else if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
+    if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane")
             warper_creator = makePtr<cv::PlaneWarperGpu>();
@@ -645,7 +622,7 @@ int main(int argc, char* argv[])
         warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    vector<Mat> images_warped_f(num_images);
+    vector<UMat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 

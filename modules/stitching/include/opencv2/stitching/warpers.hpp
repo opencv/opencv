@@ -167,24 +167,6 @@ public:
 };
 #endif
 
-class PlaneWarperOcl: public WarperCreator
-{
-public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::PlaneWarperOcl>(scale); }
-};
-
-class SphericalWarperOcl: public WarperCreator
-{
-public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::SphericalWarperOcl>(scale); }
-};
-
-class CylindricalWarperOcl: public WarperCreator
-{
-public:
-    Ptr<detail::RotationWarper> create(float scale) const { return makePtr<detail::CylindricalWarperOcl>(scale); }
-};
-
 } // namespace cv
 
 #endif // __OPENCV_STITCHING_WARPER_CREATORS_HPP__

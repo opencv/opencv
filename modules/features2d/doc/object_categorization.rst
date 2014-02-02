@@ -129,11 +129,11 @@ The class declaration is the following: ::
 
             void setVocabulary( const Mat& vocabulary );
             const Mat& getVocabulary() const;
-            void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                          Mat& imgDescriptor,
+            void compute( InputArray image, vector<KeyPoint>& keypoints,
+                          OutputArray imgDescriptor,
                           vector<vector<int> >* pointIdxsOfClusters=0,
                           Mat* descriptors=0 );
-            void compute( const Mat& descriptors, Mat& imgDescriptor,
+            void compute( InputArray descriptors, OutputArray imgDescriptor,
                           std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
             int descriptorSize() const;
             int descriptorType() const;
@@ -180,8 +180,8 @@ BOWImgDescriptorExtractor::compute
 --------------------------------------
 Computes an image descriptor using the set visual vocabulary.
 
-.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& imgDescriptor, vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 )
-.. ocv:function:: void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters=0 )
+.. ocv:function:: void BOWImgDescriptorExtractor::compute( InputArray image, vector<KeyPoint>& keypoints, OutputArray imgDescriptor, vector<vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 )
+.. ocv:function:: void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters=0 )
 
     :param image: Image, for which the descriptor is computed.
 

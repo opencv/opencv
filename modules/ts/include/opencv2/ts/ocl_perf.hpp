@@ -45,8 +45,6 @@
 #include "ocl_test.hpp"
 #include "ts_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
@@ -92,6 +90,8 @@ using std::tr1::tuple;
 
 #define OCL_TEST_SIZES ::testing::Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3, OCL_SIZE_4)
 #define OCL_TEST_TYPES ::testing::Values(CV_8UC1, CV_32FC1, CV_8UC4, CV_32FC4)
+#define OCL_TEST_TYPES_14 OCL_TEST_TYPES
+#define OCL_TEST_TYPES_134 ::testing::Values(CV_8UC1, CV_32FC1, CV_8UC3, CV_32FC3, CV_8UC4, CV_32FC4)
 
 #define OCL_PERF_ENUM ::testing::Values
 
@@ -99,9 +99,13 @@ using std::tr1::tuple;
 #define OCL_TEST_CYCLE() \
     for (cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
 
+#define OCL_TEST_CYCLE_N(n) \
+    for(declare.iterations(n), cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer())
+
 #define OCL_TEST_CYCLE_MULTIRUN(runsNum) \
     for (declare.runs(runsNum), cvtest::ocl::perf::safeFinish(); startTimer(), next(); cvtest::ocl::perf::safeFinish(), stopTimer()) \
         for (int r = 0; r < runsNum; cvtest::ocl::perf::safeFinish(), ++r)
+
 
 namespace perf {
 
@@ -115,7 +119,7 @@ CV_EXPORTS void randu(InputOutputArray dst);
 inline void safeFinish()
 {
     if (cv::ocl::useOpenCL())
-        cv::ocl::finish2();
+        cv::ocl::finish();
 }
 
 } // namespace perf
@@ -123,7 +127,5 @@ using namespace perf;
 
 } // namespace cvtest::ocl
 } // namespace cvtest
-
-#endif // HAVE_OPENCL
 
 #endif // __OPENCV_TS_OCL_PERF_HPP__

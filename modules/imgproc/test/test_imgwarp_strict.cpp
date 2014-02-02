@@ -254,7 +254,7 @@ void CV_ImageWarpBaseTest::validate_results() const
 //                fabs(rD[dx] - D[dx]) < 250.0f &&
                 rD[dx] <= 255.0f && D[dx] <= 255.0f && rD[dx] >= 0.0f && D[dx] >= 0.0f)
             {
-                PRINT_TO_LOG("\nNorm of the difference: %lf\n", norm(reference_dst, _dst, NORM_INF));
+                PRINT_TO_LOG("\nNorm of the difference: %lf\n", cvtest::norm(reference_dst, _dst, NORM_INF));
                 PRINT_TO_LOG("Error in (dx, dy): (%d, %d)\n", dx / cn + 1, dy + 1);
                 PRINT_TO_LOG("Tuple (rD, D): (%f, %f)\n", rD[dx], D[dx]);
                 PRINT_TO_LOG("Dsize: (%d, %d)\n", dsize.width / cn, dsize.height);
@@ -556,7 +556,6 @@ void CV_Resize_Test::resize_1d(const Mat& _src, Mat& _dst, int dy, const dim& _d
                 xyD[r] = 0;
                 for (int k = 0; k < ksize; ++k)
                     xyD[r] += w[k] * xyS[k * cn + r];
-                xyD[r] = xyD[r];
             }
         }
     }

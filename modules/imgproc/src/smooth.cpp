@@ -67,15 +67,18 @@ namespace cv
                                          Box Filter
 \****************************************************************************************/
 
-template<typename T, typename ST> struct RowSum : public BaseRowFilter
+template<typename T, typename ST>
+struct RowSum :
+        public BaseRowFilter
 {
-    RowSum( int _ksize, int _anchor )
+    RowSum( int _ksize, int _anchor ) :
+        BaseRowFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -98,9 +101,12 @@ template<typename T, typename ST> struct RowSum : public BaseRowFilter
 };
 
 
-template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
+template<typename ST, typename T>
+struct ColumnSum :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -108,9 +114,9 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         ST* SUM;
@@ -198,9 +204,12 @@ template<typename ST, typename T> struct ColumnSum : public BaseColumnFilter
 };
 
 
-template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, uchar> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -208,9 +217,9 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -339,9 +348,12 @@ template<> struct ColumnSum<int, uchar> : public BaseColumnFilter
     std::vector<int> sum;
 };
 
-template<> struct ColumnSum<int, short> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, short> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -349,9 +361,9 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -477,9 +489,12 @@ template<> struct ColumnSum<int, short> : public BaseColumnFilter
 };
 
 
-template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
+template<>
+struct ColumnSum<int, ushort> :
+        public BaseColumnFilter
 {
-    ColumnSum( int _ksize, int _anchor, double _scale )
+    ColumnSum( int _ksize, int _anchor, double _scale ) :
+        BaseColumnFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
@@ -487,9 +502,9 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
         sumCount = 0;
     }
 
-    void reset() { sumCount = 0; }
+    virtual void reset() { sumCount = 0; }
 
-    void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int count, int width)
     {
         int i;
         int* SUM;
@@ -614,17 +629,19 @@ template<> struct ColumnSum<int, ushort> : public BaseColumnFilter
 #ifdef HAVE_OPENCL
 
 #define DIVUP(total, grain) ((total + grain - 1) / (grain))
+#define ROUNDUP(sz, n)      ((sz) + (n) - 1 - (((sz) + (n) - 1) % (n)))
 
 static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
-                           Size ksize, Point anchor, int borderType, bool normalize )
+                           Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
+    const ocl::Device & dev = ocl::Device::getDefault();
     int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    bool doubleSupport = dev.doubleFPConfig() > 0;
 
     if (ddepth < 0)
         ddepth = sdepth;
 
-    if (!(cn == 1 || cn == 2 || cn == 4) || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+    if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
         return false;
 
@@ -638,11 +655,12 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     Size size = _src.size(), wholeSize;
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     borderType &= ~BORDER_ISOLATED;
-    int wdepth = std::max(CV_32F, std::max(ddepth, sdepth));
+    int wdepth = std::max(CV_32F, std::max(ddepth, sdepth)),
+        wtype = CV_MAKE_TYPE(wdepth, cn), dtype = CV_MAKE_TYPE(ddepth, cn);
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     size_t globalsize[2] = { size.width, size.height };
-    size_t localsize[2] = { 0, 1 };
+    size_t localsize_general[2] = { 0, 1 }, * localsize = NULL;
 
     UMat src = _src.getUMat();
     if (!isolated)
@@ -659,42 +677,110 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     int tryWorkItems = (int)maxWorkItemSizes[0];
 
     ocl::Kernel kernel;
-    for ( ; ; )
+
+    if (dev.isIntel() && !(dev.type() & ocl::Device::TYPE_CPU) &&
+        ((ksize.width < 5 && ksize.height < 5 && esz <= 4) ||
+         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
     {
-        int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = 8;
-
-        while (BLOCK_SIZE_X > 32 && BLOCK_SIZE_X >= ksize.width * 2 && BLOCK_SIZE_X > size.width * 2)
-            BLOCK_SIZE_X /= 2;
-        while (BLOCK_SIZE_Y < BLOCK_SIZE_X / 8 && BLOCK_SIZE_Y * computeUnits * 32 < size.height)
-            BLOCK_SIZE_Y *= 2;
-
-        if (ksize.width > BLOCK_SIZE_X || w < ksize.width || h < ksize.height)
+        if (w < ksize.width || h < ksize.height)
             return false;
 
-        char cvt[2][50];
-        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
-                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s",
-                             BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
-                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
-                             anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
-                             isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                             normalize ? " -D NORMALIZE" : "");
+        // Figure out what vector size to use for loading the pixels.
+        int pxLoadNumPixels = cn != 1 || size.width % 4 ? 1 : 4;
+        int pxLoadVecSize = cn * pxLoadNumPixels;
 
-        localsize[0] = BLOCK_SIZE_X;
-        globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
-        globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
+        // Figure out how many pixels per work item to compute in X and Y
+        // directions.  Too many and we run out of registers.
+        int pxPerWorkItemX = 1, pxPerWorkItemY = 1;
+        if (cn <= 2 && ksize.width <= 4 && ksize.height <= 4)
+        {
+            pxPerWorkItemX = size.width % 8 ? size.width % 4 ? size.width % 2 ? 1 : 2 : 4 : 8;
+            pxPerWorkItemY = size.height % 2 ? 1 : 2;
+        }
+        else if (cn < 4 || (ksize.width <= 4 && ksize.height <= 4))
+        {
+            pxPerWorkItemX = size.width % 2 ? 1 : 2;
+            pxPerWorkItemY = size.height % 2 ? 1 : 2;
+        }
+        globalsize[0] = size.width / pxPerWorkItemX;
+        globalsize[1] = size.height / pxPerWorkItemY;
 
-        kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
+        // Need some padding in the private array for pixels
+        int privDataWidth = ROUNDUP(pxPerWorkItemX + ksize.width - 1, pxLoadNumPixels);
 
-        size_t kernelWorkGroupSize = kernel.workGroupSize();
-        if (localsize[0] <= kernelWorkGroupSize)
-            break;
-        if (BLOCK_SIZE_X < (int)kernelWorkGroupSize)
+        // Make the global size a nice round number so the runtime can pick
+        // from reasonable choices for the workgroup size
+        const int wgRound = 256;
+        globalsize[0] = ROUNDUP(globalsize[0], wgRound);
+
+        char build_options[1024], cvt[2][40];
+        sprintf(build_options, "-D cn=%d "
+                "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
+                "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
+                "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
+                "-D PX_LOAD_X_ITERATIONS=%d -D PX_LOAD_Y_ITERATIONS=%d "
+                "-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D WT=%s -D WT1=%s "
+                "-D convertToWT=%s -D convertToDstT=%s%s%s",
+                cn, anchor.x, anchor.y, ksize.width, ksize.height,
+                pxLoadVecSize, pxLoadNumPixels,
+                pxPerWorkItemX, pxPerWorkItemY, privDataWidth, borderMap[borderType],
+                isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
+                privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
+                ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
+                ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
+
+
+
+        if (!kernel.create("boxFilterSmall", cv::ocl::imgproc::boxFilterSmall_oclsrc, build_options))
             return false;
+    }
+    else
+    {
+        localsize = localsize_general;
+        for ( ; ; )
+        {
+            int BLOCK_SIZE_X = tryWorkItems, BLOCK_SIZE_Y = std::min(ksize.height * 10, size.height);
 
-        tryWorkItems = (int)kernelWorkGroupSize;
+            while (BLOCK_SIZE_X > 32 && BLOCK_SIZE_X >= ksize.width * 2 && BLOCK_SIZE_X > size.width * 2)
+                BLOCK_SIZE_X /= 2;
+            while (BLOCK_SIZE_Y < BLOCK_SIZE_X / 8 && BLOCK_SIZE_Y * computeUnits * 32 < size.height)
+                BLOCK_SIZE_Y *= 2;
+
+            if (ksize.width > BLOCK_SIZE_X || w < ksize.width || h < ksize.height)
+                return false;
+
+            char cvt[2][50];
+            String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s"
+                                 " -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s"
+                                 " -D ST1=%s -D DT1=%s -D cn=%d",
+                                 BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
+                                 ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
+                                 anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
+                                 isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                                 normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
+                                 ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
+
+            localsize[0] = BLOCK_SIZE_X;
+            globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
+            globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
+
+            kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
+            if (kernel.empty())
+                return false;
+
+            size_t kernelWorkGroupSize = kernel.workGroupSize();
+            if (localsize[0] <= kernelWorkGroupSize)
+                break;
+            if (BLOCK_SIZE_X < (int)kernelWorkGroupSize)
+                return false;
+
+            tryWorkItems = (int)kernelWorkGroupSize;
+        }
     }
 
     _dst.create(size, CV_MAKETYPE(ddepth, cn));
@@ -716,6 +802,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     return kernel.run(2, globalsize, localsize, false);
 }
+
+#undef ROUNDUP
 
 #endif
 
@@ -824,12 +912,12 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     CV_OCL_RUN(_dst.isUMat(), ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize))
 
     Mat src = _src.getMat();
-    int sdepth = src.depth(), cn = src.channels();
+    int stype = src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if( ddepth < 0 )
         ddepth = sdepth;
     _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
     Mat dst = _dst.getMat();
-    if( borderType != BORDER_CONSTANT && normalize )
+    if( borderType != BORDER_CONSTANT && normalize && (borderType & BORDER_ISOLATED) != 0 )
     {
         if( src.rows == 1 )
             ksize.height = 1;
@@ -839,6 +927,70 @@ void cv::boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if ( tegra::box(src, dst, ksize, anchor, normalize, borderType) )
         return;
+#endif
+
+#if defined(HAVE_IPP)
+    int ippBorderType = borderType & ~BORDER_ISOLATED;
+    Point ocvAnchor, ippAnchor;
+    ocvAnchor.x = anchor.x < 0 ? ksize.width / 2 : anchor.x;
+    ocvAnchor.y = anchor.y < 0 ? ksize.height / 2 : anchor.y;
+    ippAnchor.x = ksize.width / 2 - (ksize.width % 2 == 0 ? 1 : 0);
+    ippAnchor.y = ksize.height / 2 - (ksize.height % 2 == 0 ? 1 : 0);
+
+    if (normalize && !src.isSubmatrix() && ddepth == sdepth &&
+        (/*ippBorderType == BORDER_REPLICATE ||*/ /* returns ippStsStepErr: Step value is not valid */
+         ippBorderType == BORDER_CONSTANT) && ocvAnchor == ippAnchor )
+    {
+        Ipp32s bufSize = 0;
+        IppiSize roiSize = { dst.cols, dst.rows }, maskSize = { ksize.width, ksize.height };
+
+#define IPP_FILTER_BOX_BORDER(ippType, ippDataType, flavor) \
+        do \
+        { \
+            if (ippiFilterBoxBorderGetBufferSize(roiSize, maskSize, ippDataType, cn, &bufSize) >= 0) \
+            { \
+                Ipp8u * buffer = ippsMalloc_8u(bufSize); \
+                ippType borderValue[4] = { 0, 0, 0, 0 }; \
+                ippBorderType = ippBorderType == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl; \
+                IppStatus status = ippiFilterBoxBorder_##flavor((const ippType *)src.data, (int)src.step, (ippType *)dst.data, \
+                                                                (int)dst.step, roiSize, maskSize, \
+                                                                (IppiBorderType)ippBorderType, borderValue, buffer); \
+                ippsFree(buffer); \
+                if (status >= 0) \
+                    return; \
+            } \
+            setIppErrorStatus(); \
+        } while ((void)0, 0)
+
+        if (stype == CV_8UC1)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C1R);
+        else if (stype == CV_8UC3)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C3R);
+        else if (stype == CV_8UC4)
+            IPP_FILTER_BOX_BORDER(Ipp8u, ipp8u, 8u_C4R);
+
+        else if (stype == CV_16UC1)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C1R);
+        else if (stype == CV_16UC3)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C3R);
+        else if (stype == CV_16UC4)
+            IPP_FILTER_BOX_BORDER(Ipp16u, ipp16u, 16u_C4R);
+
+        else if (stype == CV_16SC1)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C1R);
+        else if (stype == CV_16SC3)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C3R);
+        else if (stype == CV_16SC4)
+            IPP_FILTER_BOX_BORDER(Ipp16s, ipp16s, 16s_C4R);
+
+        else if (stype == CV_32FC1)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C1R);
+        else if (stype == CV_32FC3)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C3R);
+        else if (stype == CV_32FC4)
+            IPP_FILTER_BOX_BORDER(Ipp32f, ipp32f, 32f_C4R);
+    }
+#undef IPP_FILTER_BOX_BORDER
 #endif
 
     Ptr<FilterEngine> f = createBoxFilter( src.type(), dst.type(),
@@ -860,15 +1012,18 @@ void cv::blur( InputArray src, OutputArray dst,
 namespace cv
 {
 
-template<typename T, typename ST> struct SqrRowSum : public BaseRowFilter
+template<typename T, typename ST>
+struct SqrRowSum :
+        public BaseRowFilter
 {
-    SqrRowSum( int _ksize, int _anchor )
+    SqrRowSum( int _ksize, int _anchor ) :
+        BaseRowFilter()
     {
         ksize = _ksize;
         anchor = _anchor;
     }
 
-    void operator()(const uchar* src, uchar* dst, int width, int cn)
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn)
     {
         const T* S = (const T*)src;
         ST* D = (ST*)dst;
@@ -928,26 +1083,31 @@ void cv::sqrBoxFilter( InputArray _src, OutputArray _dst, int ddepth,
                        Size ksize, Point anchor,
                        bool normalize, int borderType )
 {
-    Mat src = _src.getMat();
-    int sdepth = src.depth(), cn = src.channels();
+    int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
+    Size size = _src.size();
+
     if( ddepth < 0 )
         ddepth = sdepth < CV_32F ? CV_32F : CV_64F;
-    _dst.create( src.size(), CV_MAKETYPE(ddepth, cn) );
-    Mat dst = _dst.getMat();
+
     if( borderType != BORDER_CONSTANT && normalize )
     {
-        if( src.rows == 1 )
+        if( size.height == 1 )
             ksize.height = 1;
-        if( src.cols == 1 )
+        if( size.width == 1 )
             ksize.width = 1;
     }
 
-    int sumType = CV_64F;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_boxFilter(_src, _dst, ddepth, ksize, anchor, borderType, normalize, true))
+
+    int sumDepth = CV_64F;
     if( sdepth == CV_8U )
-        sumType = CV_32S;
-    sumType = CV_MAKETYPE( sumType, cn );
-    int srcType = CV_MAKETYPE(sdepth, cn);
-    int dstType = CV_MAKETYPE(ddepth, cn);
+        sumDepth = CV_32S;
+    int sumType = CV_MAKETYPE( sumDepth, cn ), dstType = CV_MAKETYPE(ddepth, cn);
+
+    Mat src = _src.getMat();
+    _dst.create( size, dstType );
+    Mat dst = _dst.getMat();
 
     Ptr<BaseRowFilter> rowFilter = getSqrRowSumFilter(srcType, sumType, ksize.width, anchor.x );
     Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,
@@ -1065,7 +1225,7 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
     Size size = _src.size();
     _dst.create( size, type );
 
-    if( borderType != BORDER_CONSTANT )
+    if( borderType != BORDER_CONSTANT && (borderType & BORDER_ISOLATED) != 0 )
     {
         if( size.height == 1 )
             ksize.height = 1;
@@ -1084,20 +1244,64 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
-    if( type == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
+#if IPP_VERSION_X100 >= 801 && 0 // these functions are slower in IPP 8.1
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if ((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn == 1 || cn == 3) &&
+            sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
     {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        IppiSize roi = { src.cols, src.rows };
-        int bufSize = 0;
-        ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
-        AutoBuffer<uchar> buf(bufSize+128);
-        if( ippiFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
-                                          (Ipp32f *)dst.data, (int)dst.step,
-                                          roi, ksize.width, (Ipp32f)sigma1,
-                                          (IppiBorderType)borderType, 0.0,
-                                          alignPtr(&buf[0],32)) >= 0 )
-            return;
+        IppiBorderType ippBorder = ippiGetBorderType(borderType);
+        if (ippBorderConst == ippBorder || ippBorderRepl == ippBorder)
+        {
+            Mat src = _src.getMat(), dst = _dst.getMat();
+            IppiSize roiSize = { src.cols, src.rows };
+            IppDataType dataType = ippiGetDataType(depth);
+            Ipp32s specSize = 0, bufferSize = 0;
+
+            if (ippiFilterGaussianGetBufferSize(roiSize, (Ipp32u)ksize.width, dataType, cn, &specSize, &bufferSize) >= 0)
+            {
+                IppFilterGaussianSpec * pSpec = (IppFilterGaussianSpec *)ippMalloc(specSize);
+                Ipp8u * pBuffer = (Ipp8u*)ippMalloc(bufferSize);
+
+                if (ippiFilterGaussianInit(roiSize, (Ipp32u)ksize.width, (Ipp32f)sigma1, ippBorder, dataType, 1, pSpec, pBuffer) >= 0)
+                {
+#define IPP_FILTER_GAUSS(ippfavor, ippcn) \
+    do \
+    { \
+        typedef Ipp##ippfavor ippType; \
+        ippType borderValues[] = { 0, 0, 0 }; \
+        IppStatus status = ippcn == 1 ? \
+            ippiFilterGaussianBorder_##ippfavor##_C1R((const ippType *)src.data, (int)src.step, \
+                (ippType *)dst.data, (int)dst.step, roiSize, borderValues[0], pSpec, pBuffer) : \
+            ippiFilterGaussianBorder_##ippfavor##_C3R((const ippType *)src.data, (int)src.step, \
+                (ippType *)dst.data, (int)dst.step, roiSize, borderValues, pSpec, pBuffer); \
+        ippFree(pBuffer); \
+        ippFree(pSpec); \
+        if (status >= 0) \
+            return; \
+    } while ((void)0, 0)
+
+                    if (type == CV_8UC1)
+                        IPP_FILTER_GAUSS(8u, 1);
+                    else if (type == CV_8UC3)
+                        IPP_FILTER_GAUSS(8u, 3);
+                    else if (type == CV_16UC1)
+                        IPP_FILTER_GAUSS(16u, 1);
+                    else if (type == CV_16UC3)
+                        IPP_FILTER_GAUSS(16u, 3);
+                    else if (type == CV_16SC1)
+                        IPP_FILTER_GAUSS(16s, 1);
+                    else if (type == CV_16SC3)
+                        IPP_FILTER_GAUSS(16s, 3);
+                    else if (type == CV_32FC1)
+                        IPP_FILTER_GAUSS(32f, 1);
+                    else if (type == CV_32FC3)
+                        IPP_FILTER_GAUSS(32f, 3);
+#undef IPP_FILTER_GAUSS
+                }
+            }
+            setIppErrorStatus();
+        }
     }
 #endif
 
@@ -1879,35 +2083,53 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
+static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 {
-    int type = _src.type();
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    size_t localsize[2] = { 16, 16 };
+    size_t globalsize[2];
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
+    if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
 
-    const char * kernelName;
+    Size imgSize = _src.size();
+    bool useOptimized = (1 == cn) &&
+                        (size_t)imgSize.width >= localsize[0] * 8  &&
+                        (size_t)imgSize.height >= localsize[1] * 8 &&
+                        imgSize.width % 4 == 0 &&
+                        imgSize.height % 4 == 0 &&
+                        (ocl::Device::getDefault().isIntel());
 
-    if (m == 3)
-        kernelName = "medianFilter3";
-    else if (m == 5)
-        kernelName = "medianFilter5";
-    else
-        return false;
+    cv::String kname = format( useOptimized ? "medianFilter%d_u" : "medianFilter%d", m) ;
+    cv::String kdefs = useOptimized ?
+                         format("-D T=%s -D T1=%s -D T4=%s%d -D cn=%d -D USE_4OPT", ocl::typeToStr(type),
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), cn*4, cn)
+                         :
+                         format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth), cn) ;
 
-    ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
+    ocl::Kernel k(kname.c_str(), ocl::imgproc::medianFilter_oclsrc, kdefs.c_str() );
+
     if (k.empty())
         return false;
 
     UMat src = _src.getUMat();
-    _dst.create(_src.size(),type);
+    _dst.create(src.size(), type);
     UMat dst = _dst.getUMat();
 
-    size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
-    size_t localsize[2] = {16, 16};
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
 
-    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
+    if( useOptimized )
+    {
+        globalsize[0] = DIVUP(src.cols / 4, localsize[0]) * localsize[0];
+        globalsize[1] = DIVUP(src.rows / 4, localsize[1]) * localsize[1];
+    }
+    else
+    {
+        globalsize[0] = (src.cols + localsize[0] + 2) / localsize[0] * localsize[0];
+        globalsize[1] = (src.rows + localsize[1] - 1) / localsize[1] * localsize[1];
+    }
+
+    return k.run(2, globalsize, localsize, false);
 }
 
 #endif
@@ -1924,12 +2146,46 @@ void cv::medianBlur( InputArray _src0, OutputArray _dst, int ksize )
         return;
     }
 
-    CV_OCL_RUN(_src0.dims() <= 2 && _dst.isUMat(),
+    CV_OCL_RUN(_dst.isUMat(),
                ocl_medianFilter(_src0,_dst, ksize))
 
     Mat src0 = _src0.getMat();
     _dst.create( src0.size(), src0.type() );
     Mat dst = _dst.getMat();
+
+#if IPP_VERSION_X100 >= 801
+#define IPP_FILTER_MEDIAN_BORDER(ippType, ippDataType, flavor) \
+    do \
+    { \
+        if (ippiFilterMedianBorderGetBufferSize(dstRoiSize, maskSize, \
+            ippDataType, CV_MAT_CN(type), &bufSize) >= 0) \
+        { \
+            Ipp8u * buffer = ippsMalloc_8u(bufSize); \
+            IppStatus status = ippiFilterMedianBorder_##flavor((const ippType *)src0.data, (int)src0.step, \
+                (ippType *)dst.data, (int)dst.step, dstRoiSize, maskSize, \
+                ippBorderRepl, (ippType)0, buffer); \
+            ippsFree(buffer); \
+            if (status >= 0) \
+                return; \
+        } \
+        setIppErrorStatus(); \
+    } \
+    while ((void)0, 0)
+
+    Ipp32s bufSize;
+    IppiSize dstRoiSize = ippiSize(dst.cols, dst.rows), maskSize = ippiSize(ksize, ksize);
+
+    int type = src0.type();
+    if (type == CV_8UC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp8u, ipp8u, 8u_C1R);
+    else if (type == CV_16UC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp16u, ipp16u, 16u_C1R);
+    else if (type == CV_16SC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp16s, ipp16s, 16s_C1R);
+    else if (type == CV_32FC1)
+        IPP_FILTER_MEDIAN_BORDER(Ipp32f, ipp32f, 32f_C1R);
+#undef IPP_FILTER_MEDIAN_BORDER
+#endif
 
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::medianBlur(src0, dst, ksize))
@@ -2146,7 +2402,7 @@ private:
     float *space_weight, *color_weight;
 };
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#if defined (HAVE_IPP) && !defined(HAVE_IPP_ICV_ONLY) && 0
 class IPPBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
@@ -2163,11 +2419,19 @@ public:
           IppiSize kernel = {d, d};
           IppiSize roi={dst.cols, range.end - range.start};
           int bufsize=0;
-          ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
+          if (0 > ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize))
+          {
+              *ok = false;
+              return;
+          }
           AutoBuffer<uchar> buf(bufsize);
           IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
-          ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec );
-          if( ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ) < 0)
+          if (0 > ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec ))
+          {
+              *ok = false;
+              return;
+          }
+          if (0 > ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ))
               *ok = false;
       }
 private:
@@ -2187,10 +2451,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int i, j, maxk, radius;
 
-    if ( type != CV_8UC1 )
+    if (depth != CV_8U || cn > 4)
         return false;
 
     if (sigma_color <= 0)
@@ -2213,17 +2477,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
         return false;
 
     copyMakeBorder(src, temp, radius, radius, radius, radius, borderType);
-
-    std::vector<float> _color_weight(cn * 256);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    float *color_weight = &_color_weight[0];
-    float *space_weight = &_space_weight[0];
-    int *space_ofs = &_space_ofs[0];
-
-    // initialize color-related bilateral filter coefficients
-    for( i = 0; i < 256 * cn; i++ )
-        color_weight[i] = (float)std::exp(i * i * gauss_color_coeff);
+    float * const space_weight = &_space_weight[0];
+    int * const space_ofs = &_space_ofs[0];
 
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
@@ -2233,33 +2490,50 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             if ( r > radius )
                 continue;
             space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
-            space_ofs[maxk++] = (int)(i * temp.step + j);
+            space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-    ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
-                  format("-D radius=%d -D maxk=%d", radius, maxk));
+    char cvt[3][40];
+    String cnstr = cn > 1 ? format("%d", cn) : "";
+    String kernelName("bilateral");
+    size_t sizeDiv = 1;
+    if ((ocl::Device::getDefault().isIntel()) &&
+        (ocl::Device::getDefault().type() == ocl::Device::TYPE_GPU))
+    {
+            //Intel GPU
+            if (dst.cols % 4 == 0 && cn == 1) // For single channel x4 sized images.
+            {
+                kernelName = "bilateral_float4";
+                sizeDiv = 4;
+            }
+     }
+     ocl::Kernel k(kernelName.c_str(), ocl::imgproc::bilateral_oclsrc,
+            format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
+            " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=%f",
+            radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
+            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+            ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
+            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
     if (k.empty())
         return false;
 
-    Mat mcolor_weight(1, cn * 256, CV_32FC1, color_weight);
     Mat mspace_weight(1, d * d, CV_32FC1, space_weight);
     Mat mspace_ofs(1, d * d, CV_32SC1, space_ofs);
     UMat ucolor_weight, uspace_weight, uspace_ofs;
-    mcolor_weight.copyTo(ucolor_weight);
+
     mspace_weight.copyTo(uspace_weight);
     mspace_ofs.copyTo(uspace_ofs);
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(temp), ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrReadOnly(ucolor_weight),
            ocl::KernelArg::PtrReadOnly(uspace_weight),
            ocl::KernelArg::PtrReadOnly(uspace_ofs));
 
-    size_t globalsize[2] = { dst.cols, dst.rows };
+    size_t globalsize[2] = { dst.cols / sizeDiv, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
 #endif
-
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
@@ -2289,13 +2563,15 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
-#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7) && 0
     if( cn == 1 )
     {
         bool ok;
         IPPBilateralFilter_8u_Invoker body(temp, dst, sigma_color * sigma_color, sigma_space * sigma_space, radius, &ok );
         parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
-        if( ok ) return;
+        if( ok )
+            return;
+        setIppErrorStatus();
     }
 #endif
 

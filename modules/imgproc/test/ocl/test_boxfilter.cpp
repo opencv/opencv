@@ -49,27 +49,20 @@
 namespace cvtest {
 namespace ocl {
 
-enum
-{
-    noType = -1
-};
+////////////////////////////////////////// boxFilter ///////////////////////////////////////////////////////
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// boxFilter
-PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
+PARAM_TEST_CASE(BoxFilterBase, MatDepth, Channels, BorderType, bool, bool)
 {
     static const int kernelMinSize = 2;
     static const int kernelMaxSize = 10;
 
-    int depth, cn;
-    Size ksize;
-    Size dsize;
+    int depth, cn, borderType;
+    Size ksize, dsize;
     Point anchor;
-    int borderType;
     bool normalize, useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -83,7 +76,6 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
     void random_roi()
     {
         int type = CV_MAKE_TYPE(depth, cn);
-        dsize = randomSize(1, MAX_VALUE);
         ksize = randomSize(kernelMinSize, kernelMaxSize);
 
         Size roiSize = randomSize(ksize.width, MAX_VALUE, ksize.height, MAX_VALUE);
@@ -91,20 +83,22 @@ PARAM_TEST_CASE(BoxFilter, MatDepth, Channels, BorderType, bool, bool)
         randomSubMat(src, src_roi, roiSize, srcBorder, type, -MAX_VALUE, MAX_VALUE);
 
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
         anchor.x = randomInt(-1, ksize.width);
         anchor.y = randomInt(-1, ksize.height);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
+
+typedef BoxFilterBase BoxFilter;
 
 OCL_TEST_P(BoxFilter, Mat)
 {
@@ -119,11 +113,40 @@ OCL_TEST_P(BoxFilter, Mat)
     }
 }
 
+typedef BoxFilterBase SqrBoxFilter;
+
+OCL_TEST_P(SqrBoxFilter, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        int ddepth = depth == CV_8U ? CV_32S : CV_64F;
+
+        OCL_OFF(cv::sqrBoxFilter(src_roi, dst_roi, ddepth, ksize, anchor, normalize, borderType));
+        OCL_ON(cv::sqrBoxFilter(usrc_roi, udst_roi, ddepth, ksize, anchor, normalize, borderType));
+
+        Near(depth <= CV_32S ? 1 : 7e-2);
+    }
+}
 
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, BoxFilter,
                             Combine(
                                 Values(CV_8U, CV_16U, CV_16S, CV_32S, CV_32F),
-                                Values(1, 2, 4),
+                                OCL_ALL_CHANNELS,
+                                Values((BorderType)BORDER_CONSTANT,
+                                       (BorderType)BORDER_REPLICATE,
+                                       (BorderType)BORDER_REFLECT,
+                                       (BorderType)BORDER_REFLECT_101),
+                                Bool(),
+                                Bool()  // ROI
+                                )
+                           );
+
+OCL_INSTANTIATE_TEST_CASE_P(ImageProc, SqrBoxFilter,
+                            Combine(
+                                Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,

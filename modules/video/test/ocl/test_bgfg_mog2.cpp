@@ -70,7 +70,7 @@ OCL_TEST_P(Mog2_Update, Accuracy)
         OCL_ON (mog2_ocl->apply(frame, u_foreground));
 
         if (detectShadow)
-            EXPECT_MAT_SIMILAR(foreground, u_foreground, 15e-3)
+            EXPECT_MAT_SIMILAR(foreground, u_foreground, 15e-3);
         else
             EXPECT_MAT_NEAR(foreground, u_foreground, 0);
     }

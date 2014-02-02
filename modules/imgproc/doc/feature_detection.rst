@@ -1,4 +1,4 @@
-Feature Detection
+﻿Feature Detection
 =================
 
 .. highlight:: cpp
@@ -17,7 +17,7 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
     :param image: single-channel 8-bit input image.
 
-    :param edges: output edge map; it has the same size and type as  ``image`` .
+    :param edges: output edge map; single channels 8-bit image, which has the same size as  ``image`` .
 
     :param threshold1: first threshold for the hysteresis procedure.
 
@@ -97,7 +97,7 @@ Harris corner detector.
 
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
-.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
+.. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_response, int block_size, int aperture_size=3, double k=0.04 )
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -358,11 +358,11 @@ HoughLines
 ----------
 Finds lines in a binary image using the standard Hough transform.
 
-.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0 )
+.. ocv:function:: void HoughLines( InputArray image, OutputArray lines, double rho, double theta, int threshold, double srn=0, double stn=0, double min_theta=0, double max_theta=CV_PI )
 
-.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
+.. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn[, min_theta[, max_theta]]]]]) -> lines
 
-.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
+.. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0, double min_theta=0, double max_theta=CV_PI )
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -377,6 +377,10 @@ Finds lines in a binary image using the standard Hough transform.
     :param srn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``rho`` . The coarse accumulator distance resolution is  ``rho``  and the accurate accumulator resolution is  ``rho/srn`` . If both  ``srn=0``  and  ``stn=0`` , the classical Hough transform is used. Otherwise, both these parameters should be positive.
 
     :param stn: For the multi-scale Hough transform, it is a divisor for the distance resolution  ``theta``.
+
+    :param min_theta: For standard and multi-scale Hough transform, minimum angle to check for lines. Must fall between 0 and max_theta.
+
+    :param max_theta: For standard and multi-scale Hough transform, maximum angle to check for lines. Must fall between min_theta and CV_PI.
 
     :param method: One of the following Hough transform variants:
 
@@ -515,6 +519,8 @@ Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
 .. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetector(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
 
+.. ocv:pyfunction:: cv2.createLineSegmentDetector([, _refine[, _scale[, _sigma_scale[, _quant[, _ang_th[, _log_eps[, _density_th[, _n_bins]]]]]]]]) -> retval
+
     :param _refine: The way found lines will be refined:
 
         * **LSD_REFINE_NONE** - No refinement applied.
@@ -525,7 +531,7 @@ Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
     :param scale: The scale of the image that will be used to find the lines. Range (0..1].
 
-    :param sigma_scale: Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
+    :param sigma_scale: Sigma for Gaussian filter. It is computed as sigma = sigma_scale/scale.
 
     :param quant: Bound to the quantization error on the gradient norm.
 
@@ -544,20 +550,32 @@ LineSegmentDetector::detect
 ---------------------------
 Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
-.. ocv:function:: void LineSegmentDetector::detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+.. ocv:function:: void LineSegmentDetector::detect(InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< HEAD
+    :param image: A grayscale (CV_8UC1) input image.
+        If only a roi needs to be selected, use
+
+.. code-block:: c
+
+        lsd_ptr->detect(image(roi), lines);
+================================================================================
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.detect(_image[, _lines[, width[, prec[, nfa]]]]) -> _lines, width, prec, nfa
 
     :param _image A grayscale (CV_8UC1) input image.
         If only a roi needs to be selected, use ::
         lsd_ptr->detect(image(roi), lines, ...);
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> upstream/master
         lines += Scalar(roi.x, roi.y, roi.x, roi.y);
 
-    :param lines: A vector of Vec4i elements specifying the beginning and ending point of a line. Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly oriented depending on the gradient.
+
+    :param lines: A vector of ``Vec4i`` elements specifying the beginning and ending point of a line. Where Vec4i is (x_1, y_1, x_2, y_2), point 1 is the start, point 2 - end. Returned lines are strictly oriented depending on the gradient.
 
     :param width: Vector of widths of the regions, where the lines are found. E.g. Width of line.
 
     :param prec: Vector of precisions with which the lines are found.
 
-    :param nfa: Vector containing number of false alarms in the line region, with precision of 10%. The bigger the value, logarithmically better the detection.
+    :param nfa: Vector containing number of false alarms in the line region, with precision of 10%. This vector will be calculated only when the objects type is LSD_REFINE_ADV. The bigger the value, logarithmically better the detection.
 
         * -1 corresponds to 10 mean false alarms
 
@@ -565,7 +583,6 @@ Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
         * 1 corresponds to 0.1 mean false alarms
 
-    This vector will be calculated only when the objects type is LSD_REFINE_ADV.
 
 This is the output of the default parameters of the algorithm on the above shown image.
 
@@ -581,6 +598,8 @@ Draws the line segments on a given image.
 
 .. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, InputArray lines)
 
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.drawSegments(_image, lines) -> _image
+
     :param image: The image, where the liens will be drawn. Should be bigger or equal to the image, where the lines were found.
 
     :param lines: A vector of the lines that needed to be drawn.
@@ -592,13 +611,81 @@ Draws two groups of lines in blue and red, counting the non overlapping (mismatc
 
 .. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray())
 
+.. ocv:pyfunction:: cv2.createLineSegmentDetector.compareSegments(size, lines1, lines2[, _image]) -> retval, _image
+
     :param size: The size of the image, where lines1 and lines2 were found.
 
     :param lines1: The first group of lines that needs to be drawn. It is visualized in blue color.
 
-    :param lines2: The second group of lines. They visualized in red color.
+    :param lines2: The second group of lines. They are visualized in red color.
 
-    :param image: Optional image, where the lines will be drawn. The image should be color in order for lines1 and lines2 to be drawn in the above mentioned colors.
+    :param image: Optional image, where the lines will be drawn. The image should be color(3-channel) in order for lines1 and lines2 to be drawn in the above mentioned colors.
+
+
+LineSegmentDetector::filterOutAngle
+-----------------------------------
+Find all line elements that are *not* fullfilling the angle and range requirenmnets. Take all lines, whose angle is outside [min_angle, max_angle] range. This is useful when, for instance, only horizontal or vertical lines need to be removed.
+
+.. ocv:function:: int LineSegmentDetector::filterOutAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines not containing those fulfilling the requirement.
+
+    :param min_angle: The min angle to be considered in degrees. Should be in range [0..180).
+
+    :param max_angle: The max angle to be considered in degrees. Should be >= ``min_angle`` and widthin range [0..180).
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::retainAngle
+--------------------------------
+Find all line elements that are fullfilling the angle and range requirenmnets. Take all lines, whose angle is inside [min_angle, max_angle] range. The opposite of the filterOutAngle method.
+
+.. ocv:function:: int LineSegmentDetector::retainAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines not containing those fulfilling the requirement.
+
+    :param min_angle: The min angle to be considered in degrees. Should be in range [0..180).
+
+    :param max_angle: The max angle to be considered in degrees. Should be >= ``min_angle`` and widthin range [0..180).
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::filterSize
+-------------------------------
+Find all line elements that *are* fullfilling the size requirenmnets. Lines, which are shorter than max_length and longer or equal to min_length - [min_length; max_length) will be retained, everything else - discarded.
+
+.. ocv:function:: int LineSegmentDetector::filterSize(InputArray lines, OutputArray filtered, double min_length, double max_length = LSD_NO_SIZE_LIMIT)
+
+    :param lines: Input lines.
+
+    :param filtered: The output vector of lines containing those fulfilling the requirement.
+
+    :param min_length: Minimum inclusive length of the line segment.
+
+    :param max_length: Optional parameters setting the maximum length of the line segment.
+
+    :return Returns the number of line segments not included in the output vector.
+
+
+LineSegmentDetector::intersection
+---------------------------------
+Find the intersection point of 2 lines.
+
+.. ocv:function:: bool LineSegmentDetector::intersection(InputArray line1, InputArray line2, Point& P)
+
+    :param line1: First line in format Vec4i(x1, y1, x2, y2).
+
+    :param line2: Second line in the same format as ``line1``.
+
+    :param P: The point where ``line1`` and ``line2`` intersect.
+
+    :return The value in variable P is only valid when the return value is true. Otherwise, the lines are parallel and the value can be ignored.
 
 
 
@@ -647,4 +734,4 @@ The corners can be found as local maximums of the functions, as shown below: ::
 
 .. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., *Comparative study of Hough transform methods for circle finding*. Image Vision Comput. 8 1, pp 71–77 (1990)
 
-.. [Rafael12] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, vol. 2012. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd
+.. [Rafael12] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, *LSD: a Line Segment Detector*, Image Processing On Line, vol. 2012. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd

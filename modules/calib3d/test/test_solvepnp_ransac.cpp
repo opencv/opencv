@@ -274,7 +274,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     Mat tvec1, tvec2;
 
     {
-        // limit concurrency to get determenistic result
+        // limit concurrency to get deterministic result
         cv::theRNG().state = 20121010;
         tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
@@ -299,8 +299,8 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
     }
 
-    double rnorm = cv::norm(rvec1, rvec2, NORM_INF);
-    double tnorm = cv::norm(tvec1, tvec2, NORM_INF);
+    double rnorm = cvtest::norm(rvec1, rvec2, NORM_INF);
+    double tnorm = cvtest::norm(tvec1, tvec2, NORM_INF);
 
     EXPECT_LT(rnorm, 1e-6);
     EXPECT_LT(tnorm, 1e-6);

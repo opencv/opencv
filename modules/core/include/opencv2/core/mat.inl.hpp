@@ -112,7 +112,7 @@ inline bool _InputArray::isMat() const { return kind() == _InputArray::MAT; }
 inline bool _InputArray::isUMat() const  { return kind() == _InputArray::UMAT; }
 inline bool _InputArray::isMatVector() const { return kind() == _InputArray::STD_VECTOR_MAT; }
 inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::STD_VECTOR_UMAT; }
-inline bool _InputArray::isMatx()  { return kind() == _InputArray::MATX; }
+inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -372,7 +372,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    size_t esz = CV_ELEM_SIZE(_type);
+    size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols * esz;
     if( _step == AUTO_STEP )
     {
@@ -383,6 +383,12 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     {
         if( rows == 1 ) _step = minstep;
         CV_DbgAssert( _step >= minstep );
+
+        if (_step % esz1 != 0)
+        {
+            CV_Error(Error::BadStep, "Step must be a multiple of esz1");
+        }
+
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
     step[0] = _step;
@@ -397,7 +403,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    size_t esz = CV_ELEM_SIZE(_type);
+    size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
@@ -408,6 +414,12 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     {
         if( rows == 1 ) _step = minstep;
         CV_DbgAssert( _step >= minstep );
+
+        if (_step % esz1 != 0)
+        {
+            CV_Error(Error::BadStep, "Step must be a multiple of esz1");
+        }
+
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
     step[0] = _step;
@@ -3058,50 +3070,50 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 //////////////////////////////// UMat ////////////////////////////////
 
 inline
-UMat::UMat()
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {}
 
 inline
-UMat::UMat(int _rows, int _cols, int _type)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_rows, _cols, _type);
 }
 
 inline
-UMat::UMat(int _rows, int _cols, int _type, const Scalar& _s)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(int _rows, int _cols, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_rows, _cols, _type);
     *this = _s;
 }
 
 inline
-UMat::UMat(Size _sz, int _type)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(Size _sz, int _type, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create( _sz.height, _sz.width, _type );
 }
 
 inline
-UMat::UMat(Size _sz, int _type, const Scalar& _s)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(Size _sz, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_sz.height, _sz.width, _type);
     *this = _s;
 }
 
 inline
-UMat::UMat(int _dims, const int* _sz, int _type)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(int _dims, const int* _sz, int _type, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_dims, _sz, _type);
 }
 
 inline
-UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s)
-: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {
     create(_dims, _sz, _type);
     *this = _s;
@@ -3110,10 +3122,9 @@ UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s)
 inline
 UMat::UMat(const UMat& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
-u(m.u), offset(m.offset), size(&rows)
+  usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
 {
-    if( u )
-        CV_XADD(&(u->urefcount), 1);
+    addref();
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
@@ -3129,7 +3140,7 @@ u(m.u), offset(m.offset), size(&rows)
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
 : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-cols(1), allocator(0), u(0), offset(0), size(&rows)
+cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     if(vec.empty())
         return;
@@ -3148,8 +3159,7 @@ UMat& UMat::operator = (const UMat& m)
 {
     if( this != &m )
     {
-        if( m.u )
-            CV_XADD(&(m.u->urefcount), 1);
+        const_cast<UMat&>(m).addref();
         release();
         flags = m.flags;
         if( dims <= 2 && m.dims <= 2 )
@@ -3163,6 +3173,8 @@ UMat& UMat::operator = (const UMat& m)
         else
             copySize(m);
         allocator = m.allocator;
+        if (usageFlags == USAGE_DEFAULT)
+            usageFlags = m.usageFlags;
         u = m.u;
         offset = m.offset;
     }
@@ -3223,19 +3235,19 @@ void UMat::assignTo( UMat& m, int _type ) const
 }
 
 inline
-void UMat::create(int _rows, int _cols, int _type)
+void UMat::create(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
 {
     _type &= TYPE_MASK;
     if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && u )
         return;
     int sz[] = {_rows, _cols};
-    create(2, sz, _type);
+    create(2, sz, _type, _usageFlags);
 }
 
 inline
-void UMat::create(Size _sz, int _type)
+void UMat::create(Size _sz, int _type, UMatUsageFlags _usageFlags)
 {
-    create(_sz.height, _sz.width, _type);
+    create(_sz.height, _sz.width, _type, _usageFlags);
 }
 
 inline

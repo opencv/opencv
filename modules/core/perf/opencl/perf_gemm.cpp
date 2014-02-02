@@ -59,7 +59,8 @@ typedef TestBaseWithParam<GemmParams> GemmFixture;
 
 OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
                     ::testing::Values(Size(1000, 1000), Size(1500, 1500)),
-            Values((int)cv::GEMM_3_T, (int)cv::GEMM_3_T | (int)cv::GEMM_2_T)))
+            Values((int)cv::GEMM_3_T, (int)cv::GEMM_3_T | (int)cv::GEMM_2_T,
+                   (int)cv::GEMM_1_T, (int)cv::GEMM_1_T | (int)cv::GEMM_2_T)))
 {
     GemmParams params = GetParam();
     const Size srcSize = get<0>(params);

@@ -857,7 +857,7 @@ private:
         idxArg = kernel.set(idxArg, dst.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool gaussianBlur5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
@@ -883,7 +883,7 @@ private:
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_gKer));
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool polynomialExpansionOcl(const UMat &src, UMat &dst)
@@ -919,12 +919,7 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xg));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(m_xxg));
         idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
-#if 0
-        if (useDouble)
-            idxArg = kernel.set(idxArg, (void *)m_igd, 4 * sizeof(double));
-        else
-#endif
-            idxArg = kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
+        kernel.set(idxArg, (void *)m_ig, 4 * sizeof(float));
         return kernel.run(2, globalsize, localsize, false);
     }
     bool boxFilter5Ocl(const UMat &src, int ksizeHalf, UMat &dst)
@@ -951,7 +946,7 @@ private:
         idxArg = kernel.set(idxArg, height);
         idxArg = kernel.set(idxArg, src.cols);
         idxArg = kernel.set(idxArg, (int)ksizeHalf);
-        idxArg = kernel.set(idxArg, (void *)NULL, smem_size);
+        kernel.set(idxArg, (void *)NULL, smem_size);
         return kernel.run(2, globalsize, localsize, false);
     }
 
@@ -976,7 +971,7 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(flowy));
         idxArg = kernel.set(idxArg, (int)(flowy.step / flowy.elemSize()));
         idxArg = kernel.set(idxArg, (int)flowy.rows);
-        idxArg = kernel.set(idxArg, (int)flowy.cols);
+        kernel.set(idxArg, (int)flowy.cols);
         return kernel.run(2, globalsize, localsize, false);
     }
     bool updateMatricesOcl(const UMat &flowx, const UMat &flowy, const UMat &R0, const UMat &R1, UMat &M)
@@ -1004,7 +999,7 @@ private:
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(R1));
         idxArg = kernel.set(idxArg, (int)(R1.step / R1.elemSize()));
         idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(M));
-        idxArg = kernel.set(idxArg, (int)(M.step / M.elemSize()));
+        kernel.set(idxArg, (int)(M.step / M.elemSize()));
         return kernel.run(2, globalsize, localsize, false);
     }
 

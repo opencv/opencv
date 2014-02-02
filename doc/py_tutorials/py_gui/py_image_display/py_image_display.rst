@@ -59,6 +59,8 @@ A screenshot of the window will look like this (in Fedora-Gnome machine):
 
 **cv2.waitKey()** is a keyboard binding function. Its argument is the time in milliseconds. The function waits for specified milliseconds for any keyboard event. If you press any key in that time, the program continues. If **0** is passed, it waits indefinitely for a key stroke. It can also be set to detect specific key strokes like, if key `a` is pressed etc which we will discuss below.
 
+.. note:: Besides binding keyboard events this function also processes many other GUI events, so you MUST use it to actually display the image.
+
 **cv2.destroyAllWindows()** simply destroys all the windows we created. If you want to destroy any specific window, use the function **cv2.destroyWindow()** where you pass the exact window name as the argument.
 
 .. note:: There is a special case where you can already create a window and load image to it later. In that case, you can specify whether window is resizable or not. It is done with the function **cv2.namedWindow()**. By default, the flag is ``cv2.WINDOW_AUTOSIZE``. But if you specify flag to be ``cv2.WINDOW_NORMAL``, you can resize window. It will be helpful when image is too large in dimension and adding track bar to windows.

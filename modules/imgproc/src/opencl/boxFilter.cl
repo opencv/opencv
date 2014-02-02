@@ -47,6 +47,18 @@
 #endif
 #endif
 
+#if cn != 3
+#define loadpix(addr) *(__global const ST *)(addr)
+#define storepix(val, addr)  *(__global DT *)(addr) = val
+#define SRCSIZE (int)sizeof(ST)
+#define DSTSIZE (int)sizeof(DT)
+#else
+#define loadpix(addr) vload3(0, (__global const ST1 *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global DT1 *)(addr))
+#define SRCSIZE (int)sizeof(ST1)*cn
+#define DSTSIZE (int)sizeof(DT1)*cn
+#endif
+
 #ifdef BORDER_CONSTANT
 #elif defined BORDER_REPLICATE
 #define EXTRAPOLATE(x, y, minX, minY, maxX, maxY) \
@@ -104,6 +116,12 @@
 
 #define noconvert
 
+#ifdef SQR
+#define PROCESS_ELEM(value) (value * value)
+#else
+#define PROCESS_ELEM(value) value
+#endif
+
 struct RectCoords
 {
     int x1, y1, x2, y2;
@@ -117,8 +135,10 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
     if (pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
 #endif
     {
-        int src_index = mad24(pos.y, src_step, pos.x * (int)sizeof(ST));
-        return convertToWT(*(__global const ST *)(srcptr + src_index));
+        int src_index = mad24(pos.y, src_step, pos.x * SRCSIZE);
+        WT value = convertToWT(loadpix(srcptr + src_index));
+
+        return PROCESS_ELEM(value);
     }
     else
     {
@@ -135,8 +155,10 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
 #endif
             srcCoords.x2, srcCoords.y2);
 
-        int src_index = mad24(selected_row, src_step, selected_col * (int)sizeof(ST));
-        return convertToWT(*(__global const ST *)(srcptr + src_index));
+        int src_index = mad24(selected_row, src_step, selected_col * SRCSIZE);
+        WT value = convertToWT(loadpix(srcptr + src_index));
+
+        return PROCESS_ELEM(value);
 #endif
     }
 }
@@ -170,7 +192,7 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
     sumOfCols[local_id] = tmp_sum;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    int dst_index = mad24(y, dst_step, x * (int)sizeof(DT) + dst_offset);
+    int dst_index = mad24(y, dst_step, mad24(x, DSTSIZE, dst_offset));
     __global DT * dst = (__global DT *)(dstptr + dst_index);
 
     int sy_index = 0; // current index in data[] array
@@ -186,10 +208,11 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
                 total_sum += sumOfCols[local_id + sx - ANCHOR_X];
 
 #ifdef NORMALIZE
-            dst[0] = convertToDT((WT)(alpha) * total_sum);
+            DT dstval = convertToDT((WT)(alpha) * total_sum);
 #else
-            dst[0] = convertToDT(total_sum);
+            DT dstval = convertToDT(total_sum);
 #endif
+            storepix(dstval, dst);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 

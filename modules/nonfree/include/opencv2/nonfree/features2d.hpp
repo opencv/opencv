@@ -88,7 +88,7 @@ public:
 
 protected:
     void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
-    void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
 
     CV_PROP_RW int nfeatures;
     CV_PROP_RW int nOctaveLayers;
@@ -142,9 +142,8 @@ public:
     CV_PROP_RW bool upright;
 
 protected:
-
     void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
-    void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
 };
 
 typedef SURF SurfFeatureDetector;

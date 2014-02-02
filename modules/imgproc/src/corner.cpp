@@ -251,10 +251,10 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     int depth = src.depth();
     double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
     if( aperture_size < 0 )
-        scale *= 2.;
+        scale *= 2.0;
     if( depth == CV_8U )
-        scale *= 255.;
-    scale = 1./scale;
+        scale *= 255.0;
+    scale = 1.0/scale;
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
 
@@ -304,6 +304,65 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
 #ifdef HAVE_OPENCL
 
+static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
+                           float scale, int aperture_size, int borderType)
+{
+    UMat src = _src.getUMat();
+
+    Size wholeSize;
+    Point ofs;
+    src.locateROI(wholeSize, ofs);
+
+    const int sobel_lsz = 16;
+    if ((aperture_size == 3 || aperture_size == 5 || aperture_size == 7 || aperture_size == -1) &&
+        wholeSize.height > sobel_lsz + (aperture_size >> 1) &&
+        wholeSize.width > sobel_lsz + (aperture_size >> 1))
+    {
+        CV_Assert(depth == CV_8U || depth == CV_32F);
+
+        Dx.create(src.size(), CV_32FC1);
+        Dy.create(src.size(), CV_32FC1);
+
+        size_t localsize[2] = { sobel_lsz, sobel_lsz };
+        size_t globalsize[2] = { localsize[0] * (1 + (src.cols - 1) / localsize[0]),
+                                 localsize[1] * (1 + (src.rows - 1) / localsize[1]) };
+
+        int src_offset_x = (int)((src.offset % src.step) / src.elemSize());
+        int src_offset_y = (int)(src.offset / src.step);
+
+        const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                             "BORDER_WRAP", "BORDER_REFLECT101" };
+
+        ocl::Kernel k(format("sobel%d", aperture_size).c_str(), ocl::imgproc::covardata_oclsrc,
+                      cv::format("-D BLK_X=%d -D BLK_Y=%d -D %s -D SRCTYPE=%s%s",
+                                 (int)localsize[0], (int)localsize[1], borderTypes[borderType], ocl::typeToStr(depth),
+                                 aperture_size < 0 ? " -D SCHARR" : ""));
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, src_offset_x, src_offset_y,
+               ocl::KernelArg::WriteOnlyNoSize(Dx), ocl::KernelArg::WriteOnly(Dy),
+               wholeSize.height, wholeSize.width, scale);
+
+        return k.run(2, globalsize, localsize, false);
+    }
+    else
+    {
+        if (aperture_size > 0)
+        {
+            Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
+            Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
+        }
+        else
+        {
+            Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
+            Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
+        }
+    }
+
+    return true;
+}
+
 static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
                                       int aperture_size, double k, int borderType, int op_type)
 {
@@ -314,31 +373,24 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         return false;
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
-    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
-    if( aperture_size < 0 )
-        scale *= 2.0;
-    if( depth == CV_8U )
-        scale *= 255.0;
-    scale = 1.0 / scale;
-
     if ( !(type == CV_8UC1 || type == CV_32FC1) )
         return false;
 
-    UMat Dx, Dy;
-    if (aperture_size > 0)
-    {
-        Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
-        Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
-    }
-    else
-    {
-        Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
-        Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
-    }
-
     const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
-                                         0, "BORDER_REFLECT101" };
+                                         "BORDER_WRAP", "BORDER_REFLECT101" };
     const char * const cornerType[] = { "CORNER_MINEIGENVAL", "CORNER_HARRIS", 0 };
+
+
+    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    if (aperture_size < 0)
+        scale *= 2.0;
+    if (depth == CV_8U)
+        scale *= 255.0;
+    scale = 1.0 / scale;
+
+    UMat Dx, Dy;
+    if (!extractCovData(_src, Dx, Dy, depth, (float)scale, aperture_size, borderType))
+        return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
                              format("-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s -D %s",
@@ -369,8 +421,9 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 {
     UMat Dx, Dy, D2x, D2y, Dxy;
 
-    Sobel( _src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
-    Sobel( _src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
+    if (!extractCovData(_src, Dx, Dy, depth, 1, ksize, borderType))
+        return false;
+
     Sobel( _src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
     Sobel( _src, D2y, CV_32F, 0, 2, ksize, 1, 0, borderType );
     Sobel( _src, Dxy, CV_32F, 1, 1, ksize, 1, 0, borderType );
@@ -407,9 +460,62 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
+#if defined(HAVE_IPP) && (IPP_VERSION_MAJOR >= 8)
+    typedef IppStatus (CV_STDCALL * ippiMinEigenValGetBufferSize)(IppiSize, int, int, int*);
+    typedef IppStatus (CV_STDCALL * ippiMinEigenVal)(const void*, int, Ipp32f*, int, IppiSize, IppiKernelType, int, int, Ipp8u*);
+    IppiKernelType kerType;
+    int kerSize = ksize;
+    if (ksize < 0)
+    {
+        kerType = ippKernelScharr;
+        kerSize = 3;
+    } else
+    {
+        kerType = ippKernelSobel;
+    }
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    if ((borderTypeNI == BORDER_REPLICATE && (!src.isSubmatrix() || isolated)) &&
+        (kerSize == 3 || kerSize == 5) && (blockSize == 3 || blockSize == 5))
+    {
+        ippiMinEigenValGetBufferSize getBufferSizeFunc = 0;
+        ippiMinEigenVal minEigenValFunc = 0;
+        float norm_coef = 0.f;
+
+        if (src.type() == CV_8UC1)
+        {
+            getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_8u32f_C1R;
+            minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_8u32f_C1R;
+            norm_coef = 1.f / 255.f;
+        } else if (src.type() == CV_32FC1)
+        {
+            getBufferSizeFunc = (ippiMinEigenValGetBufferSize) ippiMinEigenValGetBufferSize_32f_C1R;
+            minEigenValFunc = (ippiMinEigenVal) ippiMinEigenVal_32f_C1R;
+            norm_coef = 255.f;
+        }
+        norm_coef = kerType == ippKernelSobel ? norm_coef : norm_coef / 2.45f;
+
+        if (getBufferSizeFunc && minEigenValFunc)
+        {
+            int bufferSize;
+            IppiSize srcRoi = { src.cols, src.rows };
+            IppStatus ok = getBufferSizeFunc(srcRoi, kerSize, blockSize, &bufferSize);
+            if (ok >= 0)
+            {
+                AutoBuffer<uchar> buffer(bufferSize);
+                ok = minEigenValFunc(src.data, (int) src.step, (Ipp32f*) dst.data, (int) dst.step, srcRoi, kerType, kerSize, blockSize, buffer);
+                CV_SUPPRESS_DEPRECATED_START
+                if (ok >= 0) ok = ippiMulC_32f_C1IR(norm_coef, (Ipp32f*) dst.data, (int) dst.step, srcRoi);
+                CV_SUPPRESS_DEPRECATED_END
+                if (ok >= 0)
+                    return;
+            }
+            setIppErrorStatus();
+        }
+    }
+#endif
     cornerEigenValsVecs( src, dst, blockSize, ksize, MINEIGENVAL, 0, borderType );
 }
-
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
@@ -419,6 +525,49 @@ void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksi
     Mat src = _src.getMat();
     _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
+
+#if IPP_VERSION_X100 >= 801 && 0
+    int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int borderTypeNI = borderType & ~BORDER_ISOLATED;
+    bool isolated = (borderType & BORDER_ISOLATED) != 0;
+
+    if ( (ksize == 3 || ksize == 5) && (type == CV_8UC1 || type == CV_32FC1) &&
+        (borderTypeNI == BORDER_CONSTANT || borderTypeNI == BORDER_REPLICATE) && cn == 1 && (!src.isSubmatrix() || isolated) )
+    {
+        IppiSize roisize = { src.cols, src.rows };
+        IppiMaskSize masksize = ksize == 5 ? ippMskSize5x5 : ippMskSize3x3;
+        IppDataType datatype = type == CV_8UC1 ? ipp8u : ipp32f;
+        Ipp32s bufsize = 0;
+
+        double scale = (double)(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+        if (ksize < 0)
+            scale *= 2.0;
+        if (depth == CV_8U)
+            scale *= 255.0;
+        scale = std::pow(scale, -4.0);
+
+        if (ippiHarrisCornerGetBufferSize(roisize, masksize, blockSize, datatype, cn, &bufsize) >= 0)
+        {
+            Ipp8u * buffer = ippsMalloc_8u(bufsize);
+            IppiDifferentialKernel filterType = ksize > 0 ? ippFilterSobel : ippFilterScharr;
+            IppiBorderType borderTypeIpp = borderTypeNI == BORDER_CONSTANT ? ippBorderConst : ippBorderRepl;
+            IppStatus status = (IppStatus)-1;
+
+            if (depth == CV_8U)
+                status = ippiHarrisCorner_8u32f_C1R((const Ipp8u *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                    filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+            else if (depth == CV_32F)
+                status = ippiHarrisCorner_32f_C1R((const Ipp32f *)src.data, (int)src.step, (Ipp32f *)dst.data, (int)dst.step, roisize,
+                                                  filterType, masksize, blockSize, (Ipp32f)k, (Ipp32f)scale, borderTypeIpp, 0, buffer);
+            ippsFree(buffer);
+
+            if (status >= 0)
+                return;
+        }
+        setIppErrorStatus();
+    }
+#endif
+
     cornerEigenValsVecs( src, dst, blockSize, ksize, HARRIS, k, borderType );
 }
 
@@ -459,6 +608,11 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         factor *= 255;
     factor = 1./(factor * factor * factor);
 
+#if CV_SSE2
+    volatile bool haveSSE2 = cv::checkHardwareSupport(CV_CPU_SSE2);
+    __m128 v_factor = _mm_set1_ps((float)factor), v_m2 = _mm_set1_ps(-2.0f);
+#endif
+
     Size size = src.size();
     int i, j;
     for( i = 0; i < size.height; i++ )
@@ -470,7 +624,26 @@ void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int bord
         const float* d2ydata = (const float*)(D2y.data + i*D2y.step);
         const float* dxydata = (const float*)(Dxy.data + i*Dxy.step);
 
-        for( j = 0; j < size.width; j++ )
+        j = 0;
+
+#if CV_SSE2
+        if (haveSSE2)
+        {
+            for( ; j <= size.width - 4; j += 4 )
+            {
+                __m128 v_dx = _mm_loadu_ps((const float *)(dxdata + j));
+                __m128 v_dy = _mm_loadu_ps((const float *)(dydata + j));
+
+                __m128 v_s1 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dx), _mm_loadu_ps((const float *)(d2ydata + j)));
+                __m128 v_s2 = _mm_mul_ps(_mm_mul_ps(v_dy, v_dy), _mm_loadu_ps((const float *)(d2xdata + j)));
+                __m128 v_s3 = _mm_mul_ps(_mm_mul_ps(v_dx, v_dy), _mm_loadu_ps((const float *)(dxydata + j)));
+                v_s1 = _mm_mul_ps(v_factor, _mm_add_ps(v_s1, _mm_add_ps(v_s2, _mm_mul_ps(v_s3, v_m2))));
+                _mm_storeu_ps(dstdata + j, v_s1);
+            }
+        }
+#endif
+
+        for( ; j < size.width; j++ )
         {
             float dx = dxdata[j];
             float dy = dydata[j];
