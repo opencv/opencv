@@ -193,9 +193,10 @@ enum { HOUGH_STANDARD      = 0,
      };
 
 //! Variants of Line Segment Detector
-enum { LSD_REFINE_NONE = 0,
-       LSD_REFINE_STD  = 1,
-       LSD_REFINE_ADV  = 2
+enum { LSD_NO_SIZE_LIMIT = -1,
+       LSD_REFINE_NONE   = 0,
+       LSD_REFINE_STD    = 1,
+       LSD_REFINE_ADV    = 2
      };
 
 //! Histogram comparison methods
@@ -952,6 +953,54 @@ public:
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
     CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
+
+/**
+ * Find all line elements that are *not* fullfilling the angle and range requirenmnets.
+ * Take all lines, whose angle(line_segment) is outside [min_angle, max_angle] range.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines not containing those fulfilling the requirement.
+ * @param min_angle     The min angle to be considered in degrees. Should be in range [0..180].
+ * @param max_angle     The max angle to be considered in degrees. Should be >= min_angle and widthin range [0..180].
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    CV_WRAP virtual int filterOutAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle) = 0;
+
+/**
+ * Find all line elements that are fullfilling the angle and range requirenmnets.
+ * Take all lines, whose angle(line_segment) is inside [min_angle, max_angle] range.
+ * The opposite of the filterOutAngle method.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines not containing those fulfilling the requirement.
+ * @param min_angle     The min angle to be considered in degrees. Should be in range [0..180].
+ * @param max_angle     The max angle to be considered in degrees. Should be >= min_angle and widthin range [0..180].
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    CV_WRAP virtual int retainAngle(InputArray lines, OutputArray filtered, double min_angle, double max_angle) = 0;
+
+/**
+ * Find all line elements that *are* fullfilling the size requirenmnets.
+ * Lines which are shorter than max_length and longer than min_length.
+ *
+ * @param lines         Input lines.
+ * @param filtered      The output vector of lines containing those fulfilling the requirement.
+ * @param max_length    Maximum length of the line segment.
+ * @param min_length    Minimum length of the line segment.
+ * @return              Returns the number of line segments not included in the output vector.
+ */
+    CV_WRAP virtual int filterSize(InputArray lines, OutputArray filtered, double min_length, double max_length = LSD_NO_SIZE_LIMIT) = 0;
+
+/*
+ * Find itnersection point of 2 lines.
+ *
+ * @param line1         First line in format Vec4i(x1, y1, x2, y2).
+ * @param line2         Second line in the same format as line1.
+ * @param P             The point where line1 and line2 intersect.
+ * @return              The value in variable P is only valid when the return value is true.
+ *                      Otherwise, the lines are parallel and the value can be ignored.
+ */
+    CV_WRAP virtual bool intersection(InputArray line1, InputArray line2, Point& P) = 0;
 
     virtual ~LineSegmentDetector() { }
 };
