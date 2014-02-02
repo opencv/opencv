@@ -390,21 +390,21 @@ cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     points->SetDataType(_points.depth() == CV_32F ? VTK_FLOAT : VTK_DOUBLE);
-    points->SetNumberOfPoints(total);
+    points->SetNumberOfPoints((vtkIdType)total);
 
     if (_points.depth() == CV_32F)
         for(size_t i = 0; i < total; ++i, fpoints += s_chs)
-            points->SetPoint(i, fpoints);
+            points->SetPoint((vtkIdType)i, fpoints);
 
     if (_points.depth() == CV_64F)
         for(size_t i = 0; i < total; ++i, dpoints += s_chs)
-            points->SetPoint(i, dpoints);
+            points->SetPoint((vtkIdType)i, dpoints);
 
     vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
-    cell_array->Allocate(cell_array->EstimateSize(1, total));
-    cell_array->InsertNextCell(total);
+    cell_array->Allocate(cell_array->EstimateSize(1, (int)total));
+    cell_array->InsertNextCell((int)total);
     for(size_t i = 0; i < total; ++i)
-        cell_array->InsertCellPoint(i);
+        cell_array->InsertCellPoint((vtkIdType)i);
 
     vtkSmartPointer<vtkUnsignedCharArray> scalars =  VtkUtils::FillScalars(total, color);
 

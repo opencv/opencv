@@ -278,11 +278,11 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
 
         if (traj.depth() == CV_32F)
             for(size_t i = 0, index = max(0, start); i < traj.total(); ++i, ++index)
-                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3f>(i), tag);
+                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3f>((int)i), tag);
 
         if (traj.depth() == CV_64F)
             for(size_t i = 0, index = max(0, start); i < traj.total(); ++i, ++index)
-                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3d>(i), tag);
+                writePose(cv::format(files_format.c_str(), index), traj.at<Affine3d>((int)i), tag);
     }
 
     CV_Assert(!"Unsupported array kind");

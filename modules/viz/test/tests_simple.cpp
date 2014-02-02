@@ -81,7 +81,7 @@ TEST(Viz, show_cloud_masked)
     Mat dragon_cloud = readCloud(get_dragon_ply_file_path());
 
     Vec3f qnan = Vec3f::all(std::numeric_limits<float>::quiet_NaN());
-    for(size_t i = 0; i < dragon_cloud.total(); ++i)
+    for(int i = 0; i < (int)dragon_cloud.total(); ++i)
         if (i % 15 != 0)
             dragon_cloud.at<Vec3f>(i) = qnan;
 
@@ -170,7 +170,7 @@ TEST(Viz, show_textured_mesh)
         tcoords.push_back(Vec2d(1.0, i/64.0));
     }
 
-    for(size_t i = 0; i < points.size()/2-1; ++i)
+    for(int i = 0; i < (int)points.size()/2-1; ++i)
     {
         int polys[] = {3, 2*i, 2*i+1, 2*i+2, 3, 2*i+1, 2*i+2, 2*i+3};
         polygons.insert(polygons.end(), polys, polys + sizeof(polys)/sizeof(polys[0]));
@@ -194,7 +194,7 @@ TEST(Viz, show_textured_mesh)
 TEST(Viz, show_polyline)
 {
     Mat polyline(1, 32, CV_64FC3);
-    for(size_t i = 0; i < polyline.total(); ++i)
+    for(int i = 0; i < (int)polyline.total(); ++i)
         polyline.at<Vec3d>(i) = Vec3d(i/16.0, cos(i * CV_PI/6), sin(i * CV_PI/6));
 
     Viz3d viz("show_polyline");
@@ -222,13 +222,14 @@ TEST(Viz, show_sampled_normals)
 TEST(Viz, show_trajectories)
 {
     std::vector<Affine3d> path = generate_test_trajectory<double>(), sub0, sub1, sub2, sub3, sub4, sub5;
+    int size =(int)path.size();
 
-    Mat(path).rowRange(0, path.size()/10+1).copyTo(sub0);
-    Mat(path).rowRange(path.size()/10, path.size()/5+1).copyTo(sub1);
-    Mat(path).rowRange(path.size()/5, 11*path.size()/12).copyTo(sub2);
-    Mat(path).rowRange(11*path.size()/12, path.size()).copyTo(sub3);
-    Mat(path).rowRange(3*path.size()/4, 33*path.size()/40).copyTo(sub4);
-    Mat(path).rowRange(33*path.size()/40, 9*path.size()/10).copyTo(sub5);
+    Mat(path).rowRange(0, size/10+1).copyTo(sub0);
+    Mat(path).rowRange(size/10, size/5+1).copyTo(sub1);
+    Mat(path).rowRange(size/5, 11*size/12).copyTo(sub2);
+    Mat(path).rowRange(11*size/12, size).copyTo(sub3);
+    Mat(path).rowRange(3*size/4, 33*size/40).copyTo(sub4);
+    Mat(path).rowRange(33*size/40, 9*size/10).copyTo(sub5);
     Matx33d K(1024.0, 0.0, 320.0, 0.0, 1024.0, 240.0, 0.0, 0.0, 1.0);
 
     Viz3d viz("show_trajectories");
@@ -259,7 +260,7 @@ TEST(Viz, show_trajectory_reposition)
 
     Viz3d viz("show_trajectory_reposition_to_origin");
     viz.showWidget("coos", WCoordinateSystem());
-    viz.showWidget("sub3", WTrajectory(Mat(path).rowRange(0, path.size()/3), WTrajectory::BOTH, 0.2, Color::brown()), path.front().inv());
+    viz.showWidget("sub3", WTrajectory(Mat(path).rowRange(0, (int)path.size()/3), WTrajectory::BOTH, 0.2, Color::brown()), path.front().inv());
     viz.showWidget("text2d", WText("Trajectory resposition to origin", Point(20, 20), 20, Color::green()));
     viz.spin();
 }
