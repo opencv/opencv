@@ -644,21 +644,23 @@ void UMat::copyTo(OutputArray _dst) const
     srcofs[dims-1] *= esz;
 
     _dst.create( dims, size.p, type() );
-    if( _dst.kind() == _InputArray::UMAT )
+    if( _dst.isUMat() )
     {
         UMat dst = _dst.getUMat();
         if( u == dst.u && dst.offset == offset )
             return;
-        dst.ndoffset(dstofs);
-        dstofs[dims-1] *= esz;
-        CV_Assert(u->currAllocator == dst.u->currAllocator);
-        u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+
+        if (u->currAllocator == dst.u->currAllocator)
+        {
+            dst.ndoffset(dstofs);
+            dstofs[dims-1] *= esz;
+            u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+            return;
+        }
     }
-    else
-    {
-        Mat dst = _dst.getMat();
-        u->currAllocator->download(u, dst.data, dims, sz, srcofs, step.p, dst.step.p);
-    }
+
+    Mat dst = _dst.getMat();
+    u->currAllocator->download(u, dst.data, dims, sz, srcofs, step.p, dst.step.p);
 }
 
 void UMat::copyTo(OutputArray _dst, InputArray _mask) const
