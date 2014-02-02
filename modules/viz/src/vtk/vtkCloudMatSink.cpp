@@ -156,3 +156,19 @@ void cv::viz::vtkCloudMatSink::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Colors: " << colors.needed() << "\n";
   os << indent << "Normals: " << normals.needed() << "\n";
 }
+
+int cv::viz::vtkCloudMatSink::FillInputPortInformation(int, vtkInformation *info)
+{
+    info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
+    return 1;
+}
+
+vtkPolyData* cv::viz::vtkCloudMatSink::GetInput()
+{
+    return vtkPolyData::SafeDownCast(this->Superclass::GetInput());
+}
+
+vtkPolyData* cv::viz::vtkCloudMatSink::GetInput(int port)
+{
+    return vtkPolyData::SafeDownCast(this->Superclass::GetInput(port));
+}
