@@ -3,6 +3,72 @@
 namespace cv
 {
 
+class FeatureEvaluator
+{
+public:
+    enum
+    {
+        HAAR = 0,
+        LBP  = 1,
+        HOG  = 2
+    };
+
+    struct ScaleData
+    {
+        ScaleData() { scale = 0.f; layer_ofs = ystep = 0; }
+        Size getWorkingSize(Size winSize) const
+        {
+            return Size(std::max(szi.width - winSize.width, 0),
+                        std::max(szi.height - winSize.height, 0));
+        }
+
+        float scale;
+        Size szi;
+        int layer_ofs, ystep;
+    };
+
+    virtual ~FeatureEvaluator();
+
+    virtual bool read(const FileNode& node, Size origWinSize);
+    virtual Ptr<FeatureEvaluator> clone() const;
+    virtual int getFeatureType() const;
+    int getNumChannels() const { return nchannels; }
+
+    virtual bool setImage(InputArray img, const std::vector<float>& scales);
+    virtual bool setWindow(Point p, int scaleIdx);
+    const ScaleData& getScaleData(int scaleIdx) const
+    {
+        CV_Assert( 0 <= scaleIdx && scaleIdx < (int)scaleData->size());
+        return scaleData->at(scaleIdx);
+    }
+    virtual void getUMats(std::vector<UMat>& bufs);
+    virtual void getMats();
+
+    Size getLocalSize() const { return localSize; }
+    Size getLocalBufSize() const { return lbufSize; }
+
+    virtual float calcOrd(int featureIdx) const;
+    virtual int calcCat(int featureIdx) const;
+
+    static Ptr<FeatureEvaluator> create(int type);
+
+protected:
+    enum { SBUF_VALID=1, USBUF_VALID=2 };
+    int sbufFlag;
+
+    bool updateScaleData( Size imgsz, const std::vector<float>& _scales );
+    virtual void computeChannels( int, InputArray ) {}
+    virtual void computeOptFeatures() {}
+
+    Size origWinSize, sbufSize, localSize, lbufSize;
+    int nchannels;
+    Mat sbuf, rbuf;
+    UMat urbuf, usbuf, ufbuf, uscaleData;
+
+    Ptr<std::vector<ScaleData> > scaleData;
+};
+
+
 class CascadeClassifierImpl : public BaseCascadeClassifier
 {
 public:
@@ -54,9 +120,8 @@ protected:
                             int yStep, double factor, std::vector<Rect>& candidates,
                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
                             Size sumSize0, bool outputRejectLevels = false );
-    bool ocl_detectSingleScale( InputArray image, Size processingRectSize,
-                                int yStep, double factor, Size sumSize0 );
-
+    bool ocl_detectMultiScaleNoGrouping( const std::vector<float>& scales,
+                                         std::vector<Rect>& candidates );
 
     void detectMultiScaleNoGrouping( InputArray image, std::vector<Rect>& candidates,
                                     std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
@@ -72,6 +137,7 @@ protected:
     };
 
     friend class CascadeClassifierInvoker;
+    friend class SparseCascadeClassifierInvoker;
 
     template<class FEval>
     friend int predictOrdered( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
@@ -85,7 +151,7 @@ protected:
     template<class FEval>
     friend int predictCategoricalStump( CascadeClassifierImpl& cascade, Ptr<FeatureEvaluator> &featureEvaluator, double& weight);
 
-    int runAt( Ptr<FeatureEvaluator>& feval, Point pt, double& weight );
+    int runAt( Ptr<FeatureEvaluator>& feval, Point pt, int scaleIdx, double& weight );
 
     class Data
     {
@@ -126,12 +192,10 @@ protected:
 
         bool read(const FileNode &node);
 
-        bool isStumpBased() const { return maxNodesPerTree == 1; }
-
         int stageType;
         int featureType;
         int ncategories;
-        int maxNodesPerTree;
+        int minNodesPerTree, maxNodesPerTree;
         Size origWinSize;
 
         std::vector<Stage> stages;
@@ -147,8 +211,8 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 
     Ptr<MaskGenerator> maskGenerator;
-    UMat ugrayImage, uimageBuffer;
-    UMat ufacepos, ustages, ustumps, usubsets;
+    UMat ugrayImage;
+    UMat ufacepos, ustages, unodes, uleaves, usubsets;
     ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
 
@@ -268,7 +332,6 @@ public:
 
         enum { RECT_NUM = Feature::RECT_NUM };
         float calc( const int* pwin ) const;
-
         void setOffsets( const Feature& _f, int step, int tofs );
 
         int ofs[RECT_NUM][4];
@@ -278,35 +341,34 @@ public:
     HaarEvaluator();
     virtual ~HaarEvaluator();
 
-    virtual bool read( const FileNode& node );
+    virtual bool read( const FileNode& node, Size origWinSize);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::HAAR; }
 
-    virtual bool setImage(InputArray, Size origWinSize, Size sumSize);
-    virtual bool setWindow(Point pt);
-    virtual Rect getNormRect() const;
-    virtual void getUMats(std::vector<UMat>& bufs);
+    virtual bool setWindow(Point p, int scaleIdx);
+    Rect getNormRect() const;
+    int getSquaresOffset() const;
 
-    double operator()(int featureIdx) const
+    float operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin) * varianceNormFactor; }
-    virtual double calcOrd(int featureIdx) const
+    virtual float calcOrd(int featureIdx) const
     { return (*this)(featureIdx); }
 
 protected:
-    Size origWinSize, sumSize0;
+    virtual void computeChannels( int i, InputArray img );
+    virtual void computeOptFeatures();
+
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
-    OptFeature* optfeaturesPtr; // optimization
+    Ptr<std::vector<OptFeature> > optfeatures_lbuf;
     bool hasTiltedFeatures;
 
-    Mat sum0, sum, sqsum0, sqsum;
-    UMat usum0, usum, usqsum0, usqsum, ufbuf;
-
+    int tofs, sqofs;
+    Vec4i nofs;
     Rect normrect;
-    int nofs[4];
-
     const int* pwin;
-    double varianceNormFactor;
+    OptFeature* optfeaturesPtr; // optimization
+    float varianceNormFactor;
 };
 
 inline HaarEvaluator::Feature :: Feature()
@@ -336,28 +398,6 @@ inline float HaarEvaluator::OptFeature :: calc( const int* ptr ) const
     return ret;
 }
 
-inline void HaarEvaluator::OptFeature :: setOffsets( const Feature& _f, int step, int tofs )
-{
-    weight[0] = _f.rect[0].weight;
-    weight[1] = _f.rect[1].weight;
-    weight[2] = _f.rect[2].weight;
-
-    Rect r2 = weight[2] > 0 ? _f.rect[2].r : Rect(0,0,0,0);
-    if (_f.tilted)
-    {
-        CV_TILTED_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], tofs, _f.rect[0].r, step );
-        CV_TILTED_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], tofs, _f.rect[1].r, step );
-        CV_TILTED_PTRS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], tofs, r2, step );
-    }
-    else
-    {
-        CV_SUM_OFS( ofs[0][0], ofs[0][1], ofs[0][2], ofs[0][3], 0, _f.rect[0].r, step );
-        CV_SUM_OFS( ofs[1][0], ofs[1][1], ofs[1][2], ofs[1][3], 0, _f.rect[1].r, step );
-        CV_SUM_OFS( ofs[2][0], ofs[2][1], ofs[2][2], ofs[2][3], 0, r2, step );
-    }
-}
-
-
 //----------------------------------------------  LBPEvaluator -------------------------------------
 
 class LBPEvaluator : public FeatureEvaluator
@@ -367,7 +407,7 @@ public:
     {
         Feature();
         Feature( int x, int y, int _block_w, int _block_h  ) :
-            rect(x, y, _block_w, _block_h) {}
+                 rect(x, y, _block_w, _block_h) {}
 
         bool read(const FileNode& node );
 
@@ -386,26 +426,24 @@ public:
     LBPEvaluator();
     virtual ~LBPEvaluator();
 
-    virtual bool read( const FileNode& node );
+    virtual bool read( const FileNode& node, Size origWinSize );
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const { return FeatureEvaluator::LBP; }
 
-    virtual bool setImage(InputArray image, Size _origWinSize, Size);
-    virtual bool setWindow(Point pt);
-    virtual void getUMats(std::vector<UMat>& bufs);
+    virtual bool setWindow(Point p, int scaleIdx);
 
     int operator()(int featureIdx) const
     { return optfeaturesPtr[featureIdx].calc(pwin); }
     virtual int calcCat(int featureIdx) const
     { return (*this)(featureIdx); }
 protected:
-    Size origWinSize, sumSize0;
+    virtual void computeChannels( int i, InputArray img );
+    virtual void computeOptFeatures();
+
     Ptr<std::vector<Feature> > features;
     Ptr<std::vector<OptFeature> > optfeatures;
+    Ptr<std::vector<OptFeature> > optfeatures_lbuf;
     OptFeature* optfeaturesPtr; // optimization
-
-    Mat sum0, sum;
-    UMat usum0, usum, ufbuf;
 
     const int* pwin;
 };
@@ -435,98 +473,6 @@ inline int LBPEvaluator::OptFeature :: calc( const int* p ) const
            (CALC_SUM_OFS_( ofs[8], ofs[9], ofs[12], ofs[13], p ) >= cval ? 2 : 0)|    // 6
            (CALC_SUM_OFS_( ofs[4], ofs[5], ofs[8], ofs[9], p ) >= cval ? 1 : 0);
 }
-
-inline void LBPEvaluator::OptFeature :: setOffsets( const Feature& _f, int step )
-{
-    Rect tr = _f.rect;
-    CV_SUM_OFS( ofs[0], ofs[1], ofs[4], ofs[5], 0, tr, step );
-    tr.x += 2*_f.rect.width;
-    CV_SUM_OFS( ofs[2], ofs[3], ofs[6], ofs[7], 0, tr, step );
-    tr.y += 2*_f.rect.height;
-    CV_SUM_OFS( ofs[10], ofs[11], ofs[14], ofs[15], 0, tr, step );
-    tr.x -= 2*_f.rect.width;
-    CV_SUM_OFS( ofs[8], ofs[9], ofs[12], ofs[13], 0, tr, step );
-}
-
-//---------------------------------------------- HOGEvaluator -------------------------------------------
-
-class HOGEvaluator : public FeatureEvaluator
-{
-public:
-    struct Feature
-    {
-        Feature();
-        float calc( int offset ) const;
-        void updatePtrs( const std::vector<Mat>& _hist, const Mat &_normSum );
-        bool read( const FileNode& node );
-
-        enum { CELL_NUM = 4, BIN_NUM = 9 };
-
-        Rect rect[CELL_NUM];
-        int featComponent; //component index from 0 to 35
-        const float* pF[4]; //for feature calculation
-        const float* pN[4]; //for normalization calculation
-    };
-    HOGEvaluator();
-    virtual ~HOGEvaluator();
-    virtual bool read( const FileNode& node );
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const { return FeatureEvaluator::HOG; }
-    virtual bool setImage( InputArray image, Size winSize, Size );
-    virtual bool setWindow( Point pt );
-    double operator()(int featureIdx) const
-    {
-        return featuresPtr[featureIdx].calc(offset);
-    }
-    virtual double calcOrd( int featureIdx ) const
-    {
-        return (*this)(featureIdx);
-    }
-
-private:
-    virtual void integralHistogram( const Mat& srcImage, std::vector<Mat> &histogram, Mat &norm, int nbins ) const;
-
-    Size origWinSize;
-    Ptr<std::vector<Feature> > features;
-    Feature* featuresPtr;
-    std::vector<Mat> hist;
-    Mat normSum;
-    int offset;
-};
-
-inline HOGEvaluator::Feature :: Feature()
-{
-    rect[0] = rect[1] = rect[2] = rect[3] = Rect();
-    pF[0] = pF[1] = pF[2] = pF[3] = 0;
-    pN[0] = pN[1] = pN[2] = pN[3] = 0;
-    featComponent = 0;
-}
-
-inline float HOGEvaluator::Feature :: calc( int _offset ) const
-{
-    float res = CALC_SUM(pF, _offset);
-    float normFactor = CALC_SUM(pN, _offset);
-    res = (res > 0.001f) ? (res / ( normFactor + 0.001f) ) : 0.f;
-    return res;
-}
-
-inline void HOGEvaluator::Feature :: updatePtrs( const std::vector<Mat> &_hist, const Mat &_normSum )
-{
-    int binIdx = featComponent % BIN_NUM;
-    int cellIdx = featComponent / BIN_NUM;
-    Rect normRect = Rect( rect[0].x, rect[0].y, 2*rect[0].width, 2*rect[0].height );
-
-    const float* featBuf = (const float*)_hist[binIdx].data;
-    size_t featStep = _hist[0].step / sizeof(featBuf[0]);
-
-    const float* normBuf = (const float*)_normSum.data;
-    size_t normStep = _normSum.step / sizeof(normBuf[0]);
-
-    CV_SUM_PTRS( pF[0], pF[1], pF[2], pF[3], featBuf, rect[cellIdx], featStep );
-    CV_SUM_PTRS( pN[0], pN[1], pN[2], pN[3], normBuf, normRect, normStep );
-}
-
-
 
 
 //----------------------------------------------  predictor functions -------------------------------------
@@ -662,11 +608,7 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     const CascadeClassifierImpl::Data::Stump* cascadeStumps = &cascade.data.stumps[0];
     const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    float tmp = 0; // float accumulator -- float operations are quicker
-#else
-    double tmp = 0;
-#endif
+    float tmp = 0;
     for( int si = 0; si < nstages; si++ )
     {
         const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];

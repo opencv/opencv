@@ -24,14 +24,14 @@ OCL_PERF_TEST_P(Cascade_Image_MinSize, CascadeClassifier,
                                      string("cv/cascadeandhog/images/class57.png") ),
                     testing::Values(30, 64, 90) ) )
 {
-    const string cascasePath = get<0>(GetParam());
+    const string cascadePath = get<0>(GetParam());
     const string imagePath   = get<1>(GetParam());
     int min_size = get<2>(GetParam());
     Size minSize(min_size, min_size);
 
-    CascadeClassifier cc( getDataPath(cascasePath) );
+    CascadeClassifier cc( getDataPath(cascadePath) );
     if (cc.empty())
-        FAIL() << "Can't load cascade file: " << getDataPath(cascasePath);
+        FAIL() << "Can't load cascade file: " << getDataPath(cascadePath);
 
     Mat img = imread(getDataPath(imagePath), IMREAD_GRAYSCALE);
     if (img.empty())
