@@ -41,6 +41,7 @@
 //M*/
 
 #include "perf_precomp.hpp"
+#include "opencv2/ts/ocl_perf.hpp"
 
 using namespace std;
 using namespace std::tr1;
@@ -91,37 +92,26 @@ namespace
     class ZeroOpticalFlow : public DenseOpticalFlowExt
     {
     public:
-        void calc(InputArray frame0, InputArray, OutputArray flow1, OutputArray flow2)
+        virtual void calc(InputArray frame0, InputArray, OutputArray flow1, OutputArray flow2)
         {
             cv::Size size = frame0.size();
 
             if (!flow2.needed())
             {
                 flow1.create(size, CV_32FC2);
-
-                if (flow1.kind() == cv::_InputArray::GPU_MAT)
-                    flow1.getGpuMatRef().setTo(cv::Scalar::all(0));
-                else
-                    flow1.getMatRef().setTo(cv::Scalar::all(0));
+                flow1.setTo(cv::Scalar::all(0));
             }
             else
             {
                 flow1.create(size, CV_32FC1);
                 flow2.create(size, CV_32FC1);
 
-                if (flow1.kind() == cv::_InputArray::GPU_MAT)
-                    flow1.getGpuMatRef().setTo(cv::Scalar::all(0));
-                else
-                    flow1.getMatRef().setTo(cv::Scalar::all(0));
-
-                if (flow2.kind() == cv::_InputArray::GPU_MAT)
-                    flow2.getGpuMatRef().setTo(cv::Scalar::all(0));
-                else
-                    flow2.getMatRef().setTo(cv::Scalar::all(0));
+                flow1.setTo(cv::Scalar::all(0));
+                flow2.setTo(cv::Scalar::all(0));
             }
         }
 
-        void collectGarbage()
+        virtual void collectGarbage()
         {
         }
     };
@@ -181,3 +171,48 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#ifdef HAVE_OPENCL
+
+namespace cvtest {
+namespace ocl {
+
+typedef Size_MatType SuperResolution_BTVL1;
+
+OCL_PERF_TEST_P(SuperResolution_BTVL1 ,BTVL1,
+            Combine(Values(szSmall64, szSmall128),
+                    Values(MatType(CV_8UC1), MatType(CV_8UC3))))
+{
+    Size_MatType_t params = GetParam();
+    const Size size = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat frame(size, type);
+    UMat dst(1, 1, 0);
+    declare.in(frame, WARMUP_RNG);
+
+    const int scale = 2;
+    const int iterations = 50;
+    const int temporalAreaRadius = 1;
+
+    Ptr<DenseOpticalFlowExt> opticalFlow(new ZeroOpticalFlow);
+    Ptr<SuperResolution> superRes = createSuperResolution_BTVL1();
+
+    superRes->set("scale", scale);
+    superRes->set("iterations", iterations);
+    superRes->set("temporalAreaRadius", temporalAreaRadius);
+    superRes->set("opticalFlow", opticalFlow);
+
+    superRes->setInput(makePtr<OneFrameSource_CPU>(frame));
+
+    // skip first frame
+    superRes->nextFrame(dst);
+
+    OCL_TEST_CYCLE_N(10) superRes->nextFrame(dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL
