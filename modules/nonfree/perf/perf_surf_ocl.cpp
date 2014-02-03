@@ -57,55 +57,68 @@ typedef perf::TestBaseWithParam<std::string> OCL_SURF;
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.png"
 
-PERF_TEST_P(OCL_SURF, DISABLED_with_data_transfer, testing::Values(SURF_IMAGES))
+#define OCL_TEST_CYCLE() for( ; startTimer(), next(); cv::ocl::finish(), stopTimer())
+
+PERF_TEST_P(OCL_SURF, with_data_transfer, testing::Values(SURF_IMAGES))
 {
     string filename = getDataPath(GetParam());
-    Mat img = imread(filename, IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(src.empty());
 
-    SURF_OCL d_surf;
-    oclMat d_keypoints;
-    oclMat d_descriptors;
-    Mat cpu_kp;
-    Mat cpu_dp;
-
+    Mat cpu_kp, cpu_dp;
     declare.time(60);
 
-    TEST_CYCLE()
+    if (getSelectedImpl() == "ocl")
     {
-        oclMat d_src(img);
+        SURF_OCL d_surf;
+        oclMat d_keypoints, d_descriptors;
 
-        d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
+        OCL_TEST_CYCLE()
+        {
+            oclMat d_src(src);
 
-        d_keypoints.download(cpu_kp);
-        d_descriptors.download(cpu_dp);
+            d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
+
+            d_keypoints.download(cpu_kp);
+            d_descriptors.download(cpu_dp);
+        }
+    }
+    else if (getSelectedImpl() == "plain")
+    {
+        cv::SURF surf;
+        std::vector<cv::KeyPoint> kp;
+
+        TEST_CYCLE() surf(src, Mat(), kp, cpu_dp);
     }
 
-    SANITY_CHECK(cpu_kp, 1);
-    SANITY_CHECK(cpu_dp, 1);
+    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(OCL_SURF, DISABLED_without_data_transfer, testing::Values(SURF_IMAGES))
+PERF_TEST_P(OCL_SURF, without_data_transfer, testing::Values(SURF_IMAGES))
 {
     string filename = getDataPath(GetParam());
-    Mat img = imread(filename, IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(src.empty());
 
-    SURF_OCL d_surf;
-    oclMat d_keypoints;
-    oclMat d_descriptors;
-    oclMat d_src(img);
-
+    Mat cpu_kp, cpu_dp;
     declare.time(60);
 
-    TEST_CYCLE() d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
+    if (getSelectedImpl() == "ocl")
+    {
+        SURF_OCL d_surf;
+        oclMat d_keypoints, d_descriptors, d_src(src);
 
-    Mat cpu_kp;
-    Mat cpu_dp;
-    d_keypoints.download(cpu_kp);
-    d_descriptors.download(cpu_dp);
-    SANITY_CHECK(cpu_kp, 1);
-    SANITY_CHECK(cpu_dp, 1);
+        OCL_TEST_CYCLE() d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
+    }
+    else if (getSelectedImpl() == "plain")
+    {
+        cv::SURF surf;
+        std::vector<cv::KeyPoint> kp;
+
+        TEST_CYCLE() surf(src, Mat(), kp, cpu_dp);
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 #endif // HAVE_OPENCV_OCL
