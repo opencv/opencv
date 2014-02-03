@@ -62,7 +62,6 @@ endif()
 
 add_subdirectory(c)
 add_subdirectory(cpp)
-add_subdirectory(ocl)
 # FIXIT: can't use cvconfig.h in samples: add_subdirectory(gpu)
 
 if(WIN32)
