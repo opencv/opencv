@@ -45,6 +45,7 @@
 #include <cstdio>
 #include <vector>
 #include <iostream>
+#include <functional>
 
 namespace cv
 {
