@@ -189,7 +189,7 @@ Rect FeatherBlender::createWeightMaps(const vector<Mat> &masks, const vector<Poi
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 #else
     (void)try_gpu;
@@ -491,7 +491,7 @@ void createLaplacePyr(const Mat &img, int num_levels, vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     pyr.resize(num_levels + 1);
 
     vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
@@ -512,6 +512,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, vector<Mat> &pyr)
     (void)img;
     (void)num_levels;
     (void)pyr;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }
 
@@ -531,7 +532,7 @@ void restoreImageFromLaplacePyr(vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     if (pyr.empty())
         return;
 
@@ -549,6 +550,7 @@ void restoreImageFromLaplacePyrGpu(vector<Mat> &pyr)
     gpu_pyr[0].download(pyr[0]);
 #else
     (void)pyr;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }
 
