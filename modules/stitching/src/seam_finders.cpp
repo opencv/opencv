@@ -1318,7 +1318,7 @@ void GraphCutSeamFinder::find(const vector<Mat> &src, const vector<Point> &corne
 }
 
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 void GraphCutSeamFinderGpu::find(const vector<Mat> &src, const vector<Point> &corners,
                                  vector<Mat> &masks)
 {
@@ -1641,6 +1641,62 @@ void GraphCutSeamFinderGpu::setGraphWeightsColorGrad(
                 bottom_(y, x) = 0;
         }
     }
+}
+#else
+void GraphCutSeamFinderGpu::find(const vector<Mat> &src, const vector<Point> &corners,
+                                 vector<Mat> &masks)
+{
+    (void)src;
+    (void)corners;
+    (void)masks;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+}
+
+
+void GraphCutSeamFinderGpu::findInPair(size_t first, size_t second, Rect roi)
+{
+    (void)first;
+    (void)second;
+    (void)roi;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+}
+
+
+void GraphCutSeamFinderGpu::setGraphWeightsColor(const Mat &img1, const Mat &img2, const Mat &mask1, const Mat &mask2,
+                                                 Mat &terminals, Mat &leftT, Mat &rightT, Mat &top, Mat &bottom)
+{
+    (void)img1;
+    (void)img2;
+    (void)mask1;
+    (void)mask2;
+    (void)terminals;
+    (void)leftT;
+    (void)rightT;
+    (void)top;
+    (void)bottom;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+}
+
+
+void GraphCutSeamFinderGpu::setGraphWeightsColorGrad(
+        const Mat &img1, const Mat &img2, const Mat &dx1, const Mat &dx2,
+        const Mat &dy1, const Mat &dy2, const Mat &mask1, const Mat &mask2,
+        Mat &terminals, Mat &leftT, Mat &rightT, Mat &top, Mat &bottom)
+{
+    (void)img1;
+    (void)img2;
+    (void)dx1;
+    (void)dx2;
+    (void)dy1;
+    (void)dy2;
+    (void)mask1;
+    (void)mask2;
+    (void)terminals;
+    (void)leftT;
+    (void)rightT;
+    (void)top;
+    (void)bottom;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
 }
 #endif
 
