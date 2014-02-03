@@ -44,11 +44,8 @@
 #define __OPENCV_STITCHING_WARPERS_HPP__
 
 #include "opencv2/core/core.hpp"
+#include "opencv2/core/gpumat.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/opencv_modules.hpp"
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
-# include "opencv2/gpu/gpu.hpp"
-#endif
 
 namespace cv {
 namespace detail {
@@ -331,7 +328,6 @@ public:
 };
 
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
@@ -448,7 +444,6 @@ public:
 private:
     gpu::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
-#endif
 
 
 struct SphericalPortraitProjector : ProjectorBase
