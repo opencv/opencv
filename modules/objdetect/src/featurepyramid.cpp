@@ -2,6 +2,8 @@
 #include "_latentsvm.h"
 #include "_lsvm_resizeimg.h"
 
+#include <tbb/tbb.h>
+
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
 #endif
@@ -434,21 +436,35 @@ static int getPathOfFeaturePyramid(IplImage * image,
                             float step, int numStep, int startIndex,
                             int sideLength, CvLSVMFeaturePyramid **maps)
 {
-    CvLSVMFeatureMap *map;
-    IplImage *scaleTmp;
-    float scale;
-    int   i;
+#ifdef HAVE_TBB
 
-    for(i = 0; i < numStep; i++)
+    tbb::parallel_for (size_t(0), size_t(numStep), [=](size_t i) {
+        CvLSVMFeatureMap *map;
+        float scale = 1.0f / powf(step, (float)i);
+        IplImage* scaleTmp = resize_opencv (image, scale);
+        getFeatureMaps(scaleTmp, sideLength, &map);
+        normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+        PCAFeatureMaps(map);
+        (*maps)->pyramid[startIndex + i] = map;
+        cvReleaseImage(&scaleTmp);
+    });
+
+#else
+
+    for(int i = 0; i < numStep; i++)
     {
-        scale = 1.0f / powf(step, (float)i);
-        scaleTmp = resize_opencv (image, scale);
+        CvLSVMFeatureMap *map;
+        float scale = 1.0f / powf(step, (float)i);
+        IplImage* scaleTmp = resize_opencv (image, scale);
         getFeatureMaps(scaleTmp, sideLength, &map);
         normalizeAndTruncate(map, VAL_OF_TRUNCATE);
         PCAFeatureMaps(map);
         (*maps)->pyramid[startIndex + i] = map;
         cvReleaseImage(&scaleTmp);
     }/*for(i = 0; i < numStep; i++)*/
+
+#endif
+
     return LATENT_SVM_OK;
 }
 
