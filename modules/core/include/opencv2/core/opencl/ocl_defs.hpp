@@ -28,7 +28,7 @@
         if (cv::ocl::useOpenCL() && (condition))                            \
         {                                                                   \
             CV_Assert(func);                                                \
-            return;                                                         \
+            return __VA_ARGS__;                                             \
         }                                                                   \
     }
 #else

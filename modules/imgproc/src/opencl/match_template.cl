@@ -98,7 +98,7 @@ __kernel void matchTemplate_Naive_CCORR (__global const uchar * img,int img_step
 
 __kernel void matchTemplate_CCORR_NORMED ( __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
                                            __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                           int tpl_rows, int tpl_cols, ulong tpl_sqsum)
+                                           int tpl_rows, int tpl_cols, float tpl_sqsum)
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
@@ -157,7 +157,7 @@ __kernel void matchTemplate_Naive_SQDIFF(__global const uchar * img,int img_step
 
 __kernel void matchTemplate_SQDIFF_NORMED ( __global const uchar * img_sqsums, int img_sqsums_step, int img_sqsums_offset,
                                             __global uchar * res, int res_step, int res_offset, int res_rows, int res_cols,
-                                            int tpl_rows, int tpl_cols, ulong tpl_sqsum)
+                                            int tpl_rows, int tpl_cols, float tpl_sqsum)
 {
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
