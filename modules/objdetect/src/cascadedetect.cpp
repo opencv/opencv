@@ -464,7 +464,7 @@ bool FeatureEvaluator::setImage( InputArray _image, const std::vector<float>& _s
 {
     Size imgsz = _image.size();
     bool recalcOptFeatures = updateScaleData(imgsz, _scales);
-    
+
     size_t i, nscales = scaleData->size();
     Size sz0 = scaleData->at(0).szi;
     sz0 = Size(std::max(rbuf.cols, (int)alignSize(sz0.width, 16)), std::max(rbuf.rows, sz0.height));
@@ -802,7 +802,7 @@ void LBPEvaluator::computeOptFeatures()
     optfeatures->resize(nfeatures);
     optfeaturesPtr = &(*optfeatures)[0];
     for( fi = 0; fi < nfeatures; fi++ )
-        optfeaturesPtr[fi].setOffsets( ff[fi], sstep );    
+        optfeaturesPtr[fi].setOffsets( ff[fi], sstep );
     copyVectorToUMat(*optfeatures, ufbuf);
 }
 
@@ -1098,7 +1098,7 @@ bool CascadeClassifierImpl::ocl_detectMultiScaleNoGrouping( const std::vector<fl
     {
         if (data.maxNodesPerTree > 1)
             return false;
-        
+
         Ptr<LBPEvaluator> lbp = featureEvaluator.dynamicCast<LBPEvaluator>();
         if( lbp.empty() )
             return false;
@@ -1200,9 +1200,8 @@ void CascadeClassifierImpl::detectMultiScaleNoGrouping( InputArray _image, std::
                                                     bool outputRejectLevels )
 {
     Size imgsz = _image.size();
-    
+
     Mat grayImage;
-    UMat ugrayImage;
     _InputArray gray;
 
     candidates.clear();
