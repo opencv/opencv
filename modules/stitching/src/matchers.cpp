@@ -45,10 +45,7 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 using namespace cv::gpu;
-#endif
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree/nonfree.hpp"
@@ -129,7 +126,7 @@ private:
     float match_conf_;
 };
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -204,7 +201,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -432,7 +429,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
@@ -477,6 +474,29 @@ void SurfFeaturesFinderGpu::collectGarbage()
     gray_image_.release();
     keypoints_.release();
     descriptors_.release();
+}
+#elif defined(HAVE_OPENCV_NONFREE)
+SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
+                                             int num_octaves_descr, int num_layers_descr)
+{
+    (void)hess_thresh;
+    (void)num_octaves;
+    (void)num_layers;
+    (void)num_octaves_descr;
+    (void)num_layers_descr;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+}
+
+
+void SurfFeaturesFinderGpu::find(const Mat &image, ImageFeatures &features)
+{
+    (void)image;
+    (void)features;
+    CV_Error(CV_StsNotImplemented, "CUDA optimization is unavailable");
+}
+
+void SurfFeaturesFinderGpu::collectGarbage()
+{
 }
 #endif
 
@@ -533,7 +553,7 @@ void FeaturesMatcher::operator ()(const vector<ImageFeatures> &features, vector<
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
         impl_ = new GpuMatcher(match_conf);
     else
