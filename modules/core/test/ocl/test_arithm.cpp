@@ -773,16 +773,18 @@ typedef ArithmTestBase Pow;
 
 OCL_TEST_P(Pow, Mat)
 {
+    static const double pows[] = { -4, -1, -2.5, 0, 1, 2, 3.7, 4 };
+
     for (int j = 0; j < test_loop_times; j++)
-    {
-        generateTestData();
-        double p = 4.5;
+        for (int k = 0, size = sizeof(pows) / sizeof(double); k < size; ++k)
+        {
+            generateTestData();
 
-        OCL_OFF(cv::pow(src1_roi, p, dst1_roi));
-        OCL_ON(cv::pow(usrc1_roi, p, udst1_roi));
+            OCL_OFF(cv::pow(src1_roi, pows[k], dst1_roi));
+            OCL_ON(cv::pow(usrc1_roi, pows[k], udst1_roi));
 
-        Near(1);
-    }
+            Near(1);
+        }
 }
 
 //////////////////////////////// AddWeighted /////////////////////////////////////////////////
