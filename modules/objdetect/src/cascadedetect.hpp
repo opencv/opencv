@@ -28,7 +28,7 @@ public:
     };
 
     virtual ~FeatureEvaluator();
-    
+
     virtual bool read(const FileNode& node, Size origWinSize);
     virtual Ptr<FeatureEvaluator> clone() const;
     virtual int getFeatureType() const;
@@ -211,7 +211,7 @@ protected:
     Ptr<CvHaarClassifierCascade> oldCascade;
 
     Ptr<MaskGenerator> maskGenerator;
-    UMat ugrayImage, uimageBuffer;
+    UMat ugrayImage;
     UMat ufacepos, ustages, unodes, uleaves, usubsets;
     ocl::Kernel haarKernel, lbpKernel;
     bool tryOpenCL;
