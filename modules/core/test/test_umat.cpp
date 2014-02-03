@@ -248,3 +248,46 @@ TEST(UMat, Sync)
 
     EXPECT_EQ(0, cv::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
+
+#define EXPECT_MAT_NEAR(m1, m2) ASSERT_EQ(0, cv::norm(m1, m1, cv::NORM_INF))
+
+TEST(UMat, setOpenCL)
+{
+    // save the current state
+    bool useOCL = ocl::useOpenCL();
+
+    Mat m = (Mat_<uchar>(3,3)<<0,1,2,3,4,5,6,7,8);
+
+    ocl::setUseOpenCL(true);
+    UMat um1;
+    m.copyTo(um1);
+
+    ocl::setUseOpenCL(false);
+    UMat um2;
+    m.copyTo(um2);
+
+    ocl::setUseOpenCL(true);
+    countNonZero(um1);
+    countNonZero(um2);
+
+    um1.copyTo(um2);
+    EXPECT_MAT_NEAR(um1, um2);
+    EXPECT_MAT_NEAR(um1, m);
+    um2.copyTo(um1);
+    EXPECT_MAT_NEAR(um1, m);
+    EXPECT_MAT_NEAR(um1, um2);
+
+    ocl::setUseOpenCL(false);
+    countNonZero(um1);
+    countNonZero(um2);
+
+    um1.copyTo(um2);
+    EXPECT_MAT_NEAR(um1, um2);
+    EXPECT_MAT_NEAR(um1, m);
+    um2.copyTo(um1);
+    EXPECT_MAT_NEAR(um1, um2);
+    EXPECT_MAT_NEAR(um1, m);
+
+    // reset state to the previous one
+    ocl::setUseOpenCL(useOCL);
+}
