@@ -12179,4 +12179,78 @@
       <y>237</y>
       <cn>2</cn>
       <val>225.</val></rng2></u_background></OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-1920x1080-avi---3->
+ <!-- resumed -->
+
+<OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--640x480>
+  <mhi>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>592</x>
+      <y>43</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>120</x>
+      <y>16</y>
+      <val>0.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--640x480>
+<OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1280x720>
+  <mhi>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1096</x>
+      <y>589</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>811</x>
+      <y>448</y>
+      <val>6.2380671501159668e-01</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1280x720>
+<OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1920x1080>
+  <mhi>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>6.3675773143768311e-01</val></last>
+    <rng1>
+      <x>222</x>
+      <y>150</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>947</x>
+      <y>736</y>
+      <val>1.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1920x1080>
+<OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--3840x2160>
+  <mhi>
+    <kind>720896</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>2043</x>
+      <y>197</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>1023</x>
+      <y>2047</y>
+      <val>1.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--3840x2160>
 </opencv_storage>
