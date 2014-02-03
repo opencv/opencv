@@ -189,7 +189,6 @@ public:
     UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
     {
         UMatData* u = new UMatData(this);
-        u->refcount = 1;
         u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
         npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
         for( int i = 0; i < dims - 1; i++ )
@@ -416,6 +415,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.addref();
 
     if( !needcopy )
     {
