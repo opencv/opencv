@@ -1,0 +1,2 @@
+# Environment setup for OpenCV testing
+export OPENCV_TEST_DATA_PATH=@CMAKE_INSTALL_PREFIX@/share/OpenCV/testdata
