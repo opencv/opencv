@@ -257,6 +257,7 @@ int CV_DetectorTest::runTestCase( int detectorIdx, vector<vector<Rect> >& object
     string dataPath = ts->get_data_path(), detectorFilename;
     if( !detectorFilenames[detectorIdx].empty() )
         detectorFilename = dataPath + detectorFilenames[detectorIdx];
+    printf("detector %s\n", detectorFilename.c_str());
 
     for( int ii = 0; ii < (int)imageFilenames.size(); ++ii )
     {
