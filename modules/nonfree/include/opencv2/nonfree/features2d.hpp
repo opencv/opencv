@@ -142,7 +142,6 @@ public:
     CV_PROP_RW bool upright;
 
 protected:
-
     void detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask = noArray() ) const;
     void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
 };

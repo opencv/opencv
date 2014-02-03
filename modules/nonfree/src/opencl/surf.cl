@@ -45,6 +45,12 @@
 //
 //M*/
 
+// The number of degrees between orientation samples in calcOrientation
+#define ORI_SEARCH_INC  5
+
+// The local size of the calcOrientation kernel
+#define ORI_LOCAL_SIZE  (360 / ORI_SEARCH_INC)
+
 // specialized for non-image2d_t supported platform, intel HD4000, for example
 #ifdef DISABLE_IMAGE2D
 #define IMAGE_INT32 __global uint  *
@@ -175,7 +181,7 @@ F calcAxisAlignedDerivative(
 }
 
 //calculate targeted layer per-pixel determinant and trace with an integral image
-__kernel void icvCalcLayerDetAndTrace(
+__kernel void SURF_calcLayerDetAndTrace(
     IMAGE_INT32 sumTex, // input integral image
     __global float * det,      // output Determinant
     __global float * trace,    // output trace
@@ -338,7 +344,7 @@ bool within_check(IMAGE_INT32 maskSumTex, int sum_i, int sum_j, int size, int ro
 
 // Non-maximal suppression to further filtering the candidates from previous step
 __kernel
-void icvFindMaximaInLayer_withmask(
+void SURF_findMaximaInLayerWithMask(
     __global const float * det,
     __global const float * trace,
     __global int4 * maxPosBuffer,
@@ -466,7 +472,7 @@ void icvFindMaximaInLayer_withmask(
 }
 
 __kernel
-void icvFindMaximaInLayer(
+void SURF_findMaximaInLayer(
     __global float * det,
     __global float * trace,
     __global int4 * maxPosBuffer,
@@ -624,7 +630,7 @@ inline bool solve3x3_float(const float4 *A, const float *b, float *x)
 ////////////////////////////////////////////////////////////////////////
 // INTERPOLATION
 __kernel
-void icvInterpolateKeypoint(
+void SURF_interpolateKeypoint(
     __global const float * det,
     __global const int4 * maxPosBuffer,
     __global float * keypoints,
@@ -829,7 +835,7 @@ void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduc
 }
 
 __kernel
-void icvCalcOrientation(
+void SURF_calcOrientation(
     IMAGE_INT32 sumTex,
     __global float * keypoints,
     int keypoints_step,
@@ -995,18 +1001,17 @@ void icvCalcOrientation(
 }
 
 __kernel
-void icvSetUpright(
+void SURF_setUpright(
     __global float * keypoints,
-    int keypoints_step,
-    int nFeatures
-)
+    int keypoints_step, int keypoints_offset,
+    int rows, int cols )
 {
+    int i = get_global_id(0);
     keypoints_step /= sizeof(*keypoints);
-    __global float* featureDir  = keypoints + ANGLE_ROW * keypoints_step;
 
-    if(get_global_id(0) <= nFeatures)
+    if(i < cols)
     {
-        featureDir[get_global_id(0)] = 270.0f;
+        keypoints[mad24(keypoints_step, ANGLE_ROW, i)] = 270.f;
     }
 }
 
@@ -1162,6 +1167,7 @@ void calc_dx_dy(
         s_dy_bin[tid] = vy;
     }
 }
+
 void reduce_sum25(
     volatile __local  float* sdata1,
     volatile __local  float* sdata2,
@@ -1225,16 +1231,14 @@ void reduce_sum25(
 }
 
 __kernel
-void compute_descriptors64(
+void SURF_computeDescriptors64(
     IMAGE_INT8 imgTex,
+    int img_step, int img_offset,
+    int rows, int cols,
+    __global const float* keypoints,
+    int keypoints_step, int keypoints_offset,
     __global float * descriptors,
-    __global const float * keypoints,
-    int descriptors_step,
-    int keypoints_step,
-    int rows,
-    int cols,
-    int img_step
-)
+    int descriptors_step, int descriptors_offset)
 {
     descriptors_step /= sizeof(float);
     keypoints_step   /= sizeof(float);
@@ -1279,17 +1283,16 @@ void compute_descriptors64(
         }
     }
 }
+
 __kernel
-void compute_descriptors128(
+void SURF_computeDescriptors128(
     IMAGE_INT8 imgTex,
-    __global float * descriptors,
-    __global float * keypoints,
-    int descriptors_step,
-    int keypoints_step,
-    int rows,
-    int cols,
-    int img_step
-)
+    int img_step, int img_offset,
+    int rows, int cols,
+    __global const float* keypoints,
+    int keypoints_step, int keypoints_offset,
+    __global float* descriptors,
+    int descriptors_step, int descriptors_offset)
 {
     descriptors_step /= sizeof(*descriptors);
     keypoints_step   /= sizeof(*keypoints);
@@ -1483,7 +1486,7 @@ void reduce_sum64(volatile __local  float* smem, int tid)
 }
 
 __kernel
-void normalize_descriptors128(__global float * descriptors, int descriptors_step)
+void SURF_normalizeDescriptors128(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);
     // no need for thread ID
@@ -1509,8 +1512,9 @@ void normalize_descriptors128(__global float * descriptors, int descriptors_step
     // normalize and store in output
     descriptor_base[get_local_id(0)] = lookup / len;
 }
+
 __kernel
-void normalize_descriptors64(__global float * descriptors, int descriptors_step)
+void SURF_normalizeDescriptors64(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);
     // no need for thread ID
