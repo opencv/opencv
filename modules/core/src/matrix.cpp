@@ -2560,7 +2560,7 @@ cuda::CudaMem& _OutputArray::getCudaMemRef() const
     return *(cuda::CudaMem*)obj;
 }
 
-void _OutputArray::setTo(const _InputArray& arr) const
+void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
 {
     int k = kind();
 
@@ -2569,10 +2569,16 @@ void _OutputArray::setTo(const _InputArray& arr) const
     else if( k == MAT || k == MATX || k == STD_VECTOR )
     {
         Mat m = getMat();
-        m.setTo(arr);
+        m.setTo(arr, mask);
     }
     else if( k == UMAT )
-        ((UMat*)obj)->setTo(arr);
+        ((UMat*)obj)->setTo(arr, mask);
+    else if( k == GPU_MAT )
+    {
+        Mat value = arr.getMat();
+        CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::GPU_MAT) );
+        ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>((double *)value.data)), mask);
+    }
     else
         CV_Error(Error::StsNotImplemented, "");
 }
