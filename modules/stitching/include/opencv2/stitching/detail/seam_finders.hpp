@@ -45,7 +45,7 @@
 
 #include <set>
 #include "opencv2/core/core.hpp"
-#include "opencv2/opencv_modules.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 namespace cv {
 namespace detail {
@@ -227,7 +227,6 @@ private:
 };
 
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
 class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
 {
 public:
@@ -251,7 +250,6 @@ private:
     float terminal_cost_;
     float bad_region_penalty_;
 };
-#endif
 
 } // namespace detail
 } // namespace cv
