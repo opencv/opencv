@@ -2,7 +2,9 @@
 #include "_latentsvm.h"
 #include "_lsvm_resizeimg.h"
 
+#ifdef HAVE_TBB
 #include <tbb/tbb.h>
+#endif
 
 #ifndef max
 #define max(a,b)            (((a) > (b)) ? (a) : (b))
