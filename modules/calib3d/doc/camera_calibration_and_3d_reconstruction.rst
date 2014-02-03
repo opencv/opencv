@@ -756,6 +756,7 @@ They are
 :math:`[R_1, -t]`,
 :math:`[R_2, t]`,
 :math:`[R_2, -t]`.
+By decomposing ``E``, you can only get the direction of the translation, so the function returns unit ``t``.
 
 
 recoverPose
