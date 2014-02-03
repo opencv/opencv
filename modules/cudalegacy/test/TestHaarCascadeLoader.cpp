@@ -95,7 +95,7 @@ bool TestHaarCascadeLoader::process()
     NCV_SET_SKIP_COND(this->allocatorGPU.get()->isCounting());
     NCV_SKIP_COND_BEGIN
 
-    const std::string testNvbinName = "test.nvbin";
+    const std::string testNvbinName = cv::tempfile("test.nvbin");
     ncvStat = ncvHaarLoadFromFile_host(this->cascadeName, haar, h_HaarStages, h_HaarNodes, h_HaarFeatures);
     ncvAssertReturn(ncvStat == NCV_SUCCESS, false);
 

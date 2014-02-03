@@ -94,6 +94,6 @@ endif()
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB install_list *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${install_list}
-          DESTINATION share/OpenCV/samples/${project}
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/gpu
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
