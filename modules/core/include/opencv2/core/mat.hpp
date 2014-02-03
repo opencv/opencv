@@ -217,7 +217,7 @@ public:
     virtual void createSameSize(const _InputArray& arr, int mtype) const;
     virtual void release() const;
     virtual void clear() const;
-    virtual void setTo(const _InputArray& value) const;
+    virtual void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
 };
 
 

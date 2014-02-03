@@ -5,6 +5,8 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+//#define CV_OPENCL_RUN_VERBOSE
+
 #ifdef HAVE_OPENCL
 
 #ifdef CV_OPENCL_RUN_VERBOSE
