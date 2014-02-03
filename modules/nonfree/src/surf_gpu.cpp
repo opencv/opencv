@@ -42,12 +42,10 @@
 
 #include "precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
-
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA)
+#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_GPU) || defined(DYNAMIC_CUDA_SUPPORT)
 
 cv::gpu::SURF_GPU::SURF_GPU() { throw_nogpu(); }
 cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_nogpu(); }
@@ -421,5 +419,3 @@ void cv::gpu::SURF_GPU::releaseMemory()
 }
 
 #endif // !defined (HAVE_CUDA)
-
-#endif // defined(HAVE_OPENCV_GPU) && !defined(ANDROID)

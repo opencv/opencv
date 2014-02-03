@@ -43,11 +43,7 @@
 #ifndef __OPENCV_NONFREE_GPU_HPP__
 #define __OPENCV_NONFREE_GPU_HPP__
 
-#include "opencv2/opencv_modules.hpp"
-
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
-
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core/gpumat.hpp"
 
 namespace cv { namespace gpu {
 
@@ -128,7 +124,5 @@ public:
 } // namespace gpu
 
 } // namespace cv
-
-#endif // defined(HAVE_OPENCV_GPU)
 
 #endif // __OPENCV_NONFREE_GPU_HPP__
