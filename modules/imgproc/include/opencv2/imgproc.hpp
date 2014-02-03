@@ -1147,7 +1147,8 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
-                              double srn = 0, double stn = 0 );
+                              double srn = 0, double stn = 0,
+                              double min_theta = 0, double max_theta = CV_PI );
 
 //! finds line segments in the black-n-white image using probabilistic Hough transform
 CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
