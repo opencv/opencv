@@ -1,0 +1,90 @@
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <iostream>
+#include <stdio.h>
+
+using namespace cv;
+using namespace std;
+
+void help(void)
+{
+  cout<<"This program demonstrates how to set the Region of Interest in an image from a live-feed in OpenCV.\n\n";
+  cout<<"1.\t Usage ./roi <Camera index>. \n";
+  cout<<"2.\t ESC --> Quits the program. \n";
+  cout<<"3.\t 'g' --> Switch between grayscale and RGB outputs.\n";
+  cout<<"4.\t Adjust trackbars to position and resize the rectangle.\n\n\n";
+}
+
+Mat getROI(Mat &img, int l, int w, int x, int y)
+{
+  rectangle(img, Point(x,y), Point(x+l, y+w), Scalar(0), 2, 8, 0);
+  Rect ROI = Rect(x, y, l, w);
+  Mat roi = img(ROI);
+  
+  return roi;
+}
+
+const char* keys =
+{
+  "{@camera_number| 0 | camera number}"
+};
+
+
+int main(int argc, char *argv[])
+{
+  help();
+
+  Mat img, roi;
+  VideoCapture cap;
+  CommandLineParser parser(argc, argv, keys);
+  int cam = parser.get<int>("1");
+  cap.open(cam);
+
+  int len=30, wid=40, x=30, y=30;
+  char ch;
+
+  if(!cap.isOpened())
+    {
+      system("clear");
+      help();
+      cout<<"\n\nCannot Open Camera....\n";
+      cout<<"Camera Index : "<<cam;
+     }
+
+  namedWindow("Main", CV_WINDOW_NORMAL);
+  namedWindow("Region of interest", CV_WINDOW_AUTOSIZE);
+  
+  createTrackbar("Length", "Main", &len, 300, NULL);
+  createTrackbar("Width", "Main", &wid, 300, NULL);
+  createTrackbar("X", "Main", &x, 300, NULL);
+  createTrackbar("Y", "Main", &y, 300, NULL);
+  
+  bool gray = true;
+  Mat grayroi;
+  while(true)
+    {
+      cap>>img;
+      roi = getROI(img, len, wid, x, y);
+      
+      if(gray == true)
+        {
+          cvtColor(roi, grayroi, CV_BGR2GRAY);
+          imshow("Region of interest", grayroi);
+        }
+      else if(gray == false)
+        imshow("Region of interest", roi);
+      imshow("Main", img);
+      ch = waitKey(1);
+      if(ch == 'g' || ch == 'G')
+        {
+          if(gray == true)
+            gray = false;
+          else if(gray == false)
+            gray = true;
+        }
+      else if(ch==27)
+        break;
+    }
+  
+  return 0;
+}
