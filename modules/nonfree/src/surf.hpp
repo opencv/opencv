@@ -54,14 +54,11 @@ protected:
     bool setImage(InputArray img, InputArray mask);
 
     // kernel callers declarations
-    bool calcLayerDetAndTrace(UMat &det, UMat &trace, int octave, int layer_rows);
+    bool calcLayerDetAndTrace(int octave, int layer_rows);
 
-    bool findMaximaInLayer(const UMat &det, const UMat &trace, UMat &maxPosBuffer,
-                           UMat &maxCounter, int counterOffset,
-                           int octave, int layer_rows, int layer_cols);
+    bool findMaximaInLayer(int counterOffset, int octave, int layer_rows, int layer_cols);
 
-    bool interpolateKeypoint(const UMat &det, const UMat &maxPosBuffer, int maxCounter,
-                             UMat &keypoints, UMat &counters, int octave, int layer_rows, int maxFeatures);
+    bool interpolateKeypoint(int maxCounter, UMat &keypoints, int octave, int layer_rows, int maxFeatures);
 
     bool calcOrientation(UMat &keypoints);
 
@@ -75,7 +72,7 @@ protected:
     int refcount;
 
     //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
-    UMat sum, mask1, maskSum, intBuffer;
+    UMat sum, intBuffer;
     UMat det, trace;
     UMat maxPosBuffer;
 
@@ -87,12 +84,11 @@ protected:
     UMat img, counters;
 
     // texture buffers
-    ocl::Image2D imgTex, sumTex, maskSumTex;
+    ocl::Image2D imgTex, sumTex;
     bool haveImageSupport;
+    String kerOpts;
 
     int status;
-    ocl::Kernel kerCalcDetTrace, kerFindMaxima, kerFindMaximaMask, kerInterp;
-    ocl::Kernel kerUpRight, kerOri, kerCalcDesc64, kerCalcDesc128, kerNormDesc64, kerNormDesc128;
 };
 
 /*

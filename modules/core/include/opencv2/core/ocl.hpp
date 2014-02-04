@@ -585,7 +585,7 @@ class CV_EXPORTS Image2D
 {
 public:
     Image2D();
-    Image2D(const UMat &src);
+    explicit Image2D(const UMat &src);
     ~Image2D();
 
     void* ptr() const;

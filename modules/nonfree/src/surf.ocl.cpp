@@ -54,20 +54,6 @@ namespace cv
 
 enum { ORI_SEARCH_INC=5, ORI_LOCAL_SIZE=(360 / ORI_SEARCH_INC) };
 
-/*static void openCLExecuteKernelSURF(Context2 *clCxt, const ProgramEntry* source, String kernelName, size_t globalThreads[3],
-    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
-{
-    std::stringstream optsStr;
-    optsStr << "-D ORI_LOCAL_SIZE=" << ORI_LOCAL_SIZE << " ";
-    optsStr << "-D ORI_SEARCH_INC=" << ORI_SEARCH_INC << " ";
-    cl_kernel kernel;
-    kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optsStr.str().c_str());
-    size_t wave_size = queryWaveFrontSize(kernel);
-    CV_Assert(clReleaseKernel(kernel) == CL_SUCCESS);
-    optsStr << "-D WAVE_SIZE=" << wave_size;
-    openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optsStr.str().c_str());
-}*/
-
 static inline int calcSize(int octave, int layer)
 {
     /* Wavelet size at first layer of first octave. */
@@ -100,22 +86,11 @@ bool SURF_OCL::init(const SURF* p)
         if(ocl::haveOpenCL())
         {
             const ocl::Device& dev = ocl::Device::getDefault();
-            if( dev.type() == ocl::Device::TYPE_CPU )
+            if( dev.type() == ocl::Device::TYPE_CPU || dev.doubleFPConfig() == 0 )
                 return false;
-            haveImageSupport = dev.imageSupport();
-            String opts = haveImageSupport ? "-D DISABLE_IMAGE2D" : "";
-
-            if( kerCalcDetTrace.create("SURF_calcLayerDetAndTrace", ocl::nonfree::surf_oclsrc, opts) &&
-                kerFindMaxima.create("SURF_findMaximaInLayer", ocl::nonfree::surf_oclsrc, opts) &&
-                kerFindMaximaMask.create("SURF_findMaximaInLayerWithMask", ocl::nonfree::surf_oclsrc, opts) &&
-                kerInterp.create("SURF_interpolateKeypoint", ocl::nonfree::surf_oclsrc, opts) &&
-                kerUpRight.create("SURF_setUpRight", ocl::nonfree::surf_oclsrc, opts) &&
-                kerOri.create("SURF_calcOrientation", ocl::nonfree::surf_oclsrc, opts) &&
-                kerCalcDesc64.create("SURF_computeDescriptors64", ocl::nonfree::surf_oclsrc, opts) &&
-                kerCalcDesc128.create("SURF_computeDescriptors128", ocl::nonfree::surf_oclsrc, opts) &&
-                kerNormDesc64.create("SURF_normalizeDescriptors64", ocl::nonfree::surf_oclsrc, opts) &&
-                kerNormDesc128.create("SURF_normalizeDescriptors128", ocl::nonfree::surf_oclsrc, opts))
-                status = 1;
+            haveImageSupport = false;//dev.imageSupport();
+            kerOpts = haveImageSupport ? "-D HAVE_IMAGE2D -D DOUBLE_SUPPORT" : "";
+            status = 1;
         }
     }
     return status > 0;
@@ -126,8 +101,10 @@ bool SURF_OCL::setImage(InputArray _img, InputArray _mask)
 {
     if( status <= 0 )
         return false;
-    CV_Assert(!_img.empty() && _img.type() == CV_8UC1);
-    CV_Assert(_mask.empty() || (_mask.size() == _img.size() && _mask.type() == CV_8UC1));
+    if( !_mask.empty())
+        return false;
+    int imgtype = _img.type();
+    CV_Assert(!_img.empty());
     CV_Assert(params && params->nOctaves > 0 && params->nOctaveLayers > 0);
 
     int min_size = calcSize(params->nOctaves - 1, 0);
@@ -151,10 +128,12 @@ bool SURF_OCL::setImage(InputArray _img, InputArray _mask)
     counters.setTo(Scalar::all(0));
 
     img.release();
-    if(_img.isUMat())
+    if(_img.isUMat() && imgtype == CV_8UC1)
         img = _img.getUMat();
-    else
+    else if( imgtype == CV_8UC1 )
         _img.copyTo(img);
+    else
+        cvtColor(_img, img, COLOR_BGR2GRAY);
 
     integral(img, sum);
 
@@ -164,12 +143,6 @@ bool SURF_OCL::setImage(InputArray _img, InputArray _mask)
         sumTex = ocl::Image2D(sum);
     }
 
-    maskSumTex = ocl::Image2D();
-
-    if(!_mask.empty())
-    {
-        CV_Error(Error::StsBadFunc, "Masked SURF detector is not implemented yet");
-    }
     return true;
 }
 
@@ -191,11 +164,10 @@ bool SURF_OCL::detectKeypoints(UMat &keypoints)
         const int layer_rows = img_rows >> octave;
         const int layer_cols = img_cols >> octave;
 
-        if(!calcLayerDetAndTrace(det, trace, octave, layer_rows))
+        if(!calcLayerDetAndTrace(octave, layer_rows))
             return false;
 
-        if(!findMaximaInLayer(det, trace, maxPosBuffer, counters, 1 + octave, octave,
-                              layer_rows, layer_cols))
+        if(!findMaximaInLayer(1 + octave, octave, layer_rows, layer_cols))
             return false;
 
         cpuCounters = counters.getMat(ACCESS_READ);
@@ -205,8 +177,7 @@ bool SURF_OCL::detectKeypoints(UMat &keypoints)
 
         if (maxCounter > 0)
         {
-            if(!interpolateKeypoint(det, maxPosBuffer, maxCounter, keypoints,
-                                    counters, octave, layer_rows, maxFeatures))
+            if(!interpolateKeypoint(maxCounter, keypoints, octave, layer_rows, maxFeatures))
                 return false;
         }
     }
@@ -216,7 +187,7 @@ bool SURF_OCL::detectKeypoints(UMat &keypoints)
     featureCounter = std::min(featureCounter, maxFeatures);
     cpuCounters.release();
 
-    keypoints = UMat(keypoints, Rect(0, 0, featureCounter, 1));
+    keypoints = UMat(keypoints, Rect(0, 0, featureCounter, keypoints.rows));
 
     if (params->upright)
         return setUpRight(keypoints);
@@ -232,7 +203,8 @@ bool SURF_OCL::setUpRight(UMat &keypoints)
         return true;
 
     size_t globalThreads[3] = {nFeatures, 1};
-    return kerUpRight.args(ocl::KernelArg::ReadWrite(keypoints)).run(2, globalThreads, 0, false);
+    ocl::Kernel kerUpRight("SURF_setUpRight", ocl::nonfree::surf_oclsrc, kerOpts);
+    return kerUpRight.args(ocl::KernelArg::ReadWrite(keypoints)).run(2, globalThreads, 0, true);
 }
 
 bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptors)
@@ -255,14 +227,14 @@ bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptor
 
     if( descriptorSize == 64 )
     {
-        kerCalcDesc = kerCalcDesc64;
-        kerNormDesc = kerNormDesc64;
+        kerCalcDesc.create("SURF_computeDescriptors64", ocl::nonfree::surf_oclsrc, kerOpts);
+        kerNormDesc.create("SURF_normalizeDescriptors64", ocl::nonfree::surf_oclsrc, kerOpts);
     }
     else
     {
         CV_Assert(descriptorSize == 128);
-        kerCalcDesc = kerCalcDesc128;
-        kerNormDesc = kerNormDesc128;
+        kerCalcDesc.create("SURF_computeDescriptors128", ocl::nonfree::surf_oclsrc, kerOpts);
+        kerNormDesc.create("SURF_normalizeDescriptors128", ocl::nonfree::surf_oclsrc, kerOpts);
     }
 
     size_t localThreads[] = {6, 6};
@@ -271,17 +243,19 @@ bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptor
     if(haveImageSupport)
     {
         kerCalcDesc.args(imgTex,
+                         img_rows, img_cols,
                          ocl::KernelArg::ReadOnlyNoSize(keypoints),
                          ocl::KernelArg::WriteOnlyNoSize(descriptors));
     }
     else
     {
-        kerCalcDesc.args(ocl::KernelArg::ReadOnly(img),
+        kerCalcDesc.args(ocl::KernelArg::ReadOnlyNoSize(img),
+                         img_rows, img_cols,
                          ocl::KernelArg::ReadOnlyNoSize(keypoints),
                          ocl::KernelArg::WriteOnlyNoSize(descriptors));
     }
 
-    if(!kerCalcDesc.run(2, globalThreads, localThreads, false))
+    if(!kerCalcDesc.run(2, globalThreads, localThreads, true))
         return false;
 
     size_t localThreads_n[] = {descriptorSize, 1};
@@ -290,7 +264,7 @@ bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptor
     globalThreads[0] = nFeatures * localThreads[0];
     globalThreads[1] = localThreads[1];
     bool ok = kerNormDesc.args(ocl::KernelArg::ReadWriteNoSize(descriptors)).
-                        run(2, globalThreads_n, localThreads_n, false);
+                        run(2, globalThreads_n, localThreads_n, true);
     if(ok && !_descriptors.isUMat())
         descriptors.copyTo(_descriptors);
     return ok;
@@ -364,19 +338,19 @@ void SURF_OCL::downloadKeypoints(const UMat &keypointsGPU, std::vector<KeyPoint>
     }
 }
 
-bool SURF_OCL::detect(InputArray img, InputArray mask, UMat& keypoints)
+bool SURF_OCL::detect(InputArray _img, InputArray _mask, UMat& keypoints)
 {
-    if( !setImage(img, mask) )
+    if( !setImage(_img, _mask) )
         return false;
 
     return detectKeypoints(keypoints);
 }
 
 
-bool SURF_OCL::detectAndCompute(InputArray img, InputArray mask, UMat& keypoints,
+bool SURF_OCL::detectAndCompute(InputArray _img, InputArray _mask, UMat& keypoints,
                                 OutputArray _descriptors, bool useProvidedKeypoints )
 {
-    if( !setImage(img, mask) )
+    if( !setImage(_img, _mask) )
         return false;
 
     if( !useProvidedKeypoints && !detectKeypoints(keypoints) )
@@ -389,22 +363,20 @@ inline int divUp(int a, int b) { return (a + b-1)/b; }
 
 ////////////////////////////
 // kernel caller definitions
-bool SURF_OCL::calcLayerDetAndTrace(UMat &det, UMat &trace, int octave, int c_layer_rows)
+bool SURF_OCL::calcLayerDetAndTrace(int octave, int c_layer_rows)
 {
     int nOctaveLayers = params->nOctaveLayers;
     const int min_size = calcSize(octave, 0);
     const int max_samples_i = 1 + ((img_rows - min_size) >> octave);
     const int max_samples_j = 1 + ((img_cols - min_size) >> octave);
 
-    String kernelName = "SURF_calcLayerDetAndTrace";
-    std::vector< std::pair<size_t, const void *> > args;
-
-    size_t localThreads[3]  = {16, 16};
-    size_t globalThreads[3] =
+    size_t localThreads[]  = {16, 16};
+    size_t globalThreads[] =
     {
         divUp(max_samples_j, localThreads[0]) *localThreads[0],
         divUp(max_samples_i, localThreads[1]) *localThreads[1] *(nOctaveLayers + 2)
     };
+    ocl::Kernel kerCalcDetTrace("SURF_calcLayerDetAndTrace", ocl::nonfree::surf_oclsrc, kerOpts);
     if(haveImageSupport)
     {
         kerCalcDetTrace.args(sumTex,
@@ -421,56 +393,15 @@ bool SURF_OCL::calcLayerDetAndTrace(UMat &det, UMat &trace, int octave, int c_la
                              ocl::KernelArg::WriteOnlyNoSize(det),
                              ocl::KernelArg::WriteOnlyNoSize(trace));
     }
-    return kerCalcDetTrace.run(2, globalThreads, localThreads, false);
+    return kerCalcDetTrace.run(2, globalThreads, localThreads, true);
 }
 
-bool SURF_OCL::findMaximaInLayer(const UMat &det, const UMat &trace,
-                                 UMat &maxPosBuffer, UMat &maxCounter,
-                                 int counterOffset, int octave,
+bool SURF_OCL::findMaximaInLayer(int counterOffset, int octave,
                                  int layer_rows, int layer_cols)
 {
     const int min_margin = ((calcSize(octave, 2) >> 1) >> octave) + 1;
-    bool haveMask = !maskSum.empty() || (maskSumTex.ptr() != 0);
     int nOctaveLayers = params->nOctaveLayers;
 
-    ocl::Kernel ker;
-    if( haveMask )
-    {
-        if( haveImageSupport )
-            ker = kerFindMaximaMask.args(maskSumTex,
-                           ocl::KernelArg::ReadOnlyNoSize(det),
-                           ocl::KernelArg::ReadOnlyNoSize(trace),
-                           ocl::KernelArg::PtrReadWrite(maxPosBuffer),
-                           ocl::KernelArg::PtrReadWrite(maxCounter),
-                           counterOffset, img_rows, img_cols,
-                           octave, nOctaveLayers,
-                           layer_rows, layer_cols,
-                           maxCandidates,
-                           (float)params->hessianThreshold);
-        else
-            ker = kerFindMaximaMask.args(ocl::KernelArg::ReadOnlyNoSize(maskSum),
-                           ocl::KernelArg::ReadOnlyNoSize(det),
-                           ocl::KernelArg::ReadOnlyNoSize(trace),
-                           ocl::KernelArg::PtrReadWrite(maxPosBuffer),
-                           ocl::KernelArg::PtrReadWrite(maxCounter),
-                           counterOffset, img_rows, img_cols,
-                           octave, nOctaveLayers,
-                           layer_rows, layer_cols,
-                           maxCandidates,
-                           (float)params->hessianThreshold);
-    }
-    else
-    {
-        ker = kerFindMaxima.args(ocl::KernelArg::ReadOnlyNoSize(det),
-                                 ocl::KernelArg::ReadOnlyNoSize(trace),
-                                 ocl::KernelArg::PtrReadWrite(maxPosBuffer),
-                                 ocl::KernelArg::PtrReadWrite(maxCounter),
-                                 counterOffset, img_rows, img_cols,
-                                 octave, nOctaveLayers,
-                                 layer_rows, layer_cols,
-                                 maxCandidates,
-                                 (float)params->hessianThreshold);
-    }
     size_t localThreads[3]  = {16, 16};
     size_t globalThreads[3] =
     {
@@ -478,21 +409,31 @@ bool SURF_OCL::findMaximaInLayer(const UMat &det, const UMat &trace,
         divUp(layer_rows - 2 * min_margin, localThreads[1] - 2) *nOctaveLayers *localThreads[1]
     };
 
-    return ker.run(2, globalThreads, localThreads, false);
+    ocl::Kernel kerFindMaxima("SURF_findMaximaInLayer", ocl::nonfree::surf_oclsrc, kerOpts);
+    return kerFindMaxima.args(ocl::KernelArg::ReadOnlyNoSize(det),
+                              ocl::KernelArg::ReadOnlyNoSize(trace),
+                              ocl::KernelArg::PtrReadWrite(maxPosBuffer),
+                              ocl::KernelArg::PtrReadWrite(counters),
+                              counterOffset, img_rows, img_cols,
+                              octave, nOctaveLayers,
+                              layer_rows, layer_cols,
+                              maxCandidates,
+                              (float)params->hessianThreshold).run(2, globalThreads, localThreads, true);
 }
 
-bool SURF_OCL::interpolateKeypoint(const UMat &det, const UMat &maxPosBuffer, int maxCounter,
-        UMat &keypoints, UMat &counters_, int octave, int layer_rows, int max_features)
+bool SURF_OCL::interpolateKeypoint(int maxCounter, UMat &keypoints, int octave, int layer_rows, int max_features)
 {
     size_t localThreads[3]  = {3, 3, 3};
     size_t globalThreads[3] = {maxCounter*localThreads[0], localThreads[1], 3};
 
+    ocl::Kernel kerInterp("SURF_interpolateKeypoint", ocl::nonfree::surf_oclsrc, kerOpts);
+
     return kerInterp.args(ocl::KernelArg::ReadOnlyNoSize(det),
                    ocl::KernelArg::PtrReadOnly(maxPosBuffer),
                    ocl::KernelArg::ReadWriteNoSize(keypoints),
-                   ocl::KernelArg::PtrReadWrite(counters_),
+                   ocl::KernelArg::PtrReadWrite(counters),
                    img_rows, img_cols, octave, layer_rows, max_features).
-        run(3, globalThreads, localThreads, false);
+        run(3, globalThreads, localThreads, true);
 }
 
 bool SURF_OCL::calcOrientation(UMat &keypoints)
@@ -500,18 +441,19 @@ bool SURF_OCL::calcOrientation(UMat &keypoints)
     int nFeatures = keypoints.cols;
     if( nFeatures == 0 )
         return true;
+    ocl::Kernel kerOri("SURF_calcOrientation", ocl::nonfree::surf_oclsrc, kerOpts);
+
     if( haveImageSupport )
-        kerOri.args(sumTex,
-                    ocl::KernelArg::ReadWriteNoSize(keypoints),
-                    img_rows, img_cols);
+        kerOri.args(sumTex, img_rows, img_cols,
+                    ocl::KernelArg::ReadWriteNoSize(keypoints));
     else
         kerOri.args(ocl::KernelArg::ReadOnlyNoSize(sum),
-                    ocl::KernelArg::ReadWriteNoSize(keypoints),
-                    img_rows, img_cols);
+                    img_rows, img_cols,
+                    ocl::KernelArg::ReadWriteNoSize(keypoints));
 
     size_t localThreads[3]  = {ORI_LOCAL_SIZE, 1};
     size_t globalThreads[3] = {nFeatures * localThreads[0], 1};
-    return kerOri.run(2, globalThreads, localThreads, false);
+    return kerOri.run(2, globalThreads, localThreads, true);
 }
 
 }
