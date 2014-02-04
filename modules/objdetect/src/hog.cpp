@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/core_c.h"
+#include "opencl_kernels.hpp"
 
 #include <cstdio>
 #include <iterator>
@@ -57,6 +58,29 @@
 
 namespace cv
 {
+
+#define NTHREADS 256
+
+enum {DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW};
+
+static int numPartsWithin(int size, int part_size, int stride)
+{
+    return (size - part_size + stride) / stride;
+}
+
+static Size numPartsWithin(cv::Size size, cv::Size part_size,
+                                                cv::Size stride)
+{
+    return Size(numPartsWithin(size.width, part_size.width, stride.width),
+        numPartsWithin(size.height, part_size.height, stride.height));
+}
+
+static size_t getBlockHistogramSize(Size block_size, Size cell_size, int nbins)
+{
+    Size cells_per_block = Size(block_size.width / cell_size.width,
+        block_size.height / cell_size.height);
+    return (size_t)(nbins * cells_per_block.area());
+}
 
 size_t HOGDescriptor::getDescriptorSize() const
 {
@@ -88,7 +112,24 @@ bool HOGDescriptor::checkDetectorSize() const
 void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
 {
     _svmDetector.getMat().convertTo(svmDetector, CV_32F);
-    CV_Assert( checkDetectorSize() );
+    CV_Assert(checkDetectorSize());
+
+    Mat detector_reordered(1, (int)svmDetector.size(), CV_32FC1);
+
+    size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
+    cv::Size blocks_per_img = numPartsWithin(winSize, blockSize, blockStride);
+
+    for (int i = 0; i < blocks_per_img.height; ++i)
+        for (int j = 0; j < blocks_per_img.width; ++j)
+        {
+            const float *src = &svmDetector[0] + (j * blocks_per_img.height + i) * block_hist_size;
+            float *dst = (float*)detector_reordered.data + (i * blocks_per_img.width + j) * block_hist_size;
+            for (size_t k = 0; k < block_hist_size; ++k)
+                dst[k] = src[k];
+        }
+    size_t descriptor_size = getDescriptorSize();
+    free_coef = svmDetector.size() > descriptor_size ? svmDetector[descriptor_size] : 0;
+    detector_reordered.copyTo(oclSvmDetector);
 }
 
 #define CV_TYPE_NAME_HOG_DESCRIPTOR "opencv-object-detector-hog"
@@ -1029,7 +1070,318 @@ static inline int gcd(int a, int b)
     return a;
 }
 
-void HOGDescriptor::compute(const Mat& img, std::vector<float>& descriptors,
+#ifdef HAVE_OPENCL
+
+static bool ocl_compute_gradients_8UC1(int height, int width, InputArray _img, float angle_scale,
+                                       UMat grad, UMat qangle, bool correct_gamma, int nbins)
+{
+    ocl::Kernel k("compute_gradients_8UC1_kernel", ocl::objdetect::objdetect_hog_oclsrc);
+    if(k.empty())
+        return false;
+
+    UMat img = _img.getUMat();
+
+    size_t localThreads[3] = { NTHREADS, 1, 1 };
+    size_t globalThreads[3] = { width, height, 1 };
+    char correctGamma = (correct_gamma) ? 1 : 0;
+    int grad_quadstep = (int)grad.step >> 3;
+    int qangle_step_shift = 0;
+    int qangle_step = (int)qangle.step >> (1 + qangle_step_shift);
+
+    int idx = 0;
+    idx = k.set(idx, height);
+    idx = k.set(idx, width);
+    idx = k.set(idx, (int)img.step1());
+    idx = k.set(idx, grad_quadstep);
+    idx = k.set(idx, qangle_step);
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(img));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(grad));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(qangle));
+    idx = k.set(idx, angle_scale);
+    idx = k.set(idx, correctGamma);
+    idx = k.set(idx, nbins);
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_computeGradient(InputArray img, UMat grad, UMat qangle, int nbins, Size effect_size, bool gamma_correction)
+{
+    float angleScale = (float)(nbins / CV_PI);
+
+    return ocl_compute_gradients_8UC1(effect_size.height, effect_size.width, img,
+         angleScale, grad, qangle, gamma_correction, nbins);
+}
+
+#define CELL_WIDTH 8
+#define CELL_HEIGHT 8
+#define CELLS_PER_BLOCK_X 2
+#define CELLS_PER_BLOCK_Y 2
+
+static bool ocl_compute_hists(int nbins, int block_stride_x, int block_stride_y, int height, int width,
+                              UMat grad, UMat qangle, UMat gauss_w_lut, UMat block_hists, size_t block_hist_size)
+{
+    ocl::Kernel k("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc);
+    if(k.empty())
+        return false;
+    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
+    cv::String opts;
+    if(is_cpu)
+       opts = "-D CPU ";
+    else
+        opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+    k.create("compute_hists_lut_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+    if(k.empty())
+        return false;
+
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)/block_stride_x;
+    int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)/block_stride_y;
+    int blocks_total = img_block_width * img_block_height;
+
+    int qangle_step_shift = 0;
+    int grad_quadstep = (int)grad.step >> 2;
+    int qangle_step = (int)qangle.step >> qangle_step_shift;
+
+    int blocks_in_group = 4;
+    size_t localThreads[3] = { blocks_in_group * 24, 2, 1 };
+    size_t globalThreads[3] = {((img_block_width * img_block_height + blocks_in_group - 1)/blocks_in_group) * localThreads[0], 2, 1 };
+
+    int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
+    int final_hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y) * sizeof(float);
+
+    int smem = (hists_size + final_hists_size) * blocks_in_group;
+
+    int idx = 0;
+    idx = k.set(idx, block_stride_x);
+    idx = k.set(idx, block_stride_y);
+    idx = k.set(idx, nbins);
+    idx = k.set(idx, (int)block_hist_size);
+    idx = k.set(idx, img_block_width);
+    idx = k.set(idx, blocks_in_group);
+    idx = k.set(idx, blocks_total);
+    idx = k.set(idx, grad_quadstep);
+    idx = k.set(idx, qangle_step);
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(grad));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(qangle));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(gauss_w_lut));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(block_hists));
+    idx = k.set(idx, (void*)NULL, (size_t)smem);
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static int power_2up(unsigned int n)
+{
+    for(unsigned int i = 1; i<=1024; i<<=1)
+        if(n < i)
+            return i;
+    return -1; // Input is too big
+}
+
+static bool ocl_normalize_hists(int nbins, int block_stride_x, int block_stride_y,
+                                int height, int width, UMat block_hists, float threshold)
+{
+    int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)
+        / block_stride_x;
+    int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)
+        / block_stride_y;
+    int nthreads;
+    size_t globalThreads[3] = { 1, 1, 1  };
+    size_t localThreads[3] = { 1, 1, 1  };
+
+    int idx = 0;
+    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
+    cv::String opts;
+    ocl::Kernel k;
+    if ( nbins == 9 )
+    {
+        k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        k.create("normalize_hists_36_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        if(k.empty())
+            return false;
+
+        int blocks_in_group = NTHREADS / block_hist_size;
+        nthreads = blocks_in_group * block_hist_size;
+        int num_groups = (img_block_width * img_block_height + blocks_in_group - 1)/blocks_in_group;
+        globalThreads[0] = nthreads * num_groups;
+        localThreads[0] = nthreads;
+    }
+    else
+    {
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        k.create("normalize_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        if(k.empty())
+            return false;
+
+        nthreads = power_2up(block_hist_size);
+        globalThreads[0] = img_block_width * nthreads;
+        globalThreads[1] = img_block_height;
+        localThreads[0] = nthreads;
+
+        if ((nthreads < 32) || (nthreads > 512) )
+            return false;
+
+        idx = k.set(idx, nthreads);
+        idx = k.set(idx, block_hist_size);
+        idx = k.set(idx, img_block_width);
+    }
+    idx = k.set(idx, ocl::KernelArg::PtrReadWrite(block_hists));
+    idx = k.set(idx, threshold);
+    idx = k.set(idx, (void*)NULL,  nthreads * sizeof(float));
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
+                                       int height, int width, UMat block_hists, UMat descriptors,
+                                       int block_hist_size, int descr_size, int descr_width)
+{
+    ocl::Kernel k("extract_descrs_by_rows_kernel", ocl::objdetect::objdetect_hog_oclsrc);
+    if(k.empty())
+        return false;
+
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
+        block_stride_x;
+
+    int descriptors_quadstep = (int)descriptors.step >> 2;
+
+    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t localThreads[3] = { NTHREADS, 1, 1 };
+
+    int idx = 0;
+    idx = k.set(idx, block_hist_size);
+    idx = k.set(idx, descriptors_quadstep);
+    idx = k.set(idx, descr_size);
+    idx = k.set(idx, descr_width);
+    idx = k.set(idx, img_block_width);
+    idx = k.set(idx, win_block_stride_x);
+    idx = k.set(idx, win_block_stride_y);
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(block_hists));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(descriptors));
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x, int win_stride_y, int win_stride_x,
+                                       int height, int width, UMat block_hists, UMat descriptors,
+                                       int block_hist_size, int descr_size, int nblocks_win_x, int nblocks_win_y)
+{
+    ocl::Kernel k("extract_descrs_by_cols_kernel", ocl::objdetect::objdetect_hog_oclsrc);
+    if(k.empty())
+        return false;
+
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
+        block_stride_x;
+
+    int descriptors_quadstep = (int)descriptors.step >> 2;
+
+    size_t globalThreads[3] = { img_win_width * NTHREADS, img_win_height, 1 };
+    size_t localThreads[3] = { NTHREADS, 1, 1 };
+
+    int idx = 0;
+    idx = k.set(idx, block_hist_size);
+    idx = k.set(idx, descriptors_quadstep);
+    idx = k.set(idx, descr_size);
+    idx = k.set(idx, nblocks_win_x);
+    idx = k.set(idx, nblocks_win_y);
+    idx = k.set(idx, img_block_width);
+    idx = k.set(idx, win_block_stride_x);
+    idx = k.set(idx, win_block_stride_y);
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(block_hists));
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(descriptors));
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_compute(InputArray _img, Size win_stride, std::vector<float>& _descriptors, int descr_format, Size blockSize,
+                        Size cellSize, int nbins, Size blockStride, Size winSize, float sigma, bool gammaCorrection, double L2HysThreshold)
+{
+     Size imgSize = _img.size();
+    Size effect_size = imgSize;
+
+    UMat grad(imgSize, CV_32FC2);
+    UMat qangle(imgSize, CV_8UC2);
+
+    const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
+    const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
+    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32F);
+
+    Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
+    UMat labels(1, wins_per_img.area(), CV_8U);
+
+    float scale = 1.f / (2.f * sigma * sigma);
+    Mat gaussian_lut(1, 512, CV_32FC1);
+    int idx = 0;
+    for(int i=-8; i<8; i++)
+        for(int j=-8; j<8; j++)
+            gaussian_lut.at<float>(idx++) = std::exp(-(j * j + i * i) * scale);
+    for(int i=-8; i<8; i++)
+        for(int j=-8; j<8; j++)
+            gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
+
+    if(!ocl_computeGradient(_img, grad, qangle, nbins, effect_size, gammaCorrection))
+        return false;
+
+    UMat gauss_w_lut;
+    gaussian_lut.copyTo(gauss_w_lut);
+    if(!ocl_compute_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
+        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size))
+        return false;
+
+    if(!ocl_normalize_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
+        effect_size.width, block_hists, (float)L2HysThreshold))
+        return false;
+
+    Size blocks_per_win = numPartsWithin(winSize, blockSize, blockStride);
+    wins_per_img = numPartsWithin(effect_size, winSize, win_stride);
+
+    int descr_size = blocks_per_win.area()*(int)block_hist_size;
+    int descr_width = (int)block_hist_size*blocks_per_win.width;
+
+    UMat descriptors(wins_per_img.area(), static_cast<int>(blocks_per_win.area() * block_hist_size), CV_32F);
+    switch (descr_format)
+    {
+    case DESCR_FORMAT_ROW_BY_ROW:
+        if(!ocl_extract_descrs_by_rows(winSize.height, winSize.width,
+            blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height,
+            effect_size.width, block_hists, descriptors, (int)block_hist_size, descr_size, descr_width))
+            return false;
+        break;
+    case DESCR_FORMAT_COL_BY_COL:
+        if(!ocl_extract_descrs_by_cols(winSize.height, winSize.width,
+            blockStride.height, blockStride.width, win_stride.height, win_stride.width, effect_size.height, effect_size.width,
+            block_hists, descriptors, (int)block_hist_size, descr_size, blocks_per_win.width, blocks_per_win.height))
+            return false;
+        break;
+    default:
+        return false;
+    }
+    descriptors.reshape(1, (int)descriptors.total()).getMat(ACCESS_READ).copyTo(_descriptors);
+    return true;
+}
+#endif //HAVE_OPENCL
+
+void HOGDescriptor::compute(InputArray _img, std::vector<float>& descriptors,
     Size winStride, Size padding, const std::vector<Point>& locations) const
 {
     if( winStride == Size() )
@@ -1037,11 +1389,18 @@ void HOGDescriptor::compute(const Mat& img, std::vector<float>& descriptors,
     Size cacheStride(gcd(winStride.width, blockStride.width),
                      gcd(winStride.height, blockStride.height));
 
+    Size imgSize = _img.size();
+
     size_t nwindows = locations.size();
     padding.width = (int)alignSize(std::max(padding.width, 0), cacheStride.width);
     padding.height = (int)alignSize(std::max(padding.height, 0), cacheStride.height);
-    Size paddedImgSize(img.cols + padding.width*2, img.rows + padding.height*2);
+    Size paddedImgSize(imgSize.width + padding.width*2, imgSize.height + padding.height*2);
 
+    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && _img.isUMat(),
+        ocl_compute(_img, winStride, descriptors, DESCR_FORMAT_COL_BY_COL, blockSize,
+        cellSize, nbins, blockStride, winSize, (float)getWinSigma(), gammaCorrection, L2HysThreshold))
+
+    Mat img = _img.getMat();
     HOGCache cache(this, img, padding, padding, nwindows == 0, cacheStride);
 
     if( !nwindows )
@@ -1263,20 +1622,215 @@ private:
     Mutex* mtx;
 };
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_classify_hists(int win_height, int win_width, int block_stride_y, int block_stride_x,
+                               int win_stride_y, int win_stride_x, int height, int width,
+                               const UMat& block_hists, UMat detector,
+                               float free_coef, float threshold, UMat& labels, Size descr_size, int block_hist_size)
+{
+    int nthreads;
+    bool is_cpu = cv::ocl::Device::getDefault().type() == cv::ocl::Device::TYPE_CPU;
+    cv::String opts;
+
+    ocl::Kernel k;
+    int idx = 0;
+    switch (descr_size.width)
+    {
+    case 180:
+        nthreads = 180;
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        k.create("classify_hists_180_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        if(k.empty())
+            return false;
+        idx = k.set(idx, descr_size.width);
+        idx = k.set(idx, descr_size.height);
+        break;
+
+    case 252:
+        nthreads = 256;
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        k.create("classify_hists_252_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        if(k.empty())
+            return false;
+        idx = k.set(idx, descr_size.width);
+        idx = k.set(idx, descr_size.height);
+        break;
+
+    default:
+        nthreads = 256;
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, "");
+        if(k.empty())
+            return false;
+        if(is_cpu)
+           opts = "-D CPU ";
+        else
+            opts = cv::format("-D WAVE_SIZE=%d", k.preferedWorkGroupSizeMultiple());
+        k.create("classify_hists_kernel", ocl::objdetect::objdetect_hog_oclsrc, opts);
+        if(k.empty())
+            return false;
+        idx = k.set(idx, descr_size.area());
+        idx = k.set(idx, descr_size.height);
+    }
+
+    int win_block_stride_x = win_stride_x / block_stride_x;
+    int win_block_stride_y = win_stride_y / block_stride_y;
+    int img_win_width = (width - win_width + win_stride_x) / win_stride_x;
+    int img_win_height = (height - win_height + win_stride_y) / win_stride_y;
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) /
+        block_stride_x;
+
+    size_t globalThreads[3] = { img_win_width * nthreads, img_win_height, 1 };
+    size_t localThreads[3] = { nthreads, 1, 1 };
+
+    idx = k.set(idx, block_hist_size);
+    idx = k.set(idx, img_win_width);
+    idx = k.set(idx, img_block_width);
+    idx = k.set(idx, win_block_stride_x);
+    idx = k.set(idx, win_block_stride_y);
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(block_hists));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(detector));
+    idx = k.set(idx, free_coef);
+    idx = k.set(idx, threshold);
+    idx = k.set(idx, ocl::KernelArg::PtrWriteOnly(labels));
+
+    return k.run(2, globalThreads, localThreads, false);
+}
+
+static bool ocl_detect(InputArray img, std::vector<Point> &hits, double hit_threshold, Size win_stride,
+                       const UMat& oclSvmDetector, Size blockSize, Size cellSize, int nbins, Size blockStride, Size winSize,
+                       bool gammaCorrection, double L2HysThreshold, float sigma, float free_coef)
+{
+    hits.clear();
+    if (oclSvmDetector.empty())
+        return false;
+
+    Size imgSize = img.size();
+    Size effect_size = imgSize;
+    UMat grad(imgSize, CV_32FC2);
+    UMat qangle(imgSize, CV_8UC2);
+
+    const size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);
+    const Size blocks_per_img = numPartsWithin(imgSize, blockSize, blockStride);
+    UMat block_hists(1, static_cast<int>(block_hist_size * blocks_per_img.area()) + 256, CV_32F);
+
+    Size wins_per_img = numPartsWithin(imgSize, winSize, win_stride);
+    UMat labels(1, wins_per_img.area(), CV_8U);
+
+    float scale = 1.f / (2.f * sigma * sigma);
+    Mat gaussian_lut(1, 512, CV_32FC1);
+    int idx = 0;
+    for(int i=-8; i<8; i++)
+        for(int j=-8; j<8; j++)
+            gaussian_lut.at<float>(idx++) = std::exp(-(j * j + i * i) * scale);
+    for(int i=-8; i<8; i++)
+        for(int j=-8; j<8; j++)
+            gaussian_lut.at<float>(idx++) = (8.f - fabs(j + 0.5f)) * (8.f - fabs(i + 0.5f)) / 64.f;
+
+    if(!ocl_computeGradient(img, grad, qangle, nbins, effect_size, gammaCorrection))
+        return false;
+
+    UMat gauss_w_lut;
+    gaussian_lut.copyTo(gauss_w_lut);
+    if(!ocl_compute_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
+        effect_size.width, grad, qangle, gauss_w_lut, block_hists, block_hist_size))
+        return false;
+
+    if(!ocl_normalize_hists(nbins, blockStride.width, blockStride.height, effect_size.height,
+        effect_size.width, block_hists, (float)L2HysThreshold))
+        return false;
+
+    Size blocks_per_win = numPartsWithin(winSize, blockSize, blockStride);
+
+    Size descr_size((int)block_hist_size*blocks_per_win.width, blocks_per_win.height);
+
+    if(!ocl_classify_hists(winSize.height, winSize.width, blockStride.height,
+        blockStride.width, win_stride.height, win_stride.width,
+        effect_size.height, effect_size.width, block_hists, oclSvmDetector,
+        free_coef, (float)hit_threshold, labels, descr_size, (int)block_hist_size))
+        return false;
+
+    Mat labels_host = labels.getMat(ACCESS_READ);
+    unsigned char *vec = labels_host.ptr();
+    for (int i = 0; i < wins_per_img.area(); i++)
+    {
+        int y = i / wins_per_img.width;
+        int x = i - wins_per_img.width * y;
+        if (vec[i])
+        {
+            hits.push_back(Point(x * win_stride.width, y * win_stride.height));
+        }
+    }
+    return true;
+}
+
+static bool ocl_detectMultiScale(InputArray _img, std::vector<Rect> &found_locations, std::vector<double>& level_scale,
+                                              double hit_threshold, Size win_stride, double group_threshold,
+                                              const UMat& oclSvmDetector, Size blockSize, Size cellSize,
+                                              int nbins, Size blockStride, Size winSize, bool gammaCorrection,
+                                              double L2HysThreshold, float sigma, float free_coef)
+{
+    std::vector<Rect> all_candidates;
+    std::vector<Point> locations;
+    UMat image_scale;
+    Size imgSize = _img.size();
+    image_scale.create(imgSize, _img.type());
+
+    for (size_t i = 0; i<level_scale.size() ; i++)
+    {
+        double scale = level_scale[i];
+        Size effect_size = Size(cvRound(imgSize.width / scale), cvRound(imgSize.height / scale));
+        if (effect_size == imgSize)
+        {
+            if(!ocl_detect(_img, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                return false;
+        }
+        else
+        {
+            resize(_img, image_scale, effect_size);
+            if(!ocl_detect(image_scale, locations, hit_threshold, win_stride, oclSvmDetector, blockSize, cellSize, nbins,
+                blockStride, winSize, gammaCorrection, L2HysThreshold, sigma, free_coef))
+                return false;
+        }
+        Size scaled_win_size(cvRound(winSize.width * scale),
+            cvRound(winSize.height * scale));
+        for (size_t j = 0; j < locations.size(); j++)
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
+    }
+    found_locations.assign(all_candidates.begin(), all_candidates.end());
+    cv::groupRectangles(found_locations, (int)group_threshold, 0.2);
+    return true;
+}
+#endif //HAVE_OPENCL
+
 void HOGDescriptor::detectMultiScale(
-    const Mat& img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
+    InputArray _img, std::vector<Rect>& foundLocations, std::vector<double>& foundWeights,
     double hitThreshold, Size winStride, Size padding,
     double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {
     double scale = 1.;
     int levels = 0;
 
+    Size imgSize = _img.size();
     std::vector<double> levelScale;
     for( levels = 0; levels < nlevels; levels++ )
     {
         levelScale.push_back(scale);
-        if( cvRound(img.cols/scale) < winSize.width ||
-                cvRound(img.rows/scale) < winSize.height ||
+        if( cvRound(imgSize.width/scale) < winSize.width ||
+            cvRound(imgSize.height/scale) < winSize.height ||
                 scale0 <= 1 )
             break;
         scale *= scale0;
@@ -1284,12 +1838,21 @@ void HOGDescriptor::detectMultiScale(
     levels = std::max(levels, 1);
     levelScale.resize(levels);
 
+    if(winStride == Size())
+        winStride = blockStride;
+
+    CV_OCL_RUN(_img.dims() <= 2 && _img.type() == CV_8UC1 && scale0 > 1 && winStride.width % blockStride.width == 0 &&
+        winStride.height % blockStride.height == 0 && padding == Size(0,0) && _img.isUMat(),
+        ocl_detectMultiScale(_img, foundLocations, levelScale, hitThreshold, winStride, finalThreshold, oclSvmDetector,
+        blockSize, cellSize, nbins, blockStride, winSize, gammaCorrection, L2HysThreshold, (float)getWinSigma(), free_coef));
+
     std::vector<Rect> allCandidates;
     std::vector<double> tempScales;
     std::vector<double> tempWeights;
     std::vector<double> foundScales;
-    Mutex mtx;
 
+    Mutex mtx;
+    Mat img = _img.getMat();
     Range range(0, (int)levelScale.size());
     HOGInvoker invoker(this, img, hitThreshold, winStride, padding, &levelScale[0], &allCandidates, &mtx, &tempWeights, &tempScales);
     parallel_for_(range, invoker);
@@ -1306,7 +1869,7 @@ void HOGDescriptor::detectMultiScale(
         groupRectangles(foundLocations, foundWeights, (int)finalThreshold, 0.2);
 }
 
-void HOGDescriptor::detectMultiScale(const Mat& img, std::vector<Rect>& foundLocations,
+void HOGDescriptor::detectMultiScale(InputArray img, std::vector<Rect>& foundLocations,
     double hitThreshold, Size winStride, Size padding,
     double scale0, double finalThreshold, bool useMeanshiftGrouping) const
 {

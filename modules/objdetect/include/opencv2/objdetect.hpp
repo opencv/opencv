@@ -285,10 +285,11 @@ public:
     CV_WRAP virtual void save(const String& filename, const String& objname = String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
 
-    CV_WRAP virtual void compute(const Mat& img,
+    CV_WRAP virtual void compute(InputArray img,
                          CV_OUT std::vector<float>& descriptors,
                          Size winStride = Size(), Size padding = Size(),
                          const std::vector<Point>& locations = std::vector<Point>()) const;
+
     //with found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
@@ -300,13 +301,14 @@ public:
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
+
     //with result weights output
-    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   CV_OUT std::vector<double>& foundWeights, double hitThreshold = 0,
                                   Size winStride = Size(), Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0,bool useMeanshiftGrouping = false) const;
     //without found weights output
-    virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold = 0, Size winStride = Size(),
                                   Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0, bool useMeanshiftGrouping = false) const;
@@ -328,25 +330,27 @@ public:
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
     CV_PROP std::vector<float> svmDetector;
+    UMat oclSvmDetector;
+    float free_coef;
     CV_PROP int nlevels;
 
 
-   // evaluate specified ROI and return confidence value for each location
-   virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
+    // evaluate specified ROI and return confidence value for each location
+    virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                    CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                    double hitThreshold = 0, cv::Size winStride = Size(),
                                    cv::Size padding = Size()) const;
 
-   // evaluate specified ROI and return confidence value for each location in multiple scales
-   virtual void detectMultiScaleROI(const cv::Mat& img,
+    // evaluate specified ROI and return confidence value for each location in multiple scales
+    virtual void detectMultiScaleROI(const cv::Mat& img,
                                                        CV_OUT std::vector<cv::Rect>& foundLocations,
                                                        std::vector<DetectionROI>& locations,
                                                        double hitThreshold = 0,
                                                        int groupThreshold = 0) const;
 
-   // read/parse Dalal's alt model file
-   void readALTModel(String modelfile);
-   void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
+    // read/parse Dalal's alt model file
+    void readALTModel(String modelfile);
+    void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
 
