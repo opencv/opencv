@@ -2033,17 +2033,17 @@ static IPowFunc ipowTab[] =
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
+static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
+                    bool is_ipower, int ipower)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( !(_src.dims() <= 2 && (depth == CV_32F || depth == CV_64F)) ||
-         (depth == CV_64F && !doubleSupport) )
+    if (depth == CV_64F && !doubleSupport)
         return false;
 
     bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
-    const char * const op = issqrt ? "OP_SQRT" : "OP_POW";
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
@@ -2060,6 +2060,8 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
 
     if (issqrt)
         k.args(srcarg, dstarg);
+    else if (is_ipower)
+        k.args(srcarg, dstarg, ipower);
     else
     {
         if (depth == CV_32F)
@@ -2076,39 +2078,35 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
 
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    CV_OCL_RUN(_dst.isUMat(),
-               ocl_pow(_src, power, _dst))
-
-    Mat src = _src.getMat();
-    int type = src.type(), depth = src.depth(), cn = src.channels();
-
-    _dst.create( src.dims, src.size, type );
-    Mat dst = _dst.getMat();
-
-    int ipower = cvRound(power);
-    bool is_ipower = false;
+    bool is_ipower = false, same = false;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type),
+            cn = CV_MAT_CN(type), ipower = cvRound(power);
 
     if( fabs(ipower - power) < DBL_EPSILON )
     {
         if( ipower < 0 )
         {
-            divide( 1., src, dst );
+            divide( 1., _src, _dst );
             if( ipower == -1 )
                 return;
             ipower = -ipower;
-            src = dst;
+            same = true;
         }
 
         switch( ipower )
         {
         case 0:
-            dst = Scalar::all(1);
+            _dst.createSameSize(_src, type);
+            _dst.setTo(Scalar::all(1));
             return;
         case 1:
-            src.copyTo(dst);
+            _src.copyTo(_dst);
             return;
         case 2:
-            multiply(src, src, dst);
+            if (same)
+                multiply(_dst, _dst, _dst);
+            else
+                multiply(_src, _src, _dst);
             return;
         default:
             is_ipower = true;
@@ -2116,6 +2114,22 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
+
+    Mat src, dst;
+    if (same)
+    {
+        dst = _dst.getMat();
+        src = dst;
+    }
+    else
+    {
+        src = _src.getMat();
+        _dst.create( src.dims, src.size, type );
+        dst = _dst.getMat();
+    }
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
