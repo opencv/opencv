@@ -211,6 +211,11 @@
 #elif defined OP_POW
 #define PROCESS_ELEM dstelem = pow(srcelem1, srcelem2)
 
+#elif defined OP_POWN
+#undef workT
+#define workT int
+#define PROCESS_ELEM dstelem = pown(srcelem1, srcelem2)
+
 #elif defined OP_SQRT
 #define PROCESS_ELEM dstelem = sqrt(srcelem1)
 
@@ -293,7 +298,7 @@ dstelem = v > (dstT)(0) ? log(v) : log(-v)
 #if defined OP_AND || defined OP_OR || defined OP_XOR || defined OP_ADD || defined OP_SAT_ADD || \
     defined OP_SUB || defined OP_SAT_SUB || defined OP_RSUB || defined OP_SAT_RSUB || \
     defined OP_ABSDIFF || defined OP_CMP || defined OP_MIN || defined OP_MAX || defined OP_POW || \
-    defined OP_MUL || defined OP_DIV
+    defined OP_MUL || defined OP_DIV || defined OP_POWN
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , workT srcelem2
 #endif
