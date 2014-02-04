@@ -160,16 +160,9 @@ void dumpOpenCLDevice()
         DUMP_MESSAGE_STDOUT("    Max memory allocation size = "<< maxMemAllocSizeStr);
         DUMP_PROPERTY_XML("cv_ocl_current_maxMemAllocSize", device.maxMemAllocSize());
 
-#if 0
-        const char* doubleSupportStr = device.haveDoubleSupport() ? "Yes" : "No";
-        DUMP_MESSAGE_STDOUT("    Double support = "<< doubleSupportStr);
-        DUMP_PROPERTY_XML("cv_ocl_current_haveDoubleSupport", device.haveDoubleSupport());
-#else
         const char* doubleSupportStr = device.doubleFPConfig() > 0 ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Double support = "<< doubleSupportStr);
         DUMP_PROPERTY_XML("cv_ocl_current_haveDoubleSupport", device.doubleFPConfig() > 0);
-
-#endif
 
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = "<< isUnifiedMemoryStr);

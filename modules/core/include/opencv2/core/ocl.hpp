@@ -90,7 +90,8 @@ public:
     String vendor() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
-    String deviceVersion() const;
+    int deviceVersionMajor() const;
+    int deviceVersionMinor() const;
     String driverVersion() const;
     void* ptr() const;
 
@@ -224,15 +225,11 @@ public:
     static Context2& getDefault(bool initialize = true);
     void* ptr() const;
 
-    struct Impl;
-    inline struct Impl* _getImpl() const { return p; }
+    friend void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
 protected:
+    struct Impl;
     Impl* p;
 };
-
-
-// TODO Move to internal header
-void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Platform
 {
@@ -245,12 +242,14 @@ public:
     void* ptr() const;
     static Platform& getDefault();
 
-    struct Impl;
-    inline struct Impl* _getImpl() const { return p; }
+    friend void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
 protected:
+    struct Impl;
     Impl* p;
 };
 
+// TODO Move to internal header
+void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
@@ -585,8 +584,11 @@ class CV_EXPORTS Image2D
 {
 public:
     Image2D();
-    Image2D(const UMat &src);
+    explicit Image2D(const UMat &src);
+    Image2D(const Image2D & i);
     ~Image2D();
+
+    Image2D & operator = (const Image2D & i);
 
     void* ptr() const;
 protected:

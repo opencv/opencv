@@ -2915,6 +2915,9 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
                   format("-D T=%s -D TILE_DIM=%d -D BLOCK_ROWS=%d",
                          ocl::memopTypeToStr(type), TILE_DIM, BLOCK_ROWS));
+    if (k.empty())
+        return false;
+
     if (inplace)
         k.args(ocl::KernelArg::ReadWriteNoSize(dst), dst.rows);
     else
