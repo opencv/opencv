@@ -321,4 +321,16 @@
       <cols>0</cols>
       <dt>u</dt>
       <data></data></val></faces></OCL_Cascade_Image_MinSize_CascadeClassifier--CascadeClassifier----cv-cascadeandhog-cascades-lbpcascade_frontalface-xml----cv-cascadeandhog-images-class57-png---90->
+ <!-- resumed -->
+
+<OCL_HOGFixture_HOG--HOG>
+  <found_locations>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>2</cols>
+      <dt>"4i"</dt>
+      <data>
+        231 186 74 148 621 159 96 191</data></val></found_locations></OCL_HOGFixture_HOG--HOG>
 </opencv_storage>
