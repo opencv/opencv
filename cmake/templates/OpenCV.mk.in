@@ -157,7 +157,7 @@ LOCAL_LDLIBS += $(foreach lib,$(OPENCV_EXTRA_COMPONENTS), -l$(lib))
 
 ifeq ($(OPENCV_USE_GPU_MODULE),on)
     LOCAL_STATIC_LIBRARIES+=libopencv_gpu
-    LOCAL_LDLIBS += -L$(CUDA_TOOLKIT_DIR)/lib $(foreach lib, $(CUDA_RUNTIME_LIBS), -l$(lib))
+    LOCAL_LDLIBS += -L$(CUDA_TOOLKIT_DIR)/targets/armv7-linux-androideabi/lib $(foreach lib, $(CUDA_RUNTIME_LIBS), -l$(lib))
 endif
 
 #restore the LOCAL_PATH
