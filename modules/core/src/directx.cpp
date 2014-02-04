@@ -236,7 +236,7 @@ namespace ocl {
 static bool g_isDirect3DDevice9Ex = false; // Direct3DDevice9Ex or Direct3DDevice9 was used
 #endif
 
-Context2& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
+Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 {
     (void)pD3D11Device;
 #if !defined(HAVE_DIRECTX)
@@ -338,13 +338,13 @@ Context2& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
     }
 
 
-    Context2& ctx = Context2::getDefault(false);
+    Context& ctx = Context::getDefault(false);
     initializeContextFromHandle(ctx, platforms[found], context, device);
     return ctx;
 #endif
 }
 
-Context2& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
+Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
 {
     (void)pD3D10Device;
 #if !defined(HAVE_DIRECTX)
@@ -446,13 +446,13 @@ Context2& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
     }
 
 
-    Context2& ctx = Context2::getDefault(false);
+    Context& ctx = Context::getDefault(false);
     initializeContextFromHandle(ctx, platforms[found], context, device);
     return ctx;
 #endif
 }
 
-Context2& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex)
+Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDevice9Ex)
 {
     (void)pDirect3DDevice9Ex;
 #if !defined(HAVE_DIRECTX)
@@ -555,14 +555,14 @@ Context2& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDe
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
-    Context2& ctx = Context2::getDefault(false);
+    Context& ctx = Context::getDefault(false);
     initializeContextFromHandle(ctx, platforms[found], context, device);
     g_isDirect3DDevice9Ex = true;
     return ctx;
 #endif
 }
 
-Context2& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9)
+Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9)
 {
     (void)pDirect3DDevice9;
 #if !defined(HAVE_DIRECTX)
@@ -665,7 +665,7 @@ Context2& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice
             CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for DirectX interop");
     }
 
-    Context2& ctx = Context2::getDefault(false);
+    Context& ctx = Context::getDefault(false);
     initializeContextFromHandle(ctx, platforms[found], context, device);
     g_isDirect3DDevice9Ex = false;
     return ctx;
@@ -720,7 +720,7 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     UMat u = src.getUMat();
@@ -777,7 +777,7 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
     CV_Assert(textureType >= 0);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
@@ -868,7 +868,7 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     UMat u = src.getUMat();
@@ -925,7 +925,7 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     CV_Assert(textureType >= 0);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
@@ -1019,7 +1019,7 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     UMat u = src.getUMat();
@@ -1083,7 +1083,7 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     CV_Assert(surfaceType >= 0);
 
     using namespace cv::ocl;
-    Context2& ctx = Context2::getDefault();
+    Context& ctx = Context::getDefault();
     cl_context context = (cl_context)ctx.ptr();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!

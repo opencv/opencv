@@ -1572,7 +1572,7 @@ bool haveAmdFft()
 
 #endif
 
-void finish2()
+void finish()
 {
     Queue::getDefault().finish();
 }
@@ -2025,7 +2025,7 @@ size_t Device::profilingTimerResolution() const
 
 const Device& Device::getDefault()
 {
-    const Context2& ctx = Context2::getDefault();
+    const Context& ctx = Context::getDefault();
     int idx = coreTlsData.get()->device;
     return ctx.device(idx);
 }
@@ -2230,7 +2230,7 @@ not_found:
     return NULL;
 }
 
-struct Context2::Impl
+struct Context::Impl
 {
     Impl()
     {
@@ -2337,7 +2337,7 @@ struct Context2::Impl
         devices.clear();
     }
 
-    Program getProg(const ProgramSource2& src,
+    Program getProg(const ProgramSource& src,
                     const String& buildflags, String& errmsg)
     {
         String prefix = Program::getPrefix(buildflags);
@@ -2357,7 +2357,7 @@ struct Context2::Impl
     cl_context handle;
     std::vector<Device> devices;
 
-    typedef ProgramSource2::hash_t hash_t;
+    typedef ProgramSource::hash_t hash_t;
 
     struct HashKey
     {
@@ -2372,18 +2372,18 @@ struct Context2::Impl
 };
 
 
-Context2::Context2()
+Context::Context()
 {
     p = 0;
 }
 
-Context2::Context2(int dtype)
+Context::Context(int dtype)
 {
     p = 0;
     create(dtype);
 }
 
-bool Context2::create()
+bool Context::create()
 {
     if( !haveOpenCL() )
         return false;
@@ -2398,7 +2398,7 @@ bool Context2::create()
     return p != 0;
 }
 
-bool Context2::create(int dtype0)
+bool Context::create(int dtype0)
 {
     if( !haveOpenCL() )
         return false;
@@ -2413,7 +2413,7 @@ bool Context2::create(int dtype0)
     return p != 0;
 }
 
-Context2::~Context2()
+Context::~Context()
 {
     if (p)
     {
@@ -2422,14 +2422,14 @@ Context2::~Context2()
     }
 }
 
-Context2::Context2(const Context2& c)
+Context::Context(const Context& c)
 {
     p = (Impl*)c.p;
     if(p)
         p->addref();
 }
 
-Context2& Context2::operator = (const Context2& c)
+Context& Context::operator = (const Context& c)
 {
     Impl* newp = (Impl*)c.p;
     if(newp)
@@ -2440,34 +2440,34 @@ Context2& Context2::operator = (const Context2& c)
     return *this;
 }
 
-void* Context2::ptr() const
+void* Context::ptr() const
 {
     return p == NULL ? NULL : p->handle;
 }
 
-size_t Context2::ndevices() const
+size_t Context::ndevices() const
 {
     return p ? p->devices.size() : 0;
 }
 
-const Device& Context2::device(size_t idx) const
+const Device& Context::device(size_t idx) const
 {
     static Device dummy;
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
 }
 
-Context2& Context2::getDefault(bool initialize)
+Context& Context::getDefault(bool initialize)
 {
-    static Context2 ctx;
+    static Context ctx;
     if(!ctx.p && haveOpenCL())
     {
         if (!ctx.p)
             ctx.p = new Impl();
         if (initialize)
         {
-            // do not create new Context2 right away.
+            // do not create new Context right away.
             // First, try to retrieve existing context of the same type.
-            // In its turn, Platform::getContext() may call Context2::create()
+            // In its turn, Platform::getContext() may call Context::create()
             // if there is no such context.
             if (ctx.p->handle == NULL)
                 ctx.p->setDefault();
@@ -2477,19 +2477,19 @@ Context2& Context2::getDefault(bool initialize)
     return ctx;
 }
 
-Program Context2::getProg(const ProgramSource2& prog,
+Program Context::getProg(const ProgramSource& prog,
                          const String& buildopts, String& errmsg)
 {
     return p ? p->getProg(prog, buildopts, errmsg) : Program();
 }
 
-void initializeContextFromHandle(Context2& ctx, void* platform, void* _context, void* _device)
+void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)
 {
     cl_context context = (cl_context)_context;
     cl_device_id device = (cl_device_id)_device;
 
     // cleanup old context
-    Context2::Impl * impl = ctx.p;
+    Context::Impl * impl = ctx.p;
     if (impl->handle)
     {
         CV_OclDbgAssert(clReleaseContext(impl->handle) == CL_SUCCESS);
@@ -2509,14 +2509,14 @@ void initializeContextFromHandle(Context2& ctx, void* platform, void* _context, 
 
 struct Queue::Impl
 {
-    Impl(const Context2& c, const Device& d)
+    Impl(const Context& c, const Device& d)
     {
         refcount = 1;
-        const Context2* pc = &c;
+        const Context* pc = &c;
         cl_context ch = (cl_context)pc->ptr();
         if( !ch )
         {
-            pc = &Context2::getDefault();
+            pc = &Context::getDefault();
             ch = (cl_context)pc->ptr();
         }
         cl_device_id dh = (cl_device_id)d.ptr();
@@ -2553,7 +2553,7 @@ Queue::Queue()
     p = 0;
 }
 
-Queue::Queue(const Context2& c, const Device& d)
+Queue::Queue(const Context& c, const Device& d)
 {
     p = 0;
     create(c, d);
@@ -2583,7 +2583,7 @@ Queue::~Queue()
         p->release();
 }
 
-bool Queue::create(const Context2& c, const Device& d)
+bool Queue::create(const Context& c, const Device& d)
 {
     if(p)
         p->release();
@@ -2608,7 +2608,7 @@ Queue& Queue::getDefault()
 {
     Queue& q = coreTlsData.get()->oclQueue;
     if( !q.p && haveOpenCL() )
-        q.create(Context2::getDefault());
+        q.create(Context::getDefault());
     return q;
 }
 
@@ -2725,7 +2725,7 @@ Kernel::Kernel(const char* kname, const Program& prog)
     create(kname, prog);
 }
 
-Kernel::Kernel(const char* kname, const ProgramSource2& src,
+Kernel::Kernel(const char* kname, const ProgramSource& src,
                const String& buildopts, String* errmsg)
 {
     p = 0;
@@ -2769,7 +2769,7 @@ bool Kernel::create(const char* kname, const Program& prog)
     return p != 0;
 }
 
-bool Kernel::create(const char* kname, const ProgramSource2& src,
+bool Kernel::create(const char* kname, const ProgramSource& src,
                     const String& buildopts, String* errmsg)
 {
     if(p)
@@ -2779,7 +2779,7 @@ bool Kernel::create(const char* kname, const ProgramSource2& src,
     }
     String tempmsg;
     if( !errmsg ) errmsg = &tempmsg;
-    const Program& prog = Context2::getDefault().getProg(src, buildopts, *errmsg);
+    const Program& prog = Context::getDefault().getProg(src, buildopts, *errmsg);
     return create(kname, prog);
 }
 
@@ -2984,11 +2984,11 @@ size_t Kernel::localMemSize() const
 
 struct Program::Impl
 {
-    Impl(const ProgramSource2& _src,
+    Impl(const ProgramSource& _src,
          const String& _buildflags, String& errmsg)
     {
         refcount = 1;
-        const Context2& ctx = Context2::getDefault();
+        const Context& ctx = Context::getDefault();
         src = _src;
         buildflags = _buildflags;
         const String& srcstr = src.source();
@@ -3044,7 +3044,7 @@ struct Program::Impl
         if(_buf.empty())
             return;
         String prefix0 = Program::getPrefix(buildflags);
-        const Context2& ctx = Context2::getDefault();
+        const Context& ctx = Context::getDefault();
         const Device& dev = Device::getDefault();
         const char* pos0 = _buf.c_str();
         const char* pos1 = strchr(pos0, '\n');
@@ -3099,7 +3099,7 @@ struct Program::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
-    ProgramSource2 src;
+    ProgramSource src;
     String buildflags;
     cl_program handle;
 };
@@ -3107,7 +3107,7 @@ struct Program::Impl
 
 Program::Program() { p = 0; }
 
-Program::Program(const ProgramSource2& src,
+Program::Program(const ProgramSource& src,
         const String& buildflags, String& errmsg)
 {
     p = 0;
@@ -3138,7 +3138,7 @@ Program::~Program()
         p->release();
 }
 
-bool Program::create(const ProgramSource2& src,
+bool Program::create(const ProgramSource& src,
             const String& buildflags, String& errmsg)
 {
     if(p)
@@ -3152,9 +3152,9 @@ bool Program::create(const ProgramSource2& src,
     return p != 0;
 }
 
-const ProgramSource2& Program::source() const
+const ProgramSource& Program::source() const
 {
-    static ProgramSource2 dummy;
+    static ProgramSource dummy;
     return p ? p->src : dummy;
 }
 
@@ -3188,15 +3188,15 @@ String Program::getPrefix() const
 
 String Program::getPrefix(const String& buildflags)
 {
-    const Context2& ctx = Context2::getDefault();
+    const Context& ctx = Context::getDefault();
     const Device& dev = ctx.device(0);
     return format("name=%s\ndriver=%s\nbuildflags=%s\n",
                   dev.name().c_str(), dev.driverVersion().c_str(), buildflags.c_str());
 }
 
-///////////////////////////////////////// ProgramSource2 ///////////////////////////////////////////////
+///////////////////////////////////////// ProgramSource ///////////////////////////////////////////////
 
-struct ProgramSource2::Impl
+struct ProgramSource::Impl
 {
     Impl(const char* _src)
     {
@@ -3215,39 +3215,39 @@ struct ProgramSource2::Impl
 
     IMPLEMENT_REFCOUNTABLE();
     String src;
-    ProgramSource2::hash_t h;
+    ProgramSource::hash_t h;
 };
 
 
-ProgramSource2::ProgramSource2()
+ProgramSource::ProgramSource()
 {
     p = 0;
 }
 
-ProgramSource2::ProgramSource2(const char* prog)
+ProgramSource::ProgramSource(const char* prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource2::ProgramSource2(const String& prog)
+ProgramSource::ProgramSource(const String& prog)
 {
     p = new Impl(prog);
 }
 
-ProgramSource2::~ProgramSource2()
+ProgramSource::~ProgramSource()
 {
     if(p)
         p->release();
 }
 
-ProgramSource2::ProgramSource2(const ProgramSource2& prog)
+ProgramSource::ProgramSource(const ProgramSource& prog)
 {
     p = prog.p;
     if(p)
         p->addref();
 }
 
-ProgramSource2& ProgramSource2::operator = (const ProgramSource2& prog)
+ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
 {
     Impl* newp = (Impl*)prog.p;
     if(newp)
@@ -3258,13 +3258,13 @@ ProgramSource2& ProgramSource2::operator = (const ProgramSource2& prog)
     return *this;
 }
 
-const String& ProgramSource2::source() const
+const String& ProgramSource::source() const
 {
     static String dummy;
     return p ? p->src : dummy;
 }
 
-ProgramSource2::hash_t ProgramSource2::hash() const
+ProgramSource::hash_t ProgramSource::hash() const
 {
     return p ? p->h : 0;
 }
@@ -3365,7 +3365,7 @@ protected:
     {
         CV_DbgAssert(entry.clBuffer_ == NULL);
         entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
-        Context2& ctx = Context2::getDefault();
+        Context& ctx = Context::getDefault();
         cl_int retval = CL_SUCCESS;
         entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
         CV_Assert(retval == CL_SUCCESS);
@@ -3482,7 +3482,7 @@ public:
         return u;
     }
 
-    void getBestFlags(const Context2& ctx, int /*flags*/, int& createFlags, int& flags0) const
+    void getBestFlags(const Context& ctx, int /*flags*/, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
         createFlags = CL_MEM_READ_WRITE;
@@ -3507,7 +3507,7 @@ public:
             total *= sizes[i];
         }
 
-        Context2& ctx = Context2::getDefault();
+        Context& ctx = Context::getDefault();
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, flags, createFlags, flags0);
 
@@ -3536,7 +3536,7 @@ public:
         if(u->handle == 0)
         {
             CV_Assert(u->origdata != 0);
-            Context2& ctx = Context2::getDefault();
+            Context& ctx = Context::getDefault();
             int createFlags = 0, flags0 = 0;
             getBestFlags(ctx, accessFlags, createFlags, flags0);
 
@@ -3982,7 +3982,7 @@ static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platfo
                                 numDevices, &devices[0], &numDevices) == CL_SUCCESS);
 }
 
-struct PlatformInfo2::Impl
+struct PlatformInfo::Impl
 {
     Impl(void* id)
     {
@@ -4004,30 +4004,30 @@ struct PlatformInfo2::Impl
     cl_platform_id handle;
 };
 
-PlatformInfo2::PlatformInfo2()
+PlatformInfo::PlatformInfo()
 {
     p = 0;
 }
 
-PlatformInfo2::PlatformInfo2(void* platform_id)
+PlatformInfo::PlatformInfo(void* platform_id)
 {
     p = new Impl(platform_id);
 }
 
-PlatformInfo2::~PlatformInfo2()
+PlatformInfo::~PlatformInfo()
 {
     if(p)
         p->release();
 }
 
-PlatformInfo2::PlatformInfo2(const PlatformInfo2& i)
+PlatformInfo::PlatformInfo(const PlatformInfo& i)
 {
     if (i.p)
         i.p->addref();
     p = i.p;
 }
 
-PlatformInfo2& PlatformInfo2::operator =(const PlatformInfo2& i)
+PlatformInfo& PlatformInfo::operator =(const PlatformInfo& i)
 {
     if (i.p != p)
     {
@@ -4040,29 +4040,29 @@ PlatformInfo2& PlatformInfo2::operator =(const PlatformInfo2& i)
     return *this;
 }
 
-int PlatformInfo2::deviceNumber() const
+int PlatformInfo::deviceNumber() const
 {
     return p ? (int)p->devices.size() : 0;
 }
 
-void PlatformInfo2::getDevice(Device& device, int d) const
+void PlatformInfo::getDevice(Device& device, int d) const
 {
     CV_Assert(p && d < (int)p->devices.size() );
     if(p)
         device.set(p->devices[d]);
 }
 
-String PlatformInfo2::name() const
+String PlatformInfo::name() const
 {
     return p ? p->getStrProp(CL_PLATFORM_NAME) : String();
 }
 
-String PlatformInfo2::vendor() const
+String PlatformInfo::vendor() const
 {
     return p ? p->getStrProp(CL_PLATFORM_VENDOR) : String();
 }
 
-String PlatformInfo2::version() const
+String PlatformInfo::version() const
 {
     return p ? p->getStrProp(CL_PLATFORM_VERSION) : String();
 }
@@ -4082,13 +4082,13 @@ static void getPlatforms(std::vector<cl_platform_id>& platforms)
     CV_OclDbgAssert(clGetPlatformIDs(numPlatforms, &platforms[0], &numPlatforms) == CL_SUCCESS);
 }
 
-void getPlatfomsInfo(std::vector<PlatformInfo2>& platformsInfo)
+void getPlatfomsInfo(std::vector<PlatformInfo>& platformsInfo)
 {
     std::vector<cl_platform_id> platforms;
     getPlatforms(platforms);
 
     for (size_t i = 0; i < platforms.size(); i++)
-        platformsInfo.push_back( PlatformInfo2((void*)&platforms[i]) );
+        platformsInfo.push_back( PlatformInfo((void*)&platforms[i]) );
 }
 
 const char* typeToStr(int type)
@@ -4233,7 +4233,7 @@ struct Image2D::Impl
         format.image_channel_data_type = (cl_channel_type)channelType;
         format.image_channel_order = (cl_channel_order)channelOrder;
 
-        cl_context context = (cl_context)Context2::getDefault().ptr();
+        cl_context context = (cl_context)Context::getDefault().ptr();
         cl_command_queue queue = (cl_command_queue)Queue::getDefault().ptr();
 
 #ifdef CL_VERSION_1_2
