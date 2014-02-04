@@ -902,7 +902,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
     bool doDescriptors = _descriptors.needed();
 
     CV_Assert(!_img.empty() && CV_MAT_DEPTH(imgtype) == CV_8U && (imgcn == 1 || imgcn == 3 || imgcn == 4));
-    CV_Assert(_descriptors.needed() && !useProvidedKeypoints);
+    CV_Assert(_descriptors.needed() || !useProvidedKeypoints);
 
     if( ocl::useOpenCL() )
     {
