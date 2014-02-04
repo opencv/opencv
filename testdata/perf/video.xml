@@ -11853,7 +11853,7 @@
         1.</data></val></warpMat></TransformationType_findTransformECC--findTransformECC---MOTION_HOMOGRAPHY->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---0--false->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-4.2427430152893066e+000</min>
     <max>3.7857546806335449e+000</max>
@@ -11873,7 +11873,7 @@
       <val>-1.0222511738538742e-001</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---0--false->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---0--true->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-4.2427430152893066e+000</min>
     <max>3.7857503890991211e+000</max>
@@ -11892,7 +11892,7 @@
       <val>-1.2596534490585327e+000</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---0--true->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---OPTFLOW_FARNEBACK_GAUSSIAN--false->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-6.1924114227294922e+000</min>
     <max>2.3190116882324219e+001</max>
@@ -11911,7 +11911,7 @@
       <val>2.0592054352164268e-002</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---OPTFLOW_FARNEBACK_GAUSSIAN--false->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---OPTFLOW_FARNEBACK_GAUSSIAN--true->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-6.1924118995666504e+000</min>
     <max>2.3190116882324219e+001</max>
@@ -11931,7 +11931,7 @@
       <val>2.9493300244212151e-002</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---OPTFLOW_FARNEBACK_GAUSSIAN--true->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---0--false->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-4.6971688270568848e+000</min>
     <max>3.7517192363739014e+000</max>
@@ -11949,7 +11949,7 @@
       <val>-1.2645704746246338e+000</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---0--false->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---0--true->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-4.6971659660339355e+000</min>
     <max>3.7517185211181641e+000</max>
@@ -11968,7 +11968,7 @@
       <val>3.8192432373762131e-002</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---0--true->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---OPTFLOW_FARNEBACK_GAUSSIAN--false->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-7.1830286979675293e+000</min>
     <max>2.7344680786132813e+001</max>
@@ -11987,7 +11987,7 @@
       <val>-1.5618469715118408e+000</val></rng2></uFlow></OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---OPTFLOW_FARNEBACK_GAUSSIAN--false->
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---OPTFLOW_FARNEBACK_GAUSSIAN--true->
   <uFlow>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>-7.1830377578735352e+000</min>
     <max>2.7344680786132813e+001</max>
@@ -12009,7 +12009,7 @@
 
 <OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---1000->
   <uNextPts>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>1.8750000000000000e-001</min>
     <max>5.8027416992187500e+002</max>
@@ -12028,7 +12028,7 @@
       <val>2.2586695861816406e+002</val></rng2></uNextPts></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---1000->
 <OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---2000->
   <uNextPts>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>6.2500000000000000e-002</min>
     <max>5.8027416992187500e+002</max>
@@ -12047,7 +12047,7 @@
       <val>1.0502127075195312e+002</val></rng2></uNextPts></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---2000->
 <OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000->
   <uNextPts>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>13</type>
     <min>6.2500000000000000e-002</min>
     <max>5.8108105468750000e+002</max>
@@ -12069,7 +12069,7 @@
 
 <OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---1->
   <u_foreground>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>0</type>
     <min>0.</min>
     <max>0.</max>
@@ -12087,7 +12087,7 @@
       <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---1->
 <OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---3->
   <u_foreground>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>0</type>
     <min>0.</min>
     <max>0.</max>
@@ -12105,7 +12105,7 @@
       <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---3->
 <OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---1->
   <u_foreground>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>0</type>
     <min>0.</min>
     <max>0.</max>
@@ -12123,7 +12123,7 @@
       <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---1->
 <OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---3->
   <u_foreground>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>0</type>
     <min>0.</min>
     <max>0.</max>
@@ -12141,7 +12141,7 @@
       <val>0.</val></rng2></u_foreground></OCL_MOG2_Apply_Mog2--Mog2----gpu-video-1920x1080-avi---3->
 <OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-768x576-avi---3->
   <u_background>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>16</type>
     <min>0.</min>
     <max>255.</max>
@@ -12161,7 +12161,7 @@
       <val>109.</val></rng2></u_background></OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-768x576-avi---3->
 <OCL_MOG2_GetBackgroundImage_Mog2--Mog2----gpu-video-1920x1080-avi---3->
   <u_background>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>16</type>
     <min>0.</min>
     <max>255.</max>
@@ -12183,7 +12183,7 @@
 
 <OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--640x480>
   <mhi>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
     <max>1.</max>
@@ -12201,7 +12201,7 @@
       <val>0.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--640x480>
 <OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1280x720>
   <mhi>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
     <max>1.</max>
@@ -12219,7 +12219,7 @@
       <val>6.2380671501159668e-01</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1280x720>
 <OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1920x1080>
   <mhi>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
     <max>1.</max>
@@ -12237,7 +12237,7 @@
       <val>1.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--1920x1080>
 <OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--3840x2160>
   <mhi>
-    <kind>720896</kind>
+    <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
     <max>1.</max>
