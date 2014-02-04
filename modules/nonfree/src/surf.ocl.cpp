@@ -373,8 +373,8 @@ bool SURF_OCL::calcLayerDetAndTrace(int octave, int c_layer_rows)
     size_t localThreads[]  = {16, 16};
     size_t globalThreads[] =
     {
-        divUp(max_samples_j, localThreads[0]) *localThreads[0],
-        divUp(max_samples_i, localThreads[1]) *localThreads[1] *(nOctaveLayers + 2)
+        divUp(max_samples_j, (int)localThreads[0]) * localThreads[0],
+        divUp(max_samples_i, (int)localThreads[1]) * localThreads[1] * (nOctaveLayers + 2)
     };
     ocl::Kernel kerCalcDetTrace("SURF_calcLayerDetAndTrace", ocl::nonfree::surf_oclsrc, kerOpts);
     if(haveImageSupport)
@@ -405,8 +405,8 @@ bool SURF_OCL::findMaximaInLayer(int counterOffset, int octave,
     size_t localThreads[3]  = {16, 16};
     size_t globalThreads[3] =
     {
-        divUp(layer_cols - 2 * min_margin, localThreads[0] - 2) *localThreads[0],
-        divUp(layer_rows - 2 * min_margin, localThreads[1] - 2) *nOctaveLayers *localThreads[1]
+        divUp(layer_cols - 2 * min_margin, (int)localThreads[0] - 2) * localThreads[0],
+        divUp(layer_rows - 2 * min_margin, (int)localThreads[1] - 2) * nOctaveLayers * localThreads[1]
     };
 
     ocl::Kernel kerFindMaxima("SURF_findMaximaInLayer", ocl::nonfree::surf_oclsrc, kerOpts);
