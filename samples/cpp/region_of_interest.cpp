@@ -1,28 +1,14 @@
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <iostream>
 #include <stdio.h>
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
 using namespace cv;
 using namespace std;
 
-void help(void)
-{
-  cout<<"This program demonstrates how to set the Region of Interest in an image from a live-feed in OpenCV.\n\n";
-  cout<<"1.\t Usage ./roi <Camera index>. \n";
-  cout<<"2.\t ESC --> Quits the program. \n";
-  cout<<"3.\t 'g' --> Switch between grayscale and RGB outputs.\n";
-  cout<<"4.\t Adjust trackbars to position and resize the rectangle.\n\n\n";
-}
 
-Mat getROI(Mat &img, int l, int w, int x, int y)
-{
-  rectangle(img, Point(x,y), Point(x+l, y+w), Scalar(0), 2, 8, 0);
-  Rect ROI = Rect(x, y, l, w);
-  Mat roi = img(ROI);
-  
-  return roi;
-}
+void help(void);
+Mat getROI(Mat &, int, int, int, int);
 
 const char* keys =
 {
@@ -45,7 +31,6 @@ int main(int argc, char *argv[])
 
   if(!cap.isOpened())
     {
-      system("clear");
       help();
       cout<<"\n\nCannot Open Camera....\n";
       cout<<"Camera Index : "<<cam;
@@ -87,4 +72,22 @@ int main(int argc, char *argv[])
     }
   
   return 0;
+}
+
+void help(void)
+{
+  cout<<"This program demonstrates how to set the Region of Interest in an image from a live-feed in OpenCV.\n\n";
+  cout<<"1.\t Usage ./roi <Camera index>. \n";
+  cout<<"2.\t ESC --> Quits the program. \n";
+  cout<<"3.\t 'g' --> Switch between grayscale and RGB outputs.\n";
+  cout<<"4.\t Adjust trackbars to position and resize the rectangle.\n\n\n";
+}
+
+Mat getROI(Mat &img, int l, int w, int x, int y)
+{
+  rectangle(img, Point(x,y), Point(x+l, y+w), Scalar(0), 2, 8, 0);
+  Rect ROI = Rect(x, y, l, w);
+  Mat roi = img(ROI);
+  
+  return roi;
 }
