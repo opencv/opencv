@@ -78,6 +78,6 @@ Mat getROI(Mat &img, int l, int w, int x, int y)
     rectangle(img, Point(x,y), Point(x+l, y+w), Scalar(0), 2, 8, 0);
     Rect ROI = Rect(x, y, l, w);
     Mat roi = img(ROI);
-    
+
     return roi;
 }
