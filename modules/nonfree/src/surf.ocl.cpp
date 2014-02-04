@@ -209,30 +209,30 @@ bool SURF_OCL::setUpRight(UMat &keypoints)
 
 bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptors)
 {
-    int descriptorSize = params->descriptorSize();
+    int dsize = params->descriptorSize();
     int nFeatures = keypoints.cols;
     if (nFeatures == 0)
     {
         _descriptors.release();
         return true;
     }
-    _descriptors.create(nFeatures, descriptorSize, CV_32F);
+    _descriptors.create(nFeatures, dsize, CV_32F);
     UMat descriptors;
     if( _descriptors.isUMat() )
         descriptors = _descriptors.getUMat();
     else
-        descriptors.create(nFeatures, descriptorSize, CV_32F);
+        descriptors.create(nFeatures, dsize, CV_32F);
 
     ocl::Kernel kerCalcDesc, kerNormDesc;
 
-    if( descriptorSize == 64 )
+    if( dsize == 64 )
     {
         kerCalcDesc.create("SURF_computeDescriptors64", ocl::nonfree::surf_oclsrc, kerOpts);
         kerNormDesc.create("SURF_normalizeDescriptors64", ocl::nonfree::surf_oclsrc, kerOpts);
     }
     else
     {
-        CV_Assert(descriptorSize == 128);
+        CV_Assert(dsize == 128);
         kerCalcDesc.create("SURF_computeDescriptors128", ocl::nonfree::surf_oclsrc, kerOpts);
         kerNormDesc.create("SURF_normalizeDescriptors128", ocl::nonfree::surf_oclsrc, kerOpts);
     }
@@ -258,7 +258,7 @@ bool SURF_OCL::computeDescriptors(const UMat &keypoints, OutputArray _descriptor
     if(!kerCalcDesc.run(2, globalThreads, localThreads, true))
         return false;
 
-    size_t localThreads_n[] = {descriptorSize, 1};
+    size_t localThreads_n[] = {dsize, 1};
     size_t globalThreads_n[] = {nFeatures*localThreads_n[0], localThreads_n[1]};
 
     globalThreads[0] = nFeatures * localThreads[0];
