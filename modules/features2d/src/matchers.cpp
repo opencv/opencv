@@ -1617,9 +1617,11 @@ GenericDescriptorMatcher::GenericDescriptorMatcher()
 GenericDescriptorMatcher::~GenericDescriptorMatcher()
 {}
 
-void GenericDescriptorMatcher::add( const std::vector<Mat>& images,
+void GenericDescriptorMatcher::add( InputArrayOfArrays _images,
                                     std::vector<std::vector<KeyPoint> >& keypoints )
 {
+    std::vector<Mat> images;
+    _images.getMatVector(images);
     CV_Assert( !images.empty() );
     CV_Assert( images.size() == keypoints.size() );
 
@@ -1651,8 +1653,8 @@ void GenericDescriptorMatcher::clear()
 void GenericDescriptorMatcher::train()
 {}
 
-void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                         const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints ) const
+void GenericDescriptorMatcher::classify( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                         InputArray trainImage, std::vector<KeyPoint>& trainKeypoints ) const
 {
     std::vector<DMatch> matches;
     match( queryImage, queryKeypoints, trainImage, trainKeypoints, matches );
@@ -1662,7 +1664,7 @@ void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyP
         queryKeypoints[matches[i].queryIdx].class_id = trainKeypoints[matches[i].trainIdx].class_id;
 }
 
-void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints )
+void GenericDescriptorMatcher::classify( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints )
 {
     std::vector<DMatch> matches;
     match( queryImage, queryKeypoints, matches );
@@ -1672,10 +1674,11 @@ void GenericDescriptorMatcher::classify( const Mat& queryImage, std::vector<KeyP
         queryKeypoints[matches[i].queryIdx].class_id = trainPointCollection.getKeyPoint( matches[i].trainIdx, matches[i].trainIdx ).class_id;
 }
 
-void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                      const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+void GenericDescriptorMatcher::match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                      InputArray _trainImage, std::vector<KeyPoint>& trainKeypoints,
                                       std::vector<DMatch>& matches, const Mat& mask ) const
 {
+    Mat trainImage = _trainImage.getMat();
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
     std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
     tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
@@ -1683,10 +1686,11 @@ void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoin
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                         const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+void GenericDescriptorMatcher::knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                         InputArray _trainImage, std::vector<KeyPoint>& trainKeypoints,
                                          std::vector<std::vector<DMatch> >& matches, int knn, const Mat& mask, bool compactResult ) const
 {
+    Mat trainImage = _trainImage.getMat();
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
     std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
     tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
@@ -1694,11 +1698,12 @@ void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyP
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
-                                            const Mat& trainImage, std::vector<KeyPoint>& trainKeypoints,
+void GenericDescriptorMatcher::radiusMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
+                                            InputArray _trainImage, std::vector<KeyPoint>& trainKeypoints,
                                             std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                             const Mat& mask, bool compactResult ) const
 {
+    Mat trainImage = _trainImage.getMat();
     Ptr<GenericDescriptorMatcher> tempMatcher = clone( true );
     std::vector<std::vector<KeyPoint> > vecTrainPoints(1, trainKeypoints);
     tempMatcher->add( std::vector<Mat>(1, trainImage), vecTrainPoints );
@@ -1706,7 +1711,7 @@ void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, std::vector<K
     vecTrainPoints[0].swap( trainKeypoints );
 }
 
-void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void GenericDescriptorMatcher::match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                       std::vector<DMatch>& matches, const std::vector<Mat>& masks )
 {
     std::vector<std::vector<DMatch> > knnMatches;
@@ -1714,7 +1719,7 @@ void GenericDescriptorMatcher::match( const Mat& queryImage, std::vector<KeyPoin
     convertMatches( knnMatches, matches );
 }
 
-void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void GenericDescriptorMatcher::knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                          std::vector<std::vector<DMatch> >& matches, int knn,
                                          const std::vector<Mat>& masks, bool compactResult )
 {
@@ -1730,7 +1735,7 @@ void GenericDescriptorMatcher::knnMatch( const Mat& queryImage, std::vector<KeyP
     knnMatchImpl( queryImage, queryKeypoints, matches, knn, masks, compactResult );
 }
 
-void GenericDescriptorMatcher::radiusMatch( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void GenericDescriptorMatcher::radiusMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                             std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                             const std::vector<Mat>& masks, bool compactResult )
 {
@@ -1792,10 +1797,11 @@ VectorDescriptorMatcher::VectorDescriptorMatcher( const Ptr<DescriptorExtractor>
 VectorDescriptorMatcher::~VectorDescriptorMatcher()
 {}
 
-void VectorDescriptorMatcher::add( const std::vector<Mat>& imgCollection,
+void VectorDescriptorMatcher::add( InputArrayOfArrays _imgCollection,
                                    std::vector<std::vector<KeyPoint> >& pointCollection )
 {
-    std::vector<Mat> descriptors;
+    std::vector<Mat> imgCollection, descriptors;
+    _imgCollection.getMatVector(imgCollection);
     extractor->compute( imgCollection, pointCollection, descriptors );
 
     matcher->add( descriptors );
@@ -1820,7 +1826,7 @@ bool VectorDescriptorMatcher::isMaskSupported()
     return matcher->isMaskSupported();
 }
 
-void VectorDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void VectorDescriptorMatcher::knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                             std::vector<std::vector<DMatch> >& matches, int knn,
                                             const std::vector<Mat>& masks, bool compactResult )
 {
@@ -1829,7 +1835,7 @@ void VectorDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<K
     matcher->knnMatch( queryDescriptors, matches, knn, masks, compactResult );
 }
 
-void VectorDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void VectorDescriptorMatcher::radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                                std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                                const std::vector<Mat>& masks, bool compactResult )
 {

@@ -163,8 +163,9 @@ void SimpleBlobDetector::write( cv::FileStorage& fs ) const
     params.write(fs);
 }
 
-void SimpleBlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage, std::vector<Center> &centers) const
+void SimpleBlobDetector::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
+    Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     (void)image;
     centers.clear();
 
