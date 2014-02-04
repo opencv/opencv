@@ -433,6 +433,41 @@ int PCAFeatureMaps(CvLSVMFeatureMap *map)
     return LATENT_SVM_OK;
 }
 
+#ifdef HAVE_TBB
+struct FeaturePyramid {
+	
+	FeaturePyramid(IplImage* _image,
+	const float _step,
+	const int _startIndex,
+	const int _sideLength,
+	CvLSVMFeaturePyramid **_maps) :
+		image(_image),
+		step(_step),
+		startIndex(_startIndex),
+		sideLength(_sideLength),
+		maps(_maps)
+	{}
+
+	IplImage * image;
+	const float step;
+	const int startIndex;
+	const int sideLength;
+	CvLSVMFeaturePyramid **maps;
+
+	void operator()( const tbb::blocked_range<int>& range ) const {
+		for( int i=range.begin(); i!=range.end(); ++i ) {
+			CvLSVMFeatureMap *map;
+			float scale = 1.0f / powf(step, (float)i);
+			IplImage* scaleTmp = resize_opencv (image, scale);
+			getFeatureMaps(scaleTmp, sideLength, &map);
+			normalizeAndTruncate(map, VAL_OF_TRUNCATE);
+			PCAFeatureMaps(map);
+			(*maps)->pyramid[startIndex + i] = map;
+			cvReleaseImage(&scaleTmp);
+		}
+	}
+};
+#endif
 
 static int getPathOfFeaturePyramid(IplImage * image,
                             float step, int numStep, int startIndex,
@@ -440,16 +475,8 @@ static int getPathOfFeaturePyramid(IplImage * image,
 {
 #ifdef HAVE_TBB
 
-    tbb::parallel_for (size_t(0), size_t(numStep), [=](size_t i) {
-        CvLSVMFeatureMap *map;
-        float scale = 1.0f / powf(step, (float)i);
-        IplImage* scaleTmp = resize_opencv (image, scale);
-        getFeatureMaps(scaleTmp, sideLength, &map);
-        normalizeAndTruncate(map, VAL_OF_TRUNCATE);
-        PCAFeatureMaps(map);
-        (*maps)->pyramid[startIndex + i] = map;
-        cvReleaseImage(&scaleTmp);
-    });
+	FeaturePyramid fp(image, step, startIndex, sideLength, maps);
+	tbb::parallel_for( tbb::blocked_range<int>( 0, numStep ), fp );
 
 #else
 
