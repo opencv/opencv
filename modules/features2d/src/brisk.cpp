@@ -757,7 +757,7 @@ BRISK::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputArra
 }
 
 void
-BRISK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+    BRISK::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }
