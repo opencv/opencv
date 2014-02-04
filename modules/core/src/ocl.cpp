@@ -40,10 +40,47 @@
 //M*/
 
 #include "precomp.hpp"
+#include <list>
 #include <map>
 #include <string>
 #include <sstream>
 #include <iostream> // std::cerr
+
+#include "opencv2/core/bufferpool.hpp"
+#ifndef LOG_BUFFER_POOL
+# if 0
+#   define LOG_BUFFER_POOL printf
+# else
+#   define LOG_BUFFER_POOL(...)
+# endif
+#endif
+
+// TODO Move to some common place
+static size_t getConfigurationParameterForSize(const char* name, size_t defaultValue)
+{
+    const char* envValue = getenv(name);
+    if (envValue == NULL)
+    {
+        return defaultValue;
+    }
+    cv::String value = envValue;
+    size_t pos = 0;
+    for (; pos < value.size(); pos++)
+    {
+        if (!isdigit(value[pos]))
+            break;
+    }
+    cv::String valueStr = value.substr(0, pos);
+    cv::String suffixStr = value.substr(pos, value.length() - pos);
+    int v = atoi(valueStr.c_str());
+    if (suffixStr.length() == 0)
+        return v;
+    else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
+        return v * 1024 * 1024;
+    else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
+        return v * 1024;
+    CV_ErrorNoReturn(cv::Error::StsBadArg, cv::format("Invalid value for %s parameter: %s", name, value.c_str()));
+}
 
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
@@ -3234,8 +3271,208 @@ ProgramSource2::hash_t ProgramSource2::hash() const
 
 //////////////////////////////////////////// OpenCLAllocator //////////////////////////////////////////////////
 
+class OpenCLBufferPool
+{
+protected:
+    ~OpenCLBufferPool() { }
+public:
+    virtual cl_mem allocate(size_t size, CV_OUT size_t& capacity) = 0;
+    virtual void release(cl_mem handle, size_t capacity) = 0;
+};
+
+class OpenCLBufferPoolImpl : public BufferPoolController, public OpenCLBufferPool
+{
+public:
+    struct BufferEntry
+    {
+        cl_mem clBuffer_;
+        size_t capacity_;
+    };
+protected:
+    Mutex mutex_;
+
+    size_t currentReservedSize;
+    size_t maxReservedSize;
+
+    std::list<BufferEntry> reservedEntries_; // LRU order
+
+    // synchronized
+    bool _findAndRemoveEntryFromReservedList(CV_OUT BufferEntry& entry, const size_t size)
+    {
+        if (reservedEntries_.empty())
+            return false;
+        std::list<BufferEntry>::iterator i = reservedEntries_.begin();
+        std::list<BufferEntry>::iterator result_pos = reservedEntries_.end();
+        BufferEntry result = {NULL, 0};
+        size_t minDiff = (size_t)(-1);
+        for (; i != reservedEntries_.end(); ++i)
+        {
+            BufferEntry& e = *i;
+            if (e.capacity_ >= size)
+            {
+                size_t diff = e.capacity_ - size;
+                if (diff < size / 8 && (result_pos == reservedEntries_.end() || diff < minDiff))
+                {
+                    minDiff = diff;
+                    result_pos = i;
+                    result = e;
+                    if (diff == 0)
+                        break;
+                }
+            }
+        }
+        if (result_pos != reservedEntries_.end())
+        {
+            //CV_DbgAssert(result == *result_pos);
+            reservedEntries_.erase(result_pos);
+            entry = result;
+            currentReservedSize -= entry.capacity_;
+            return true;
+        }
+        return false;
+    }
+
+    // synchronized
+    void _checkSizeOfReservedEntries()
+    {
+        while (currentReservedSize > maxReservedSize)
+        {
+            CV_DbgAssert(!reservedEntries_.empty());
+            const BufferEntry& entry = reservedEntries_.back();
+            CV_DbgAssert(currentReservedSize >= entry.capacity_);
+            currentReservedSize -= entry.capacity_;
+            _releaseBufferEntry(entry);
+            reservedEntries_.pop_back();
+        }
+    }
+
+    inline size_t _allocationGranularity(size_t size)
+    {
+        // heuristic values
+        if (size < 1024)
+            return 16;
+        else if (size < 64*1024)
+            return 64;
+        else if (size < 1024*1024)
+            return 4096;
+        else if (size < 16*1024*1024)
+            return 64*1024;
+        else
+            return 1024*1024;
+    }
+
+    void _allocateBufferEntry(BufferEntry& entry, size_t size)
+    {
+        CV_DbgAssert(entry.clBuffer_ == NULL);
+        entry.capacity_ = alignSize(size, (int)_allocationGranularity(size));
+        Context2& ctx = Context2::getDefault();
+        cl_int retval = CL_SUCCESS;
+        entry.clBuffer_ = clCreateBuffer((cl_context)ctx.ptr(), CL_MEM_READ_WRITE, entry.capacity_, 0, &retval);
+        CV_Assert(retval == CL_SUCCESS);
+        CV_Assert(entry.clBuffer_ != NULL);
+        LOG_BUFFER_POOL("OpenCL allocate %lld (0x%llx) bytes: %p\n",
+                (long long)entry.capacity_, (long long)entry.capacity_, entry.clBuffer_);
+    }
+
+    void _releaseBufferEntry(const BufferEntry& entry)
+    {
+        CV_Assert(entry.capacity_ != 0);
+        CV_Assert(entry.clBuffer_ != NULL);
+        LOG_BUFFER_POOL("OpenCL release buffer: %p, %lld (0x%llx) bytes\n",
+                entry.clBuffer_, (long long)entry.capacity_, (long long)entry.capacity_);
+        clReleaseMemObject(entry.clBuffer_);
+    }
+public:
+    OpenCLBufferPoolImpl()
+        : currentReservedSize(0), maxReservedSize(0)
+    {
+        // Note: Buffer pool is disabled by default,
+        //       because we didn't receive significant performance improvement
+        maxReservedSize = getConfigurationParameterForSize("OPENCV_OPENCL_BUFFERPOOL_LIMIT", 0);
+    }
+    virtual ~OpenCLBufferPoolImpl()
+    {
+        freeAllReservedBuffers();
+        CV_Assert(reservedEntries_.empty());
+    }
+public:
+    virtual cl_mem allocate(size_t size, CV_OUT size_t& capacity)
+    {
+        BufferEntry entry = {NULL, 0};
+        if (maxReservedSize > 0)
+        {
+            AutoLock locker(mutex_);
+            if (_findAndRemoveEntryFromReservedList(entry, size))
+            {
+                CV_DbgAssert(size <= entry.capacity_);
+                LOG_BUFFER_POOL("Reuse reserved buffer: %p\n", entry.clBuffer_);
+                capacity = entry.capacity_;
+                return entry.clBuffer_;
+            }
+        }
+        _allocateBufferEntry(entry, size);
+        capacity = entry.capacity_;
+        return entry.clBuffer_;
+    }
+    virtual void release(cl_mem handle, size_t capacity)
+    {
+        BufferEntry entry = {handle, capacity};
+        if (maxReservedSize == 0 || entry.capacity_ > maxReservedSize / 8)
+        {
+            _releaseBufferEntry(entry);
+        }
+        else
+        {
+            AutoLock locker(mutex_);
+            reservedEntries_.push_front(entry);
+            currentReservedSize += entry.capacity_;
+            _checkSizeOfReservedEntries();
+        }
+    }
+
+    virtual size_t getReservedSize() const { return currentReservedSize; }
+    virtual size_t getMaxReservedSize() const { return maxReservedSize; }
+    virtual void setMaxReservedSize(size_t size)
+    {
+        AutoLock locker(mutex_);
+        size_t oldMaxReservedSize = maxReservedSize;
+        maxReservedSize = size;
+        if (maxReservedSize < oldMaxReservedSize)
+        {
+            std::list<BufferEntry>::iterator i = reservedEntries_.begin();
+            for (; i != reservedEntries_.end();)
+            {
+                const BufferEntry& entry = *i;
+                if (entry.capacity_ > maxReservedSize / 8)
+                {
+                    CV_DbgAssert(currentReservedSize >= entry.capacity_);
+                    currentReservedSize -= entry.capacity_;
+                    _releaseBufferEntry(entry);
+                    i = reservedEntries_.erase(i);
+                    continue;
+                }
+                ++i;
+            }
+            _checkSizeOfReservedEntries();
+        }
+    }
+    virtual void freeAllReservedBuffers()
+    {
+        AutoLock locker(mutex_);
+        std::list<BufferEntry>::const_iterator i = reservedEntries_.begin();
+        for (; i != reservedEntries_.end(); ++i)
+        {
+            const BufferEntry& entry = *i;
+            _releaseBufferEntry(entry);
+        }
+        reservedEntries_.clear();
+    }
+};
+
+
 class OpenCLAllocator : public MatAllocator
 {
+    mutable OpenCLBufferPoolImpl bufferPool;
 public:
     OpenCLAllocator() { matStdAllocator = Mat::getStdAllocator(); }
 
@@ -3274,17 +3511,18 @@ public:
         int createFlags = 0, flags0 = 0;
         getBestFlags(ctx, flags, createFlags, flags0);
 
-        cl_int retval = 0;
-        void* handle = clCreateBuffer((cl_context)ctx.ptr(),
-                                      createFlags, total, 0, &retval);
-        if( !handle || retval != CL_SUCCESS )
+        CV_Assert(createFlags == CL_MEM_READ_WRITE);
+        size_t capacity = 0;
+        void* handle = bufferPool.allocate(total, capacity);
+        if (!handle)
             return defaultAllocate(dims, sizes, type, data, step, flags);
         UMatData* u = new UMatData(this);
         u->data = 0;
         u->size = total;
+        u->capacity = capacity;
         u->handle = handle;
         u->flags = flags0;
-
+        CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency
         return u;
     }
 
@@ -3405,8 +3643,9 @@ public:
                 fastFree(u->data);
                 u->data = 0;
             }
-            clReleaseMemObject((cl_mem)u->handle);
+            bufferPool.release((cl_mem)u->handle, u->capacity);
             u->handle = 0;
+            u->capacity = 0;
             delete u;
         }
     }
@@ -3712,6 +3951,8 @@ public:
             CV_OclDbgAssert(clFinish(q) == CL_SUCCESS);
         }
     }
+
+    BufferPoolController* getBufferPoolController() const { return &bufferPool; }
 
     MatAllocator* matStdAllocator;
 };
