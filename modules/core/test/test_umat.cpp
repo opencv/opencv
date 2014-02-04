@@ -291,3 +291,31 @@ TEST(UMat, setOpenCL)
     // reset state to the previous one
     ocl::setUseOpenCL(useOCL);
 }
+
+TEST(UMat, BufferPoolGrowing)
+{
+#ifdef _DEBUG
+    const int ITERATIONS = 100;
+#else
+    const int ITERATIONS = 200;
+#endif
+    const Size sz(1920, 1080);
+    BufferPoolController* c = ocl::getOpenCLAllocator()->getBufferPoolController();
+    if (c)
+    {
+        size_t oldMaxReservedSize = c->getMaxReservedSize();
+        c->freeAllReservedBuffers();
+        c->setMaxReservedSize(sz.area() * 10);
+        for (int i = 0; i < ITERATIONS; i++)
+        {
+            UMat um(Size(sz.width + i, sz.height + i), CV_8UC1);
+            UMat um2(Size(sz.width + 2 * i, sz.height + 2 * i), CV_8UC1);
+        }
+        c->setMaxReservedSize(oldMaxReservedSize);
+        c->freeAllReservedBuffers();
+    }
+    else
+    {
+        std::cout << "Skipped, no OpenCL" << std::endl;
+    }
+}
