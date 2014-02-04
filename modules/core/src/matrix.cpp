@@ -199,7 +199,6 @@ public:
     bool allocate(UMatData* u, int /*accessFlags*/) const
     {
         if(!u) return false;
-        CV_XADD(&u->urefcount, 1);
         return true;
     }
 

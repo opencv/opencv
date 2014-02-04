@@ -3112,8 +3112,7 @@ UMat::UMat(const UMat& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
 u(m.u), offset(m.offset), size(&rows)
 {
-    if( u )
-        CV_XADD(&(u->urefcount), 1);
+    addref();
     if( m.dims <= 2 )
     {
         step[0] = m.step[0]; step[1] = m.step[1];
@@ -3148,8 +3147,7 @@ UMat& UMat::operator = (const UMat& m)
 {
     if( this != &m )
     {
-        if( m.u )
-            CV_XADD(&(m.u->urefcount), 1);
+        const_cast<UMat&>(m).addref();
         release();
         flags = m.flags;
         if( dims <= 2 && m.dims <= 2 )
