@@ -191,8 +191,13 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 {
     matchTemplate(_image, _templ, _result, CV_TM_CCORR);
 
-    UMat image_sums;
-    integral(_image, image_sums);
+    UMat image_sums, temp;
+    integral(_image, temp);
+
+    if(temp.depth() == CV_64F)
+        temp.convertTo(image_sums, CV_32F);
+    else
+        image_sums = temp;
 
     int type = image_sums.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
