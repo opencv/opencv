@@ -142,11 +142,6 @@ inline int idx_row_high(const int y, const int last_row)
     return abs(last_row - abs(last_row - y)) % (last_row + 1);
 }
 
-inline int idx_row(const int y, const int last_row)
-{
-    return idx_row_low(idx_row_high(y, last_row), last_row);
-}
-
 inline int idx_col_low(const int x, const int last_col)
 {
     return abs(x) % (last_col + 1);
