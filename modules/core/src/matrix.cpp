@@ -221,8 +221,8 @@ public:
 
 MatAllocator* Mat::getStdAllocator()
 {
-    static StdMatAllocator allocator;
-    return &allocator;
+    static MatAllocator * allocator = new StdMatAllocator();
+    return allocator;
 }
 
 void swap( Mat& a, Mat& b )
