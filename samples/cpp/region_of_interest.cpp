@@ -50,13 +50,13 @@ int main()
             imshow("Region of interest", roi);
 
         imshow("Main", img);
-        ch = waitKey(1);
+        ch = (char)waitKey(1);
         if(ch == 'g' || ch == 'G')
         {
             if(gray)
-            	gray = !gray;
+                gray = !gray;
             else if(!gray)
-            	gray = !gray;
+                gray = !gray;
         }
         else if(ch=='q'||ch=='Q')
             break;
