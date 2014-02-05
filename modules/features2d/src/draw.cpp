@@ -88,7 +88,7 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
     }
 }
 
-void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray& outImage,
+void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
                     const Scalar& _color, int flags )
 {
     if( !(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
@@ -143,7 +143,7 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
         outImg = Scalar::all(0);
         outImg1 = outImg( Rect(0, 0, img1size.width, img1size.height) );
         outImg2 = outImg( Rect(img1size.width, 0, img2size.width, img2size.height) );
-        printf("%d  %d\n", _outImg.size().width, _outImg.size().height);
+
         if( img1.type() == CV_8U )
             cvtColor( img1, outImg1, COLOR_GRAY2BGR );
         else

@@ -297,7 +297,8 @@ void FREAK::computeImpl( InputArray _image, std::vector<KeyPoint>& keypoints, Ou
     if( !extAll )
     {
         // extract the best comparisons only
-        Mat(cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U)).copyTo(_descriptors);
+        _descriptors.create((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
+        _descriptors.setTo(Scalar::all(0));
         Mat descriptors = _descriptors.getMat();
 #if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
@@ -416,7 +417,8 @@ void FREAK::computeImpl( InputArray _image, std::vector<KeyPoint>& keypoints, Ou
     }
     else // extract all possible comparisons for selection
     {
-        Mat(cv::Mat::zeros((int)keypoints.size(), 128, CV_8U)).copyTo(_descriptors);
+        _descriptors.create((int)keypoints.size(), 128, CV_8U);
+        _descriptors.setTo(Scalar::all(0));
         Mat descriptors = _descriptors.getMat();
         std::bitset<1024>* ptr = (std::bitset<1024>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 
