@@ -6,6 +6,7 @@ project(${TIFF_LIBRARY})
 
 include(CheckFunctionExists)
 include(CheckIncludeFile)
+include(TestBigEndian)
 
 check_include_file(assert.h HAVE_ASSERT_H)
 check_include_file(fcntl.h HAVE_FCNTL_H)
@@ -16,6 +17,7 @@ check_include_file(search.h HAVE_SEARCH_H)
 check_include_file(string.h HAVE_STRING_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
+test_big_endian(HOST_BIGENDIAN)
 
 if(WIN32 AND NOT HAVE_WINRT)
   set(USE_WIN32_FILEIO 1)
