@@ -3900,7 +3900,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
         return false;
 
     const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
-    ocl::ProgramSource2 program = op_type == OCL_OP_AFFINE ?
+    ocl::ProgramSource program = op_type == OCL_OP_AFFINE ?
                 ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 

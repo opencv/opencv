@@ -51,15 +51,15 @@ CV_EXPORTS bool useOpenCL();
 CV_EXPORTS bool haveAmdBlas();
 CV_EXPORTS bool haveAmdFft();
 CV_EXPORTS void setUseOpenCL(bool flag);
-CV_EXPORTS void finish2();
+CV_EXPORTS void finish();
 
-class CV_EXPORTS Context2;
+class CV_EXPORTS Context;
 class CV_EXPORTS Device;
 class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
-class CV_EXPORTS ProgramSource2;
+class CV_EXPORTS ProgramSource;
 class CV_EXPORTS Queue;
-class CV_EXPORTS PlatformInfo2;
+class CV_EXPORTS PlatformInfo;
 class CV_EXPORTS Image2D;
 
 class CV_EXPORTS Device
@@ -206,26 +206,26 @@ protected:
 };
 
 
-class CV_EXPORTS Context2
+class CV_EXPORTS Context
 {
 public:
-    Context2();
-    explicit Context2(int dtype);
-    ~Context2();
-    Context2(const Context2& c);
-    Context2& operator = (const Context2& c);
+    Context();
+    explicit Context(int dtype);
+    ~Context();
+    Context(const Context& c);
+    Context& operator = (const Context& c);
 
     bool create();
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
-    Program getProg(const ProgramSource2& prog,
+    Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
 
-    static Context2& getDefault(bool initialize = true);
+    static Context& getDefault(bool initialize = true);
     void* ptr() const;
 
-    friend void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 protected:
     struct Impl;
     Impl* p;
@@ -242,25 +242,25 @@ public:
     void* ptr() const;
     static Platform& getDefault();
 
-    friend void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 protected:
     struct Impl;
     Impl* p;
 };
 
 // TODO Move to internal header
-void initializeContextFromHandle(Context2& ctx, void* platform, void* context, void* device);
+void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
 public:
     Queue();
-    explicit Queue(const Context2& c, const Device& d=Device());
+    explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
 
-    bool create(const Context2& c=Context2(), const Device& d=Device());
+    bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
     void* ptr() const;
     static Queue& getDefault();
@@ -314,7 +314,7 @@ class CV_EXPORTS Kernel
 public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
-    Kernel(const char* kname, const ProgramSource2& prog,
+    Kernel(const char* kname, const ProgramSource& prog,
            const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
@@ -322,7 +322,7 @@ public:
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
-    bool create(const char* kname, const ProgramSource2& prog,
+    bool create(const char* kname, const ProgramSource& prog,
                 const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
@@ -508,7 +508,7 @@ class CV_EXPORTS Program
 {
 public:
     Program();
-    Program(const ProgramSource2& src,
+    Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     explicit Program(const String& buf);
     Program(const Program& prog);
@@ -516,12 +516,12 @@ public:
     Program& operator = (const Program& prog);
     ~Program();
 
-    bool create(const ProgramSource2& src,
+    bool create(const ProgramSource& src,
                 const String& buildflags, String& errmsg);
     bool read(const String& buf, const String& buildflags);
     bool write(String& buf) const;
 
-    const ProgramSource2& source() const;
+    const ProgramSource& source() const;
     void* ptr() const;
 
     String getPrefix() const;
@@ -533,17 +533,17 @@ protected:
 };
 
 
-class CV_EXPORTS ProgramSource2
+class CV_EXPORTS ProgramSource
 {
 public:
     typedef uint64 hash_t;
 
-    ProgramSource2();
-    explicit ProgramSource2(const String& prog);
-    explicit ProgramSource2(const char* prog);
-    ~ProgramSource2();
-    ProgramSource2(const ProgramSource2& prog);
-    ProgramSource2& operator = (const ProgramSource2& prog);
+    ProgramSource();
+    explicit ProgramSource(const String& prog);
+    explicit ProgramSource(const char* prog);
+    ~ProgramSource();
+    ProgramSource(const ProgramSource& prog);
+    ProgramSource& operator = (const ProgramSource& prog);
 
     const String& source() const;
     hash_t hash() const;
@@ -553,15 +553,15 @@ protected:
     Impl* p;
 };
 
-class CV_EXPORTS PlatformInfo2
+class CV_EXPORTS PlatformInfo
 {
 public:
-    PlatformInfo2();
-    explicit PlatformInfo2(void* id);
-    ~PlatformInfo2();
+    PlatformInfo();
+    explicit PlatformInfo(void* id);
+    ~PlatformInfo();
 
-    PlatformInfo2(const PlatformInfo2& i);
-    PlatformInfo2& operator =(const PlatformInfo2& i);
+    PlatformInfo(const PlatformInfo& i);
+    PlatformInfo& operator =(const PlatformInfo& i);
 
     String name() const;
     String vendor() const;
@@ -578,7 +578,7 @@ CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
-CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo2>& platform_info);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
 
 class CV_EXPORTS Image2D
 {

@@ -235,7 +235,7 @@ public:
 
     // Compute the BRISK features and descriptors on an image
     void operator()( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
-                      OutputArray descriptors, bool useProvidedKeypoints=false ) const;
+                     OutputArray descriptors, bool useProvidedKeypoints=false ) const;
 
     AlgorithmInfo* info() const;
 

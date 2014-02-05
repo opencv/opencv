@@ -407,8 +407,7 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
 
-    if (((channels != 1) && (channels != 2) && (channels != 4))
-        || (borderType != BORDER_DEFAULT))
+    if ((channels != 1 && channels != 2 && channels != 4) || borderType != BORDER_DEFAULT)
         return false;
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
@@ -425,18 +424,16 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
     _dst.create( dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    const char * const kernelName = "pyrDown";
-    ocl::ProgramSource2 program = ocl::imgproc::pyr_down_oclsrc;
-    ocl::Kernel k;
-
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
     char cvt[2][50];
-    k.create(kernelName, program,
+    ocl::Kernel k("pyrDown", ocl::imgproc::pyr_down_oclsrc,
                  format("-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s",
                  ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
                  ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
                  ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
                  doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
 
@@ -449,12 +446,11 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
 
-    if (((channels != 1) && (channels != 2) && (channels != 4))
-        || (borderType != BORDER_DEFAULT))
+    if ((channels != 1 && channels != 2 && channels != 4) || borderType != BORDER_DEFAULT)
         return false;
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    if ((depth == CV_64F) && !(doubleSupport))
+    if (depth == CV_64F && !doubleSupport)
         return false;
 
     Size ssize = _src.size();
@@ -466,18 +462,16 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     _dst.create( dsize, src.type() );
     UMat dst = _dst.getUMat();
 
-    const char * const kernelName = "pyrUp";
-    ocl::ProgramSource2 program = ocl::imgproc::pyr_up_oclsrc;
-    ocl::Kernel k;
-
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
     char cvt[2][50];
-    k.create(kernelName, program,
+    ocl::Kernel k("pyrUp", ocl::imgproc::pyr_up_oclsrc,
                  format("-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s",
                  ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
                  ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
                  ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
                  doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst));
     size_t globalThreads[2] = {dst.cols, dst.rows};
