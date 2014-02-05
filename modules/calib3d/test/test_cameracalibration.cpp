@@ -1733,7 +1733,7 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
 
     return cvStereoCalibrate(&_objPt, &_imgPt, &_imgPt2, &_npoints, &_cameraMatrix1,
         &_distCoeffs1, &_cameraMatrix2, &_distCoeffs2, imageSize,
-        &matR, &matT, &matE, &matF, criteria, flags );
+        &matR, &matT, &matE, &matF, flags, criteria );
 }
 
 void CV_StereoCalibrationTest_C::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
@@ -1830,7 +1830,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
 {
     return stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
                     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-                    imageSize, R, T, E, F, criteria, flags );
+                    imageSize, R, T, E, F, flags, criteria );
 }
 
 void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
