@@ -42,7 +42,7 @@ Abstract interface for extracting and matching a keypoint descriptor. There are 
 
         void classify( InputArray queryImage,
                        vector<KeyPoint>& queryKeypoints,
-                       const Mat& trainImage,
+                       InputArray trainImage,
                        vector<KeyPoint>& trainKeypoints ) const;
         void classify( InputArray queryImage,
                        vector<KeyPoint>& queryKeypoints );
@@ -142,7 +142,7 @@ GenericDescriptorMatcher::classify
 --------------------------------------
 Classifies keypoints from a query set.
 
-.. ocv:function:: void GenericDescriptorMatcher::classify(  InputArray queryImage,           vector<KeyPoint>& queryKeypoints,           const Mat& trainImage,           vector<KeyPoint>& trainKeypoints ) const
+.. ocv:function:: void GenericDescriptorMatcher::classify(  InputArray queryImage,           vector<KeyPoint>& queryKeypoints,           InputArray trainImage,           vector<KeyPoint>& trainKeypoints ) const
 
 .. ocv:function:: void GenericDescriptorMatcher::classify( InputArray queryImage,           vector<KeyPoint>& queryKeypoints )
 
