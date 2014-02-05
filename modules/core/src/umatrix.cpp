@@ -551,14 +551,6 @@ int UMat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) co
     ? (int)(total()*channels()/_elemChannels) : -1;
 }
 
-
-UMat UMat::cross(InputArray) const
-{
-    CV_Error(CV_StsNotImplemented, "");
-    return UMat();
-}
-
-
 UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 {
     if(_newndims == dims)
@@ -819,6 +811,8 @@ UMat UMat::mul(InputArray m, double scale) const
     return dst;
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 {
     int type = _src1.type(), depth = CV_MAT_DEPTH(type);
@@ -860,6 +854,8 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     }
     return false;
 }
+
+#endif
 
 double UMat::dot(InputArray m) const
 {
