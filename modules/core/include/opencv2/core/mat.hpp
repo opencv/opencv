@@ -1222,8 +1222,6 @@ public:
     //! per-element matrix multiplication by means of matrix expressions
     UMat mul(InputArray m, double scale=1) const;
 
-    //! computes cross-product of 2 3D vectors
-    UMat cross(InputArray m) const;
     //! computes dot-product
     double dot(InputArray m) const;
 
