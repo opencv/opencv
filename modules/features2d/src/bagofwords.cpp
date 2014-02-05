@@ -140,7 +140,7 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
     return vocabulary;
 }
 
-void BOWImgDescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, InputOutputArray imgDescriptor,
+void BOWImgDescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
                                          std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* descriptors )
 {
     imgDescriptor.release();
@@ -170,7 +170,7 @@ int BOWImgDescriptorExtractor::descriptorType() const
     return CV_32FC1;
 }
 
-void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, InputOutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
+void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
     CV_Assert( vocabulary.empty() != false );
 
