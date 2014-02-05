@@ -83,9 +83,9 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   file(GLOB_RECURSE cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 
-  if(NOT HAVE_OPENGL)
-    ocv_list_filterout(cpp_samples Qt_sample)
-  endif()
+  ocv_list_filterout(cpp_samples Qt_sample)
+  add_subdirectory(Qt_sample)
+
 
   if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_cudafilters)
     ocv_list_filterout(cpp_samples "/gpu/")

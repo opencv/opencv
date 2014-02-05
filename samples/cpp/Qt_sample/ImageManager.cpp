@@ -2,6 +2,7 @@
 #include "Gui.h"
 #include <sstream>
 #include <iostream>
+#include <opencv2/imgproc/imgproc_c.h>
 
 #define TRHREASHOLD_BIN 57.
 
