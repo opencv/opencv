@@ -187,7 +187,8 @@ void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, InputOu
         pointIdxsOfClusters->resize(clusterCount);
     }
 
-    Mat( 1, clusterCount, descriptorType(), Scalar::all(0.0) ).copyTo(_imgDescriptor);
+    _imgDescriptor.create(1, clusterCount, descriptorType());
+    _imgDescriptor.setTo(Scalar::all(0));
 
     Mat imgDescriptor = _imgDescriptor.getMat();
 
