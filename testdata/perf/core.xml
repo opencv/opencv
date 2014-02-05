@@ -50179,4 +50179,126 @@
       <x>0</x>
       <y>1337</y>
       <val>-1.7697904258966446e-02</val></rng2></dst></OCL_ReduceAccFixture_Reduce--Reduce---3840x2160---32FC1--32FC1---1--CV_REDUCE_AVG->
+ <!-- resumed -->
+
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.9880413160000000e+09</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.0665645933062069e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9955408034000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC4->
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -7.3057052849737275e+01</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC4->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4956196059000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.1556854393840847e+01</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.9923192454000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC4->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -5.1020229338815147e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC4->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.3658239721000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC1->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -2.9753100860052837e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC1->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3473366406100000e+11</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC4->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC4->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -3.5295096351023938e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC4->
 </opencv_storage>
