@@ -1518,9 +1518,9 @@ public:
 
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const;
-    void compute( InputArray image, std::vector<KeyPoint>& keypoints, InputOutputArray imgDescriptor,
+    void compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
-    void compute( InputArray keypointDescriptors, InputOutputArray imgDescriptor,
+    void compute( InputArray keypointDescriptors, OutputArray imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 

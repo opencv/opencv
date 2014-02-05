@@ -109,7 +109,7 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const String& descriptorExt
 }
 
 
-CV_WRAP void Feature2D::compute( InputArray image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT OutputArray descriptors ) const
+CV_WRAP void Feature2D::compute( InputArray image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 {
    DescriptorExtractor::compute(image, keypoints, descriptors);
 }
