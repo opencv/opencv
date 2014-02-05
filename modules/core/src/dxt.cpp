@@ -1545,7 +1545,7 @@ class PlanCache
             clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
             // TODO remove all plans if context changed
-            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context2::getDefault().ptr(), dim, clLengthsIn))
+            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
 
             // setting plan properties
             CLAMDDFT_Assert(clAmdFftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
@@ -1560,8 +1560,8 @@ class PlanCache
             CLAMDDFT_Assert(clAmdFftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
 
             // ready to bake
-            cl_command_queue commandQueue = (cl_command_queue)ocl::Queue::getDefault().ptr();
-            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &commandQueue, NULL, NULL))
+            cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, NULL, NULL))
         }
 
         ~FftPlan()
@@ -1593,7 +1593,7 @@ public:
     clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
                                      bool inplace, int flags, FftType fftType)
     {
-        cl_context currentContext = (cl_context)ocl::Context2::getDefault().ptr();
+        cl_context currentContext = (cl_context)ocl::Context::getDefault().ptr();
 
         for (size_t i = 0, size = planStorage.size(); i < size; i ++)
         {
@@ -1704,11 +1704,11 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags)
     cl_mem srcarg = (cl_mem)src.handle(ACCESS_READ);
     cl_mem dstarg = (cl_mem)dst.handle(ACCESS_RW);
 
-    cl_command_queue commandQueue = (cl_command_queue)ocl::Queue::getDefault().ptr();
+    cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
     cl_event e = 0;
 
     CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
-                                       1, &commandQueue, 0, NULL, &e,
+                                       1, &queue, 0, NULL, &e,
                                        &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
 
     tmpBuffer.addref();
