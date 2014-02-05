@@ -391,6 +391,7 @@ TEST(Highgui_Jpeg, encode_empty)
 #define uint64 uint64_hack_
 #define int64 int64_hack_
 #include "tiff.h"
+#include "tiffio.h"
 
 TEST(Highgui_Tiff, decode_tile16384x16384)
 {
@@ -408,8 +409,8 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
 
     try
     {
-        cv::imread(file3);
-        EXPECT_NO_THROW(cv::imread(file4));
+        cv::imread(file3, CV_LOAD_IMAGE_UNCHANGED);
+        EXPECT_NO_THROW(cv::imread(file4, CV_LOAD_IMAGE_UNCHANGED));
     }
     catch(const std::bad_alloc&)
     {
@@ -419,4 +420,46 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
     remove(file3.c_str());
     remove(file4.c_str());
 }
+
+TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
+{
+    // see issue #2601 "16-bit Grayscale TIFF Load Failures Due to Buffer Underflow and Endianness"
+
+    // Write a small 16-bit TIFF file in both endian formats and check imread() can correctly read it back.
+    // libtiff's TIFFOpen() can force the endianness of the TIFF file using "b" (big) and "l" (little) mode flags.
+
+    const char* tiff_write_mode[2] = { "wb", "wl" };
+
+    for (int i = 0; i < 2; i++)
+    {
+        // TIFFWriteEncodedStrip() can modify its buffer argument so initialize buffer each iteration
+        uint16_t buffer[] = { 0xDEAD, 0xBEEF };
+
+        string filename = cv::tempfile(".tiff");
+
+        TIFF* tif = TIFFOpen(filename.c_str(), tiff_write_mode[i]);
+        ASSERT_TRUE(tif);
+
+        TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, 2);
+        TIFFSetField(tif, TIFFTAG_IMAGELENGTH, 1);
+        TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 16);
+        TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+        TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+        TIFFWriteEncodedStrip(tif, 0, buffer, sizeof(buffer));
+        TIFFClose(tif);
+
+        Mat img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+
+        ASSERT_EQ(img.rows, 1);
+        ASSERT_EQ(img.cols, 2);
+        ASSERT_EQ(img.type(), CV_16U);
+        ASSERT_EQ(img.elemSize(), 2);
+        ASSERT_EQ(img.channels(), 1);
+        ASSERT_EQ(img.at<uint16_t>(0,0), 0xDEAD);
+        ASSERT_EQ(img.at<uint16_t>(0,1), 0xBEEF);
+
+        remove(filename.c_str());
+    }
+}
+
 #endif
