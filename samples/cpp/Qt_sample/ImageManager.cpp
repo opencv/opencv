@@ -12,7 +12,7 @@ using namespace cv;
 
 ImageManager::ImageManager(string videoPath)
 {
-    this->m_thread =	new QThread();
+    this->m_thread =####new QThread();
 
 
     // detect if the string represents a number or a string (ie input id or video path)
@@ -100,13 +100,13 @@ QImage ImageManager::Mat2QImage(const cv::Mat img)
         case CV_8UC3:
             cvtColor(img, _tmp, CV_BGR2RGB);
             break;
-	default:
+####default:
       cerr << "ImageManager : unknown format" << endl;
-	  break;
+####  break;
         }
         assert(_tmp.isContinuous());
     // create the coresponding QImage
-	QImage i(_tmp.data, _tmp.cols, _tmp.rows, _tmp.step, QImage::Format_RGB888);
+####QImage i(_tmp.data, _tmp.cols, _tmp.rows, _tmp.step, QImage::Format_RGB888);
 
     // return copy as i will be deleted add the end of the function
     return i.copy();

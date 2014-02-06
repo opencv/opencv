@@ -15,32 +15,32 @@ class ImageManager : public QObject
 {
 Q_OBJECT
 private:
-	cv::VideoCapture *m_videoCapture;
-	
-	// thread within which the image processing will be done
-	QThread *m_thread;
-	
-	cv::Mat m_currentImage;
+####cv::VideoCapture *m_videoCapture;
+####
+####// thread within which the image processing will be done
+####QThread *m_thread;
+####
+####cv::Mat m_currentImage;
 public:
-	// constructor. string can be any parameter understandable by cv::VideoCapture::open
+####// constructor. string can be any parameter understandable by cv::VideoCapture::open
     ImageManager(std::string _videoFile);
-	// start processing
-	void start();
-	// stop processing
-	void stop();
-	
-	//return curent image
-	cv::Mat getCurrentImage();
-	
-	// convert cv::Mat to QImage
-	QImage Mat2QImage(const cv::Mat img);
+####// start processing
+####void start();
+####// stop processing
+####void stop();
+####
+####//return curent image
+####cv::Mat getCurrentImage();
+####
+####// convert cv::Mat to QImage
+####QImage Mat2QImage(const cv::Mat img);
 public slots:
   // function wich will be execute within the new thread context
   void process();
   
   
   signals:
-	 // sending image updates to other threads (such as HMI)
+#### // sending image updates to other threads (such as HMI)
      void log(std::string _name, QImage _image);
 };
 
