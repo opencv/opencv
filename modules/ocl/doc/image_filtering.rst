@@ -499,37 +499,6 @@ Returns void
 
 Applies bilateral filter to the image. Supports 8UC1 8UC4 data types.
 
-ocl::adaptiveBilateralFilter
---------------------------------
-Returns void
-
-.. ocv:function:: void ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double maxSigmaColor = 20.0, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT)
-
-    :param src: The source image
-
-    :param dst: The destination image; will have the same size and the same type as src
-
-    :param ksize: The kernel size. This is the neighborhood where the local variance will be calculated, and where pixels will contribute (in a weighted manner).
-
-    :param sigmaSpace: Filter sigma in the coordinate space. Larger value of the parameter means that farther pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
-
-    :param maxSigmaColor: Maximum allowed sigma color (will clamp the value calculated in the ksize neighborhood. Larger value of the parameter means that more dissimilar pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
-
-    :param borderType: Pixel extrapolation method.
-
-A main part of our strategy will be to load each raw pixel once, and reuse it to calculate all pixels in the output (filtered) image that need this pixel value. The math of the filter is that of the usual bilateral filter, except that the sigma color is calculated in the neighborhood, and clamped by the optional input value.
-
-Local memory organization
-
-
-.. image:: images/adaptiveBilateralFilter.jpg
-                 :height: 250pt
-                 :width:  350pt
-                 :alt: Introduction Icon
-
-.. note:: We partition the image to non-overlapping blocks of size (Ux, Uy). Each such block will correspond to the pixel locations where we will calculate the filter result in one workgroup. Considering neighbourhoods of sizes (kx, ky), where kx = 2 dx + 1, and ky = 2 dy + 1 (in image ML, dx = dy = 1, and kx = ky = 3), it is clear that we need to load data of size Wx = Ux + 2 dx, Wy = Uy + 2 dy. Furthermore, if (Sx, Sy) is the top left pixel coordinates for a particular block, and (Sx + Ux - 1, Sy + Uy -1) is to botom right coordinate of the block, we need to load data starting at top left coordinate (PSx, PSy) = (Sx - dx, Sy - dy), and ending at bottom right coordinate (Sx + Ux - 1 + dx, Sy + Uy - 1 + dy). The workgroup layout is (Wx,1). However, to take advantage of the natural hardware properties (preferred wavefront sizes), we restrict Wx to be a multiple of that preferred wavefront size (for current AMD hardware this is typically 64). Each thread in the workgroup will load Wy elements (under the constraint that Wx*Wy*pixel width <= max local memory).
-
-Applies bilateral filter to the image. Supports 8UC1 8UC3 data types.
 
 ocl::copyMakeBorder
 -----------------------

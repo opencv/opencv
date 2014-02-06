@@ -412,29 +412,6 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.ht
 This filter does not work inplace.
 
 
-adaptiveBilateralFilter
------------------------
-Applies the adaptive bilateral filter to an image.
-
-.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
-
-.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize, sigmaSpace[, dst[, anchor[, borderType]]]) -> dst
-
-    :param src: The source image
-
-    :param dst: The destination image; will have the same size and the same type as src
-
-    :param ksize: The kernel size. This is the neighborhood where the local variance will be calculated, and where pixels will contribute (in a weighted manner).
-
-    :param sigmaSpace: Filter sigma in the coordinate space. Larger value of the parameter means that farther pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
-
-    :param maxSigmaColor: Maximum allowed sigma color (will clamp the value calculated in the ksize neighborhood. Larger value of the parameter means that more dissimilar pixels will influence each other (as long as their colors are close enough; see sigmaColor). Then d>0, it specifies the neighborhood size regardless of sigmaSpace, otherwise d is proportional to sigmaSpace.
-
-    :param borderType: Pixel extrapolation method.
-
-A main part of our strategy will be to load each raw pixel once, and reuse it to calculate all pixels in the output (filtered) image that need this pixel value. The math of the filter is that of the usual bilateral filter, except that the sigma color is calculated in the neighborhood, and clamped by the optional input value.
-
-
 blur
 ----
 Blurs an image using the normalized box filter.
