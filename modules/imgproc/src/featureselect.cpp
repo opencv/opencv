@@ -124,7 +124,7 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
 
         tmpCorners.resize(total);
         Mat mcorners(1, totalb, CV_8UC1, &tmpCorners[0]);
-        corners.colRange(0, totalb).getMat(ACCESS_READ).copyTo(mcorners);
+        corners.colRange(0, totalb).copyTo(mcorners);
     }
 
     std::sort( tmpCorners.begin(), tmpCorners.end() );
