@@ -1297,10 +1297,12 @@ void FernDescriptorMatcher::calcBestProbAndMatchIdx( const Mat& image, const Poi
     }
 }
 
-void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void FernDescriptorMatcher::knnMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                          std::vector<std::vector<DMatch> >& matches, int knn,
                                          const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
 {
+    Mat queryImage = _queryImage.getMat();
+
     train();
 
     matches.resize( queryKeypoints.size() );
@@ -1333,10 +1335,11 @@ void FernDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<Key
     }
 }
 
-void FernDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+void FernDescriptorMatcher::radiusMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                             std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                             const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
 {
+    Mat queryImage = _queryImage.getMat();
     train();
     matches.resize( queryKeypoints.size() );
     std::vector<float> signature( (size_t)classifier->getClassCount() );

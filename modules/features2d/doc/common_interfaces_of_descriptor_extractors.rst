@@ -25,10 +25,10 @@ Abstract base class for computing descriptors for image keypoints. ::
     public:
         virtual ~DescriptorExtractor();
 
-        void compute( const Mat& image, vector<KeyPoint>& keypoints,
-                      Mat& descriptors ) const;
-        void compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints,
-                      vector<Mat>& descriptors ) const;
+        void compute( InputArray image, vector<KeyPoint>& keypoints,
+                      OutputArray descriptors ) const;
+        void compute( InputArrayOfArrays images, vector<vector<KeyPoint> >& keypoints,
+                      OutputArrayOfArrays descriptors ) const;
 
         virtual void read( const FileNode& );
         virtual void write( FileStorage& ) const;
@@ -57,9 +57,9 @@ DescriptorExtractor::compute
 --------------------------------
 Computes the descriptors for a set of keypoints detected in an image (first variant) or image set (second variant).
 
-.. ocv:function:: void DescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArray image, vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 
-.. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
+.. ocv:function:: void DescriptorExtractor::compute( InputArrayOfArrays  images, vector<vector<KeyPoint> >& keypoints, OutputArrayOfArrays descriptors ) const
 
 .. ocv:pyfunction:: cv2.DescriptorExtractor_create.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
 
