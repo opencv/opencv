@@ -59,6 +59,24 @@ if(ANDROID)
   ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
   ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
 
+  if(HAVE_CUDA)
+    # CUDA runtime libraries and are required always
+    set(culibs ${CUDA_LIBRARIES})
+
+    # right now NPP is requared always too
+    list(INSERT culibs 0 ${CUDA_npp_LIBRARY})
+
+    if(HAVE_CUFFT)
+      list(INSERT culibs 0 ${CUDA_cufft_LIBRARY})
+    endif()
+
+    if(HAVE_CUBLAS)
+      list(INSERT culibs 0 ${CUDA_cublas_LIBRARY})
+    endif()
+  endif()
+
+  ocv_convert_to_lib_name(CUDA_RUNTIME_LIBS_CONFIGMAKE ${culibs})
+
   # split 3rdparty libs and modules
   foreach(mod ${OPENCV_MODULES_CONFIGMAKE})
     if(NOT mod MATCHES "^opencv_.+$")
@@ -67,6 +85,10 @@ if(ANDROID)
   endforeach()
   if(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE)
     list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
+  endif()
+
+  if(ENABLE_DYNAMIC_CUDA)
+    set(OPENCV_DYNAMICUDA_MODULE_CONFIGMAKE "dynamicuda")
   endif()
 
   # GPU module enabled separately
@@ -84,6 +106,7 @@ if(ANDROID)
     string(REPLACE ";" " " ${lst} "${${lst}}")
   endforeach()
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+  string(REPLACE ";" " " CUDA_RUNTIME_LIBS_CONFIGMAKE "${CUDA_RUNTIME_LIBS_CONFIGMAKE}")
 
   # prepare 3rd-party component list without TBB for armeabi and mips platforms. TBB is useless there.
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
