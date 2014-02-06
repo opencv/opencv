@@ -372,7 +372,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    size_t esz = CV_ELEM_SIZE(_type);
+    size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols * esz;
     if( _step == AUTO_STEP )
     {
@@ -383,6 +383,12 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     {
         if( rows == 1 ) _step = minstep;
         CV_DbgAssert( _step >= minstep );
+
+        if (_step % esz1 != 0)
+        {
+            CV_Error(Error::BadStep, "Step must be a multiple of esz1");
+        }
+
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
     step[0] = _step;
@@ -397,7 +403,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
       allocator(0), u(0), size(&rows)
 {
-    size_t esz = CV_ELEM_SIZE(_type);
+    size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols*esz;
     if( _step == AUTO_STEP )
     {
@@ -408,6 +414,12 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     {
         if( rows == 1 ) _step = minstep;
         CV_DbgAssert( _step >= minstep );
+
+        if (_step % esz1 != 0)
+        {
+            CV_Error(Error::BadStep, "Step must be a multiple of esz1");
+        }
+
         flags |= _step == minstep ? CONTINUOUS_FLAG : 0;
     }
     step[0] = _step;

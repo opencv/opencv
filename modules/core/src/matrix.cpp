@@ -282,7 +282,7 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
     if( !_sz )
         return;
 
-    size_t esz = CV_ELEM_SIZE(m.flags), total = esz;
+    size_t esz = CV_ELEM_SIZE(m.flags), esz1 = CV_ELEM_SIZE1(m.flags), total = esz;
     int i;
     for( i = _dims-1; i >= 0; i-- )
     {
@@ -291,7 +291,14 @@ static inline void setSize( Mat& m, int _dims, const int* _sz,
         m.size.p[i] = s;
 
         if( _steps )
+        {
+            if (_steps[i] % esz1 != 0)
+            {
+                CV_Error(Error::BadStep, "Step must be a multiple of esz1");
+            }
+
             m.step.p[i] = i < _dims-1 ? _steps[i] : esz;
+        }
         else if( autoSteps )
         {
             m.step.p[i] = total;
