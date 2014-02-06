@@ -223,7 +223,6 @@ namespace
             break;
 
         case _InputArray::UMAT:
-        case _InputArray::UEXPR:
             src.getUMat().convertTo(dst, depth, scale);
             break;
 

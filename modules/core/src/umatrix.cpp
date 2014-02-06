@@ -551,14 +551,6 @@ int UMat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) co
     ? (int)(total()*channels()/_elemChannels) : -1;
 }
 
-
-UMat UMat::cross(InputArray) const
-{
-    CV_Error(CV_StsNotImplemented, "");
-    return UMat();
-}
-
-
 UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 {
     if(_newndims == dims)
@@ -796,6 +788,127 @@ UMat& UMat::operator = (const Scalar& s)
 {
     setTo(s);
     return *this;
+}
+
+UMat UMat::t() const
+{
+    UMat m;
+    transpose(*this, m);
+    return m;
+}
+
+UMat UMat::inv(int method) const
+{
+    UMat m;
+    invert(*this, m, method);
+    return m;
+}
+
+UMat UMat::mul(InputArray m, double scale) const
+{
+    UMat dst;
+    multiply(*this, m, dst, scale);
+    return dst;
+}
+
+#ifdef HAVE_OPENCL
+
+static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
+{
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type);
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ( !doubleSupport && depth == CV_64F )
+        return false;
+
+    int dbsize = ocl::Device::getDefault().maxComputeUnits();
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+    int ddepth = std::max(CV_32F, depth);
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
+
+    char cvt[40];
+    ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
+                  format("-D srcT=%s -D dstT=%s -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ocl::convertTypeStr(depth, ddepth, 1, cvt),
+                         (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    if (k.empty())
+        return false;
+
+    UMat src1 = _src1.getUMat().reshape(1), src2 = _src2.getUMat().reshape(1), db(1, dbsize, ddepth);
+
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
+            src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
+            dbarg = ocl::KernelArg::PtrWriteOnly(db);
+
+    k.args(src1arg, src1.cols, (int)src1.total(), dbsize, dbarg, src2arg);
+
+    size_t globalsize = dbsize * wgs;
+    if (k.run(1, &globalsize, &wgs, false))
+    {
+        res = sum(db.getMat(ACCESS_READ))[0];
+        return true;
+    }
+    return false;
+}
+
+#endif
+
+double UMat::dot(InputArray m) const
+{
+    CV_Assert(m.sameSize(*this) && m.type() == type());
+
+#ifdef HAVE_OPENCL
+    double r = 0;
+    CV_OCL_RUN_(dims <= 2, ocl_dot(*this, m, r), r)
+#endif
+
+    return getMat(ACCESS_READ).dot(m);
+}
+
+UMat UMat::zeros(int rows, int cols, int type)
+{
+    return UMat(rows, cols, type, Scalar::all(0));
+}
+
+UMat UMat::zeros(Size size, int type)
+{
+    return UMat(size, type, Scalar::all(0));
+}
+
+UMat UMat::zeros(int ndims, const int* sz, int type)
+{
+    return UMat(ndims, sz, type, Scalar::all(0));
+}
+
+UMat UMat::ones(int rows, int cols, int type)
+{
+    return UMat::ones(Size(cols, rows), type);
+}
+
+UMat UMat::ones(Size size, int type)
+{
+    return UMat(size, type, Scalar(1));
+}
+
+UMat UMat::ones(int ndims, const int* sz, int type)
+{
+    return UMat(ndims, sz, type, Scalar(1));
+}
+
+UMat UMat::eye(int rows, int cols, int type)
+{
+    return UMat::eye(Size(cols, rows), type);
+}
+
+UMat UMat::eye(Size size, int type)
+{
+    UMat m(size, type);
+    setIdentity(m);
+    return m;
 }
 
 }

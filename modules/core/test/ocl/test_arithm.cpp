@@ -1337,6 +1337,23 @@ OCL_TEST_P(Norm, NORM_L2_2args_mask)
         }
 }
 
+//////////////////////////////// UMat::dot ////////////////////////////////////////////////
+
+typedef ArithmTestBase UMatDot;
+
+OCL_TEST_P(UMatDot, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(const double cpuRes = src1_roi.dot(src2_roi));
+        OCL_ON(const double gpuRes = usrc1_roi.dot(usrc2_roi));
+
+        EXPECT_PRED3(relativeError, cpuRes, gpuRes, 1e-6);
+    }
+}
+
 //////////////////////////////// Sqrt ////////////////////////////////////////////////
 
 typedef ArithmTestBase Sqrt;
@@ -1708,6 +1725,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ReduceSum, Combine(testing::Values(std::make_pair<MatDepth, MatDepth>(CV_8U, CV_32S),
                                                                        std::make_pair<MatDepth, MatDepth>(CV_8U, CV_32F),
