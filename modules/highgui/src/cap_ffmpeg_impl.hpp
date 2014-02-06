@@ -1131,7 +1131,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
      and qmin since they will be set to reasonable defaults by the libx264
      preset system. Also, use a crf encode with the default quality rating,
      this seems easier than finding an appropriate default bitrate. */
-    if (c->codec_id == CODEC_ID_H264) {
+    if (c->codec_id == CV_CODEC(CODEC_ID_H264)) {
       c->gop_size = -1;
       c->qmin = -1;
       c->bit_rate = 0;
