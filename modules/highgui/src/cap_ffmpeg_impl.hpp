@@ -739,7 +739,7 @@ double CvCapture_FFMPEG::getProperty( int property_id )
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
         return (double)frame.height;
     case CV_FFMPEG_CAP_PROP_FPS:
-        return av_q2d(video_st->r_frame_rate);
+        return av_q2d(video_st->avg_frame_rate);
     case CV_FFMPEG_CAP_PROP_FOURCC:
         return (double)video_st->codec->codec_tag;
     default:
@@ -778,12 +778,7 @@ int CvCapture_FFMPEG::get_bitrate()
 
 double CvCapture_FFMPEG::get_fps()
 {
-    double fps = r2d(ic->streams[video_stream]->r_frame_rate);
-
-    if (fps < eps_zero)
-    {
-        fps = r2d(ic->streams[video_stream]->avg_frame_rate);
-    }
+    double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
 
     if (fps < eps_zero)
     {
