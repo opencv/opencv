@@ -40,8 +40,6 @@
 //
 //M*/
 
-#define CUDA_DISABLER
-
 #if !defined CUDA_DISABLER
 
 #include <thrust/device_ptr.h>
