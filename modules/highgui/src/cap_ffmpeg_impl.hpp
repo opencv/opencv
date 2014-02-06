@@ -62,8 +62,24 @@
 extern "C" {
 #endif
 
-#include "ffmpeg_codecs.hpp"
+#if !defined(WIN32) || defined(__MINGW32__)
 
+#include <stdint.h>
+
+// some versions of FFMPEG assume a C99 compiler, and don't define INT64_C
+#ifndef INT64_C
+#define INT64_C(c) (c##LL)
+#endif
+
+#ifndef UINT64_C
+#define UINT64_C(c) (c##ULL)
+#endif
+
+#include <errno.h>
+
+#endif
+
+#include <libavformat/avformat.h>
 #include <libavutil/mathematics.h>
 
 #include <libavutil/opt.h>
@@ -1375,7 +1391,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     /* Lookup codec_id for given fourcc */
-    const struct AVCodecTag * tags[] = { codec_bmp_tags, NULL};
+    const struct AVCodecTag * tags[] = { avformat_get_riff_video_tags(), NULL};
     if( (codec_id = av_codec_get_id(tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
         return false;
 
