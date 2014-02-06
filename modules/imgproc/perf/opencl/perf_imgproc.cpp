@@ -252,22 +252,6 @@ OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
     SANITY_CHECK(dst);
 }
 
-///////////// SqrBoxFilter ////////////////////////
-
-typedef TestBaseWithParam<Size> SqrBoxFilterFixture;
-
-OCL_PERF_TEST_P(SqrBoxFilterFixture, SqrBoxFilter, OCL_TEST_SIZES)
-{
-    const Size srcSize = GetParam();
-
-    UMat src(srcSize, CV_8UC1), dst(srcSize, CV_32SC1);
-    declare.in(src, WARMUP_RNG).out(dst);
-
-    OCL_TEST_CYCLE() cv::sqrBoxFilter(src, dst, CV_32S, Size(3, 3));
-
-    SANITY_CHECK(dst);
-}
-
 ///////////// Canny ////////////////////////
 
 typedef tuple<int, bool> CannyParams;
