@@ -948,7 +948,7 @@ void ORB::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, InputA
     (*this)(image.getMat(), mask.getMat(), keypoints, noArray(), false);
 }
 
-void ORB::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void ORB::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

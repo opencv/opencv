@@ -823,7 +823,7 @@ void SIFT::detectImpl( InputArray image, std::vector<KeyPoint>& keypoints, Input
     (*this)(image.getMat(), mask.getMat(), keypoints, noArray());
 }
 
-void SIFT::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void SIFT::computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     (*this)(image, Mat(), keypoints, descriptors, true);
 }

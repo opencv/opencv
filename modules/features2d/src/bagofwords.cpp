@@ -140,7 +140,7 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
     return vocabulary;
 }
 
-void BOWImgDescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
+void BOWImgDescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
                                          std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* descriptors )
 {
     imgDescriptor.release();
@@ -170,7 +170,7 @@ int BOWImgDescriptorExtractor::descriptorType() const
     return CV_32FC1;
 }
 
-void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
+void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
     CV_Assert( vocabulary.empty() != false );
 
@@ -187,7 +187,11 @@ void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& im
         pointIdxsOfClusters->resize(clusterCount);
     }
 
-    imgDescriptor = Mat( 1, clusterCount, descriptorType(), Scalar::all(0.0) );
+    _imgDescriptor.create(1, clusterCount, descriptorType());
+    _imgDescriptor.setTo(Scalar::all(0));
+
+    Mat imgDescriptor = _imgDescriptor.getMat();
+
     float *dptr = (float*)imgDescriptor.data;
     for( size_t i = 0; i < matches.size(); i++ )
     {
@@ -201,7 +205,7 @@ void BOWImgDescriptorExtractor::compute( const Mat& keypointDescriptors, Mat& im
     }
 
     // Normalize image descriptor.
-    imgDescriptor /= keypointDescriptors.rows;
+    imgDescriptor /= keypointDescriptors.size().height;
 }
 
 }
