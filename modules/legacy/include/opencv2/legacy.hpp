@@ -2672,10 +2672,10 @@ protected:
     // The minimum distance to each training patch with all its affine poses is found over all scales.
     // The class ID of a match is returned for each keypoint. The distance is calculated over PCA components
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
-    virtual void knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                               std::vector<std::vector<DMatch> >& matches, int k,
                               const std::vector<Mat>& masks, bool compactResult );
-    virtual void radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                  const std::vector<Mat>& masks, bool compactResult );
 
@@ -2735,10 +2735,10 @@ public:
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const;
 
 protected:
-    virtual void knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                               std::vector<std::vector<DMatch> >& matches, int k,
                               const std::vector<Mat>& masks, bool compactResult );
-    virtual void radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                  const std::vector<Mat>& masks, bool compactResult );
 
@@ -2770,7 +2770,7 @@ public:
     virtual bool empty() const;
 
 protected:
-    virtual void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const;
+    virtual void computeImpl( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const;
 
     RTreeClassifier classifier_;
     static const int BORDER_SIZE = 16;
@@ -2783,15 +2783,17 @@ CalonderDescriptorExtractor<T>::CalonderDescriptorExtractor(const String& classi
 }
 
 template<typename T>
-void CalonderDescriptorExtractor<T>::computeImpl( const Mat& image,
+void CalonderDescriptorExtractor<T>::computeImpl( InputArray _image,
                                                  std::vector<KeyPoint>& keypoints,
-                                                 Mat& descriptors) const
+                                                 OutputArray _descriptors) const
 {
+    Mat image = _image.getMat(), descriptors;
     // Cannot compute descriptors for keypoints on the image border.
     KeyPointsFilter::runByImageBorder(keypoints, image.size(), BORDER_SIZE);
 
     /// @todo Check 16-byte aligned
-    descriptors.create((int)keypoints.size(), classifier_.classes(), cv::DataType<T>::type);
+    _descriptors.create((int)keypoints.size(), classifier_.classes(), cv::DataType<T>::type);
+     descriptors = _descriptors.getMat();
 
     int patchSize = RandomizedTree::PATCH_SIZE;
     int offset = patchSize / 2;

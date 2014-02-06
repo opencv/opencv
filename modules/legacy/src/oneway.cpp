@@ -2232,10 +2232,11 @@ namespace cv{
         return false;
     }
 
-    void OneWayDescriptorMatcher::knnMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    void OneWayDescriptorMatcher::knnMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                                std::vector<std::vector<DMatch> >& matches, int knn,
                                                const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
     {
+        Mat queryImage = _queryImage.getMat();
         train();
 
         CV_Assert( knn == 1 ); // knn > 1 unsupported because of bug in OneWayDescriptorBase for this case
@@ -2251,10 +2252,12 @@ namespace cv{
         }
     }
 
-    void OneWayDescriptorMatcher::radiusMatchImpl( const Mat& queryImage, std::vector<KeyPoint>& queryKeypoints,
+    void OneWayDescriptorMatcher::radiusMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                                   std::vector<std::vector<DMatch> >& matches, float maxDistance,
                                                   const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
     {
+        Mat queryImage = _queryImage.getMat();
+
         train();
 
         matches.resize( queryKeypoints.size() );
