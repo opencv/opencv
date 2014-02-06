@@ -502,7 +502,6 @@ class CV_EXPORTS Mat;
 class CV_EXPORTS MatExpr;
 
 class CV_EXPORTS UMat;
-class CV_EXPORTS UMatExpr;
 
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;

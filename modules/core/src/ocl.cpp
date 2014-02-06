@@ -2800,7 +2800,10 @@ int Kernel::set(int i, const void* value, size_t sz)
     CV_Assert(i >= 0);
     if( i == 0 )
         p->cleanupUMats();
-    if( clSetKernelArg(p->handle, (cl_uint)i, sz, value) < 0 )
+
+    cl_int retval = clSetKernelArg(p->handle, (cl_uint)i, sz, value);
+    CV_OclDbgAssert(retval == CL_SUCCESS);
+    if (retval != CL_SUCCESS)
         return -1;
     return i+1;
 }
