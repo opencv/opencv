@@ -2545,7 +2545,6 @@ struct Queue::Impl
     IMPLEMENT_REFCOUNTABLE();
 
     cl_command_queue handle;
-    bool initialized;
 };
 
 Queue::Queue()
