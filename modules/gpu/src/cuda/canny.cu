@@ -239,30 +239,35 @@ namespace canny
 {
     __device__ int counter = 0;
 
-    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, ushort2* st)
+    __device__ __forceinline__ bool checkIdx(int y, int x, int rows, int cols)
+    {
+        return (y >= 0) && (y < rows) && (x >= 0) && (x < cols);
+    }
+
+    __global__ void edgesHysteresisLocalKernel(PtrStepSzi map, short2* st)
     {
         __shared__ volatile int smem[18][18];
 
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        smem[threadIdx.y + 1][threadIdx.x + 1] = x < map.cols && y < map.rows ? map(y, x) : 0;
+        smem[threadIdx.y + 1][threadIdx.x + 1] = checkIdx(y, x, map.rows, map.cols) ? map(y, x) : 0;
         if (threadIdx.y == 0)
-            smem[0][threadIdx.x + 1] = y > 0 ? map(y - 1, x) : 0;
+            smem[0][threadIdx.x + 1] = checkIdx(y - 1, x, map.rows, map.cols) ? map(y - 1, x) : 0;
         if (threadIdx.y == blockDim.y - 1)
-            smem[blockDim.y + 1][threadIdx.x + 1] = y + 1 < map.rows ? map(y + 1, x) : 0;
+            smem[blockDim.y + 1][threadIdx.x + 1] = checkIdx(y + 1, x, map.rows, map.cols) ? map(y + 1, x) : 0;
         if (threadIdx.x == 0)
-            smem[threadIdx.y + 1][0] = x > 0 ? map(y, x - 1) : 0;
+            smem[threadIdx.y + 1][0] = checkIdx(y, x - 1, map.rows, map.cols) ? map(y, x - 1) : 0;
         if (threadIdx.x == blockDim.x - 1)
-            smem[threadIdx.y + 1][blockDim.x + 1] = x + 1 < map.cols ? map(y, x + 1) : 0;
+            smem[threadIdx.y + 1][blockDim.x + 1] = checkIdx(y, x + 1, map.rows, map.cols) ? map(y, x + 1) : 0;
         if (threadIdx.x == 0 && threadIdx.y == 0)
-            smem[0][0] = y > 0 && x > 0 ? map(y - 1, x - 1) : 0;
+            smem[0][0] = checkIdx(y - 1, x - 1, map.rows, map.cols) ? map(y - 1, x - 1) : 0;
         if (threadIdx.x == blockDim.x - 1 && threadIdx.y == 0)
-            smem[0][blockDim.x + 1] = y > 0 && x + 1 < map.cols ? map(y - 1, x + 1) : 0;
+            smem[0][blockDim.x + 1] = checkIdx(y - 1, x + 1, map.rows, map.cols) ? map(y - 1, x + 1) : 0;
         if (threadIdx.x == 0 && threadIdx.y == blockDim.y - 1)
-            smem[blockDim.y + 1][0] = y + 1 < map.rows && x > 0 ? map(y + 1, x - 1) : 0;
+            smem[blockDim.y + 1][0] = checkIdx(y + 1, x - 1, map.rows, map.cols) ? map(y + 1, x - 1) : 0;
         if (threadIdx.x == blockDim.x - 1 && threadIdx.y == blockDim.y - 1)
-            smem[blockDim.y + 1][blockDim.x + 1] = y + 1 < map.rows && x + 1 < map.cols ? map(y + 1, x + 1) : 0;
+            smem[blockDim.y + 1][blockDim.x + 1] = checkIdx(y + 1, x + 1, map.rows, map.cols) ? map(y + 1, x + 1) : 0;
 
         __syncthreads();
 
@@ -317,11 +322,11 @@ namespace canny
         if (n > 0)
         {
             const int ind =  ::atomicAdd(&counter, 1);
-            st[ind] = make_ushort2(x, y);
+            st[ind] = make_short2(x, y);
         }
     }
 
-    void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1)
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1)
     {
         void* counter_ptr;
         cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, counter) );
@@ -345,13 +350,13 @@ namespace canny
     __constant__ int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
     __constant__ int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
-    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, ushort2* st1, ushort2* st2, const int count)
+    __global__ void edgesHysteresisGlobalKernel(PtrStepSzi map, short2* st1, short2* st2, const int count)
     {
         const int stack_size = 512;
 
         __shared__ int s_counter;
         __shared__ int s_ind;
-        __shared__ ushort2 s_st[stack_size];
+        __shared__ short2 s_st[stack_size];
 
         if (threadIdx.x == 0)
             s_counter = 0;
@@ -363,14 +368,14 @@ namespace canny
         if (ind >= count)
             return;
 
-        ushort2 pos = st1[ind];
+        short2 pos = st1[ind];
 
         if (threadIdx.x < 8)
         {
             pos.x += c_dx[threadIdx.x];
             pos.y += c_dy[threadIdx.x];
 
-            if (pos.x > 0 && pos.x < map.cols && pos.y > 0 && pos.y < map.rows && map(pos.y, pos.x) == 1)
+            if (pos.x > 0 && pos.x < map.cols - 1 && pos.y > 0 && pos.y < map.rows - 1 && map(pos.y, pos.x) == 1)
             {
                 map(pos.y, pos.x) = 2;
 
@@ -402,7 +407,7 @@ namespace canny
                 pos.x += c_dx[threadIdx.x & 7];
                 pos.y += c_dy[threadIdx.x & 7];
 
-                if (pos.x > 0 && pos.x < map.cols && pos.y > 0 && pos.y < map.rows && map(pos.y, pos.x) == 1)
+                if (pos.x > 0 && pos.x < map.cols - 1 && pos.y > 0 && pos.y < map.rows - 1 && map(pos.y, pos.x) == 1)
                 {
                     map(pos.y, pos.x) = 2;
 
@@ -419,8 +424,10 @@ namespace canny
         {
             if (threadIdx.x == 0)
             {
-                ind = ::atomicAdd(&counter, s_counter);
-                s_ind = ind - s_counter;
+                s_ind = ::atomicAdd(&counter, s_counter);
+
+                if (s_ind + s_counter > map.cols * map.rows)
+                    s_counter = 0;
             }
 
             __syncthreads();
@@ -432,7 +439,7 @@ namespace canny
         }
     }
 
-    void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2)
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2)
     {
         void* counter_ptr;
         cudaSafeCall( cudaGetSymbolAddress(&counter_ptr, canny::counter) );
@@ -453,6 +460,8 @@ namespace canny
             cudaSafeCall( cudaDeviceSynchronize() );
 
             cudaSafeCall( cudaMemcpy(&count, counter_ptr, sizeof(int), cudaMemcpyDeviceToHost) );
+
+            count = min(count, map.cols * map.rows);
 
             std::swap(st1, st2);
         }
