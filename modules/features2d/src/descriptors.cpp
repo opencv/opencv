@@ -54,7 +54,7 @@ namespace cv
 DescriptorExtractor::~DescriptorExtractor()
 {}
 
-void DescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void DescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 {
     if( image.empty() || keypoints.empty() )
     {
@@ -68,8 +68,11 @@ void DescriptorExtractor::compute( const Mat& image, std::vector<KeyPoint>& keyp
     computeImpl( image, keypoints, descriptors );
 }
 
-void DescriptorExtractor::compute( const std::vector<Mat>& imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection, std::vector<Mat>& descCollection ) const
+void DescriptorExtractor::compute( InputArrayOfArrays _imageCollection, std::vector<std::vector<KeyPoint> >& pointCollection, OutputArrayOfArrays _descCollection ) const
 {
+    std::vector<Mat> imageCollection, descCollection;
+    _imageCollection.getMatVector(imageCollection);
+    _descCollection.getMatVector(descCollection);
     CV_Assert( imageCollection.size() == pointCollection.size() );
     descCollection.resize( imageCollection.size() );
     for( size_t i = 0; i < imageCollection.size(); i++ )
@@ -106,7 +109,7 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const String& descriptorExt
 }
 
 
-CV_WRAP void Feature2D::compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const
+CV_WRAP void Feature2D::compute( InputArray image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 {
    DescriptorExtractor::compute(image, keypoints, descriptors);
 }
@@ -157,8 +160,9 @@ struct KP_LessThan
     const std::vector<KeyPoint>* kp;
 };
 
-void OpponentColorDescriptorExtractor::computeImpl( const Mat& bgrImage, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void OpponentColorDescriptorExtractor::computeImpl( InputArray _bgrImage, std::vector<KeyPoint>& keypoints, OutputArray descriptors ) const
 {
+    Mat bgrImage = _bgrImage.getMat();
     std::vector<Mat> opponentChannels;
     convertBGRImageToOpponentColorSpace( bgrImage, opponentChannels );
 

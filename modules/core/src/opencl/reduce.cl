@@ -58,12 +58,14 @@
 #define EXTRA_PARAMS
 #endif
 
-#if defined OP_SUM || defined OP_SUM_ABS || defined OP_SUM_SQR
-#if OP_SUM
+#if defined OP_SUM || defined OP_SUM_ABS || defined OP_SUM_SQR || defined OP_DOT
+#ifdef OP_DOT
+#define FUNC(a, b, c) a += b * c
+#elif defined OP_SUM
 #define FUNC(a, b) a += b
-#elif OP_SUM_ABS
+#elif defined OP_SUM_ABS
 #define FUNC(a, b) a += b >= (dstT)(0) ? b : -b
-#elif OP_SUM_SQR
+#elif defined OP_SUM_SQR
 #define FUNC(a, b) a += b * b
 #endif
 #define DECLARE_LOCAL_MEM \
@@ -76,6 +78,12 @@
     int mask_index = mad24(id / cols, mask_step, mask_offset + (id % cols)); \
     if (mask[mask_index]) \
         FUNC(accumulator, temp)
+#elif defined OP_DOT
+#define REDUCE_GLOBAL \
+    int src2_index = mad24(id / cols, src2_step, src2_offset + (id % cols) * (int)sizeof(srcT)); \
+    __global const srcT * src2 = (__global const srcT *)(src2ptr + src2_index); \
+    dstT temp = convertToDT(src[0]), temp2 = convertToDT(src2[0]); \
+    FUNC(accumulator, temp, temp2)
 #else
 #define REDUCE_GLOBAL \
     dstT temp = convertToDT(src[0]); \
@@ -112,37 +120,31 @@
 
 #elif defined OP_MIN_MAX_LOC || defined OP_MIN_MAX_LOC_MASK
 
-#if defined (DEPTH_0)
+#ifdef DEPTH_0
 #define srcT uchar
 #define MIN_VAL 0
 #define MAX_VAL 255
-#endif
-#if defined (DEPTH_1)
+#elif defined DEPTH_1
 #define srcT char
 #define MIN_VAL -128
 #define MAX_VAL 127
-#endif
-#if defined (DEPTH_2)
+#elif defined DEPTH_2
 #define srcT ushort
 #define MIN_VAL 0
 #define MAX_VAL 65535
-#endif
-#if defined (DEPTH_3)
+#elif defined DEPTH_3
 #define srcT short
 #define MIN_VAL -32768
 #define MAX_VAL 32767
-#endif
-#if defined (DEPTH_4)
+#elif defined DEPTH_4
 #define srcT int
 #define MIN_VAL INT_MIN
 #define MAX_VAL INT_MAX
-#endif
-#if defined (DEPTH_5)
+#elif defined DEPTH_5
 #define srcT float
 #define MIN_VAL (-FLT_MAX)
 #define MAX_VAL FLT_MAX
-#endif
-#if defined (DEPTH_6)
+#elif defined DEPTH_6
 #define srcT double
 #define MIN_VAL (-DBL_MAX)
 #define MAX_VAL DBL_MAX
@@ -233,17 +235,19 @@
 #error "No operation"
 #endif
 
-#if defined OP_MIN_MAX_LOC
+#ifdef OP_MIN_MAX_LOC
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , __global uchar * dstptr2, __global int * dstlocptr, __global int * dstlocptr2
-#endif
-#if defined OP_MIN_MAX_LOC_MASK
+#elif defined OP_MIN_MAX_LOC_MASK
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , __global uchar * dstptr2, __global int * dstlocptr, __global int * dstlocptr2, \
-    __global const uchar * maskptr, int mask_step, int mask_offset, __global int * test
+    __global const uchar * maskptr, int mask_step, int mask_offset
+#elif defined OP_DOT
+#undef EXTRA_PARAMS
+#define EXTRA_PARAMS , __global uchar * src2ptr, int src2_step, int src2_offset
 #endif
 
-__kernel void reduce(__global const uchar * srcptr, int step, int offset, int cols,
+__kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset, int cols,
                      int total, int groupnum, __global uchar * dstptr EXTRA_PARAMS)
 {
     int lid = get_local_id(0);
@@ -255,7 +259,7 @@ __kernel void reduce(__global const uchar * srcptr, int step, int offset, int co
 
     for (int grain = groupnum * WGS; id < total; id += grain)
     {
-        int src_index = mad24(id / cols, step, offset + (id % cols) * (int)sizeof(srcT));
+        int src_index = mad24(id / cols, src_step, src_offset + (id % cols) * (int)sizeof(srcT));
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
         REDUCE_GLOBAL;
     }

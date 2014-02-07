@@ -449,6 +449,8 @@ static SumSqrFunc getSumSqrTab(int depth)
     return sumSqrTab[depth];
 }
 
+#ifdef HAVE_OPENCL
+
 template <typename T> Scalar ocl_part_sum(Mat m)
 {
     CV_Assert(m.rows == 1);
@@ -463,8 +465,6 @@ template <typename T> Scalar ocl_part_sum(Mat m)
 
     return s;
 }
-
-#ifdef HAVE_OPENCL
 
 enum { OCL_OP_SUM = 0, OCL_OP_SUM_ABS =  1, OCL_OP_SUM_SQR = 2 };
 
@@ -1279,7 +1279,7 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
             ocl::KernelArg::PtrWriteOnly(minloc), ocl::KernelArg::PtrWriteOnly(maxloc), ocl::KernelArg::ReadOnlyNoSize(mask));
 
     size_t globalsize = groupnum * wgs;
-    if (!k.run(1, &globalsize, &wgs, true))
+    if (!k.run(1, &globalsize, &wgs, false))
         return false;
 
     Mat minv = minval.getMat(ACCESS_READ), maxv = maxval.getMat(ACCESS_READ),

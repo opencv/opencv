@@ -29,7 +29,7 @@ Abstract interface for extracting and matching a keypoint descriptor. There are 
         GenericDescriptorMatcher();
         virtual ~GenericDescriptorMatcher();
 
-        virtual void add( const vector<Mat>& images,
+        virtual void add( InputArrayOfArrays images,
                           vector<vector<KeyPoint> >& keypoints );
 
         const vector<Mat>& getTrainImages() const;
@@ -40,36 +40,36 @@ Abstract interface for extracting and matching a keypoint descriptor. There are 
 
         virtual bool isMaskSupported() = 0;
 
-        void classify( const Mat& queryImage,
+        void classify( InputArray queryImage,
                        vector<KeyPoint>& queryKeypoints,
-                       const Mat& trainImage,
+                       InputArray trainImage,
                        vector<KeyPoint>& trainKeypoints ) const;
-        void classify( const Mat& queryImage,
+        void classify( InputArray queryImage,
                        vector<KeyPoint>& queryKeypoints );
 
         /*
          * Group of methods to match keypoints from an image pair.
          */
-        void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                    const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+        void match( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
+                    InputArray trainImage, vector<KeyPoint>& trainKeypoints,
                     vector<DMatch>& matches, const Mat& mask=Mat() ) const;
-        void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                       const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+        void knnMatch( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
+                       InputArray trainImage, vector<KeyPoint>& trainKeypoints,
                        vector<vector<DMatch> >& matches, int k,
                        const Mat& mask=Mat(), bool compactResult=false ) const;
-        void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
-                          const Mat& trainImage, vector<KeyPoint>& trainKeypoints,
+        void radiusMatch( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
+                          InputArray trainImage, vector<KeyPoint>& trainKeypoints,
                           vector<vector<DMatch> >& matches, float maxDistance,
                           const Mat& mask=Mat(), bool compactResult=false ) const;
         /*
          * Group of methods to match keypoints from one image to an image set.
          */
-        void match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+        void match( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
                     vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() );
-        void knnMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+        void knnMatch( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
                        vector<vector<DMatch> >& matches, int k,
                        const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
-        void radiusMatch( const Mat& queryImage, vector<KeyPoint>& queryKeypoints,
+        void radiusMatch( InputArray queryImage, vector<KeyPoint>& queryKeypoints,
                           vector<vector<DMatch> >& matches, float maxDistance,
                           const vector<Mat>& masks=vector<Mat>(), bool compactResult=false );
 
@@ -89,7 +89,7 @@ GenericDescriptorMatcher::add
 ---------------------------------
 Adds images and their keypoints to the training collection stored in the class instance.
 
-.. ocv:function:: void GenericDescriptorMatcher::add( const vector<Mat>& images,                        vector<vector<KeyPoint> >& keypoints )
+.. ocv:function:: void GenericDescriptorMatcher::add( InputArrayOfArrays images,                        vector<vector<KeyPoint> >& keypoints )
 
     :param images: Image collection.
 
@@ -142,9 +142,9 @@ GenericDescriptorMatcher::classify
 --------------------------------------
 Classifies keypoints from a query set.
 
-.. ocv:function:: void GenericDescriptorMatcher::classify(  const Mat& queryImage,           vector<KeyPoint>& queryKeypoints,           const Mat& trainImage,           vector<KeyPoint>& trainKeypoints ) const
+.. ocv:function:: void GenericDescriptorMatcher::classify(  InputArray queryImage,           vector<KeyPoint>& queryKeypoints,           InputArray trainImage,           vector<KeyPoint>& trainKeypoints ) const
 
-.. ocv:function:: void GenericDescriptorMatcher::classify( const Mat& queryImage,           vector<KeyPoint>& queryKeypoints )
+.. ocv:function:: void GenericDescriptorMatcher::classify( InputArray queryImage,           vector<KeyPoint>& queryKeypoints )
 
     :param queryImage: Query image.
 
@@ -170,9 +170,9 @@ GenericDescriptorMatcher::match
 -----------------------------------
 Finds the best match in the training set for each keypoint from the query set.
 
-.. ocv:function:: void GenericDescriptorMatcher::match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints, const Mat& trainImage, vector<KeyPoint>& trainKeypoints, vector<DMatch>& matches, const Mat& mask=Mat() ) const
+.. ocv:function:: void GenericDescriptorMatcher::match(InputArray queryImage, vector<KeyPoint>& queryKeypoints, InputArray trainImage, vector<KeyPoint>& trainKeypoints, vector<DMatch>& matches, const Mat& mask=Mat() ) const
 
-.. ocv:function:: void GenericDescriptorMatcher::match( const Mat& queryImage, vector<KeyPoint>& queryKeypoints, vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
+.. ocv:function:: void GenericDescriptorMatcher::match( InputArray queryImage, vector<KeyPoint>& queryKeypoints, vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
 
     :param queryImage: Query image.
 
@@ -196,9 +196,9 @@ GenericDescriptorMatcher::knnMatch
 --------------------------------------
 Finds the ``k`` best matches for each query keypoint.
 
-.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, int k,       const Mat& mask=Mat(), bool compactResult=false ) const
+.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           InputArray queryImage, vector<KeyPoint>& queryKeypoints,      InputArray trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, int k,       const Mat& mask=Mat(), bool compactResult=false ) const
 
-.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, int k,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void GenericDescriptorMatcher::knnMatch(           InputArray queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, int k,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
 The methods are extended variants of ``GenericDescriptorMatch::match``. The parameters are similar, and the semantics is similar to ``DescriptorMatcher::knnMatch``. But this class does not require explicitly computed keypoint descriptors.
 
@@ -208,9 +208,9 @@ GenericDescriptorMatcher::radiusMatch
 -----------------------------------------
 For each query keypoint, finds the training keypoints not farther than the specified distance.
 
-.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      const Mat& trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const Mat& mask=Mat(), bool compactResult=false ) const
+.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           InputArray queryImage, vector<KeyPoint>& queryKeypoints,      InputArray trainImage, vector<KeyPoint>& trainKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const Mat& mask=Mat(), bool compactResult=false ) const
 
-.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           const Mat& queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void GenericDescriptorMatcher::radiusMatch(           InputArray queryImage, vector<KeyPoint>& queryKeypoints,      vector<vector<DMatch> >& matches, float maxDistance,       const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
 
 The methods are similar to ``DescriptorMatcher::radius``. But this class does not require explicitly computed keypoint descriptors.
 
@@ -254,7 +254,7 @@ Class used for matching descriptors that can be described as vectors in a finite
         VectorDescriptorMatcher( const Ptr<DescriptorExtractor>& extractor, const Ptr<DescriptorMatcher>& matcher );
         virtual ~VectorDescriptorMatcher();
 
-        virtual void add( const vector<Mat>& imgCollection,
+        virtual void add( InputArrayOfArrays imgCollection,
                           vector<vector<KeyPoint> >& pointCollection );
         virtual void clear();
         virtual void train();

@@ -61,8 +61,9 @@ inline int smoothedSum(const Mat& sum, const KeyPoint& pt, int y, int x)
            + sum.at<int>(img_y - HALF_KERNEL, img_x - HALF_KERNEL);
 }
 
-static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests16(InputArray _sum, const std::vector<KeyPoint>& keypoints, OutputArray _descriptors)
 {
+    Mat sum = _sum.getMat(), descriptors = _descriptors.getMat();
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
         uchar* desc = descriptors.ptr(i);
@@ -71,8 +72,9 @@ static void pixelTests16(const Mat& sum, const std::vector<KeyPoint>& keypoints,
     }
 }
 
-static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests32(InputArray _sum, const std::vector<KeyPoint>& keypoints, OutputArray _descriptors)
 {
+    Mat sum = _sum.getMat(), descriptors = _descriptors.getMat();
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
         uchar* desc = descriptors.ptr(i);
@@ -82,8 +84,9 @@ static void pixelTests32(const Mat& sum, const std::vector<KeyPoint>& keypoints,
     }
 }
 
-static void pixelTests64(const Mat& sum, const std::vector<KeyPoint>& keypoints, Mat& descriptors)
+static void pixelTests64(InputArray _sum, const std::vector<KeyPoint>& keypoints, OutputArray _descriptors)
 {
+    Mat sum = _sum.getMat(), descriptors = _descriptors.getMat();
     for (int i = 0; i < (int)keypoints.size(); ++i)
     {
         uchar* desc = descriptors.ptr(i);
@@ -155,12 +158,12 @@ void BriefDescriptorExtractor::write( FileStorage& fs) const
     fs << "descriptorSize" << bytes_;
 }
 
-void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors) const
+void BriefDescriptorExtractor::computeImpl(InputArray image, std::vector<KeyPoint>& keypoints, OutputArray descriptors) const
 {
     // Construct integral image for fast smoothing (box filter)
     Mat sum;
 
-    Mat grayImage = image;
+    Mat grayImage = image.getMat();
     if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     ///TODO allow the user to pass in a precomputed integral image
@@ -173,7 +176,8 @@ void BriefDescriptorExtractor::computeImpl(const Mat& image, std::vector<KeyPoin
     //Remove keypoints very close to the border
     KeyPointsFilter::runByImageBorder(keypoints, image.size(), PATCH_SIZE/2 + KERNEL_SIZE/2);
 
-    descriptors = Mat::zeros((int)keypoints.size(), bytes_, CV_8U);
+    descriptors.create((int)keypoints.size(), bytes_, CV_8U);
+    descriptors.setTo(Scalar::all(0));
     test_fn_(sum, keypoints, descriptors);
 }
 

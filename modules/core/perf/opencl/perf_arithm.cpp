@@ -706,6 +706,28 @@ OCL_PERF_TEST_P(NormFixture, Norm,
     SANITY_CHECK(res, 1e-5, ERROR_RELATIVE);
 }
 
+///////////// UMat::dot ////////////////////////
+
+typedef Size_MatType UMatDotFixture;
+
+OCL_PERF_TEST_P(UMatDotFixture, UMatDot,
+            ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    double r = 0.0;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), src2(srcSize, type);
+    declare.in(src1, src2, WARMUP_RNG);
+
+    OCL_TEST_CYCLE() r = src1.dot(src2);
+
+    SANITY_CHECK(r, 1e-5, ERROR_RELATIVE);
+}
+
 ///////////// Repeat ////////////////////////
 
 typedef Size_MatType RepeatFixture;
