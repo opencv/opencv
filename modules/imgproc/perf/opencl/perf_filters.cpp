@@ -77,6 +77,31 @@ OCL_PERF_TEST_P(BlurFixture, Blur,
     SANITY_CHECK(dst, eps);
 }
 
+///////////// SqrBoxFilter ////////////////////////
+
+typedef tuple<Size, MatType, Size> SqrBoxFilterParams;
+typedef TestBaseWithParam<SqrBoxFilterParams> SqrBoxFilterFixture;
+
+OCL_PERF_TEST_P(SqrBoxFilterFixture, SqrBoxFilter,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+                                   OCL_PERF_ENUM(Size(3, 3), Size(20, 3), Size(3, 20), Size(20, 20))))
+{
+    const SqrBoxFilterParams params = GetParam();
+    const Size srcSize = get<0>(params), ksize = get<2>(params);
+    const int type = get<1>(params), depth = CV_MAT_DEPTH(type),
+            ddepth = depth == CV_8U ? CV_32S : CV_32F;
+    const double eps = ddepth == CV_32S ? 0 : 5e-5;
+
+    checkDeviceMaxMemoryAllocSize(srcSize, CV_MAKE_TYPE(ddepth, CV_MAT_CN(type)));
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::sqrBoxFilter(src, dst, ddepth, ksize, Point(-1, -1), false);
+
+    SANITY_CHECK(dst, eps);
+}
+
 ///////////// Laplacian////////////////////////
 
 typedef FilterFixture LaplacianFixture;
