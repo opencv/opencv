@@ -84,8 +84,8 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
 
     void UMatToVector(const UMat & um, std::vector<Point2f> & v) const
     {
-        v.resize(points.cols);
-        um.getMat(ACCESS_READ).copyTo(v);
+        v.resize(um.size().area());
+        um.copyTo(Mat(um.size(), CV_32FC2, &v[0]));
     }
 };
 
