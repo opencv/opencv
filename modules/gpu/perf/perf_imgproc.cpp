@@ -672,7 +672,7 @@ PERF_TEST_P(Sz, ImgProc_ColumnSum,
 
 DEF_PARAM_TEST(Image_AppertureSz_L2gradient, string, int, bool);
 
-PERF_TEST_P(Image_AppertureSz_L2gradient, DISABLED_ImgProc_Canny,
+PERF_TEST_P(Image_AppertureSz_L2gradient, ImgProc_Canny,
             Combine(Values("perf/800x600.png", "perf/1280x1024.png", "perf/1680x1050.png"),
                     Values(3, 5),
                     Bool()))
@@ -1777,7 +1777,7 @@ PERF_TEST_P(Image, ImgProc_HoughLinesP,
 
 DEF_PARAM_TEST(Sz_Dp_MinDist, cv::Size, float, float);
 
-PERF_TEST_P(Sz_Dp_MinDist, DISABLED_ImgProc_HoughCircles,
+PERF_TEST_P(Sz_Dp_MinDist, ImgProc_HoughCircles,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(1.0f, 2.0f, 4.0f),
                     Values(1.0f)))
