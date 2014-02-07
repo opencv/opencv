@@ -104,6 +104,12 @@
 
 #define noconvert
 
+#ifdef SQR
+#define PROCESS_ELEM(value) (value * value)
+#else
+#define PROCESS_ELEM(value) value
+#endif
+
 struct RectCoords
 {
     int x1, y1, x2, y2;
@@ -118,7 +124,9 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
 #endif
     {
         int src_index = mad24(pos.y, src_step, pos.x * (int)sizeof(ST));
-        return convertToWT(*(__global const ST *)(srcptr + src_index));
+        WT value = convertToWT(*(__global const ST *)(srcptr + src_index));
+
+        return PROCESS_ELEM(value);
     }
     else
     {
@@ -136,7 +144,9 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
             srcCoords.x2, srcCoords.y2);
 
         int src_index = mad24(selected_row, src_step, selected_col * (int)sizeof(ST));
-        return convertToWT(*(__global const ST *)(srcptr + src_index));
+        WT value = convertToWT(*(__global const ST *)(srcptr + src_index));
+
+        return PROCESS_ELEM(value);
 #endif
     }
 }
