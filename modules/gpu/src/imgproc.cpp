@@ -1491,6 +1491,8 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
 
 void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
 {
+    CV_Assert(image_size.width < std::numeric_limits<short>::max() && image_size.height < std::numeric_limits<short>::max());
+
     if (apperture_size > 0)
     {
         ensureSizeIsEnough(image_size, CV_32SC1, dx);
@@ -1506,8 +1508,8 @@ void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
     ensureSizeIsEnough(image_size, CV_32FC1, mag);
     ensureSizeIsEnough(image_size, CV_32SC1, map);
 
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1);
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2);
+    ensureSizeIsEnough(1, image_size.area(), CV_16SC2, st1);
+    ensureSizeIsEnough(1, image_size.area(), CV_16SC2, st2);
 }
 
 void cv::gpu::CannyBuf::release()
@@ -1527,9 +1529,9 @@ namespace canny
 
     void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh);
 
-    void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1);
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1);
 
-    void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2);
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2);
 
     void getEdges(PtrStepSzi map, PtrStepSzb dst);
 }
@@ -1543,9 +1545,9 @@ namespace
         buf.map.setTo(Scalar::all(0));
         calcMap(dx, dy, buf.mag, buf.map, low_thresh, high_thresh);
 
-        edgesHysteresisLocal(buf.map, buf.st1.ptr<ushort2>());
+        edgesHysteresisLocal(buf.map, buf.st1.ptr<short2>());
 
-        edgesHysteresisGlobal(buf.map, buf.st1.ptr<ushort2>(), buf.st2.ptr<ushort2>());
+        edgesHysteresisGlobal(buf.map, buf.st1.ptr<short2>(), buf.st2.ptr<short2>());
 
         getEdges(buf.map, dst);
     }
