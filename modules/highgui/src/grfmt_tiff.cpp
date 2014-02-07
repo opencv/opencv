@@ -124,15 +124,15 @@ bool TiffDecoder::readHeader()
 
     if( tif )
     {
-        uint32_t wdth = 0, hght = 0;
-        uint16_t photometric = 0;
+        uint wdth = 0, hght = 0;
+        ushort photometric = 0;
         m_tif = tif;
 
         if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &wdth ) &&
             TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &hght ) &&
             TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
-            uint16_t bpp=8, ncn = photometric > 1 ? 3 : 1;
+            ushort bpp=8, ncn = photometric > 1 ? 3 : 1;
             TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
             TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
 
@@ -198,12 +198,12 @@ bool  TiffDecoder::readData( Mat& img )
     if( m_tif && m_width && m_height )
     {
         TIFF* tif = (TIFF*)m_tif;
-        uint32_t tile_width0 = m_width, tile_height0 = 0;
+        uint tile_width0 = m_width, tile_height0 = 0;
         int x, y, i;
         int is_tiled = TIFFIsTiled(tif);
-        uint16_t photometric;
+        ushort photometric;
         TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
-        uint16_t bpp = 8, ncn = photometric > 1 ? 3 : 1;
+        ushort bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
         const int bitsPerByte = 8;
@@ -399,8 +399,8 @@ bool  TiffDecoder::readData( Mat& img )
 
 bool TiffDecoder::readHdrData(Mat& img)
 {
-    uint32_t rows_per_strip = 0;
-    uint16_t photometric = 0;
+    uint rows_per_strip = 0;
+    ushort photometric = 0;
     if(!m_tif)
     {
         return false;

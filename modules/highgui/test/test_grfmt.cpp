@@ -437,7 +437,7 @@ TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
     for (int i = 0; i < 2; i++)
     {
         // TIFFWriteEncodedStrip() can modify its buffer argument so initialize buffer each iteration
-        uint16_t buffer[] = { 0xDEAD, 0xBEEF };
+        ushort buffer[] = { 0xDEAD, 0xBEEF };
 
         string filename = cv::tempfile(".tiff");
 
@@ -457,10 +457,10 @@ TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
         ASSERT_EQ(img.rows, 1);
         ASSERT_EQ(img.cols, 2);
         ASSERT_EQ(img.type(), CV_16U);
-        ASSERT_EQ(img.elemSize(), sizeof(uint16_t));
+        ASSERT_EQ(img.elemSize(), sizeof(ushort));
         ASSERT_EQ(img.channels(), 1);
-        ASSERT_EQ(img.at<uint16_t>(0,0), 0xDEAD);
-        ASSERT_EQ(img.at<uint16_t>(0,1), 0xBEEF);
+        ASSERT_EQ(img.at<ushort>(0,0), 0xDEAD);
+        ASSERT_EQ(img.at<ushort>(0,1), 0xBEEF);
 
         remove(filename.c_str());
     }
