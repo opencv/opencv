@@ -329,26 +329,6 @@ OCL_TEST_P(Bilateral, Mat)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// AdaptiveBilateral
-
-typedef FilterTestBase AdaptiveBilateral;
-
-OCL_TEST_P(AdaptiveBilateral, Mat)
-{
-    const Size kernelSize(ksize, ksize);
-
-    for (int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-
-        adaptiveBilateralFilter(src_roi, dst_roi, kernelSize, 5, 1, Point(-1, -1), borderType); // TODO anchor
-        ocl::adaptiveBilateralFilter(gsrc_roi, gdst_roi, kernelSize, 5, 1, Point(-1, -1), borderType);
-
-        Near();
-    }
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // MedianFilter
 
@@ -454,14 +434,6 @@ INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(5, 9),
                             Values(Size(0, 0)), // not used
                             FILTER_BORDER_SET_NO_ISOLATED,
-                            Values(0.0), // not used
-                            Bool()));
-
-INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
-                            Values(CV_8UC1, CV_8UC3),
-                            Values(5, 9),
-                            Values(Size(0, 0)), // not used
-                            FILTER_BORDER_SET_NO_WRAP_NO_ISOLATED,
                             Values(0.0), // not used
                             Bool()));
 

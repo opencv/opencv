@@ -550,14 +550,6 @@ namespace cv
         // supports 8UC1 8UC4
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT);
 
-        //! Applies an adaptive bilateral filter to the input image
-        //  Unlike the usual bilateral filter that uses fixed value for sigmaColor,
-        //  the adaptive version calculates the local variance in he ksize neighborhood
-        //  and use this as sigmaColor, for the value filtering. However, the local standard deviation is
-        //  clamped to the maxSigmaColor.
-        //  supports 8UC1, 8UC3
-        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, double maxSigmaColor=20.0, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
-
         //! computes exponent of each matrix element (dst = e**src)
         // supports only CV_32FC1, CV_64FC1 type
         CV_EXPORTS void exp(const oclMat &src, oclMat &dst);
