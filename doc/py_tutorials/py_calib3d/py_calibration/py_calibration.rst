@@ -93,9 +93,8 @@ Once we find the corners, we can increase their accuracy using **cv2.cornerSubPi
     objp = np.zeros((6*7,3), np.float32)
     objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
 
-    # Arrays to store object points and image points from all the images.
+    # Arrays to store object points 
     objpoints = [] # 3d point in real world space
-    imgpoints = [] # 2d points in image plane.
 
     images = glob.glob('*.jpg')
 
@@ -110,15 +109,15 @@ Once we find the corners, we can increase their accuracy using **cv2.cornerSubPi
         if ret == True:
             objpoints.append(objp)
 
-            corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
-            imgpoints.append(corners2)
+            cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
 
             # Draw and display the corners
-            img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
+            cv2.drawChessboardCorners(img, (7,6), corners,ret)
             cv2.imshow('img',img)
             cv2.waitKey(500)
 
     cv2.destroyAllWindows()
+
 
 One image with pattern drawn on it is shown below:
 
