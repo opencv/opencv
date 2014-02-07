@@ -37,8 +37,6 @@ public:
 public slots:
   // function wich will be execute within the new thread context
   void process();
-  
-  
   signals:
 #### // sending image updates to other threads (such as HMI)
      void log(std::string _name, QImage _image);

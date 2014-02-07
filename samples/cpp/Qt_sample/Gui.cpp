@@ -38,5 +38,4 @@ void Gui::log(std::string _name, QImage _image)
     // update the image to the label
     QImage resized = _image.scaled(IMG_WIDTH, IMG_HEIGHT,Qt::KeepAspectRatio);
     label->setPixmap(QPixmap::fromImage(resized));
-    
 }

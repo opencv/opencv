@@ -24,5 +24,5 @@ if(Qt4_FOUND)
 
 
   add_executable( Qt_sample ${MOC} ${source_files} ${SOURCES_UI_HEADERS})
-  target_link_libraries( Qt_sample ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} ${QT_LIBRARIES}) 
+  target_link_libraries( Qt_sample ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS} ${QT_LIBRARIES})
 endif()
