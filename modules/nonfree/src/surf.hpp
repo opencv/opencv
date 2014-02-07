@@ -69,7 +69,6 @@ protected:
     bool detectKeypoints(UMat &keypoints);
 
     const SURF* params;
-    int refcount;
 
     //! max keypoints = min(keypointsRatio * img.size().area(), 65535)
     UMat sum, intBuffer;
