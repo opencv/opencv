@@ -413,8 +413,8 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
 
     try
     {
-        cv::imread(file3, CV_LOAD_IMAGE_UNCHANGED);
-        EXPECT_NO_THROW(cv::imread(file4, CV_LOAD_IMAGE_UNCHANGED));
+        cv::imread(file3, IMREAD_UNCHANGED);
+        EXPECT_NO_THROW(cv::imread(file4, IMREAD_UNCHANGED));
     }
     catch(const std::bad_alloc&)
     {
@@ -452,12 +452,12 @@ TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
         TIFFWriteEncodedStrip(tif, 0, buffer, sizeof(buffer));
         TIFFClose(tif);
 
-        Mat img = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+        Mat img = imread(filename, IMREAD_UNCHANGED);
 
         ASSERT_EQ(img.rows, 1);
         ASSERT_EQ(img.cols, 2);
         ASSERT_EQ(img.type(), CV_16U);
-        ASSERT_EQ(img.elemSize(), 2);
+        ASSERT_EQ(img.elemSize(), sizeof(uint16_t));
         ASSERT_EQ(img.channels(), 1);
         ASSERT_EQ(img.at<uint16_t>(0,0), 0xDEAD);
         ASSERT_EQ(img.at<uint16_t>(0,1), 0xBEEF);
