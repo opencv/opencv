@@ -715,7 +715,7 @@ GPU_TEST_P(CvtColor, BGR2YCrCb)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_BGR2YCrCb);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
 GPU_TEST_P(CvtColor, RGB2YCrCb)
@@ -728,7 +728,7 @@ GPU_TEST_P(CvtColor, RGB2YCrCb)
     cv::Mat dst_gold;
     cv::cvtColor(src, dst_gold, cv::COLOR_RGB2YCrCb);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
 GPU_TEST_P(CvtColor, BGR2YCrCb4)
@@ -749,7 +749,7 @@ GPU_TEST_P(CvtColor, BGR2YCrCb4)
     cv::split(h_dst, channels);
     cv::merge(channels, 3, h_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, h_dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_32F ? 1e-2 : 1);
 }
 
 GPU_TEST_P(CvtColor, RGBA2YCrCb4)
@@ -771,7 +771,7 @@ GPU_TEST_P(CvtColor, RGBA2YCrCb4)
     cv::split(h_dst, channels);
     cv::merge(channels, 3, h_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, h_dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_32F ? 1e-2 : 1);
 }
 
 GPU_TEST_P(CvtColor, YCrCb2BGR)
@@ -840,7 +840,7 @@ GPU_TEST_P(CvtColor, YCrCb42RGBA)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-GPU_TEST_P(CvtColor, DISABLED_BGR2HSV)
+GPU_TEST_P(CvtColor, BGR2HSV)
 {
     if (depth == CV_16U)
         return;
@@ -856,7 +856,7 @@ GPU_TEST_P(CvtColor, DISABLED_BGR2HSV)
     EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, DISABLED_RGB2HSV)
+GPU_TEST_P(CvtColor, RGB2HSV)
 {
     if (depth == CV_16U)
         return;
@@ -872,7 +872,7 @@ GPU_TEST_P(CvtColor, DISABLED_RGB2HSV)
     EXPECT_MAT_NEAR(dst_gold, dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, DISABLED_RGB2HSV4)
+GPU_TEST_P(CvtColor, RGB2HSV4)
 {
     if (depth == CV_16U)
         return;
@@ -896,7 +896,7 @@ GPU_TEST_P(CvtColor, DISABLED_RGB2HSV4)
     EXPECT_MAT_NEAR(dst_gold, h_dst, depth == CV_32F ? 1e-2 : 1);
 }
 
-GPU_TEST_P(CvtColor, DISABLED_RGBA2HSV4)
+GPU_TEST_P(CvtColor, RGBA2HSV4)
 {
     if (depth == CV_16U)
         return;
