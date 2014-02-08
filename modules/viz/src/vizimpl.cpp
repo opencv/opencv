@@ -68,6 +68,8 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     timer_callback_ = vtkSmartPointer<TimerCallback>::New();
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();
     exit_callback_->viz = this;
+
+    setBackgroundMeshLab();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,6 +116,7 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
     Vec2i window_size(window_->GetSize());
     int fullscreen = window_->GetFullScreen();
 
+    window_->Finalize();
     window_ = vtkSmartPointer<vtkRenderWindow>::New();
     if (window_position_[0] != std::numeric_limits<int>::min()) //also workaround
         window_->SetPosition(window_position_.val);
