@@ -312,6 +312,8 @@ namespace cv
                 return transform_filter->GetOutput();
             }
         };
+
+        vtkSmartPointer<vtkRenderWindowInteractor> vtkCocoaRenderWindowInteractorNew();
     }
 }
 
