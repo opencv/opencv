@@ -52,6 +52,7 @@ TEST(Viz, show_cloud_bluberry)
     Affine3d pose = Affine3d().rotate(Vec3d(0, 0.8, 0));
 
     Viz3d viz("show_cloud_bluberry");
+    viz.setBackgroundColor(Color::black());
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("dragon", WCloud(dragon_cloud, Color::bluberry()), pose);
 
