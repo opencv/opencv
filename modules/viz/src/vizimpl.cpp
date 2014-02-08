@@ -111,7 +111,7 @@ void cv::viz::Viz3d::VizImpl::close()
 
 void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 {
-#if !defined _MSC_VER
+#if !defined _MSC_VER && !defined __APPLE__
     //recreating is workaround for Ubuntu -- a crash in x-server
     Vec2i window_size(window_->GetSize());
     int fullscreen = window_->GetFullScreen();
@@ -127,12 +127,15 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 #endif
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spin()
 {
     recreateRenderWindow();
+#if defined __APPLE__
+    interactor_ = vtkCocoaRenderWindowInteractorNew();
+#else
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+#endif
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
     window_->AlphaBitPlanesOff();
@@ -154,7 +157,11 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
     {
         spin_once_state_ = true;
         recreateRenderWindow();
+#if defined __APPLE__
+        interactor_ = vtkCocoaRenderWindowInteractorNew();
+#else
         interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+#endif
         interactor_->SetRenderWindow(window_);
         interactor_->SetInteractorStyle(style_);
         interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
