@@ -313,6 +313,7 @@ public:
     Vec(const Vec<_Tp, cn>& v);
 
     static Vec all(_Tp alpha);
+    static Vec zeros();
 
     //! per-element multiplication
     Vec mul(const Vec<_Tp, cn>& v) const;
@@ -937,6 +938,12 @@ Vec<_Tp, cn> Vec<_Tp, cn>::all(_Tp alpha)
     Vec v;
     for( int i = 0; i < cn; i++ ) v.val[i] = alpha;
     return v;
+}
+
+template<typename _Tp, int cn> inline
+Vec<_Tp, cn> Vec<_Tp, cn>::zeros()
+{
+    return all(0);
 }
 
 template<typename _Tp, int cn> inline
