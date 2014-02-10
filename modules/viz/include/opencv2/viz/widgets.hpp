@@ -345,6 +345,8 @@ namespace cv
             void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity());
+            //! Repacks internal structure to sinle cloud
+            void finalize();
         };
 
         class CV_EXPORTS WCloudNormals : public Widget3D

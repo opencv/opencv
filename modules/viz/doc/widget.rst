@@ -934,6 +934,8 @@ This 3D Widget defines a collection of clouds. ::
         void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
         //! All points in cloud have the same color
         void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3d &pose = Affine3d::Identity());
+        //! Repacks internal structure to sinle cloud
+        void finalize();
     };
 
 viz::WCloudCollection::WCloudCollection
@@ -963,6 +965,12 @@ Adds a cloud to the collection.
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN).
 
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
+
+viz::WCloudCollection::finalize
+-------------------------------
+Finalizes cloud data by repacking to single cloud. Useful for large cloud collections to reduce memory usage
+
+.. ocv:function:: void finalize()
 
 viz::WCloudNormals
 ------------------

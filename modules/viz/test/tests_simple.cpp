@@ -103,6 +103,7 @@ TEST(Viz, show_cloud_collection)
     ccol.addCloud(cloud, Color::white(), Affine3d().translate(Vec3d(0, 0, 0)).rotate(Vec3d(CV_PI/2, 0, 0)));
     ccol.addCloud(cloud, Color::blue(),  Affine3d().translate(Vec3d(1, 0, 0)));
     ccol.addCloud(cloud, Color::red(),   Affine3d().translate(Vec3d(2, 0, 0)));
+    ccol.finalize();
 
     Viz3d viz("show_cloud_collection");
     viz.setBackgroundColor(Color::mlab());
