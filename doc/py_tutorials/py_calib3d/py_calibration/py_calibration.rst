@@ -92,7 +92,7 @@ Once we find the corners, we can increase their accuracy using **cv2.cornerSubPi
     objp = np.zeros((6*7,3), np.float32)
     objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
 
-    # Arrays to store object points 
+    # Arrays to store object points
     objpoints = [] # 3d point in real world space
 
     images = glob.glob('*.jpg')
