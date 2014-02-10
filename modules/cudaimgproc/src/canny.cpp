@@ -58,9 +58,9 @@ namespace canny
 
     void calcMap(PtrStepSzi dx, PtrStepSzi dy, PtrStepSzf mag, PtrStepSzi map, float low_thresh, float high_thresh);
 
-    void edgesHysteresisLocal(PtrStepSzi map, ushort2* st1);
+    void edgesHysteresisLocal(PtrStepSzi map, short2* st1);
 
-    void edgesHysteresisGlobal(PtrStepSzi map, ushort2* st1, ushort2* st2);
+    void edgesHysteresisGlobal(PtrStepSzi map, short2* st1, short2* st2);
 
     void getEdges(PtrStepSzi map, PtrStepSzb dst);
 }
@@ -194,6 +194,8 @@ namespace
 
     void CannyImpl::createBuf(Size image_size)
     {
+        CV_Assert(image_size.width < std::numeric_limits<short>::max() && image_size.height < std::numeric_limits<short>::max());
+
         ensureSizeIsEnough(image_size, CV_32SC1, dx_);
         ensureSizeIsEnough(image_size, CV_32SC1, dy_);
 
@@ -209,8 +211,8 @@ namespace
         ensureSizeIsEnough(image_size, CV_32FC1, mag_);
         ensureSizeIsEnough(image_size, CV_32SC1, map_);
 
-        ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1_);
-        ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2_);
+        ensureSizeIsEnough(1, image_size.area(), CV_16SC2, st1_);
+        ensureSizeIsEnough(1, image_size.area(), CV_16SC2, st2_);
     }
 
     void CannyImpl::CannyCaller(GpuMat& edges)
@@ -218,9 +220,9 @@ namespace
         map_.setTo(Scalar::all(0));
         canny::calcMap(dx_, dy_, mag_, map_, static_cast<float>(low_thresh_), static_cast<float>(high_thresh_));
 
-        canny::edgesHysteresisLocal(map_, st1_.ptr<ushort2>());
+        canny::edgesHysteresisLocal(map_, st1_.ptr<short2>());
 
-        canny::edgesHysteresisGlobal(map_, st1_.ptr<ushort2>(), st2_.ptr<ushort2>());
+        canny::edgesHysteresisGlobal(map_, st1_.ptr<short2>(), st2_.ptr<short2>());
 
         canny::getEdges(map_, edges);
     }
