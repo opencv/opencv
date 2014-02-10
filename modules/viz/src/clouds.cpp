@@ -242,6 +242,24 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, const Color &color, c
     addCloud(cloud, Mat(cloud.size(), CV_8UC3, color), pose);
 }
 
+void cv::viz::WCloudCollection::finalize()
+{
+    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert("Incompatible widget type." && actor);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    CV_Assert("Need to add at least one cloud." && mapper);
+
+    vtkSmartPointer<vtkAlgorithm> producer = mapper->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
+    append_filter->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = append_filter->GetOutput();
+    mapper->RemoveInputConnection(0, 0);
+    VtkUtils::SetInputData(mapper, polydata);
+    mapper->Modified();
+}
+
 template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
 {
     Widget3D widget = this->cast<Widget3D>();
