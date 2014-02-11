@@ -9,6 +9,8 @@ Compares a template against overlapped image regions.
 
 .. ocv:function:: void matchTemplate( InputArray image, InputArray templ, OutputArray result, int method )
 
+.. ocv::functon:: void matchTemplate( InputArray image, const std::vector<Mat>& templs, Point& loc, int* templInd, double treshold, int method )
+
 .. ocv:pyfunction:: cv2.matchTemplate(image, templ, method[, result]) -> result
 
 .. ocv:cfunction:: void cvMatchTemplate( const CvArr* image, const CvArr* templ, CvArr* result, int method )
@@ -16,6 +18,14 @@ Compares a template against overlapped image regions.
     :param image: Image where the search is running. It must be 8-bit or 32-bit floating-point.
 
     :param templ: Searched template. It must be not greater than the source image and have the same data type.
+
+    :param templs: Vector of templates. Every template must not be greater than image and have the same data type.
+
+    :param loc: Location of best match in case of multiple template matching method
+
+    :param treshold: treshold used for selection of the best matching template
+
+    :param templInd: the index of the template that is the best matching
 
     :param result: Map of comparison results. It must be single-channel 32-bit floating-point. If  ``image``  is  :math:`W \times H`  and ``templ``  is  :math:`w \times h` , then  ``result``  is  :math:`(W-w+1) \times (H-h+1)` .
 
