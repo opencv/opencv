@@ -281,7 +281,7 @@ CUDA_TEST_P(ConvertTo, WithOutScaling)
         cv::Mat dst_gold;
         src.convertTo(dst_gold, depth2);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth2 < CV_32F ? 1.0 : 1e-4);
     }
 }
 
