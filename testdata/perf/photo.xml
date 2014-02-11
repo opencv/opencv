@@ -342,4 +342,79 @@
       <y>609</y>
       <cn>2</cn>
       <val>190.</val></rng2></gpu_dst></Sz_Depth_WinSz_BlockSz_CUDA_FastNonLocalMeansColored--CUDA_FastNonLocalMeansColored---1280x720--CV_8U--21--7->
+ <!-- resumed -->
+
+<OCL_Photo_DenoisingGrayscale--DenoisingGrayscale>
+  <result>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>254.</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>97.</val></last>
+    <rng1>
+      <x>15</x>
+      <y>268</y>
+      <val>82.</val></rng1>
+    <rng2>
+      <x>285</x>
+      <y>126</y>
+      <val>222.</val></rng2></result></OCL_Photo_DenoisingGrayscale--DenoisingGrayscale>
+<OCL_Photo_DenoisingColored--DenoisingColored>
+  <result>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>139.</val></last>
+    <rng1>
+      <x>486</x>
+      <y>470</y>
+      <val>60.</val></rng1>
+    <rng2>
+      <x>436</x>
+      <y>394</y>
+      <cn>2</cn>
+      <val>143.</val></rng2></result></OCL_Photo_DenoisingColored--DenoisingColored>
+<OCL_Photo_DenoisingGrayscaleMulti--DenoisingGrayscaleMulti>
+  <result>
+    <kind>655360</kind>
+    <type>0</type>
+    <min>2.</min>
+    <max>253.</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>89.</val></last>
+    <rng1>
+      <x>465</x>
+      <y>361</y>
+      <val>236.</val></rng1>
+    <rng2>
+      <x>223</x>
+      <y>227</y>
+      <val>26.</val></rng2></result></OCL_Photo_DenoisingGrayscaleMulti--DenoisingGrayscaleMulti>
+<OCL_Photo_DenoisingColoredMulti--DenoisingColoredMulti>
+  <result>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>511</x>
+      <y>511</y>
+      <val>142.</val></last>
+    <rng1>
+      <x>277</x>
+      <y>506</y>
+      <val>91.</val></rng1>
+    <rng2>
+      <x>54</x>
+      <y>385</y>
+      <val>125.</val></rng2></result></OCL_Photo_DenoisingColoredMulti--DenoisingColoredMulti>
 </opencv_storage>
