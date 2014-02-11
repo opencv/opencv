@@ -365,7 +365,7 @@ macro(add_android_project target path)
       endif()
       install(CODE "EXECUTE_PROCESS(COMMAND ${ANDROID_EXECUTABLE} --silent update project --path . --target \"${android_proj_sdk_target}\" --name \"${target}\" ${inst_lib_opt}
                                     WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}\"
-                                   )"  COMPONENT dev)
+                                   )"  COMPONENT samples)
       #empty 'gen'
       install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT samples)
     endif()

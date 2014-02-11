@@ -734,7 +734,7 @@ CUDA_TEST_P(Normalize, WithOutMask)
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 CUDA_TEST_P(Normalize, WithMask)
