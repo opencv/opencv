@@ -41,6 +41,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels.hpp"
+#include <vector>
 
 ////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
 
@@ -657,6 +658,48 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
             }
 
             rrow[j] = (float)num;
+        }
+    }
+}
+
+void cv::matchTemplate( InputArray _image, const std::vector<Mat>& templs, Point& loc, int* templInd, double treshold, int method )
+{
+    double bstVal = 1e30, minVal = 0, maxVal = 0;
+    Point minLoc, maxLoc;
+    Mat result;
+    Mat image = _image.getMat();
+    Mat templ;
+    if( method == TM_SQDIFF || method == TM_SQDIFF_NORMED )
+        bstVal *= -1;
+    for( unsigned i = 0; i < templs.size(); i++ )
+    {
+        templ = templs[i];
+        int res_rows = image.rows - templ.rows + 1;
+        int res_cols = image.cols - templ.cols + 1;
+        result.create( res_rows, res_cols, CV_32FC1 );
+        matchTemplate( image, templs[i], result, method );
+        minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+        if( method == TM_SQDIFF || method == TM_SQDIFF_NORMED )
+        {
+            if( bstVal < minVal)
+            {
+                bstVal = minVal;
+                loc = minLoc;
+                *templInd = i;
+            }
+            if( bstVal < treshold )
+                break;
+        }
+        else
+        {
+            if( bstVal > maxVal )
+            {
+                bstVal = maxVal;
+                loc = maxLoc;
+                *templInd = i;
+            }
+            if( bstVal > treshold )
+                break;
         }
     }
 }

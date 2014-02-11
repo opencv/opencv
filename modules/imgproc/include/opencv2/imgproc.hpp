@@ -44,6 +44,7 @@
 #define __OPENCV_IMGPROC_HPP__
 
 #include "opencv2/core.hpp"
+#include <vector>
 
 /*! \namespace cv
  Namespace where all the C++ OpenCV functionality resides
@@ -1422,6 +1423,9 @@ CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method );
 
+//! returns first template with accuracy better than treshold
+CV_EXPORTS_W void matchTemplate( InputArray image, const std::vector<Mat>& templs, Point& loc,
+                                int *templInd, double treshold, int method);
 
 // computes the connected components labeled image of boolean image ``image``
 // with 4 or 8 way connectivity - returns N, the total
