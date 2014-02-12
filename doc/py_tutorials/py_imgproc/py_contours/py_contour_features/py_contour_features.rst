@@ -127,7 +127,7 @@ Here, bounding rectangle is drawn with minimum area, so it considers the rotatio
 ::
 
     rect = cv2.minAreaRect(cnt)
-    box = cv2.cv.BoxPoints(rect)
+    box = cv2.boxPoints(rect)
     box = np.int0(box)
     cv2.drawContours(img,[box],0,(0,0,255),2)
 
@@ -172,7 +172,7 @@ Similarly we can fit a line to a set of points. Below image contains a set of wh
 ::
 
     rows,cols = img.shape[:2]
-    [vx,vy,x,y] = cv2.fitLine(cnt, cv2.cv.CV_DIST_L2,0,0.01,0.01)
+    [vx,vy,x,y] = cv2.fitLine(cnt, cv2.DIST_L2,0,0.01,0.01)
     lefty = int((-x*vy/vx) + y)
     righty = int(((cols-x)*vy/vx)+y)
     cv2.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
