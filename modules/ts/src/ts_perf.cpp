@@ -876,22 +876,24 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
     if (a.empty())
         return;
-    else if (a.isUMat() && wtype != WARMUP_READ)
+    else if (a.isUMat())
     {
-        int depth = a.depth();
-        if (depth == CV_8U)
-            cv::randu(a, 0, 256);
-        else if (depth == CV_8S)
-            cv::randu(a, -128, 128);
-        else if (depth == CV_16U)
-            cv::randu(a, 0, 1024);
-        else if (depth == CV_32F || depth == CV_64F)
-            cv::randu(a, -1.0, 1.0);
-        else if (depth == CV_16S || depth == CV_32S)
-            cv::randu(a, -4096, 4096);
-        else
-            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
-
+        if (wtype == WARMUP_RNG || wtype == WARMUP_WRITE)
+        {
+            int depth = a.depth();
+            if (depth == CV_8U)
+                cv::randu(a, 0, 256);
+            else if (depth == CV_8S)
+                cv::randu(a, -128, 128);
+            else if (depth == CV_16U)
+                cv::randu(a, 0, 1024);
+            else if (depth == CV_32F || depth == CV_64F)
+                cv::randu(a, -1.0, 1.0);
+            else if (depth == CV_16S || depth == CV_32S)
+                cv::randu(a, -4096, 4096);
+            else
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
+        }
         return;
     }
     else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
