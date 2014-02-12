@@ -1557,7 +1557,7 @@ bool CascadeClassifier::load( const String& filename )
 
 bool CascadeClassifier::read(const FileNode &root)
 {
-    Ptr<CascadeClassifierImpl> ccimpl;
+    Ptr<CascadeClassifierImpl> ccimpl = makePtr<CascadeClassifierImpl>();
     bool ok = ccimpl->read_(root);
     if( ok )
         cc = ccimpl.staticCast<BaseCascadeClassifier>();
