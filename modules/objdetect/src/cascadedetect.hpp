@@ -608,7 +608,7 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
     const CascadeClassifierImpl::Data::Stump* cascadeStumps = &cascade.data.stumps[0];
     const CascadeClassifierImpl::Data::Stage* cascadeStages = &cascade.data.stages[0];
 
-    float tmp = 0;
+    double tmp = 0;
     for( int si = 0; si < nstages; si++ )
     {
         const CascadeClassifierImpl::Data::Stage& stage = cascadeStages[si];
@@ -625,7 +625,7 @@ inline int predictCategoricalStump( CascadeClassifierImpl& cascade,
 
         if( tmp < stage.threshold )
         {
-            sum = (double)tmp;
+            sum = tmp;
             return -si;
         }
 
