@@ -88,6 +88,9 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         rrects[cls].height += rectList[i].height;
         rweights[cls]++;
     }
+
+    bool useDefaultWeights = false;
+
     if ( levelWeights && weights && !weights->empty() && !levelWeights->empty() )
     {
         for( i = 0; i < nlabels; i++ )
@@ -102,6 +105,8 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
                 rejectWeights[cls] = (*levelWeights)[i];
         }
     }
+    else
+        useDefaultWeights = true;
 
     for( i = 0; i < nclasses; i++ )
     {
@@ -154,7 +159,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         {
             rectList.push_back(r1);
             if( weights )
-                weights->push_back(l1);
+                weights->push_back(useDefaultWeights ? n1 : l1);
             if( levelWeights )
                 levelWeights->push_back(w1);
         }
@@ -575,16 +580,19 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     nchannels = hasTiltedFeatures ? 3 : 2;
     normrect = Rect(1, 1, origWinSize.width - 2, origWinSize.height - 2);
 
+    localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
         String vname = ocl::Device::getDefault().vendor();
         if (vname == "Advanced Micro Devices, Inc." ||
             vname == "AMD")
+        {
             localSize = Size(8, 8);
-        lbufSize = Size(origWinSize.width + localSize.width,
-                        origWinSize.height + localSize.height);
-        if (lbufSize.area() > 1024)
-            lbufSize = Size(0, 0);
+            lbufSize = Size(origWinSize.width + localSize.width,
+                            origWinSize.height + localSize.height);
+            if (lbufSize.area() > 1024)
+                lbufSize = Size(0, 0);
+        }
     }
 
     return true;
@@ -757,6 +765,7 @@ bool LBPEvaluator::read( const FileNode& node, Size _origWinSize )
             return false;
     }
     nchannels = 1;
+    localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
         const ocl::Device& device = ocl::Device::getDefault();
