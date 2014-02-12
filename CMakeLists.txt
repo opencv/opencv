@@ -596,6 +596,28 @@ if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
   endif()
 endif()
 
+if(NOT OPENCV_README_FILE)
+  if(ANDROID)
+    set(OPENCV_README_FILE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/android/README.android)
+  endif()
+endif()
+
+if(NOT OPENCV_LICENSE_FILE)
+  set(OPENCV_LICENSE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+endif()
+
+# for UNIX it does not make sense as LICENSE and readme will be part of the package automatically
+if(ANDROID OR NOT UNIX)
+  install(FILES ${OPENCV_LICENSE_FILE}
+        PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+        DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+  if(OPENCV_README_FILE)
+    install(FILES ${OPENCV_README_FILE}
+            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+            DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+  endif()
+endif()
+
 # ----------------------------------------------------------------------------
 # Summary:
 # ----------------------------------------------------------------------------
