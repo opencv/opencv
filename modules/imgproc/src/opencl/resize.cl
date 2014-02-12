@@ -52,8 +52,18 @@
 #define CAST_BITS (INTER_RESIZE_COEF_BITS << 1)
 #define INC(x,l) min(x+1,l-1)
 
-#define PIXSIZE ((int)sizeof(PIXTYPE))
+
 #define noconvert(x) (x)
+
+#if cn != 3
+#define loadpix(addr)  *(__global const PIXTYPE*)(addr)
+#define storepix(val, addr)  *(__global PIXTYPE*)(addr) = val
+#define PIXSIZE ((int)sizeof(PIXTYPE))
+#else
+#define loadpix(addr)  vload3(0, (__global const PIXTYPE1*)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global PIXTYPE1*)(addr))
+#define PIXSIZE ((int)sizeof(PIXTYPE1)*3)
+#endif
 
 #if defined INTER_LINEAR
 
@@ -89,10 +99,10 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
     int U1 = rint(INTER_RESIZE_COEF_SCALE - u);
     int V1 = rint(INTER_RESIZE_COEF_SCALE - v);
 
-    WORKTYPE data0 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE)));
-    WORKTYPE data1 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
-    WORKTYPE data2 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
-    WORKTYPE data3 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
+    WORKTYPE data0 = convertToWT(loadpix(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE)));
+    WORKTYPE data1 = convertToWT(loadpix(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
+    WORKTYPE data2 = convertToWT(loadpix(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
+    WORKTYPE data3 = convertToWT(loadpix(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
 
     WORKTYPE val = mul24((WORKTYPE)mul24(U1, V1), data0) + mul24((WORKTYPE)mul24(U, V1), data1) +
                mul24((WORKTYPE)mul24(U1, V), data2) + mul24((WORKTYPE)mul24(U, V), data3);
@@ -102,10 +112,10 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
 #else
     float u1 = 1.f - u;
     float v1 = 1.f - v;
-    WORKTYPE data0 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE)));
-    WORKTYPE data1 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
-    WORKTYPE data2 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
-    WORKTYPE data3 = convertToWT(*(__global const PIXTYPE*)(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
+    WORKTYPE data0 = convertToWT(loadpix(srcptr + mad24(y, srcstep, srcoffset + x*PIXSIZE)));
+    WORKTYPE data1 = convertToWT(loadpix(srcptr + mad24(y, srcstep, srcoffset + x_*PIXSIZE)));
+    WORKTYPE data2 = convertToWT(loadpix(srcptr + mad24(y_, srcstep, srcoffset + x*PIXSIZE)));
+    WORKTYPE data3 = convertToWT(loadpix(srcptr + mad24(y_, srcstep, srcoffset + x_*PIXSIZE)));
 
     PIXTYPE uval = u1 * v1 * data0 + u * v1 * data1 + u1 * v *data2 + u * v *data3;
 
@@ -113,8 +123,7 @@ __kernel void resizeLN(__global const uchar* srcptr, int srcstep, int srcoffset,
 
     if(dx < dstcols && dy < dstrows)
     {
-        __global PIXTYPE* dst = (__global PIXTYPE*)(dstptr + mad24(dy, dststep, dstoffset + dx*PIXSIZE));
-        dst[0] = uval;
+        storepix(uval, dstptr + mad24(dy, dststep, dstoffset + dx*PIXSIZE));
     }
 }
 
@@ -136,16 +145,12 @@ __kernel void resizeNN(__global const uchar* srcptr, int srcstep, int srcoffset,
         int sx = min(convert_int_rtz(s1), srccols-1);
         int sy = min(convert_int_rtz(s2), srcrows-1);
 
-        __global PIXTYPE* dst = (__global PIXTYPE*)(dstptr + mad24(dy, dststep, dstoffset + dx*PIXSIZE));
-        __global const PIXTYPE* src = (__global const PIXTYPE*)(srcptr + mad24(sy, srcstep, srcoffset + sx*PIXSIZE));
-
-        dst[0] = src[0];
+        storepix(loadpix(srcptr + mad24(sy, srcstep, srcoffset + sx*PIXSIZE)),
+                 dstptr + mad24(dy, dststep, dstoffset + dx*PIXSIZE));
     }
 }
 
 #elif defined INTER_AREA
-
-#define TSIZE ((int)(sizeof(T)))
 
 #ifdef INTER_AREA_FAST
 
@@ -174,10 +179,10 @@ __kernel void resizeAREA_FAST(__global const uchar * src, int src_step, int src_
             int src_index = mad24(symap_tab[y + sy], src_step, src_offset);
             #pragma unroll
             for (int x = 0; x < XSCALE; ++x)
-                sum += convertToWTV(((__global const T*)(src + src_index))[sxmap_tab[sx + x]]);
+                sum += convertToWTV(loadpix(src + src_index + sxmap_tab[sx + x]*PIXSIZE));
         }
 
-        ((__global T*)(dst + dst_index))[dx] = convertToT(convertToWT2V(sum) * (WT2V)(SCALE));
+        storepix(convertToPIXTYPE(convertToWT2V(sum) * (WT2V)(SCALE)), dst + dst_index + dx*PIXSIZE);
     }
 }
 
@@ -219,12 +224,12 @@ __kernel void resizeAREA(__global const uchar * src, int src_step, int src_offse
             for (int sx = sx0, xk = xk0; sx <= sx1; ++sx, ++xk)
             {
                 WTV alpha = (WTV)(xalpha_tab[xk]);
-                buf += convertToWTV(((__global const T*)(src + src_index))[sx]) * alpha;
+                buf += convertToWTV(loadpix(src + src_index + sx*PIXSIZE)) * alpha;
             }
             sum += buf * beta;
         }
 
-        ((__global T*)(dst + dst_index))[dx] = convertToT(sum);
+        storepix(convertToPIXTYPE(sum), dst + dst_index + dx*PIXSIZE);
     }
 }
 
