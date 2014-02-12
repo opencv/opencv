@@ -33,14 +33,14 @@ static void help()
     cout << "\nThis demo demonstrates the use of the Qt enhanced version of the highgui GUI interface\n"
             "  and dang if it doesn't throw in the use of of the POSIT 3D tracking algorithm too\n"
             "It works off of the video: cube4.avi\n"
-            "Using OpenCV version %s\n" << CV_VERSION << "\n\n"
-" 1). This demo is mainly based on work from Javier Barandiaran Martirena\n"
-"     See this page http://code.opencv.org/projects/opencv/wiki/Posit.\n"
-" 2). This is a demo to illustrate how to use **OpenGL Callback**.\n"
-" 3). You need Qt binding to compile this sample with OpenGL support enabled.\n"
-" 4). The features' detection is very basic and could highly be improved \n"
-"     (basic thresholding tuned for the specific video) but 2).\n"
-" 5) THANKS TO Google Summer of Code 2010 for supporting this work!\n" << endl;
+            "Using OpenCV version " << CV_VERSION << "\n\n"
+    " 1). This demo is mainly based on work from Javier Barandiaran Martirena\n"
+    "     See this page http://code.opencv.org/projects/opencv/wiki/Posit.\n"
+    " 2). This is a demo to illustrate how to use **OpenGL Callback**.\n"
+    " 3). You need Qt binding to compile this sample with OpenGL support enabled.\n"
+    " 4). The features' detection is very basic and could highly be improved \n"
+    "     (basic thresholding tuned for the specific video) but 2).\n"
+    " 5) THANKS TO Google Summer of Code 2010 for supporting this work!\n" << endl;
 }
 
 #define FOCAL_LENGTH 600
@@ -88,7 +88,6 @@ static void renderCube(float size)
     glEnd();
 }
 
-
 static void on_opengl(void* param)
 {
     //Draw the object with the estimated pose
@@ -121,8 +120,6 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints, const Mat& source
     threshold(grayImage, grayImage, 26, 255, THRESH_BINARY_INV); //25
 
     Mat MgrayImage = grayImage;
-    //For debug
-    //MgrayImage = MgrayImage.clone();//deep copy
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
     findContours(MgrayImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
@@ -199,21 +196,15 @@ static void foundCorners(vector<CvPoint2D32f> *srcImagePoints, const Mat& source
             srcImagePoints->at(i) = cvPoint2D32f(srcImagePoints_temp.at(i).x-source.cols/2,source.rows/2-srcImagePoints_temp.at(i).y);
         }
     }
-
 }
 
 static void createOpenGLMatrixFrom(float *posePOSIT,const CvMatr32f &rotationMatrix, const CvVect32f &translationVector)
 {
-
-
     //coordinate system returned is relative to the first 3D input point
     for (int f=0; f<3; f++)
-    {
         for (int c=0; c<3; c++)
-        {
             posePOSIT[c*4+f] = rotationMatrix[f*3+c];	//transposed
-        }
-    }
+
     posePOSIT[3] = 0.0;
     posePOSIT[7] = 0.0;
     posePOSIT[11] = 0.0;
@@ -226,19 +217,27 @@ static void createOpenGLMatrixFrom(float *posePOSIT,const CvMatr32f &rotationMat
 int main(void)
 {
     help();
-    VideoCapture video("cube4.avi");
-    CV_Assert(video.isOpened());
+
+    string fileName = "cube4.avi";
+    VideoCapture video(fileName);
+    if (!video.isOpened())
+    {
+        cerr << "Video file " << fileName << " could not be opened" << endl;
+        return EXIT_FAILURE;
+    }
 
     Mat source, grayImage;
-
     video >> source;
 
     namedWindow("original", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    namedWindow("POSIT", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear). This demo is only to illustrate how to use OpenGL callback.\n -- Press ESC to exit.", 10000);
+    namedWindow("POSIT", WINDOW_OPENGL | CV_WINDOW_FREERATIO);
+    resizeWindow("POSIT", source.cols, source.rows);
 
-    float OpenGLMatrix[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    setOpenGlDrawCallback("POSIT",on_opengl,OpenGLMatrix);
+    displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear)."
+                   "This demo is only to illustrate how to use OpenGL callback.\n -- Press ESC to exit.", 10000);
+
+    float OpenGLMatrix[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    setOpenGlDrawCallback("POSIT", on_opengl, OpenGLMatrix);
 
     vector<CvPoint3D32f> modelPoints;
     initPOSIT(&modelPoints);
@@ -248,19 +247,20 @@ int main(void)
 
     CvMatr32f rotation_matrix = new float[9];
     CvVect32f translation_vector = new float[3];
-    CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 100, 1.0e-4f);
+    CvTermCriteria criteria = cvTermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 100, 1e-4f);
+    vector<CvPoint2D32f> srcImagePoints(4, cvPoint2D32f(0, 0));
 
-    vector<CvPoint2D32f> srcImagePoints(4,cvPoint2D32f(0,0));
-
-
-    while(waitKey(33) != 27)
+    while (waitKey(33) != 27)
     {
         video >> source;
-        imshow("original",source);
+        if (source.empty())
+            break;
+
+        imshow("original", source);
 
         foundCorners(&srcImagePoints,source,grayImage);
         cvPOSIT( positObject, &srcImagePoints[0], FOCAL_LENGTH, criteria, rotation_matrix, translation_vector );
-        createOpenGLMatrixFrom(OpenGLMatrix,rotation_matrix,translation_vector);
+        createOpenGLMatrixFrom(OpenGLMatrix, rotation_matrix, translation_vector);
 
         imshow("POSIT",source);
 
@@ -268,6 +268,7 @@ int main(void)
             video.set(CV_CAP_PROP_POS_AVI_RATIO, 0);
     }
 
+    setOpenGlDrawCallback("POSIT", 0, 0);
     destroyAllWindows();
     cvReleasePOSITObject(&positObject);
 
