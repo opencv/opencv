@@ -125,7 +125,7 @@ bool LogisticRegression::train(cv::InputArray data_ip, cv::InputArray labels_ip)
     cv::Mat labels;
 
     set_label_map(_labels_i);
-    int num_classes = this->forward_mapper.size();
+    int num_classes = (int) this->forward_mapper.size();
 
     // add a column of ones
     cv::Mat data_t = cv::Mat::zeros(_data_i.rows, _data_i.cols+1, CV_32F);
