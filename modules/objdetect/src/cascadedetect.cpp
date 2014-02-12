@@ -89,7 +89,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         rweights[cls]++;
     }
 
-	bool useDefaultWeights = false;
+    bool useDefaultWeights = false;
 
     if ( levelWeights && weights && !weights->empty() && !levelWeights->empty() )
     {
@@ -105,8 +105,8 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
                 rejectWeights[cls] = (*levelWeights)[i];
         }
     }
-	else
-		useDefaultWeights = true;
+    else
+        useDefaultWeights = true;
 
     for( i = 0; i < nclasses; i++ )
     {
