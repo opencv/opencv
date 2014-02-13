@@ -39,10 +39,14 @@
 //
 //M*/
 
+#include "opencv2/core/base.hpp"
+
 #ifndef __OPENCV_DENOISING_ARRAYS_HPP__
 #define __OPENCV_DENOISING_ARRAYS_HPP__
 
-template <class T> struct Array2d {
+template <class T>
+struct Array2d
+{
     T* a;
     int n1,n2;
     bool needToDeallocArray;
@@ -50,14 +54,16 @@ template <class T> struct Array2d {
     Array2d(const Array2d& array2d):
         a(array2d.a), n1(array2d.n1), n2(array2d.n2), needToDeallocArray(false)
     {
-        if (array2d.needToDeallocArray) {
-            // copy constructor for self allocating arrays not supported
-            throw new std::exception();
+        if (array2d.needToDeallocArray)
+        {
+            CV_Error(Error::BadDataPtr, "Copy constructor for self allocating arrays not supported");
         }
     }
 
     Array2d(T* _a, int _n1, int _n2):
-        a(_a), n1(_n1), n2(_n2), needToDeallocArray(false) {}
+        a(_a), n1(_n1), n2(_n2), needToDeallocArray(false)
+    {
+    }
 
     Array2d(int _n1, int _n2):
         n1(_n1), n2(_n2), needToDeallocArray(true)
@@ -65,28 +71,34 @@ template <class T> struct Array2d {
         a = new T[n1*n2];
     }
 
-    ~Array2d() {
-        if (needToDeallocArray) {
+    ~Array2d()
+    {
+        if (needToDeallocArray)
             delete[] a;
-        }
     }
 
-    T* operator [] (int i) {
+    T* operator [] (int i)
+    {
         return a + i*n2;
     }
 
-    inline T* row_ptr(int i) {
+    inline T* row_ptr(int i)
+    {
         return (*this)[i];
     }
 };
 
-template <class T> struct Array3d {
+template <class T>
+struct Array3d
+{
     T* a;
     int n1,n2,n3;
     bool needToDeallocArray;
 
     Array3d(T* _a, int _n1, int _n2, int _n3):
-        a(_a), n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(false) {}
+        a(_a), n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(false)
+    {
+    }
 
     Array3d(int _n1, int _n2, int _n3):
         n1(_n1), n2(_n2), n3(_n3), needToDeallocArray(true)
@@ -94,64 +106,72 @@ template <class T> struct Array3d {
         a = new T[n1*n2*n3];
     }
 
-    ~Array3d() {
-        if (needToDeallocArray) {
+    ~Array3d()
+    {
+        if (needToDeallocArray)
             delete[] a;
-        }
     }
 
-    Array2d<T> operator [] (int i) {
+    Array2d<T> operator [] (int i)
+    {
         Array2d<T> array2d(a + i*n2*n3, n2, n3);
         return array2d;
     }
 
-    inline T* row_ptr(int i1, int i2) {
+    inline T* row_ptr(int i1, int i2)
+    {
         return a + i1*n2*n3 + i2*n3;
     }
 };
 
-template <class T> struct Array4d {
+template <class T>
+struct Array4d
+{
     T* a;
     int n1,n2,n3,n4;
     bool needToDeallocArray;
     int steps[4];
 
-    void init_steps() {
+    void init_steps()
+    {
         steps[0] = n2*n3*n4;
         steps[1] = n3*n4;
         steps[2] = n4;
         steps[3] = 1;
     }
 
-    Array4d(T* _a, int _n1, int _n2, int _n3, int _n4):
+    Array4d(T* _a, int _n1, int _n2, int _n3, int _n4) :
         a(_a), n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(false)
-     {
+    {
         init_steps();
-     }
+    }
 
-    Array4d(int _n1, int _n2, int _n3, int _n4):
+    Array4d(int _n1, int _n2, int _n3, int _n4) :
         n1(_n1), n2(_n2), n3(_n3), n4(_n4), needToDeallocArray(true)
     {
         a = new T[n1*n2*n3*n4];
         init_steps();
-   }
-
-    ~Array4d() {
-        if (needToDeallocArray) {
-            delete[] a;
-        }
     }
 
-    Array3d<T> operator [] (int i) {
+    ~Array4d()
+    {
+        if (needToDeallocArray)
+            delete[] a;
+    }
+
+    Array3d<T> operator [] (int i)
+    {
         Array3d<T> array3d(a + i*n2*n3*n4, n2, n3, n4);
         return array3d;
     }
 
-    inline T* row_ptr(int i1, int i2, int i3) {
+    inline T* row_ptr(int i1, int i2, int i3)
+    {
         return a + i1*n2*n3*n4 + i2*n3*n4 + i3*n4;
     }
 
-    inline int step_size(int dimension) {
+    inline int step_size(int dimension)
+    {
         return steps[dimension];
     }
 };
