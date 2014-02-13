@@ -1563,7 +1563,14 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
 
         TEST_CYCLE() cv::gpu::alphaComp(d_img1, d_img2, dst, alpha_op);
 
-        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        if (CV_MAT_DEPTH(type) < CV_32F)
+        {
+            GPU_SANITY_CHECK(dst, 1);
+        }
+        else
+        {
+            GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        }
     }
     else
     {
