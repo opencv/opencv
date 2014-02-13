@@ -445,6 +445,12 @@ include(cmake/OpenCVPCHSupport.cmake)
 include(cmake/OpenCVModule.cmake)
 
 # ----------------------------------------------------------------------------
+#  Detect endianness of build platform
+# ----------------------------------------------------------------------------
+include(TestBigEndian)
+test_big_endian(WORDS_BIGENDIAN)
+
+# ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
 # ----------------------------------------------------------------------------
 
