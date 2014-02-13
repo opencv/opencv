@@ -3924,7 +3924,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     else
     {
         char cvt[2][50];
-        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s cn=%d",
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s -D cn=%d",
                       interpolationMap[interpolation], ocl::typeToStr(type),
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),
