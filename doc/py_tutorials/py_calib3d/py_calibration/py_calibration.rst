@@ -79,6 +79,7 @@ So to find pattern in chess board, we use the function, **cv2.findChessboardCorn
 .. seealso:: Instead of chess board, we can use some circular grid, but then use the function **cv2.findCirclesGrid()** to find the pattern. It is said that less number of images are enough when using circular grid.
 
 Once we find the corners, we can increase their accuracy using **cv2.cornerSubPix()**. We can also draw the pattern using **cv2.drawChessboardCorners()**. All these steps are included in below code:
+
 ::
 
     import numpy as np
@@ -92,8 +93,9 @@ Once we find the corners, we can increase their accuracy using **cv2.cornerSubPi
     objp = np.zeros((6*7,3), np.float32)
     objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
 
-    # Arrays to store object points
+    # Arrays to store object points and image points from all the images.
     objpoints = [] # 3d point in real world space
+    imgpoints = [] # 2d points in image plane.
 
     images = glob.glob('*.jpg')
 
@@ -109,14 +111,14 @@ Once we find the corners, we can increase their accuracy using **cv2.cornerSubPi
             objpoints.append(objp)
 
             cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+            imgpoints.append(corners)
 
             # Draw and display the corners
-            cv2.drawChessboardCorners(img, (7,6), corners,ret)
+            cv2.drawChessboardCorners(img, (7,6), corners2,ret)
             cv2.imshow('img',img)
             cv2.waitKey(500)
 
     cv2.destroyAllWindows()
-
 
 One image with pattern drawn on it is shown below:
 
