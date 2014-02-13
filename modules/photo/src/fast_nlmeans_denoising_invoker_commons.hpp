@@ -70,7 +70,7 @@ template <typename T> static inline int calcDist(const Mat& m, int i1, int j1, i
 
 template <typename T> static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
 {
-    return calcDist(a_down,b_down) - calcDist(a_up, b_up);
+    return calcDist(a_down, b_down) - calcDist(a_up, b_up);
 }
 
 template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uchar b_down)
