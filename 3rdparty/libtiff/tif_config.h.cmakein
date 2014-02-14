@@ -154,9 +154,9 @@
 /* define to use win32 IO system */
 #cmakedefine USE_WIN32_FILEIO
 
-/* Define WORDS_BIGENDIAN if your processor stores words with the most
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
-#cmakedefine WORDS_BIGENDIAN
+#cmakedefine WORDS_BIGENDIAN 1
 
 /* Support Deflate compression */
 #define ZIP_SUPPORT 1
