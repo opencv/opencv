@@ -86,15 +86,15 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images)
+Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images)
 {
     return estimateTransform(images, std::vector<std::vector<Rect> >());
 }
 
 
-Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois)
+Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois)
 {
-    images.getMatVector(imgs_);
+    images.getUMatVector(imgs_);
     rois_ = rois;
 
     Status status;
@@ -112,21 +112,21 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vecto
 
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
-    return composePanorama(std::vector<Mat>(), pano);
+    return composePanorama(std::vector<UMat>(), pano);
 }
 
 
-Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
+Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
 {
     LOGLN("Warping images (auxiliary)... ");
 
-    std::vector<Mat> imgs;
-    images.getMatVector(imgs);
+    std::vector<UMat> imgs;
+    images.getUMatVector(imgs);
     if (!imgs.empty())
     {
         CV_Assert(imgs.size() == imgs_.size());
 
-        Mat img;
+        UMat img;
         seam_est_imgs_.resize(imgs.size());
 
         for (size_t i = 0; i < imgs.size(); ++i)
@@ -136,8 +136,8 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
             seam_est_imgs_[i] = img.clone();
         }
 
-        std::vector<Mat> seam_est_imgs_subset;
-        std::vector<Mat> imgs_subset;
+        std::vector<UMat> seam_est_imgs_subset;
+        std::vector<UMat> imgs_subset;
 
         for (size_t i = 0; i < indices_.size(); ++i)
         {
@@ -149,17 +149,17 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         imgs_ = imgs_subset;
     }
 
-    Mat &pano_ = pano.getMatRef();
+    UMat pano_;
 
 #if ENABLE_LOG
     int64 t = getTickCount();
 #endif
 
     std::vector<Point> corners(imgs_.size());
-    std::vector<Mat> masks_warped(imgs_.size());
-    std::vector<Mat> images_warped(imgs_.size());
+    std::vector<UMat> masks_warped(imgs_.size());
+    std::vector<UMat> images_warped(imgs_.size());
     std::vector<Size> sizes(imgs_.size());
-    std::vector<Mat> masks(imgs_.size());
+    std::vector<UMat> masks(imgs_.size());
 
     // Prepare image masks
     for (size_t i = 0; i < imgs_.size(); ++i)
@@ -185,7 +185,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         w->warp(masks[i], K, cameras_[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    std::vector<Mat> images_warped_f(imgs_.size());
+    std::vector<UMat> images_warped_f(imgs_.size());
     for (size_t i = 0; i < imgs_.size(); ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
@@ -206,8 +206,8 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     t = getTickCount();
 #endif
 
-    Mat img_warped, img_warped_s;
-    Mat dilated_mask, seam_mask, mask, mask_warped;
+    UMat img_warped, img_warped_s;
+    UMat dilated_mask, seam_mask, mask, mask_warped;
 
     //double compose_seam_aspect = 1;
     double compose_work_aspect = 1;
@@ -216,7 +216,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     double compose_scale = 1;
     bool is_compose_scale_set = false;
 
-    Mat full_img, img;
+    UMat full_img, img;
     for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
     {
         LOGLN("Compositing image #" << indices_[img_idx] + 1);
@@ -290,7 +290,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size());
 
-        mask_warped = seam_mask & mask_warped;
+        bitwise_and(seam_mask, mask_warped, mask_warped);
 
         if (!is_blender_prepared)
         {
@@ -302,7 +302,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         blender_->feed(img_warped_s, mask_warped, corners[img_idx]);
     }
 
-    Mat result, result_mask;
+    UMat result, result_mask;
     blender_->blend(result, result_mask);
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -311,11 +311,13 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
     // so convert it to avoid user confusing
     result.convertTo(pano_, CV_8U);
 
+    pano.assign(pano_);
+
     return OK;
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
 {
     Status status = estimateTransform(images);
     if (status != OK)
@@ -324,7 +326,7 @@ Stitcher::Status Stitcher::stitch(InputArray images, OutputArray pano)
 }
 
 
-Stitcher::Status Stitcher::stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 {
     Status status = estimateTransform(images, rois);
     if (status != OK)
@@ -346,7 +348,7 @@ Stitcher::Status Stitcher::matchImages()
     seam_scale_ = 1;
     bool is_work_scale_set = false;
     bool is_seam_scale_set = false;
-    Mat full_img, img;
+    UMat full_img, img;
     features_.resize(imgs_.size());
     seam_est_imgs_.resize(imgs_.size());
     full_img_sizes_.resize(imgs_.size());
@@ -420,8 +422,8 @@ Stitcher::Status Stitcher::matchImages()
 
     // Leave only images we are sure are from the same panorama
     indices_ = detail::leaveBiggestComponent(features_, pairwise_matches_, (float)conf_thresh_);
-    std::vector<Mat> seam_est_imgs_subset;
-    std::vector<Mat> imgs_subset;
+    std::vector<UMat> seam_est_imgs_subset;
+    std::vector<UMat> imgs_subset;
     std::vector<Size> full_img_sizes_subset;
     for (size_t i = 0; i < indices_.size(); ++i)
     {
