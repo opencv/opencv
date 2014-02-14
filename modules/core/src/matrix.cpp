@@ -2592,6 +2592,43 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
         CV_Error(Error::StsNotImplemented, "");
 }
 
+
+void _OutputArray::assign(const UMat& u) const
+{
+    int k = kind();
+    if (k == UMAT)
+    {
+        *(UMat*)obj = u;
+    }
+    else if (k == MAT)
+    {
+        u.copyTo(*(Mat*)obj); // TODO check u.getMat()
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
+void _OutputArray::assign(const Mat& m) const
+{
+    int k = kind();
+    if (k == UMAT)
+    {
+        m.copyTo(*(UMat*)obj); // TODO check m.getUMat()
+    }
+    else if (k == MAT)
+    {
+        *(Mat*)obj = m;
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+}
+
+
 static _InputOutputArray _none;
 InputOutputArray noArray() { return _none; }
 

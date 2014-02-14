@@ -98,8 +98,8 @@ public:
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
-    const cv::Mat& matchingMask() const { return matching_mask_; }
-    void setMatchingMask(const cv::Mat &mask)
+    const cv::UMat& matchingMask() const { return matching_mask_; }
+    void setMatchingMask(const cv::UMat &mask)
     {
         CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
         matching_mask_ = mask.clone();
@@ -127,14 +127,14 @@ public:
     const Ptr<detail::Blender> blender() const { return blender_; }
     void setBlender(Ptr<detail::Blender> b) { blender_ = b; }
 
-    Status estimateTransform(InputArray images);
-    Status estimateTransform(InputArray images, const std::vector<std::vector<Rect> > &rois);
+    Status estimateTransform(InputArrayOfArrays images);
+    Status estimateTransform(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois);
 
     Status composePanorama(OutputArray pano);
-    Status composePanorama(InputArray images, OutputArray pano);
+    Status composePanorama(InputArrayOfArrays images, OutputArray pano);
 
-    Status stitch(InputArray images, OutputArray pano);
-    Status stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
+    Status stitch(InputArrayOfArrays images, OutputArray pano);
+    Status stitch(InputArrayOfArrays images, const std::vector<std::vector<Rect> > &rois, OutputArray pano);
 
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
@@ -152,7 +152,7 @@ private:
     double conf_thresh_;
     Ptr<detail::FeaturesFinder> features_finder_;
     Ptr<detail::FeaturesMatcher> features_matcher_;
-    cv::Mat matching_mask_;
+    cv::UMat matching_mask_;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster_;
     bool do_wave_correct_;
     detail::WaveCorrectKind wave_correct_kind_;
@@ -161,12 +161,12 @@ private:
     Ptr<detail::SeamFinder> seam_finder_;
     Ptr<detail::Blender> blender_;
 
-    std::vector<cv::Mat> imgs_;
+    std::vector<cv::UMat> imgs_;
     std::vector<std::vector<cv::Rect> > rois_;
     std::vector<cv::Size> full_img_sizes_;
     std::vector<detail::ImageFeatures> features_;
     std::vector<detail::MatchesInfo> pairwise_matches_;
-    std::vector<cv::Mat> seam_est_imgs_;
+    std::vector<cv::UMat> seam_est_imgs_;
     std::vector<int> indices_;
     std::vector<detail::CameraParams> cameras_;
     double work_scale_;

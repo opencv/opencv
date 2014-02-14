@@ -76,8 +76,13 @@ void Blender::prepare(Rect dst_roi)
 }
 
 
-void Blender::feed(const Mat &img, const Mat &mask, Point tl)
+void Blender::feed(InputArray _img, InputArray _mask, Point tl)
 {
+    Mat img = _img.getMat();
+    Mat mask = _mask.getMat();
+    Mat dst = dst_.getMat(ACCESS_RW);
+    Mat dst_mask = dst_mask_.getMat(ACCESS_RW);
+
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
     int dx = tl.x - dst_roi_.x;
@@ -86,9 +91,9 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
     for (int y = 0; y < img.rows; ++y)
     {
         const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
-        Point3_<short> *dst_row = dst_.ptr<Point3_<short> >(dy + y);
+        Point3_<short> *dst_row = dst.ptr<Point3_<short> >(dy + y);
         const uchar *mask_row = mask.ptr<uchar>(y);
-        uchar *dst_mask_row = dst_mask_.ptr<uchar>(dy + y);
+        uchar *dst_mask_row = dst_mask.ptr<uchar>(dy + y);
 
         for (int x = 0; x < img.cols; ++x)
         {
@@ -100,11 +105,11 @@ void Blender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void Blender::blend(Mat &dst, Mat &dst_mask)
+void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
-    dst_.setTo(Scalar::all(0), dst_mask_ == 0);
-    dst = dst_;
-    dst_mask = dst_mask_;
+    dst_.setTo(Scalar::all(0), dst_mask_.getMat(ACCESS_READ) == 0); // TODO
+    dst.assign(dst_);
+    dst_mask.assign(dst_mask_);
     dst_.release();
     dst_mask_.release();
 }
@@ -118,21 +123,27 @@ void FeatherBlender::prepare(Rect dst_roi)
 }
 
 
-void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
+void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
 {
+    Mat img = _img.getMat();
+    Mat dst = dst_.getMat(ACCESS_RW);
+
     CV_Assert(img.type() == CV_16SC3);
     CV_Assert(mask.type() == CV_8U);
 
     createWeightMap(mask, sharpness_, weight_map_);
+    Mat weight_map = weight_map_.getMat(ACCESS_READ);
+    Mat dst_weight_map = dst_weight_map_.getMat(ACCESS_RW);
+
     int dx = tl.x - dst_roi_.x;
     int dy = tl.y - dst_roi_.y;
 
     for (int y = 0; y < img.rows; ++y)
     {
         const Point3_<short>* src_row = img.ptr<Point3_<short> >(y);
-        Point3_<short>* dst_row = dst_.ptr<Point3_<short> >(dy + y);
-        const float* weight_row = weight_map_.ptr<float>(y);
-        float* dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
+        Point3_<short>* dst_row = dst.ptr<Point3_<short> >(dy + y);
+        const float* weight_row = weight_map.ptr<float>(y);
+        float* dst_weight_row = dst_weight_map.ptr<float>(dy + y);
 
         for (int x = 0; x < img.cols; ++x)
         {
@@ -145,16 +156,16 @@ void FeatherBlender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void FeatherBlender::blend(Mat &dst, Mat &dst_mask)
+void FeatherBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
     normalizeUsingWeightMap(dst_weight_map_, dst_);
-    dst_mask_ = dst_weight_map_ > WEIGHT_EPS;
+    dst_mask_ = ((Mat)(dst_weight_map_.getMat(ACCESS_READ) > WEIGHT_EPS)).getUMat(ACCESS_READ);
     Blender::blend(dst, dst_mask);
 }
 
 
-Rect FeatherBlender::createWeightMaps(const std::vector<Mat> &masks, const std::vector<Point> &corners,
-                                      std::vector<Mat> &weight_maps)
+Rect FeatherBlender::createWeightMaps(const std::vector<UMat> &masks, const std::vector<Point> &corners,
+                                      std::vector<UMat> &weight_maps)
 {
     weight_maps.resize(masks.size());
     for (size_t i = 0; i < masks.size(); ++i)
@@ -168,7 +179,7 @@ Rect FeatherBlender::createWeightMaps(const std::vector<Mat> &masks, const std::
     {
         Rect roi(corners[i].x - dst_roi.x, corners[i].y - dst_roi.y,
                  weight_maps[i].cols, weight_maps[i].rows);
-        weights_sum(roi) += weight_maps[i];
+        add(weights_sum(roi), weight_maps[i], weights_sum(roi));
     }
 
     for (size_t i = 0; i < weight_maps.size(); ++i)
@@ -233,8 +244,9 @@ void MultiBandBlender::prepare(Rect dst_roi)
 }
 
 
-void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
+void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 {
+    Mat img = _img.getMat();
     CV_Assert(img.type() == CV_16SC3 || img.type() == CV_8UC3);
     CV_Assert(mask.type() == CV_8U);
 
@@ -269,27 +281,27 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     int right = br_new.x - tl.x - img.cols;
 
     // Create the source image Laplacian pyramid
-    Mat img_with_border;
-    copyMakeBorder(img, img_with_border, top, bottom, left, right,
+    UMat img_with_border;
+    copyMakeBorder(_img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
-    std::vector<Mat> src_pyr_laplace;
+    std::vector<UMat> src_pyr_laplace;
     if (can_use_gpu_ && img_with_border.depth() == CV_16S)
         createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
     else
         createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
 
     // Create the weight map Gaussian pyramid
-    Mat weight_map;
-    std::vector<Mat> weight_pyr_gauss(num_bands_ + 1);
+    UMat weight_map;
+    std::vector<UMat> weight_pyr_gauss(num_bands_ + 1);
 
     if(weight_type_ == CV_32F)
     {
-        mask.convertTo(weight_map, CV_32F, 1./255.);
+        mask.getUMat().convertTo(weight_map, CV_32F, 1./255.);
     }
-    else// weight_type_ == CV_16S
+    else // weight_type_ == CV_16S
     {
-        mask.convertTo(weight_map, CV_16S);
-        add(weight_map, 1, weight_map, mask != 0);
+        mask.getUMat().convertTo(weight_map, CV_16S);
+        add(weight_map, Scalar::all(1), weight_map, mask.getMat(ACCESS_READ) != 0); // TODO
     }
 
     copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
@@ -307,13 +319,17 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     {
         for (int i = 0; i <= num_bands_; ++i)
         {
+            Mat _src_pyr_laplace = src_pyr_laplace[i].getMat(ACCESS_READ);
+            Mat _dst_pyr_laplace = dst_pyr_laplace_[i].getMat(ACCESS_RW);
+            Mat _weight_pyr_gauss = weight_pyr_gauss[i].getMat(ACCESS_READ);
+            Mat _dst_band_weights = dst_band_weights_[i].getMat(ACCESS_RW);
             for (int y = y_tl; y < y_br; ++y)
             {
                 int y_ = y - y_tl;
-                const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y_);
-                Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y);
-                const float* weight_row = weight_pyr_gauss[i].ptr<float>(y_);
-                float* dst_weight_row = dst_band_weights_[i].ptr<float>(y);
+                const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y_);
+                Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
+                const float* weight_row = _weight_pyr_gauss.ptr<float>(y_);
+                float* dst_weight_row = _dst_band_weights.ptr<float>(y);
 
                 for (int x = x_tl; x < x_br; ++x)
                 {
@@ -332,13 +348,17 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
     {
         for (int i = 0; i <= num_bands_; ++i)
         {
+            Mat _src_pyr_laplace = src_pyr_laplace[i].getMat(ACCESS_READ);
+            Mat _dst_pyr_laplace = dst_pyr_laplace_[i].getMat(ACCESS_RW);
+            Mat _weight_pyr_gauss = weight_pyr_gauss[i].getMat(ACCESS_READ);
+            Mat _dst_band_weights = dst_band_weights_[i].getMat(ACCESS_RW);
             for (int y = y_tl; y < y_br; ++y)
             {
                 int y_ = y - y_tl;
-                const Point3_<short>* src_row = src_pyr_laplace[i].ptr<Point3_<short> >(y_);
-                Point3_<short>* dst_row = dst_pyr_laplace_[i].ptr<Point3_<short> >(y);
-                const short* weight_row = weight_pyr_gauss[i].ptr<short>(y_);
-                short* dst_weight_row = dst_band_weights_[i].ptr<short>(y);
+                const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y_);
+                Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
+                const short* weight_row = _weight_pyr_gauss.ptr<short>(y_);
+                short* dst_weight_row = _dst_band_weights.ptr<short>(y);
 
                 for (int x = x_tl; x < x_br; ++x)
                 {
@@ -356,7 +376,7 @@ void MultiBandBlender::feed(const Mat &img, const Mat &mask, Point tl)
 }
 
 
-void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
+void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
     for (int i = 0; i <= num_bands_; ++i)
         normalizeUsingWeightMap(dst_band_weights_[i], dst_pyr_laplace_[i]);
@@ -368,7 +388,7 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 
     dst_ = dst_pyr_laplace_[0];
     dst_ = dst_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
-    dst_mask_ = dst_band_weights_[0] > WEIGHT_EPS;
+    dst_mask_ = ((Mat)(dst_band_weights_[0].getMat(ACCESS_READ) > WEIGHT_EPS)).getUMat(ACCESS_READ);
     dst_mask_ = dst_mask_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
     dst_pyr_laplace_.clear();
     dst_band_weights_.clear();
@@ -380,12 +400,15 @@ void MultiBandBlender::blend(Mat &dst, Mat &dst_mask)
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
-void normalizeUsingWeightMap(const Mat& weight, Mat& src)
+void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
+    Mat weight = _weight.getMat();
+    Mat src = _src.getMat();
+
     CV_Assert(src.type() == CV_16SC3);
 
     if(weight.type() == CV_32FC1)
@@ -424,15 +447,17 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 }
 
 
-void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
+void createWeightMap(InputArray mask, float sharpness, InputOutputArray weight)
 {
     CV_Assert(mask.type() == CV_8U);
     distanceTransform(mask, weight, DIST_L1, 3);
-    threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
+    UMat tmp;
+    multiply(weight, sharpness, tmp);
+    threshold(tmp, weight, 1.f, 1.f, THRESH_TRUNC);
 }
 
 
-void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
+void createLaplacePyr(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::createLaplacePyr(img, num_levels, pyr))
@@ -445,18 +470,18 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
     {
         if(num_levels == 0)
         {
-            img.convertTo(pyr[0], CV_16S);
+            img.getUMat().convertTo(pyr[0], CV_16S);
             return;
         }
 
-        Mat downNext;
-        Mat current = img;
+        UMat downNext;
+        UMat current = img.getUMat();
         pyrDown(img, downNext);
 
         for(int i = 1; i < num_levels; ++i)
         {
-            Mat lvl_up;
-            Mat lvl_down;
+            UMat lvl_up;
+            UMat lvl_down;
 
             pyrDown(downNext, lvl_down);
             pyrUp(downNext, lvl_up, current.size());
@@ -467,7 +492,7 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
         }
 
         {
-            Mat lvl_up;
+            UMat lvl_up;
             pyrUp(downNext, lvl_up, current.size());
             subtract(current, lvl_up, pyr[num_levels-1], noArray(), CV_16S);
 
@@ -476,10 +501,10 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
     }
     else
     {
-        pyr[0] = img;
+        pyr[0] = img.getUMat();
         for (int i = 0; i < num_levels; ++i)
             pyrDown(pyr[i], pyr[i + 1]);
-        Mat tmp;
+        UMat tmp;
         for (int i = 0; i < num_levels; ++i)
         {
             pyrUp(pyr[i + 1], tmp, pyr[i].size());
@@ -489,7 +514,7 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 }
 
 
-void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
+void createLaplacePyrGpu(InputArray img, int num_levels, std::vector<UMat> &pyr)
 {
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     pyr.resize(num_levels + 1);
@@ -517,11 +542,11 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 }
 
 
-void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
+void restoreImageFromLaplacePyr(std::vector<UMat> &pyr)
 {
     if (pyr.empty())
         return;
-    Mat tmp;
+    UMat tmp;
     for (size_t i = pyr.size() - 1; i > 0; --i)
     {
         pyrUp(pyr[i], tmp, pyr[i - 1].size());
@@ -530,7 +555,7 @@ void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 }
 
 
-void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
+void restoreImageFromLaplacePyrGpu(std::vector<UMat> &pyr)
 {
 #if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     if (pyr.empty())
