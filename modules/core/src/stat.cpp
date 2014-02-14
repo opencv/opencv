@@ -502,7 +502,7 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), db(1, dbsize, dtype), mask = _mask.getUMat();
+    UMat src = _src.getUMat(), db(USAGE_CPU_READ, 1, dbsize, dtype), mask = _mask.getUMat();
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
             dbarg = ocl::KernelArg::PtrWriteOnly(db),
@@ -655,7 +655,7 @@ static bool ocl_countNonZero( InputArray _src, int & res )
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), db(1, dbsize, CV_32SC1);
+    UMat src = _src.getUMat(), db(USAGE_CPU_READ, 1, dbsize, CV_32SC1);
     k.args(ocl::KernelArg::ReadOnlyNoSize(src), src.cols, (int)src.total(),
            dbsize, ocl::KernelArg::PtrWriteOnly(db));
 
@@ -1260,9 +1260,11 @@ static bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int*
     if (k.empty())
         return false;
 
-    UMat src = _src.getUMat(), minval(1, groupnum, src.type()),
-        maxval(1, groupnum, src.type()), minloc( 1, groupnum, CV_32SC1),
-        maxloc( 1, groupnum, CV_32SC1), mask;
+    UMat src = _src.getUMat(), mask,
+        minval(USAGE_CPU_READ, 1, groupnum, src.type()),
+        maxval(USAGE_CPU_READ, 1, groupnum, src.type()),
+        minloc(USAGE_CPU_READ, 1, groupnum, CV_32SC1),
+        maxloc(USAGE_CPU_READ, 1, groupnum, CV_32SC1);
     if (!_mask.empty())
         mask = _mask.getUMat();
 
@@ -1925,7 +1927,7 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
 
     if (normType == NORM_INF)
     {
-        UMat abssrc;
+        UMat abssrc(USAGE_CPU_NO_ACCESS);
 
         if (depth != CV_8U && depth != CV_16U)
         {
@@ -2298,7 +2300,8 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, double &
     if (k.empty())
         return false;
 
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), diff(src1.size(), CV_MAKE_TYPE(wdepth, cn));
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(),
+        diff(USAGE_CPU_NO_ACCESS, src1.size(), CV_MAKE_TYPE(wdepth, cn));
     k.args(ocl::KernelArg::ReadOnlyNoSize(src1), ocl::KernelArg::ReadOnlyNoSize(src2),
            ocl::KernelArg::WriteOnly(diff, cn));
 

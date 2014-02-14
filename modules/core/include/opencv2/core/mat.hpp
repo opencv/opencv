@@ -266,6 +266,34 @@ CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
+//! Usage flags for allocator
+enum UMatUsageFlags
+{
+    USAGE_DEFAULT = 0,
+
+    USAGE_CPU_READ = 1 << 0,
+    USAGE_CPU_WRITE = 1 << 1,
+    USAGE_CPU_NO_READ = 1 << 2,
+    USAGE_CPU_NO_WRITE = 1 << 3,
+    USAGE_CPU_ACCESS = USAGE_CPU_READ | USAGE_CPU_WRITE,
+    USAGE_CPU_NO_ACCESS = USAGE_CPU_NO_READ | USAGE_CPU_NO_WRITE,
+
+    USAGE_DEVICE_READ = 1 << 4,
+    USAGE_DEVICE_WRITE = 1 << 5,
+    USAGE_DEVICE_NO_READ = 1 << 6,
+    USAGE_DEVICE_NO_WRITE = 1 << 7,
+    USAGE_DEVICE_ACCESS = USAGE_DEVICE_READ | USAGE_DEVICE_WRITE,
+    USAGE_DEVICE_NO_ACCESS = USAGE_DEVICE_NO_READ | USAGE_DEVICE_NO_WRITE,
+
+    USAGE_ALL_ACCESS = USAGE_CPU_ACCESS | USAGE_DEVICE_ACCESS,
+
+    // default allocation policy is platform and usage specific
+    USAGE_ALLOCATE_HOST_MEMORY = 1 << 8,
+    USAGE_ALLOCATE_DEVICE_MEMORY = 1 << 9,
+
+    __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
+};
+
 struct CV_EXPORTS UMatData;
 
 /*!
@@ -283,8 +311,8 @@ public:
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
     virtual UMatData* allocate(int dims, const int* sizes, int type,
-                               void* data, size_t* step, int flags) const = 0;
-    virtual bool allocate(UMatData* data, int accessflags) const = 0;
+                               void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
+    virtual bool allocate(UMatData* data, int accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
     virtual void map(UMatData* data, int accessflags) const;
     virtual void unmap(UMatData* data) const;
@@ -369,6 +397,7 @@ struct CV_EXPORTS UMatData
     int flags;
     void* handle;
     void* userdata;
+    int allocatorFlags_; // TODO Need to cleanup: current or previous allocator?
 };
 
 
@@ -672,6 +701,7 @@ public:
 
     //! retrieve UMat from Mat
     UMat getUMat(int accessFlags) const;
+    UMat getUMat(int accessFlags, UMatUsageFlags usageFlags) const;
 
     //! returns a new matrix header for the specified row
     Mat row(int y) const;
@@ -1137,17 +1167,24 @@ class CV_EXPORTS UMat
 public:
     //! default constructor
     UMat();
+    UMat(UMatUsageFlags usageFlags);
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
     UMat(int rows, int cols, int type);
     UMat(Size size, int type);
+    UMat(UMatUsageFlags usageFlags, int rows, int cols, int type);
+    UMat(UMatUsageFlags usageFlags, Size size, int type);
     //! constucts 2D matrix and fills it with the specified value _s.
     UMat(int rows, int cols, int type, const Scalar& s);
     UMat(Size size, int type, const Scalar& s);
+    UMat(UMatUsageFlags usageFlags, int rows, int cols, int type, const Scalar& s);
+    UMat(UMatUsageFlags usageFlags, Size size, int type, const Scalar& s);
 
     //! constructs n-dimensional matrix
     UMat(int ndims, const int* sizes, int type);
     UMat(int ndims, const int* sizes, int type, const Scalar& s);
+    UMat(UMatUsageFlags usageFlags, int ndims, const int* sizes, int type);
+    UMat(UMatUsageFlags usageFlags, int ndims, const int* sizes, int type, const Scalar& s);
 
     //! copy constructor
     UMat(const UMat& m);
@@ -1240,6 +1277,9 @@ public:
     void create(int rows, int cols, int type);
     void create(Size size, int type);
     void create(int ndims, const int* sizes, int type);
+    void create(UMatUsageFlags usageFlags, int rows, int cols, int type);
+    void create(UMatUsageFlags usageFlags, Size size, int type);
+    void create(UMatUsageFlags usageFlags, int ndims, const int* sizes, int type);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -1311,6 +1351,7 @@ public:
 
     //! custom allocator
     MatAllocator* allocator;
+    UMatUsageFlags usageFlags; // usage flags for allocator
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
 

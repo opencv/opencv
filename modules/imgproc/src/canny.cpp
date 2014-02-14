@@ -93,7 +93,7 @@ static bool ippCanny(const Mat& _src, Mat& _dst, float low,  float high)
 static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float high_thresh,
                       int aperture_size, bool L2gradient, int cn, const Size & size)
 {
-    UMat dx(size, CV_16SC(cn)), dy(size, CV_16SC(cn));
+    UMat dx(USAGE_CPU_NO_ACCESS, size, CV_16SC(cn)), dy(USAGE_CPU_NO_ACCESS, size, CV_16SC(cn));
 
     if (L2gradient)
     {
@@ -106,7 +106,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     int low = cvFloor(low_thresh), high = cvFloor(high_thresh);
     Size esize(size.width + 2, size.height + 2);
 
-    UMat mag;
+    UMat mag(USAGE_CPU_NO_ACCESS);
     size_t globalsize[2] = { size.width * cn, size.height }, localsize[2] = { 16, 16 };
 
     if (aperture_size == 3 && !_src.isSubmatrix())
@@ -116,7 +116,9 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
         if (calcSobelRowPassKernel.empty())
             return false;
 
-        UMat src = _src.getUMat(), dxBuf(size, CV_16SC(cn)), dyBuf(size, CV_16SC(cn));
+        UMat src = _src.getUMat(),
+                dxBuf(USAGE_CPU_NO_ACCESS, size, CV_16SC(cn)),
+                dyBuf(USAGE_CPU_NO_ACCESS, size, CV_16SC(cn));
         calcSobelRowPassKernel.args(ocl::KernelArg::ReadOnly(src),
                                     ocl::KernelArg::WriteOnlyNoSize(dxBuf),
                                     ocl::KernelArg::WriteOnlyNoSize(dyBuf));
@@ -168,7 +170,7 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     if (calcMapKernel.empty())
         return false;
 
-    UMat map(esize, CV_32SC(cn));
+    UMat map(USAGE_CPU_NO_ACCESS, esize, CV_32SC(cn));
     calcMapKernel.args(ocl::KernelArg::ReadOnlyNoSize(dx), ocl::KernelArg::ReadOnlyNoSize(dy),
                        ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::WriteOnlyNoSize(map, cn),
                        size.height, size.width, low, high);
@@ -181,14 +183,15 @@ static bool ocl_Canny(InputArray _src, OutputArray _dst, float low_thresh, float
     if (edgesHysteresisLocalKernel.empty())
         return false;
 
-    UMat stack(1, size.area(), CV_16UC2), counter(1, 1, CV_32SC1, Scalar::all(0));
+    UMat stack(USAGE_CPU_NO_ACCESS, 1, size.area(), CV_16UC2),
+            counter(USAGE_CPU_READ, 1, 1, CV_32SC1, Scalar::all(0));
     edgesHysteresisLocalKernel.args(ocl::KernelArg::ReadOnlyNoSize(map), ocl::KernelArg::PtrReadWrite(stack),
                                     ocl::KernelArg::PtrReadWrite(counter), size.height, size.width);
     if (!edgesHysteresisLocalKernel.run(2, globalsize, localsize, false))
         return false;
 
     // global hysteresis thresholding
-    UMat stack2(1, size.area(), CV_16UC2);
+    UMat stack2(USAGE_CPU_NO_ACCESS, 1, size.area(), CV_16UC2);
     int count;
 
     for ( ; ; )
