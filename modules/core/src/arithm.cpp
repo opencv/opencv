@@ -934,16 +934,23 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if( oclop < 0 || ((haveMask || haveScalar) && (cn > 4 || cn == 3)) ||
+    if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
             (!doubleSupport && srcdepth == CV_64F))
         return false;
 
     char opts[1024];
     int kercn = haveMask || haveScalar ? cn : 1;
-    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s",
+    int scalarcn = kercn == 3 ? 4 : kercn;
+
+    sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"), oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
-            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, 1)) :
+            ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
+            bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, scalarcn)) :
+            ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
+            kercn);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
     if( k.empty() )
@@ -960,7 +967,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( haveScalar )
     {
-        size_t esz = CV_ELEM_SIZE(srctype);
+        size_t esz = CV_ELEM_SIZE1(srctype)*scalarcn;
         double buf[4] = {0,0,0,0};
 
         if( oclop != OCL_OP_NOT )
@@ -1294,7 +1301,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     bool haveMask = !_mask.empty();
 
-    if( ((haveMask || haveScalar) && (cn > 4 || cn == 3)) )
+    if( ((haveMask || haveScalar) && cn > 4) )
         return false;
 
     int dtype = _dst.type(), ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32S, CV_MAT_DEPTH(wtype));
@@ -1307,21 +1314,26 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         return false;
 
     int kercn = haveMask || haveScalar ? cn : 1;
+    int scalarcn = kercn == 3 ? 4 : kercn;
 
     char cvtstr[4][32], opts[1024];
-    sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT2=%s "
-            "-D dstT=%s -D workT=%s -D scaleT=%s -D convertToWT1=%s "
-            "-D convertToWT2=%s -D convertToDT=%s%s",
+    sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
+            "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D convertToWT1=%s "
+            "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
+            ocl::typeToStr(CV_MAKETYPE(depth1, 1)),
             ocl::typeToStr(CV_MAKETYPE(depth2, kercn)),
+            ocl::typeToStr(CV_MAKETYPE(depth2, 1)),
             ocl::typeToStr(CV_MAKETYPE(ddepth, kercn)),
+            ocl::typeToStr(CV_MAKETYPE(ddepth, 1)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
+            ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, 1)),
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
-            doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+            doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn);
 
     size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
     const uchar* usrdata_p = (const uchar*)usrdata;
@@ -1352,7 +1364,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( haveScalar )
     {
-        size_t esz = CV_ELEM_SIZE(wtype);
+        size_t esz = CV_ELEM_SIZE(wtype)*scalarcn;
         double buf[4]={0,0,0,0};
         Mat src2sc = _src2.getMat();
 
@@ -2621,7 +2633,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D srcT1=%s -D workT=srcT1"
+                  format("-D BINARY_OP -D srcT1=%s -D workT=srcT1 -D cn=1"
                          " -D OP_CMP -D CMP_OPERATOR=%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
                          operationMap[op],
