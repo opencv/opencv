@@ -348,7 +348,9 @@ int main(int argc, char* argv[])
     int64 app_start_time = getTickCount();
 #endif
 
+#if 0
     cv::setBreakOnError(true);
+#endif
 
     int retval = parseCmdArgs(argc, argv);
     if (retval)
@@ -554,10 +556,10 @@ int main(int argc, char* argv[])
 #endif
 
     vector<Point> corners(num_images);
-    vector<Mat> masks_warped(num_images);
-    vector<Mat> images_warped(num_images);
+    vector<UMat> masks_warped(num_images);
+    vector<UMat> images_warped(num_images);
     vector<Size> sizes(num_images);
-    vector<Mat> masks(num_images);
+    vector<UMat> masks(num_images);
 
     // Preapre images masks
     for (int i = 0; i < num_images; ++i)
@@ -645,7 +647,7 @@ int main(int argc, char* argv[])
         warper->warp(masks[i], K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
     }
 
-    vector<Mat> images_warped_f(num_images);
+    vector<UMat> images_warped_f(num_images);
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
