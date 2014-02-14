@@ -1542,7 +1542,7 @@ CV_ENUM(AlphaOp, ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_P
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
-PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
+PERF_TEST_P(Sz_Type_Op, DISABLED_ImgProc_AlphaComp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
                     AlphaOp::all()))
