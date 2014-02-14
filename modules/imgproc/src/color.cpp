@@ -3158,7 +3158,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                 coeffs[i+bidx*3] = _coeffs[i+6]*_whitept[i];
             }
 
-            Mat(1, 9, CV_32SC1, coeffs).copyTo(ucoeffs);
+            Mat(1, 9, CV_32FC1, coeffs).copyTo(ucoeffs);
         }
 
         _dst.create(sz, CV_MAKETYPE(depth, dcn));
