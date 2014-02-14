@@ -1957,7 +1957,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     double inv_fx = 1. / fx, inv_fy = 1. / fy;
     float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
 
-    if( cn == 3 || !(cn <= 4 &&
+    if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
             (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1) )) )
         return false;
@@ -1975,15 +1975,18 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKETYPE(wdepth, cn);
         char buf[2][32];
         k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
-                        depth, ocl::typeToStr(type), ocl::typeToStr(wtype),
+                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D PIXTYPE1=%s "
+                        "-D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                         ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                        ocl::convertTypeStr(wdepth, depth, cn, buf[1])));
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                        cn));
     }
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D PIXTYPE=%s -D cn", ocl::memopTypeToStr(type), cn));
+                 format("-D INTER_NEAREST -D PIXTYPE=%s -D PIXTYPE1=%s -D cn=%d",
+                        ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth), cn));
     }
     else if (interpolation == INTER_AREA)
     {
@@ -1995,9 +1998,9 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][40];
-        String buildOption = format("-D INTER_AREA -D T=%s -D WTV=%s -D convertToWTV=%s",
-                                    ocl::typeToStr(type), ocl::typeToStr(wtype),
-                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]));
+        String buildOption = format("-D INTER_AREA -D PIXTYPE=%s -D PIXTYPE1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
+                                    ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);
 
         UMat alphaOcl, tabofsOcl, mapOcl;
         UMat dmap, smap;
@@ -2005,7 +2008,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (is_area_fast)
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
-            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+            buildOption = buildOption + format(" -D convertToPIXTYPE=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
@@ -2028,7 +2031,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            buildOption = buildOption + format(" -D convertToPIXTYPE=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
@@ -3887,7 +3890,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = depth;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     int interpolation = flags & INTER_MAX;
@@ -3896,7 +3899,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     if ( !(borderType == cv::BORDER_CONSTANT &&
            (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
-         (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3)
+         (!doubleSupport && depth == CV_64F) || cn > 4)
         return false;
 
     const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
@@ -3904,27 +3907,39 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                 ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 
+    int scalarcn = cn == 3 ? 4 : cn;
+    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(CV_32S, depth);
+    int sctype = CV_MAKETYPE(wdepth, scalarcn);
+
     ocl::Kernel k;
+    String opts;
     if (interpolation == INTER_NEAREST)
     {
-        k.create(kernelName, program,
-                 format("-D INTER_NEAREST -D T=%s%s", ocl::typeToStr(type),
-                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        opts = format("-D INTER_NEAREST -D T=%s%s -D T1=%s -D ST=%s -D cn=%d", ocl::typeToStr(type),
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                      ocl::typeToStr(CV_MAT_DEPTH(type)),
+                      ocl::typeToStr(sctype),
+                      cn);
     }
     else
     {
         char cvt[2][50];
-        wdepth = std::max(CV_32S, depth);
-        k.create(kernelName, program,
-                  format("-D INTER_%s -D T=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s",
-                         interpolationMap[interpolation], ocl::typeToStr(type),
-                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s -D cn=%d",
+                      interpolationMap[interpolation], ocl::typeToStr(type),
+                      ocl::typeToStr(CV_MAT_DEPTH(type)),
+                      ocl::typeToStr(sctype),
+                      ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
+                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
+                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", cn);
     }
+
+    k.create(kernelName, program, opts);
     if (k.empty())
         return false;
+
+    double borderBuf[] = {0, 0, 0, 0};
+    scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
@@ -3956,7 +3971,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
-           ocl::KernelArg::Constant(Mat(1, 1, CV_MAKE_TYPE(wdepth, cn), borderValue)));
+           ocl::KernelArg(0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { dst.cols, dst.rows };
     return k.run(2, globalThreads, NULL, false);

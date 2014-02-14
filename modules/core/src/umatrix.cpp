@@ -744,20 +744,23 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     bool haveMask = !_mask.empty();
     int tp = type(), cn = CV_MAT_CN(tp);
-    if( dims <= 2 && cn <= 4 && cn != 3 && ocl::useOpenCL() )
+    if( dims <= 2 && cn <= 4 && CV_MAT_DEPTH(tp) < CV_64F && ocl::useOpenCL() )
     {
         Mat value = _value.getMat();
         CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::UMAT) );
-        double buf[4];
+        double buf[4]={0,0,0,0};
         convertAndUnrollScalar(value, tp, (uchar*)buf, 1);
 
+        int scalarcn = cn == 3 ? 4 : cn;
         char opts[1024];
-        sprintf(opts, "-D dstT=%s", ocl::memopTypeToStr(tp));
+        sprintf(opts, "-D dstT=%s -D dstST=%s -D dstT1=%s -D cn=%d", ocl::memopTypeToStr(tp),
+                ocl::memopTypeToStr(CV_MAKETYPE(tp,scalarcn)),
+                ocl::memopTypeToStr(CV_MAT_DEPTH(tp)), cn);
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
         {
-            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE(tp));
+            ocl::KernelArg scalararg(0, 0, 0, buf, CV_ELEM_SIZE1(tp)*scalarcn);
             UMat mask;
 
             if( haveMask )
