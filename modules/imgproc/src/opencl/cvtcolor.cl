@@ -46,10 +46,6 @@
 
 /**************************************PUBLICFUNC*************************************/
 
-#if defined (DOUBLE_SUPPORT)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
-
 #if depth == 0
     #define DATA_TYPE uchar
     #define MAX_NUM  255
@@ -1061,6 +1057,237 @@ __kernel void mRGBA2RGBA(__global const uchar* src, int src_step, int src_offset
         dst[dst_idx + 1] = v3 == 0 ? 0 : (v1 * MAX_NUM + v3_half) / v3;
         dst[dst_idx + 2] = v3 == 0 ? 0 : (v2 * MAX_NUM + v3_half) / v3;
         dst[dst_idx + 3] = v3;
+    }
+}
+
+#endif
+
+/////////////////////////////////// [l|s]RGB <-> Lab ///////////////////////////
+
+#define lab_shift xyz_shift
+#define gamma_shift 3
+#define lab_shift2 (lab_shift + gamma_shift)
+#define GAMMA_TAB_SIZE 1024
+#define GammaTabScale (float)GAMMA_TAB_SIZE
+
+inline float splineInterpolate(float x, __global const float * tab, int n)
+{
+    int ix = clamp(convert_int_sat_rtn(x), 0, n-1);
+    x -= ix;
+    tab += ix*4;
+    return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
+}
+
+#ifdef DEPTH_0
+
+__kernel void BGR2Lab(__global const uchar * src, int src_step, int src_offset,
+                      __global uchar * dst, int dst_step, int dst_offset, int rows, int cols,
+                      __global const ushort * gammaTab, __global ushort * LabCbrtTab_b,
+                      __constant int * coeffs, int Lscale, int Lshift)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+
+        src += src_idx;
+        dst += dst_idx;
+
+        int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+            C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+            C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        int R = gammaTab[src[0]], G = gammaTab[src[1]], B = gammaTab[src[2]];
+        int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];
+        int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)];
+        int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];
+
+        int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );
+        int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );
+        int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );
+
+        dst[0] = SAT_CAST(L);
+        dst[1] = SAT_CAST(a);
+        dst[2] = SAT_CAST(b);
+    }
+}
+
+#elif defined DEPTH_5
+
+__kernel void BGR2Lab(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float _1_3, float _a)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+
+        __global const float * src = (__global const float *)(srcptr + src_idx);
+        __global float * dst = (__global float *)(dstptr + dst_idx);
+
+        float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+              C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+              C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        float R = clamp(src[0], 0.0f, 1.0f);
+        float G = clamp(src[1], 0.0f, 1.0f);
+        float B = clamp(src[2], 0.0f, 1.0f);
+
+#ifdef SRGB
+        R = splineInterpolate(R * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        G = splineInterpolate(G * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+        B = splineInterpolate(B * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+
+        float X = R*C0 + G*C1 + B*C2;
+        float Y = R*C3 + G*C4 + B*C5;
+        float Z = R*C6 + G*C7 + B*C8;
+
+        float FX = X > 0.008856f ? pow(X, _1_3) : (7.787f * X + _a);
+        float FY = Y > 0.008856f ? pow(Y, _1_3) : (7.787f * Y + _a);
+        float FZ = Z > 0.008856f ? pow(Z, _1_3) : (7.787f * Z + _a);
+
+        float L = Y > 0.008856f ? (116.f * FY - 16.f) : (903.3f * Y);
+        float a = 500.f * (FX - FY);
+        float b = 200.f * (FY - FZ);
+
+        dst[0] = L;
+        dst[1] = a;
+        dst[2] = b;
+    }
+}
+
+#endif
+
+inline void Lab2BGR_f(const float * srcbuf, float * dstbuf,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float lThresh, float fThresh)
+{
+    float li = srcbuf[0], ai = srcbuf[1], bi = srcbuf[2];
+
+    float C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+          C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+          C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+    float y, fy;
+    if (li <= lThresh)
+    {
+        y = li / 903.3f;
+        fy = 7.787f * y + 16.0f / 116.0f;
+    }
+    else
+    {
+        fy = (li + 16.0f) / 116.0f;
+        y = fy * fy * fy;
+    }
+
+    float fxz[] = { ai / 500.0f + fy, fy - bi / 200.0f };
+
+    for (int j = 0; j < 2; j++)
+        if (fxz[j] <= fThresh)
+            fxz[j] = (fxz[j] - 16.0f / 116.0f) / 7.787f;
+        else
+            fxz[j] = fxz[j] * fxz[j] * fxz[j];
+
+    float x = fxz[0], z = fxz[1];
+    float ro = clamp(C0 * x + C1 * y + C2 * z, 0.0f, 1.0f);
+    float go = clamp(C3 * x + C4 * y + C5 * z, 0.0f, 1.0f);
+    float bo = clamp(C6 * x + C7 * y + C8 * z, 0.0f, 1.0f);
+
+#ifdef SRGB
+    ro = splineInterpolate(ro * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+    go = splineInterpolate(go * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+    bo = splineInterpolate(bo * GammaTabScale, gammaTab, GAMMA_TAB_SIZE);
+#endif
+
+    dstbuf[0] = ro, dstbuf[1] = go, dstbuf[2] = bo;
+}
+
+#ifdef DEPTH_0
+
+__kernel void Lab2BGR(__global const uchar * src, int src_step, int src_offset,
+                      __global uchar * dst, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float lThresh, float fThresh)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+
+        src += src_idx;
+        dst += dst_idx;
+
+        float srcbuf[3], dstbuf[3];
+        srcbuf[0] = src[0]*(100.f/255.f);
+        srcbuf[1] = convert_float(src[1] - 128);
+        srcbuf[2] = convert_float(src[2] - 128);
+
+        Lab2BGR_f(&srcbuf[0], &dstbuf[0],
+#ifdef SRGB
+            gammaTab,
+#endif
+            coeffs, lThresh, fThresh);
+
+        dst[0] = SAT_CAST(dstbuf[0] * 255.0f);
+        dst[1] = SAT_CAST(dstbuf[1] * 255.0f);
+        dst[2] = SAT_CAST(dstbuf[2] * 255.0f);
+#if dcn == 4
+        dst[3] = MAX_NUM;
+#endif
+    }
+}
+
+#elif defined DEPTH_5
+
+__kernel void Lab2BGR(__global const uchar * srcptr, int src_step, int src_offset,
+                      __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
+#ifdef SRGB
+                      __global const float * gammaTab,
+#endif
+                      __constant float * coeffs, float lThresh, float fThresh)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
+
+    if (y < rows && x < cols)
+    {
+        int src_idx = mad24(y, src_step, src_offset + x * scnbytes);
+        int dst_idx = mad24(y, dst_step, dst_offset + x * dcnbytes);
+
+        __global const float * src = (__global const float *)(srcptr + src_idx);
+        __global float * dst = (__global float *)(dstptr + dst_idx);
+
+        float srcbuf[3], dstbuf[3];
+        srcbuf[0] = src[0], srcbuf[1] = src[1], srcbuf[2] = src[2];
+
+        Lab2BGR_f(&srcbuf[0], &dstbuf[0],
+#ifdef SRGB
+            gammaTab,
+#endif
+            coeffs, lThresh, fThresh);
+
+        dst[0] = dstbuf[0], dst[1] = dstbuf[1], dst[2] = dstbuf[2];
+#if dcn == 4
+        dst[3] = MAX_NUM;
+#endif
     }
 }
 
