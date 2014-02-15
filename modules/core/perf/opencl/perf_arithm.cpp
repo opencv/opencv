@@ -121,7 +121,7 @@ OCL_PERF_TEST_P(LogFixture, Log, ::testing::Combine(
 typedef Size_MatType AddFixture;
 
 OCL_PERF_TEST_P(AddFixture, Add,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size srcSize = GET_PARAM(0);
     const int type = GET_PARAM(1);
@@ -141,7 +141,7 @@ OCL_PERF_TEST_P(AddFixture, Add,
 typedef Size_MatType SubtractFixture;
 
 OCL_PERF_TEST_P(SubtractFixture, Subtract,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -161,7 +161,7 @@ OCL_PERF_TEST_P(SubtractFixture, Subtract,
 
 typedef Size_MatType MulFixture;
 
-OCL_PERF_TEST_P(MulFixture, Multiply, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+OCL_PERF_TEST_P(MulFixture, Multiply, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -182,7 +182,7 @@ OCL_PERF_TEST_P(MulFixture, Multiply, ::testing::Combine(OCL_TEST_SIZES, OCL_TES
 typedef Size_MatType DivFixture;
 
 OCL_PERF_TEST_P(DivFixture, Divide,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -203,7 +203,7 @@ OCL_PERF_TEST_P(DivFixture, Divide,
 typedef Size_MatType AbsDiffFixture;
 
 OCL_PERF_TEST_P(AbsDiffFixture, Absdiff,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -452,7 +452,7 @@ OCL_PERF_TEST_P(PhaseFixture, Phase, ::testing::Combine(
 typedef Size_MatType BitwiseAndFixture;
 
 OCL_PERF_TEST_P(BitwiseAndFixture, Bitwise_and,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -473,7 +473,7 @@ OCL_PERF_TEST_P(BitwiseAndFixture, Bitwise_and,
 typedef Size_MatType BitwiseXorFixture;
 
 OCL_PERF_TEST_P(BitwiseXorFixture, Bitwise_xor,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -494,7 +494,7 @@ OCL_PERF_TEST_P(BitwiseXorFixture, Bitwise_xor,
 typedef Size_MatType BitwiseOrFixture;
 
 OCL_PERF_TEST_P(BitwiseOrFixture, Bitwise_or,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -515,7 +515,7 @@ OCL_PERF_TEST_P(BitwiseOrFixture, Bitwise_or,
 typedef Size_MatType BitwiseNotFixture;
 
 OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -584,7 +584,7 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
 typedef Size_MatType AddWeightedFixture;
 
 OCL_PERF_TEST_P(AddWeightedFixture, AddWeighted,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
