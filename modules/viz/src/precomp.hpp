@@ -155,7 +155,16 @@ namespace cv
     namespace viz
     {
         typedef std::map<String, vtkSmartPointer<vtkProp> > WidgetActorMap;
-        typedef std::map<String, Viz3d> VizMap;
+
+        struct VizMap
+        {
+            typedef std::map<String, Viz3d> type;
+            typedef type::iterator iterator;
+
+            type m;
+            ~VizMap();
+            void replace_clear();
+        };
 
         class VizStorage
         {
@@ -167,7 +176,6 @@ namespace cv
 
         private:
             VizStorage(); // Static
-            ~VizStorage();
 
             static void add(const Viz3d& window);
             static Viz3d& get(const String &window_name);
@@ -177,6 +185,8 @@ namespace cv
 
             static VizMap storage;
             friend class Viz3d;
+
+            static VizStorage init;
         };
 
         template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/norm(v); }
