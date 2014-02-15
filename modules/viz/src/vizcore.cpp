@@ -291,7 +291,11 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
 {
     if (_traj.kind() == _InputArray::STD_VECTOR_MAT)
     {
+#if CV_MAJOR_VERSION < 3
         std::vector<Mat>& v = *(std::vector<Mat>*)_traj.obj;
+#else
+        std::vector<Mat>& v = *(std::vector<Mat>*)_traj.getObj();
+#endif
 
         for(size_t i = 0, index = max(0, start); i < v.size(); ++i, ++index)
         {
@@ -317,6 +321,7 @@ void cv::viz::writeTrajectory(InputArray _traj, const String& files_format, int 
         if (traj.depth() == CV_64F)
             for(size_t i = 0, index = max(0, start); i < traj.total(); ++i, ++index)
                 writePose(cv::format(files_format.c_str(), index), traj.at<Affine3d>((int)i), tag);
+        return;
     }
 
     CV_Assert(!"Unsupported array kind");
