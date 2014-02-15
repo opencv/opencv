@@ -1025,3 +1025,44 @@ Constructs a WMesh.
     :param polygons: Points of the mesh object.
     :param colors: Point colors.
     :param normals: Point normals.
+
+viz::WWidgetMerger
+---------------------
+.. ocv:class:: WWidgetMerger
+
+This class allos to merge several widgets to single one. It has quite limited functionality and can't merge widgets with different attributes. For instance, 
+if widgetA has color array and widgetB has only global color defined, then result of merge won't have color at all. The class is suitable for merging large amount of similar widgets.
+
+    class CV_EXPORTS WWidgetMerger : public Widget3D
+    {
+    public:
+        WWidgetMerger();
+
+        //! Add widget to merge with optional position change
+        void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity());
+
+        //! Repacks internal structure to sinle widget
+        void finalize();
+    };
+
+
+viz::WWidgetMerger::WWidgetMerger
+---------------------------------------
+Constructs a WWidgetMerger.
+
+.. ocv:WWidgetMerger:: WWidgetMerger()
+
+viz::WWidgetMerger::addCloud
+-------------------------------
+Adds a cloud to the collection.
+
+.. ocv:function:: void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity())
+
+    :param widget: Widget to merge.
+    :param pose: Pose of the widget.
+
+viz::WWidgetMerger::finalize
+-------------------------------
+Finalizes merger data and constructs final merged widget
+
+.. ocv:function:: void finalize()

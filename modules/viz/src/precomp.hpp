@@ -272,6 +272,11 @@ namespace cv
                 return scalars;
             }
 
+            static vtkSmartPointer<vtkPolyData> FillScalars(vtkSmartPointer<vtkPolyData> polydata, const Color& color)
+            {
+                return polydata->GetPointData()->SetScalars(FillScalars(polydata->GetNumberOfPoints(), color)), polydata;
+            }
+
             static vtkSmartPointer<vtkPolyData> ComputeNormals(vtkSmartPointer<vtkPolyData> polydata)
             {
                 vtkSmartPointer<vtkPolyDataNormals> normals_generator = vtkSmartPointer<vtkPolyDataNormals>::New();
