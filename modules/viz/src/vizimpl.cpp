@@ -72,6 +72,8 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     setBackgroundMeshLab();
 }
 
+cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
 {

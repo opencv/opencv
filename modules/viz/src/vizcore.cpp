@@ -67,36 +67,70 @@ cv::Affine3d cv::viz::makeCameraPose(const Vec3d& position, const Vec3d& focal_p
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// VizStorage implementation
 
+#if defined(_WIN32) && !defined(__CYGWIN__)
+
+    #include <windows.h>
+
+    static BOOL WINAPI ConsoleHandlerRoutine(DWORD /*dwCtrlType*/)
+    {
+        vtkObject::GlobalWarningDisplayOff();
+        return FALSE;
+    }
+
+    static void register_console_handler()
+    {
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        CONSOLE_SCREEN_BUFFER_INFO hOutInfo;
+        if (GetConsoleScreenBufferInfo(hOut, &hOutInfo))
+            SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
+    }
+
+#else
+
+    void register_console_handler() {}
+
+#endif
+
+
+cv::viz::VizStorage cv::viz::VizStorage::init;
 cv::viz::VizMap cv::viz::VizStorage::storage;
-void cv::viz::VizStorage::unregisterAll() { storage.clear(); }
+
+void cv::viz::VizMap::replace_clear() { type().swap(m); }
+cv::viz::VizMap::~VizMap() { replace_clear(); }
+
+cv::viz::VizStorage::VizStorage()
+{
+    register_console_handler();
+}
+void cv::viz::VizStorage::unregisterAll() { storage.replace_clear(); }
 
 cv::viz::Viz3d& cv::viz::VizStorage::get(const String &window_name)
 {
     String name = generateWindowName(window_name);
-    VizMap::iterator vm_itr = storage.find(name);
-    CV_Assert(vm_itr != storage.end());
+    VizMap::iterator vm_itr = storage.m.find(name);
+    CV_Assert(vm_itr != storage.m.end());
     return vm_itr->second;
 }
 
 void cv::viz::VizStorage::add(const Viz3d& window)
 {
     String window_name = window.getWindowName();
-    VizMap::iterator vm_itr = storage.find(window_name);
-    CV_Assert(vm_itr == storage.end());
-    storage.insert(std::make_pair(window_name, window));
+    VizMap::iterator vm_itr = storage.m.find(window_name);
+    CV_Assert(vm_itr == storage.m.end());
+    storage.m.insert(std::make_pair(window_name, window));
 }
 
 bool cv::viz::VizStorage::windowExists(const String &window_name)
 {
     String name = generateWindowName(window_name);
-    return storage.find(name) != storage.end();
+    return storage.m.find(name) != storage.m.end();
 }
 
 void cv::viz::VizStorage::removeUnreferenced()
 {
-    for(VizMap::iterator pos = storage.begin(); pos != storage.end();)
+    for(VizMap::iterator pos = storage.m.begin(); pos != storage.m.end();)
         if(pos->second.impl_->ref_counter == 1)
-            storage.erase(pos++);
+            storage.m.erase(pos++);
         else
             ++pos;
 }
