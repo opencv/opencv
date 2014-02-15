@@ -156,6 +156,27 @@ TEST(Viz, show_mesh_random_colors)
     viz.spin();
 }
 
+TEST(Viz, show_widget_merger)
+{
+    WWidgetMerger merger;
+    merger.addWidget(WCube(Vec3d::all(0.0), Vec3d::all(1.0), true, Color::gold()));
+
+    RNG& rng = theRNG();
+    for(int i = 0; i < 77; ++i)
+    {
+        Vec3b c;
+        rng.fill(c, RNG::NORMAL, Scalar::all(128), Scalar::all(48), true);
+        merger.addWidget(WSphere(Vec3d(c)*(1.0/255.0), 7.0/255.0, 10, Color(c[2], c[1], c[0])));
+    }
+    merger.finalize();
+
+    Viz3d viz("show_mesh_random_color");
+    viz.showWidget("coo", WCoordinateSystem());
+    viz.showWidget("merger", merger);
+    viz.showWidget("text2d", WText("Widget merger", Point(20, 20), 20, Color::green()));
+    viz.spin();
+}
+
 TEST(Viz, show_textured_mesh)
 {
     Mat lena = imread(Path::combine(cvtest::TS::ptr()->get_data_path(), "lena.png"));
@@ -195,12 +216,18 @@ TEST(Viz, show_textured_mesh)
 
 TEST(Viz, show_polyline)
 {
-    Mat polyline(1, 32, CV_64FC3);
+    const Color palette[] = { Color::red(), Color::green(), Color::blue(), Color::gold(), Color::raspberry(), Color::bluberry(), Color::lime() };
+    size_t palette_size = sizeof(palette)/sizeof(palette[0]);
+
+    Mat polyline(1, 32, CV_64FC3), colors(1, 32, CV_8UC3);
     for(int i = 0; i < (int)polyline.total(); ++i)
+    {
         polyline.at<Vec3d>(i) = Vec3d(i/16.0, cos(i * CV_PI/6), sin(i * CV_PI/6));
+        colors.at<Vec3b>(i) = palette[i & palette_size];
+    }
 
     Viz3d viz("show_polyline");
-    viz.showWidget("polyline", WPolyLine(Mat(polyline), Color::apricot()));
+    viz.showWidget("polyline", WPolyLine(polyline, colors));
     viz.showWidget("coosys", WCoordinateSystem());
     viz.showWidget("text2d", WText("Polyline", Point(20, 20), 20, Color::green()));
     viz.spin();
