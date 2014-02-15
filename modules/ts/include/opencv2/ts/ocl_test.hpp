@@ -71,10 +71,17 @@ struct GetMatForRead<Mat>
 {
     static const Mat get(const Mat& m) { return m; }
 };
+
 template <>
 struct GetMatForRead<UMat>
 {
     static const Mat get(const UMat& m) { return m.getMat(ACCESS_READ); }
+};
+
+template <>
+struct GetMatForRead<MatExpr>
+{
+    static const Mat get(const MatExpr& m) { return m; }
 };
 
 } // namespace traits
@@ -91,14 +98,14 @@ extern int test_loop_times;
 
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
-    EXPECT_LE(checkNorm(mat), eps) \
+    EXPECT_LE(TestUtils::checkNorm(mat), eps) \
 }
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkNorm(mat1, mat2), eps) \
+    EXPECT_LE(TestUtils::checkNorm(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
 }
 
@@ -106,7 +113,7 @@ extern int test_loop_times;
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkNormRelative(mat1, mat2), eps) \
+    EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
         << "Size: " << mat1.size() << std::endl; \
 }
 
