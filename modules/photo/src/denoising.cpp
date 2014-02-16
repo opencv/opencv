@@ -40,14 +40,17 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
+
 #include "fast_nlmeans_denoising_invoker.hpp"
 #include "fast_nlmeans_multi_denoising_invoker.hpp"
+#include "fast_nlmeans_denoising_opencl.hpp"
 
 void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
                                int templateWindowSize, int searchWindowSize)
 {
+    CV_OCL_RUN(_src.dims() <= 2 && (_src.isUMat() || _dst.isUMat()),
+               ocl_fastNlMeansDenoising(_src, _dst, h, templateWindowSize, searchWindowSize))
+
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();

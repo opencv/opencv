@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -40,17 +40,66 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/utility.hpp"
-#include "opencv2/photo.hpp"
-#include "opencv2/core/ocl.hpp"
-#include "opencv2/imgproc.hpp"
+#ifdef HAVE_OPENCL
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/photo/photo_tegra.hpp"
-#endif
+namespace cvtest {
+namespace ocl {
 
-#endif
+PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool)
+{
+    int cn, templateWindowSize, searchWindowSize;
+    float h;
+    bool use_roi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src)
+    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+
+    virtual void SetUp()
+    {
+        cn = GET_PARAM(0);
+        use_roi = GET_PARAM(1);
+
+        templateWindowSize = 7;
+        searchWindowSize = 21;
+        h = 3.0f;
+    }
+
+    virtual void generateTestData()
+    {
+        const int type = CV_8UC(cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
+
+        Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 0, 255);
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src)
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+    }
+};
+
+typedef FastNlMeansDenoisingTestBase FastNlMeansDenoising;
+
+OCL_TEST_P(FastNlMeansDenoising, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
+        OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
+
+        OCL_EXPECT_MATS_NEAR(dst, 1)
+    }
+}
+
+OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising, Combine(Values((Channels)1), Bool()));
+
+} } // namespace cvtest::ocl
+
+#endif // HAVE_OPENCL
