@@ -2674,10 +2674,10 @@ protected:
     // loaded with DescriptorOneWay::Initialize, kd tree is used for finding minimum distances.
     virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                               std::vector<std::vector<DMatch> >& matches, int k,
-                              const std::vector<Mat>& masks, bool compactResult );
+                              InputArrayOfArrays masks, bool compactResult );
     virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                 const std::vector<Mat>& masks, bool compactResult );
+                                 InputArrayOfArrays masks, bool compactResult );
 
     Ptr<OneWayDescriptorBase> base;
     Params params;
@@ -2737,10 +2737,10 @@ public:
 protected:
     virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                               std::vector<std::vector<DMatch> >& matches, int k,
-                              const std::vector<Mat>& masks, bool compactResult );
+                              InputArrayOfArrays masks, bool compactResult );
     virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                  std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                 const std::vector<Mat>& masks, bool compactResult );
+                                 InputArrayOfArrays masks, bool compactResult );
 
     void trainFernClassifier();
     void calcBestProbAndMatchIdx( const Mat& image, const Point2f& pt,
