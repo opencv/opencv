@@ -133,8 +133,8 @@ namespace
     class CLAHE_CalcLut_Body : public cv::ParallelLoopBody
     {
     public:
-        CLAHE_CalcLut_Body(const cv::Mat& src, cv::Mat& lut, cv::Size tileSize, int tilesX, int tilesY, int clipLimit, float lutScale) :
-            src_(src), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), tilesY_(tilesY), clipLimit_(clipLimit), lutScale_(lutScale)
+        CLAHE_CalcLut_Body(const cv::Mat& src, cv::Mat& lut, cv::Size tileSize, int tilesX, int clipLimit, float lutScale) :
+            src_(src), lut_(lut), tileSize_(tileSize), tilesX_(tilesX), clipLimit_(clipLimit), lutScale_(lutScale)
         {
         }
 
@@ -146,7 +146,6 @@ namespace
 
         cv::Size tileSize_;
         int tilesX_;
-        int tilesY_;
         int clipLimit_;
         float lutScale_;
     };
@@ -401,7 +400,7 @@ namespace
         cv::Mat srcForLut = _srcForLut.getMat();
         lut_.create(tilesX_ * tilesY_, histSize, CV_8UC1);
 
-        CLAHE_CalcLut_Body calcLutBody(srcForLut, lut_, tileSize, tilesX_, tilesY_, clipLimit, lutScale);
+        CLAHE_CalcLut_Body calcLutBody(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), calcLutBody);
 
         CLAHE_Interpolation_Body interpolationBody(src, dst, lut_, tileSize, tilesX_, tilesY_);
