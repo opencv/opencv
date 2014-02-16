@@ -28,7 +28,7 @@ with an image set. ::
     public:
         virtual ~DescriptorMatcher();
 
-        virtual void add( InputArray descriptors );
+        virtual void add( InputArrayOfArrays descriptors );
 
         const vector<Mat>& getTrainDescriptors() const;
         virtual void clear();
@@ -265,7 +265,7 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
           const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
           const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
 
-        virtual void add( const vector<Mat>& descriptors );
+        virtual void add( InputArrayOfArrays descriptors );
         virtual void clear();
 
         virtual void train();
