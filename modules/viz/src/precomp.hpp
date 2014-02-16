@@ -130,6 +130,7 @@
 #include <vtkElevationFilter.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
+#include "vtkCallbackCommand.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -144,6 +145,7 @@
 #include <vtk/vtkCloudMatSource.h>
 #include <vtk/vtkTrajectorySource.h>
 #include <vtk/vtkImageMatSource.h>
+
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/viz/vizcore.hpp>
@@ -332,8 +334,7 @@ namespace cv
     }
 }
 
-#include "interactor_style.hpp"
+#include "vtk/vtkVizInteractorStyle.hpp"
 #include "vizimpl.hpp"
-
 
 #endif
