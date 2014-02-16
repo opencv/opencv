@@ -1199,9 +1199,12 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
     CV_Assert( _searchParams );
 }
 
-void FlannBasedMatcher::add( const std::vector<Mat>& descriptors )
+void FlannBasedMatcher::add( InputArrayOfArrays _descriptors )
 {
-    DescriptorMatcher::add( descriptors );
+    DescriptorMatcher::add( _descriptors );
+    std::vector<Mat> descriptors;
+    _descriptors.getMatVector(descriptors);
+
     for( size_t i = 0; i < descriptors.size(); i++ )
     {
         addedDescCount += descriptors[i].rows;

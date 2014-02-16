@@ -1157,7 +1157,7 @@ public:
     CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
                        const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
-    virtual void add( const std::vector<Mat>& descriptors );
+    virtual void add( InputArrayOfArrays descriptors );
     virtual void clear();
 
     // Reads matcher object from a file node
