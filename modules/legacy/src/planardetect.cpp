@@ -1299,7 +1299,7 @@ void FernDescriptorMatcher::calcBestProbAndMatchIdx( const Mat& image, const Poi
 
 void FernDescriptorMatcher::knnMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                          std::vector<std::vector<DMatch> >& matches, int knn,
-                                         const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
+                                         InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
 {
     Mat queryImage = _queryImage.getMat();
 
@@ -1337,7 +1337,7 @@ void FernDescriptorMatcher::knnMatchImpl( InputArray _queryImage, std::vector<Ke
 
 void FernDescriptorMatcher::radiusMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                             std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                            const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
+                                            InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
 {
     Mat queryImage = _queryImage.getMat();
     train();
