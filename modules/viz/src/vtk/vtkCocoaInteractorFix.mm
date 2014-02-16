@@ -40,8 +40,7 @@
 // Authors:
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  OpenCV Viz module is complete rewrite of
-//  PCL visualization module (www.pointclouds.org)
+//  This workaround code was taken from PCL library(www.pointclouds.org)
 //
 //M*/
 

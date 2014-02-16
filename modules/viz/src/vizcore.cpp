@@ -87,6 +87,7 @@ cv::Affine3d cv::viz::makeCameraPose(const Vec3d& position, const Vec3d& focal_p
 
 #else
 
+    void register_console_handler();
     void register_console_handler() {}
 
 #endif

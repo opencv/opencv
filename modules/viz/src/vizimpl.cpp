@@ -60,10 +60,9 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_->AddRenderer(renderer_);
 
     // Create the interactor style
-    style_ = vtkSmartPointer<InteractorStyle>::New();
+    style_ = vtkSmartPointer<vtkVizInteractorStyle>::New();
     style_->setWidgetActorMap(widget_actor_map_);
     style_->UseTimersOn();
-    style_->Initialize();
 
     timer_callback_ = vtkSmartPointer<TimerCallback>::New();
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();

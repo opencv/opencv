@@ -84,7 +84,7 @@ void cv::viz::vtkOBJWriter::WriteData()
     std::ostream& outfile = *outfilep;
 
     //write header
-    outfile << "# wavefront obj file written by the visualization toolkit" << std::endl << std::endl;
+    outfile << "# wavefront obj file written by opencv viz module" << std::endl << std::endl;
     outfile << "mtllib NONE" << std::endl << std::endl;
 
     // write out the points
