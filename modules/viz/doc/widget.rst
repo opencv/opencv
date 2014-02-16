@@ -934,7 +934,7 @@ This 3D Widget defines a collection of clouds. ::
         void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
         //! All points in cloud have the same color
         void addCloud(InputArray cloud, const Color &color = Color::white(), Affine3d &pose = Affine3d::Identity());
-        //! Repacks internal structure to sinle cloud
+        //! Repacks internal structure to single cloud
         void finalize();
     };
 
@@ -1030,8 +1030,8 @@ viz::WWidgetMerger
 ---------------------
 .. ocv:class:: WWidgetMerger
 
-This class allos to merge several widgets to single one. It has quite limited functionality and can't merge widgets with different attributes. For instance, 
-if widgetA has color array and widgetB has only global color defined, then result of merge won't have color at all. The class is suitable for merging large amount of similar widgets.
+This class allows to merge several widgets to single one. It has quite limited functionality and can't merge widgets with different attributes. For instance,
+if widgetA has color array and widgetB has only global color defined, then result of merge won't have color at all. The class is suitable for merging large amount of similar widgets. ::
 
     class CV_EXPORTS WWidgetMerger : public Widget3D
     {
@@ -1041,10 +1041,9 @@ if widgetA has color array and widgetB has only global color defined, then resul
         //! Add widget to merge with optional position change
         void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity());
 
-        //! Repacks internal structure to sinle widget
+        //! Repacks internal structure to single widget
         void finalize();
     };
-
 
 viz::WWidgetMerger::WWidgetMerger
 ---------------------------------------

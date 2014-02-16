@@ -1074,4 +1074,3 @@ void cv::viz::vtkVizInteractorStyle::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "AngleStepSize: " << AngleStepSize << "\n";
     os << indent << "MotionUserScale: "<< MotionUserScale << "\n";
 }
-
