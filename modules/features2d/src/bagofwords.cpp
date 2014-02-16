@@ -172,7 +172,7 @@ int BOWImgDescriptorExtractor::descriptorType() const
 
 void BOWImgDescriptorExtractor::compute( InputArray keypointDescriptors, OutputArray _imgDescriptor, std::vector<std::vector<int> >* pointIdxsOfClusters )
 {
-    CV_Assert( vocabulary.empty() != false );
+    CV_Assert( !vocabulary.empty() );
 
     int clusterCount = descriptorSize(); // = vocabulary.rows
 
