@@ -195,7 +195,10 @@ namespace
         accum_.setTo(Scalar::all(0));
 
         circlesAccumCenters_gpu(srcPoints, pointsCount, dx_, dy_, accum_, minRadius_, maxRadius_, idp);
-
+        
+        Mat tt; //CPU copy of accum_
+        accum_.download(tt);
+        
         int centersCount = buildCentersList_gpu(accum_, centers, votesThreshold_);
         if (centersCount == 0)
         {
