@@ -148,7 +148,7 @@
             renWin->SetRootWindow(NULL);
         }
     }
-} 
+}
 
 @end
 
@@ -209,4 +209,3 @@ vtkSmartPointer<vtkRenderWindowInteractor> cv::viz::vtkCocoaRenderWindowInteract
 {
     return vtkSmartPointer<vtkCocoaRenderWindowInteractorFix>::New();
 }
-

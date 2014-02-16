@@ -346,7 +346,7 @@ namespace cv
             void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity());
-            //! Repacks internal structure to sinle cloud
+            //! Repacks internal structure to single cloud
             void finalize();
         };
 
@@ -363,7 +363,6 @@ namespace cv
             WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
         };
 
-
         class CV_EXPORTS WWidgetMerger : public Widget3D
         {
         public:
@@ -372,7 +371,7 @@ namespace cv
             //! Add widget to merge with optional position change
             void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity());
 
-            //! Repacks internal structure to sinle widget
+            //! Repacks internal structure to single widget
             void finalize();
         };
 
