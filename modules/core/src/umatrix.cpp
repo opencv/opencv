@@ -60,6 +60,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     flags = 0;
     handle = 0;
     userdata = 0;
+    allocatorFlags_ = 0;
 }
 
 UMatData::~UMatData()
@@ -71,6 +72,7 @@ UMatData::~UMatData()
     flags = 0;
     handle = 0;
     userdata = 0;
+    allocatorFlags_ = 0;
 }
 
 void UMatData::lock()
@@ -204,8 +206,7 @@ static void finalizeHdr(UMat& m)
         m.rows = m.cols = -1;
 }
 
-
-UMat Mat::getUMat(int accessFlags) const
+UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
 {
     UMat hdr;
     if(!data)
@@ -216,10 +217,10 @@ UMat Mat::getUMat(int accessFlags) const
         MatAllocator *a = allocator, *a0 = getStdAllocator();
         if(!a)
             a = a0;
-        temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags);
+        temp_u = a->allocate(dims, size.p, type(), data, step.p, accessFlags, usageFlags);
         temp_u->refcount = 1;
     }
-    UMat::getStdAllocator()->allocate(temp_u, accessFlags);
+    UMat::getStdAllocator()->allocate(temp_u, accessFlags, usageFlags);
     hdr.flags = flags;
     setSize(hdr, dims, size.p, step.p);
     finalizeHdr(hdr);
@@ -229,8 +230,10 @@ UMat Mat::getUMat(int accessFlags) const
     return hdr;
 }
 
-void UMat::create(int d, const int* _sizes, int _type)
+void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
 {
+    this->usageFlags = _usageFlags;
+
     int i;
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
@@ -260,13 +263,13 @@ void UMat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0);
+            u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, 0, step.p, 0);
+                u = a0->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );

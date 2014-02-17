@@ -3534,19 +3534,26 @@ private:
 class OpenCLAllocator : public MatAllocator
 {
     mutable OpenCLBufferPoolImpl bufferPool;
+    enum AllocatorFlags
+    {
+        ALLOCATOR_FLAGS_BUFFER_POOL_USED = 1 << 0
+    };
 public:
     OpenCLAllocator() { matStdAllocator = Mat::getStdAllocator(); }
 
-    UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step, int flags) const
+    UMatData* defaultAllocate(int dims, const int* sizes, int type, void* data, size_t* step,
+            int flags, UMatUsageFlags usageFlags) const
     {
-        UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags);
+        UMatData* u = matStdAllocator->allocate(dims, sizes, type, data, step, flags, usageFlags);
         return u;
     }
 
-    void getBestFlags(const Context& ctx, int /*flags*/, int& createFlags, int& flags0) const
+    void getBestFlags(const Context& ctx, int /*flags*/, UMatUsageFlags usageFlags, int& createFlags, int& flags0) const
     {
         const Device& dev = ctx.device(0);
-        createFlags = CL_MEM_READ_WRITE;
+        createFlags = 0;
+        if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
+            createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
         if( dev.hostUnifiedMemory() )
             flags0 = 0;
@@ -3555,10 +3562,10 @@ public:
     }
 
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data, size_t* step, int flags) const
+                       void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
     {
         if(!useOpenCL())
-            return defaultAllocate(dims, sizes, type, data, step, flags);
+            return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
         CV_Assert(data == 0);
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -3570,24 +3577,39 @@ public:
 
         Context& ctx = Context::getDefault();
         int createFlags = 0, flags0 = 0;
-        getBestFlags(ctx, flags, createFlags, flags0);
+        getBestFlags(ctx, flags, usageFlags, createFlags, flags0);
 
-        CV_Assert(createFlags == CL_MEM_READ_WRITE);
         size_t capacity = 0;
-        void* handle = bufferPool.allocate(total, capacity);
-        if (!handle)
-            return defaultAllocate(dims, sizes, type, data, step, flags);
+        void* handle = NULL;
+        int allocatorFlags = 0;
+        if (createFlags == 0)
+        {
+            handle = bufferPool.allocate(total, capacity);
+            if (!handle)
+                return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+            allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_USED;
+        }
+        else
+        {
+            capacity = total;
+            cl_int retval = 0;
+            handle = clCreateBuffer((cl_context)ctx.ptr(),
+                                          CL_MEM_READ_WRITE|createFlags, total, 0, &retval);
+            if( !handle || retval != CL_SUCCESS )
+                return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+        }
         UMatData* u = new UMatData(this);
         u->data = 0;
         u->size = total;
         u->capacity = capacity;
         u->handle = handle;
         u->flags = flags0;
-        CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency
+        u->allocatorFlags_ = allocatorFlags;
+        CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
         return u;
     }
 
-    bool allocate(UMatData* u, int accessFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
         if(!u)
             return false;
@@ -3599,16 +3621,16 @@ public:
             CV_Assert(u->origdata != 0);
             Context& ctx = Context::getDefault();
             int createFlags = 0, flags0 = 0;
-            getBestFlags(ctx, accessFlags, createFlags, flags0);
+            getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             cl_int retval = 0;
             int tempUMatFlags = UMatData::TEMP_UMAT;
-            u->handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+            u->handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|CL_MEM_READ_WRITE,
                                        u->size, u->origdata, &retval);
             if((!u->handle || retval != CL_SUCCESS) && !(accessFlags & ACCESS_FAST))
             {
-                u->handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|createFlags,
+                u->handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
                                            u->size, u->origdata, &retval);
                 tempUMatFlags = UMatData::TEMP_COPIED_UMAT;
             }
@@ -3705,7 +3727,14 @@ public:
                 fastFree(u->data);
                 u->data = 0;
             }
-            bufferPool.release((cl_mem)u->handle, u->capacity);
+            if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
+            {
+                bufferPool.release((cl_mem)u->handle, u->capacity);
+            }
+            else
+            {
+                clReleaseMemObject((cl_mem)u->handle);
+            }
             u->handle = 0;
             u->capacity = 0;
             delete u;
