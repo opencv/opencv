@@ -1566,8 +1566,8 @@ RotatedRect::RotatedRect(const std::vector<Point2f>& _points)
     int ht_i = (wd_i + 1) % 2;
 
     float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
-    float _width = norm(vecs[wd_i]);
-    float _height = norm(vecs[ht_i]);
+    float _width = (float) norm(vecs[wd_i]);
+    float _height = (float) norm(vecs[ht_i]);
 
     center = _center;
     size = Size2f(_width, _height);
