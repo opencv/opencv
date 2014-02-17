@@ -530,6 +530,18 @@ enum { CAP_INTELPERC_DEPTH_MAP              = 0, // Each pixel is a 16-bit integ
        CAP_INTELPERC_IMAGE                  = 3
      };
 
+
+class IVideoCapture
+{
+public:
+    virtual ~IVideoCapture() {}
+    virtual double getProperty(int) { return 0; }
+    virtual bool setProperty(int, double) { return 0; }
+    virtual bool grabFrame() { return true; }
+    virtual bool retrieveFrame(int, cv::OutputArray) { return 0; }
+    virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
+};
+
 class CV_EXPORTS_W VideoCapture
 {
 public:
@@ -554,8 +566,10 @@ public:
 
 protected:
     Ptr<CvCapture> cap;
+    Ptr<IVideoCapture> icap;
+private:
+    static Ptr<IVideoCapture> createCameraCapture(int index);
 };
-
 
 class CV_EXPORTS_W VideoWriter
 {
