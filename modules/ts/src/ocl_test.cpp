@@ -43,8 +43,6 @@
 
 #include "opencv2/ts/ocl_test.hpp"
 
-#ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
@@ -197,41 +195,39 @@ Mat TestUtils::readImageType(const String &fname, int type)
     return src;
 }
 
-double TestUtils::checkNorm(const Mat &m)
+double TestUtils::checkNorm(InputArray m)
 {
-    return norm(m, NORM_INF);
+    return norm(m.getMat(), NORM_INF);
 }
 
-double TestUtils::checkNorm(const Mat &m1, const Mat &m2)
+double TestUtils::checkNorm(InputArray m1, InputArray m2)
 {
-    return norm(m1, m2, NORM_INF);
+    return norm(m1.getMat(), m2.getMat(), NORM_INF);
 }
 
-double TestUtils::checkSimilarity(const Mat &m1, const Mat &m2)
+double TestUtils::checkSimilarity(InputArray m1, InputArray m2)
 {
     Mat diff;
-    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    matchTemplate(m1.getMat(), m2.getMat(), diff, CV_TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 
-double TestUtils::checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& ob2)
+double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, std::vector<Rect>& ob2)
 {
     double final_test_result = 0.0;
     size_t sz1 = ob1.size();
     size_t sz2 = ob2.size();
 
-    if(sz1 != sz2)
-    {
+    if (sz1 != sz2)
         return sz1 > sz2 ? (double)(sz1 - sz2) : (double)(sz2 - sz1);
-    }
     else
     {
-        if(sz1==0 && sz2==0)
+        if (sz1 == 0 && sz2 == 0)
             return 0;
         cv::Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
-        for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
+        for (vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
         {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
@@ -251,7 +247,7 @@ double TestUtils::checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vect
         cv::Mat result_;
         multiply(cpu_result, gpu_result, result_);
         int result = cv::countNonZero(result_ > 0);
-        if(cpu_area!=0 && result!=0)
+        if (cpu_area!=0 && result!=0)
             final_test_result = 1.0 - (double)result/(double)cpu_area;
         else if(cpu_area==0 && result!=0)
             final_test_result = -1;
@@ -259,8 +255,10 @@ double TestUtils::checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vect
     return final_test_result;
 }
 
-void TestUtils::showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow)
+void TestUtils::showDiff(InputArray _src, InputArray _gold, InputArray _actual, double eps, bool alwaysShow)
 {
+    Mat src = _src.getMat(), actual = _actual.getMat(), gold = _gold.getMat();
+
     Mat diff, diff_thresh;
     absdiff(gold, actual, diff);
     diff.convertTo(diff, CV_32F);
@@ -288,6 +286,4 @@ void TestUtils::showDiff(const Mat& src, const Mat& gold, const Mat& actual, dou
     }
 }
 
-}} // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace cvtest::ocl

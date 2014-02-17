@@ -45,8 +45,6 @@
 #include "ocl_test.hpp"
 #include "ts_perf.hpp"
 
-#ifdef HAVE_OPENCL
-
 namespace cvtest {
 namespace ocl {
 
@@ -129,7 +127,5 @@ using namespace perf;
 
 } // namespace cvtest::ocl
 } // namespace cvtest
-
-#endif // HAVE_OPENCL
 
 #endif // __OPENCV_TS_OCL_PERF_HPP__
