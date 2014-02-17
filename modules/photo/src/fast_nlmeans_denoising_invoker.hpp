@@ -137,6 +137,8 @@ FastNlMeansDenoisingInvoker<T>::FastNlMeansDenoisingInvoker(
         double dist = almost_dist * almost_dist2actual_dist_multiplier;
         int weight = cvRound(fixed_point_mult_ * std::exp(-dist / (h * h * sizeof(T))));
 
+        printf("%d ", weight);
+
         if (weight < WEIGHT_THRESHOLD * fixed_point_mult_)
             weight = 0;
 
