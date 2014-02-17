@@ -60,7 +60,7 @@ typedef tuple<Size, MatType, InterType> WarpAffineParams;
 typedef TestBaseWithParam<WarpAffineParams> WarpAffineFixture;
 
 OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, InterType::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
 {
     static const double coeffs[2][3] =
     {
@@ -90,7 +90,7 @@ typedef WarpAffineParams WarpPerspectiveParams;
 typedef TestBaseWithParam<WarpPerspectiveParams> WarpPerspectiveFixture;
 
 OCL_PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, InterType::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
 {
     static const double coeffs[3][3] =
     {
@@ -121,7 +121,7 @@ typedef tuple<Size, MatType, InterType, double> ResizeParams;
 typedef TestBaseWithParam<ResizeParams> ResizeFixture;
 
 OCL_PERF_TEST_P(ResizeFixture, Resize,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
                                InterType::all(), ::testing::Values(0.5, 2.0)))
 {
     const ResizeParams params = GetParam();
@@ -146,7 +146,7 @@ typedef tuple<Size, MatType, double> ResizeAreaParams;
 typedef TestBaseWithParam<ResizeAreaParams> ResizeAreaFixture;
 
 OCL_PERF_TEST_P(ResizeAreaFixture, Resize,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, ::testing::Values(0.3, 0.5, 0.6)))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, ::testing::Values(0.3, 0.5, 0.6)))
 {
     const ResizeAreaParams params = GetParam();
     const Size srcSize = get<0>(params);
