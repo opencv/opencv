@@ -40,20 +40,19 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/ocl.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 
 using namespace cvtest;
 using namespace testing;
 using namespace cv;
 
-#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
-{ \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(cv::norm(mat1, mat2), eps); \
-}\
+namespace cvtest {
+namespace ocl {
 
-////////////////////////////////////////////////////////////// Basic Tests /////////////////////////////////////////////////////////////////////
+#define UMAT_TEST_SIZES testing::Values(cv::Size(1, 1), cv::Size(1,128), cv::Size(128, 1), \
+    cv::Size(128, 128), cv::Size(640, 480), cv::Size(751, 373), cv::Size(1200, 1200))
+
+/////////////////////////////// Basic Tests ////////////////////////////////
 
 PARAM_TEST_CASE(UMatBasicTests, int, int, Size, bool)
 {
@@ -66,6 +65,7 @@ PARAM_TEST_CASE(UMatBasicTests, int, int, Size, bool)
     bool useRoi;
     Size roi_size;
     Rect roi;
+
     virtual void SetUp()
     {
         depth = GET_PARAM(0);
@@ -82,7 +82,7 @@ PARAM_TEST_CASE(UMatBasicTests, int, int, Size, bool)
     }
 };
 
-CORE_TEST_P(UMatBasicTests, createUMat)
+TEST_P(UMatBasicTests, createUMat)
 {
     if(useRoi)
     {
@@ -112,7 +112,7 @@ CORE_TEST_P(UMatBasicTests, createUMat)
     ASSERT_EQ( ua.dims, 2);
 }
 
-CORE_TEST_P(UMatBasicTests, swap)
+TEST_P(UMatBasicTests, swap)
 {
     Mat b = randomMat(size, type, -100, 100);
     UMat ub;
@@ -128,7 +128,7 @@ CORE_TEST_P(UMatBasicTests, swap)
     EXPECT_MAT_NEAR(ud, ua, 0);
 }
 
-CORE_TEST_P(UMatBasicTests, base)
+TEST_P(UMatBasicTests, base)
 {
     if(useRoi)
     {
@@ -167,7 +167,7 @@ CORE_TEST_P(UMatBasicTests, base)
     ASSERT_EQ(ub.total(), total);
 }
 
-CORE_TEST_P(UMatBasicTests, copyTo)
+TEST_P(UMatBasicTests, DISABLED_copyTo)
 {
     UMat roi_ua;
     Mat roi_a;
@@ -224,7 +224,7 @@ CORE_TEST_P(UMatBasicTests, copyTo)
     }
 }
 
-CORE_TEST_P(UMatBasicTests, DISABLED_GetUMat)
+TEST_P(UMatBasicTests, DISABLED_GetUMat)
 {
     if(useRoi)
     {
@@ -254,7 +254,7 @@ CORE_TEST_P(UMatBasicTests, DISABLED_GetUMat)
 }
 
 INSTANTIATE_TEST_CASE_P(UMat, UMatBasicTests, Combine(testing::Values(CV_8U), testing::Values(1, 2),
-    testing::Values(cv::Size(1,1), cv::Size(1,128), cv::Size(128,1), cv::Size(128, 128), cv::Size(640,480)), Bool() ) );
+    testing::Values(cv::Size(1, 1), cv::Size(1, 128), cv::Size(128, 1), cv::Size(128, 128), cv::Size(640, 480)), Bool()));
 
 //////////////////////////////////////////////////////////////// Reshape ////////////////////////////////////////////////////////////////////////
 
@@ -278,7 +278,7 @@ PARAM_TEST_CASE(UMatTestReshape,  int, int, Size, bool)
     }
 };
 
-CORE_TEST_P(UMatTestReshape, reshape)
+TEST_P(UMatTestReshape, DISABLED_reshape)
 {
     a = randomMat(size,type, -100, 100);
     a.copyTo(ua);
@@ -342,7 +342,7 @@ CORE_TEST_P(UMatTestReshape, reshape)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatTestReshape, Combine(UMAT_TEST_DEPTH, UMAT_TEST_CHANNELS, UMAT_TEST_SIZES, Bool() ));
+INSTANTIATE_TEST_CASE_P(UMat, UMatTestReshape, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool() ));
 
 ////////////////////////////////////////////////////////////////// ROI testing ///////////////////////////////////////////////////////////////
 
@@ -364,7 +364,7 @@ PARAM_TEST_CASE(UMatTestRoi, int, int, Size)
     }
 };
 
-CORE_TEST_P(UMatTestRoi, createRoi)
+TEST_P(UMatTestRoi, createRoi)
 {
     int roi_shift_x = randomInt(0, size.width-1);
     int roi_shift_y = randomInt(0, size.height-1);
@@ -378,7 +378,7 @@ CORE_TEST_P(UMatTestRoi, createRoi)
     EXPECT_MAT_NEAR(roi_a, roi_ua, 0);
 }
 
-CORE_TEST_P(UMatTestRoi, locateRoi)
+TEST_P(UMatTestRoi, locateRoi)
 {
     int roi_shift_x = randomInt(0, size.width-1);
     int roi_shift_y = randomInt(0, size.height-1);
@@ -396,7 +396,7 @@ CORE_TEST_P(UMatTestRoi, locateRoi)
     ASSERT_EQ(p, up);
 }
 
-CORE_TEST_P(UMatTestRoi, adjustRoi)
+TEST_P(UMatTestRoi, adjustRoi)
 {
     int roi_shift_x = randomInt(0, size.width-1);
     int roi_shift_y = randomInt(0, size.height-1);
@@ -410,14 +410,14 @@ CORE_TEST_P(UMatTestRoi, adjustRoi)
     int adjTop = randomInt(-(roi_ua.rows/2), (size.height-1)/2);
     int adjBot = randomInt(-(roi_ua.rows/2), (size.height-1)/2);
     roi_ua.adjustROI(adjTop, adjBot, adjLeft, adjRight);
-    roi_shift_x = max(0, roi.x-adjLeft);
-    roi_shift_y = max(0, roi.y-adjTop);
-    Rect new_roi( roi_shift_x, roi_shift_y, min(roi.width+adjRight+adjLeft, size.width-roi_shift_x), min(roi.height+adjBot+adjTop, size.height-roi_shift_y) );
+    roi_shift_x = std::max(0, roi.x-adjLeft);
+    roi_shift_y = std::max(0, roi.y-adjTop);
+    Rect new_roi( roi_shift_x, roi_shift_y, std::min(roi.width+adjRight+adjLeft, size.width-roi_shift_x), std::min(roi.height+adjBot+adjTop, size.height-roi_shift_y) );
     UMat test_roi = UMat(ua, new_roi);
     EXPECT_MAT_NEAR(roi_ua, test_roi, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatTestRoi, Combine(UMAT_TEST_DEPTH, UMAT_TEST_CHANNELS, UMAT_TEST_SIZES ));
+INSTANTIATE_TEST_CASE_P(UMat, UMatTestRoi, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES ));
 
 /////////////////////////////////////////////////////////////// Size ////////////////////////////////////////////////////////////////////
 
@@ -441,7 +441,7 @@ PARAM_TEST_CASE(UMatTestSizeOperations, int, int, Size, bool)
     }
 };
 
-CORE_TEST_P(UMatTestSizeOperations, copySize)
+TEST_P(UMatTestSizeOperations, copySize)
 {
     Size s = randomSize(1,300);
     a = randomMat(size, type, -100, 100);
@@ -466,7 +466,7 @@ CORE_TEST_P(UMatTestSizeOperations, copySize)
     ASSERT_EQ(ua.size, ub.size);
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatTestSizeOperations, Combine(UMAT_TEST_DEPTH, UMAT_TEST_CHANNELS, UMAT_TEST_SIZES, Bool() ));
+INSTANTIATE_TEST_CASE_P(UMat, UMatTestSizeOperations, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool() ));
 
 ///////////////////////////////////////////////////////////////// UMat operations ////////////////////////////////////////////////////////////////////////////
 
@@ -490,7 +490,7 @@ PARAM_TEST_CASE(UMatTestUMatOperations, int, int, Size, bool)
     }
 };
 
-CORE_TEST_P(UMatTestUMatOperations, diag)
+TEST_P(UMatTestUMatOperations, diag)
 {
     a = randomMat(size, type, -100, 100);
     a.copyTo(ua);
@@ -514,7 +514,7 @@ CORE_TEST_P(UMatTestUMatOperations, diag)
     EXPECT_MAT_NEAR(ua.diag(), new_diag.t(), 0);
 }
 
-INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(UMAT_TEST_DEPTH, UMAT_TEST_CHANNELS, UMAT_TEST_SIZES, Bool() ));
+INSTANTIATE_TEST_CASE_P(UMat, UMatTestUMatOperations, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, UMAT_TEST_SIZES, Bool()));
 
 ///////////////////////////////////////////////////////////////// OpenCL ////////////////////////////////////////////////////////////////////////////
 
@@ -541,9 +541,208 @@ TEST(UMat, BufferPoolGrowing)
         c->freeAllReservedBuffers();
     }
     else
-    {
         std::cout << "Skipped, no OpenCL" << std::endl;
+}
+
+class CV_UMatTest :
+        public cvtest::BaseTest
+{
+public:
+    CV_UMatTest() {}
+    ~CV_UMatTest() {}
+protected:
+    void run(int);
+
+    struct test_excep
+    {
+        test_excep(const string& _s=string("")) : s(_s) { }
+        string s;
+    };
+
+    bool TestUMat();
+
+    void checkDiff(const Mat& m1, const Mat& m2, const string& s)
+    {
+        if (norm(m1, m2, NORM_INF) != 0)
+            throw test_excep(s);
     }
+    void checkDiffF(const Mat& m1, const Mat& m2, const string& s)
+    {
+        if (norm(m1, m2, NORM_INF) > 1e-5)
+            throw test_excep(s);
+    }
+};
+
+#define STR(a) STR2(a)
+#define STR2(a) #a
+
+#define CHECK_DIFF(a, b) checkDiff(a, b, "(" #a ")  !=  (" #b ")  at l." STR(__LINE__))
+#define CHECK_DIFF_FLT(a, b) checkDiffF(a, b, "(" #a ")  !=(eps)  (" #b ")  at l." STR(__LINE__))
+
+
+bool CV_UMatTest::TestUMat()
+{
+    try
+    {
+        Mat a(100, 100, CV_16SC2), b, c;
+        randu(a, Scalar::all(-100), Scalar::all(100));
+        Rect roi(1, 3, 5, 4);
+        Mat ra(a, roi), rb, rc, rc0;
+        UMat ua, ura, ub, urb, uc, urc;
+        a.copyTo(ua);
+        ua.copyTo(b);
+        CHECK_DIFF(a, b);
+
+        ura = ua(roi);
+        ura.copyTo(rb);
+
+        CHECK_DIFF(ra, rb);
+
+        ra += Scalar::all(1.f);
+        {
+            Mat temp = ura.getMat(ACCESS_RW);
+            temp += Scalar::all(1.f);
+        }
+        ra.copyTo(rb);
+        CHECK_DIFF(ra, rb);
+
+        b = a.clone();
+        ra = a(roi);
+        rb = b(roi);
+        randu(b, Scalar::all(-100), Scalar::all(100));
+        b.copyTo(ub);
+        urb = ub(roi);
+
+        /*std::cout << "==============================================\nbefore op (CPU):\n";
+        std::cout << "ra: " << ra << std::endl;
+        std::cout << "rb: " << rb << std::endl;*/
+
+        ra.copyTo(ura);
+        rb.copyTo(urb);
+        ra.release();
+        rb.release();
+        ura.copyTo(ra);
+        urb.copyTo(rb);
+
+        /*std::cout << "==============================================\nbefore op (GPU):\n";
+        std::cout << "ra: " << ra << std::endl;
+        std::cout << "rb: " << rb << std::endl;*/
+
+        cv::max(ra, rb, rc);
+        cv::max(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        /*std::cout << "==============================================\nafter op:\n";
+        std::cout << "rc: " << rc << std::endl;
+        std::cout << "rc0: " << rc0 << std::endl;*/
+
+        CHECK_DIFF(rc0, rc);
+
+        {
+            UMat tmp = rc0.getUMat(ACCESS_WRITE);
+            cv::max(ura, urb, tmp);
+        }
+        CHECK_DIFF(rc0, rc);
+
+        ura.copyTo(urc);
+        cv::max(urc, urb, urc);
+        urc.copyTo(rc0);
+        CHECK_DIFF(rc0, rc);
+
+        rc = ra ^ rb;
+        cv::bitwise_xor(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        /*std::cout << "==============================================\nafter op:\n";
+        std::cout << "ra: " << rc0 << std::endl;
+        std::cout << "rc: " << rc << std::endl;*/
+
+        CHECK_DIFF(rc0, rc);
+
+        rc = ra + rb;
+        cv::add(ura, urb, urc);
+        urc.copyTo(rc0);
+
+        CHECK_DIFF(rc0, rc);
+
+        cv::subtract(ra, Scalar::all(5), rc);
+        cv::subtract(ura, Scalar::all(5), urc);
+        urc.copyTo(rc0);
+
+        CHECK_DIFF(rc0, rc);
+    }
+    catch (const test_excep& e)
+    {
+        ts->printf(cvtest::TS::LOG, "%s\n", e.s.c_str());
+        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        return false;
+    }
+    return true;
+}
+
+void CV_UMatTest::run( int /* start_from */)
+{
+    printf("Use OpenCL: %s\nHave OpenCL: %s\n",
+           cv::ocl::useOpenCL() ? "TRUE" : "FALSE",
+           cv::ocl::haveOpenCL() ? "TRUE" : "FALSE" );
+
+    if (!TestUMat())
+        return;
+
+    ts->set_failed_test_info(cvtest::TS::OK);
+}
+
+TEST(Core_UMat, base) { CV_UMatTest test; test.safe_run(); }
+
+TEST(Core_UMat, getUMat)
+{
+    {
+        int a[3] = { 1, 2, 3 };
+        Mat m = Mat(1, 1, CV_32SC3, a);
+        UMat u = m.getUMat(ACCESS_READ);
+        EXPECT_NE((void*)NULL, u.u);
+    }
+
+    {
+        Mat m(10, 10, CV_8UC1), ref;
+        for (int y = 0; y < m.rows; ++y)
+        {
+            uchar * const ptr = m.ptr<uchar>(y);
+            for (int x = 0; x < m.cols; ++x)
+                ptr[x] = (uchar)(x + y * 2);
+        }
+
+        ref = m.clone();
+        Rect r(1, 1, 8, 8);
+        ref(r).setTo(17);
+
+        {
+            UMat um = m(r).getUMat(ACCESS_WRITE);
+            um.setTo(17);
+        }
+
+        double err = norm(m, ref, NORM_INF);
+        if (err > 0)
+        {
+            std::cout << "m: " << std::endl << m << std::endl;
+            std::cout << "ref: " << std::endl << ref << std::endl;
+        }
+        EXPECT_EQ(0., err);
+    }
+}
+
+TEST(UMat, Sync)
+{
+    UMat um(10, 10, CV_8UC1);
+
+    {
+        Mat m = um.getMat(ACCESS_WRITE);
+        m.setTo(cv::Scalar::all(17));
+    }
+
+    um.setTo(cv::Scalar::all(19));
+
+    EXPECT_EQ(0, cv::norm(um.getMat(ACCESS_READ), cv::Mat(um.size(), um.type(), 19), NORM_INF));
 }
 
 TEST(UMat, setOpenCL)
@@ -586,3 +785,5 @@ TEST(UMat, setOpenCL)
     // reset state to the previous one
     cv::ocl::setUseOpenCL(useOCL);
 }
+
+} } // namespace cvtest::ocl
