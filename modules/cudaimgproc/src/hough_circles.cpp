@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <algorithm>
 
 using namespace cv;
 using namespace cv::cuda;
@@ -134,6 +133,7 @@ namespace
         GpuMat dx_, dy_;
         GpuMat edges_;
         GpuMat accum_;
+        Mat tt; //CPU copy of accum_
         GpuMat list_;
         GpuMat result_;
         Ptr<cuda::Filter> filterDx_;
@@ -196,7 +196,6 @@ namespace
 
         circlesAccumCenters_gpu(srcPoints, pointsCount, dx_, dy_, accum_, minRadius_, maxRadius_, idp);
         
-        Mat tt; //CPU copy of accum_
         accum_.download(tt);
         
         int centersCount = buildCentersList_gpu(accum_, centers, votesThreshold_);
