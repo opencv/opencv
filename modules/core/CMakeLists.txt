@@ -25,7 +25,7 @@ endif()
 
 if(HAVE_CUDA)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wshadow)
 endif()
 
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
