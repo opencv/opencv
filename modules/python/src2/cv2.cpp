@@ -199,13 +199,13 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
     {
         if( data != 0 )
         {
             CV_Error(Error::StsAssert, "The data should normally be NULL!");
             // probably this is safe to do in such extreme case
-            return stdAllocator->allocate(dims0, sizes, type, data, step, flags);
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
         }
         PyEnsureGIL gil;
 
@@ -228,9 +228,9 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
-        return stdAllocator->allocate(u, accessFlags);
+        return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
 
     void deallocate(UMatData* u) const
