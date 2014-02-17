@@ -20,8 +20,6 @@ __kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almost
         float dist = almostDist * almostDist2ActualDistMultiplier;
         int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
 
-//        printf("%d ", weight);
-
         if (weight < WEIGHT_THRESHOLD * fixedPointMult)
             weight = 0;
 
@@ -43,7 +41,8 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
                                   __local int_t * dists, int y, int x, int id,
                                   __global int_t * col_dists, __global int_t * up_col_dists)
 {
-    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2 - TEMPLATE_SIZE2;
+    y -= TEMPLATE_SIZE2;
+    int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
 
     for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
     {
@@ -79,8 +78,6 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
     }
 }
 
-#define COND if (i == 252 && x0 == 20)
-
 inline void calcElementInFirstRow(__global const uchar * src, int src_step, int src_offset,
                                   __local int_t * dists, int y, int x0, int x, int id, int first,
                                   __global int_t * col_dists, __global int_t * up_col_dists)
@@ -102,7 +99,6 @@ inline void calcElementInFirstRow(__global const uchar * src, int src_step, int 
         for (int ty = 0; ty < TEMPLATE_SIZE; ++ty)
         {
             col_dist += calcDist(src_current[0], src_template[0]);
-//            COND printf("%d\n", calcDist(src_current[0], src_template[0]));
 
             src_current = (__global const uchar_t *)((__global const uchar *)src_current + src_step);
             src_template = (__global const uchar_t *)((__global const uchar *)src_template + src_step);
@@ -111,7 +107,6 @@ inline void calcElementInFirstRow(__global const uchar * src, int src_step, int 
         dists[i] += col_dist - col_dists_current[first];
         col_dists_current[first] = col_dist;
         up_col_dists[mad24(x0, SEARCH_SIZE_SQ, i)] = col_dist;
-//        COND printf("res = %d\n", col_dist);
     }
 }
 
@@ -120,7 +115,7 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
                         __global int_t * col_dists, __global int_t * up_col_dists)
 {
     int sx = x + TEMPLATE_SIZE2;
-    int sy_up = y - TEMPLATE_SIZE2 - 1 /*- TEMPLATE_SIZE*/;
+    int sy_up = y - TEMPLATE_SIZE2 - 1;
     int sy_down = y + TEMPLATE_SIZE2;
 
     uchar_t up_value = *(__global const uchar_t *)(src + mad24(sy_up, src_step, mad24(cn, sx, src_offset)));
@@ -140,16 +135,11 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
         __global int_t * col_dists_current = col_dists + mad24(i, TEMPLATE_SIZE, first);
         __global int_t * up_col_dists_current = up_col_dists + mad24(x0, SEARCH_SIZE_SQ, i);
 
-//        COND printf("\nres = %d\n", up_col_dists_current[0]);
-//        COND printf("up = %d, down = %d\n", calcDist(up_value, up_value_t), calcDist(down_value, down_value_t));
         int_t col_dist = up_col_dists_current[0] + calcDist(down_value, down_value_t) - calcDist(up_value, up_value_t);
 
         dists[i] += col_dist - col_dists_current[0];
         col_dists_current[0] = col_dist;
         up_col_dists_current[0] = col_dist;
-
-//        COND printf("res = %d\n", up_col_dists_current[0]);
-//        if (up_col_dists_current[0] < 0) printf("%d %d -- %d\n", i, x0, up_col_dists_current[0]);
     }
 }
 
@@ -189,13 +179,13 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (int lsize = CTA_SIZE2 >> 1; lsize >= 4; lsize >>= 1)
+    for (int lsize = CTA_SIZE2 >> 1; lsize > 0; lsize >>= 1)
     {
         if (id < lsize)
         {
            int id2 = lsize + id;
-           weights_local[id] = weights + weights_local[id2];
-           weighted_sum_local[id] = weighted_sum + weighted_sum_local[id2];
+           weights_local[id] += weights_local[id2];
+           weighted_sum_local[id] += weighted_sum_local[id2];
         }
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -203,11 +193,7 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     if (id == 0)
     {
         int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
-
-        int_t weights_local_0 = (int_t)(1);//(int_t)(weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3]);
-        int_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] + weighted_sum_local[2] + weighted_sum_local[3];
-
-        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t((weighted_sum_local_0 + weights_local_0 >> 1) / weights_local_0);
+        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local[0]);
     }
 }
 
@@ -235,7 +221,7 @@ __kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
         {
-            barrier(CLK_LOCAL_MEM_FENCE);
+            // barrier(CLK_LOCAL_MEM_FENCE);
             if (x == x0)
             {
                 calcFirstElementInRow(src, src_step, src_offset, dists, y, x, id, col_dists, up_col_dists);
@@ -246,12 +232,10 @@ __kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int
                 if (y == y0)
                     calcElementInFirstRow(src, src_step, src_offset, dists, y, x - x0, x, id, first, col_dists, up_col_dists);
                 else
-                {
                     calcElement(src, src_step, src_offset, dists, y, x - x0, x, id, first, col_dists, up_col_dists);
-                    first = (first + 1) % TEMPLATE_SIZE;
-                }
-            }
 
+                first = (first + 1) % TEMPLATE_SIZE;
+            }
             barrier(CLK_LOCAL_MEM_FENCE);
 
             convolveWindow(src, src_step, src_offset, dists, almostDist2Weight, dst, dst_step, dst_offset,

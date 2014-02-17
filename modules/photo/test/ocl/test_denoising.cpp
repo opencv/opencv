@@ -71,7 +71,7 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool)
     {
         const int type = CV_8UC(cn);
 
-        Size roiSize = randomSize(1, MAX_VALUE);
+        Size roiSize = randomSize(10, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
 
@@ -93,6 +93,10 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
 
         OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
         OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
+
+//        Mat difference;
+//        cv::subtract(dst_roi, udst_roi, difference);
+//        print(difference);
 
         OCL_EXPECT_MATS_NEAR(dst, 1)
     }
