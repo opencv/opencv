@@ -706,7 +706,7 @@ struct KL_Divergence
         Iterator1 last = a + size;
 
         while (a < last) {
-            if (* a != 0) {
+            if (* b != 0) {
                 ResultType ratio = (ResultType)(*a / *b);
                 if (ratio>0) {
                     result += *a * log(ratio);
