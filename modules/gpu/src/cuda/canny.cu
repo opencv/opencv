@@ -42,8 +42,6 @@
 
 #if !defined CUDA_DISABLER
 
-#include <utility>
-#include <algorithm>//std::swap
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/emulation.hpp"
 #include "opencv2/gpu/device/transform.hpp"
@@ -463,7 +461,10 @@ namespace canny
 
             count = min(count, map.cols * map.rows);
 
-            std::swap(st1, st2);
+            //std::swap(st1, st2);
+            short2* tmp = st1;
+            st1 = st2;
+            st2 = tmp;
         }
     }
 }
