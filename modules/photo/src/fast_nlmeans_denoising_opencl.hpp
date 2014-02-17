@@ -111,15 +111,17 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     _dst.create(size, type);
     UMat dst = _dst.getUMat();
 
-    Size upColSumSize(size.width, searchWindowSize * searchWindowSize * nblocksy);
-    Size colSumSize(nblocksx * templateWindowSize, searchWindowSize * searchWindowSize * nblocksy);
+    int searchWindowSizeSq = searchWindowSize * searchWindowSize;
+    Size upColSumSize(size.width, searchWindowSizeSq * nblocksy);
+    Size colSumSize(nblocksx * templateWindowSize, searchWindowSizeSq * nblocksy);
     UMat buffer(upColSumSize + colSumSize, CV_32SC(cn));
 
+    srcex = srcex(Rect(Point(borderSize, borderSize), size));
     k.args(ocl::KernelArg::ReadOnlyNoSize(srcex), ocl::KernelArg::WriteOnly(dst),
-           ocl::KernelArg::PtrReadOnly(almostDist2Weight), nblocksy, nblocksx,
+           ocl::KernelArg::PtrReadOnly(almostDist2Weight),
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
-    size_t globalsize[2] = { nblocksx, nblocksy }, localsize[2] = { CTA_SIZE, 1 };
+    size_t globalsize[2] = { nblocksx * BLOCK_COLS, nblocksy * BLOCK_ROWS }, localsize[2] = { CTA_SIZE, 1 };
     return k.run(2, globalsize, localsize, false);
 }
 
