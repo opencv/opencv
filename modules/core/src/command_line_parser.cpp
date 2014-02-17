@@ -65,8 +65,7 @@ static void from_str(const String& str, int type, void* dst)
     {
         std::string temp;
         ss >> temp;
-        if( !temp.compare("true") ) *(bool*)dst = true;
-        else *(bool*)dst = false;
+        *(bool*) = temp == "true";
     }
     else if( type == Param::UNSIGNED_INT )
         ss >> *(unsigned*)dst;
