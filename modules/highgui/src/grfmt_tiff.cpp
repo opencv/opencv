@@ -118,18 +118,21 @@ bool TiffDecoder::readHeader()
     bool result = false;
 
     close();
-    TIFF* tif = TIFFOpen( m_filename.c_str(), "rb" );
+    // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
+    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    TIFF* tif = TIFFOpen( m_filename.c_str(), "r" );
 
     if( tif )
     {
-        int wdth = 0, hght = 0, photometric = 0;
+        uint32 wdth = 0, hght = 0;
+        uint16 photometric = 0;
         m_tif = tif;
 
         if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &wdth ) &&
             TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &hght ) &&
             TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
-            int bpp=8, ncn = photometric > 1 ? 3 : 1;
+            uint16 bpp=8, ncn = photometric > 1 ? 3 : 1;
             TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
             TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
 
@@ -195,12 +198,12 @@ bool  TiffDecoder::readData( Mat& img )
     if( m_tif && m_width && m_height )
     {
         TIFF* tif = (TIFF*)m_tif;
-        int tile_width0 = m_width, tile_height0 = 0;
+        uint32 tile_width0 = m_width, tile_height0 = 0;
         int x, y, i;
         int is_tiled = TIFFIsTiled(tif);
-        int photometric;
+        uint16 photometric;
         TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
-        int bpp = 8, ncn = photometric > 1 ? 3 : 1;
+        uint16 bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
         const int bitsPerByte = 8;
