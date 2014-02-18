@@ -85,11 +85,11 @@ OCL_TEST_P(StereoBMFixture, StereoBM)
     OCL_OFF(bm->compute(left, right, disp));
     OCL_ON(bm->compute(uleft, uright, udisp));
 
-    Near(1e-2);
+    Near(0.05);
 }
 
-OCL_INSTANTIATE_TEST_CASE_P(StereoMatcher, StereoBMFixture, testing::Combine(testing::Values(128),
-                                       testing::Values(15)));
+OCL_INSTANTIATE_TEST_CASE_P(StereoMatcher, StereoBMFixture, testing::Combine(testing::Values(32, 64, 128),
+                                       testing::Values(11, 21)));
 }//ocl
 }//cvtest
 
