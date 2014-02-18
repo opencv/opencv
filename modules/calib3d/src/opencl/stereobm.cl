@@ -47,90 +47,121 @@
 
 #ifdef csize
 
-__kernel void stereoBM_opt(__global const uchar * left, __global const uchar * right, __global uchar * dispptr,
+#define MAX_VAL 32767
+
+__kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar * rightptr, __global uchar * dispptr,
                        int disp_step, int disp_offset, int rows, int cols, int mindisp, int ndisp,
-                       int preFilterCap, int winsize, int textureTreshold, int uniquenessRatio)
+                       int preFilterCap, int nthreads, int textureTreshold, int uniquenessRatio)
 {
-    int total_x = get_global_id(0);
-    int gx = get_group_id(0), x = gx*ndisp;
-    int y = get_global_id(1);
-    int d = get_local_id(0) + mindisp;
-    int wsz2 = winsize/2;
+    int x = get_global_id(0);
+    int total_y = get_global_id(1);
+    int z = get_local_id(2);
+    int d = get_local_id(1);
+    int gy = get_group_id(1), y = gy*ndisp + z*ndisp/nthreads;
+    int wsz2 = wsz/2;
     short FILTERED = (mindisp - 1)<<4;
-    __local int cost[csize];
-    int textsum[tsize];
-    if( total_x<cols && y<rows && d<ndisp)
+    __local short costFunc[csize];
+    short textsum[tsize];
+    __local short * cost = &costFunc[0] + d + ndisp*ndisp/nthreads*z;
+    __global const uchar * left, * right;
+    int dispIdx = mad24(total_y, disp_step, disp_offset + x*(int)sizeof(short) );
+    __global short * disp = (__global short*)(dispptr + dispIdx);
+    if( x < cols && total_y < rows)
     {
-        int dispIdx = mad24(y, disp_step, disp_offset + total_x*(int)sizeof(short) );
-        __global short * disp = (__global short*)(dispptr + dispIdx);
         disp[0] = FILTERED;
+    }
 
-        if( (total_x > ndisp-1) && (y > wsz2-1) && (total_x < cols + ndisp - cols%ndisp) && (y < rows - wsz2))
+    short costbuf[wsz];
+    short textbuf[wsz];
+    int head = 0;
+
+    if( (x > ndisp+mindisp+wsz2-2) && (x < cols - wsz2 - mindisp) && (y < rows-wsz2) )
+    {
+        cost += (y < wsz2) ? ndisp*wsz2 : 0;
+        y = (y<wsz2) ? wsz2 : y;
+        cost[0] = 0;
+        textsum[y%ndisp] = 0;
+        #pragma unroll
+        for(int i = 0; (i < wsz); i++)
         {
-            for(; (x <= ndisp+mindisp+wsz2-2); x++)
-            {
-                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = INT_MAX;
-                textsum[x%(gx*ndisp)] = INT_MAX;
-            }
-            cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = 0;
-            textsum[x%(gx*ndisp)] = 0;
-            for(int i = -wsz2; i < wsz2+1; i++)
-                for(int j = -wsz2; j < wsz2+1; j++)
-                {
-                    cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )]
-                        - right[min( y+i, rows-1 ) * cols + min( x+j-d, cols-1 )] );
-                    textsum[x%(gx*ndisp)] += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )] - preFilterCap );
-                }
-            x++;
-            for(; (x < gx*ndisp + ndisp) && (x < cols-wsz2-mindisp); x++)
-            {
-                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = cost[(d-mindisp)+ndisp*((x-1)%(gx*ndisp))];
-                textsum[x%(gx*ndisp)] = textsum[(x-1)%(gx*ndisp)];
-                for(int i = -wsz2; i < wsz2+1; i++)
-                {
-                    cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] += -abs( left[min( y+i, rows-1 ) * cols + min( x-wsz2-1, cols-1 )]
-                            - right[min( y+i, rows-1 ) * cols + min( x-wsz2-1-d, cols-1 )] ) +
-                        abs( left[min( y+i, rows-1 ) * cols + min( x+wsz2, cols-1 )]
-                            - right[min( y+i, rows-1 ) * cols + min( x+wsz2-d, cols-1 )] );
-                    textsum[x%(gx*ndisp)] += -abs( left[min( y+i, rows-1 ) * cols + min( x-wsz2-1, cols-1 )] - preFilterCap ) +
-                        abs( left[min( y+i, rows-1 ) * cols + min( x+wsz2, cols-1 )] - preFilterCap );
-                }
-            }
+            left = leftptr + mad24(y-wsz2+i, cols, x-wsz2);
+            right = rightptr + mad24(y-wsz2+i, cols, x-wsz2-d-mindisp);
 
-            for(; (x > cols - (cols-1)%ndisp - 1) && (x < cols + ndisp - (cols-1)%ndisp - 1); x++)
+            int costdiff = 0, textdiff = 0;
+            #pragma unroll
+            for(int j = 0; j < wsz; j++)
             {
-                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = INT_MAX;
-                textsum[x%(gx*ndisp)] = INT_MAX;
+                costdiff += abs( left[0] - right[0] );
+                textdiff += abs( left[0] - preFilterCap );
+                left++; right++;
             }
-            barrier(CLK_LOCAL_MEM_FENCE);
+            cost[0] += costdiff;
+            textsum[y%ndisp] += textdiff;
+            costbuf[head] = costdiff;
+            textbuf[head] = textdiff;
+            head++;
+        }
+        y++;
 
-            int best_disp = FILTERED, best_cost = INT_MAX-1;
-            for(int i = 0; (i < ndisp); i++)
+        for(; y < gy*ndisp + (z+1)*ndisp/nthreads; y++)
+        {
+            head = head%wsz;
+            cost += ndisp;
+            cost[0] = cost[-ndisp];
+            textsum[y%ndisp] = textsum[(y-1)%ndisp];
+            left = leftptr + mad24(y+wsz2, cols, x - wsz2);
+            right = rightptr + mad24(y+wsz2, cols, x - wsz2 - d - mindisp);
+
+            int costdiff = 0, textdiff = 0;
+            #pragma unroll
+            for(int i = 0; i < wsz; i++)
             {
-                best_cost = (cost[i + ndisp*(d-mindisp)] < best_cost) ? cost[i + ndisp*(d-mindisp)] : best_cost;
-                best_disp = (best_cost == cost[i + ndisp*(d-mindisp)]) ? i+mindisp : best_disp;
+                costdiff +=
+                    abs( left[0] - right[0] );
+                textdiff += abs( left[0] - preFilterCap );
+                left++; right++;
             }
+            cost[0] += costdiff - costbuf[head];
+            textsum[y%ndisp] += textdiff - textbuf[head];
+            costbuf[head] = costdiff;
+            textbuf[head] = textdiff;
+            head++;
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
 
-            int thresh = best_cost + (best_cost * uniquenessRatio/100);
-            for(int i = 0; (i < ndisp) && (uniquenessRatio > 0); i++)
+        cost = &costFunc[0] + d*ndisp;
+        short best_disp = FILTERED, best_cost = MAX_VAL-1;
+        #pragma unroll
+        for(int i = 0; i < tsize; i++)
+        {
+            short c = cost[0];
+            best_cost = (c < best_cost) ? c : best_cost;
+            best_disp = (best_cost == c) ? ndisp - i - 1 : best_disp;
+            cost++;
+        }
+
+        cost = &costFunc[0] + d*ndisp;
+        int thresh = best_cost + (best_cost * uniquenessRatio/100);
+        #pragma unroll
+        for(int i = 0; (i < tsize) && (uniquenessRatio > 0); i++)
+        {
+            best_disp = ( (cost[0] <= thresh) && (i < (ndisp - best_disp - 2) || i > (ndisp - best_disp) ) ) ?
+                FILTERED : best_disp;
+            cost++;
+        }
+
+        best_disp = (total_y >= rows-wsz2) || (total_y < wsz2) || (textsum[d] < textureTreshold) ? FILTERED : best_disp;
+
+        if( best_disp != FILTERED )
+        {
+            cost = &costFunc[0] + (ndisp - best_disp - 1) + ndisp*d;
+            int y3 = ((ndisp - best_disp - 1) > 0) ? cost[-1] : cost[1],
+                y2 = cost[0],
+                y1 = ((ndisp - best_disp - 1) < ndisp-1) ? cost[1] : cost[-1];
+            d = y3+y1-2*y2 + abs(y3-y1);
+            if( x < cols && total_y < rows)
             {
-                best_disp = ( (cost[i + ndisp*(d-mindisp)] <= thresh) && (i < best_disp - mindisp - 1 || i > best_disp - mindisp + 1) ) ?
-                    FILTERED : best_disp;
-            }
-
-            disp[0] = textsum[d-mindisp] < textureTreshold ? (FILTERED) : (best_disp == FILTERED) ? (short)(best_disp) : (short)(best_disp);
-
-            if( best_disp != FILTERED )
-            {
-                int y1 = (best_disp > mindisp) ? cost[(best_disp-mindisp-1) + ndisp*(d-mindisp)] :
-                        cost[(best_disp-mindisp+1) + ndisp*(d-mindisp)],
-                    y2 = cost[(best_disp-mindisp) + ndisp*(d-mindisp)],
-                    y3 = (best_disp < mindisp+ndisp-1) ? cost[(best_disp-mindisp+1) + ndisp*(d-mindisp)] :
-                        cost[(best_disp-mindisp-1) + ndisp*(d-mindisp)];
-                float a = (y3 - ((best_disp+1)*(y2-y1) + best_disp*y1 - (best_disp-1)*y2)/(best_disp - (best_disp-1)) )/
-                    ((best_disp+1)*((best_disp+1) - (best_disp-1) - best_disp) + (best_disp-1)*best_disp);
-                float b = (y2 - y1)/(best_disp - (best_disp-1)) - a*((best_disp-1)+best_disp);
-                disp[0] = (y1 == y2 || y3 == y2) ? (short)(best_disp*16) :(short)(-b/(2*a)*16);
+                disp[0] = (short)(((ndisp - best_disp - 1 + mindisp)*256 + (d != 0 ? (y3-y1)*256/d : 0) + 15) >> 4);
             }
         }
     }
@@ -148,7 +179,7 @@ __kernel void stereoBM_BF(__global const uchar * left, __global const uchar * ri
     int y = get_global_id(1);
     int wsz2 = winsize/2;
     short FILTERED = (mindisp - 1)<<4;
-
+ 
     if(x < cols && y < rows )
     {
         int dispIdx = mad24(y, disp_step, disp_offset + x*(int)sizeof(short) );
@@ -161,21 +192,20 @@ __kernel void stereoBM_BF(__global const uchar * left, __global const uchar * ri
 
             for(int d = mindisp; d < ndisp+mindisp; d++)
             {
-                cost[d-mindisp] = 0;
+                cost[(ndisp-1) - (d - mindisp)] = 0;
                 for(int i = -wsz2; i < wsz2+1; i++)
                     for(int j = -wsz2; j < wsz2+1; j++)
                     {
-                        textsum += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )] - preFilterCap );
-                        cost[d-mindisp] += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )]
-                            - right[min( y+i, rows-1 ) * cols + min( x+j-d, cols-1 )] );
+                        textsum += (d == mindisp) ? abs( left[ (y+i) * cols + x + j] - preFilterCap ) : 0;
+                        cost[(ndisp-1) - (d - mindisp)] += abs(left[(y+i) * cols + x+j] - right[(y+i) * cols + x+j-d] );
                     }
             }
 
-            int best_disp = mindisp, best_cost = cost[0];
-            for(int d = mindisp; d < ndisp+mindisp; d++)
+            int best_disp = -1, best_cost = INT_MAX;
+            for(int d = ndisp + mindisp - 1; d > mindisp-1; d--)
             {
                 best_cost = (cost[d-mindisp] < best_cost) ? cost[d-mindisp] : best_cost;
-                best_disp = (best_cost == cost[d-mindisp]) ? d : best_disp;
+                best_disp = (best_cost == cost[d-mindisp]) ? (d) : best_disp;
             }
 
             int thresh = best_cost + (best_cost * uniquenessRatio/100);
@@ -191,10 +221,8 @@ __kernel void stereoBM_BF(__global const uchar * left, __global const uchar * ri
                 int y1 = (best_disp > mindisp) ? cost[best_disp-mindisp-1] : cost[best_disp-mindisp+1],
                     y2 = cost[best_disp-mindisp],
                     y3 = (best_disp < mindisp+ndisp-1) ? cost[best_disp-mindisp+1] : cost[best_disp-mindisp-1];
-                float a = (y3 - ((best_disp+1)*(y2-y1) + best_disp*y1 - (best_disp-1)*y2)/(best_disp - (best_disp-1)) )/
-                    ((best_disp+1)*((best_disp+1) - (best_disp-1) - best_disp) + (best_disp-1)*best_disp);
-                float b = (y2 - y1)/(best_disp - (best_disp-1)) - a*((best_disp-1)+best_disp);
-                disp[0] = (y1 == y2 || y2 == y3) ? (short)(best_disp*16) : (short)(-b/(2*a)*16);
+                int _d = y3+y1-2*y2 + abs(y3-y1);
+                disp[0] = (short)(((ndisp - (best_disp-mindisp) - 1 + mindisp)*256 + (_d != 0 ? (y3-y1)*256/_d : 0) + 15) >> 4);
             }
         }
     }
@@ -221,10 +249,10 @@ __kernel void prefilter_norm(__global unsigned char *input, __global unsigned ch
         int cov2 = 0;
         for(int i = -wsz2; i < wsz2+1; i++)
             for(int j = -wsz2; j < wsz2+1; j++)
-                cov2 += input[min( max( (y+i),0 ),rows-1 ) * cols + min( max( (x+j),0 ),cols-1 )];
+                cov2 += input[clamp(y+i, 0, rows-1) * cols + clamp(x+j, 0, cols-1)];
 
         int res = (cov1*scale_g - cov2*scale_s)>>10;
-        res = min(min(max(-prefilterCap, res), prefilterCap) + prefilterCap, 255);
+        res = min(clamp(res, -prefilterCap, prefilterCap) + prefilterCap, 255);
         output[y * cols + x] = res & 0xFF;
     }
 }
@@ -240,13 +268,13 @@ __kernel void prefilter_xsobel(__global unsigned char *input, __global unsigned 
     int x = get_global_id(0);
     int y = get_global_id(1);
     output[y * cols + x] = min(prefilterCap, 255) & 0xFF;
-    if(x < cols && y < rows-1 && x > 0)
+    if(x < cols && y < rows && x > 0 && !((y == rows-1)&(rows%2==1) ) )
     {
-        int cov = input[((y > 0) ? y-1 : y+1) * cols + (x-1)] * (-1) + input[((y > 0) ? y-1 : y+1) * cols + ((x<cols-1) ? x+1 : x-1)] * (1) +
-                  input[              (y)     * cols + (x-1)] * (-2) + input[       (y)            * cols + ((x<cols-1) ? x+1 : x-1)] * (2) +
-                  input[             (y+1)    * cols + (x-1)] * (-1) + input[      (y+1)           * cols + ((x<cols-1) ? x+1 : x-1)] * (1);
+        int cov = input[ ((y > 0) ? y-1 : y+1)  * cols + (x-1)] * (-1) + input[ ((y > 0) ? y-1 : y+1)  * cols + ((x<cols-1) ? x+1 : x-1)] * (1) +
+                  input[              (y)       * cols + (x-1)] * (-2) + input[        (y)             * cols + ((x<cols-1) ? x+1 : x-1)] * (2) +
+                  input[((y<rows-1)?(y+1):(y-1))* cols + (x-1)] * (-1) + input[((y<rows-1)?(y+1):(y-1))* cols + ((x<cols-1) ? x+1 : x-1)] * (1);
 
-        cov = min(min(max(-prefilterCap, cov), prefilterCap) + prefilterCap, 255);
+        cov = min(clamp(cov, -prefilterCap, prefilterCap) + prefilterCap, 255);
         output[y * cols + x] = cov & 0xFF;
     }
 }

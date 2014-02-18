@@ -181,13 +181,11 @@ static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int pre
     _output.create(input.size(), input.type());
     output = _output.getUMat();
 
-    size_t blockSize = 1;
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
-    size_t localThreads[3]  = { blockSize, blockSize, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
 
-    return k.run(2, globalThreads, localThreads, false);
+    return k.run(2, globalThreads, NULL, false);
 }
 
 static void
@@ -656,6 +654,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     mind = d;
                 }
             }
+
             tsum += htext[y + wsz2] - htext[y - wsz2 - 1];
             if( tsum < textureThreshold )
             {
@@ -739,9 +738,9 @@ struct PrefilterInvoker : public ParallelLoopBody
 
 static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
-{
+{//printf("opt\n");
     int ndisp = state->numDisparities;
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d", ndisp*ndisp, ndisp) );
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", ndisp*ndisp, ndisp, state->SADWindowSize) );
     if(k.empty())
         return false;
 
@@ -749,8 +748,9 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     _disp.create(_left.size(), CV_16S);
     UMat disp = _disp.getUMat();
 
-    size_t globalThreads[3] = { left.cols, left.rows, 1 };
-    size_t localThreads[3] = {ndisp, 1, 1};
+    int nthreads = (ndisp <= 64) ? 2 : 4;
+    size_t globalThreads[3] = { left.cols, (left.rows - left.rows%ndisp + ndisp), nthreads};
+    size_t localThreads[3] = {1, ndisp, nthreads};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -759,11 +759,11 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     idx = k.set(idx, state->minDisparity);
     idx = k.set(idx, ndisp);
     idx = k.set(idx, state->preFilterCap);
-    idx = k.set(idx, state->SADWindowSize);
+    idx = k.set(idx, nthreads);
     idx = k.set(idx, state->textureThreshold);
     idx = k.set(idx, state->uniquenessRatio);
 
-    return k.run(2, globalThreads, localThreads, false);
+    return k.run(3, globalThreads, localThreads, false);
 }
 
 static bool ocl_stereobm_bf(InputArray _left, InputArray _right,
@@ -791,15 +791,13 @@ static bool ocl_stereobm_bf(InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
 
     return k.run(2, globalThreads, NULL, false);
+    return false;
 }
 
 static bool ocl_stereo(InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {
-    if(ocl::Device::getDefault().localMemSize() > state->numDisparities * state->numDisparities * sizeof(int) )
-        return ocl_stereobm_opt(_left, _right, _disp, state);
-    else
-        return ocl_stereobm_bf(_left, _right, _disp, state);
+    return ocl_stereobm_opt(_left, _right, _disp, state);
 }
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
@@ -935,7 +933,8 @@ public:
 
         int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
 
-        if(ocl::useOpenCL() && disparr.isUMat())
+        if(ocl::useOpenCL() && disparr.isUMat() &&
+            ocl::Device::getDefault().localMemSize() > params.numDisparities * (params.numDisparities+1) * sizeof(short))
         {
             UMat left, right;
             CV_Assert(ocl_prefiltering(leftarr, rightarr, left, right, &params));
@@ -946,6 +945,7 @@ public:
 
             if (dtype == CV_32F)
                 disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+
             return;
         }
 
@@ -993,7 +993,7 @@ public:
             bufSize2 = width*height*(sizeof(Point_<short>) + sizeof(int) + sizeof(uchar));
 
 #if CV_SSE2
-        bool useShorts = false;//params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
+        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
 #else
         const bool useShorts = false;
 #endif
