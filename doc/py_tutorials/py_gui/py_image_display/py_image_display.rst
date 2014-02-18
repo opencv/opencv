@@ -59,7 +59,7 @@ A screenshot of the window will look like this (in Fedora-Gnome machine):
 
 **cv2.waitKey()** is a keyboard binding function. Its argument is the time in milliseconds. The function waits for specified milliseconds for any keyboard event. If you press any key in that time, the program continues. If **0** is passed, it waits indefinitely for a key stroke. It can also be set to detect specific key strokes like, if key `a` is pressed etc which we will discuss below.
 
-.. note:: Besides binding keyboard events this function also process other GUI events, so it's a must to use it to process ``WM_PAINT`` (which actually prints the image), and even to process the close window event.
+.. note:: Besides binding keyboard events this function also processes many other GUI events, so you MUST use it to actually display the image.
 
 **cv2.destroyAllWindows()** simply destroys all the windows we created. If you want to destroy any specific window, use the function **cv2.destroyWindow()** where you pass the exact window name as the argument.
 
