@@ -35,8 +35,6 @@ __kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almost
             weight = 0;
 
         almostDist2Weight[almostDist] = weight;
-
-//        printf("%d ", weight);
     }
 }
 
@@ -50,12 +48,20 @@ inline int_t calcDist(uchar_t a, uchar_t b)
     return diff * diff;
 }
 
+inline int_t calcDistUpDown(uchar_t down_value, uchar_t down_value_t, uchar_t up_value, uchar_t up_value_t)
+{
+    int_t A = convert_int_t(down_value) - convert_int_t(down_value_t);
+    int_t B = convert_int_t(up_value) - convert_int_t(up_value_t);
+    return (A - B) * (A + B);
+}
+
 inline void calcFirstElementInRow(__global const uchar * src, int src_step, int src_offset,
                                   __local int_t * dists, int y, int x, int id,
                                   __global int_t * col_dists, __global int_t * up_col_dists)
 {
     y -= TEMPLATE_SIZE2;
     int sx = x - SEARCH_SIZE2, sy = y - SEARCH_SIZE2;
+    int_t col_dists_current_private[TEMPLATE_SIZE];
 
     for (int i = id, size = SEARCH_SIZE_SQ; i < size; i += CTA_SIZE)
     {
@@ -68,9 +74,8 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
 
         #pragma unroll
         for (int j = 0; j < TEMPLATE_SIZE; ++j)
-            col_dists_current[j] = (int_t)(0);
+            col_dists_current_private[j] = (int_t)(0);
 
-        #pragma unroll
         for (int ty = 0; ty < TEMPLATE_SIZE; ++ty)
         {
             #pragma unroll
@@ -78,13 +83,17 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
             {
                 value = calcDist(src_template[tx], src_current[tx]);
 
-                col_dists_current[tx + TEMPLATE_SIZE2] += value;
+                col_dists_current_private[tx + TEMPLATE_SIZE2] += value;
                 dist += value;
             }
 
             src_current = (__global const uchar_t *)((__global const uchar *)src_current + src_step);
             src_template = (__global const uchar_t *)((__global const uchar *)src_template + src_step);
         }
+
+        #pragma unroll
+        for (int j = 0; j < TEMPLATE_SIZE; ++j)
+            col_dists_current[j] = col_dists_current_private[j];
 
         dists[i] = dist;
         up_col_dists[0 + i] = col_dists[TEMPLATE_SIZE - 1];
@@ -148,7 +157,7 @@ inline void calcElement(__global const uchar * src, int src_step, int src_offset
         __global int_t * col_dists_current = col_dists + mad24(i, TEMPLATE_SIZE, first);
         __global int_t * up_col_dists_current = up_col_dists + mad24(x0, SEARCH_SIZE_SQ, i);
 
-        int_t col_dist = up_col_dists_current[0] + calcDist(down_value, down_value_t) - calcDist(up_value, up_value_t);
+        int_t col_dist = up_col_dists_current[0] + calcDistUpDown(down_value, down_value_t, up_value, up_value_t);
 
         dists[i] += col_dist - col_dists_current[0];
         col_dists_current[0] = col_dist;
@@ -192,7 +201,7 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (int lsize = CTA_SIZE2 >> 1; lsize > 0; lsize >>= 1)
+    for (int lsize = CTA_SIZE2 >> 1; lsize > 2; lsize >>= 1)
     {
         if (id < lsize)
         {
@@ -206,7 +215,11 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     if (id == 0)
     {
         int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
-        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local[0] / weights_local[0]);
+        int_t weighted_sum_local_0 = weighted_sum_local[0] + weighted_sum_local[1] +
+            weighted_sum_local[2] + weighted_sum_local[3];
+        int weights_local_0 = weights_local[0] + weights_local[1] + weights_local[2] + weights_local[3];
+
+        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local_0 / weights_local_0);
     }
 }
 
@@ -234,7 +247,6 @@ __kernel void fastNlMeansDenoising(__global const uchar * src, int src_step, int
     for (int y = y0; y < y1; ++y)
         for (int x = x0; x < x1; ++x)
         {
-            // barrier(CLK_LOCAL_MEM_FENCE);
             if (x == x0)
             {
                 calcFirstElementInRow(src, src_step, src_offset, dists, y, x, id, col_dists, up_col_dists);
