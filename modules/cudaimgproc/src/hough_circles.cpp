@@ -140,8 +140,8 @@ namespace
         Ptr<cuda::Filter> filterDy_;
         Ptr<cuda::CannyEdgeDetector> canny_;
     };
-    
-     bool centersCompare(Vec3f a, Vec3f b) {return (a[2] > b[2]);}
+
+    bool centersCompare(Vec3f a, Vec3f b) {return (a[2] > b[2]);}
 
     HoughCirclesDetectorImpl::HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold,
                                                        int minRadius, int maxRadius, int maxCircles) :
@@ -195,9 +195,9 @@ namespace
         accum_.setTo(Scalar::all(0));
 
         circlesAccumCenters_gpu(srcPoints, pointsCount, dx_, dy_, accum_, minRadius_, maxRadius_, idp);
-        
+
         accum_.download(tt);
-        
+
         int centersCount = buildCentersList_gpu(accum_, centers, votesThreshold_);
         if (centersCount == 0)
         {
