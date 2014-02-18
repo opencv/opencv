@@ -81,11 +81,27 @@ OCL_TEST_P(StereoBMFixture, StereoBM)
 {
     Ptr<StereoBM> bm = createStereoBM( n_disp, winSize);
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
+//    bm->setMinDisparity(15);
 
+    long t1 = clock();
     OCL_OFF(bm->compute(left, right, disp));
+    long t2 = clock();
     OCL_ON(bm->compute(uleft, uright, udisp));
-
-    Near(0.05);
+    cv::ocl::finish();
+    long t3 = clock();
+    std::cout << (double)(t2-t1)/CLOCKS_PER_SEC << "     " << (double)(t3-t2)/CLOCKS_PER_SEC << std::endl;
+/*
+    Mat t; absdiff(disp, udisp, t);
+/*    for(int i = 0; i<t.rows; i++)
+        for(int j = 0; j< t.cols; j++)
+       //    if(t.at<short>(i,j) > 0)
+            if(i>=5 && i <=16 && j == 36+15)
+                printf("%d  %d  cv: %d    ocl: %d\n", i, j, disp.at<short>(i,j), udisp.getMat(ACCESS_READ).at<short>(i,j) );*/
+/*    imshow("diff.png", t*100);
+    imshow("cv.png", disp*100);
+    imshow("ocl.png", udisp.getMat(ACCESS_READ)*100);
+    waitKey(0);*/
+    Near(1e-3);
 }
 
 OCL_INSTANTIATE_TEST_CASE_P(StereoMatcher, StereoBMFixture, testing::Combine(testing::Values(32, 64, 128),
