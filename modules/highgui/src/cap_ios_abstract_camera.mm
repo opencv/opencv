@@ -291,7 +291,7 @@
         if ([self.captureVideoPreviewLayer isOrientationSupported])
         {
             [self.captureVideoPreviewLayer setOrientation:self.defaultAVCaptureVideoOrientation];
-        }                
+        }
     }
 
     if (parentView != nil) {
