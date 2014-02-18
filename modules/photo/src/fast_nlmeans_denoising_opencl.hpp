@@ -35,28 +35,35 @@ static int divUp(int a, int b)
     return (a + b - 1) / b;
 }
 
-static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, float h, int cn,
+template <typename FT>
+static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindowSize, int templateWindowSize, FT h, int cn,
                                       int & almostTemplateWindowSizeSqBinShift)
 {
     const int maxEstimateSumValue = searchWindowSize * searchWindowSize * 255;
     int fixedPointMult = std::numeric_limits<int>::max() / maxEstimateSumValue;
+    int depth = DataType<FT>::depth;
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if (depth == CV_64F && !doubleSupport)
+        return false;
 
     // precalc weight for every possible l2 dist between blocks
     // additional optimization of precalced weights to replace division(averaging) by binary shift
     CV_Assert(templateWindowSize <= 46340); // sqrt(INT_MAX)
     int templateWindowSizeSq = templateWindowSize * templateWindowSize;
     almostTemplateWindowSizeSqBinShift = getNearestPowerOf2(templateWindowSizeSq);
-    float almostDist2ActualDistMultiplier = (float)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
+    FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
-    const float WEIGHT_THRESHOLD = 1e-3f;
+    const FT WEIGHT_THRESHOLD = 1e-3f;
     int maxDist = 255 * 255 * cn;
     int almostMaxDist = (int)(maxDist / almostDist2ActualDistMultiplier + 1);
-    float den = 1.0f / (h * h * cn);
+    FT den = 1.0f / (h * h * cn);
 
     almostDist2Weight.create(1, almostMaxDist, CV_32SC1);
 
     ocl::Kernel k("calcAlmostDist2Weight", ocl::photo::nlmeans_oclsrc,
-                  "-D OP_CALC_WEIGHTS");
+                  format("-D OP_CALC_WEIGHTS -D FT=%s%s", ocl::typeToStr(depth),
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -99,7 +106,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
         return false;
 
     UMat almostDist2Weight;
-    if (!ocl_calcAlmostDist2Weight(almostDist2Weight, searchWindowSize, templateWindowSize, h, cn,
+    if (!ocl_calcAlmostDist2Weight<float>(almostDist2Weight, searchWindowSize, templateWindowSize, h, cn,
                                    almostTemplateWindowSizeSqBinShift))
         return false;
     CV_Assert(almostTemplateWindowSizeSqBinShift >= 0);

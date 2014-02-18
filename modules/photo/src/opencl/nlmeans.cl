@@ -5,25 +5,38 @@
 // Copyright (C) 2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 
+#ifdef cl_amd_printf
 #pragma OPENCL_EXTENSION cl_amd_printf:enable
+#endif
+
+#ifdef DOUBLE_SUPPORT
+#ifdef cl_amd_fp64
+#pragma OPENCL EXTENSION cl_amd_fp64:enable
+#elif defined cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+#endif
+#endif
+
 
 #ifdef OP_CALC_WEIGHTS
 
 __kernel void calcAlmostDist2Weight(__global int * almostDist2Weight, int almostMaxDist,
-                                    float almostDist2ActualDistMultiplier, int fixedPointMult,
-                                    float den, float WEIGHT_THRESHOLD)
+                                    FT almostDist2ActualDistMultiplier, int fixedPointMult,
+                                    FT den, FT WEIGHT_THRESHOLD)
 {
     int almostDist = get_global_id(0);
 
     if (almostDist < almostMaxDist)
     {
-        float dist = almostDist * almostDist2ActualDistMultiplier;
+        FT dist = almostDist * almostDist2ActualDistMultiplier;
         int weight = convert_int_sat_rte(fixedPointMult * exp(-dist * den));
 
         if (weight < WEIGHT_THRESHOLD * fixedPointMult)
             weight = 0;
 
         almostDist2Weight[almostDist] = weight;
+
+//        printf("%d ", weight);
     }
 }
 
@@ -193,7 +206,7 @@ inline void convolveWindow(__global const uchar * src, int src_step, int src_off
     if (id == 0)
     {
         int dst_index = mad24(y, dst_step, mad24(cn, x, dst_offset));
-        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local[0]);
+        *(__global uchar_t *)(dst + dst_index) = convert_uchar_t(weighted_sum_local[0] / weights_local[0]);
     }
 }
 

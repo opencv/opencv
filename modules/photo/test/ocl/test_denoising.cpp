@@ -94,10 +94,6 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
         OCL_OFF(cv::fastNlMeansDenoising(src_roi, dst_roi, h, templateWindowSize, searchWindowSize));
         OCL_ON(cv::fastNlMeansDenoising(usrc_roi, udst_roi, h, templateWindowSize, searchWindowSize));
 
-//        Mat difference;
-//        cv::subtract(dst_roi, udst_roi, difference);
-//        print(difference);
-
         OCL_EXPECT_MATS_NEAR(dst, 1)
     }
 }
