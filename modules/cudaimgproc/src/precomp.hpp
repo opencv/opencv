@@ -60,5 +60,6 @@
 #endif
 
 #include <limits>
+#include <algorithm>
 
 #endif /* __OPENCV_PRECOMP_H__ */
