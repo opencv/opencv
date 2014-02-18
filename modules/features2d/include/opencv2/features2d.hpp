@@ -465,8 +465,8 @@ public:
           double _min_margin=0.003, int _edge_blur_size=5 );
 
     //! the operator that extracts the MSERs from the image or the specific part of it
-    CV_WRAP_AS(detect) void operator()( const Mat& image, CV_OUT std::vector<std::vector<Point> >& msers,
-                                        const Mat& mask=Mat() ) const;
+    CV_WRAP_AS(detect) void operator()( InputArray image, CV_OUT std::vector<std::vector<Point> >& msers,
+                                        InputArray mask=noArray() ) const;
     AlgorithmInfo* info() const;
 
 protected:
@@ -1053,11 +1053,11 @@ public:
      * See description of similar methods for matching image pair above.
      */
     CV_WRAP void match( InputArray queryDescriptors, CV_OUT std::vector<DMatch>& matches,
-                        const std::vector<Mat>& masks=std::vector<Mat>() );
+                        InputArrayOfArrays masks=noArray() );
     CV_WRAP void knnMatch( InputArray queryDescriptors, CV_OUT std::vector<std::vector<DMatch> >& matches, int k,
-                           const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+                           InputArrayOfArrays masks=noArray(), bool compactResult=false );
     void radiusMatch( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+                      InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
     // Reads matcher object from a file node
     virtual void read( const FileNode& );
@@ -1106,11 +1106,11 @@ protected:
     virtual void radiusMatchImpl( InputArray queryDescriptors, std::vector<std::vector<DMatch> >& matches, float maxDistance,
         InputArrayOfArrays masks=noArray(), bool compactResult=false ) = 0;
 
-    static bool isPossibleMatch( const Mat& mask, int queryIdx, int trainIdx );
-    static bool isMaskedOut( const std::vector<Mat>& masks, int queryIdx );
+    static bool isPossibleMatch( InputArray mask, int queryIdx, int trainIdx );
+    static bool isMaskedOut( InputArrayOfArrays masks, int queryIdx );
 
     static Mat clone_op( Mat m ) { return m.clone(); }
-    void checkMasks( const std::vector<Mat>& masks, int queryDescriptorsCount ) const;
+    void checkMasks( InputArrayOfArrays masks, int queryDescriptorsCount ) const;
 
     // Collection of descriptors from train images.
     std::vector<Mat> trainDescCollection;
@@ -1157,7 +1157,7 @@ public:
     CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
                        const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
-    virtual void add( const std::vector<Mat>& descriptors );
+    virtual void add( InputArrayOfArrays descriptors );
     virtual void clear();
 
     // Reads matcher object from a file node
@@ -1256,7 +1256,7 @@ public:
     // Find one best match for each query descriptor (if mask is empty).
     void match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                 InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
-                std::vector<DMatch>& matches, const Mat& mask=Mat() ) const;
+                std::vector<DMatch>& matches, InputArray mask=noArray() ) const;
     // Find k best matches for each query keypoint (in increasing order of distances).
     // compactResult is used when mask is not empty. If compactResult is false matches
     // vector will have the same size as queryDescriptors rows.
@@ -1264,24 +1264,24 @@ public:
     void knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                    InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
                    std::vector<std::vector<DMatch> >& matches, int k,
-                   const Mat& mask=Mat(), bool compactResult=false ) const;
+                   InputArray mask=noArray(), bool compactResult=false ) const;
     // Find best matches for each query descriptor which have distance less than maxDistance (in increasing order of distances).
     void radiusMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                       InputArray trainImage, std::vector<KeyPoint>& trainKeypoints,
                       std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const Mat& mask=Mat(), bool compactResult=false ) const;
+                      InputArray mask=noArray(), bool compactResult=false ) const;
     /*
      * Group of methods to match keypoints from one image to image set.
      * See description of similar methods for matching image pair above.
      */
     void match( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
-                std::vector<DMatch>& matches, const std::vector<Mat>& masks=std::vector<Mat>() );
+                std::vector<DMatch>& matches, InputArrayOfArrays masks=noArray() );
     void knnMatch( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                    std::vector<std::vector<DMatch> >& matches, int k,
-                   const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+                   InputArrayOfArrays masks=noArray(), bool compactResult=false );
     void radiusMatch(InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                       std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                      const std::vector<Mat>& masks=std::vector<Mat>(), bool compactResult=false );
+                      InputArrayOfArrays masks=noArray(), bool compactResult=false );
 
     // Reads matcher object from a file node
     virtual void read( const FileNode& fn );
@@ -1305,10 +1305,10 @@ protected:
     // after calling train().
     virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                std::vector<std::vector<DMatch> >& matches, int k,
-                               const std::vector<Mat>& masks, bool compactResult ) = 0;
+                               InputArrayOfArrays masks, bool compactResult ) = 0;
     virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                   std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                  const std::vector<Mat>& masks, bool compactResult ) = 0;
+                                  InputArrayOfArrays masks, bool compactResult ) = 0;
     /*
      * A storage for sets of keypoints together with corresponding images and class IDs
      */
@@ -1383,10 +1383,10 @@ public:
 protected:
     virtual void knnMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                std::vector<std::vector<DMatch> >& matches, int k,
-                               const std::vector<Mat>& masks, bool compactResult );
+                               InputArrayOfArrays masks, bool compactResult );
     virtual void radiusMatchImpl( InputArray queryImage, std::vector<KeyPoint>& queryKeypoints,
                                   std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                  const std::vector<Mat>& masks, bool compactResult );
+                                  InputArrayOfArrays masks, bool compactResult );
 
     Ptr<DescriptorExtractor> extractor;
     Ptr<DescriptorMatcher> matcher;
