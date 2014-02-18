@@ -132,7 +132,7 @@ OCV_OPTION(WITH_JASPER         "Include JPEG2K support"                      ON 
 OCV_OPTION(WITH_JPEG           "Include JPEG support"                        ON)
 OCV_OPTION(WITH_WEBP           "Include WebP support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_OPENEXR        "Include ILM support via OpenEXR"             ON   IF (NOT IOS) )
-OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID AND NOT APPLE) )
+OCV_OPTION(WITH_OPENGL         "Include OpenGL support"                      OFF  IF (NOT ANDROID) )
 OCV_OPTION(WITH_OPENNI         "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PNG            "Include PNG support"                         ON)
 OCV_OPTION(WITH_PVAPI          "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
@@ -416,6 +416,12 @@ include(cmake/OpenCVPCHSupport.cmake)
 include(cmake/OpenCVModule.cmake)
 
 # ----------------------------------------------------------------------------
+#  Detect endianness of build platform
+# ----------------------------------------------------------------------------
+include(TestBigEndian)
+test_big_endian(WORDS_BIGENDIAN)
+
+# ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
 # ----------------------------------------------------------------------------
 
@@ -553,16 +559,46 @@ include(cmake/OpenCVGenConfig.cmake)
 include(cmake/OpenCVGenInfoPlist.cmake)
 
 # Generate environment setup file
-if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX AND NOT ANDROID)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
-                 "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY)
-  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh"
-          DESTINATION /etc/profile.d/ COMPONENT tests)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests.sh.in"
-                 "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
-  install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
-          PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
-          DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+if(INSTALL_TESTS AND OPENCV_TEST_DATA_PATH AND UNIX)
+  if(ANDROID)
+    get_filename_component(TEST_PATH ${OPENCV_TEST_INSTALL_PATH} DIRECTORY)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_android.sh.in"
+                   "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
+            DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT tests)
+  else()
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_testing.sh.in"
+                   "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh" @ONLY)
+    install(FILES "${CMAKE_BINARY_DIR}/unix-install/opencv_testing.sh"
+            DESTINATION /etc/profile.d/ COMPONENT tests)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/opencv_run_all_tests_unix.sh.in"
+                   "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh" @ONLY)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/unix-install/opencv_run_all_tests.sh"
+            DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+
+  endif()
+endif()
+
+if(NOT OPENCV_README_FILE)
+  if(ANDROID)
+    set(OPENCV_README_FILE ${CMAKE_CURRENT_SOURCE_DIR}/platforms/android/README.android)
+  endif()
+endif()
+
+if(NOT OPENCV_LICENSE_FILE)
+  set(OPENCV_LICENSE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+endif()
+
+# for UNIX it does not make sense as LICENSE and readme will be part of the package automatically
+if(ANDROID OR NOT UNIX)
+  install(FILES ${OPENCV_LICENSE_FILE}
+        PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+        DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+  if(OPENCV_README_FILE)
+    install(FILES ${OPENCV_README_FILE}
+            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ
+            DESTINATION ${CMAKE_INSTALL_PREFIX} COMPONENT libs)
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
