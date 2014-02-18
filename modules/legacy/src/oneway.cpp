@@ -2234,7 +2234,7 @@ namespace cv{
 
     void OneWayDescriptorMatcher::knnMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                                std::vector<std::vector<DMatch> >& matches, int knn,
-                                               const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
+                                               InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
     {
         Mat queryImage = _queryImage.getMat();
         train();
@@ -2254,7 +2254,7 @@ namespace cv{
 
     void OneWayDescriptorMatcher::radiusMatchImpl( InputArray _queryImage, std::vector<KeyPoint>& queryKeypoints,
                                                   std::vector<std::vector<DMatch> >& matches, float maxDistance,
-                                                  const std::vector<Mat>& /*masks*/, bool /*compactResult*/ )
+                                                   InputArrayOfArrays /*masks*/, bool /*compactResult*/ )
     {
         Mat queryImage = _queryImage.getMat();
 

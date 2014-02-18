@@ -28,7 +28,7 @@ with an image set. ::
     public:
         virtual ~DescriptorMatcher();
 
-        virtual void add( InputArray descriptors );
+        virtual void add( InputArrayOfArrays descriptors );
 
         const vector<Mat>& getTrainDescriptors() const;
         virtual void clear();
@@ -44,20 +44,20 @@ with an image set. ::
                     vector<DMatch>& matches, InputArray mask=noArray() ) const;
         void knnMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                        vector<vector<DMatch> >& matches, int k,
-                       InputArray mask=Mat(), bool compactResult=false ) const;
+                       InputArray mask=noArray(), bool compactResult=false ) const;
         void radiusMatch( InputArray queryDescriptors, InputArray trainDescriptors,
                           vector<vector<DMatch> >& matches, float maxDistance,
-                          InputArray mask=Mat(), bool compactResult=false ) const;
+                          InputArray mask=noArray(), bool compactResult=false ) const;
         /*
          * Group of methods to match descriptors from one image to an image set.
          */
         void match( InputArray queryDescriptors, vector<DMatch>& matches,
-                    const vector<Mat>& masks=noArray() );
+                    InputArrayOfArrays masks=noArray() );
         void knnMatch( InputArray queryDescriptors, vector<vector<DMatch> >& matches,
-                       int k, const vector<Mat>& masks=vector<Mat>(),
+                       int k, InputArrayOfArrays masks=noArray(),
                        bool compactResult=false );
         void radiusMatch( InputArray queryDescriptors, vector<vector<DMatch> >& matches,
-                          float maxDistance, const vector<Mat>& masks=vector<Mat>(),
+                          float maxDistance, InputArrayOfArrays masks=noArray(),
                           bool compactResult=false );
 
         virtual void read( const FileNode& );
@@ -133,7 +133,7 @@ Finds the best match for each descriptor from a query set.
 
 .. ocv:function:: void DescriptorMatcher::match( InputArray queryDescriptors, InputArray trainDescriptors, vector<DMatch>& matches, InputArray mask=noArray() ) const
 
-.. ocv:function:: void DescriptorMatcher::match(InputArray queryDescriptors, vector<DMatch>& matches, const vector<Mat>& masks=vector<Mat>() )
+.. ocv:function:: void DescriptorMatcher::match(InputArray queryDescriptors, vector<DMatch>& matches, InputArrayOfArrays masks=noArray() )
 
     :param queryDescriptors: Query set of descriptors.
 
@@ -155,7 +155,7 @@ Finds the k best matches for each descriptor from a query set.
 
 .. ocv:function:: void DescriptorMatcher::knnMatch(InputArray queryDescriptors,   InputArray trainDescriptors,       vector<vector<DMatch> >& matches,       int k, InputArray mask=noArray(),       bool compactResult=false ) const
 
-.. ocv:function:: void DescriptorMatcher::knnMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches, int k,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void DescriptorMatcher::knnMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches, int k,      InputArrayOfArrays masks=noArray(),       bool compactResult=false )
 
     :param queryDescriptors: Query set of descriptors.
 
@@ -181,7 +181,7 @@ For each query descriptor, finds the training descriptors not farther than the s
 
 .. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           InputArray trainDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance, InputArray mask=noArray(),           bool compactResult=false ) const
 
-.. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance,      const vector<Mat>& masks=vector<Mat>(),       bool compactResult=false )
+.. ocv:function:: void DescriptorMatcher::radiusMatch( InputArray queryDescriptors,           vector<vector<DMatch> >& matches,           float maxDistance,      InputArrayOfArrays masks=noArray(),       bool compactResult=false )
 
     :param queryDescriptors: Query set of descriptors.
 
@@ -265,7 +265,7 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
           const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
           const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
 
-        virtual void add( const vector<Mat>& descriptors );
+        virtual void add( InputArrayOfArrays descriptors );
         virtual void clear();
 
         virtual void train();
