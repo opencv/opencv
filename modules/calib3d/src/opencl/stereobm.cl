@@ -45,9 +45,102 @@
 ////////////////////////////////////////// stereoBM //////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef csize
+
+__kernel void stereoBM_opt(__global const uchar * left, __global const uchar * right, __global uchar * dispptr,
+                       int disp_step, int disp_offset, int rows, int cols, int mindisp, int ndisp,
+                       int preFilterCap, int winsize, int textureTreshold, int uniquenessRatio)
+{
+    int total_x = get_global_id(0);
+    int gx = get_group_id(0), x = gx*ndisp;
+    int y = get_global_id(1);
+    int d = get_local_id(0) + mindisp;
+    int wsz2 = winsize/2;
+    short FILTERED = (mindisp - 1)<<4;
+    __local int cost[csize];
+    int textsum[tsize];
+    if( total_x<cols && y<rows && d<ndisp)
+    {
+        int dispIdx = mad24(y, disp_step, disp_offset + total_x*(int)sizeof(short) );
+        __global short * disp = (__global short*)(dispptr + dispIdx);
+        disp[0] = FILTERED;
+
+        if( (total_x > ndisp-1) && (y > wsz2-1) && (total_x < cols + ndisp - cols%ndisp) && (y < rows - wsz2))
+        {
+            for(; (x <= ndisp+mindisp+wsz2-2); x++)
+            {
+                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = INT_MAX;
+                textsum[x%(gx*ndisp)] = INT_MAX;
+            }
+            cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = 0;
+            textsum[x%(gx*ndisp)] = 0;
+            for(int i = -wsz2; i < wsz2+1; i++)
+                for(int j = -wsz2; j < wsz2+1; j++)
+                {
+                    cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )]
+                        - right[min( y+i, rows-1 ) * cols + min( x+j-d, cols-1 )] );
+                    textsum[x%(gx*ndisp)] += abs( left[min( y+i, rows-1 ) * cols + min( x+j, cols-1 )] - preFilterCap );
+                }
+            x++;
+            for(; (x < gx*ndisp + ndisp) && (x < cols-wsz2-mindisp); x++)
+            {
+                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = cost[(d-mindisp)+ndisp*((x-1)%(gx*ndisp))];
+                textsum[x%(gx*ndisp)] = textsum[(x-1)%(gx*ndisp)];
+                for(int i = -wsz2; i < wsz2+1; i++)
+                {
+                    cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] += -abs( left[min( y+i, rows-1 ) * cols + min( x-wsz2-1, cols-1 )]
+                            - right[min( y+i, rows-1 ) * cols + min( x-wsz2-1-d, cols-1 )] ) +
+                        abs( left[min( y+i, rows-1 ) * cols + min( x+wsz2, cols-1 )]
+                            - right[min( y+i, rows-1 ) * cols + min( x+wsz2-d, cols-1 )] );
+                    textsum[x%(gx*ndisp)] += -abs( left[min( y+i, rows-1 ) * cols + min( x-wsz2-1, cols-1 )] - preFilterCap ) +
+                        abs( left[min( y+i, rows-1 ) * cols + min( x+wsz2, cols-1 )] - preFilterCap );
+                }
+            }
+
+            for(; (x > cols - (cols-1)%ndisp - 1) && (x < cols + ndisp - (cols-1)%ndisp - 1); x++)
+            {
+                cost[(d-mindisp)+ndisp*(x%(gx*ndisp))] = INT_MAX;
+                textsum[x%(gx*ndisp)] = INT_MAX;
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+
+            int best_disp = FILTERED, best_cost = INT_MAX-1;
+            for(int i = 0; (i < ndisp); i++)
+            {
+                best_cost = (cost[i + ndisp*(d-mindisp)] < best_cost) ? cost[i + ndisp*(d-mindisp)] : best_cost;
+                best_disp = (best_cost == cost[i + ndisp*(d-mindisp)]) ? i+mindisp : best_disp;
+            }
+
+            int thresh = best_cost + (best_cost * uniquenessRatio/100);
+            for(int i = 0; (i < ndisp) && (uniquenessRatio > 0); i++)
+            {
+                best_disp = ( (cost[i + ndisp*(d-mindisp)] <= thresh) && (i < best_disp - mindisp - 1 || i > best_disp - mindisp + 1) ) ?
+                    FILTERED : best_disp;
+            }
+
+            disp[0] = textsum[d-mindisp] < textureTreshold ? (FILTERED) : (best_disp == FILTERED) ? (short)(best_disp) : (short)(best_disp);
+
+            if( best_disp != FILTERED )
+            {
+                int y1 = (best_disp > mindisp) ? cost[(best_disp-mindisp-1) + ndisp*(d-mindisp)] :
+                        cost[(best_disp-mindisp+1) + ndisp*(d-mindisp)],
+                    y2 = cost[(best_disp-mindisp) + ndisp*(d-mindisp)],
+                    y3 = (best_disp < mindisp+ndisp-1) ? cost[(best_disp-mindisp+1) + ndisp*(d-mindisp)] :
+                        cost[(best_disp-mindisp-1) + ndisp*(d-mindisp)];
+                float a = (y3 - ((best_disp+1)*(y2-y1) + best_disp*y1 - (best_disp-1)*y2)/(best_disp - (best_disp-1)) )/
+                    ((best_disp+1)*((best_disp+1) - (best_disp-1) - best_disp) + (best_disp-1)*best_disp);
+                float b = (y2 - y1)/(best_disp - (best_disp-1)) - a*((best_disp-1)+best_disp);
+                disp[0] = (y1 == y2 || y3 == y2) ? (short)(best_disp*16) :(short)(-b/(2*a)*16);
+            }
+        }
+    }
+}
+
+#endif
+
 #ifdef SIZE
 
-__kernel void stereoBM(__global const uchar * left, __global const uchar * right, __global uchar * dispptr,
+__kernel void stereoBM_BF(__global const uchar * left, __global const uchar * right, __global uchar * dispptr,
                        int disp_step, int disp_offset, int rows, int cols, int mindisp, int ndisp,
                        int preFilterCap, int winsize, int textureTreshold, int uniquenessRatio)
 {
