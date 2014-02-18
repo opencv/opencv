@@ -19,7 +19,7 @@ enum
 {
     BLOCK_ROWS = 32,
     BLOCK_COLS = 128,
-    CTA_SIZE = 128
+    CTA_SIZE = 256
 };
 
 static inline int getNearestPowerOf2(int value)
