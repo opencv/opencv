@@ -68,7 +68,7 @@ OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 
 
     OCL_TEST_CYCLE() bm->compute(left, right, disp);
 
-    SANITY_CHECK(disp, 1e-2, ERROR_RELATIVE);
+    SANITY_CHECK(disp, 0.05, ERROR_RELATIVE);
 }
 
 }//ocl
