@@ -162,6 +162,9 @@ protected:
 
     int emptyCameraCallbackReported;
 
+    int width;
+    int height;
+
     static const char* flashModesNames[ANDROID_CAMERA_FLASH_MODES_NUM];
     static const char* focusModesNames[ANDROID_CAMERA_FOCUS_MODES_NUM];
     static const char* whiteBalanceModesNames[ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM];
@@ -390,10 +393,18 @@ const char* CameraHandler::focusModesNames[ANDROID_CAMERA_FOCUS_MODES_NUM] =
     CameraParameters::FOCUS_MODE_AUTO,
 #if !defined(ANDROID_r2_2_0)
     CameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO,
+#else
+    CameraParameters::FOCUS_MODE_AUTO,
 #endif
     CameraParameters::FOCUS_MODE_EDOF,
     CameraParameters::FOCUS_MODE_FIXED,
-    CameraParameters::FOCUS_MODE_INFINITY
+    CameraParameters::FOCUS_MODE_INFINITY,
+    CameraParameters::FOCUS_MODE_MACRO,
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    CameraParameters::FOCUS_MODE_CONTINUOUS_PICTURE
+#else
+    CameraParameters::FOCUS_MODE_AUTO
+#endif
 };
 
 const char* CameraHandler::whiteBalanceModesNames[ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM] =
@@ -845,6 +856,24 @@ double CameraHandler::getProperty(int propIdx)
     {
         return getFocusDistance(ANDROID_CAMERA_FOCUS_DISTANCE_FAR_INDEX);
     }
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    case ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK:
+    {
+        const char* status = params->get(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK);
+        if (status == CameraParameters::TRUE)
+            return 1.;
+        else
+            return 0.;
+    }
+    case ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK:
+    {
+        const char* status = params->get(CameraParameters::KEY_AUTO_EXPOSURE_LOCK);
+        if (status == CameraParameters::TRUE)
+            return 1.;
+        else
+            return 0.;
+    }
+#endif
     default:
         LOGW("CameraHandler::getProperty - Unsupported property.");
     };
@@ -855,99 +884,151 @@ void CameraHandler::setProperty(int propIdx, double value)
 {
     LOGD("CameraHandler::setProperty(%d, %f)", propIdx, value);
 
+    android::String8 params_str;
+    params_str = camera->getParameters();
+    LOGI("Params before set: [%s]", params_str.string());
+
     switch (propIdx)
     {
     case ANDROID_CAMERA_PROPERTY_FRAMEWIDTH:
     {
         int w,h;
         params->getPreviewSize(&w, &h);
-        w = (int)value;
-        params->setPreviewSize(w, h);
+        width = (int)value;
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FRAMEHEIGHT:
     {
         int w,h;
         params->getPreviewSize(&w, &h);
-        h = (int)value;
-        params->setPreviewSize(w, h);
+        height = (int)value;
     }
     break;
     case ANDROID_CAMERA_PROPERTY_EXPOSURE:
     {
         int max_exposure = params->getInt("max-exposure-compensation");
         int min_exposure = params->getInt("min-exposure-compensation");
-        if(max_exposure && min_exposure){
+        if(max_exposure && min_exposure)
+        {
             int exposure = (int)value;
-            if(exposure >= min_exposure && exposure <= max_exposure){
+            if(exposure >= min_exposure && exposure <= max_exposure)
                 params->set("exposure-compensation", exposure);
-            } else {
+            else
                 LOGE("Exposure compensation not in valid range (%i,%i).", min_exposure, max_exposure);
-            }
-        } else {
+        } else
             LOGE("Exposure compensation adjust is not supported.");
-        }
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FLASH_MODE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_FLASH_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_FLASH_MODES_NUM)
+        {
             const char* mode_name = flashModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_FLASH_MODES, mode_name))
                 params->set(CameraParameters::KEY_FLASH_MODE, mode_name);
             else
                 LOGE("Flash mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Flash mode value not in valid range.");
         }
+        else
+            LOGE("Flash mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_FOCUS_MODE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_FOCUS_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_FOCUS_MODES_NUM)
+        {
             const char* mode_name = focusModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, mode_name))
                 params->set(CameraParameters::KEY_FOCUS_MODE, mode_name);
             else
                 LOGE("Focus mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Focus mode value not in valid range.");
         }
+        else
+            LOGE("Focus mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_WHITE_BALANCE:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_WHITE_BALANCE_MODES_NUM)
+        {
             const char* mode_name = whiteBalanceModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, mode_name))
                 params->set(CameraParameters::KEY_WHITE_BALANCE, mode_name);
             else
                 LOGE("White balance mode %s is not supported.", mode_name);
-        } else {
-            LOGE("White balance mode value not in valid range.");
         }
+        else
+            LOGE("White balance mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
     case ANDROID_CAMERA_PROPERTY_ANTIBANDING:
     {
         int new_val = (int)value;
-        if(new_val >= 0 && new_val < ANDROID_CAMERA_ANTIBANDING_MODES_NUM){
+        if(new_val >= 0 && new_val < ANDROID_CAMERA_ANTIBANDING_MODES_NUM)
+        {
             const char* mode_name = antibandingModesNames[new_val];
             if(is_supported(CameraParameters::KEY_SUPPORTED_ANTIBANDING, mode_name))
                 params->set(CameraParameters::KEY_ANTIBANDING, mode_name);
             else
                 LOGE("Antibanding mode %s is not supported.", mode_name);
-        } else {
-            LOGE("Antibanding mode value not in valid range.");
         }
+        else
+            LOGE("Antibanding mode value not in valid range.");
+
+        camera->setParameters(params->flatten());
     }
     break;
+#if !defined(ANDROID_r2_2_0) && !defined(ANDROID_r2_3_3) && !defined(ANDROID_r3_0_1)
+    case ANDROID_CAMERA_PROPERTY_EXPOSE_LOCK:
+    {
+        if (is_supported(CameraParameters::KEY_AUTO_EXPOSURE_LOCK_SUPPORTED, "true"))
+        {
+            if (value != 0)
+                params->set(CameraParameters::KEY_AUTO_EXPOSURE_LOCK, CameraParameters::TRUE);
+            else
+                params->set(CameraParameters::KEY_AUTO_EXPOSURE_LOCK, CameraParameters::FALSE);
+            LOGE("Expose lock is set");
+        }
+        else
+            LOGE("Expose lock is not supported");
+
+        camera->setParameters(params->flatten());
+    }
+    break;
+    case ANDROID_CAMERA_PROPERTY_WHITEBALANCE_LOCK:
+    {
+        if (is_supported(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK_SUPPORTED, "true"))
+        {
+            if (value != 0)
+                params->set(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK, CameraParameters::TRUE);
+            else
+                params->set(CameraParameters::KEY_AUTO_WHITEBALANCE_LOCK, CameraParameters::FALSE);
+            LOGE("White balance lock is set");
+        }
+        else
+            LOGE("White balance lock is not supported");
+
+        camera->setParameters(params->flatten());
+    }
+    break;
+#endif
     default:
         LOGW("CameraHandler::setProperty - Unsupported property.");
     };
+
+    params_str = camera->getParameters();
+    LOGI("Params after set: [%s]", params_str.string());
 }
 
 void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
@@ -965,6 +1046,11 @@ void CameraHandler::applyProperties(CameraHandler** ppcameraHandler)
         LOGE("applyProperties: Passed NULL *ppcameraHandler");
         return;
     }
+
+    // delayed resolution setup to exclude errors during other parameres setup on the fly
+    // without camera restart
+    if (((*ppcameraHandler)->width != 0) && ((*ppcameraHandler)->height != 0))
+        (*ppcameraHandler)->params->setPreviewSize((*ppcameraHandler)->width, (*ppcameraHandler)->height);
 
 #if defined(ANDROID_r4_0_0) || defined(ANDROID_r4_0_3) || defined(ANDROID_r4_1_1) || defined(ANDROID_r4_2_0) \
  || defined(ANDROID_r4_3_0) || defined(ANDROID_r4_4_0)
