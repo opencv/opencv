@@ -425,62 +425,72 @@
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
-        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
-        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
-        1.41014223e+01</data></val></xmap>
+    <min>9.1753715276718140e-01</min>
+    <max>6.3783496093750000e+02</max>
+    <last>
+      <x>591</x>
+      <y>592</y>
+      <val>6.3783477783203125e+02</val></last>
+    <rng1>
+      <x>328</x>
+      <y>353</y>
+      <val>3.5202670288085938e+02</val></rng1>
+    <rng2>
+      <x>30</x>
+      <y>278</y>
+      <val>3.7545421600341797e+01</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
-        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
-        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
-        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--SphericalWarperType->
+    <min>-2.8777240753173828e+01</min>
+    <max>5.0603649902343750e+02</max>
+    <last>
+      <x>591</x>
+      <y>592</y>
+      <val>5.0582971191406250e+02</val></last>
+    <rng1>
+      <x>218</x>
+      <y>166</y>
+      <val>1.3936575317382812e+02</val></rng1>
+    <rng2>
+      <x>474</x>
+      <y>173</y>
+      <val>1.4180384826660156e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--CylindricalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.4101420402526855e+01</max>
+    <min>9.1757941246032715e-01</min>
+    <max>6.3783483886718750e+02</max>
     <last>
-      <x>3</x>
-      <y>958</y>
-      <val>1.4101420402526855e+01</val></last>
+      <x>591</x>
+      <y>638</y>
+      <val>6.3783483886718750e+02</val></last>
     <rng1>
-      <x>0</x>
-      <y>801</y>
-      <val>0.</val></rng1>
+      <x>506</x>
+      <y>27</y>
+      <val>5.3787597656250000e+02</val></rng1>
     <rng2>
-      <x>2</x>
-      <y>589</y>
-      <val>1.5574078559875488e+00</val></rng2></xmap>
+      <x>505</x>
+      <y>236</y>
+      <val>5.3676068115234375e+02</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>6.7715429687500000e+03</max>
+    <min>-2.8174449920654297e+01</min>
+    <max>5.0649835205078125e+02</max>
     <last>
-      <x>3</x>
-      <y>958</y>
-      <val>6.7715429687500000e+03</val></last>
+      <x>591</x>
+      <y>638</y>
+      <val>5.0629129028320312e+02</val></last>
     <rng1>
-      <x>2</x>
-      <y>264</y>
-      <val>2.4430767822265625e+02</val></rng1>
+      <x>374</x>
+      <y>119</y>
+      <val>8.8123451232910156e+01</val></rng1>
     <rng2>
-      <x>0</x>
-      <y>366</y>
-      <val>183.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--CylindricalWarperType->
+      <x>524</x>
+      <y>145</y>
+      <val>9.9956871032714844e+01</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--PlaneWarperType->
   <xmap>
     <kind>655360</kind>
@@ -488,94 +498,104 @@
     <min>0.</min>
     <max>639.</max>
     <last>
-      <x>1278</x>
-      <y>958</y>
+      <x>639</x>
+      <y>638</y>
       <val>639.</val></last>
     <rng1>
-      <x>574</x>
-      <y>424</y>
-      <val>287.</val></rng1>
+      <x>350</x>
+      <y>205</y>
+      <val>350.</val></rng1>
     <rng2>
-      <x>1154</x>
-      <y>208</y>
-      <val>577.</val></rng2></xmap>
+      <x>561</x>
+      <y>478</y>
+      <val>561.</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
-    <max>479.</max>
+    <max>4.7850000000000000e+02</max>
     <last>
-      <x>1278</x>
-      <y>958</y>
-      <val>479.</val></last>
+      <x>639</x>
+      <y>638</y>
+      <val>4.7850000000000000e+02</val></last>
     <rng1>
-      <x>475</x>
-      <y>91</y>
-      <val>4.5500000000000000e+01</val></rng1>
+      <x>320</x>
+      <y>278</y>
+      <val>2.0850000000000000e+02</val></rng1>
     <rng2>
-      <x>546</x>
-      <y>512</y>
-      <val>256.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--PlaneWarperType->
+      <x>195</x>
+      <y>141</y>
+      <val>1.0575000000000000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---640x480--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--SphericalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
-        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
-        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
-        1.41014223e+01</data></val></xmap>
+    <min>5.8599472045898438e-01</min>
+    <max>1.2781650390625000e+03</max>
+    <last>
+      <x>1185</x>
+      <y>1185</y>
+      <val>1.2781647949218750e+03</val></last>
+    <rng1>
+      <x>6</x>
+      <y>886</y>
+      <val>8.0658988952636719e+00</val></rng1>
+    <rng2>
+      <x>1169</x>
+      <y>441</y>
+      <val>1.2583106689453125e+03</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
-        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
-        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
-        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--SphericalWarperType->
+    <min>-4.2536788940429688e+01</min>
+    <max>7.6077868652343750e+02</max>
+    <last>
+      <x>1185</x>
+      <y>1185</y>
+      <val>7.6062243652343750e+02</val></last>
+    <rng1>
+      <x>953</x>
+      <y>608</y>
+      <val>3.6842031860351562e+02</val></rng1>
+    <rng2>
+      <x>30</x>
+      <y>759</y>
+      <val>4.6338851928710938e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--CylindricalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.4101420402526855e+01</max>
+    <min>5.8608603477478027e-01</min>
+    <max>1.2781647949218750e+03</max>
     <last>
-      <x>3</x>
-      <y>1438</y>
-      <val>1.4101420402526855e+01</val></last>
+      <x>1185</x>
+      <y>1278</y>
+      <val>1.2781647949218750e+03</val></last>
     <rng1>
-      <x>1</x>
-      <y>491</y>
-      <val>5.4630249738693237e-01</val></rng1>
+      <x>982</x>
+      <y>377</y>
+      <val>1.0414355468750000e+03</val></rng1>
     <rng2>
-      <x>0</x>
-      <y>1289</y>
-      <val>0.</val></rng2></xmap>
+      <x>1106</x>
+      <y>453</y>
+      <val>1.1823544921875000e+03</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.0164382812500000e+04</max>
+    <min>-4.2418548583984375e+01</min>
+    <max>7.6116101074218750e+02</max>
     <last>
-      <x>3</x>
-      <y>1438</y>
-      <val>1.0164382812500000e+04</val></last>
+      <x>1185</x>
+      <y>1278</y>
+      <val>7.6100457763671875e+02</val></last>
     <rng1>
-      <x>1</x>
-      <y>1293</y>
-      <val>7.3668286132812500e+02</val></rng1>
+      <x>731</x>
+      <y>670</y>
+      <val>3.7697357177734375e+02</val></rng1>
     <rng2>
-      <x>1</x>
-      <y>452</y>
-      <val>2.5752563476562500e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--CylindricalWarperType->
+      <x>826</x>
+      <y>926</y>
+      <val>5.2357763671875000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--PlaneWarperType->
   <xmap>
     <kind>655360</kind>
@@ -583,94 +603,104 @@
     <min>0.</min>
     <max>1279.</max>
     <last>
-      <x>2558</x>
-      <y>1438</y>
+      <x>1279</x>
+      <y>1278</y>
       <val>1279.</val></last>
     <rng1>
-      <x>1748</x>
-      <y>1306</y>
-      <val>874.</val></rng1>
+      <x>1046</x>
+      <y>425</y>
+      <val>1046.</val></rng1>
     <rng2>
-      <x>820</x>
-      <y>524</y>
-      <val>410.</val></rng2></xmap>
+      <x>170</x>
+      <y>1263</y>
+      <val>170.</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
-    <max>719.</max>
+    <max>7.1887500000000000e+02</max>
     <last>
-      <x>2558</x>
-      <y>1438</y>
-      <val>719.</val></last>
+      <x>1279</x>
+      <y>1278</y>
+      <val>7.1887500000000000e+02</val></last>
     <rng1>
-      <x>1657</x>
-      <y>727</y>
-      <val>3.6350000000000000e+02</val></rng1>
+      <x>247</x>
+      <y>891</y>
+      <val>5.0118750000000000e+02</val></rng1>
     <rng2>
-      <x>2072</x>
-      <y>1158</y>
-      <val>579.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--PlaneWarperType->
+      <x>551</x>
+      <y>448</y>
+      <val>252.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1280x720--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--SphericalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
-        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
-        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
-        1.41014223e+01</data></val></xmap>
+    <min>2.5413027405738831e-01</min>
+    <max>1.9184964599609375e+03</max>
+    <last>
+      <x>1779</x>
+      <y>1779</y>
+      <val>1.9184963378906250e+03</val></last>
+    <rng1>
+      <x>176</x>
+      <y>1636</y>
+      <val>2.1115806579589844e+02</val></rng1>
+    <rng2>
+      <x>1675</x>
+      <y>1194</y>
+      <val>1.7918775634765625e+03</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
-        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
-        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
-        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--SphericalWarperType->
+    <min>-6.4276763916015625e+01</min>
+    <max>1.1420313720703125e+03</max>
+    <last>
+      <x>1779</x>
+      <y>1779</y>
+      <val>1.1418748779296875e+03</val></last>
+    <rng1>
+      <x>118</x>
+      <y>1369</y>
+      <val>8.3841308593750000e+02</val></rng1>
+    <rng2>
+      <x>1123</x>
+      <y>639</y>
+      <val>3.9641519165039062e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--CylindricalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.4101420402526855e+01</max>
+    <min>2.5420808792114258e-01</min>
+    <max>1.9184962158203125e+03</max>
     <last>
-      <x>3</x>
-      <y>2158</y>
-      <val>1.4101420402526855e+01</val></last>
+      <x>1779</x>
+      <y>1918</y>
+      <val>1.9184962158203125e+03</val></last>
     <rng1>
-      <x>0</x>
-      <y>1670</y>
-      <val>0.</val></rng1>
+      <x>22</x>
+      <y>882</y>
+      <val>2.7595922470092773e+01</val></rng1>
     <rng2>
-      <x>1</x>
-      <y>1384</y>
-      <val>5.4630249738693237e-01</val></rng2></xmap>
+      <x>1000</x>
+      <y>824</y>
+      <val>1.0701204833984375e+03</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.5253642578125000e+04</max>
+    <min>-6.3706375122070312e+01</min>
+    <max>1.1424486083984375e+03</max>
     <last>
-      <x>3</x>
-      <y>2158</y>
-      <val>1.5253642578125000e+04</val></last>
+      <x>1779</x>
+      <y>1918</y>
+      <val>1.1422918701171875e+03</val></last>
     <rng1>
-      <x>1</x>
-      <y>1668</y>
-      <val>9.5033795166015625e+02</val></rng1>
+      <x>194</x>
+      <y>311</y>
+      <val>1.4956430053710938e+02</val></rng1>
     <rng2>
-      <x>3</x>
-      <y>1930</y>
-      <val>1.3642043945312500e+04</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--CylindricalWarperType->
+      <x>1283</x>
+      <y>910</y>
+      <val>5.1127539062500000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--PlaneWarperType->
   <xmap>
     <kind>655360</kind>
@@ -678,94 +708,104 @@
     <min>0.</min>
     <max>1919.</max>
     <last>
-      <x>3838</x>
-      <y>2158</y>
+      <x>1919</x>
+      <y>1918</y>
       <val>1919.</val></last>
     <rng1>
-      <x>1729</x>
-      <y>727</y>
-      <val>8.6450000000000000e+02</val></rng1>
+      <x>1255</x>
+      <y>390</y>
+      <val>1255.</val></rng1>
     <rng2>
-      <x>3780</x>
-      <y>1713</y>
-      <val>1890.</val></rng2></xmap>
+      <x>202</x>
+      <y>523</y>
+      <val>2.0199993896484375e+02</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
-    <max>1079.</max>
+    <max>1.0788750000000000e+03</max>
     <last>
-      <x>3838</x>
-      <y>2158</y>
-      <val>1079.</val></last>
+      <x>1919</x>
+      <y>1918</y>
+      <val>1.0788750000000000e+03</val></last>
     <rng1>
-      <x>324</x>
-      <y>170</y>
-      <val>85.</val></rng1>
+      <x>991</x>
+      <y>1094</y>
+      <val>6.1537500000000000e+02</val></rng1>
     <rng2>
-      <x>2387</x>
-      <y>32</y>
-      <val>16.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--PlaneWarperType->
+      <x>1726</x>
+      <y>50</y>
+      <val>2.8125000000000000e+01</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---1920x1080--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--SphericalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        0. 5.46302497e-01 1.55740774e+00 1.41014204e+01 0.
-        5.46302497e-01 1.55740774e+00 1.41014204e+01 0. 5.46302497e-01
-        1.55740786e+00 1.41014204e+01 0. 5.46302497e-01 1.55740774e+00
-        1.41014223e+01</data></val></xmap>
+    <min>5.0824570655822754e-01</min>
+    <max>3.8382424316406250e+03</max>
+    <last>
+      <x>3559</x>
+      <y>3559</y>
+      <val>3.8382419433593750e+03</val></last>
+    <rng1>
+      <x>2120</x>
+      <y>2417</y>
+      <val>2.2608913574218750e+03</val></rng1>
+    <rng2>
+      <x>1319</x>
+      <y>3180</y>
+      <val>1.4567723388671875e+03</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        -7.09148347e-02 -8.08070302e-02 -1.31250307e-01 -1.00251126e+00
-        4.57657516e-01 5.21498024e-01 8.47039759e-01 6.46982813e+00
-        1.33864796e+00 1.52538133e+00 2.47759080e+00 1.89242439e+01
-        7.01525307e+00 7.99383783e+00 1.29839401e+01 9.91734695e+01</data></val></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--SphericalWarperType->
+    <min>-1.2776707458496094e+02</min>
+    <max>2.2856333007812500e+03</max>
+    <last>
+      <x>3559</x>
+      <y>3559</y>
+      <val>2.2854763183593750e+03</val></last>
+    <rng1>
+      <x>312</x>
+      <y>2908</y>
+      <val>1.7836729736328125e+03</val></rng1>
+    <rng2>
+      <x>3392</x>
+      <y>1865</y>
+      <val>1.1318386230468750e+03</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--CylindricalWarperType->
   <xmap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>1.4101420402526855e+01</max>
+    <min>5.0841617584228516e-01</min>
+    <max>3.8382419433593750e+03</max>
     <last>
-      <x>3</x>
-      <y>4318</y>
-      <val>1.4101420402526855e+01</val></last>
+      <x>3559</x>
+      <y>3838</y>
+      <val>3.8382419433593750e+03</val></last>
     <rng1>
-      <x>0</x>
-      <y>577</y>
-      <val>0.</val></rng1>
+      <x>3327</x>
+      <y>1209</y>
+      <val>3.5565080566406250e+03</val></rng1>
     <rng2>
-      <x>1</x>
-      <y>2885</y>
-      <val>5.4630249738693237e-01</val></rng2></xmap>
+      <x>655</x>
+      <y>2395</y>
+      <val>7.6166857910156250e+02</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
-    <min>0.</min>
-    <max>3.0521423828125000e+04</max>
+    <min>-1.2741275024414062e+02</min>
+    <max>2.2861550292968750e+03</max>
     <last>
-      <x>3</x>
-      <y>4318</y>
-      <val>3.0521423828125000e+04</val></last>
+      <x>3559</x>
+      <y>3838</y>
+      <val>2.2859982910156250e+03</val></last>
     <rng1>
-      <x>0</x>
-      <y>2330</y>
-      <val>1165.</val></rng1>
+      <x>235</x>
+      <y>3169</y>
+      <val>1.8435339355468750e+03</val></rng1>
     <rng2>
-      <x>2</x>
-      <y>2071</y>
-      <val>1.9165197753906250e+03</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--CylindricalWarperType->
+      <x>1609</x>
+      <y>3671</y>
+      <val>2.0659147949218750e+03</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--PlaneWarperType->
   <xmap>
     <kind>655360</kind>
@@ -773,228 +813,248 @@
     <min>0.</min>
     <max>3839.</max>
     <last>
-      <x>7678</x>
-      <y>4318</y>
+      <x>3839</x>
+      <y>3838</y>
       <val>3839.</val></last>
     <rng1>
-      <x>2138</x>
-      <y>1826</y>
-      <val>1069.</val></rng1>
+      <x>2064</x>
+      <y>885</y>
+      <val>2064.</val></rng1>
     <rng2>
-      <x>3297</x>
-      <y>3501</y>
-      <val>1.6485000000000000e+03</val></rng2></xmap>
+      <x>1294</x>
+      <y>411</y>
+      <val>1294.</val></rng2></xmap>
   <ymap>
     <kind>655360</kind>
     <type>5</type>
     <min>0.</min>
-    <max>2159.</max>
+    <max>2.1588750000000000e+03</max>
     <last>
-      <x>7678</x>
-      <y>4318</y>
-      <val>2159.</val></last>
+      <x>3839</x>
+      <y>3838</y>
+      <val>2.1588750000000000e+03</val></last>
     <rng1>
-      <x>5257</x>
-      <y>618</y>
-      <val>309.</val></rng1>
+      <x>2160</x>
+      <y>1637</y>
+      <val>9.2081250000000000e+02</val></rng1>
     <rng2>
-      <x>58</x>
-      <y>520</y>
-      <val>260.</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--PlaneWarperType->
+      <x>148</x>
+      <y>1295</y>
+      <val>7.2843750000000000e+02</val></rng2></ymap></OCL_StitchingWarpersFixture_StitchingWarpers_BuildMaps--StitchingWarpers_BuildMaps---3840x2160--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--SphericalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
-        2.75703728e-01 3.43715131e-01 6.28358603e-01 -3.27725172e-01
-        1.99247599e-01 2.88141757e-01 6.50436103e-01 -5.05576015e-01
-        6.50688589e-01 -1.93454176e-01 1.44313648e-02 -4.97053862e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--SphericalWarperType->
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>591</x>
+      <y>592</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>262</x>
+      <y>270</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>495</x>
+      <y>428</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--CylindricalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9176263809204102e-01</min>
-    <max>9.9849575757980347e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>3</x>
-      <y>958</y>
-      <val>-8.8422864675521851e-01</val></last>
+      <x>591</x>
+      <y>638</y>
+      <val>64.</val></last>
     <rng1>
-      <x>0</x>
-      <y>164</y>
-      <val>-6.4924257993698120e-01</val></rng1>
+      <x>349</x>
+      <y>596</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>2</x>
-      <y>538</y>
-      <val>7.3705530166625977e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--CylindricalWarperType->
+      <x>184</x>
+      <y>33</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--PlaneWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9999219179153442e-01</min>
-    <max>9.9995493888854980e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>1278</x>
-      <y>958</y>
-      <val>6.8033063411712646e-01</val></last>
+      <x>639</x>
+      <y>638</y>
+      <val>64.</val></last>
     <rng1>
-      <x>341</x>
-      <y>633</y>
-      <val>-6.0177719593048096e-01</val></rng1>
+      <x>375</x>
+      <y>300</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>1114</x>
-      <y>621</y>
-      <val>7.2595417499542236e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--PlaneWarperType->
+      <x>13</x>
+      <y>626</y>
+      <val>128.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---640x480--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--SphericalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
-        1.80823773e-01 1.62900805e-01 3.93110633e-01 -9.15733799e-02
-        -1.66874647e-01 1.54000625e-01 3.36789429e-01 2.37139970e-01
-        4.37882751e-01 2.31529936e-01 5.21142781e-01 5.12351274e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--SphericalWarperType->
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>1185</x>
+      <y>1185</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>513</x>
+      <y>815</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>1142</x>
+      <y>526</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--CylindricalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9473565816879272e-01</min>
-    <max>9.9849575757980347e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>3</x>
-      <y>1438</y>
-      <val>-3.5428860783576965e-01</val></last>
+      <x>1185</x>
+      <y>1278</y>
+      <val>64.</val></last>
     <rng1>
-      <x>2</x>
-      <y>347</y>
-      <val>3.7224924564361572e-01</val></rng1>
+      <x>309</x>
+      <y>492</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>1</x>
-      <y>1023</y>
-      <val>4.3119803071022034e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--CylindricalWarperType->
+      <x>684</x>
+      <y>250</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--PlaneWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9999803304672241e-01</min>
-    <max>9.9999505281448364e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>2558</x>
-      <y>1438</y>
-      <val>-1.2874162197113037e-01</val></last>
+      <x>1279</x>
+      <y>1278</y>
+      <val>64.</val></last>
     <rng1>
-      <x>1960</x>
-      <y>487</y>
-      <val>-3.6662971973419189e-01</val></rng1>
+      <x>1142</x>
+      <y>111</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>516</x>
-      <y>245</y>
-      <val>-5.9204876422882080e-02</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--PlaneWarperType->
+      <x>454</x>
+      <y>34</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1280x720--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--SphericalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
-        4.87657309e-01 4.43348467e-01 6.61378801e-01 5.65425277e-01
-        1.46625936e-01 3.49467933e-01 4.99868751e-01 3.80492836e-01
-        8.83258164e-01 -2.05467820e-01 -4.10400242e-01 9.65138450e-02</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--SphericalWarperType->
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>1779</x>
+      <y>1779</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>878</x>
+      <y>764</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>1621</x>
+      <y>33</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--CylindricalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9439692497253418e-01</min>
-    <max>9.9994701147079468e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>3</x>
-      <y>2158</y>
-      <val>1.6116951406002045e-01</val></last>
+      <x>1779</x>
+      <y>1918</y>
+      <val>64.</val></last>
     <rng1>
-      <x>1</x>
-      <y>1573</y>
-      <val>7.3714250326156616e-01</val></rng1>
+      <x>1363</x>
+      <y>1426</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>1</x>
-      <y>1894</y>
-      <val>-1.4121675491333008e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--CylindricalWarperType->
+      <x>619</x>
+      <y>1328</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--PlaneWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9999940395355225e-01</min>
-    <max>9.9999940395355225e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>3838</x>
-      <y>2158</y>
-      <val>2.7127766609191895e-01</val></last>
+      <x>1919</x>
+      <y>1918</y>
+      <val>64.</val></last>
     <rng1>
-      <x>349</x>
-      <y>429</y>
-      <val>1.5086723864078522e-01</val></rng1>
+      <x>1134</x>
+      <y>1678</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>3683</x>
-      <y>1185</y>
-      <val>1.5689258277416229e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--PlaneWarperType->
+      <x>270</x>
+      <y>1383</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---1920x1080--PlaneWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--SphericalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <val type_id="opencv-matrix">
-      <rows>4</rows>
-      <cols>4</cols>
-      <dt>f</dt>
-      <data>
-        2.81772077e-01 2.01775402e-01 -1.91642448e-01 -3.04844379e-01
-        -2.95571685e-01 1.36315256e-01 6.37116134e-01 3.51148695e-01
-        -9.61276054e-01 -2.52941787e-01 -8.80843252e-02 2.57447213e-01
-        -8.15622091e-01 -1.52166128e-01 -4.36902732e-01 1.94278434e-01</data></val></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--SphericalWarperType->
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
+    <last>
+      <x>3559</x>
+      <y>3559</y>
+      <val>64.</val></last>
+    <rng1>
+      <x>1731</x>
+      <y>2111</y>
+      <val>64.</val></rng1>
+    <rng2>
+      <x>1608</x>
+      <y>874</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--SphericalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--CylindricalWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9950110912322998e-01</min>
-    <max>9.9901926517486572e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>3</x>
-      <y>4318</y>
-      <val>4.1595599055290222e-01</val></last>
+      <x>3559</x>
+      <y>3838</y>
+      <val>64.</val></last>
     <rng1>
-      <x>3</x>
-      <y>1658</y>
-      <val>4.1595599055290222e-01</val></rng1>
+      <x>1262</x>
+      <y>2912</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>3</x>
-      <y>1330</y>
-      <val>4.1595599055290222e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--CylindricalWarperType->
+      <x>2241</x>
+      <y>2422</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--CylindricalWarperType->
 <OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
   <dst>
     <kind>655360</kind>
-    <type>5</type>
-    <min>-9.9999994039535522e-01</min>
-    <max>9.9999976158142090e-01</max>
+    <type>0</type>
+    <min>64.</min>
+    <max>255.</max>
     <last>
-      <x>7678</x>
-      <y>4318</y>
-      <val>-4.1626000404357910e-01</val></last>
+      <x>3839</x>
+      <y>3838</y>
+      <val>64.</val></last>
     <rng1>
-      <x>985</x>
-      <y>2694</y>
-      <val>5.4863244295120239e-02</val></rng1>
+      <x>3319</x>
+      <y>2619</y>
+      <val>64.</val></rng1>
     <rng2>
-      <x>299</x>
-      <y>3700</y>
-      <val>5.5946636199951172e-01</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
+      <x>3284</x>
+      <y>1707</y>
+      <val>64.</val></rng2></dst></OCL_StitchingWarpersFixture_StitchingWarpers_Warp--StitchingWarpers_Warp---3840x2160--PlaneWarperType->
 </opencv_storage>
