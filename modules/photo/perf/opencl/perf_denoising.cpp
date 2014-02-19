@@ -45,7 +45,7 @@ OCL_PERF_TEST(Photo, DenoisingColored)
     SANITY_CHECK(result);
 }
 
-OCL_PERF_TEST(Photo, DenoisingGrayscaleMulti)
+OCL_PERF_TEST(Photo, DESABLED_DenoisingGrayscaleMulti)
 {
     const int imgs_count = 3;
 
@@ -68,7 +68,7 @@ OCL_PERF_TEST(Photo, DenoisingGrayscaleMulti)
     SANITY_CHECK(result);
 }
 
-OCL_PERF_TEST(Photo, DenoisingColoredMulti)
+OCL_PERF_TEST(Photo, DESABLED_DenoisingColoredMulti)
 {
     const int imgs_count = 3;
 

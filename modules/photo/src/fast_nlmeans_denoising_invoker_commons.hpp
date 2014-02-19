@@ -84,7 +84,6 @@ template <typename T> static inline void incWithWeight(int* estimation, int weig
 
 template <> inline void incWithWeight(int* estimation, int weight, uchar p)
 {
-
     estimation[0] += weight * p;
 }
 
@@ -95,6 +94,24 @@ template <> inline void incWithWeight(int* estimation, int weight, Vec2b p)
 }
 
 template <> inline void incWithWeight(int* estimation, int weight, Vec3b p)
+{
+    estimation[0] += weight * p[0];
+    estimation[1] += weight * p[1];
+    estimation[2] += weight * p[2];
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, int p)
+{
+    estimation[0] += weight * p;
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, Vec2i p)
+{
+    estimation[0] += weight * p[0];
+    estimation[1] += weight * p[1];
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, Vec3i p)
 {
     estimation[0] += weight * p[0];
     estimation[1] += weight * p[1];
@@ -123,6 +140,22 @@ template <> inline Vec3b saturateCastFromArray(int* estimation)
     res[1] = saturate_cast<uchar>(estimation[1]);
     res[2] = saturate_cast<uchar>(estimation[2]);
     return res;
+}
+
+template <> inline int saturateCastFromArray(int* estimation)
+{
+    return estimation[0];
+}
+
+template <> inline Vec2i saturateCastFromArray(int* estimation)
+{
+    estimation[1] = 0;
+    return Vec2i(estimation);
+}
+
+template <> inline Vec3i saturateCastFromArray(int* estimation)
+{
+    return Vec3i(estimation);
 }
 
 #endif
