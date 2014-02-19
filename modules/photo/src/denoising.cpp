@@ -86,14 +86,19 @@ void cv::fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
                                       float h, float hForColorComponents,
                                       int templateWindowSize, int searchWindowSize)
 {
-    Mat src = _src.getMat();
-    _dst.create(src.size(), src.type());
-    Mat dst = _dst.getMat();
-
-    if (src.type() != CV_8UC3) {
+    if (_src.type() != CV_8UC3)
+    {
         CV_Error(Error::StsBadArg, "Type of input image should be CV_8UC3!");
         return;
     }
+
+    CV_OCL_RUN(_src.dims() <= 2 && (_dst.isUMat() || _src.isUMat()),
+                ocl_fastNlMeansDenoisingColored(_src, _dst, h, hForColorComponents,
+                                                templateWindowSize, searchWindowSize))
+
+    Mat src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
 
     Mat src_lab;
     cvtColor(src, src_lab, COLOR_LBGR2Lab);
