@@ -392,7 +392,7 @@ public:
     //! various constructors
     RotatedRect();
     RotatedRect(const Point2f& center, const Size2f& size, float angle);
-    RotatedRect(const std::vector<Point2f>& points);
+    RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
     //! returns 4 vertices of the rectangle
     void points(Point2f pts[]) const;
@@ -1548,31 +1548,6 @@ inline
 RotatedRect::RotatedRect(const Point2f& _center, const Size2f& _size, float _angle)
     : center(_center), size(_size), angle(_angle) {}
 
-inline
-RotatedRect::RotatedRect(const std::vector<Point2f>& _points)
-{
-    CV_Assert( _points.size() == 3 );
-    Point2f _center = 0.5f * (_points[0] + _points[2]);
-    Vec2f vecs[2];
-    vecs[0] = Vec2f(_points[0] - _points[1]);
-    vecs[1] = Vec2f(_points[1] - _points[2]);
-    // check that given sides are perpendicular
-    CV_Assert( abs(vecs[0].dot(vecs[1])) <= 0.001 );
-
-    // wd_i stores which vector (0,1) or (1,2) will make the width
-    // One of them will definitely have slope within -1 to 1
-    int wd_i = 0;
-    if( vecs[1][0] != 0 && fabs(vecs[1][1] / vecs[1][0]) <= 1.0f ) wd_i = 1;
-    int ht_i = (wd_i + 1) % 2;
-
-    float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
-    float _width = (float) norm(vecs[wd_i]);
-    float _height = (float) norm(vecs[ht_i]);
-
-    center = _center;
-    size = Size2f(_width, _height);
-    angle = _angle;
-}
 
 
 ///////////////////////////////// Range /////////////////////////////////
