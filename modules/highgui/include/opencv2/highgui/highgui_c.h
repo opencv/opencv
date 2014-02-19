@@ -425,8 +425,11 @@ enum
     CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CV_CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION,
 
     // Properties of cameras available through GStreamer interface
-    CV_CAP_GSTREAMER_QUEUE_LENGTH   = 200, // default is 1
-    CV_CAP_PROP_PVAPI_MULTICASTIP   = 300, // ip for anable multicast master mode. 0 for disable multicast
+    CV_CAP_GSTREAMER_QUEUE_LENGTH           = 200, // default is 1
+
+    // PVAPI
+    CV_CAP_PROP_PVAPI_MULTICASTIP           = 300, // ip for anable multicast master mode. 0 for disable multicast
+    CV_CAP_PROP_PVAPI_FRAMESTARTTRIGGERMODE = 301, // FrameStartTriggerMode: Determines how a frame is initiated
 
     // Properties of cameras available through XIMEA SDK interface
     CV_CAP_PROP_XI_DOWNSAMPLING  = 400,      // Change image resolution by binning or skipping.
