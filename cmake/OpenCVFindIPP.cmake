@@ -163,9 +163,16 @@ function(set_ipp_new_libraries _LATEST_VERSION)
         ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCV}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPI}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
         ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPS}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
-        ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCORE}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
-        PARENT_SCOPE)
+        ${IPP_LIB_PREFIX}${IPP_PREFIX}${IPPCORE}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
 
+    if (UNIX)
+        set(IPP_LIBRARIES
+            ${IPP_LIBRARIES}
+            ${IPP_LIB_PREFIX}irc${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${IPP_LIB_PREFIX}imf${CMAKE_SHARED_LIBRARY_SUFFIX}
+            ${IPP_LIB_PREFIX}svml${CMAKE_SHARED_LIBRARY_SUFFIX})
+    endif()
+    set(IPP_LIBRARIES ${IPP_LIBRARIES} PARENT_SCOPE)
     return()
 
 endfunction()
@@ -208,18 +215,38 @@ function(set_ipp_variables _LATEST_VERSION)
         set(IPP_INCLUDE_DIRS ${IPP_ROOT_DIR}/include PARENT_SCOPE)
 
         if (APPLE)
-            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib PARENT_SCOPE)
+            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib)
         elseif (IPP_X64)
             if(NOT EXISTS ${IPP_ROOT_DIR}/lib/intel64)
                 message(SEND_ERROR "IPP EM64T libraries not found")
             endif()
-            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib/intel64 PARENT_SCOPE)
+            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib/intel64)
         else()
             if(NOT EXISTS ${IPP_ROOT_DIR}/lib/ia32)
                 message(SEND_ERROR "IPP IA32 libraries not found")
             endif()
-            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib/ia32 PARENT_SCOPE)
+            set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib/ia32)
         endif()
+
+        if (UNIX)
+            get_filename_component(INTEL_COMPILER_LIBRARY_DIR ${IPP_ROOT_DIR}/../lib REALPATH)
+            if (IPP_X64)
+                if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
+                    message(SEND_ERROR "Intel compiler EM64T libraries not found")
+                endif()
+                set(IPP_LIBRARY_DIRS
+                    ${IPP_LIBRARY_DIRS}
+                    ${INTEL_COMPILER_LIBRARY_DIR}/intel64)
+            else()
+                if(NOT EXISTS ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
+                    message(SEND_ERROR "Intel compiler IA32 libraries not found")
+                endif()
+                set(IPP_LIBRARY_DIRS
+                    ${IPP_LIBRARY_DIRS}
+                    ${INTEL_COMPILER_LIBRARY_DIR}/ia32)
+            endif()
+        endif()
+        set(IPP_LIBRARY_DIRS ${IPP_LIBRARY_DIRS} PARENT_SCOPE)
 
         # set IPP_LIBRARIES variable (7.x or 8.x lib names)
         set_ipp_new_libraries(${_LATEST_VERSION})
