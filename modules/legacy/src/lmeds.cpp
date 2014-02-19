@@ -163,7 +163,7 @@ icvLMedS( int *points1, int *points2, int numPoints, CvMatrix3 * fundamentalMatr
 /*===========================================================================*/
 /*===========================================================================*/
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
@@ -328,7 +328,7 @@ icvCubic( double a2, double a1, double a0, double *squares )
     return CV_NO_ERR;
 }                               /* icvCubic */
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic pop
 #endif
 
