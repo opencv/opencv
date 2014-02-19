@@ -50,7 +50,7 @@ namespace detail {
 
 Rect PlaneWarperOcl::buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap)
 {
-    projector_.setCameraParams(K, R);
+    projector_.setCameraParams(K, R, T);
 
     Point dst_tl, dst_br;
     detectResultRoi(src_size, dst_tl, dst_br);
