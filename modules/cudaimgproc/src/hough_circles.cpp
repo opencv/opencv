@@ -224,7 +224,7 @@ namespace
 
             const float minDist2 = minDist_ * minDist_;
 
-            vector<Vec3f> sortBuf;
+            std::vector<Vec3f> sortBuf;
             for(int i=0; i<centersCount; i++){
                 Vec3f temp;
                 temp[0] = oldBuf[i].x;
