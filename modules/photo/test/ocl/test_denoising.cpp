@@ -98,7 +98,23 @@ OCL_TEST_P(FastNlMeansDenoising, Mat)
     }
 }
 
+typedef FastNlMeansDenoisingTestBase fastNlMeansDenoisingColored;
+
+OCL_TEST_P(fastNlMeansDenoisingColored, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::fastNlMeansDenoisingColored(src_roi, dst_roi, h, h, templateWindowSize, searchWindowSize));
+        OCL_ON(cv::fastNlMeansDenoisingColored(usrc_roi, udst_roi, h, h, templateWindowSize, searchWindowSize));
+
+        OCL_EXPECT_MATS_NEAR(dst, 1)
+    }
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(Photo, FastNlMeansDenoising, Combine(Values(1, 2), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Photo, fastNlMeansDenoisingColored, Combine(Values(Channels(3)), Bool()));
 
 } } // namespace cvtest::ocl
 

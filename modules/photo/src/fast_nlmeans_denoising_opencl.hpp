@@ -132,6 +132,38 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
     return k.run(2, globalsize, localsize, false);
 }
 
+static bool ocl_fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
+                                      float h, float hForColorComponents,
+                                      int templateWindowSize, int searchWindowSize)
+{
+    UMat src = _src.getUMat();
+    _dst.create(src.size(), src.type());
+    UMat dst = _dst.getUMat();
+
+    UMat src_lab;
+    cvtColor(src, src_lab, COLOR_LBGR2Lab);
+
+    UMat l(src.size(), CV_8U);
+    UMat ab(src.size(), CV_8UC2);
+    std::vector<UMat> l_ab(2), l_ab_denoised(2);
+    l_ab[0] = l;
+    l_ab[1] = ab;
+    l_ab_denoised[0].create(src.size(), CV_8U);
+    l_ab_denoised[1].create(src.size(), CV_8UC2);
+
+    int from_to[] = { 0,0, 1,1, 2,2 };
+    mixChannels(std::vector<UMat>(1, src_lab), l_ab, from_to, 3);
+
+    fastNlMeansDenoising(l_ab[0], l_ab_denoised[0], h, templateWindowSize, searchWindowSize);
+    fastNlMeansDenoising(l_ab[1], l_ab_denoised[1], hForColorComponents, templateWindowSize, searchWindowSize);
+
+    UMat dst_lab(src.size(), src.type());
+    mixChannels(l_ab_denoised, std::vector<UMat>(1, dst_lab), from_to, 3);
+
+    cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
+    return true;
+}
+
 }
 
 #endif
