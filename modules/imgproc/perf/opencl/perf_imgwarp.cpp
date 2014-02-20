@@ -172,7 +172,7 @@ typedef tuple<Size, MatType, InterType> RemapParams;
 typedef TestBaseWithParam<RemapParams> RemapFixture;
 
 OCL_PERF_TEST_P(RemapFixture, Remap,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, InterType::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, InterType::all()))
 {
     const RemapParams params = GetParam();
     const Size srcSize = get<0>(params);

@@ -3503,7 +3503,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 {
     int cn = _src.channels(), type = _src.type(), depth = _src.depth();
 
-    if (borderType == BORDER_TRANSPARENT || cn == 3 || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
+    if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
         return false;
 
@@ -3553,10 +3553,16 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
                                ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2]),
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, 2)));
     }
+    int scalarcn = cn == 3 ? 4 : cn;
+    int sctype = CV_MAKETYPE(depth, scalarcn);
+    buildOptions += format(" -D T=%s -D T1=%s"
+                           " -D cn=%d -D ST=%s",
+                           ocl::typeToStr(type), ocl::typeToStr(depth),
+                           cn, ocl::typeToStr(sctype));
 
     ocl::Kernel k(kernelName.c_str(), ocl::imgproc::remap_oclsrc, buildOptions);
 
-    Mat scalar(1, 1, type, borderValue);
+    Mat scalar(1, 1, sctype, borderValue);
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src), dstarg = ocl::KernelArg::WriteOnly(dst),
             map1arg = ocl::KernelArg::ReadOnlyNoSize(map1),
             scalararg = ocl::KernelArg::Constant((void*)scalar.data, scalar.elemSize());
