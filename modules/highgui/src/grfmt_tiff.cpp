@@ -235,18 +235,20 @@ bool  TiffDecoder::readData( Mat& img )
                     {
                         case 8:
                         {
+                            uchar * bstart = buffer;
                             if( !is_tiled )
                                 ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
                             else
+                            {
                                 ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
-
+                                //Tiles fill the buffer from the bottom up
+                                bstart += (tile_height0 - tile_height) * tile_width0 * 4;
+                            }
                             if( !ok )
                             {
                                 close();
                                 return false;
                             }
-
-                            uchar * bstart = buffer + (tile_height0 - tile_height) * tile_width0 * 4;
 
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
@@ -273,27 +275,25 @@ bool  TiffDecoder::readData( Mat& img )
                                 return false;
                             }
 
-                            uint16 * bstart = buffer16 + (tile_height0 - tile_height) * tile_width0 * ncn;
-
                             for( i = 0; i < tile_height; i++ )
                             {
                                 if( color )
                                 {
                                     if( ncn == 1 )
                                     {
-                                        icvCvt_Gray2BGR_16u_C1C3R(bstart + i*tile_width0*ncn, 0,
+                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                   (ushort*)(data + img.step*i) + x*3, 0,
                                                                   cvSize(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
-                                        icvCvt_RGB2BGR_16u_C3R(bstart + i*tile_width0*ncn, 0,
+                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1) );
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2BGR_16u_C4C3R(bstart + i*tile_width0*ncn, 0,
+                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1), 2 );
                                     }
@@ -303,12 +303,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         memcpy((ushort*)(data + img.step*i)+x,
-                                               bstart + i*tile_width0*ncn,
+                                               buffer16 + i*tile_width0*ncn,
                                                tile_width*sizeof(buffer16[0]));
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2Gray_16u_CnC1R(bstart + i*tile_width0*ncn, 0,
+                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x, 0,
                                                                cvSize(tile_width,1), ncn, 2 );
                                     }
@@ -331,21 +331,18 @@ bool  TiffDecoder::readData( Mat& img )
                                 return false;
                             }
 
-                            float * fstart = buffer32 + (tile_height0 - tile_height) * tile_width0 * sizeof(buffer32[0]);
-                            double * dstart = buffer64 + (tile_height0 - tile_height) * tile_width0 * sizeof(buffer64[0]);
-
                             for( i = 0; i < tile_height; i++ )
                             {
                                 if(dst_bpp == 32)
                                 {
                                     memcpy((float*)(data + img.step*i)+x,
-                                           fstart + i*tile_width0*ncn,
+                                           buffer32 + i*tile_width0*ncn,
                                            tile_width*sizeof(buffer32[0]));
                                 }
                                 else
                                 {
                                     memcpy((double*)(data + img.step*i)+x,
-                                         dstart + i*tile_width0*ncn,
+                                         buffer64 + i*tile_width0*ncn,
                                          tile_width*sizeof(buffer64[0]));
                                 }
                             }
