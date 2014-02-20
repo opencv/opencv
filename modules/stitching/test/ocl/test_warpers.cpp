@@ -64,7 +64,13 @@ struct WarperTestBase :
         src = randomMat(size, CV_32FC1, -500, 500);
 
         K = Mat::eye(3, 3, CV_32FC1);
-        R = Mat::eye(3, 3, CV_32FC1);
+        float angle = (float)(30.0 * CV_PI / 180.0);
+        float rotationMatrix[9] = {
+                (float)cos(angle), (float)sin(angle), 0,
+                (float)-sin(angle), (float)cos(angle), 0,
+                0, 0, 1
+        };
+        Mat(3, 3, CV_32FC1, rotationMatrix).copyTo(R);
     }
 
     void Near(double threshold = 0.)
@@ -140,7 +146,7 @@ OCL_TEST_F(PlaneWarperOclTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-5);
+        Near(1e-4);
     }
 }
 
