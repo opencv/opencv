@@ -5216,7 +5216,7 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     // wd_i stores which vector (0,1) or (1,2) will make the width
     // One of them will definitely have slope within -1 to 1
     int wd_i = 0;
-    if( vecs[1][0] != 0 && abs(vecs[1][1] / vecs[1][0]) <= 1.0f ) wd_i = 1;
+    if( abs(vecs[1][1]) < abs(vecs[1][0]) ) wd_i = 1;
     int ht_i = (wd_i + 1) % 2;
 
     float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
