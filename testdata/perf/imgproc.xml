@@ -79009,4 +79009,132 @@
       <y>3724</y>
       <cn>2</cn>
       <val>2.7562022209167480e-01</val></rng2></dst></OCL_ResizeFixture_Resize--Resize---3840x2160--32FC3--INTER_LINEAR--2->
+ <!-- resumed -->
+
+<OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---1000x1000--32FC1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-8.7086095809936523e+00</min>
+    <max>8.6995172500610352e+00</max>
+    <last>
+      <x>995</x>
+      <y>995</y>
+      <val>-9.9773031473159790e-01</val></last>
+    <rng1>
+      <x>399</x>
+      <y>631</y>
+      <val>-6.1198621988296509e-01</val></rng1>
+    <rng2>
+      <x>844</x>
+      <y>92</y>
+      <val>2.2934489250183105e+00</val></rng2></dst></OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---1000x1000--32FC1->
+<OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---1000x1000--32FC4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.4858032226562500e+01</min>
+    <max>1.6537639617919922e+01</max>
+    <last>
+      <x>995</x>
+      <y>995</y>
+      <val>-4.5974330902099609e+00</val></last>
+    <rng1>
+      <x>709</x>
+      <y>642</y>
+      <val>-2.2266721725463867e-01</val></rng1>
+    <rng2>
+      <x>395</x>
+      <y>886</y>
+      <val>-1.1530880928039551e+00</val></rng2></dst></OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---1000x1000--32FC4->
+<OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---2000x2000--32FC1->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-7.9298362731933594e+00</min>
+    <max>6.8517355918884277e+00</max>
+    <last>
+      <x>1995</x>
+      <y>1995</y>
+      <val>-7.9941654205322266e-01</val></last>
+    <rng1>
+      <x>1022</x>
+      <y>852</y>
+      <val>4.8840604722499847e-02</val></rng1>
+    <rng2>
+      <x>156</x>
+      <y>591</y>
+      <val>3.2689440250396729e-01</val></rng2></dst></OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---2000x2000--32FC1->
+<OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---2000x2000--32FC4->
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>-1.6611194610595703e+01</min>
+    <max>1.7555164337158203e+01</max>
+    <last>
+      <x>1995</x>
+      <y>1995</y>
+      <val>-5.1206026077270508e+00</val></last>
+    <rng1>
+      <x>1521</x>
+      <y>1952</y>
+      <val>6.9932136535644531e+00</val></rng1>
+    <rng2>
+      <x>864</x>
+      <y>1861</y>
+      <val>-6.6232256889343262e+00</val></rng2></dst></OCL_CV_TM_CCORRFixture_matchTemplate--matchTemplate---2000x2000--32FC4->
+<OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--1000x1000>
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>4.2909902334213257e-01</min>
+    <max>9.5265746116638184e-01</max>
+    <last>
+      <x>995</x>
+      <y>995</y>
+      <val>7.5445705652236938e-01</val></last>
+    <rng1>
+      <x>875</x>
+      <y>391</y>
+      <val>7.7665996551513672e-01</val></rng1>
+    <rng2>
+      <x>829</x>
+      <y>173</y>
+      <val>7.3121243715286255e-01</val></rng2></dst></OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--1000x1000>
+<OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--2000x2000>
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>3.8772159814834595e-01</min>
+    <max>9.5999658107757568e-01</max>
+    <last>
+      <x>1995</x>
+      <y>1995</y>
+      <val>6.8142932653427124e-01</val></last>
+    <rng1>
+      <x>1570</x>
+      <y>208</y>
+      <val>7.7035182714462280e-01</val></rng1>
+    <rng2>
+      <x>578</x>
+      <y>1251</y>
+      <val>8.1610244512557983e-01</val></rng2></dst></OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--2000x2000>
+<OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--4000x4000>
+  <dst>
+    <kind>655360</kind>
+    <type>5</type>
+    <min>3.7185975909233093e-01</min>
+    <max>9.7591429948806763e-01</max>
+    <last>
+      <x>3995</x>
+      <y>3995</y>
+      <val>7.6680982112884521e-01</val></last>
+    <rng1>
+      <x>2208</x>
+      <y>2202</y>
+      <val>7.4519056081771851e-01</val></rng1>
+    <rng2>
+      <x>2490</x>
+      <y>2734</y>
+      <val>6.8019872903823853e-01</val></rng2></dst></OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--4000x4000>
 </opencv_storage>
