@@ -1920,6 +1920,12 @@ public:
                   0;
           }
 
+          if( func == 0 )
+          {
+              *ok = false;
+              return;
+          }
+
           switch (src.depth())
           {
           case CV_8U:
@@ -2061,7 +2067,7 @@ public:
 
           AutoBuffer<uchar> buf(bufsize + 64);
           uchar* bufptr = alignPtr((uchar*)buf, 32);
-          if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) <= 0 )
+          if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
               *ok = false;
       }
 private:
