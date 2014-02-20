@@ -9,20 +9,20 @@
 #define __OPENCV_FAST_NLMEANS_DENOISING_OPENCL_HPP__
 
 #include "precomp.hpp"
-
-#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
+
+#ifdef HAVE_OPENCL
 
 namespace cv {
 
 enum
 {
     BLOCK_ROWS = 32,
-    BLOCK_COLS = 128,
+    BLOCK_COLS = 32,
     CTA_SIZE = 256
 };
 
-static inline int getNearestPowerOf2(int value)
+static inline int getNearestPowerOf2OpenCL(int value)
 {
     int p = 0;
     while (1 << p < value)
@@ -51,7 +51,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     // additional optimization of precalced weights to replace division(averaging) by binary shift
     CV_Assert(templateWindowSize <= 46340); // sqrt(INT_MAX)
     int templateWindowSizeSq = templateWindowSize * templateWindowSize;
-    almostTemplateWindowSizeSqBinShift = getNearestPowerOf2(templateWindowSizeSq);
+    almostTemplateWindowSizeSqBinShift = getNearestPowerOf2OpenCL(templateWindowSizeSq);
     FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
     const FT WEIGHT_THRESHOLD = 1e-3f;
@@ -128,7 +128,7 @@ static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
            ocl::KernelArg::PtrReadOnly(almostDist2Weight),
            ocl::KernelArg::PtrReadOnly(buffer), almostTemplateWindowSizeSqBinShift);
 
-    size_t globalsize[2] = { nblocksx * BLOCK_COLS, nblocksy * BLOCK_ROWS }, localsize[2] = { CTA_SIZE, 1 };
+    size_t globalsize[2] = { nblocksx * CTA_SIZE, nblocksy }, localsize[2] = { CTA_SIZE, 1 };
     return k.run(2, globalsize, localsize, false);
 }
 
@@ -166,4 +166,5 @@ static bool ocl_fastNlMeansDenoisingColored( InputArray _src, OutputArray _dst,
 
 }
 
+#endif
 #endif

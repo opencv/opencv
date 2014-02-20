@@ -42,7 +42,7 @@ OCL_PERF_TEST(Photo, DenoisingColored)
     OCL_TEST_CYCLE()
             cv::fastNlMeansDenoisingColored(original, result, 10, 10);
 
-    SANITY_CHECK(result);
+    SANITY_CHECK(result, 2);
 }
 
 OCL_PERF_TEST(Photo, DISABLED_DenoisingGrayscaleMulti)
