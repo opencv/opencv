@@ -5211,7 +5211,7 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     vecs[0] = Vec2f(_point1 - _point2);
     vecs[1] = Vec2f(_point2 - _point3);
     // check that given sides are perpendicular
-    CV_Assert( abs(vecs[0].dot(vecs[1])) <= 0.001 );
+    CV_Assert( abs(vecs[0].dot(vecs[1])) <= FLT_EPSILON );
 
     // wd_i stores which vector (0,1) or (1,2) will make the width
     // One of them will definitely have slope within -1 to 1
