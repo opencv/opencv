@@ -115,8 +115,6 @@ inline void calcFirstElementInRow(__global const uchar * src, int src_step, int 
         for (int j = 0; j < TEMPLATE_SIZE; ++j)
             col_dists_current[j] = col_dists_current_private[j];
 
-//        COND printf("%d %d\n", i, convert_int(dist));
-
         dists[i] = dist;
         up_col_dists[0 + i] = col_dists[TEMPLATE_SIZE - 1];
     }
