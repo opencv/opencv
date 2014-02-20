@@ -403,7 +403,6 @@ protected:
             Size s1(6, 7), os1;
             Complex<int> c1(9, 10), oc1;
             Rect r1(11, 12, 13, 14), or1;
-            RotatedRect rr1(Point2f(0,0), Point2f(100,100), Point2f(50, 150));
             Vec<int, 5> v1(15, 16, 17, 18, 19), ov1;
             Scalar sc1(20.0, 21.1, 22.2, 23.3), osc1;
             Range g1(7, 8), og1;
