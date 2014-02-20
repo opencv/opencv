@@ -293,8 +293,12 @@ namespace canny
                 n += smem[threadIdx.y + 2][threadIdx.x + 2] == 2;
             }
 
+            __syncthreads();
+
             if (n > 0)
                 smem[threadIdx.y + 1][threadIdx.x + 1] = 2;
+
+            __syncthreads();
         }
 
         const int e = smem[threadIdx.y + 1][threadIdx.x + 1];
