@@ -77,13 +77,13 @@ __kernel void inrange(__global const uchar * src1ptr, int src1_step, int src1_of
 #endif
 
         dst[0] = 255;
-
+        bool do_loop = true; // workaround for Intel platform
         #pragma unroll
-        for (int c = 0; c < cn; ++c)
+        for (int c = 0; c < cn && do_loop; ++c)
             if ( src2[c] > src1[c] || src3[c] < src1[c] )
             {
                 dst[0] = 0;
-                break;
+                do_loop = false;
             }
     }
 }
