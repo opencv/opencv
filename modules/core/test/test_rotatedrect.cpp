@@ -52,7 +52,7 @@ protected:
     int prepare_test_case( int );
     void run_func();
     int validate_test_results( int );
-    const static int MAX_COORD_VAL = 1000;
+    float MAX_COORD_VAL;
     Point2f a, b, c;
     RotatedRect rec;
 };
@@ -60,22 +60,24 @@ protected:
 Core_RotatedRectConstructorTest::Core_RotatedRectConstructorTest()
 {
     test_case_count = 100;
+    MAX_COORD_VAL = 1000.0f;
 }
 
 int Core_RotatedRectConstructorTest::prepare_test_case( int test_case_idx )
 {
     cvtest::BaseTest::prepare_test_case( test_case_idx );
     RNG& rng = ts->get_rng();
-    a = Point2f( (float) (cvtest::randInt(rng) % MAX_COORD_VAL), (float) (cvtest::randInt(rng) % MAX_COORD_VAL) );
-    b = Point2f( (float) (cvtest::randInt(rng) % MAX_COORD_VAL) , (float) (cvtest::randInt(rng) % MAX_COORD_VAL) );
-    // to ensure a != b
-    while( norm(a - b) == 0 ) {
-        b = Point2f( (float) (cvtest::randInt(rng) % MAX_COORD_VAL) , (float) (cvtest::randInt(rng) % MAX_COORD_VAL) );
+    a = Point2f( rng.uniform(-MAX_COORD_VAL, MAX_COORD_VAL), rng.uniform(-MAX_COORD_VAL, MAX_COORD_VAL) );
+    do
+    {
+        b = Point2f( rng.uniform(-MAX_COORD_VAL, MAX_COORD_VAL), rng.uniform(-MAX_COORD_VAL, MAX_COORD_VAL) );
     }
+    while( norm(a - b) <= FLT_EPSILON );
     Vec2f along(a - b);
     Vec2f perp = Vec2f(-along[1], along[0]);
-    float d = (float) (cvtest::randInt(rng) % MAX_COORD_VAL) + 1.0f;  // c can't be same as b, so d must be > 0
-    c = Point2f( b.x + d * perp[0], b.y + d * perp[1] );
+    double d = (double) rng.uniform(1.0f, 5.0f);
+    if( cvtest::randInt(rng) % 2 == 0 ) d = -d;
+    c = Point2f( (float) ((double) b.x + d * perp[0]), (float) ((double) b.y + d * perp[1]) );
     return 1;
 }
 
@@ -86,22 +88,20 @@ void Core_RotatedRectConstructorTest::run_func()
 
 int Core_RotatedRectConstructorTest::validate_test_results( int )
 {
-    int code = cvtest::TS::OK;
     Point2f vertices[4];
     rec.points(vertices);
-
     int count_match = 0;
     for( int i = 0; i < 4; i++ )
     {
-        if( norm(vertices[i] - a) <= 0.1 ) count_match++;
-        else if( norm(vertices[i] - b) <= 0.1 ) count_match++;
-        else if( norm(vertices[i] - c) <= 0.1 ) count_match++;
+        if( norm(vertices[i] - a) <= 0.001 ) count_match++;
+        else if( norm(vertices[i] - b) <= 0.001 ) count_match++;
+        else if( norm(vertices[i] - c) <= 0.001 ) count_match++;
     }
     if( count_match == 3 )
-        return code;
+        return cvtest::TS::OK;
     ts->printf( cvtest::TS::LOG, "RotatedRect end points don't match those supplied in constructor");
     ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
-    return code;
+    return cvtest::TS::OK;
 }
 
 TEST(Core_RotatedRect, three_point_constructor) { Core_RotatedRectConstructorTest test; test.safe_run(); }
