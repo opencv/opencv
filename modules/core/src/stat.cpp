@@ -548,7 +548,7 @@ cv::Scalar cv::sum( InputArray _src )
     {
         IppiSize sz = { cols, rows };
         int type = src.type();
-        typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, int);
+        typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
         typedef IppStatus (CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
         ippiSumFuncHint ippFuncHint =
             type == CV_32FC1 ? (ippiSumFuncHint)ippiSum_32f_C1R :
@@ -751,7 +751,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
         }
         else
         {
-            typedef IppStatus (CV_STDCALL* ippiMeanFuncHint)(const void*, int, IppiSize, double *, int);
+            typedef IppStatus (CV_STDCALL* ippiMeanFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
             typedef IppStatus (CV_STDCALL* ippiMeanFuncNoHint)(const void*, int, IppiSize, double *);
             ippiMeanFuncHint ippFuncHint =
                 type == CV_32FC1 ? (ippiMeanFuncHint)ippiMean_32f_C1R :
