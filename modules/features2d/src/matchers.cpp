@@ -330,7 +330,7 @@ static bool ocl_match2Dispatcher(InputArray query, InputArray train, const UMat 
 static bool ocl_kmatchDispatcher(InputArray query, InputArray train, const UMat &trainIdx,
                                  const UMat &distance, int distType)
 {
-        return ocl_match2Dispatcher(query, train, trainIdx, distance, distType);
+    return ocl_match2Dispatcher(query, train, trainIdx, distance, distType);
 }
 
 static bool ocl_knnMatchSingle(InputArray query, InputArray train, UMat &trainIdx,
@@ -1209,8 +1209,8 @@ FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParam
 void FlannBasedMatcher::add( InputArrayOfArrays _descriptors )
 {
     DescriptorMatcher::add( _descriptors );
-    std::vector<Mat> descriptors;
-    _descriptors.getMatVector(descriptors);
+    std::vector<UMat> descriptors;
+    _descriptors.getUMatVector(descriptors);
 
     for( size_t i = 0; i < descriptors.size(); i++ )
     {
