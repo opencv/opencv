@@ -42,7 +42,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
+#if defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
 
 #include "opencv2/gpu/device/common.hpp"
 #include "opencv2/gpu/device/limits.hpp"

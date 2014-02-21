@@ -851,6 +851,8 @@ PERF_TEST_P(Sz_Depth_Cn, ImgProc_BlendLinear,
     }
 }
 
+#ifdef HAVE_CUFFT
+
 //////////////////////////////////////////////////////////////////////
 // Convolve
 
@@ -1084,6 +1086,8 @@ PERF_TEST_P(Sz_Flags, ImgProc_Dft,
         CPU_SANITY_CHECK(dst);
     }
 }
+
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // CornerHarris
@@ -1538,7 +1542,7 @@ CV_ENUM(AlphaOp, ALPHA_OVER, ALPHA_IN, ALPHA_OUT, ALPHA_ATOP, ALPHA_XOR, ALPHA_P
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
-PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
+PERF_TEST_P(Sz_Type_Op, DISABLED_ImgProc_AlphaComp,
             Combine(GPU_TYPICAL_MAT_SIZES,
                     Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
                     AlphaOp::all()))
@@ -1559,7 +1563,14 @@ PERF_TEST_P(Sz_Type_Op, ImgProc_AlphaComp,
 
         TEST_CYCLE() cv::gpu::alphaComp(d_img1, d_img2, dst, alpha_op);
 
-        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        if (CV_MAT_DEPTH(type) < CV_32F)
+        {
+            GPU_SANITY_CHECK(dst, 1);
+        }
+        else
+        {
+            GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        }
     }
     else
     {
@@ -1825,7 +1836,7 @@ CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION)
 
 DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
 
-PERF_TEST_P(Method_Sz, ImgProc_GeneralizedHough,
+PERF_TEST_P(Method_Sz, DISABLED_ImgProc_GeneralizedHough,
             Combine(Values(GHMethod(cv::GHT_POSITION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE), GHMethod(cv::GHT_POSITION | cv::GHT_ROTATION), GHMethod(cv::GHT_POSITION | cv::GHT_SCALE | cv::GHT_ROTATION)),
                     GPU_TYPICAL_MAT_SIZES))
 {

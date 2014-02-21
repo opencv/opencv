@@ -87,7 +87,6 @@ public class TermCriteria {
 
     @Override
     public String toString() {
-        if (this == null) return "null";
         return "{ type: " + type + ", maxCount: " + maxCount + ", epsilon: " + epsilon + "}";
     }
 }

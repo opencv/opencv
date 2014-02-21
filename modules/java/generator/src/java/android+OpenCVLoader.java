@@ -48,7 +48,17 @@ public class OpenCVLoader
      */
     public static boolean initDebug()
     {
-        return StaticHelper.initOpenCV();
+        return StaticHelper.initOpenCV(false);
+    }
+
+    /**
+     * Loads and initializes OpenCV library from current application package. Roughly, it's an analog of system.loadLibrary("opencv_java").
+     * @param InitCuda load and initialize CUDA runtime libraries.
+     * @return Returns true is initialization of OpenCV was successful.
+     */
+    public static boolean initDebug(boolean InitCuda)
+    {
+        return StaticHelper.initOpenCV(InitCuda);
     }
 
     /**

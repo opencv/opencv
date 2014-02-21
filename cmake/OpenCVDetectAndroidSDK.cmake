@@ -180,7 +180,7 @@ unset(__android_project_chain CACHE)
 # add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
-  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST)
+  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST EMBED_CUDA FORCE_EMBED_OPENCV)
   set(__varname "android_proj_")
   foreach(v ${android_proj_arglist})
     set(${__varname}${v} "")
@@ -303,6 +303,46 @@ macro(add_android_project target path)
             add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
         endif()
       endif()
+
+      # copy opencv_java, tbb if it is shared and dynamicuda if present if FORCE_EMBED_OPENCV flag is set
+      if(android_proj_FORCE_EMBED_OPENCV)
+        set(native_deps ${android_proj_NATIVE_DEPS})
+        # filter out gpu module as it is always static library on Android
+        list(REMOVE_ITEM native_deps "opencv_gpu")
+        if(ENABLE_DYNAMIC_CUDA)
+          list(APPEND native_deps "opencv_dynamicuda")
+        endif()
+        foreach(lib ${native_deps})
+          get_property(f TARGET ${lib} PROPERTY LOCATION)
+          get_filename_component(f_name ${f} NAME)
+          add_custom_command(
+            OUTPUT "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}"
+            COMMAND ${CMAKE_COMMAND} -E copy "${f}" "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}"
+            DEPENDS "${lib}" VERBATIM
+            COMMENT "Embedding ${f}")
+            list(APPEND android_proj_file_deps "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f_name}")
+        endforeach()
+      endif()
+
+      # copy all needed CUDA libs to project if EMBED_CUDA flag is present
+      if(android_proj_EMBED_CUDA)
+        set(android_proj_culibs ${CUDA_npp_LIBRARY} ${CUDA_LIBRARIES})
+        if(HAVE_CUFFT)
+          list(INSERT android_proj_culibs 0 ${CUDA_cufft_LIBRARY})
+        endif()
+        if(HAVE_CUBLAS)
+          list(INSERT android_proj_culibs 0 ${CUDA_cublas_LIBRARY})
+        endif()
+        foreach(lib ${android_proj_culibs})
+          get_filename_component(f "${lib}" NAME)
+          add_custom_command(
+            OUTPUT "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f}"
+            COMMAND ${CMAKE_COMMAND} -E copy "${lib}" "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f}"
+            DEPENDS "${lib}" VERBATIM
+            COMMENT "Embedding ${f}")
+          list(APPEND android_proj_file_deps "${android_proj_bin_dir}/libs/${ANDROID_NDK_ABI_NAME}/${f}")
+        endforeach()
+      endif()
     endif()
 
     # build java part
@@ -365,7 +405,7 @@ macro(add_android_project target path)
       endif()
       install(CODE "EXECUTE_PROCESS(COMMAND ${ANDROID_EXECUTABLE} --silent update project --path . --target \"${android_proj_sdk_target}\" --name \"${target}\" ${inst_lib_opt}
                                     WORKING_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}\"
-                                   )"  COMPONENT dev)
+                                   )"  COMPONENT samples)
       #empty 'gen'
       install(CODE "MAKE_DIRECTORY(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/samples/${sample_dir}/gen\")" COMPONENT samples)
     endif()

@@ -42,7 +42,9 @@
 
 #include "perf_precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+#include "cvconfig.h"
+
+#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA) && !defined(DYNAMIC_CUDA_SUPPORT)
 
 #include "opencv2/ts/gpu_perf.hpp"
 

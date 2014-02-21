@@ -3582,7 +3582,7 @@ GPU_TEST_P(Normalize, WithOutMask)
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 GPU_TEST_P(Normalize, WithMask)
@@ -3598,7 +3598,7 @@ GPU_TEST_P(Normalize, WithMask)
     dst_gold.setTo(cv::Scalar::all(0));
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type, mask);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+    EXPECT_MAT_NEAR(dst_gold, dst, type < CV_32F ? 1.0 : 1e-4);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_Core, Normalize, testing::Combine(

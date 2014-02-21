@@ -10,12 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -30,7 +26,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -41,71 +37,42 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
+// Authors:
+//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
+//
 //M*/
 
-#include "perf_precomp.hpp"
+#ifndef __vtkXYZWriter_h
+#define __vtkXYZWriter_h
 
-#ifdef HAVE_OPENCV_OCL
+#include "vtkPolyDataWriter.h"
 
-using namespace cv;
-using namespace cv::ocl;
-using namespace std;
-
-typedef perf::TestBaseWithParam<std::string> OCL_SURF;
-
-#define SURF_IMAGES \
-    "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
-    "stitching/a3.png"
-
-PERF_TEST_P(OCL_SURF, DISABLED_with_data_transfer, testing::Values(SURF_IMAGES))
+namespace cv
 {
-    string filename = getDataPath(GetParam());
-    Mat img = imread(filename, IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    SURF_OCL d_surf;
-    oclMat d_keypoints;
-    oclMat d_descriptors;
-    Mat cpu_kp;
-    Mat cpu_dp;
-
-    declare.time(60);
-
-    TEST_CYCLE()
+    namespace viz
     {
-        oclMat d_src(img);
+        class vtkXYZWriter : public vtkPolyDataWriter
+        {
+        public:
+            static vtkXYZWriter *New();
+            vtkTypeMacro(vtkXYZWriter,vtkPolyDataWriter)
+            void PrintSelf(ostream& os, vtkIndent indent);
 
-        d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
+            vtkGetMacro(DecimalPrecision, int)
+            vtkSetMacro(DecimalPrecision, int)
 
-        d_keypoints.download(cpu_kp);
-        d_descriptors.download(cpu_dp);
+        protected:
+            vtkXYZWriter();
+            ~vtkXYZWriter(){}
+
+            void WriteData();
+
+            int DecimalPrecision;
+
+        private:
+            vtkXYZWriter(const vtkXYZWriter&);  // Not implemented.
+            void operator=(const vtkXYZWriter&);  // Not implemented.
+        };
     }
-
-    SANITY_CHECK(cpu_kp, 1);
-    SANITY_CHECK(cpu_dp, 1);
 }
-
-PERF_TEST_P(OCL_SURF, DISABLED_without_data_transfer, testing::Values(SURF_IMAGES))
-{
-    string filename = getDataPath(GetParam());
-    Mat img = imread(filename, IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    SURF_OCL d_surf;
-    oclMat d_keypoints;
-    oclMat d_descriptors;
-    oclMat d_src(img);
-
-    declare.time(60);
-
-    TEST_CYCLE() d_surf(d_src, oclMat(), d_keypoints, d_descriptors);
-
-    Mat cpu_kp;
-    Mat cpu_dp;
-    d_keypoints.download(cpu_kp);
-    d_descriptors.download(cpu_dp);
-    SANITY_CHECK(cpu_kp, 1);
-    SANITY_CHECK(cpu_dp, 1);
-}
-
-#endif // HAVE_OPENCV_OCL
+#endif
