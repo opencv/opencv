@@ -420,7 +420,7 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
     remove(file4.c_str());
 }
 
-class CV_GrfmtReadTifTiledWithNotFullTiles: public cvtest::BaseTest
+TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
 {
     // see issue #2601 "16-bit Grayscale TIFF Load Failures Due to Buffer Underflow and Endianness"
 
