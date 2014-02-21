@@ -1369,6 +1369,21 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
         return;
     }
 
+    if( k == UMAT )
+    {
+        UMat& v = *(UMat*)obj;
+        umv.resize(1);
+        umv[0] = v;
+        return;
+    }
+    if( k == MAT )
+    {
+        Mat& v = *(Mat*)obj;
+        umv.resize(1);
+        umv[0] = v.getUMat(accessFlags);
+        return;
+    }
+
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
