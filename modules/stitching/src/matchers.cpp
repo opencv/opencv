@@ -155,21 +155,31 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     matches_info.matches.clear();
 
-    Ptr<flann::IndexParams> indexParams = makePtr<flann::KDTreeIndexParams>();
-    Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>();
-
-    if (features2.descriptors.depth() == CV_8U)
+    Ptr<DescriptorMatcher> matcher;
+#if 0 // TODO check this
+    if (ocl::useOpenCL())
     {
-        indexParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
-        searchParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+        matcher = makePtr<BFMatcher>((int)NORM_L2);
     }
+    else
+#endif
+    {
+        Ptr<flann::IndexParams> indexParams = makePtr<flann::KDTreeIndexParams>();
+        Ptr<flann::SearchParams> searchParams = makePtr<flann::SearchParams>();
 
-    FlannBasedMatcher matcher(indexParams, searchParams);
+        if (features2.descriptors.depth() == CV_8U)
+        {
+            indexParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+            searchParams->setAlgorithm(cvflann::FLANN_INDEX_LSH);
+        }
+
+        matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
+    }
     std::vector< std::vector<DMatch> > pair_matches;
     MatchesSet matches;
 
     // Find 1->2 matches
-    matcher.knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
+    matcher->knnMatch(features1.descriptors, features2.descriptors, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)
@@ -186,7 +196,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
 
     // Find 2->1 matches
     pair_matches.clear();
-    matcher.knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
+    matcher->knnMatch(features2.descriptors, features1.descriptors, pair_matches, 2);
     for (size_t i = 0; i < pair_matches.size(); ++i)
     {
         if (pair_matches[i].size() < 2)
