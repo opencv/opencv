@@ -51,17 +51,14 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/core/internal.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && !defined(ANDROID)
-    #include "opencv2/nonfree/gpu.hpp"
+#include "opencv2/nonfree/gpu.hpp"
 
-    #if defined(HAVE_CUDA)
-        #include "opencv2/gpu/stream_accessor.hpp"
-        #include "opencv2/gpu/device/common.hpp"
-
-        static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
-    #else
-        static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-    #endif
+#if defined(HAVE_CUDA) && defined(HAVE_OPENCV_GPU) && !defined(DYNAMIC_CUDA_SUPPORT)
+    #include "opencv2/gpu/stream_accessor.hpp"
+    #include "opencv2/gpu/device/common.hpp"
+    static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
+#else
+    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
 #endif
 
 #ifdef HAVE_OPENCV_OCL

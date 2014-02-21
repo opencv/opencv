@@ -82,6 +82,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
 
+  ocv_list_filterout(cpp_samples "viz")
+
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
@@ -91,6 +93,6 @@ endif()
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
-          DESTINATION share/OpenCV/samples/cpp
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/cpp
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
