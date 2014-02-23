@@ -353,7 +353,7 @@ Mat& Mat::operator = (const Scalar& s)
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
-    if( !data )
+    if( empty() )
         return *this;
 
     Mat value = _value.getMat(), mask = _mask.getMat();
@@ -632,6 +632,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
     }
     else if( borderType == BORDER_WRAP )
     {
+        CV_Assert(len > 0);
         if( p < 0 )
             p -= ((p-len+1)/len)*len;
         if( p >= len )

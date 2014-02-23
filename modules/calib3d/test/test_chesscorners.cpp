@@ -311,7 +311,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
     if (count != 0)
         sum_error /= count;
-    ts->printf(cvtest::TS::LOG, "Average error is %f\n", sum_error);
+    ts->printf(cvtest::TS::LOG, "Average error is %f (%d patterns have been found)\n", sum_error, count);
 }
 
 double calcErrorMinError(const Size& cornSz, const vector<Point2f>& corners_found, const vector<Point2f>& corners_generated)
