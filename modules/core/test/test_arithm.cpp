@@ -18,7 +18,7 @@ struct BaseElemWiseOp
     BaseElemWiseOp(int _ninputs, int _flags, double _alpha, double _beta,
                    Scalar _gamma=Scalar::all(0), int _context=1)
     : ninputs(_ninputs), flags(_flags), alpha(_alpha), beta(_beta), gamma(_gamma), context(_context) {}
-    BaseElemWiseOp() { flags = 0; alpha = beta = 0; gamma = Scalar::all(0); }
+    BaseElemWiseOp() { flags = 0; alpha = beta = 0; gamma = Scalar::all(0); ninputs = 0; context = 1; }
     virtual ~BaseElemWiseOp() {}
     virtual void op(const vector<Mat>&, Mat&, const Mat&) {}
     virtual void refop(const vector<Mat>&, Mat&, const Mat&) {}
@@ -89,7 +89,6 @@ struct BaseElemWiseOp
     double alpha;
     double beta;
     Scalar gamma;
-    int maxErr;
     int context;
 };
 
@@ -409,7 +408,7 @@ struct MaxSOp : public BaseElemWiseOp
 
 struct CmpOp : public BaseElemWiseOp
 {
-    CmpOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    CmpOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
     void generateScalars(int depth, RNG& rng)
     {
         BaseElemWiseOp::generateScalars(depth, rng);
@@ -437,7 +436,7 @@ struct CmpOp : public BaseElemWiseOp
 
 struct CmpSOp : public BaseElemWiseOp
 {
-    CmpSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
+    CmpSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
     void generateScalars(int depth, RNG& rng)
     {
         BaseElemWiseOp::generateScalars(depth, rng);
@@ -467,7 +466,7 @@ struct CmpSOp : public BaseElemWiseOp
 
 struct CopyOp : public BaseElemWiseOp
 {
-    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {}
+    CopyOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK, 1, 1, Scalar::all(0)) {  }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
         src[0].copyTo(dst, mask);
@@ -484,7 +483,6 @@ struct CopyOp : public BaseElemWiseOp
     {
         return 0;
     }
-    int cmpop;
 };
 
 
@@ -810,7 +808,7 @@ static void setIdentity(Mat& dst, const Scalar& s)
 
 struct FlipOp : public BaseElemWiseOp
 {
-    FlipOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    FlipOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { flipcode = 0; }
     void getRandomSize(RNG& rng, vector<int>& size)
     {
         cvtest::randomSize(rng, 2, 2, cvtest::ARITHM_MAX_SIZE_LOG, size);

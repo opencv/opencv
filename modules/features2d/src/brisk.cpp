@@ -224,6 +224,8 @@ BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float
                                                    std::vector<int> indexChange)
 {
   generateKernel(radiusList, numberList, dMax, dMin, indexChange);
+  threshold = 20;
+  octaves = 3;
 }
 
 void
