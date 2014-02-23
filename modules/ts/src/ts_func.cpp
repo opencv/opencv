@@ -2897,7 +2897,7 @@ static std::ostream& operator << (std::ostream& out, const MatPart& m)
 }
 
 MatComparator::MatComparator(double _maxdiff, int _context)
-    : maxdiff(_maxdiff), context(_context) {}
+    : maxdiff(_maxdiff), realmaxdiff(DBL_MAX), context(_context) {}
 
 ::testing::AssertionResult
 MatComparator::operator()(const char* expr1, const char* expr2,

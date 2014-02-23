@@ -1998,7 +1998,7 @@ bool cv::findCirclesGrid( InputArray _image, Size patternSize,
       {
         isFound = boxFinder.findHoles();
       }
-      catch (cv::Exception)
+      catch (const cv::Exception &)
       {
 
       }

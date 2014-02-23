@@ -2641,9 +2641,9 @@ KernelArg KernelArg::Constant(const Mat& m)
 
 struct Kernel::Impl
 {
-    Impl(const char* kname, const Program& prog)
+    Impl(const char* kname, const Program& prog) :
+        refcount(1), e(0), nu(0)
     {
-        e = 0; refcount = 1;
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
         handle = ph != 0 ?

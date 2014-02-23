@@ -309,7 +309,8 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         progress = update_progress( progress, idx, max_idx, 0 );
     }
 
-    sum_error /= count;
+    if (count != 0)
+        sum_error /= count;
     ts->printf(cvtest::TS::LOG, "Average error is %f\n", sum_error);
 }
 
