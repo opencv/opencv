@@ -45,7 +45,7 @@
 
 #define DECLARE_SRC_PARAM(index) __global const uchar * src##index##ptr, int src##index##_step, int src##index##_offset,
 #define DECLARE_DATA(index) __global const T * src##index = \
-    (__global T *)(src##index##ptr + mad24(src##index##_step, y, x * (int)sizeof(T) + src##index##_offset));
+    (__global T *)(src##index##ptr + mad24(src##index##_step, y, mad24(x, (int)sizeof(T), src##index##_offset)));
 #define PROCESS_ELEM(index) dst[index] = src##index[0];
 
 __kernel void merge(DECLARE_SRC_PARAMS_N
@@ -58,7 +58,7 @@ __kernel void merge(DECLARE_SRC_PARAMS_N
     if (x < cols && y < rows)
     {
         DECLARE_DATA_N
-        __global T * dst = (__global T *)(dstptr + mad24(dst_step, y, x * (int)sizeof(T) * cn + dst_offset));
+        __global T * dst = (__global T *)(dstptr + mad24(dst_step, y, mad24(x, (int)sizeof(T) * cn, dst_offset)));
         PROCESS_ELEMS_N
     }
 }
@@ -67,7 +67,7 @@ __kernel void merge(DECLARE_SRC_PARAMS_N
 
 #define DECLARE_DST_PARAM(index) , __global uchar * dst##index##ptr, int dst##index##_step, int dst##index##_offset
 #define DECLARE_DATA(index) __global T * dst##index = \
-    (__global T *)(dst##index##ptr + mad24(y, dst##index##_step, x * (int)sizeof(T) + dst##index##_offset));
+    (__global T *)(dst##index##ptr + mad24(y, dst##index##_step, mad24(x, (int)sizeof(T), dst##index##_offset)));
 #define PROCESS_ELEM(index) dst##index[0] = src[index];
 
 __kernel void split(__global uchar* srcptr, int src_step, int src_offset, int rows, int cols DECLARE_DST_PARAMS)
@@ -78,7 +78,7 @@ __kernel void split(__global uchar* srcptr, int src_step, int src_offset, int ro
     if (x < cols && y < rows)
     {
         DECLARE_DATA_N
-        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, x *  cn * (int)sizeof(T) + src_offset));
+        __global const T * src = (__global const T *)(srcptr + mad24(y, src_step, mad24(x, cn * (int)sizeof(T), src_offset)));
         PROCESS_ELEMS_N
     }
 }

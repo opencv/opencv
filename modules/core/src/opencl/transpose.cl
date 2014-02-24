@@ -60,7 +60,7 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
     }
     else
     {
-        int bid = gp_x + gs_x * gp_y;
+        int bid = mad24(gs_x, gp_y, gp_x);
         groupId_y =  bid % gs_y;
         groupId_x = ((bid / gs_y) + groupId_y) % gs_x;
     }
@@ -68,23 +68,23 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
     int lx = get_local_id(0);
     int ly = get_local_id(1);
 
-    int x = groupId_x * TILE_DIM + lx;
-    int y = groupId_y * TILE_DIM + ly;
+    int x = mad24(groupId_x, TILE_DIM, lx);
+    int y = mad24(groupId_y, TILE_DIM, ly);
 
-    int x_index = groupId_y * TILE_DIM + lx;
-    int y_index = groupId_x * TILE_DIM + ly;
+    int x_index = mad24(groupId_y, TILE_DIM, lx);
+    int y_index = mad24(groupId_x, TILE_DIM, ly);
 
     __local T title[TILE_DIM * LDS_STEP];
 
     if (x < src_cols && y < src_rows)
     {
-        int index_src = mad24(y, src_step, x * (int)sizeof(T) + src_offset);
+        int index_src = mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset));
 
         for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
             if (y + i < src_rows)
             {
                 __global const T * src = (__global const T *)(srcptr + index_src);
-                title[(ly + i) * LDS_STEP + lx] = src[0];
+                title[mad24(ly + i, LDS_STEP, lx)] = src[0];
                 index_src = mad24(BLOCK_ROWS, src_step, index_src);
             }
     }
@@ -92,13 +92,13 @@ __kernel void transpose(__global const uchar * srcptr, int src_step, int src_off
 
     if (x_index < src_rows && y_index < src_cols)
     {
-        int index_dst = mad24(y_index, dst_step, x_index * (int)sizeof(T) + dst_offset);
+        int index_dst = mad24(y_index, dst_step, mad24(x_index, (int)sizeof(T), dst_offset));
 
         for (int i = 0; i < TILE_DIM; i += BLOCK_ROWS)
             if ((y_index + i) < src_cols)
             {
                 __global T * dst = (__global T *)(dstptr + index_dst);
-                dst[0] = title[lx * LDS_STEP + ly + i];
+                dst[0] = title[mad24(lx, LDS_STEP, ly + i)];
                 index_dst = mad24(BLOCK_ROWS, dst_step, index_dst);
             }
     }
@@ -111,8 +111,8 @@ __kernel void transpose_inplace(__global uchar * srcptr, int src_step, int src_o
 
     if (y < src_rows && x < y)
     {
-        int src_index = mad24(y, src_step, src_offset + x * (int)sizeof(T));
-        int dst_index = mad24(x, src_step, src_offset + y * (int)sizeof(T));
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset));
+        int dst_index = mad24(x, src_step, mad24(y, (int)sizeof(T), src_offset));
 
         __global T * src = (__global T *)(srcptr + src_index);
         __global T * dst = (__global T *)(srcptr + dst_index);

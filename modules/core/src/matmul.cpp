@@ -2166,9 +2166,9 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
 
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
+                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D wdepth=%d -D convertToWT1=%s"
                          " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s%s", ocl::typeToStr(depth),
-                         ocl::typeToStr(wdepth), ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
+                         ocl::typeToStr(wdepth), wdepth, ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
                          ocl::convertTypeStr(wdepth, depth, 1, cvt[1]),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
