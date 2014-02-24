@@ -1615,7 +1615,7 @@ The method copies the matrix data to another matrix. Before copying the data, th
 
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
-When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+When the operation mask is specified, if the ``Mat::create`` call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
 
 .. _Mat::convertTo:
 

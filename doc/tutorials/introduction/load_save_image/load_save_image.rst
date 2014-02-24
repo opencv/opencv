@@ -99,7 +99,7 @@ Explanation
       imshow( imageName, image );
       imshow( "Gray image", gray_image );
 
-#. Add add the *waitKey(0)* function call for the program to wait forever for an user key press.
+#. Add the *waitKey(0)* function call for the program to wait forever for an user key press.
 
 
 Result
