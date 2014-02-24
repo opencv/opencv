@@ -205,7 +205,7 @@ TEST_P(SURF, DISABLED_Descriptor)
     EXPECT_GT(matchedRatio, 0.35);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Features2D, SURF, testing::Combine(
+INSTANTIATE_TEST_CASE_F(OCL_Features2D, SURF, testing::Combine(
     testing::Values(HessianThreshold(500.0), HessianThreshold(1000.0)),
     testing::Values(Octaves(3), Octaves(4)),
     testing::Values(OctaveLayers(2), OctaveLayers(3)),
