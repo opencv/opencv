@@ -94,6 +94,7 @@ static std::string bytesToStringRepr(size_t value)
 void dumpOpenCLDevice()
 {
     using namespace cv::ocl;
+
     try
     {
         std::vector<PlatformInfo> platforms;
@@ -165,6 +166,14 @@ void dumpOpenCLDevice()
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = "<< isUnifiedMemoryStr);
         DUMP_PROPERTY_XML("cv_ocl_current_hostUnifiedMemory", device.hostUnifiedMemory());
+
+        const char* haveAmdBlasStr = haveAmdBlas() ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Has AMD Blas = "<< haveAmdBlasStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_AmdBlas", haveAmdBlas());
+
+        const char* haveAmdFftStr = haveAmdFft() ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Has AMD Fft = "<< haveAmdFftStr);
+        DUMP_PROPERTY_XML("cv_ocl_current_AmdFft", haveAmdFft());
     }
     catch (...)
     {
