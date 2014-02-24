@@ -47,9 +47,9 @@
 #elif defined BORDER_REPLICATE
 #define EXTRAPOLATE(x, y, v) \
     { \
-        x = max(min(x, src_cols - 1), 0); \
-        y = max(min(y, src_rows - 1), 0); \
-        v = *(__global const T *)(srcptr + mad24(y, src_step, x * (int)sizeof(T) + src_offset)); \
+        x = clamp(x, 0, src_cols - 1); \
+        y = clamp(y, 0, src_rows - 1); \
+        v = *(__global const T *)(srcptr + mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset))); \
     }
 #elif defined BORDER_WRAP
 #define EXTRAPOLATE(x, y, v) \
@@ -63,7 +63,7 @@
             y -= ((y - src_rows + 1) / src_rows) * src_rows; \
         if( y >= src_rows ) \
             y %= src_rows; \
-        v = *(__global const T *)(srcptr + mad24(y, src_step, x * (int)sizeof(T) + src_offset)); \
+        v = *(__global const T *)(srcptr + mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset))); \
     }
 #elif defined(BORDER_REFLECT) || defined(BORDER_REFLECT_101)
 #ifdef BORDER_REFLECT
@@ -97,7 +97,7 @@
                     y = src_rows - 1 - (y - src_rows) - delta; \
             } \
             while (y >= src_rows || y < 0); \
-        v = *(__global const T *)(srcptr + mad24(y, src_step, x * (int)sizeof(T) + src_offset)); \
+        v = *(__global const T *)(srcptr + mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset))); \
     }
 #else
 #error No extrapolation method
@@ -117,14 +117,14 @@ __kernel void copyMakeBorder(__global const uchar * srcptr, int src_step, int sr
         int src_x = x - left;
         int src_y = y - top;
 
-        int dst_index = mad24(y, dst_step, x * (int)sizeof(T) + dst_offset);
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(T), dst_offset));
         __global T * dst = (__global T *)(dstptr + dst_index);
 
         if (NEED_EXTRAPOLATION(src_x, src_y))
             EXTRAPOLATE(src_x, src_y, dst[0])
         else
         {
-            int src_index = mad24(src_y, src_step, src_x * (int)sizeof(T) + src_offset);
+            int src_index = mad24(src_y, src_step, mad24(src_x, (int)sizeof(T), src_offset));
             __global const T * src = (__global const T *)(srcptr + src_index);
             dst[0] = src[0];
         }

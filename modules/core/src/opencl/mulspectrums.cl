@@ -45,7 +45,7 @@
 
 inline float2 cmulf(float2 a, float2 b)
 {
-    return (float2)(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+    return (float2)(mad(a.x, b.x, - a.y * b.y), mad(a.x, b.y, a.y * b.x));
 }
 
 inline float2 conjf(float2 a)
@@ -63,9 +63,9 @@ __kernel void mulAndScaleSpectrums(__global const uchar * src1ptr, int src1_step
 
     if (x < dst_cols && y < dst_rows)
     {
-        int src1_index = mad24(y, src1_step, x * (int)sizeof(float2) + src1_offset);
-        int src2_index = mad24(y, src2_step, x * (int)sizeof(float2) + src2_offset);
-        int dst_index = mad24(y, dst_step, x * (int)sizeof(float2) + dst_offset);
+        int src1_index = mad24(y, src1_step, mad24(x, (int)sizeof(float2), src1_offset));
+        int src2_index = mad24(y, src2_step, mad24(x, (int)sizeof(float2), src2_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(float2), dst_offset));
 
         float2 src0 = *(__global const float2 *)(src1ptr + src1_index);
         float2 src1 = *(__global const float2 *)(src2ptr + src2_index);

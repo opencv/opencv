@@ -719,10 +719,14 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
             ((needDouble && doubleSupport) || !needDouble) )
     {
-        char cvt[40];
+        int wdepth = std::max(CV_32F, sdepth);
+
+        char cvt[2][40];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D dstT=%s -D convertToDT=%s%s", ocl::typeToStr(sdepth),
-                             ocl::typeToStr(ddepth), ocl::convertTypeStr(CV_32F, ddepth, 1, cvt),
+                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
+                             ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
+                             ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
                              doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
         if (!k.empty())
         {
@@ -731,7 +735,13 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
             UMat dst = _dst.getUMat();
 
             float alphaf = (float)alpha, betaf = (float)beta;
-            k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn), alphaf, betaf);
+            ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                    dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+
+            if (wdepth == CV_32F)
+                k.args(srcarg, dstarg, alphaf, betaf);
+            else
+                k.args(srcarg, dstarg, alpha, beta);
 
             size_t globalsize[2] = { dst.cols * cn, dst.rows };
             if (k.run(2, globalsize, NULL, false))
@@ -838,8 +848,8 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
 
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s",
-                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ocl::convertTypeStr(depth, ddepth, 1, cvt),
+                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT -D WGS=%d -D WGS2_ALIGNED=%d%s",
+                         ocl::typeToStr(depth), ocl::typeToStr(ddepth), ddepth, ocl::convertTypeStr(depth, ddepth, 1, cvt),
                          (int)wgs, wgs2_aligned, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
