@@ -3140,7 +3140,7 @@ UMat::UMat(const UMat& m)
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
 : flags(MAGIC_VAL | DataType<_Tp>::type | CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-cols(1), allocator(0), u(0), offset(0), size(&rows)
+cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     if(vec.empty())
         return;

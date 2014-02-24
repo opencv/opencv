@@ -305,7 +305,7 @@ void UMat::deallocate()
 
 
 UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     CV_Assert( m.dims >= 2 );
     if( m.dims > 2 )
@@ -350,7 +350,7 @@ UMat::UMat(const UMat& m, const Range& _rowRange, const Range& _colRange)
 
 UMat::UMat(const UMat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
-    allocator(m.allocator), u(m.u), offset(m.offset + roi.y*m.step[0]), size(&rows)
+    allocator(m.allocator), usageFlags(m.usageFlags), u(m.u), offset(m.offset + roi.y*m.step[0]), size(&rows)
 {
     CV_Assert( m.dims <= 2 );
     flags &= roi.width < m.cols ? ~CONTINUOUS_FLAG : -1;
@@ -376,7 +376,7 @@ UMat::UMat(const UMat& m, const Rect& roi)
 
 
 UMat::UMat(const UMat& m, const Range* ranges)
-    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), u(0), offset(0), size(&rows)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
     int i, d = m.dims;
 
