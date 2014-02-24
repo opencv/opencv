@@ -66,10 +66,10 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
                                 )
             )
     {
-        Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
+        Mat frame0 = imread(getDataPath("cv/optflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
         ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
 
-        Mat frame1 = imread(getDataPath("gpu/opticalflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
+        Mat frame1 = imread(getDataPath("cv/optflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
         ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
 
         const Size srcSize = frame0.size();
@@ -79,7 +79,7 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
             const int medianFiltering = get<0>(filteringScale);
             const double scaleStep = get<1>(filteringScale);
         const bool useInitFlow = get<1>(params);
-        const double eps = 0.001;
+        double eps = 0.9;
 
         UMat uFrame0; frame0.copyTo(uFrame0);
         UMat uFrame1; frame1.copyTo(uFrame1);
@@ -96,7 +96,7 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
         if (useInitFlow)
         {
             //calculate initial flow as result of optical flow
-            OCL_ON(alg->calc(uFrame0, uFrame1, uFlow));
+            alg->calc(uFrame0, uFrame1, uFlow);
         }
 
         //set flag to use initial flow
@@ -106,8 +106,7 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
 
         SANITY_CHECK(uFlow, eps, ERROR_RELATIVE);
     }
-
-    }
+}
 } // namespace cvtest::ocl
 
 #endif // HAVE_OPENCL
