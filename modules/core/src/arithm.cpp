@@ -1364,7 +1364,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( haveScalar )
     {
-        size_t esz = CV_ELEM_SIZE(wtype)*scalarcn;
+        size_t esz = CV_ELEM_SIZE1(wtype)*scalarcn;
         double buf[4]={0,0,0,0};
         Mat src2sc = _src2.getMat();
 
