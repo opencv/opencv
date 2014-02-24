@@ -55,7 +55,7 @@ static IppStatus sts = ippInit();
 
 namespace cv
 {
-#if defined (HAVE_IPP) && ((IPP_VERSION_MAJOR == 7 && IPP_VERSION_MINOR >= 1) || IPP_VERSION_MAJOR > 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
     typedef IppStatus (CV_STDCALL* ippiResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
 #endif
 
@@ -1864,7 +1864,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
-#if defined (HAVE_IPP) && ((IPP_VERSION_MAJOR == 7 && IPP_VERSION_MINOR >= 1) || IPP_VERSION_MAJOR > 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
 class IPPresizeInvoker :
     public ParallelLoopBody
 {
@@ -1884,40 +1884,100 @@ public:
 
           if (mode == (int)ippLinear)
           {
-              func =
-                  type == CV_8UC1  ? (ippiResizeFunc)ippiResizeLinear_8u_C1R :
-                  type == CV_8UC3  ? (ippiResizeFunc)ippiResizeLinear_8u_C3R :
-                  type == CV_8UC4  ? (ippiResizeFunc)ippiResizeLinear_8u_C4R :
-                  type == CV_16UC1 ? (ippiResizeFunc)ippiResizeLinear_16u_C1R :
-                  type == CV_16UC3 ? (ippiResizeFunc)ippiResizeLinear_16u_C3R :
-                  type == CV_16UC4 ? (ippiResizeFunc)ippiResizeLinear_16u_C4R :
-                  type == CV_16SC1 ? (ippiResizeFunc)ippiResizeLinear_16s_C1R :
-                  type == CV_16SC3 ? (ippiResizeFunc)ippiResizeLinear_16s_C3R :
-                  type == CV_16SC4 ? (ippiResizeFunc)ippiResizeLinear_16s_C4R :
-                  type == CV_32FC1 ? (ippiResizeFunc)ippiResizeLinear_32f_C1R :
-                  type == CV_32FC3 ? (ippiResizeFunc)ippiResizeLinear_32f_C3R :
-                  type == CV_32FC4 ? (ippiResizeFunc)ippiResizeLinear_32f_C4R :
-                  type == CV_64FC1 ? (ippiResizeFunc)ippiResizeLinear_64f_C1R :
-                  type == CV_64FC3 ? (ippiResizeFunc)ippiResizeLinear_64f_C3R :
-                  type == CV_64FC4 ? (ippiResizeFunc)ippiResizeLinear_64f_C4R :
-                  0;
-          }
+              switch (type)
+              {
+              case CV_8UC1:
+                  func = (ippiResizeFunc)ippiResizeLinear_8u_C1R;
+                  break;
+              case CV_8UC3:
+                  func = (ippiResizeFunc)ippiResizeLinear_8u_C3R;
+                  break;
+              case CV_8UC4:
+                  func = (ippiResizeFunc)ippiResizeLinear_8u_C4R;
+                  break;
+              case CV_16UC1:
+                  func = (ippiResizeFunc)ippiResizeLinear_16u_C1R;
+                  break;
+              case CV_16UC3:
+                  func = (ippiResizeFunc)ippiResizeLinear_16u_C3R;
+                  break;
+              case CV_16UC4:
+                  func = (ippiResizeFunc)ippiResizeLinear_16u_C4R;
+                  break;
+              case CV_16SC1:
+                  func = (ippiResizeFunc)ippiResizeLinear_16s_C1R;
+                  break;
+              case CV_16SC3:
+                  func = (ippiResizeFunc)ippiResizeLinear_16s_C3R;
+                  break;
+              case CV_16SC4:
+                  func = (ippiResizeFunc)ippiResizeLinear_16s_C4R;
+                  break;
+              case CV_32FC1:
+                  func = (ippiResizeFunc)ippiResizeLinear_32f_C1R;
+                  break;
+              case CV_32FC3:
+                  func = (ippiResizeFunc)ippiResizeLinear_32f_C3R;
+                  break;
+              case CV_32FC4:
+                  func = (ippiResizeFunc)ippiResizeLinear_32f_C4R;
+                  break;
+              case CV_64FC1:
+                  func = (ippiResizeFunc)ippiResizeLinear_64f_C1R;
+                  break;
+              case CV_64FC3:
+                  func = (ippiResizeFunc)ippiResizeLinear_64f_C3R;
+                  break;
+              case CV_64FC4:
+                  func = (ippiResizeFunc)ippiResizeLinear_64f_C4R;
+                  break;
+              default:
+                  break;
+              }
+          }     
           else if (mode == (int)ippCubic)
           {
-              func =
-                  type == CV_8UC1  ? (ippiResizeFunc)ippiResizeCubic_8u_C1R :
-                  type == CV_8UC3  ? (ippiResizeFunc)ippiResizeCubic_8u_C3R :
-                  type == CV_8UC4  ? (ippiResizeFunc)ippiResizeCubic_8u_C4R :
-                  type == CV_16UC1 ? (ippiResizeFunc)ippiResizeCubic_16u_C1R :
-                  type == CV_16UC3 ? (ippiResizeFunc)ippiResizeCubic_16u_C3R :
-                  type == CV_16UC4 ? (ippiResizeFunc)ippiResizeCubic_16u_C4R :
-                  type == CV_16SC1 ? (ippiResizeFunc)ippiResizeCubic_16s_C1R :
-                  type == CV_16SC3 ? (ippiResizeFunc)ippiResizeCubic_16s_C3R :
-                  type == CV_16SC4 ? (ippiResizeFunc)ippiResizeCubic_16s_C4R :
-                  type == CV_32FC1 ? (ippiResizeFunc)ippiResizeCubic_32f_C1R :
-                  type == CV_32FC3 ? (ippiResizeFunc)ippiResizeCubic_32f_C3R :
-                  type == CV_32FC4 ? (ippiResizeFunc)ippiResizeCubic_32f_C4R :
-                  0;
+             switch (type)
+              {
+              case CV_8UC1:
+                  func = (ippiResizeFunc)ippiResizeCubic_8u_C1R;
+                  break;
+              case CV_8UC3:
+                  func = (ippiResizeFunc)ippiResizeCubic_8u_C3R;
+                  break;
+              case CV_8UC4:
+                  func = (ippiResizeFunc)ippiResizeCubic_8u_C4R;
+                  break;
+              case CV_16UC1:
+                  func = (ippiResizeFunc)ippiResizeCubic_16u_C1R;
+                  break;
+              case CV_16UC3:
+                  func = (ippiResizeFunc)ippiResizeCubic_16u_C3R;
+                  break;
+              case CV_16UC4:
+                  func = (ippiResizeFunc)ippiResizeCubic_16u_C4R;
+                  break;
+              case CV_16SC1:
+                  func = (ippiResizeFunc)ippiResizeCubic_16s_C1R;
+                  break;
+              case CV_16SC3:
+                  func = (ippiResizeFunc)ippiResizeCubic_16s_C3R;
+                  break;
+              case CV_16SC4:
+                  func = (ippiResizeFunc)ippiResizeCubic_16s_C4R;
+                  break;
+              case CV_32FC1:
+                  func = (ippiResizeFunc)ippiResizeCubic_32f_C1R;
+                  break;
+              case CV_32FC3:
+                  func = (ippiResizeFunc)ippiResizeCubic_32f_C3R;
+                  break;
+              case CV_32FC4:
+                  func = (ippiResizeFunc)ippiResizeCubic_32f_C4R;
+                  break;
+              default:
+                  break;
+              }
           }
 
           if( func == 0 )
@@ -2050,7 +2110,7 @@ public:
                   status = ippiResizeGetSrcOffset_32f((IppiResizeSpec_32f*)pSpec, dstOffset, &srcOffset);
               break;
           case CV_64F:
-              itemSize = 4;
+              itemSize = 8;
               status = ippiResizeGetBufferSize_64f((IppiResizeSpec_64f*)pSpec, dstSize, cn, &bufsize);
               if (status == ippStsNoErr)
                   status = ippiResizeGetSrcOffset_64f((IppiResizeSpec_64f*)pSpec, dstOffset, &srcOffset);
@@ -2403,7 +2463,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
 
-#if defined (HAVE_IPP) && ((IPP_VERSION_MAJOR == 7 && IPP_VERSION_MINOR >= 1) || IPP_VERSION_MAJOR > 7)
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
 #define IPP_RESIZE_EPS    1.e-10
 
     double ex = fabs((double)dsize.width/src.cols  - inv_scale_x)/inv_scale_x;
@@ -2762,7 +2822,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2)||
+        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) ||
             sstep > 0x8000 )
             return 0;
 
