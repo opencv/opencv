@@ -19,6 +19,17 @@ if(WITH_IPP)
   endif()
 endif(WITH_IPP)
 
+# --- IPP Async ---
+
+if(WITH_IPP_A)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPPAsync.cmake")
+  if(IPP_A_INCLUDE_DIR AND IPP_A_LIBRARIES)
+    ocv_include_directories(${IPP_A_INCLUDE_DIR})
+    link_directories(${IPP_A_LIBRARIES})
+    set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${IPP_A_LIBRARIES})
+   endif()
+endif(WITH_IPP_A)
+
 # --- CUDA ---
 if(WITH_CUDA)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")

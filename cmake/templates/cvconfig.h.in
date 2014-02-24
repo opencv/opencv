@@ -94,6 +94,9 @@
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 
+/* Intel IPP Async */
+#cmakedefine HAVE_IPP_A
+
 /* JPEG-2000 codec */
 #cmakedefine HAVE_JASPER
 
