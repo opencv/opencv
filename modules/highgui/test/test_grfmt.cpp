@@ -471,6 +471,47 @@ TEST(Highgui_Tiff, write_read_16bit_big_little_endian)
     }
 }
 
+class CV_GrfmtReadTifTiledWithNotFullTiles: public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            /* see issue #3472 - dealing with tiled images where the tile size is
+             * not a multiple of image size.
+             * The tiled images were created with 'convert' from ImageMagick,
+             * using the command 'convert <input> -define tiff:tile-geometry=128x128 -depth [8|16] <output>
+             * Note that the conversion to 16 bits expands the range from 0-255 to 0-255*255,
+             * so the test converts back but rounding errors cause small differences.
+             */
+            cv::Mat img = imread(string(ts->get_data_path()) + "readwrite/non_tiled.tif",-1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            ASSERT_TRUE(img.channels() == 3);
+            cv::Mat tiled8 = imread(string(ts->get_data_path()) + "readwrite/tiled_8.tif", -1);
+            if (tiled8.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, tiled8);
+
+            cv::Mat tiled16 = imread(string(ts->get_data_path()) + "readwrite/tiled_16.tif", -1);
+            if (tiled16.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            ASSERT_TRUE(tiled16.elemSize() == 6);
+            tiled16.convertTo(tiled8, CV_8UC3, 1./256.);
+            ASSERT_PRED_FORMAT2(cvtest::MatComparator(2, 0), img, tiled8);
+            // What about 32, 64 bit?
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+        }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
+TEST(Highgui_Tiff, decode_tile_remainder)
+{
+    CV_GrfmtReadTifTiledWithNotFullTiles test; test.safe_run();
+}
+
 #endif
 
 #ifdef HAVE_WEBP

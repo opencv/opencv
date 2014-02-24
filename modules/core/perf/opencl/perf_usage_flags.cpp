@@ -34,7 +34,7 @@ OCL_PERF_TEST_P(UsageFlagsBoolFixture, UsageFlags_AllocHostMem, ::testing::Combi
         cv::subtract(dst, Scalar::all(1), final);
     }
 
-    SANITY_CHECK_NOTHING()
+    SANITY_CHECK_NOTHING();
 }
 
 } } // namespace cvtest::ocl
