@@ -68,35 +68,47 @@ inline float normAcc_SQDIFF(float num, float denum)
 
 #ifdef CALC_SUM
 
-__kernel void calcSum(__global const uchar * templateptr, int template_step, int template_offset,
-                     int template_rows, int template_cols, __global float * result)
+__kernel void calcSum(__global const uchar * srcptr, int src_step, int src_offset,
+                      int cols, int total, __global float * dst)
 {
-    __global const T * template = (__global const T *)(templateptr + template_offset);
+    int lid = get_local_id(0), id = get_global_id(0);
 
-    WT res = (WT)(0);
+    __local WT localmem[WGS2_ALIGNED];
+    WT accumulator = (WT)(0), tmp;
 
-    for (int y = 0; y < template_rows; ++y)
+    for ( ; id < total; id += WGS)
     {
-        for (int x = 0; x < template_cols; ++x)
-        {
-            WT value = convertToWT(template[x]);
-#ifdef SUM_2
-#if wdepth == 4
-            res = mad24(value, value, res);
-#else
-            res = mad(value, value, res);
-#endif
-#elif defined SUM_1
-            res += value;
-#else
-#error "No operation is specified"
-#endif
-        }
+        int src_index = mad24(id / cols, src_step, mad24(id % cols, (int)sizeof(T), src_offset));
+        __global const T * src = (__global const T *)(srcptr + src_index);
 
-        template = (__global const T *)((__global const uchar *)template + template_step);
+        tmp = convertToWT(src[0]);
+#if wdepth == 4
+        accumulator = mad24(tmp, tmp, accumulator);
+#else
+        accumulator = mad(tmp, tmp, accumulator);
+#endif
     }
 
-    result[0] = convertToDT(res);
+    if (lid < WGS2_ALIGNED)
+        localmem[lid] = accumulator;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (lid >= WGS2_ALIGNED && total >= WGS2_ALIGNED)
+        localmem[lid - WGS2_ALIGNED] += accumulator;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (int lsize = WGS2_ALIGNED >> 1; lsize > 0; lsize >>= 1)
+    {
+        if (lid < lsize)
+        {
+            int lid2 = lsize + lid;
+            localmem[lid] += localmem[lid2];
+        }
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if (lid == 0)
+        dst[0] = convertToDT(localmem[0]);
 }
 
 #elif defined CCORR

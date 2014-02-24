@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
 
 ////////////////////////////////////////////////// matchTemplate //////////////////////////////////////////////////////////
@@ -57,28 +56,36 @@ enum
     SUM_1 = 0, SUM_2 = 1
 };
 
-static bool sumTemplate(InputArray _templ, UMat & result, int sum_type)
+static bool sumTemplate(InputArray _src, UMat & result)
 {
-    CV_Assert(sum_type == SUM_1 || sum_type == SUM_2);
-
-    int type = _templ.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int wdepth = std::max(CV_32S, depth), wtype = CV_MAKE_TYPE(wdepth, cn);
+    size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+    int wgs2_aligned = 1;
+    while (wgs2_aligned < (int)wgs)
+        wgs2_aligned <<= 1;
+    wgs2_aligned >>= 1;
 
     char cvt[40];
-    const char * const sumTypeToStr[] = { "SUM_1", "SUM_2" };
     ocl::Kernel k("calcSum", ocl::imgproc::match_template_oclsrc,
-                  format("-D CALC_SUM -D %s -D T=%s -D WT=%s -D convertToWT=%s -D cn=%d -D wdepth=%d",
-                         sumTypeToStr[sum_type], ocl::typeToStr(type), ocl::typeToStr(wtype),
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt), cn, wdepth));
+                  format("-D CALC_SUM -D T=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d -D wdepth=%d",
+                         ocl::typeToStr(type), ocl::typeToStr(wtype), cn,
+                         ocl::convertTypeStr(depth, wdepth, cn, cvt),
+                         (int)wgs, wgs2_aligned, wdepth));
     if (k.empty())
         return false;
 
+    UMat src = _src.getUMat();
     result.create(1, 1, CV_32FC1);
-    UMat templ = _templ.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnly(templ), ocl::KernelArg::PtrWriteOnly(result));
+    ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+            resarg = ocl::KernelArg::PtrWriteOnly(result);
 
-    return k.runTask(false);
+    k.args(srcarg, src.cols, (int)src.total(), resarg);
+
+    size_t globalsize = wgs;
+    return k.run(1, &globalsize, &wgs, false);
 }
 
 static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, OutputArray _result)
@@ -123,7 +130,7 @@ static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, Out
     integral(image.reshape(1), image_sums, image_sqsums, CV_32F, CV_32F);
 
     UMat templ_sqsum;
-    if (!sumTemplate(templ, templ_sqsum, SUM_2))
+    if (!sumTemplate(templ, templ_sqsum))
         return false;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
@@ -177,7 +184,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
     integral(image.reshape(1), image_sums, image_sqsums, CV_32F, CV_32F);
 
     UMat templ_sqsum;
-    if (!sumTemplate(_templ, templ_sqsum, SUM_2))
+    if (!sumTemplate(_templ, templ_sqsum))
         return false;
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(image_sqsums), ocl::KernelArg::ReadWrite(result),
