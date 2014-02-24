@@ -4206,7 +4206,7 @@ const char* typeToStr(int type)
 
 const char* memopTypeToStr(int type)
 {
-    static const char* tab[]=
+    static const char* tab[] =
     {
         "uchar", "uchar2", "uchar3", "uchar4",
         "uchar", "uchar2", "uchar3", "uchar4",
@@ -4214,7 +4214,7 @@ const char* memopTypeToStr(int type)
         "ushort", "ushort2", "ushort3", "ushort4",
         "int", "int2", "int3", "int4",
         "int", "int2", "int3", "int4",
-        "int2", "int4", "?", "int8",
+        "ulong", "ulong2", "ulong3", "ulong4",
         "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
