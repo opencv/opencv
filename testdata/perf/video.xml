@@ -12257,76 +12257,74 @@
   <uFlow>
     <kind>655360</kind>
     <type>13</type>
-    <min>-3.5060341358184814e+000</min>
-    <max>4.8271355628967285e+000</max>
+    <min>-3.5057995319366455e+000</min>
+    <max>4.0653448104858398e+000</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>-3.4457303583621979e-002</val></last>
+      <val>6.5876096487045288e-003</val></last>
     <rng1>
-      <x>169</x>
-      <y>159</y>
-      <val>9.8652911186218262e-001</val></rng1>
+      <x>4</x>
+      <y>19</y>
+      <val>9.2737901210784912e-001</val></rng1>
     <rng2>
-      <x>178</x>
-      <y>213</y>
+      <x>496</x>
+      <y>109</y>
       <cn>1</cn>
-      <val>-6.1188036203384399e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---false->
+      <val>3.7118133157491684e-002</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---false->
 <OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---true->
   <uFlow>
     <kind>655360</kind>
     <type>13</type>
-    <min>-3.5041491985321045e+000</min>
-    <max>3.9612207412719727e+000</max>
+    <min>-3.5150122642517090e+000</min>
+    <max>2.6839590072631836e+001</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>-2.9186433181166649e-002</val></last>
+      <val>5.8275628834962845e-002</val></last>
     <rng1>
-      <x>192</x>
-      <y>315</y>
-      <cn>1</cn>
-      <val>2.4797087907791138e-001</val></rng1>
+      <x>270</x>
+      <y>348</y>
+      <val>-1.0311433076858521e+000</val></rng1>
     <rng2>
-      <x>153</x>
-      <y>41</y>
-      <val>7.7002561092376709e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---true->
+      <x>181</x>
+      <y>141</y>
+      <val>8.0679202079772949e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---true->
 <OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---false->
   <uFlow>
     <kind>655360</kind>
     <type>13</type>
-    <min>-3.5644359588623047e+000</min>
-    <max>3.4069721698760986e+000</max>
+    <min>-3.5631065368652344e+000</min>
+    <max>5.7260208129882812e+000</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>-1.7843911424279213e-002</val></last>
+      <val>-8.0386521294713020e-003</val></last>
     <rng1>
-      <x>506</x>
-      <y>41</y>
-      <val>-1.2398407459259033e+000</val></rng1>
+      <x>382</x>
+      <y>97</y>
+      <val>-1.2725880146026611e+000</val></rng1>
     <rng2>
-      <x>465</x>
-      <y>142</y>
+      <x>238</x>
+      <y>219</y>
       <cn>1</cn>
-      <val>3.9375327527523041e-002</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---false->
+      <val>-6.9229906797409058e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---false->
 <OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
   <uFlow>
     <kind>655360</kind>
     <type>13</type>
-    <min>-3.5640504360198975e+000</min>
-    <max>3.4093408584594727e+000</max>
+    <min>-3.5599670410156250e+000</min>
+    <max>5.5970811843872070e+000</max>
     <last>
       <x>583</x>
       <y>387</y>
-      <val>-1.8439607694745064e-002</val></last>
+      <val>-2.0397007465362549e-003</val></last>
     <rng1>
-      <x>328</x>
-      <y>191</y>
-      <cn>1</cn>
-      <val>-1.2729643583297729e+000</val></rng1>
+      <x>564</x>
+      <y>236</y>
+      <val>-1.0273369550704956e+000</val></rng1>
     <rng2>
-      <x>297</x>
-      <y>128</y>
-      <val>7.6545321941375732e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
+      <x>128</x>
+      <y>43</y>
+      <val>3.2507807016372681e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
 </opencv_storage>
