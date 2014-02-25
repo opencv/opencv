@@ -1,6 +1,7 @@
 package org.opencv.android;
 
 import java.util.List;
+import java.nio.ByteOrder;
 
 import android.content.Context;
 import android.graphics.ImageFormat;
@@ -288,7 +289,13 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         }
 
         public Mat rgba() {
-            Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2BGR_NV12, 4);
+            // NV12 and NV21 differs in order of U and V values
+            // COLOR_YUV2BGR_NV12 conversion compensates byte order difference between
+            // Java and native code if it is present
+            if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN)
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2BGR_NV21, 4);
+            else
+                Imgproc.cvtColor(mYuvFrameData, mRgba, Imgproc.COLOR_YUV2BGR_NV12, 4);
             return mRgba;
         }
 
