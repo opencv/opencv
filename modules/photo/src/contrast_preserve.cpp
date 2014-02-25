@@ -59,7 +59,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     _color_boost.create(I.size(), CV_8UC3);
     Mat color_boost = _color_boost.getMat();
 
-    CV_Assert((I.data) && (I.channels()==3));
+    CV_Assert(!I.empty() && (I.channels()==3));
 
     // Parameter Setting
     int maxIter = 15;
