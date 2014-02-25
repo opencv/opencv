@@ -5204,6 +5204,30 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 
 ////////////////////// RotatedRect //////////////////////
 
+RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const Point2f& _point3)
+{
+    Point2f _center = 0.5f * (_point1 + _point3);
+    Vec2f vecs[2];
+    vecs[0] = Vec2f(_point1 - _point2);
+    vecs[1] = Vec2f(_point2 - _point3);
+    // check that given sides are perpendicular
+    CV_Assert( abs(vecs[0].dot(vecs[1])) / (norm(vecs[0]) * norm(vecs[1])) <= FLT_EPSILON );
+
+    // wd_i stores which vector (0,1) or (1,2) will make the width
+    // One of them will definitely have slope within -1 to 1
+    int wd_i = 0;
+    if( abs(vecs[1][1]) < abs(vecs[1][0]) ) wd_i = 1;
+    int ht_i = (wd_i + 1) % 2;
+
+    float _angle = atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
+    float _width = (float) norm(vecs[wd_i]);
+    float _height = (float) norm(vecs[ht_i]);
+
+    center = _center;
+    size = Size2f(_width, _height);
+    angle = _angle;
+}
+
 void RotatedRect::points(Point2f pt[]) const
 {
     double _angle = angle*CV_PI/180.;
