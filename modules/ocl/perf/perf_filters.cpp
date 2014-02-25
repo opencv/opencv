@@ -381,7 +381,7 @@ PERF_TEST_P(BilateralFixture, Bilateral,
 
 typedef Size_MatType adaptiveBilateralFixture;
 
-PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
+PERF_TEST_P(adaptiveBilateralFixture, DISABLED_adaptiveBilateral,
             ::testing::Combine(::testing::Values(OCL_SIZE_1000), OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
 {
     const Size_MatType_t params = GetParam();
