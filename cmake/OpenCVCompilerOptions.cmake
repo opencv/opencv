@@ -185,6 +185,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_extra_compiler_option(-ffunction-sections)
   endif()
 
+  if(ENABLE_COVERAGE)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} --coverage")
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --coverage")
+  endif()
+
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")
   set(OPENCV_EXTRA_FLAGS_DEBUG "${OPENCV_EXTRA_FLAGS_DEBUG} -O0 -DDEBUG -D_DEBUG")
 endif()

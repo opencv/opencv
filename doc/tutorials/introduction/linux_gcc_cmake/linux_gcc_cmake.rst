@@ -25,29 +25,34 @@ Let's use a simple program such as DisplayImage.cpp shown below.
 
 .. code-block:: cpp
 
-   #include <stdio.h>
-   #include <opencv2/opencv.hpp>
+  #include <stdio.h>
+  #include <opencv2/opencv.hpp>
 
-   using namespace cv;
+  using namespace cv;
 
-   int main( int argc, char** argv )
-   {
-     Mat image;
-     image = imread( argv[1], 1 );
+  int main(int argc, char** argv )
+  {
+      if ( argc != 2 )
+      {
+          printf("usage: DisplayImage.out <Image_Path>\n");
+          return -1;
+      }
 
-     if( argc != 2 || !image.data )
-       {
-         printf( "No image data \n" );
-         return -1;
-       }
+      Mat image;
+      image = imread( argv[1], 1 );
 
-     namedWindow( "Display Image", WINDOW_AUTOSIZE );
-     imshow( "Display Image", image );
+      if ( !image.data )
+      {
+          printf("No image data \n");
+          return -1;
+      }
+      namedWindow("Display Image", WINDOW_AUTOSIZE );
+      imshow("Display Image", image);
 
-     waitKey(0);
+      waitKey(0);
 
-     return 0;
-   }
+      return 0;
+  }
 
 Create a CMake file
 ---------------------
