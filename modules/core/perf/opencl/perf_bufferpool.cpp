@@ -61,7 +61,7 @@ OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatCreation100, Bool())
         }
     }
 
-    SANITY_CHECK_NOTHING()
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatCountNonZero100, Bool())
@@ -79,7 +79,7 @@ OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatCountNonZero100, Bool())
         }
     }
 
-    SANITY_CHECK_NOTHING()
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatCanny10, Bool())
@@ -104,7 +104,7 @@ OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatCanny10, Bool())
         }
     }
 
-    SANITY_CHECK_NOTHING()
+    SANITY_CHECK_NOTHING();
 }
 
 OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatIntegral10, Bool())
@@ -124,7 +124,7 @@ OCL_PERF_TEST_P(BufferPoolFixture, BufferPool_UMatIntegral10, Bool())
         }
     }
 
-    SANITY_CHECK_NOTHING()
+    SANITY_CHECK_NOTHING();
 }
 
 } } // namespace cvtest::ocl

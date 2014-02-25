@@ -198,6 +198,7 @@ OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binar
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  ON   IF (NOT IOS) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CMAKE_COMPILER_IS_GNUCXX )
+OCV_OPTION(ENABLE_COVERAGE            "Enable coverage collection with  GCov"                    OFF  IF CMAKE_COMPILER_IS_GNUCXX )
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CMAKE_COMPILER_IS_GNUCXX AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX) )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
@@ -418,8 +419,15 @@ include(cmake/OpenCVModule.cmake)
 # ----------------------------------------------------------------------------
 #  Detect endianness of build platform
 # ----------------------------------------------------------------------------
-include(TestBigEndian)
-test_big_endian(WORDS_BIGENDIAN)
+
+if(CMAKE_SYSTEM_NAME STREQUAL iOS)
+  # test_big_endian needs try_compile, which doesn't work for iOS
+  # http://public.kitware.com/Bug/view.php?id=12288
+  set(WORDS_BIGENDIAN 0)
+else()
+  include(TestBigEndian)
+  test_big_endian(WORDS_BIGENDIAN)
+endif()
 
 # ----------------------------------------------------------------------------
 #  Detect 3rd-party libraries
