@@ -205,7 +205,7 @@ private:
 #define SANITY_CHECK_MOMENTS(array, ...) ::perf::Regression::addMoments(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
-#define SANITY_CHECK_NOTHING() this->setVerified();
+#define SANITY_CHECK_NOTHING() this->setVerified()
 
 class CV_EXPORTS GpuPerf
 {
