@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/calib3d/calib3d_c.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -213,8 +214,8 @@ int main(void)
     Mat source, grayImage;
     video >> source;
 
-    namedWindow("Original", WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-    namedWindow("POSIT", WINDOW_OPENGL | CV_WINDOW_FREERATIO);
+    namedWindow("Original", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
+    namedWindow("POSIT", WINDOW_OPENGL | WINDOW_FREERATIO);
     resizeWindow("POSIT", source.cols, source.rows);
 
     displayOverlay("POSIT", "We lost the 4 corners' detection quite often (the red circles disappear).\n"
@@ -253,8 +254,8 @@ int main(void)
 
         updateWindow("POSIT");
 
-        if (video.get(CV_CAP_PROP_POS_AVI_RATIO) > 0.99)
-            video.set(CV_CAP_PROP_POS_AVI_RATIO, 0);
+        if (video.get(CAP_PROP_POS_AVI_RATIO) > 0.99)
+            video.set(CAP_PROP_POS_AVI_RATIO, 0);
     }
 
     setOpenGlDrawCallback("POSIT", NULL, NULL);
