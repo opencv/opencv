@@ -427,7 +427,9 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
                 _descriptors.push_back(descriptors.getMat(ACCESS_READ));
             }
 
-        features.descriptors = _descriptors.getUMat(ACCESS_READ);
+        // TODO optimize copyTo()
+        //features.descriptors = _descriptors.getUMat(ACCESS_READ);
+        _descriptors.copyTo(features.descriptors);
     }
 }
 
