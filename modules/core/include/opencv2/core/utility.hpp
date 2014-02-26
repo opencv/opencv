@@ -495,6 +495,11 @@ template<> inline std::string CommandLineParser::get<std::string>(const String& 
 }
 #endif // OPENCV_NOSTL
 
+#if !defined(OPENCV_SKIP_SUPPRESS_WARNING) || !OPENCV_SKIP_SUPPRESS_WARNING
+// Use this to bypass "warning C4127: conditional expression is constant"
+template <typename T> T SuppressWarning(T v) { return v; }
+#endif
+
 } //namespace cv
 
 #endif //__OPENCV_CORE_UTILITY_H__
