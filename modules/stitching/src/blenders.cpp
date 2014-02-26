@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 namespace cv {
 namespace detail {
@@ -245,6 +246,31 @@ void MultiBandBlender::prepare(Rect dst_roi)
     }
 }
 
+#ifdef HAVE_OPENCL
+static bool ocl_MultiBandBlender_feed(InputArray _src, InputArray _weight,
+        InputOutputArray _dst, InputOutputArray _dst_weight)
+{
+    String buildOptions = "-D DEFINE_feed";
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "src", _src);
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "weight", _weight);
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "dst", _dst);
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "dstWeight", _dst_weight);
+    ocl::Kernel k("feed", ocl::stitching::multibandblend_oclsrc, buildOptions);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+
+    k.args(ocl::KernelArg::ReadOnly(src),
+           ocl::KernelArg::ReadOnly(_weight.getUMat()),
+           ocl::KernelArg::ReadWrite(_dst.getUMat()),
+           ocl::KernelArg::ReadWrite(_dst_weight.getUMat())
+           );
+
+    size_t globalsize[2] = {src.cols, src.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+#endif
 
 void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 {
@@ -338,63 +364,61 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     int x_br = br_new.x - dst_roi_.x;
 
     // Add weighted layer of the source image to the final Laplacian pyramid layer
-    if(weight_type_ == CV_32F)
+    for (int i = 0; i <= num_bands_; ++i)
     {
-        for (int i = 0; i <= num_bands_; ++i)
+        Rect rc(x_tl, y_tl, x_br - x_tl, y_br - y_tl);
+        CV_OPENCL_RUN(SuppressWarning(true),
+                ocl_MultiBandBlender_feed(src_pyr_laplace[i], weight_pyr_gauss[i],
+                        dst_pyr_laplace_[i](rc),
+                        dst_band_weights_[i](rc)),
+                goto next_band;)
         {
             Mat _src_pyr_laplace = src_pyr_laplace[i].getMat(ACCESS_READ);
-            Mat _dst_pyr_laplace = dst_pyr_laplace_[i].getMat(ACCESS_RW);
+            Mat _dst_pyr_laplace = dst_pyr_laplace_[i](rc).getMat(ACCESS_RW);
             Mat _weight_pyr_gauss = weight_pyr_gauss[i].getMat(ACCESS_READ);
-            Mat _dst_band_weights = dst_band_weights_[i].getMat(ACCESS_RW);
-            for (int y = y_tl; y < y_br; ++y)
+            Mat _dst_band_weights = dst_band_weights_[i](rc).getMat(ACCESS_RW);
+            if(weight_type_ == CV_32F)
             {
-                int y_ = y - y_tl;
-                const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y_);
-                Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
-                const float* weight_row = _weight_pyr_gauss.ptr<float>(y_);
-                float* dst_weight_row = _dst_band_weights.ptr<float>(y);
-
-                for (int x = x_tl; x < x_br; ++x)
+                for (int y = 0; y < rc.height; ++y)
                 {
-                    int x_ = x - x_tl;
-                    dst_row[x].x += static_cast<short>(src_row[x_].x * weight_row[x_]);
-                    dst_row[x].y += static_cast<short>(src_row[x_].y * weight_row[x_]);
-                    dst_row[x].z += static_cast<short>(src_row[x_].z * weight_row[x_]);
-                    dst_weight_row[x] += weight_row[x_];
+                    const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y);
+                    Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
+                    const float* weight_row = _weight_pyr_gauss.ptr<float>(y);
+                    float* dst_weight_row = _dst_band_weights.ptr<float>(y);
+
+                    for (int x = 0; x < rc.width; ++x)
+                    {
+                        dst_row[x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+                        dst_row[x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+                        dst_row[x].z += static_cast<short>(src_row[x].z * weight_row[x]);
+                        dst_weight_row[x] += weight_row[x];
+                    }
                 }
             }
-            x_tl /= 2; y_tl /= 2;
-            x_br /= 2; y_br /= 2;
-        }
-    }
-    else // weight_type_ == CV_16S
-    {
-        for (int i = 0; i <= num_bands_; ++i)
-        {
-            Mat _src_pyr_laplace = src_pyr_laplace[i].getMat(ACCESS_READ);
-            Mat _dst_pyr_laplace = dst_pyr_laplace_[i].getMat(ACCESS_RW);
-            Mat _weight_pyr_gauss = weight_pyr_gauss[i].getMat(ACCESS_READ);
-            Mat _dst_band_weights = dst_band_weights_[i].getMat(ACCESS_RW);
-            for (int y = y_tl; y < y_br; ++y)
+            else // weight_type_ == CV_16S
             {
-                int y_ = y - y_tl;
-                const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y_);
-                Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
-                const short* weight_row = _weight_pyr_gauss.ptr<short>(y_);
-                short* dst_weight_row = _dst_band_weights.ptr<short>(y);
-
-                for (int x = x_tl; x < x_br; ++x)
+                for (int y = 0; y < y_br - y_tl; ++y)
                 {
-                    int x_ = x - x_tl;
-                    dst_row[x].x += short((src_row[x_].x * weight_row[x_]) >> 8);
-                    dst_row[x].y += short((src_row[x_].y * weight_row[x_]) >> 8);
-                    dst_row[x].z += short((src_row[x_].z * weight_row[x_]) >> 8);
-                    dst_weight_row[x] += weight_row[x_];
+                    const Point3_<short>* src_row = _src_pyr_laplace.ptr<Point3_<short> >(y);
+                    Point3_<short>* dst_row = _dst_pyr_laplace.ptr<Point3_<short> >(y);
+                    const short* weight_row = _weight_pyr_gauss.ptr<short>(y);
+                    short* dst_weight_row = _dst_band_weights.ptr<short>(y);
+
+                    for (int x = 0; x < x_br - x_tl; ++x)
+                    {
+                        dst_row[x].x += short((src_row[x].x * weight_row[x]) >> 8);
+                        dst_row[x].y += short((src_row[x].y * weight_row[x]) >> 8);
+                        dst_row[x].z += short((src_row[x].z * weight_row[x]) >> 8);
+                        dst_weight_row[x] += weight_row[x];
+                    }
                 }
             }
-            x_tl /= 2; y_tl /= 2;
-            x_br /= 2; y_br /= 2;
         }
+#ifdef HAVE_OPENCL
+next_band:
+#endif
+        x_tl /= 2; y_tl /= 2;
+        x_br /= 2; y_br /= 2;
     }
 
     LOGLN("  Add weighted layer of the source image to the final Laplacian pyramid layer, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
@@ -411,10 +435,10 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     else
         restoreImageFromLaplacePyr(dst_pyr_laplace_);
 
-    dst_ = dst_pyr_laplace_[0];
-    dst_ = dst_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
+    Rect dst_rc(0, 0, dst_roi_final_.width, dst_roi_final_.height);
+    dst_ = dst_pyr_laplace_[0](dst_rc);
     UMat _dst_mask;
-    compare(dst_band_weights_[0](Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width)), WEIGHT_EPS, dst_mask_, CMP_GT);
+    compare(dst_band_weights_[0](dst_rc), WEIGHT_EPS, dst_mask_, CMP_GT);
     dst_pyr_laplace_.clear();
     dst_band_weights_.clear();
 
@@ -425,47 +449,74 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
+#ifdef HAVE_OPENCL
+static bool ocl_normalizeUsingWeightMap(InputArray _weight, InputOutputArray _mat)
+{
+    String buildOptions = "-D DEFINE_normalizeUsingWeightMap";
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "mat", _mat);
+    ocl::buildOptionsAddMatrixDescription(buildOptions, "weight", _weight);
+    ocl::Kernel k("normalizeUsingWeightMap", ocl::stitching::multibandblend_oclsrc, buildOptions);
+    if (k.empty())
+        return false;
+
+    UMat mat = _mat.getUMat();
+
+    k.args(ocl::KernelArg::ReadWrite(mat),
+           ocl::KernelArg::ReadOnly(_weight.getUMat())
+           );
+
+    size_t globalsize[2] = {mat.cols, mat.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+#endif
+
 void normalizeUsingWeightMap(InputArray _weight, InputOutputArray _src)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if(tegra::normalizeUsingWeightMap(weight, src))
         return;
 #endif
-    Mat weight = _weight.getMat();
-    Mat src = _src.getMat();
 
-    CV_Assert(src.type() == CV_16SC3);
-
-    if(weight.type() == CV_32FC1)
+    CV_OPENCL_RUN(SuppressWarning(true),
+                  ocl_normalizeUsingWeightMap(_weight, _src),
+                  return;)
     {
-        for (int y = 0; y < src.rows; ++y)
-        {
-            Point3_<short> *row = src.ptr<Point3_<short> >(y);
-            const float *weight_row = weight.ptr<float>(y);
+        Mat weight = _weight.getMat();
+        Mat src = _src.getMat();
 
-            for (int x = 0; x < src.cols; ++x)
+        CV_Assert(src.type() == CV_16SC3);
+
+        if(weight.type() == CV_32FC1)
+        {
+            for (int y = 0; y < src.rows; ++y)
             {
-                row[x].x = static_cast<short>(row[x].x / (weight_row[x] + WEIGHT_EPS));
-                row[x].y = static_cast<short>(row[x].y / (weight_row[x] + WEIGHT_EPS));
-                row[x].z = static_cast<short>(row[x].z / (weight_row[x] + WEIGHT_EPS));
+                Point3_<short> *row = src.ptr<Point3_<short> >(y);
+                const float *weight_row = weight.ptr<float>(y);
+
+                for (int x = 0; x < src.cols; ++x)
+                {
+                    row[x].x = static_cast<short>(row[x].x / (weight_row[x] + WEIGHT_EPS));
+                    row[x].y = static_cast<short>(row[x].y / (weight_row[x] + WEIGHT_EPS));
+                    row[x].z = static_cast<short>(row[x].z / (weight_row[x] + WEIGHT_EPS));
+                }
             }
         }
-    }
-    else
-    {
-        CV_Assert(weight.type() == CV_16SC1);
-
-        for (int y = 0; y < src.rows; ++y)
+        else
         {
-            const short *weight_row = weight.ptr<short>(y);
-            Point3_<short> *row = src.ptr<Point3_<short> >(y);
+            CV_Assert(weight.type() == CV_16SC1);
 
-            for (int x = 0; x < src.cols; ++x)
+            for (int y = 0; y < src.rows; ++y)
             {
-                int w = weight_row[x] + 1;
-                row[x].x = static_cast<short>((row[x].x << 8) / w);
-                row[x].y = static_cast<short>((row[x].y << 8) / w);
-                row[x].z = static_cast<short>((row[x].z << 8) / w);
+                const short *weight_row = weight.ptr<short>(y);
+                Point3_<short> *row = src.ptr<Point3_<short> >(y);
+
+                for (int x = 0; x < src.cols; ++x)
+                {
+                    int w = weight_row[x] + 1;
+                    row[x].x = static_cast<short>((row[x].x << 8) / w);
+                    row[x].y = static_cast<short>((row[x].y << 8) / w);
+                    row[x].z = static_cast<short>((row[x].z << 8) / w);
+                }
             }
         }
     }

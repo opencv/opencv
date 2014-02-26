@@ -4404,7 +4404,24 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
 
 #undef PROCESS_SRC
 
-/////////////////////////////////////////// Image2D ////////////////////////////////////////////////////
+
+// TODO Make this as a method of OpenCL "BuildOptions" class
+void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m)
+{
+    if (!buildOptions.empty())
+        buildOptions += " ";
+    int type = _m.type(), depth = CV_MAT_DEPTH(type);
+    buildOptions += format(
+            "-D %s_T=%s -D %s_T1=%s -D %s_CN=%d -D %s_TSIZE=%d -D %s_T1SIZE=%d -D %s_DEPTH=%d",
+            name.c_str(), ocl::typeToStr(type),
+            name.c_str(), ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            name.c_str(), (int)CV_MAT_CN(type),
+            name.c_str(), (int)CV_ELEM_SIZE(type),
+            name.c_str(), (int)CV_ELEM_SIZE1(type),
+            name.c_str(), (int)depth
+            );
+}
+
 
 struct Image2D::Impl
 {
