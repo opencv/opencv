@@ -95,12 +95,17 @@ private:
 
 static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _weights1, InputArray _weights2, OutputArray _dst )
 {
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            kercn = cn <= 4 && cn != 3 ? cn : 1, cnscale = cn / kercn,
+            wdepth = std::max(CV_32F, depth);
 
-    char cvt[30];
+    char cvt[2][40];
     ocl::Kernel k("blendLinear", ocl::imgproc::blend_linear_oclsrc,
-                  format("-D T=%s -D cn=%d -D convertToT=%s", ocl::typeToStr(depth),
-                         cn, ocl::convertTypeStr(CV_32F, depth, 1, cvt)));
+                  format("-D T=%s -D cn=%d -D convertToT=%s -D WT=%s -D convertToWT=%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(type, kercn)), cnscale,
+                         ocl::convertTypeStr(wdepth, depth, kercn, cvt[0]),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[1])));
     if (k.empty())
         return false;
 
