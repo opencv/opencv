@@ -107,7 +107,9 @@ void Blender::feed(InputArray _img, InputArray _mask, Point tl)
 
 void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
-    dst_.setTo(Scalar::all(0), dst_mask_.getMat(ACCESS_READ) == 0); // TODO
+    UMat mask;
+    compare(dst_mask_, 0, mask, CMP_EQ);
+    dst_.setTo(Scalar::all(0), mask);
     dst.assign(dst_);
     dst_mask.assign(dst_mask_);
     dst_.release();
@@ -159,7 +161,7 @@ void FeatherBlender::feed(InputArray _img, InputArray mask, Point tl)
 void FeatherBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
     normalizeUsingWeightMap(dst_weight_map_, dst_);
-    dst_mask_ = ((Mat)(dst_weight_map_.getMat(ACCESS_READ) > WEIGHT_EPS)).getUMat(ACCESS_READ);
+    compare(dst_weight_map_, WEIGHT_EPS, dst_mask_, CMP_GT);
     Blender::blend(dst, dst_mask);
 }
 
@@ -301,7 +303,9 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     else // weight_type_ == CV_16S
     {
         mask.getUMat().convertTo(weight_map, CV_16S);
-        add(weight_map, Scalar::all(1), weight_map, mask.getMat(ACCESS_READ) != 0); // TODO
+        UMat add_mask;
+        compare(mask, 0, add_mask, CMP_NE);
+        add(weight_map, Scalar::all(1), weight_map, add_mask);
     }
 
     copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
@@ -388,8 +392,8 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 
     dst_ = dst_pyr_laplace_[0];
     dst_ = dst_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
-    dst_mask_ = ((Mat)(dst_band_weights_[0].getMat(ACCESS_READ) > WEIGHT_EPS)).getUMat(ACCESS_READ);
-    dst_mask_ = dst_mask_(Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width));
+    UMat _dst_mask;
+    compare(dst_band_weights_[0](Range(0, dst_roi_final_.height), Range(0, dst_roi_final_.width)), WEIGHT_EPS, dst_mask_, CMP_GT);
     dst_pyr_laplace_.clear();
     dst_band_weights_.clear();
 

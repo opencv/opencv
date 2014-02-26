@@ -98,7 +98,7 @@ Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, InputArra
     _xmap.create(dsize, CV_32FC1);
     _ymap.create(dsize, CV_32FC1);
 
-    if (ocl::useOpenCL()) // TODO !!!!! check T
+    if (ocl::useOpenCL())
     {
         ocl::Kernel k("buildWarpPlaneMaps", ocl::stitching::warpers_oclsrc);
         if (!k.empty())
