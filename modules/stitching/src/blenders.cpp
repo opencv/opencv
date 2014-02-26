@@ -248,7 +248,11 @@ void MultiBandBlender::prepare(Rect dst_roi)
 
 void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 {
-    Mat img = _img.getMat();
+#if ENABLE_LOG
+    int64 t = getTickCount();
+#endif
+
+    UMat img = _img.getUMat();
     CV_Assert(img.type() == CV_16SC3 || img.type() == CV_8UC3);
     CV_Assert(mask.type() == CV_8U);
 
@@ -286,11 +290,21 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     UMat img_with_border;
     copyMakeBorder(_img, img_with_border, top, bottom, left, right,
                    BORDER_REFLECT);
+    LOGLN("  Add border to the source image, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
+
     std::vector<UMat> src_pyr_laplace;
     if (can_use_gpu_ && img_with_border.depth() == CV_16S)
         createLaplacePyrGpu(img_with_border, num_bands_, src_pyr_laplace);
     else
         createLaplacePyr(img_with_border, num_bands_, src_pyr_laplace);
+
+    LOGLN("  Create the source image Laplacian pyramid, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
 
     // Create the weight map Gaussian pyramid
     UMat weight_map;
@@ -312,6 +326,11 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 
     for (int i = 0; i < num_bands_; ++i)
         pyrDown(weight_pyr_gauss[i], weight_pyr_gauss[i + 1]);
+
+    LOGLN("  Create the weight map Gaussian pyramid, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+    t = getTickCount();
+#endif
 
     int y_tl = tl_new.y - dst_roi_.y;
     int y_br = br_new.y - dst_roi_.y;
@@ -348,7 +367,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
             x_br /= 2; y_br /= 2;
         }
     }
-    else// weight_type_ == CV_16S
+    else // weight_type_ == CV_16S
     {
         for (int i = 0; i <= num_bands_; ++i)
         {
@@ -377,6 +396,8 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
             x_br /= 2; y_br /= 2;
         }
     }
+
+    LOGLN("  Add weighted layer of the source image to the final Laplacian pyramid layer, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 }
 
 

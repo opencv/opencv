@@ -220,6 +220,9 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     for (size_t img_idx = 0; img_idx < imgs_.size(); ++img_idx)
     {
         LOGLN("Compositing image #" << indices_[img_idx] + 1);
+#if ENABLE_LOG
+        int64 compositing_t = getTickCount();
+#endif
 
         // Read image and resize it if necessary
         full_img = imgs_[img_idx];
@@ -261,25 +264,48 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
             }
         }
         if (std::abs(compose_scale - 1) > 1e-1)
+        {
+#if ENABLE_LOG
+            int64 resize_t = getTickCount();
+#endif
             resize(full_img, img, Size(), compose_scale, compose_scale);
+            LOGLN("  resize time: " << ((getTickCount() - resize_t) / getTickFrequency()) << " sec");
+        }
         else
             img = full_img;
         full_img.release();
         Size img_size = img.size();
 
+        LOGLN(" after resize time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
+
         Mat K;
         cameras_[img_idx].K().convertTo(K, CV_32F);
 
+#if ENABLE_LOG
+        int64 pt = getTickCount();
+#endif
         // Warp the current image
         w->warp(img, K, cameras_[img_idx].R, INTER_LINEAR, BORDER_CONSTANT, img_warped);
+        LOGLN(" warp the current image: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         // Warp the current image mask
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
         w->warp(mask, K, cameras_[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
+        LOGLN(" warp the current image mask: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         // Compensate exposure
         exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
+        LOGLN(" compensate exposure: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
 
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
@@ -292,18 +318,35 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
         bitwise_and(seam_mask, mask_warped, mask_warped);
 
+        LOGLN(" other: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+#if ENABLE_LOG
+        pt = getTickCount();
+#endif
+
         if (!is_blender_prepared)
         {
             blender_->prepare(corners, sizes);
             is_blender_prepared = true;
         }
 
+        LOGLN(" other2: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
+
+        LOGLN(" feed...");
+#if ENABLE_LOG
+        int64 feed_t = getTickCount();
+#endif
         // Blend the current image
         blender_->feed(img_warped_s, mask_warped, corners[img_idx]);
+        LOGLN(" feed time: " << ((getTickCount() - feed_t) / getTickFrequency()) << " sec");
+        LOGLN("Compositing ## time: " << ((getTickCount() - compositing_t) / getTickFrequency()) << " sec");
     }
 
+#if ENABLE_LOG
+        int64 blend_t = getTickCount();
+#endif
     UMat result, result_mask;
     blender_->blend(result, result_mask);
+    LOGLN("blend time: " << ((getTickCount() - blend_t) / getTickFrequency()) << " sec");
 
     LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
