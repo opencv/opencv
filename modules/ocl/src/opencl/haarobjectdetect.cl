@@ -150,8 +150,8 @@ __kernel void gpuRunHaarClassifierCascadePacked(
         int     index = i+lid; // index in shared local memory
         if(index<DATA_SIZE)
         {// calc global x,y coordinat and read data from there
-            int     x = min(GroupX + (index % (DATA_SIZE_X)),Width-1);
-            int     y = min(GroupY + (index / (DATA_SIZE_X)),Height-1);
+            int     x = min(GroupX + (index % (DATA_SIZE_X)),Width-1+WND_SIZE_X);
+            int     y = min(GroupY + (index / (DATA_SIZE_X)),Height-1+WND_SIZE_Y);
             SumL[index] = sum[ImgOffset+y*pixelstep+x];
         }
     }
