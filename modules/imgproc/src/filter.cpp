@@ -1405,7 +1405,11 @@ struct SymmColumnVec_32f16s
 
 struct RowVec_32f
 {
-    RowVec_32f() {}
+    RowVec_32f()
+    {
+        haveSSE = checkHardwareSupport(CV_CPU_SSE);
+    }
+
     RowVec_32f( const Mat& _kernel )
     {
         kernel = _kernel;

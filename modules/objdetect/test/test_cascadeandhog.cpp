@@ -574,7 +574,7 @@ public:
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
-    virtual void compute(const Mat& img, vector<float>& descriptors,
+    virtual void compute(InputArray img, vector<float>& descriptors,
         Size winStride = Size(), Size padding = Size(),
         const vector<Point>& locations = vector<Point>()) const;
 
@@ -1107,9 +1107,11 @@ void HOGDescriptorTester::detect(const Mat& img, vector<Point>& hits, double hit
     detect(img, hits, weightsV, hitThreshold, winStride, padding, locations);
 }
 
-void HOGDescriptorTester::compute(const Mat& img, vector<float>& descriptors,
+void HOGDescriptorTester::compute(InputArray _img, vector<float>& descriptors,
     Size winStride, Size padding, const vector<Point>& locations) const
 {
+    Mat img = _img.getMat();
+
     if( winStride == Size() )
         winStride = cellSize;
     Size cacheStride(gcd(winStride.width, blockStride.width),
