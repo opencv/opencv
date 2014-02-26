@@ -426,6 +426,7 @@ String format( const char* fmt, ... )
         String s(len, '\0');
         va_start(va, fmt);
         len = vsnprintf((char*)s.c_str(), len + 1, fmt, va);
+        (void)len;
         va_end(va);
         return s;
     }

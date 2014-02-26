@@ -237,6 +237,11 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     impl->sort_params();
 }
 
+CommandLineParser::~CommandLineParser()
+{
+    if (CV_XADD(&impl->refcount, -1) == 1)
+        delete impl;
+}
 
 CommandLineParser::CommandLineParser(const CommandLineParser& parser)
 {

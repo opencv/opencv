@@ -44,7 +44,7 @@
 namespace cv
 {
 
-BOWTrainer::BOWTrainer()
+BOWTrainer::BOWTrainer() : size(0)
 {}
 
 BOWTrainer::~BOWTrainer()

@@ -429,6 +429,7 @@ static inline float extrapolateValueInRect(int height, int width,
   if (r == height && c == 0) { return v21;}
   if (r == height && c == width) { return v22;}
 
+  CV_Assert(height > 0 && width > 0);
   float qr = float(r) / height;
   float pr = 1.0f - qr;
   float qc = float(c) / width;

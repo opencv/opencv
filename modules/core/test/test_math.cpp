@@ -617,6 +617,7 @@ Core_GEMMTest::Core_GEMMTest() : Core_MatrixTest( 5, 1, false, false, 2 )
 {
     test_case_count = 100;
     max_log_array_size = 10;
+    tabc_flag = 0;
     alpha = beta = 0;
 }
 
@@ -821,6 +822,8 @@ protected:
 
 Core_TransformTest::Core_TransformTest() : Core_MatrixTest( 3, 1, true, false, 4 )
 {
+    scale = 1;
+    diagMtx = false;
 }
 
 
@@ -1154,7 +1157,7 @@ protected:
 
 
 Core_CovarMatrixTest::Core_CovarMatrixTest() : Core_MatrixTest( 1, 1, true, false, 1 ),
-flags(0), t_flag(0), are_images(false)
+    flags(0), t_flag(0), len(0), count(0), are_images(false)
 {
     test_case_count = 100;
     test_array[INPUT_OUTPUT].push_back(NULL);

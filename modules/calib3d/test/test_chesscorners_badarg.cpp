@@ -89,7 +89,14 @@ protected:
     }
 };
 
-CV_ChessboardDetectorBadArgTest::CV_ChessboardDetectorBadArgTest() {}
+CV_ChessboardDetectorBadArgTest::CV_ChessboardDetectorBadArgTest()
+{
+    cpp = false;
+    flags = 0;
+    out_corners = NULL;
+    out_corner_count = NULL;
+    drawCorners = was_found = false;
+}
 
 /* ///////////////////// chess_corner_test ///////////////////////// */
 void CV_ChessboardDetectorBadArgTest::run( int /*start_from */)
