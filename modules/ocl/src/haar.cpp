@@ -888,12 +888,12 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                     for(int y=0;y<WGNumY;++y)
                     {
                         int     gy = y*localThreads[1];
-                        if(gy>=(Height-cascade->orig_window_size.height))
+                        if(gy>=Height)
                             continue; // no data to process
                         for(int x=0;x<WGNumX;++x)
                         {
                             int     gx = x*localThreads[0];
-                            if(gx>=(Width-cascade->orig_window_size.width))
+                            if(gx>=Width)
                                 continue; // no data to process
 
                             if(scaleinfo[z].factor<=2)
