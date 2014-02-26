@@ -66,11 +66,11 @@ OCL_PERF_TEST_P(OpticalFlowDualTVL1Fixture, OpticalFlowDualTVL1,
                                 )
             )
     {
-        Mat frame0 = imread(getDataPath("cv/optflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
+        Mat frame0 = imread(getDataPath("cv/optflow/RubberWhale1.png"), cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame0.empty()) << "can't load RubberWhale1.png";
 
-        Mat frame1 = imread(getDataPath("cv/optflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
+        Mat frame1 = imread(getDataPath("cv/optflow/RubberWhale2.png"), cv::IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame1.empty()) << "can't load RubberWhale2.png";
 
         const Size srcSize = frame0.size();
 
