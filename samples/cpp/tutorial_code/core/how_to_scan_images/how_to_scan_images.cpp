@@ -14,7 +14,7 @@ static void help()
         << " we take an input image and divide the native color palette (255) with the "  << endl
         << "input. Shows C operator[] method, iterators and at function for on-the-fly item address calculation."<< endl
         << "Usage:"                                                                       << endl
-        << "./howToScanImages imageNameToUse divideWith [G]"                              << endl
+        << "./howToScanImages.exe imageNameToUse divideWith [G]"                              << endl
         << "if you add a G parameter the image is processed in gray scale"                << endl
         << "--------------------------------------------------------------------------"   << endl
         << endl;
@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
     }
 
     Mat I, J;
-    if( argc == 4 && !strcmp(argv[3],"G") )
+    if( argc == 4 && strcmp(argv[3],"G") )
         I = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
     else
         I = imread(argv[1], CV_LOAD_IMAGE_COLOR);

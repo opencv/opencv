@@ -32,15 +32,15 @@ A simple color space reduction algorithm would consist of just passing through e
 
 Therefore, for larger images it would be wise to calculate all possible values beforehand and during the assignment just make the assignment, by using a lookup table. Lookup tables are simple arrays (having one or more dimensions) that for a given input value variation holds the final output value. Its strength lies that we do not need to make the calculation, we just need to read the result.
 
-Our test case program (and the sample presented here) will do the following: read in a console line argument image (that may be either color or gray scale - console line argument too) and apply the reduction with the given console line argument integer value. In OpenCV, at the moment they are three major ways of going through an image pixel by pixel. To make things a little more interesting will make the scanning for each image using all of these methods, and print out how long it took.
+Our test case program (and the sample presented here) will do the following: read in a console line argument image (that may be either color or gray scale - console line argument too) and apply the reduction with the given console line argument integer value. In OpenCV, at the moment there are three major ways of going through an image pixel by pixel. To make things a little more interesting, we will make the scanning for each image, using all of these methods, and print out how long it took.
 
 You can download the full source code :download:`here <../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp>` or look it up in the samples directory of OpenCV at the cpp tutorial code for the core section. Its basic usage is:
 
 .. code-block:: bash
 
-   how_to_scan_images imageName.jpg intValueToReduce [G]
+   how_to_scan_images.exe imageName.jpg intValueToReduce [G]
 
-The final argument is optional. If given the image will be loaded in gray scale format, otherwise the RGB color way is used. The first thing is to calculate the lookup table.
+The final argument is optional (¡°[G]¡±). If given the image will be loaded in gray scale format, otherwise the RGB color way is used. The first thing is to calculate the lookup table.
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
@@ -89,7 +89,7 @@ For multichannel images the columns contain as many sub columns as the number of
    Row n & \tabIt{n,0} & \tabIt{n,1} & \tabIt{n,...} & \tabIt{n, m} \\
    \end{tabular}
 
-Note that the order of the channels is inverse: BGR instead of RGB. Because in many cases the memory is large enough to store the rows in a successive fashion the rows may follow one after another, creating a single long row. Because everything is in a single place following one after another this may help to speed up the scanning process. We can use the :basicstructures:`isContinuous() <mat-iscontinuous>` function to *ask* the matrix if this is the case. Continue on to the next section to find an example.
+Note that the order of the channels is inverse: BGR instead of RGB. Because in many cases the memory is large enough to store the rows in a successive fashion; the rows may follow one after another, creating a single long row. Because everything is in a single place following one after another this may help to speed up the scanning process. We can use the :basicstructures:`isContinuous() <mat-iscontinuous>` function to *ask* the matrix if this is the case. Continue on to the next section to find an example.
 
 The efficient way
 =================
@@ -101,9 +101,9 @@ When it comes to performance you cannot beat the classic C style operator[] (poi
    :tab-width: 4
    :lines: 125-152
 
-Here we basically just acquire a pointer to the start of each row and go through it until it ends. In the special case that the matrix is stored in a continues manner we only need to request the pointer a single time and go all the way to the end. We need to look out for color images: we have three channels so we need to pass through three times more items in each row.
+Here we basically just acquire a pointer to the start of each row and go through it until it ends. In the special case, when the matrix is stored in a continues manner we only need to request the pointer a single time and go all the way to the end. We should to look out for color images: we have three channels so we need to pass through three times more items in each row.
 
-There's another way of this. The *data* data member of a *Mat* object returns the pointer to the first row, first column. If this pointer is null you have no valid input in that object. Checking this is the simplest method to check if your image loading was a success. In case the storage is continues we can use this to go through the whole data pointer. In case of a gray scale image this would look like:
+There's another way of this. The *data* member of a *Mat* object returns the pointer to the first row, first column. If this pointer is null you have no valid input in that object. There is a simplest method to check, if your image loading was a successful. In case the storage is continues we can use this to go through the whole data pointer. In case of a gray scale image this would look like:
 
 .. code-block:: cpp
 
@@ -143,7 +143,7 @@ If you need to multiple lookups using this method for an image it may be trouble
 The Core Function
 =================
 
-This is a bonus method of achieving lookup table modification in an image. Because in image processing it's quite common that you want to replace all of a given image value to some other value OpenCV has a function that makes the modification without the need from you to write the scanning of the image. We use the :operationsOnArrays:`LUT() <lut>` function of the core module. First we build a Mat type of the lookup table:
+This is a bonus method of achieving lookup table modification in an image. Because in image processing it's quite common that you want to replace all of a given image value to some other value. OpenCV has a function that makes the modification without the need from you to write the scanning of the image. We use the :operationsOnArrays:`LUT() <lut>` function of the core module. First we build a Mat type of the lookup table:
 
 .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
    :language: cpp
