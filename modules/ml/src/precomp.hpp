@@ -351,7 +351,7 @@ namespace cv
 {
     struct DTreeBestSplitFinder
     {
-        DTreeBestSplitFinder(){ tree = 0; node = 0; }
+        DTreeBestSplitFinder(){ splitSize = 0, tree = 0; node = 0; }
         DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node);
         DTreeBestSplitFinder( const DTreeBestSplitFinder& finder, Split );
         virtual ~DTreeBestSplitFinder() {}

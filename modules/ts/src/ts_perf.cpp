@@ -855,6 +855,9 @@ int64 TestBase::_calibrate()
 #endif
 TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
+    lastTime = totalTime = timeLimit = 0;
+    nIters = currentIter = runsPerIteration = 0;
+    verified = false;
 }
 #ifdef _MSC_VER
 # pragma warning(pop)

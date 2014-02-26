@@ -779,7 +779,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_apply(InputArray _image, OutputArray _fgm
     idxArg = kernel_apply.set(idxArg, varMax);
     idxArg = kernel_apply.set(idxArg, fVarInit);
     idxArg = kernel_apply.set(idxArg, fTau);
-    idxArg = kernel_apply.set(idxArg, nShadowDetection);
+    kernel_apply.set(idxArg, nShadowDetection);
 
     size_t globalsize[] = {frame.cols, frame.rows, 1};
 
@@ -805,7 +805,7 @@ bool BackgroundSubtractorMOG2Impl::ocl_getBackgroundImage(OutputArray _backgroun
     idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_weight));
     idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::ReadOnlyNoSize(u_mean));
     idxArg = kernel_getBg.set(idxArg, ocl::KernelArg::WriteOnlyNoSize(dst));
-    idxArg = kernel_getBg.set(idxArg, backgroundRatio);
+    kernel_getBg.set(idxArg, backgroundRatio);
 
     size_t globalsize[2] = {u_bgmodelUsedModes.cols, u_bgmodelUsedModes.rows};
 

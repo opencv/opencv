@@ -408,7 +408,7 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
             argidx = k.set(argidx, alpha);
     }
     if (haveMask)
-        argidx = k.set(argidx, maskarg);
+        k.set(argidx, maskarg);
 
     size_t globalsize[2] = { src.cols, src.rows };
     return k.run(2, globalsize, NULL, false);

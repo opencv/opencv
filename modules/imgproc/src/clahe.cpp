@@ -83,11 +83,9 @@ namespace clahe
         idx = k.set(idx, tile_size);
         idx = k.set(idx, tilesX);
         idx = k.set(idx, clipLimit);
-        idx = k.set(idx, lutScale);
+        k.set(idx, lutScale);
 
-        if (!k.run(2, globalThreads, localThreads, false))
-            return false;
-        return true;
+        return k.run(2, globalThreads, localThreads, false);
     }
 
     static bool transform(cv::InputArray _src, cv::OutputArray _dst, cv::InputArray _lut,
@@ -118,11 +116,9 @@ namespace clahe
         idx = k.set(idx, src.rows);
         idx = k.set(idx, tile_size);
         idx = k.set(idx, tilesX);
-        idx = k.set(idx, tilesY);
+        k.set(idx, tilesY);
 
-        if (!k.run(2, globalThreads, localThreads, false))
-            return false;
-        return true;
+        return k.run(2, globalThreads, localThreads, false);
     }
 }
 

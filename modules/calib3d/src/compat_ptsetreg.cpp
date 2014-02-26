@@ -57,6 +57,7 @@ CvLevMarq::CvLevMarq()
     criteria = cvTermCriteria(0,0,0);
     iters = 0;
     completeSymmFlag = false;
+    errNorm = prevErrNorm = DBL_MAX;
 }
 
 CvLevMarq::CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag )
@@ -101,7 +102,7 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
         J.reset(cvCreateMat( nerrs, nparams, CV_64F ));
         err.reset(cvCreateMat( nerrs, 1, CV_64F ));
     }
-    prevErrNorm = DBL_MAX;
+    errNorm = prevErrNorm = DBL_MAX;
     lambdaLg10 = -3;
     criteria = criteria0;
     if( criteria.type & CV_TERMCRIT_ITER )
