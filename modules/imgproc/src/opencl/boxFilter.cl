@@ -160,9 +160,9 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
 {
     const struct RectCoords srcCoords = { srcOffsetX, srcOffsetY, srcEndX, srcEndY }; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
 
-    int x = get_local_id(0) + (LOCAL_SIZE_X - (KERNEL_SIZE_X - 1)) * get_group_id(0) - ANCHOR_X;
-    int y = get_global_id(1) * BLOCK_SIZE_Y;
     int local_id = get_local_id(0);
+    int x = local_id + (LOCAL_SIZE_X - (KERNEL_SIZE_X - 1) * cn) * get_group_id(0) - ANCHOR_X * cn;
+    int y = get_global_id(1) * BLOCK_SIZE_Y;
 
     WT data[KERNEL_SIZE_Y];
     __local WT sumOfCols[LOCAL_SIZE_X];

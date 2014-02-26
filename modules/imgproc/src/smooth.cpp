@@ -633,14 +633,14 @@ struct ColumnSum<int, ushort> :
 static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                            Size ksize, Point anchor, int borderType, bool normalize, bool sqr = false )
 {
-    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), esz = CV_ELEM_SIZE(type);
+    int type = _src.type(), sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
+            kercn = 1, cnscale = cn / kercn, esz1 = CV_ELEM_SIZE1(type) * kercn;
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (ddepth < 0)
         ddepth = sdepth;
 
-    if (!(cn == 1 || cn == 2 || cn == 4) || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
-        _src.offset() % esz != 0 || _src.step() % esz != 0)
+    if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
     if (anchor.x < 0)
@@ -656,8 +656,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     int wdepth = std::max(CV_32F, std::max(ddepth, sdepth));
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
-    size_t globalsize[2] = { size.width, size.height };
-    size_t localsize[2] = { 0, 1 };
+    size_t globalsize[2], localsize[2] = { 0, 1 };
 
     UMat src = _src.getUMat();
     if (!isolated)
@@ -689,16 +688,18 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         char cvt[2][50];
         String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
                              "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s",
-                             BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
-                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
+                             BLOCK_SIZE_X, BLOCK_SIZE_Y,
+                             ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
+                             ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
+                             ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[0]),
+                             ocl::convertTypeStr(sdepth, wdepth, kercn, cvt[1]),
                              anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                              isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                              normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
 
         localsize[0] = BLOCK_SIZE_X;
-        globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
+        globalsize[0] = DIVUP(size.width * cnscale, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
         globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
 
         kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
@@ -712,12 +713,14 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         tryWorkItems = (int)kernelWorkGroupSize;
     }
 
+    CV_Assert(localsize[0] % cn == 0);
+
     _dst.create(size, CV_MAKETYPE(ddepth, cn));
     UMat dst = _dst.getUMat();
 
     int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
     idxArg = kernel.set(idxArg, (int)src.step);
-    int srcOffsetX = (int)((src.offset % src.step) / src.elemSize());
+    int srcOffsetX = (int)((src.offset % src.step) / esz1);
     int srcOffsetY = (int)(src.offset / src.step);
     int srcEndX = isolated ? srcOffsetX + size.width : wholeSize.width;
     int srcEndY = isolated ? srcOffsetY + size.height : wholeSize.height;
@@ -725,7 +728,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     idxArg = kernel.set(idxArg, srcOffsetY);
     idxArg = kernel.set(idxArg, srcEndX);
     idxArg = kernel.set(idxArg, srcEndY);
-    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst));
+    idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst, cnscale));
     if (normalize)
         idxArg = kernel.set(idxArg, (float)alpha);
 
