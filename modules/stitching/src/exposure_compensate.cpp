@@ -208,11 +208,14 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
         Size bl_per_img = bl_per_imgs[img_idx];
-        gain_maps_[img_idx].create(bl_per_img);
+        gain_maps_[img_idx].create(bl_per_img, CV_32F);
 
-        for (int by = 0; by < bl_per_img.height; ++by)
-            for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
-                gain_maps_[img_idx](by, bx) = static_cast<float>(gains[bl_idx]);
+        {
+            Mat_<float> gain_map = gain_maps_[img_idx].getMat(ACCESS_WRITE);
+            for (int by = 0; by < bl_per_img.height; ++by)
+                for (int bx = 0; bx < bl_per_img.width; ++bx, ++bl_idx)
+                    gain_map(by, bx) = static_cast<float>(gains[bl_idx]);
+        }
 
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
         sepFilter2D(gain_maps_[img_idx], gain_maps_[img_idx], CV_32F, ker, ker);
@@ -222,16 +225,16 @@ void BlocksGainCompensator::feed(const std::vector<Point> &corners, const std::v
 
 void BlocksGainCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/)
 {
-    Mat image = _image.getMat();
+    CV_Assert(_image.type() == CV_8UC3);
 
-    CV_Assert(image.type() == CV_8UC3);
-
-    Mat_<float> gain_map;
-    if (gain_maps_[index].size() == image.size())
-        gain_map = gain_maps_[index];
+    UMat u_gain_map;
+    if (gain_maps_[index].size() == _image.size())
+        u_gain_map = gain_maps_[index];
     else
-        resize(gain_maps_[index], gain_map, image.size(), 0, 0, INTER_LINEAR);
+        resize(gain_maps_[index], u_gain_map, _image.size(), 0, 0, INTER_LINEAR);
 
+    Mat_<float> gain_map = u_gain_map.getMat(ACCESS_READ);
+    Mat image = _image.getMat();
     for (int y = 0; y < image.rows; ++y)
     {
         const float* gain_row = gain_map.ptr<float>(y);
