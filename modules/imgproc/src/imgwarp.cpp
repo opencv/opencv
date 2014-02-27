@@ -57,6 +57,8 @@ namespace cv
 {
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
     typedef IppStatus (CV_STDCALL* ippiResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetBufferSize)(void*, IppiSize, Ipp32u, int*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
@@ -1864,29 +1866,41 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
-#define CHECK_FUNC(FUNC) if( FUNC==0 ) { *ok = false; return;}
-#define CHECK_STATUS(STATUS) if( STATUS!=ippStsNoErr ) { *ok = false; return;}
+#define CHECK_IPP_FUNC(FUNC) if( FUNC==0 ) { *ok = false; return;}
+#define CHECK_IPP_STATUS(STATUS) if( STATUS!=ippStsNoErr ) { *ok = false; return;}
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_FUNC(func);\
-    status = ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize); CHECK_STATUS(status)\
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
-    status = ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_32f*)pSpec); CHECK_STATUS(status);
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_32f*)pSpec));
 
 #define SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_FUNC(func);\
-    status = ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize); CHECK_STATUS(status)\
+    if (mode==(int)ippCubic) { *ok = false; return;}\
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
-    status = ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_64f*)pSpec); CHECK_STATUS(status);
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_64f*)pSpec));\
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset) ippiResizeGetBufferSize_##TYPE;
 
 #define SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN) \
-    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; CHECK_FUNC(func);\
-    status = ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize); CHECK_STATUS(status)\
+    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
     specBuf.allocate(specSize);\
     pSpec = (uchar*)specBuf;\
-    status = ippiResizeCubicInit_##TYPE(srcSize, dstSize,  0.f, 0.75f, (IppiResizeSpec_32f*)pSpec, pInit); CHECK_STATUS(status);
+    AutoBuffer<uchar> buf(initSize);\
+    uchar* pInit = (uchar*)buf;\
+    CHECK_IPP_STATUS(ippiResizeCubicInit_##TYPE(srcSize, dstSize,  0.f, 0.75f, (IppiResizeSpec_32f*)pSpec, pInit));
+
+#define SET_IPP_RESIZE_PTR(TYPE, CN) \
+    if (mode == (int)ippLinear)     { SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN);}\
+    else if (mode == (int)ippCubic) { SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN);}\
+    else { *ok = false; return;}\
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset)ippiResizeGetSrcOffset_##TYPE;
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
 class IPPresizeInvoker :
@@ -1896,7 +1910,6 @@ public:
     IPPresizeInvoker(Mat &_src, Mat &_dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
       ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), ok(_ok)
       {
-          IppStatus status = ippStsNotSupportedModeErr;
           *ok = true;
           IppiSize srcSize, dstSize;
           int type = src.type();
@@ -1906,48 +1919,24 @@ public:
           dstSize.width  = dst.cols;
           dstSize.height = dst.rows;
 
-          if (mode == (int)ippLinear)
+          switch (type)
           {
-              switch (type)
-              {
-              case CV_8UC1:  SET_IPP_RESIZE_LINEAR_FUNC_PTR(8u,C1);  break;
-              case CV_8UC3:  SET_IPP_RESIZE_LINEAR_FUNC_PTR(8u,C3);  break;
-              case CV_8UC4:  SET_IPP_RESIZE_LINEAR_FUNC_PTR(8u,C4);  break;
-              case CV_16UC1: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16u,C1); break;
-              case CV_16UC3: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16u,C3); break;
-              case CV_16UC4: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16u,C4); break;
-              case CV_16SC1: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16s,C1); break;
-              case CV_16SC3: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16s,C3); break;
-              case CV_16SC4: SET_IPP_RESIZE_LINEAR_FUNC_PTR(16s,C4); break;
-              case CV_32FC1: SET_IPP_RESIZE_LINEAR_FUNC_PTR(32f,C1); break;
-              case CV_32FC3: SET_IPP_RESIZE_LINEAR_FUNC_PTR(32f,C3); break;
-              case CV_32FC4: SET_IPP_RESIZE_LINEAR_FUNC_PTR(32f,C4); break;
-              case CV_64FC1: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C1); break;
-              case CV_64FC3: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C3); break;
-              case CV_64FC4: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C4); break;
-              default: { *ok = false; return;} break;
-              }
-          }
-          else if (mode == (int)ippCubic)
-          {
-              AutoBuffer<uchar> buf(initSize);
-              uchar* pInit = (uchar*)buf;
-              switch (type)
-              {
-              case CV_8UC1:  SET_IPP_RESIZE_CUBIC_FUNC_PTR(8u,C1);  break;
-              case CV_8UC3:  SET_IPP_RESIZE_CUBIC_FUNC_PTR(8u,C3);  break;
-              case CV_8UC4:  SET_IPP_RESIZE_CUBIC_FUNC_PTR(8u,C4);  break;
-              case CV_16UC1: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16u,C1); break;
-              case CV_16UC3: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16u,C3); break;
-              case CV_16UC4: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16u,C4); break;
-              case CV_16SC1: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16s,C1); break;
-              case CV_16SC3: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16s,C3); break;
-              case CV_16SC4: SET_IPP_RESIZE_CUBIC_FUNC_PTR(16s,C4); break;
-              case CV_32FC1: SET_IPP_RESIZE_CUBIC_FUNC_PTR(32f,C1); break;
-              case CV_32FC3: SET_IPP_RESIZE_CUBIC_FUNC_PTR(32f,C3); break;
-              case CV_32FC4: SET_IPP_RESIZE_CUBIC_FUNC_PTR(32f,C4); break;
-              default: { *ok = false; return;} break;
-              }
+          case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
+          case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
+          case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
+          case CV_16UC1: SET_IPP_RESIZE_PTR(16u,C1); break;
+          case CV_16UC3: SET_IPP_RESIZE_PTR(16u,C3); break;
+          case CV_16UC4: SET_IPP_RESIZE_PTR(16u,C4); break;
+          case CV_16SC1: SET_IPP_RESIZE_PTR(16s,C1); break;
+          case CV_16SC3: SET_IPP_RESIZE_PTR(16s,C3); break;
+          case CV_16SC4: SET_IPP_RESIZE_PTR(16s,C4); break;
+          case CV_32FC1: SET_IPP_RESIZE_PTR(32f,C1); break;
+          case CV_32FC3: SET_IPP_RESIZE_PTR(32f,C3); break;
+          case CV_32FC4: SET_IPP_RESIZE_PTR(32f,C4); break;
+          case CV_64FC1: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C1); break;
+          case CV_64FC3: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C3); break;
+          case CV_64FC4: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C4); break;
+          default: { *ok = false; return;} break;
           }
       }
 
@@ -1960,59 +1949,22 @@ public:
           if (*ok == false) return;
 
           int cn = src.channels();
-          int dsty = CV_IMIN(cvRound(range.start * inv_scale_y), dst.rows);
-          int dstwidth  = CV_IMIN(cvRound(src.cols * inv_scale_x), dst.cols);
-          int dstheight = CV_IMIN(cvRound(range.end * inv_scale_y), dst.rows);
+          int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
+          int dstwidth  = min(cvRound(src.cols * inv_scale_x), dst.cols);
+          int dstheight = min(cvRound(range.end * inv_scale_y), dst.rows);
 
           IppiPoint dstOffset = { 0, dsty }, srcOffset = {0, 0};
           IppiSize  dstSize   = { dstwidth, dstheight - dsty };
-          int bufsize = 0, itemSize = 0;
+          int bufsize = 0, itemSize = (int)src.elemSize1();
 
-          IppStatus status = ippStsNotSupportedModeErr;
-
-          switch (src.depth())
-          {
-          case CV_8U:
-              itemSize = 1;
-              status = ippiResizeGetBufferSize_8u((IppiResizeSpec_32f*)pSpec, dstSize, cn, &bufsize);
-              CHECK_STATUS(status);
-              status = ippiResizeGetSrcOffset_8u((IppiResizeSpec_32f*)pSpec, dstOffset, &srcOffset);
-              break;
-          case CV_16U:
-              itemSize = 2;
-              status = ippiResizeGetBufferSize_16u((IppiResizeSpec_32f*)pSpec, dstSize, cn, &bufsize);
-              CHECK_STATUS(status);
-              status = ippiResizeGetSrcOffset_16u((IppiResizeSpec_32f*)pSpec, dstOffset, &srcOffset);
-              break;
-          case CV_16S:
-              itemSize = 2;
-              status = ippiResizeGetBufferSize_16s((IppiResizeSpec_32f*)pSpec, dstSize, cn, &bufsize);
-              CHECK_STATUS(status);
-              status = ippiResizeGetSrcOffset_16s((IppiResizeSpec_32f*)pSpec, dstOffset, &srcOffset);
-              break;
-          case CV_32F:
-              itemSize = 4;
-              status = ippiResizeGetBufferSize_32f((IppiResizeSpec_32f*)pSpec, dstSize, cn, &bufsize);
-              CHECK_STATUS(status);
-              status = ippiResizeGetSrcOffset_32f((IppiResizeSpec_32f*)pSpec, dstOffset, &srcOffset);
-              break;
-          case CV_64F:
-              itemSize = 8;
-              status = ippiResizeGetBufferSize_64f((IppiResizeSpec_64f*)pSpec, dstSize, cn, &bufsize);
-              CHECK_STATUS(status);
-              status = ippiResizeGetSrcOffset_64f((IppiResizeSpec_64f*)pSpec, dstOffset, &srcOffset);
-              break;
-          }
-
-          CHECK_STATUS(status);
+          CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
+          CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
 
           Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
           Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
 
           AutoBuffer<uchar> buf(bufsize + 64);
           uchar* bufptr = alignPtr((uchar*)buf, 32);
-
-          CHECK_FUNC(func);
 
           if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
               *ok = false;
@@ -2026,6 +1978,8 @@ private:
     AutoBuffer<uchar>   specBuf;
     int mode;
     ippiResizeFunc func;
+    ippiResizeGetBufferSize getBufferSizeFunc;
+    ippiResizeGetSrcOffset getSrcOffsetFunc;
     bool *ok;
     const IPPresizeInvoker& operator= (const IPPresizeInvoker&);
 };
