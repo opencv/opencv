@@ -252,7 +252,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     int width1 = width - rofs - ndisp + 1;
     int ftzero = state.preFilterCap;
     int textureThreshold = state.textureThreshold;
-    int uniquenessRatio = state.uniquenessRatio*256/100;
+    int uniquenessRatio = state.uniquenessRatio;
     short FILTERED = (short)((mindisp - 1) << DISPARITY_SHIFT);
 
     ushort *sad, *hsad0, *hsad, *hsad_sub;
@@ -274,7 +274,7 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
     sad = (ushort*)alignPtr(buf + sizeof(sad[0]), ALIGN);
     hsad0 = (ushort*)alignPtr(sad + ndisp + 1 + dy0*ndisp, ALIGN);
     htext = (int*)alignPtr((int*)(hsad0 + (height+dy1)*ndisp) + wsz2 + 2, ALIGN);
-    cbuf0 = (uchar*)alignPtr(htext + height + wsz2 + 2 + dy0*ndisp, ALIGN);
+    cbuf0 = (uchar*)alignPtr((uchar*)(htext + height + wsz2 + 2) + dy0*ndisp, ALIGN);
 
     for( x = 0; x < TABSZ; x++ )
         tab[x] = (uchar)std::abs(x - ftzero);
@@ -427,28 +427,19 @@ static void findStereoCorrespondenceBM_SSE2( const Mat& left, const Mat& right,
                 continue;
             }
 
-            __m128i minsad82 = _mm_unpackhi_epi64(minsad8, minsad8);
-            __m128i mind82 = _mm_unpackhi_epi64(mind8, mind8);
-            mask = _mm_cmpgt_epi16(minsad8, minsad82);
-            mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
-            minsad8 = _mm_min_epi16(minsad8, minsad82);
-
-            minsad82 = _mm_shufflelo_epi16(minsad8, _MM_SHUFFLE(3,2,3,2));
-            mind82 = _mm_shufflelo_epi16(mind8, _MM_SHUFFLE(3,2,3,2));
-            mask = _mm_cmpgt_epi16(minsad8, minsad82);
-            mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
-            minsad8 = _mm_min_epi16(minsad8, minsad82);
-
-            minsad82 = _mm_shufflelo_epi16(minsad8, 1);
-            mind82 = _mm_shufflelo_epi16(mind8, 1);
-            mask = _mm_cmpgt_epi16(minsad8, minsad82);
-            mind8 = _mm_xor_si128(mind8,_mm_and_si128(_mm_xor_si128(mind82,mind8),mask));
-            mind = (short)_mm_cvtsi128_si32(mind8);
-            minsad = sad[mind];
+            ushort CV_DECL_ALIGNED(16) minsad_buf[8], mind_buf[8];
+            _mm_store_si128((__m128i*)minsad_buf, minsad8);
+            _mm_store_si128((__m128i*)mind_buf, mind8);
+            for( d = 0; d < 8; d++ )
+                if(minsad > (int)minsad_buf[d] || (minsad == (int)minsad_buf[d] && mind > mind_buf[d]))
+                {
+                    minsad = minsad_buf[d];
+                    mind = mind_buf[d];
+                }
 
             if( uniquenessRatio > 0 )
             {
-                int thresh = minsad + ((minsad * uniquenessRatio) >> 8);
+                int thresh = minsad + (minsad * uniquenessRatio/100);
                 __m128i thresh8 = _mm_set1_epi16((short)(thresh + 1));
                 __m128i d1 = _mm_set1_epi16((short)(mind-1)), d2 = _mm_set1_epi16((short)(mind+1));
                 __m128i dd_16 = _mm_add_epi16(dd_8, dd_8);
