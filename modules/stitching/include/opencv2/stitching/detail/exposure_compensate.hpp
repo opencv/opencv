@@ -97,7 +97,7 @@ public:
 
 private:
     int bl_width_, bl_height_;
-    std::vector<Mat_<float> > gain_maps_;
+    std::vector<UMat> gain_maps_;
 };
 
 } // namespace detail
