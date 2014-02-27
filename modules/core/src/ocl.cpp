@@ -46,6 +46,8 @@
 #include <sstream>
 #include <iostream> // std::cerr
 
+#define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG 0
+
 #include "opencv2/core/bufferpool.hpp"
 #ifndef LOG_BUFFER_POOL
 # if 0
@@ -3010,26 +3012,28 @@ struct Program::Impl
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
                                     buildflags.c_str(), 0, 0);
+#if !CV_OPENCL_ALWAYS_SHOW_BUILD_LOG
             if( retval != CL_SUCCESS )
+#endif
             {
                 size_t retsz = 0;
-                retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                cl_int buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
                                                CL_PROGRAM_BUILD_LOG, 0, 0, &retsz);
-                if( retval == CL_SUCCESS && retsz > 1 )
+                if (buildInfo_retval == CL_SUCCESS && retsz > 1)
                 {
                     AutoBuffer<char> bufbuf(retsz + 16);
                     char* buf = bufbuf;
-                    retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
+                    buildInfo_retval = clGetProgramBuildInfo(handle, (cl_device_id)deviceList[0],
                                                    CL_PROGRAM_BUILD_LOG, retsz+1, buf, &retsz);
-                    if( retval == CL_SUCCESS )
+                    if (buildInfo_retval == CL_SUCCESS)
                     {
+                        // TODO It is useful to see kernel name & program file name also
                         errmsg = String(buf);
-                        printf("OpenCL program can not be built: %s", errmsg.c_str());
+                        printf("OpenCL program build log: %s\n%s\n", buildflags.c_str(), errmsg.c_str());
                         fflush(stdout);
                     }
                 }
-
-                if( handle )
+                if (retval != CL_SUCCESS && handle)
                 {
                     clReleaseProgram(handle);
                     handle = NULL;
