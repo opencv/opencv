@@ -686,9 +686,9 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             return false;
 
         char cvt[2][50];
-        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
+        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D cn=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
                              "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s",
-                             BLOCK_SIZE_X, BLOCK_SIZE_Y,
+                             BLOCK_SIZE_X, BLOCK_SIZE_Y, cnscale,
                              ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
                              ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
@@ -698,8 +698,9 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                              isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                              normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
 
+        // in elements
         localsize[0] = BLOCK_SIZE_X;
-        globalsize[0] = DIVUP(size.width * cnscale, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
+        globalsize[0] = DIVUP(size.width * cnscale, BLOCK_SIZE_X - (ksize.width - 1) * cn) * BLOCK_SIZE_X;
         globalsize[1] = DIVUP(size.height, BLOCK_SIZE_Y);
 
         kernel.create("boxFilter", cv::ocl::imgproc::boxFilter_oclsrc, opts);
@@ -720,14 +721,16 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     int idxArg = kernel.set(0, ocl::KernelArg::PtrReadOnly(src));
     idxArg = kernel.set(idxArg, (int)src.step);
+
     int srcOffsetX = (int)((src.offset % src.step) / esz1);
     int srcOffsetY = (int)(src.offset / src.step);
-    int srcEndX = isolated ? srcOffsetX + size.width : wholeSize.width;
+    int srcEndX = isolated ? srcOffsetX + size.width * cnscale : (wholeSize.width * cnscale);
     int srcEndY = isolated ? srcOffsetY + size.height : wholeSize.height;
     idxArg = kernel.set(idxArg, srcOffsetX);
     idxArg = kernel.set(idxArg, srcOffsetY);
     idxArg = kernel.set(idxArg, srcEndX);
     idxArg = kernel.set(idxArg, srcEndY);
+
     idxArg = kernel.set(idxArg, ocl::KernelArg::WriteOnly(dst, cnscale));
     if (normalize)
         idxArg = kernel.set(idxArg, (float)alpha);

@@ -112,7 +112,8 @@
 
 struct RectCoords
 {
-    int x1, y1, x2, y2;
+    int x1, y1; // TL corner
+    int x2, y2; // BR corner
 };
 
 inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, const struct RectCoords srcCoords)
@@ -133,17 +134,18 @@ inline WT readSrcPixel(int2 pos, __global const uchar * srcptr, int src_step, co
 #ifdef BORDER_CONSTANT
         return (WT)(0);
 #else
-        int selected_col = pos.x, selected_row = pos.y;
+        int selected_col = (pos.x < 0 ? pos.x + 1 - cn : pos.x) / cn, curcn = pos.x - selected_col * cn;
+        int selected_row = pos.y;
 
         EXTRAPOLATE(selected_col, selected_row,
 #ifdef BORDER_ISOLATED
-            srcCoords.x1, srcCoords.y1,
+            srcCoords.x1 / cn, srcCoords.y1,
 #else
             0, 0,
 #endif
-            srcCoords.x2, srcCoords.y2);
+            srcCoords.x2 / cn, srcCoords.y2);
 
-        int src_index = mad24(selected_row, src_step, selected_col * (int)sizeof(ST));
+        int src_index = mad24(selected_row, src_step, (selected_col * cn + curcn) * (int)sizeof(ST));
         WT value = convertToWT(*(__global const ST *)(srcptr + src_index));
 
         return PROCESS_ELEM(value);
@@ -161,17 +163,22 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
     const struct RectCoords srcCoords = { srcOffsetX, srcOffsetY, srcEndX, srcEndY }; // for non-isolated border: offsetX, offsetY, wholeX, wholeY
 
     int local_id = get_local_id(0);
+    // index of dst/src element
     int x = local_id + (LOCAL_SIZE_X - (KERNEL_SIZE_X - 1) * cn) * get_group_id(0) - ANCHOR_X * cn;
     int y = get_global_id(1) * BLOCK_SIZE_Y;
 
     WT data[KERNEL_SIZE_Y];
     __local WT sumOfCols[LOCAL_SIZE_X];
+
+    // the current position inside src matrix
     int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
 
+    // load the column to the local memory
     #pragma unroll
     for (int sy = 0; sy < KERNEL_SIZE_Y; sy++, srcPos.y++)
         data[sy] = readSrcPixel(srcPos, srcptr, src_step, srcCoords);
 
+    // accumulate the column sum
     WT tmp_sum = (WT)(0);
     #pragma unroll
     for (int sy = 0; sy < KERNEL_SIZE_Y; sy++)
@@ -180,20 +187,24 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
     sumOfCols[local_id] = tmp_sum;
     barrier(CLK_LOCAL_MEM_FENCE);
 
+    // calculate dst index
     int dst_index = mad24(y, dst_step, x * (int)sizeof(DT) + dst_offset);
     __global DT * dst = (__global DT *)(dstptr + dst_index);
 
-    int sy_index = 0; // current index in data[] array
+    // current index in data[] array
+    int sy_index = 0;
+
+    // cycle per block row
     for (int i = 0, stepY = min(rows - y, BLOCK_SIZE_Y); i < stepY; ++i)
     {
-        if (local_id >= ANCHOR_X && local_id < LOCAL_SIZE_X - (KERNEL_SIZE_X - 1 - ANCHOR_X) &&
+        if (local_id >= ANCHOR_X * cn && local_id < LOCAL_SIZE_X - (KERNEL_SIZE_X - 1 - ANCHOR_X) * cn &&
             x >= 0 && x < cols)
         {
             WT total_sum = (WT)(0);
 
             #pragma unroll
             for (int sx = 0; sx < KERNEL_SIZE_X; sx++)
-                total_sum += sumOfCols[local_id + sx - ANCHOR_X];
+                total_sum += sumOfCols[local_id + (sx - ANCHOR_X) * cn];
 
 #ifdef NORMALIZE
             dst[0] = convertToDT((WT)(alpha) * total_sum);
@@ -203,6 +214,7 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
         }
         barrier(CLK_LOCAL_MEM_FENCE);
 
+        // update column sums
         tmp_sum = sumOfCols[local_id];
         tmp_sum -= data[sy_index];
 
@@ -215,6 +227,7 @@ __kernel void boxFilter(__global const uchar * srcptr, int src_step, int srcOffs
         sy_index = sy_index + 1 < KERNEL_SIZE_Y ? sy_index + 1 : 0;
         barrier(CLK_LOCAL_MEM_FENCE);
 
+        // shift to the next row
         dst = (__global DT *)((__global uchar *)dst + dst_step);
     }
 }

@@ -289,7 +289,7 @@ void TestUtils::showDiff(InputArray _src, InputArray _gold, InputArray _actual, 
         imshow("src", src);
         imshow("gold", gold);
         imshow("actual", actual);
-        imshow("diff", diff);
+        imshow("diff", diff * 100);
 
         cv::waitKey();
     }
