@@ -43,6 +43,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
 
 using namespace perf;
@@ -53,8 +54,8 @@ using std::tr1::get;
 
 typedef Size_MatType CV_TM_CCORRFixture;
 
-PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
-            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+OCL_PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
+                ::testing::Combine(::testing::Values(Size(1000, 1000), Size(2000, 2000)),
                                OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
     const Size_MatType_t params = GetParam();
@@ -66,7 +67,7 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
     Mat dst(dstSize, CV_32F);
     randu(src, 0.0f, 1.0f);
     randu(templ, 0.0f, 1.0f);
-    declare.time(srcSize == OCL_SIZE_2000 ? 20 : 6).in(src, templ).out(dst);
+    declare.in(src, templ).out(dst);
 
     if (RUN_OCL_IMPL)
     {
@@ -90,7 +91,8 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
 
 typedef TestBaseWithParam<Size> CV_TM_CCORR_NORMEDFixture;
 
-PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
+                ::testing::Values(Size(1000, 1000), Size(2000, 2000), Size(4000, 4000)))
 {
     const Size srcSize = GetParam(), templSize(5, 5);
 
@@ -125,7 +127,7 @@ CV_ENUM(MethodType, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_C
 typedef std::tr1::tuple<Size, Size, MethodType> ImgSize_TmplSize_Method_t;
 typedef TestBaseWithParam<ImgSize_TmplSize_Method_t> ImgSize_TmplSize_Method;
 
-PERF_TEST_P(ImgSize_TmplSize_Method, MatchTemplate,
+OCL_PERF_TEST_P(ImgSize_TmplSize_Method, MatchTemplate,
         ::testing::Combine(
             testing::Values(szSmall128, cv::Size(320, 240),
                             cv::Size(640, 480), cv::Size(800, 600),

@@ -47,6 +47,8 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
 
 ///////////// dft ////////////////////////
 
@@ -54,9 +56,16 @@ typedef TestBaseWithParam<Size> dftFixture;
 
 #ifdef HAVE_CLAMDFFT
 
-PERF_TEST_P(dftFixture, dft, OCL_TYPICAL_MAT_SIZES)
+typedef tuple<Size, int> DftParams;
+typedef TestBaseWithParam<DftParams> DftFixture;
+
+OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(testing::Values(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                                ::testing::Values((int)DFT_ROWS, (int)DFT_SCALE, (int)DFT_INVERSE,
+                                                       (int)DFT_INVERSE | DFT_SCALE, (int)DFT_ROWS | DFT_INVERSE)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int flags = get<1>(params);
 
     Mat src(srcSize, CV_32FC2), dst;
     randu(src, 0.0f, 1.0f);
@@ -69,7 +78,7 @@ PERF_TEST_P(dftFixture, dft, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst;
 
-        OCL_TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst, Size(), flags | DFT_COMPLEX_OUTPUT);
 
         oclDst.download(dst);
 
@@ -77,7 +86,7 @@ PERF_TEST_P(dftFixture, dft, OCL_TYPICAL_MAT_SIZES)
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::dft(src, dst);
+        TEST_CYCLE() cv::dft(src, dst, flags | DFT_COMPLEX_OUTPUT);
 
         SANITY_CHECK(dst);
     }
