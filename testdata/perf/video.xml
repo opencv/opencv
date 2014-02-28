@@ -12253,4 +12253,78 @@
       <x>1023</x>
       <y>2047</y>
       <val>1.</val></rng2></mhi></OCL_UpdateMotionHistoryFixture_UpdateMotionHistory--UpdateMotionHistory--3840x2160>
+<OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---false->
+  <uFlow>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-3.5057995319366455e+000</min>
+    <max>4.0653448104858398e+000</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>6.5876096487045288e-003</val></last>
+    <rng1>
+      <x>4</x>
+      <y>19</y>
+      <val>9.2737901210784912e-001</val></rng1>
+    <rng2>
+      <x>496</x>
+      <y>109</y>
+      <cn>1</cn>
+      <val>3.7118133157491684e-002</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---false->
+<OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---true->
+  <uFlow>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-3.5150122642517090e+000</min>
+    <max>2.6839590072631836e+001</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>5.8275628834962845e-002</val></last>
+    <rng1>
+      <x>270</x>
+      <y>348</y>
+      <val>-1.0311433076858521e+000</val></rng1>
+    <rng2>
+      <x>181</x>
+      <y>141</y>
+      <val>8.0679202079772949e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1-----1--0-3---true->
+<OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---false->
+  <uFlow>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-3.5631065368652344e+000</min>
+    <max>5.7260208129882812e+000</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>-8.0386521294713020e-003</val></last>
+    <rng1>
+      <x>382</x>
+      <y>97</y>
+      <val>-1.2725880146026611e+000</val></rng1>
+    <rng2>
+      <x>238</x>
+      <y>219</y>
+      <cn>1</cn>
+      <val>-6.9229906797409058e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---false->
+<OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
+  <uFlow>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>-3.5599670410156250e+000</min>
+    <max>5.5970811843872070e+000</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>-2.0397007465362549e-003</val></last>
+    <rng1>
+      <x>564</x>
+      <y>236</y>
+      <val>-1.0273369550704956e+000</val></rng1>
+    <rng2>
+      <x>128</x>
+      <y>43</y>
+      <val>3.2507807016372681e-001</val></rng2></uFlow></OCL_OpticalFlowDualTVL1Fixture_OpticalFlowDualTVL1--OpticalFlowDualTVL1----3--0-5---true->
 </opencv_storage>
