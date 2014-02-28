@@ -33657,4 +33657,1368 @@
       <x>1222</x>
       <y>846</y>
       <val>-5.5194866943359375e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1500x1500--16SC1->
+ <!-- resumed -->
+
+<StereoMatchBMFixture--StereoMatchBM>
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></StereoMatchBMFixture--StereoMatchBM>
+<HaarFixture--Haar>
+  <faces>
+    <kind>196608</kind>
+    <type>28</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>"4i"</dt>
+      <data>
+        70 89 44 44</data></val></faces></HaarFixture--Haar>
+<tvl1flowFixture--tvl1flow>
+  <flow1>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-3.6378667354583740e+00</min>
+    <max>3.2285661697387695e+00</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>1.0948680639266968e+00</val></last>
+    <rng1>
+      <x>275</x>
+      <y>60</y>
+      <val>9.0366369485855103e-01</val></rng1>
+    <rng2>
+      <x>441</x>
+      <y>301</y>
+      <val>1.0177311897277832e+00</val></rng2></flow1>
+  <flow2>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-3.4300503730773926e+00</min>
+    <max>2.2884593009948730e+00</max>
+    <last>
+      <x>583</x>
+      <y>387</y>
+      <val>5.7944958098232746e-03</val></last>
+    <rng1>
+      <x>339</x>
+      <y>243</y>
+      <val>-1.0488671064376831e+00</val></rng1>
+    <rng2>
+      <x>319</x>
+      <y>361</y>
+      <val>1.0467313230037689e-02</val></rng2></flow2></tvl1flowFixture--tvl1flow>
+<MinMaxFixture_MinMax--MinMax---1000x1000--8UC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val></MinMaxFixture_MinMax--MinMax---1000x1000--8UC1->
+<MinMaxFixture_MinMax--MinMax---1000x1000--32FC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -4.0949919433593750e+03</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949797363281250e+03</data></val></max_val></MinMaxFixture_MinMax--MinMax---1000x1000--32FC1->
+<MinMaxFixture_MinMax--MinMax---2000x2000--8UC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val></MinMaxFixture_MinMax--MinMax---2000x2000--8UC1->
+<MinMaxFixture_MinMax--MinMax---2000x2000--32FC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -4.0949985351562500e+03</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949987792968750e+03</data></val></max_val></MinMaxFixture_MinMax--MinMax---2000x2000--32FC1->
+<MinMaxFixture_MinMax--MinMax---4000x4000--8UC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val></MinMaxFixture_MinMax--MinMax---4000x4000--8UC1->
+<MinMaxFixture_MinMax--MinMax---4000x4000--32FC1->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -4095.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.0949995117187500e+03</data></val></max_val></MinMaxFixture_MinMax--MinMax---4000x4000--32FC1->
+<AbsFixture_Abs--Abs---1000x1000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>253.</val></last>
+    <rng1>
+      <x>517</x>
+      <y>758</y>
+      <val>122.</val></rng1>
+    <rng2>
+      <x>94</x>
+      <y>458</y>
+      <val>138.</val></rng2></dst></AbsFixture_Abs--Abs---1000x1000--8UC1->
+<AbsFixture_Abs--Abs---1000x1000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>3.1101261265575886e-03</min>
+    <max>4.0949919433593750e+03</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>2.0791586914062500e+03</val></last>
+    <rng1>
+      <x>811</x>
+      <y>505</y>
+      <val>3.7712998046875000e+03</val></rng1>
+    <rng2>
+      <x>356</x>
+      <y>891</y>
+      <val>2.6509233398437500e+03</val></rng2></dst></AbsFixture_Abs--Abs---1000x1000--32FC1->
+<AbsFixture_Abs--Abs---2000x2000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>529</x>
+      <y>787</y>
+      <val>216.</val></rng1>
+    <rng2>
+      <x>1838</x>
+      <y>1615</y>
+      <val>92.</val></rng2></dst></AbsFixture_Abs--Abs---2000x2000--8UC1->
+<AbsFixture_Abs--Abs---2000x2000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.4911824837327003e-03</min>
+    <max>4.0949987792968750e+03</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>3.1684841308593750e+03</val></last>
+    <rng1>
+      <x>132</x>
+      <y>615</y>
+      <val>1.0309637451171875e+03</val></rng1>
+    <rng2>
+      <x>331</x>
+      <y>459</y>
+      <val>4.0254567871093750e+03</val></rng2></dst></AbsFixture_Abs--Abs---2000x2000--32FC1->
+<AbsFixture_Abs--Abs---4000x4000--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>99.</val></last>
+    <rng1>
+      <x>3920</x>
+      <y>2509</y>
+      <val>218.</val></rng1>
+    <rng2>
+      <x>863</x>
+      <y>1355</y>
+      <val>223.</val></rng2></dst></AbsFixture_Abs--Abs---4000x4000--8UC1->
+<AbsFixture_Abs--Abs---4000x4000--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>8.1042526289820671e-04</min>
+    <max>4095.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>3.1598117675781250e+03</val></last>
+    <rng1>
+      <x>2896</x>
+      <y>3467</y>
+      <val>1.5438400878906250e+03</val></rng1>
+    <rng2>
+      <x>3329</x>
+      <y>3957</y>
+      <val>1.8419799804687500e+03</val></rng2></dst></AbsFixture_Abs--Abs---4000x4000--32FC1->
+<VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---1--0->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>532</x>
+      <y>509</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>730</x>
+      <y>118</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---1--0->
+<VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---1--0-01->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>484</x>
+      <y>508</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>215</x>
+      <y>362</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---1--0-01->
+<VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---3--0->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>236</x>
+      <y>476</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>174</x>
+      <y>230</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---3--0->
+<VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---3--0-01->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>290</x>
+      <y>27</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>762</x>
+      <y>327</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-768x576-avi---3--0-01->
+<VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---1--0->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1570</x>
+      <y>956</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>375</x>
+      <y>555</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---1--0->
+<VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---1--0-01->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>27</x>
+      <y>687</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1796</x>
+      <y>425</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---1--0-01->
+<VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---3--0->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1798</x>
+      <y>741</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1052</x>
+      <y>104</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---3--0->
+<VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---3--0-01->
+  <foreground>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>60</x>
+      <y>505</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1253</x>
+      <y>132</y>
+      <val>0.</val></rng2></foreground></VideoMOGFixture_MOG--MOG----gpu-video-1920x1080-avi---3--0-01->
+<MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--1000x1000>
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>565</x>
+      <y>852</y>
+      <cn>3</cn>
+      <val>74.</val></rng1>
+    <rng2>
+      <x>946</x>
+      <y>91</y>
+      <cn>1</cn>
+      <val>123.</val></rng2></dst></MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--1000x1000>
+<MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--2000x2000>
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>99.</val></last>
+    <rng1>
+      <x>1277</x>
+      <y>211</y>
+      <val>202.</val></rng1>
+    <rng2>
+      <x>1220</x>
+      <y>1764</y>
+      <val>191.</val></rng2></dst></MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--2000x2000>
+<MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--4000x4000>
+  <dst>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>98.</val></last>
+    <rng1>
+      <x>1953</x>
+      <y>1207</y>
+      <cn>2</cn>
+      <val>234.</val></rng1>
+    <rng2>
+      <x>1260</x>
+      <y>1156</y>
+      <cn>1</cn>
+      <val>113.</val></rng2></dst></MeanShiftFilteringFixture_MeanShiftFiltering--MeanShiftFiltering--4000x4000>
+<MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--1000x1000>
+  <dst1>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>191.</val></last>
+    <rng1>
+      <x>426</x>
+      <y>920</y>
+      <cn>3</cn>
+      <val>169.</val></rng1>
+    <rng2>
+      <x>561</x>
+      <y>863</y>
+      <cn>1</cn>
+      <val>238.</val></rng2></dst1>
+  <dst2>
+    <kind>65536</kind>
+    <type>11</type>
+    <min>0.</min>
+    <max>999.</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>999.</val></last>
+    <rng1>
+      <x>764</x>
+      <y>880</y>
+      <val>764.</val></rng1>
+    <rng2>
+      <x>853</x>
+      <y>871</y>
+      <cn>1</cn>
+      <val>871.</val></rng2></dst2></MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--1000x1000>
+<MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--2000x2000>
+  <dst1>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>99.</val></last>
+    <rng1>
+      <x>150</x>
+      <y>1370</y>
+      <cn>3</cn>
+      <val>248.</val></rng1>
+    <rng2>
+      <x>568</x>
+      <y>1589</y>
+      <cn>2</cn>
+      <val>194.</val></rng2></dst1>
+  <dst2>
+    <kind>65536</kind>
+    <type>11</type>
+    <min>0.</min>
+    <max>1999.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>1999.</val></last>
+    <rng1>
+      <x>1860</x>
+      <y>301</y>
+      <val>1860.</val></rng1>
+    <rng2>
+      <x>1183</x>
+      <y>280</y>
+      <val>1183.</val></rng2></dst2></MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--2000x2000>
+<MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--4000x4000>
+  <dst1>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>98.</val></last>
+    <rng1>
+      <x>2084</x>
+      <y>1784</y>
+      <cn>3</cn>
+      <val>228.</val></rng1>
+    <rng2>
+      <x>1791</x>
+      <y>3647</y>
+      <cn>2</cn>
+      <val>114.</val></rng2></dst1>
+  <dst2>
+    <kind>65536</kind>
+    <type>11</type>
+    <min>0.</min>
+    <max>3999.</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>3999.</val></last>
+    <rng1>
+      <x>652</x>
+      <y>1742</y>
+      <cn>1</cn>
+      <val>1742.</val></rng1>
+    <rng2>
+      <x>734</x>
+      <y>2901</y>
+      <cn>1</cn>
+      <val>2899.</val></rng2></dst2></MeanShiftProcFixture_MeanShiftProc--MeanShiftProc--4000x4000>
+<ColumnSumFixture_ColumnSum--ColumnSum--1000x1000>
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-2.3780331250000000e+05</min>
+    <max>2.3084362500000000e+05</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>5.3461312500000000e+04</val></last>
+    <rng1>
+      <x>74</x>
+      <y>403</y>
+      <val>-2.9870229492187500e+03</val></rng1>
+    <rng2>
+      <x>904</x>
+      <y>510</y>
+      <val>-5.1579546875000000e+04</val></rng2></dst></ColumnSumFixture_ColumnSum--ColumnSum--1000x1000>
+<ColumnSumFixture_ColumnSum--ColumnSum--2000x2000>
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-344167.</min>
+    <max>392480.</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>-8.8331750000000000e+04</val></last>
+    <rng1>
+      <x>43</x>
+      <y>1323</y>
+      <val>-2.2702445312500000e+05</val></rng1>
+    <rng2>
+      <x>845</x>
+      <y>333</y>
+      <val>-2.7902222656250000e+04</val></rng2></dst></ColumnSumFixture_ColumnSum--ColumnSum--2000x2000>
+<ColumnSumFixture_ColumnSum--ColumnSum--4000x4000>
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-5.4623450000000000e+05</min>
+    <max>6.2917225000000000e+05</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>-1.6484782812500000e+05</val></last>
+    <rng1>
+      <x>3957</x>
+      <y>2051</y>
+      <val>-2.3469472656250000e+04</val></rng1>
+    <rng2>
+      <x>1379</x>
+      <y>3519</y>
+      <val>1.0286520312500000e+05</val></rng2></dst></ColumnSumFixture_ColumnSum--ColumnSum--4000x4000>
+<DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---256x256--NORM_L1->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>5.5528818750000000e+05</min>
+    <max>6.5010237500000000e+05</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>6.1278437500000000e+05</val></last>
+    <rng1>
+      <x>0</x>
+      <y>9</y>
+      <val>6.2126512500000000e+05</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>88</y>
+      <val>6.0476393750000000e+05</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>69.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>177</y>
+      <val>8.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>9</y>
+      <val>129.</val></rng2></labels></DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---256x256--NORM_L1->
+<DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---256x256--NORM_L2SQR->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1930159872.</min>
+    <max>2.5635758080000000e+09</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>2.2689062400000000e+09</val></last>
+    <rng1>
+      <x>0</x>
+      <y>189</y>
+      <val>2.3249628160000000e+09</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>234</y>
+      <val>2.3974174720000000e+09</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>0</x>
+      <y>255</y>
+      <val>156.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>248</y>
+      <val>220.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>156</y>
+      <val>197.</val></rng2></labels></DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---256x256--NORM_L2SQR->
+<DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---512x512--NORM_L1->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1180429.</min>
+    <max>1326201.</max>
+    <last>
+      <x>0</x>
+      <y>511</y>
+      <val>1.2805382500000000e+06</val></last>
+    <rng1>
+      <x>0</x>
+      <y>275</y>
+      <val>1.2552535000000000e+06</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>493</y>
+      <val>1.2941271250000000e+06</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>1.</min>
+    <max>510.</max>
+    <last>
+      <x>0</x>
+      <y>511</y>
+      <val>55.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>372</y>
+      <val>190.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>162</y>
+      <val>122.</val></rng2></labels></DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---512x512--NORM_L1->
+<DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---512x512--NORM_L2SQR->
+  <dists>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>4.4323450880000000e+09</min>
+    <max>5.3023877120000000e+09</max>
+    <last>
+      <x>0</x>
+      <y>511</y>
+      <val>4.8721633280000000e+09</val></last>
+    <rng1>
+      <x>0</x>
+      <y>196</y>
+      <val>4.8121625600000000e+09</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>155</y>
+      <val>4.7309322240000000e+09</val></rng2></dists>
+  <labels>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>510.</max>
+    <last>
+      <x>0</x>
+      <y>511</y>
+      <val>343.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>32</y>
+      <val>46.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>63</y>
+      <val>310.</val></rng2></labels></DistanceToCentersFixture_DistanceToCenters--DistanceToCenters---512x512--NORM_L2SQR->
+<BuildWarpPerspectiveMapsFixture_Inverse--Inverse--1000x1000>
+  <xmap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-3.9950000000000000e+02</min>
+    <max>9.6515936279296875e+02</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>4.6565936279296875e+02</val></last>
+    <rng1>
+      <x>687</x>
+      <y>595</y>
+      <val>3.9745941162109375e+02</val></rng1>
+    <rng2>
+      <x>151</x>
+      <y>318</y>
+      <val>7.1769836425781250e+01</val></rng2></xmap>
+  <ymap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-100.</min>
+    <max>1.2646594238281250e+03</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>1.2646594238281250e+03</val></last>
+    <rng1>
+      <x>235</x>
+      <y>382</y>
+      <val>3.4832168579101562e+02</val></rng1>
+    <rng2>
+      <x>602</x>
+      <y>625</y>
+      <val>7.4226586914062500e+02</val></rng2></ymap></BuildWarpPerspectiveMapsFixture_Inverse--Inverse--1000x1000>
+<BuildWarpPerspectiveMapsFixture_Inverse--Inverse--2000x2000>
+  <xmap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-8.9950000000000000e+02</min>
+    <max>1.8311846923828125e+03</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>8.3168469238281250e+02</val></last>
+    <rng1>
+      <x>1742</x>
+      <y>524</y>
+      <val>1.3466162109375000e+03</val></rng1>
+    <rng2>
+      <x>1376</x>
+      <y>106</y>
+      <val>1.2386508789062500e+03</val></rng2></xmap>
+  <ymap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-100.</min>
+    <max>2.6306845703125000e+03</max>
+    <last>
+      <x>1999</x>
+      <y>1999</y>
+      <val>2.6306845703125000e+03</val></last>
+    <rng1>
+      <x>231</x>
+      <y>505</y>
+      <val>4.5284283447265625e+02</val></rng1>
+    <rng2>
+      <x>1184</x>
+      <y>688</y>
+      <val>1.0878254394531250e+03</val></rng2></ymap></BuildWarpPerspectiveMapsFixture_Inverse--Inverse--2000x2000>
+<BuildWarpPerspectiveMapsFixture_Inverse--Inverse--4000x4000>
+  <xmap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-1.8995000000000000e+03</min>
+    <max>3.5632355957031250e+03</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>1.5637355957031250e+03</val></last>
+    <rng1>
+      <x>2560</x>
+      <y>1326</y>
+      <val>1.6540249023437500e+03</val></rng1>
+    <rng2>
+      <x>2188</x>
+      <y>1485</y>
+      <val>1.2523635253906250e+03</val></rng2></xmap>
+  <ymap>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-100.</min>
+    <max>5.3627353515625000e+03</max>
+    <last>
+      <x>3999</x>
+      <y>3999</y>
+      <val>5.3627353515625000e+03</val></last>
+    <rng1>
+      <x>3583</x>
+      <y>1545</y>
+      <val>3.0295092773437500e+03</val></rng1>
+    <rng2>
+      <x>2657</x>
+      <y>1792</y>
+      <val>2.7804174804687500e+03</val></rng2></ymap></BuildWarpPerspectiveMapsFixture_Inverse--Inverse--4000x4000>
+<KNNFixture_KNN--KNN---1000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>963</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>425</y>
+      <val>0.</val></rng2></best_label></KNNFixture_KNN--KNN---1000->
+<KNNFixture_KNN--KNN---2000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>1999</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>487</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>20</y>
+      <val>1.</val></rng2></best_label></KNNFixture_KNN--KNN---2000->
+<KNNFixture_KNN--KNN---4000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>1293</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>3413</y>
+      <val>0.</val></rng2></best_label></KNNFixture_KNN--KNN---4000->
+ <!-- resumed -->
+
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--640x480>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        152 171</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        9.69627094e+00 9.71606636e+00</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        205 4</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        9.51214123e+00 9.55581188e+00</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--640x480>
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1280x720>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        101 322</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.38312273e+01 1.38948774e+01</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        268 455</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.38372192e+01 1.38532562e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1280x720>
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1920x1080>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        281 140</data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.71441994e+01 1.71723099e+01</data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        1 1</data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        245 169</data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data>
+        0 0</data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>2</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data>
+        1.71979313e+01 1.72415867e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1920x1080>
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--640x480>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--640x480>
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1280x720>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1280x720>
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1920x1080>
+  <matches0-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-queryIdx>
+  <matches0-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-trainIdx>
+  <matches0-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches0-imgIdx>
+  <matches0-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches0-distance>
+  <matches1-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-queryIdx>
+  <matches1-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-trainIdx>
+  <matches1-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>i</dt>
+      <data></data></val></matches1-imgIdx>
+  <matches1-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <val type_id="opencv-matrix">
+      <rows>0</rows>
+      <cols>1</cols>
+      <dt>f</dt>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1920x1080>
 </opencv_storage>
