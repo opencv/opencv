@@ -59,7 +59,6 @@ const_ignore_list = (
     "CV_CAP_PROP_POS_MSEC",
     "CV_CAP_PROP_POS_FRAMES",
     "CV_CAP_PROP_POS_AVI_RATIO",
-    "CV_CAP_PROP_FPS",
     "CV_CAP_PROP_FOURCC",
     "CV_CAP_PROP_FRAME_COUNT",
     "CV_CAP_PROP_FORMAT",
