@@ -226,7 +226,7 @@ OCL_TEST_P(Haar, FaceDetect)
                                 flags,
                                 Size(30, 30), Size(0, 0));
 
-    EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 1.0);
+    EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 0.1);
 }
 
 OCL_TEST_P(Haar, FaceDetectUseBuf)
@@ -247,7 +247,7 @@ OCL_TEST_P(Haar, FaceDetectUseBuf)
                                 Size(30, 30));
     cascadebuf.release();
 
-    EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 1.0);
+    EXPECT_LT(checkRectSimilarity(img.size(), faces, oclfaces), 0.1);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, Haar,
