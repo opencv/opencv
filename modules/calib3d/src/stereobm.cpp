@@ -681,7 +681,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = (short)mind;//(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
                 costptr[y*coststep] = sad[mind];
             }
         }
@@ -739,7 +739,7 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {//printf("opt\n");
     int ndisp = state->numDisparities;
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", ndisp*ndisp, ndisp, state->SADWindowSize) );
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", ndisp*ndisp, 2*ndisp, state->SADWindowSize) );
     if(k.empty())
         return false;
 
@@ -747,9 +747,8 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     _disp.create(_left.size(), CV_16S);
     UMat disp = _disp.getUMat();
 
-    int nthreads = (ndisp <= 64) ? 2 : 4;
-    size_t globalThreads[3] = { left.cols, (left.rows - left.rows%ndisp + ndisp), nthreads};
-    size_t localThreads[3] = {1, ndisp, nthreads};
+    size_t globalThreads[3] = { left.cols, (left.rows-left.rows%32 + 32)/32, ndisp};
+    size_t localThreads[3] = {1, 2, ndisp};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -758,7 +757,6 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     idx = k.set(idx, state->minDisparity);
     idx = k.set(idx, ndisp);
     idx = k.set(idx, state->preFilterCap);
-    idx = k.set(idx, nthreads);
     idx = k.set(idx, state->textureThreshold);
     idx = k.set(idx, state->uniquenessRatio);
 
@@ -993,7 +991,7 @@ public:
             bufSize2 = width*height*(sizeof(Point_<short>) + sizeof(int) + sizeof(uchar));
 
 #if CV_SSE2
-        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
+        bool useShorts = false;//params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
 #else
         const bool useShorts = false;
 #endif
