@@ -51,18 +51,21 @@ using std::tr1::get;
 
 ///////////// norm////////////////////////
 
-typedef tuple<Size, MatType> normParams;
-typedef TestBaseWithParam<normParams> normFixture;
+CV_ENUM(NormType, NORM_INF, NORM_L1, NORM_L2)
 
-PERF_TEST_P(normFixture, norm, testing::Combine(
-                OCL_TYPICAL_MAT_SIZES,
-                OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+typedef std::tr1::tuple<Size, MatType, NormType> NormParams;
+typedef TestBaseWithParam<NormParams> NormFixture;
+
+OCL_PERF_TEST_P(NormFixture, Norm,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_TEST_TYPES, NormType::all()))
 {
-    const normParams params = GetParam();
+    const NormParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    double value = 0.0;
-    const double eps = CV_MAT_DEPTH(type) == CV_8U ? DBL_EPSILON : 1e-3;
+    const int normType = get<2>(params);
+    perf::ERROR_TYPE errorType = type != NORM_INF ? ERROR_RELATIVE : ERROR_ABSOLUTE;
+    double eps = 1e-5, value;
 
     Mat src1(srcSize, type), src2(srcSize, type);
     declare.in(src1, src2, WARMUP_RNG);
@@ -71,15 +74,15 @@ PERF_TEST_P(normFixture, norm, testing::Combine(
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
-        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, NORM_INF);
+        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, normType);
 
-        SANITY_CHECK(value, eps);
+        SANITY_CHECK(value, eps, errorType);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() value = cv::norm(src1, src2, NORM_INF);
+        TEST_CYCLE() value = cv::norm(src1, src2, normType);
 
-        SANITY_CHECK(value);
+        SANITY_CHECK(value, eps, errorType);
     }
     else
         OCL_PERF_ELSE
