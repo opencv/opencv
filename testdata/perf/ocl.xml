@@ -12429,150 +12429,6 @@
       <x>176</x>
       <y>0</y>
       <val>469.</val></rng2></pts_gold></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---3--true->
-<OCL_LUTFixture_LUT--LUT---640x480--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>233</x>
-      <y>95</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>42</x>
-      <y>245</y>
-      <val>1.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---640x480--8UC1->
-<OCL_LUTFixture_LUT--LUT---640x480--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>2.9446363449096680e-02</min>
-    <max>1.9984451532363892e+00</max>
-    <last>
-      <x>639</x>
-      <y>479</y>
-      <val>1.9476528167724609e+00</val></last>
-    <rng1>
-      <x>350</x>
-      <y>73</y>
-      <val>7.7071249485015869e-01</val></rng1>
-    <rng2>
-      <x>211</x>
-      <y>207</y>
-      <val>2.9110276699066162e-01</val></rng2></dst></OCL_LUTFixture_LUT--LUT---640x480--32FC1->
-<OCL_LUTFixture_LUT--LUT---1280x720--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>1.</val></last>
-    <rng1>
-      <x>1072</x>
-      <y>13</y>
-      <val>1.</val></rng1>
-    <rng2>
-      <x>516</x>
-      <y>260</y>
-      <val>1.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1280x720--8UC1->
-<OCL_LUTFixture_LUT--LUT---1280x720--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>2.9446363449096680e-02</min>
-    <max>1.9984451532363892e+00</max>
-    <last>
-      <x>1279</x>
-      <y>719</y>
-      <val>1.8361275196075439e+00</val></last>
-    <rng1>
-      <x>826</x>
-      <y>103</y>
-      <val>2.4424713850021362e-01</val></rng1>
-    <rng2>
-      <x>1192</x>
-      <y>695</y>
-      <val>3.7540477514266968e-01</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1280x720--32FC1->
-<OCL_LUTFixture_LUT--LUT---1920x1080--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>864</x>
-      <y>245</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>926</x>
-      <y>1064</y>
-      <val>0.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1920x1080--8UC1->
-<OCL_LUTFixture_LUT--LUT---1920x1080--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>2.9446363449096680e-02</min>
-    <max>1.9984451532363892e+00</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>1.8096278905868530e+00</val></last>
-    <rng1>
-      <x>303</x>
-      <y>998</y>
-      <val>6.3267821073532104e-01</val></rng1>
-    <rng2>
-      <x>725</x>
-      <y>56</y>
-      <val>7.2463393211364746e-01</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1920x1080--32FC1->
-<OCL_LUTFixture_LUT--LUT---3840x2160--8UC1->
-  <dst>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>1.</max>
-    <last>
-      <x>3839</x>
-      <y>2159</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>2499</x>
-      <y>2025</y>
-      <val>1.</val></rng1>
-    <rng2>
-      <x>3242</x>
-      <y>613</y>
-      <val>1.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---3840x2160--8UC1->
-<OCL_LUTFixture_LUT--LUT---3840x2160--32FC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>2.9446363449096680e-02</min>
-    <max>1.9984451532363892e+00</max>
-    <last>
-      <x>3839</x>
-      <y>2159</y>
-      <val>1.2858066558837891e+00</val></last>
-    <rng1>
-      <x>3532</x>
-      <y>1521</y>
-      <val>7.9215407371520996e-02</val></rng1>
-    <rng2>
-      <x>2295</x>
-      <y>1622</y>
-      <val>1.4270622730255127e+00</val></rng2></dst></OCL_LUTFixture_LUT--LUT---3840x2160--32FC1->
 <OCL_ExpFixture_Exp--Exp---640x480--32FC1->
   <dst>
     <kind>65536</kind>
@@ -21267,213 +21123,6 @@
       <y>80</y>
       <cn>3</cn>
       <val>-1.5806660461425781e+02</val></rng2></dst></OCL_RepeatFixture_Repeat--Repeat---1920x1080--32FC4->
-<OCL_BruteForceMatcherFixture_Match--Match--640x480>
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>479.</max>
-    <last>
-      <x>0</x>
-      <y>479</y>
-      <val>479.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>139</y>
-      <val>139.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>377</y>
-      <val>377.</val></rng2></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>477.</max>
-    <last>
-      <x>0</x>
-      <y>479</y>
-      <val>429.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>309</y>
-      <val>439.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>55</y>
-      <val>335.</val></rng2></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>479</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>29</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>53</y>
-      <val>0.</val></rng2></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>9.1932506561279297e+00</min>
-    <max>9.8918409347534180e+00</max>
-    <last>
-      <x>0</x>
-      <y>479</y>
-      <val>9.6552963256835938e+00</val></last>
-    <rng1>
-      <x>0</x>
-      <y>478</y>
-      <val>9.7682209014892578e+00</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>431</y>
-      <val>9.7343416213989258e+00</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match--640x480>
-<OCL_BruteForceMatcherFixture_Match--Match--1280x720>
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>719.</max>
-    <last>
-      <x>0</x>
-      <y>719</y>
-      <val>719.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>265</y>
-      <val>265.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>13</y>
-      <val>13.</val></rng2></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>719.</max>
-    <last>
-      <x>0</x>
-      <y>719</y>
-      <val>708.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>507</y>
-      <val>298.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>191</y>
-      <val>515.</val></rng2></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>719</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>411</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>67</y>
-      <val>0.</val></rng2></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>1.3476247787475586e+01</min>
-    <max>1.4231868743896484e+01</max>
-    <last>
-      <x>0</x>
-      <y>719</y>
-      <val>1.3985763549804688e+01</val></last>
-    <rng1>
-      <x>0</x>
-      <y>604</y>
-      <val>1.3685743331909180e+01</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>398</y>
-      <val>1.4024976730346680e+01</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match--1280x720>
-<OCL_BruteForceMatcherFixture_Match--Match--1920x1080>
-  <matches-queryIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>1079.</max>
-    <last>
-      <x>0</x>
-      <y>1079</y>
-      <val>1079.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>520</y>
-      <val>520.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>951</y>
-      <val>951.</val></rng2></matches-queryIdx>
-  <matches-trainIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>2.</min>
-    <max>1073.</max>
-    <last>
-      <x>0</x>
-      <y>1079</y>
-      <val>1004.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>579</y>
-      <val>584.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>474</y>
-      <val>140.</val></rng2></matches-trainIdx>
-  <matches-imgIdx>
-    <kind>65536</kind>
-    <type>4</type>
-    <min>0.</min>
-    <max>0.</max>
-    <last>
-      <x>0</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>484</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>213</y>
-      <val>0.</val></rng2></matches-imgIdx>
-  <matches-distance>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>1.6629045486450195e+01</min>
-    <max>1.7485473632812500e+01</max>
-    <last>
-      <x>0</x>
-      <y>1079</y>
-      <val>1.7239362716674805e+01</val></last>
-    <rng1>
-      <x>0</x>
-      <y>412</y>
-      <val>1.7056795120239258e+01</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>607</y>
-      <val>1.7014961242675781e+01</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match--1920x1080>
 <OCL_MOG2_Apply_Mog2--Mog2----gpu-video-768x576-avi---1->
   <foreground>
     <kind>65536</kind>
@@ -34605,9 +34254,682 @@
       <x>0</x>
       <y>3413</y>
       <val>0.</val></rng2></best_label></KNNFixture_KNN--KNN---4000->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2735968098958334e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3937694759903408e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2784142960995436e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3823614972108388e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2744683268229167e+02 1.2737364908854167e+02
+        1.2736398437500000e+02 1.2753362955729168e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3912339152305933e+01 7.3875809659827695e+01
+        7.3885601474296109e+01 7.3978466315731879e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2785416772633792e+02 1.2796401232021552e+02
+        1.2806803096048534e+02 1.2808514668683213e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3972362684979444e+01 7.3853070520179855e+01
+        7.3724409478137716e+01 7.3934652158158457e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2739779513888890e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3920216242043907e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2800159922629595e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3871398011382368e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2741035807291667e+02 1.2738458984375001e+02
+        1.2753041775173611e+02 1.2743981553819444e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3894335003266050e+01 7.3872158750654791e+01
+        7.3864200183065620e+01 7.3937093853143935e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2800104292824864e+02 1.2791884464328487e+02
+        1.2802668506670329e+02 1.2804176619730063e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3927018547545302e+01 7.3877824233575467e+01
+        7.3796552417105119e+01 7.3895294556987039e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2738738908179013e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3914390950188249e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2797848777731627e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3874750253383510e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2745783130787038e+02 1.2745721402391976e+02
+        1.2749452835648148e+02 1.2749974440586421e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3893400880172123e+01 7.3864138946917336e+01
+        7.3870233409859807e+01 7.3911611930832564e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2799921957902335e+02 1.2799108395402814e+02
+        1.2807132713086813e+02 1.2803226304954953e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3886171707715377e+01 7.3907249677881737e+01
+        7.3892945669518511e+01 7.3900584471212241e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--8UC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2747732952353395e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3884851392706068e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--8UC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--32FC1->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2802347342836728e+02 0. 0. 0.</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3896745080700086e+01 0. 0. 0.</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--32FC1->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--8UC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2747174455054012e+02 1.2745859362943673e+02
+        1.2744831886574075e+02 1.2748031177662037e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3919796987805043e+01 7.3898366437186013e+01
+        7.3883110965283237e+01 7.3896603900032858e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--8UC4->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--32FC4->
+  <mean>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2801880449903416e+02 1.2803182094486593e+02
+        1.2800242322193895e+02 1.2798436170125358e+02</data></val></mean>
+  <stddev>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3900614944172759e+01 7.3891484019185455e+01
+        7.3908911300534228e+01 7.3901871095692783e+01</data></val></stddev></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---3840x2160--32FC4->
  <!-- resumed -->
 
-<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--640x480>
+<OCL_LUTFixture_LUT--LUT---640x480--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>129.</val></last>
+    <rng1>
+      <x>302</x>
+      <y>13</y>
+      <val>162.</val></rng1>
+    <rng2>
+      <x>440</x>
+      <y>19</y>
+      <val>10.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---640x480--8UC1->
+<OCL_LUTFixture_LUT--LUT---640x480--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0837421875000000e+03</min>
+    <max>4.0638579101562500e+03</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-1.0540660400390625e+03</val></last>
+    <rng1>
+      <x>296</x>
+      <y>203</y>
+      <val>2.6981364746093750e+03</val></rng1>
+    <rng2>
+      <x>254</x>
+      <y>92</y>
+      <val>-2.7961977539062500e+03</val></rng2></dst></OCL_LUTFixture_LUT--LUT---640x480--32FC1->
+<OCL_LUTFixture_LUT--LUT---1280x720--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>254.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>232.</val></last>
+    <rng1>
+      <x>574</x>
+      <y>559</y>
+      <val>118.</val></rng1>
+    <rng2>
+      <x>199</x>
+      <y>697</y>
+      <val>153.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1280x720--8UC1->
+<OCL_LUTFixture_LUT--LUT---1280x720--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0889921875000000e+03</min>
+    <max>4.0100991210937500e+03</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-6.9296978759765625e+02</val></last>
+    <rng1>
+      <x>1043</x>
+      <y>383</y>
+      <val>-9.6948803710937500e+02</val></rng1>
+    <rng2>
+      <x>155</x>
+      <y>16</y>
+      <val>-7.4100085449218750e+02</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1280x720--32FC1->
+<OCL_LUTFixture_LUT--LUT---1920x1080--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>32.</val></last>
+    <rng1>
+      <x>847</x>
+      <y>10</y>
+      <val>7.</val></rng1>
+    <rng2>
+      <x>1363</x>
+      <y>748</y>
+      <val>153.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1920x1080--8UC1->
+<OCL_LUTFixture_LUT--LUT---1920x1080--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0870961914062500e+03</min>
+    <max>4.0750285644531250e+03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>3.0191816406250000e+03</val></last>
+    <rng1>
+      <x>1612</x>
+      <y>382</y>
+      <val>2.7583701171875000e+03</val></rng1>
+    <rng2>
+      <x>1395</x>
+      <y>174</y>
+      <val>1.6188654785156250e+03</val></rng2></dst></OCL_LUTFixture_LUT--LUT---1920x1080--32FC1->
+<OCL_LUTFixture_LUT--LUT---3840x2160--8UC1->
+  <dst>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>1.</min>
+    <max>255.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>12.</val></last>
+    <rng1>
+      <x>3667</x>
+      <y>1539</y>
+      <val>214.</val></rng1>
+    <rng2>
+      <x>3411</x>
+      <y>1591</y>
+      <val>11.</val></rng2></dst></OCL_LUTFixture_LUT--LUT---3840x2160--8UC1->
+<OCL_LUTFixture_LUT--LUT---3840x2160--32FC1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.0846743164062500e+03</min>
+    <max>4.0852385253906250e+03</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>2.4702949218750000e+03</val></last>
+    <rng1>
+      <x>2921</x>
+      <y>96</y>
+      <val>-1.9002852783203125e+03</val></rng1>
+    <rng2>
+      <x>3709</x>
+      <y>1567</y>
+      <val>3.8907863769531250e+03</val></rng2></dst></OCL_LUTFixture_LUT--LUT---3840x2160--32FC1->
+ <!-- resumed -->
+
+<OCL_BruteForceMatcherFixture_Match--Match---640x480--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>479.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>479.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>463</y>
+      <val>463.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>215</y>
+      <val>215.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>477.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>429.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>457</y>
+      <val>245.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>43</y>
+      <val>150.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>41</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>154</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>9.1932506561279297e+00</min>
+    <max>9.8918409347534180e+00</max>
+    <last>
+      <x>0</x>
+      <y>479</y>
+      <val>9.6552963256835938e+00</val></last>
+    <rng1>
+      <x>0</x>
+      <y>357</y>
+      <val>9.8127965927124023e+00</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>412</y>
+      <val>9.6241617202758789e+00</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_Match--Match---1280x720--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>719.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>719.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>322</y>
+      <val>322.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>302</y>
+      <val>302.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>719.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>708.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>206</y>
+      <val>396.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>183</y>
+      <val>182.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>253</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>45</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.3476247787475586e+01</min>
+    <max>1.4231868743896484e+01</max>
+    <last>
+      <x>0</x>
+      <y>719</y>
+      <val>1.3985763549804688e+01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>524</y>
+      <val>1.3764575004577637e+01</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>7</y>
+      <val>1.3742104530334473e+01</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_Match--Match---1920x1080--32FC1->
+  <matches-queryIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>1079.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>1079.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>277</y>
+      <val>277.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>498</y>
+      <val>498.</val></rng2></matches-queryIdx>
+  <matches-trainIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>2.</min>
+    <max>1073.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>1004.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>170</y>
+      <val>534.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>41</y>
+      <val>813.</val></rng2></matches-trainIdx>
+  <matches-imgIdx>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>79</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>1027</y>
+      <val>0.</val></rng2></matches-imgIdx>
+  <matches-distance>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>1.6629045486450195e+01</min>
+    <max>1.7485473632812500e+01</max>
+    <last>
+      <x>0</x>
+      <y>1079</y>
+      <val>1.7239362716674805e+01</val></last>
+    <rng1>
+      <x>0</x>
+      <y>954</y>
+      <val>1.7192163467407227e+01</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>248</y>
+      <val>1.7271842956542969e+01</val></rng2></matches-distance></OCL_BruteForceMatcherFixture_Match--Match---1920x1080--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---640x480--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -34679,8 +35001,8 @@
       <cols>1</cols>
       <dt>f</dt>
       <data>
-        9.51214123e+00 9.55581188e+00</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--640x480>
-<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1280x720>
+        9.51214123e+00 9.55581188e+00</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1280x720--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -34752,8 +35074,8 @@
       <cols>1</cols>
       <dt>f</dt>
       <data>
-        1.38372192e+01 1.38532562e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1280x720>
-<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1920x1080>
+        1.38372192e+01 1.38532562e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1920x1080--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -34825,8 +35147,8 @@
       <cols>1</cols>
       <dt>f</dt>
       <data>
-        1.71979313e+01 1.72415867e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch--1920x1080>
-<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--640x480>
+        1.71979313e+01 1.72415867e+01</data></val></matches1-distance></OCL_BruteForceMatcherFixture_KnnMatch--KnnMatch---1920x1080--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---640x480--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -34890,8 +35212,8 @@
       <rows>0</rows>
       <cols>1</cols>
       <dt>f</dt>
-      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--640x480>
-<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1280x720>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---640x480--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1280x720--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -34955,8 +35277,8 @@
       <rows>0</rows>
       <cols>1</cols>
       <dt>f</dt>
-      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1280x720>
-<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1920x1080>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1280x720--32FC1->
+<OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1920x1080--32FC1->
   <matches0-queryIdx>
     <kind>65536</kind>
     <type>4</type>
@@ -35020,5 +35342,342 @@
       <rows>0</rows>
       <cols>1</cols>
       <dt>f</dt>
-      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch--1920x1080>
+      <data></data></val></matches1-distance></OCL_BruteForceMatcherFixture_RadiusMatch--RadiusMatch---1920x1080--32FC1->
+ <!-- resumed -->
+
+<KalmanFilterFixture_KalmanFilter--KalmanFilter---1000->
+  <statePre_>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>616</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>659</y>
+      <val>0.</val></rng2></statePre_></KalmanFilterFixture_KalmanFilter--KalmanFilter---1000->
+<KalmanFilterFixture_KalmanFilter--KalmanFilter---1500->
+  <statePre_>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>0</x>
+      <y>1499</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>1007</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>648</y>
+      <val>0.</val></rng2></statePre_></KalmanFilterFixture_KalmanFilter--KalmanFilter---1500->
+ <!-- resumed -->
+
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--8UC1->
+  <src>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>330</x>
+      <y>301</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>614</x>
+      <y>34</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--8UC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--32FC1->
+  <src>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>583</x>
+      <y>128</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>140</x>
+      <y>375</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--32FC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--8UC4->
+  <src>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>135</x>
+      <y>151</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>4</x>
+      <y>172</y>
+      <cn>3</cn>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--8UC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--32FC4->
+  <src>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>380</x>
+      <y>17</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>191</x>
+      <y>234</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---640x480--32FC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--8UC1->
+  <src>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>140</x>
+      <y>405</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>762</x>
+      <y>271</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--8UC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--32FC1->
+  <src>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>29</x>
+      <y>621</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>445</x>
+      <y>479</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--32FC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--8UC4->
+  <src>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>224</x>
+      <y>76</y>
+      <cn>3</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>860</x>
+      <y>39</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--8UC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--32FC4->
+  <src>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>48</x>
+      <y>297</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>904</x>
+      <y>357</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1280x720--32FC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--8UC1->
+  <src>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1482</x>
+      <y>793</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1271</x>
+      <y>338</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--8UC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--32FC1->
+  <src>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>900</x>
+      <y>217</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1448</x>
+      <y>848</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--32FC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--8UC4->
+  <src>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1785</x>
+      <y>1050</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>13</x>
+      <y>984</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--8UC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--32FC4->
+  <src>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>685</x>
+      <y>719</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1387</x>
+      <y>426</y>
+      <cn>3</cn>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---1920x1080--32FC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--8UC1->
+  <src>
+    <kind>65536</kind>
+    <type>0</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>2187</x>
+      <y>1596</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>2609</x>
+      <y>1567</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--8UC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC1->
+  <src>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>593</x>
+      <y>1056</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>77</x>
+      <y>1084</y>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC1->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--8UC4->
+  <src>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>3254</x>
+      <y>694</y>
+      <cn>2</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>2780</x>
+      <y>1267</y>
+      <cn>3</cn>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--8UC4->
+<OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC4->
+  <src>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>17.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>3062</x>
+      <y>168</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1607</x>
+      <y>1828</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC4->
 </opencv_storage>
