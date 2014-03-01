@@ -235,9 +235,6 @@ OCL_PERF_TEST_P(RemapFixture, Remap,
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    if (srcSize == OCL_SIZE_4000 && interpolation == INTER_LINEAR)
-        declare.time(9);
-
     Mat xmap, ymap;
     xmap.create(srcSize, CV_32FC1);
     ymap.create(srcSize, CV_32FC1);

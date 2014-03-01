@@ -47,27 +47,31 @@
 
 using namespace perf;
 using std::tr1::get;
+using std::tr1::tuple;
 
 ///////////// gemm ////////////////////////
 
-typedef Size_MatType GemmFixture;
-
 #ifdef HAVE_CLAMDBLAS
+
+typedef tuple<Size, int> GemmParams;
+typedef TestBaseWithParam<GemmParams> GemmFixture;
 
 OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
                     ::testing::Values(Size(1000, 1000), Size(1500, 1500)),
             ::testing::Values((int)cv::GEMM_1_T, (int)cv::GEMM_1_T | (int)cv::GEMM_2_T)))
 {
-    const Size_MatType_t params = GetParam();
+    const GemmParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
     Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
             src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
-    declare.in(src1, src2, src3).out(dst).time(srcSize == OCL_SIZE_2000 ? 65 : 8);
+
     randu(src1, -10.0f, 10.0f);
     randu(src2, -10.0f, 10.0f);
     randu(src3, -10.0f, 10.0f);
+
+    declare.in(src1, src2, src3).out(dst);
 
     if (RUN_OCL_IMPL)
     {

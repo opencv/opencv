@@ -71,9 +71,6 @@ OCL_PERF_TEST_P(DftFixture, Dft, ::testing::Combine(testing::Values(OCL_SIZE_1, 
     randu(src, 0.0f, 1.0f);
     declare.in(src);
 
-    if (srcSize == OCL_SIZE_4000)
-        declare.time(7.4);
-
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst;

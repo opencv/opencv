@@ -52,13 +52,12 @@ using std::tr1::get;
 using std::tr1::tuple;
 using std::tr1::make_tuple;
 
-typedef tuple<int> PyrLKOpticalFlowParamType;
-typedef TestBaseWithParam<int> PyrLKOpticalFlowFixture;
+typedef TestBaseWithParam<tuple<int> > PyrLKOpticalFlowFixture;
 
 OCL_PERF_TEST_P(PyrLKOpticalFlowFixture,
             PyrLKOpticalFlow, ::testing::Values(1000, 2000, 4000))
 {
-    const int pointsCount = GetParam();
+    const int pointsCount = get<0>(GetParam());
 
     const string fileName0 = "gpu/opticalflow/rubberwhale1.png",
         fileName1 = "gpu/opticalflow/rubberwhale2.png";
@@ -109,7 +108,7 @@ PERF_TEST(tvl1flowFixture, tvl1flow)
     const Size srcSize = frame0.size();
     const double eps = 1.2;
     Mat flow(srcSize, CV_32FC2), flow1(srcSize, CV_32FC1), flow2(srcSize, CV_32FC1);
-    declare.in(frame0, frame1).out(flow1, flow2).time(159);
+    declare.in(frame0, frame1).out(flow1, flow2);
 
     if (RUN_PLAIN_IMPL)
     {

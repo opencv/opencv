@@ -60,15 +60,14 @@ OCL_PERF_TEST_P(LUTFixture, LUT,
     // getting params
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type);
 
     // creating src data
-    Mat src(srcSize, CV_8UC1), lut(1, 256, type);
+    Mat src(srcSize, CV_8UC(cn)), lut(1, 256, type);
     int dstType = CV_MAKETYPE(lut.depth(), src.channels());
     Mat dst(srcSize, dstType);
 
-    randu(lut, 0, 2);
-    declare.in(src, WARMUP_RNG).in(lut).out(dst);
+    declare.in(src, lut, WARMUP_RNG).out(dst);
 
     // select implementation
     if (RUN_OCL_IMPL)
@@ -564,158 +563,6 @@ OCL_PERF_TEST_P(FlipFixture, Flip,
         OCL_PERF_ELSE
 }
 
-///////////// MinMax ////////////////////////
-
-typedef Size_MatType MinMaxFixture;
-
-PERF_TEST_P(MinMaxFixture, MinMax,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    declare.in(src, WARMUP_RNG);
-
-    double min_val = std::numeric_limits<double>::max(),
-            max_val = std::numeric_limits<double>::min();
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() cv::ocl::minMax(oclSrc, &min_val, &max_val);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        Point min_loc, max_loc;
-
-        TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// MinMaxLoc ////////////////////////
-
-typedef Size_MatType MinMaxLocFixture;
-
-OCL_PERF_TEST_P(MinMaxLocFixture, MinMaxLoc,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    randu(src, 0, 1);
-    declare.in(src);
-
-    double min_val = 0.0, max_val = 0.0;
-    Point min_loc, max_loc;
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() cv::ocl::minMaxLoc(oclSrc, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// Sum ////////////////////////
-
-typedef Size_MatType SumFixture;
-
-OCL_PERF_TEST_P(SumFixture, Sum,
-            ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    Scalar result;
-    randu(src, 0, 60);
-    declare.in(src);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() result = cv::ocl::sum(oclSrc);
-
-        SANITY_CHECK(result, 1e-6, ERROR_RELATIVE);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() result = cv::sum(src);
-
-        SANITY_CHECK(result, 1e-6, ERROR_RELATIVE);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// countNonZero ////////////////////////
-
-typedef Size_MatType CountNonZeroFixture;
-
-OCL_PERF_TEST_P(CountNonZeroFixture, CountNonZero,
-                ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    int result = 0;
-    randu(src, 0, 256);
-    declare.in(src);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() result = cv::ocl::countNonZero(oclSrc);
-
-        SANITY_CHECK(result);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() result = cv::countNonZero(src);
-
-        SANITY_CHECK(result);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
 ///////////// Phase ////////////////////////
 
 typedef Size_MatType PhaseFixture;
@@ -890,6 +737,41 @@ OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
         TEST_CYCLE() cv::bitwise_not(src, dst);
 
         SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// SetIdentity ////////////////////////
+
+typedef Size_MatType SetIdentityFixture;
+
+OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    Mat src(srcSize, type);
+    Scalar s = Scalar::all(17);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src);
+
+        OCL_TEST_CYCLE() cv::ocl::setIdentity(oclSrc, s);
+
+        oclSrc.download(src);
+
+        SANITY_CHECK(src);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::setIdentity(src, s);
+
+        SANITY_CHECK(src);
     }
     else
         OCL_PERF_ELSE

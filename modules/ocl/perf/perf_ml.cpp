@@ -55,7 +55,7 @@ static void genData(Mat& trainData, Size size, Mat& trainLabel = Mat().setTo(Sca
     trainData.create(size, CV_32FC1);
     randu(trainData, 1.0, 100.0);
 
-    if(nClasses != 0)
+    if (nClasses != 0)
     {
         trainLabel.create(size.height, 1, CV_8UC1);
         randu(trainLabel, 0, nClasses - 1);
@@ -82,7 +82,7 @@ PERF_TEST_P(KNNFixture, KNN,
     genData(testData, size);
     Mat best_label;
 
-    if(RUN_PLAIN_IMPL)
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE()
         {
@@ -90,7 +90,8 @@ PERF_TEST_P(KNNFixture, KNN,
             knn_cpu.train(trainData, trainLabels);
             knn_cpu.find_nearest(testData, k, &best_label);
         }
-    }else if(RUN_OCL_IMPL)
+    }
+    else if (RUN_OCL_IMPL)
     {
         cv::ocl::oclMat best_label_ocl;
         cv::ocl::oclMat testdata;
@@ -103,7 +104,8 @@ PERF_TEST_P(KNNFixture, KNN,
             knn_ocl.find_nearest(testdata, k, best_label_ocl);
         }
         best_label_ocl.download(best_label);
-    }else
+    }
+    else
         OCL_PERF_ELSE
     SANITY_CHECK(best_label);
 }
@@ -188,7 +190,7 @@ PERF_TEST_P(SVMFixture, DISABLED_SVM,
     CvMat samples_ = samples;
     CvMat results_ = results;
 
-    if(RUN_PLAIN_IMPL)
+    if (RUN_PLAIN_IMPL)
     {
         CvSVM svm;
         svm.train(trainData, labels, Mat(), Mat(), params);
@@ -197,7 +199,7 @@ PERF_TEST_P(SVMFixture, DISABLED_SVM,
             svm.predict(&samples_, &results_);
         }
     }
-    else if(RUN_OCL_IMPL)
+    else if (RUN_OCL_IMPL)
     {
         CvSVM_OCL svm;
         svm.train(trainData, labels, Mat(), Mat(), params);
