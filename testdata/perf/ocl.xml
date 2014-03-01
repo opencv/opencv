@@ -21384,36 +21384,6 @@
       <y>1105</y>
       <cn>2</cn>
       <val>1.5656395263671875e+03</val></rng2></dst></OCL_BlendLinearFixture_BlendLinear--BlendLinear---3840x2160--32FC4->
-<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--1000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--1000>
-<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--2000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--2000>
-<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--4000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow--4000>
 <OCL_FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----5--1-1---0--false->
   <flowx>
     <kind>65536</kind>
@@ -33232,82 +33202,6 @@
       <x>1540</x>
       <y>361</y>
       <val>8.9233808517456055e+00</val></rng2></dst></OCL_DftFixture_Dft--Dft---1920x1080--5->
- <!-- resumed -->
-
-<OCL_GemmFixture_Gemm--Gemm---1000x1000--8SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-5.0567348632812500e+03</min>
-    <max>5.0391425781250000e+03</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>-1.4068099365234375e+03</val></last>
-    <rng1>
-      <x>47</x>
-      <y>251</y>
-      <val>8.1614001464843750e+02</val></rng1>
-    <rng2>
-      <x>924</x>
-      <y>411</y>
-      <val>8.6532672119140625e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1000x1000--8SC1->
-<OCL_GemmFixture_Gemm--Gemm---1000x1000--16SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-4.8846127929687500e+03</min>
-    <max>5.3985541992187500e+03</max>
-    <last>
-      <x>999</x>
-      <y>999</y>
-      <val>-1.2664890136718750e+03</val></last>
-    <rng1>
-      <x>810</x>
-      <y>442</y>
-      <val>4.4692883300781250e+02</val></rng1>
-    <rng2>
-      <x>758</x>
-      <y>761</y>
-      <val>5.1368334960937500e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1000x1000--16SC1->
-<OCL_GemmFixture_Gemm--Gemm---1500x1500--8SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-6.1538872070312500e+03</min>
-    <max>6.1305195312500000e+03</max>
-    <last>
-      <x>1499</x>
-      <y>1499</y>
-      <val>-2.2782975769042969e+02</val></last>
-    <rng1>
-      <x>699</x>
-      <y>830</y>
-      <val>-1.4658304443359375e+03</val></rng1>
-    <rng2>
-      <x>1001</x>
-      <y>364</y>
-      <val>-2.1035439453125000e+03</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1500x1500--8SC1->
-<OCL_GemmFixture_Gemm--Gemm---1500x1500--16SC1->
-  <dst>
-    <kind>65536</kind>
-    <type>5</type>
-    <min>-6.4624082031250000e+03</min>
-    <max>6.4224389648437500e+03</max>
-    <last>
-      <x>1499</x>
-      <y>1499</y>
-      <val>-2.5809038162231445e+01</val></last>
-    <rng1>
-      <x>407</x>
-      <y>1030</y>
-      <val>-5.8051506042480469e+01</val></rng1>
-    <rng2>
-      <x>1222</x>
-      <y>846</y>
-      <val>-5.5194866943359375e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1500x1500--16SC1->
- <!-- resumed -->
-
 <StereoMatchBMFixture--StereoMatchBM>
   <value>
     <kind>131072</kind>
@@ -35680,4 +35574,110 @@
       <y>1828</y>
       <cn>1</cn>
       <val>0.</val></rng2></src></OCL_SetIdentityFixture_SetIdentity--SetIdentity---3840x2160--32FC4->
+ <!-- resumed -->
+
+<OCL_GemmFixture_Gemm--Gemm---1000x1000--1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-5.0567348632812500e+03</min>
+    <max>5.0391425781250000e+03</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>-1.4068099365234375e+03</val></last>
+    <rng1>
+      <x>703</x>
+      <y>997</y>
+      <val>-3.5601287841796875e+02</val></rng1>
+    <rng2>
+      <x>856</x>
+      <y>285</y>
+      <val>-1.0315312957763672e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1000x1000--1->
+<OCL_GemmFixture_Gemm--Gemm---1000x1000--3->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-4.8846127929687500e+03</min>
+    <max>5.3985541992187500e+03</max>
+    <last>
+      <x>999</x>
+      <y>999</y>
+      <val>-1.2664890136718750e+03</val></last>
+    <rng1>
+      <x>269</x>
+      <y>148</y>
+      <val>-1.5504647827148438e+02</val></rng1>
+    <rng2>
+      <x>245</x>
+      <y>204</y>
+      <val>-6.5579638671875000e+02</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1000x1000--3->
+<OCL_GemmFixture_Gemm--Gemm---1500x1500--1->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-6.1538872070312500e+03</min>
+    <max>6.1305195312500000e+03</max>
+    <last>
+      <x>1499</x>
+      <y>1499</y>
+      <val>-2.2782975769042969e+02</val></last>
+    <rng1>
+      <x>405</x>
+      <y>463</y>
+      <val>1.3154093933105469e+02</val></rng1>
+    <rng2>
+      <x>1292</x>
+      <y>877</y>
+      <val>-1.6283258056640625e+03</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1500x1500--1->
+<OCL_GemmFixture_Gemm--Gemm---1500x1500--3->
+  <dst>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>-6.4624082031250000e+03</min>
+    <max>6.4224389648437500e+03</max>
+    <last>
+      <x>1499</x>
+      <y>1499</y>
+      <val>-2.5809038162231445e+01</val></last>
+    <rng1>
+      <x>453</x>
+      <y>116</y>
+      <val>2.0680413818359375e+02</val></rng1>
+    <rng2>
+      <x>727</x>
+      <y>1218</y>
+      <val>2.2031752929687500e+03</val></rng2></dst></OCL_GemmFixture_Gemm--Gemm---1500x1500--3->
+ <!-- resumed -->
+
+<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---1000->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---1000->
+<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---2000->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---2000->
+<OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000->
 </opencv_storage>
