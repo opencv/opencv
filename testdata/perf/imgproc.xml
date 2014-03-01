@@ -71586,86 +71586,6 @@
       <x>326</x>
       <y>39</y>
       <val>0.</val></rng2></edges></OCL_CannyFixture_Canny--Canny---5--true->
- <!-- resumed -->
-
-<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--false->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>1.</min>
-    <max>581.</max>
-    <last>
-      <x>0</x>
-      <y>999</y>
-      <val>185.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>300</y>
-      <val>302.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>538</y>
-      <cn>1</cn>
-      <val>107.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--false->
-<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--true->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>1.</min>
-    <max>579.</max>
-    <last>
-      <x>0</x>
-      <y>205</y>
-      <val>129.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>141</y>
-      <cn>1</cn>
-      <val>229.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>13</y>
-      <val>105.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--0--true->
-<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--false->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>1.</min>
-    <max>581.</max>
-    <last>
-      <x>0</x>
-      <y>999</y>
-      <val>73.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>896</y>
-      <val>445.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>554</y>
-      <val>501.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--false->
-<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--true->
-  <dst>
-    <kind>655360</kind>
-    <type>13</type>
-    <min>1.</min>
-    <max>579.</max>
-    <last>
-      <x>0</x>
-      <y>197</y>
-      <val>129.</val></last>
-    <rng1>
-      <x>0</x>
-      <y>163</y>
-      <cn>1</cn>
-      <val>191.</val></rng1>
-    <rng2>
-      <x>0</x>
-      <y>6</y>
-      <cn>1</cn>
-      <val>77.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack---gpu-opticalflow-rubberwhale1-png--3--true->
- <!-- resumed -->
-
 <OCL_PreCornerDetectFixture_PreCornerDetect--PreCornerDetect---640x480--8UC1->
   <dst>
     <kind>655360</kind>
@@ -71810,8 +71730,6 @@
       <x>1881</x>
       <y>1740</y>
       <val>1.5663641691207886e-01</val></rng2></dst></OCL_PreCornerDetectFixture_PreCornerDetect--PreCornerDetect---3840x2160--32FC1->
- <!-- resumed -->
-
 <OCL_ImgSize_TmplSize_Method_MatchTemplate--MatchTemplate---128x128--12x12--TM_SQDIFF->
   <result>
     <kind>655360</kind>
@@ -79137,4 +79055,81 @@
       <x>2490</x>
       <y>2734</y>
       <val>6.8019872903823853e-01</val></rng2></dst></OCL_CV_TM_CCORR_NORMEDFixture_matchTemplate--matchTemplate--4000x4000>
+ <!-- resumed -->
+
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---0--false->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>581.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>185.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>775</y>
+      <cn>1</cn>
+      <val>247.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>970</y>
+      <val>424.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---0--false->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---0--true->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>579.</max>
+    <last>
+      <x>0</x>
+      <y>205</y>
+      <val>129.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>183</y>
+      <val>412.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>7</y>
+      <val>319.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---0--true->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---3--false->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>581.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>73.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>84</y>
+      <cn>1</cn>
+      <val>131.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>333</y>
+      <val>464.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---3--false->
+<OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---3--true->
+  <dst>
+    <kind>655360</kind>
+    <type>13</type>
+    <min>1.</min>
+    <max>579.</max>
+    <last>
+      <x>0</x>
+      <y>197</y>
+      <val>129.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>75</y>
+      <val>439.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>186</y>
+      <cn>1</cn>
+      <val>37.</val></rng2></dst></OCL_GoodFeaturesToTrackFixture_GoodFeaturesToTrack--GoodFeaturesToTrack----gpu-opticalflow-rubberwhale1-png---3--true->
 </opencv_storage>
