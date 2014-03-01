@@ -99,8 +99,7 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
     Mat src(srcSize, CV_8UC1), templ(templSize, CV_8UC1), dst;
     const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
     dst.create(dstSize, CV_8UC1);
-    declare.in(src, templ, WARMUP_RNG).out(dst)
-            .time(srcSize == OCL_SIZE_2000 ? 10 : srcSize == OCL_SIZE_4000 ? 23 : 2);
+    declare.in(src, templ, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
     {

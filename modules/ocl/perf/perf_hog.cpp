@@ -74,7 +74,7 @@ OCL_PERF_TEST(HOGFixture, HOG)
     ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
 
     vector<cv::Rect> found_locations;
-    declare.in(src).time(5);
+    declare.in(src);
 
     if (RUN_PLAIN_IMPL)
     {

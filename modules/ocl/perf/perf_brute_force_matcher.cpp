@@ -46,17 +46,22 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
+using std::tr1::get;
 
 //////////////////// BruteForceMatch /////////////////
 
-typedef TestBaseWithParam<Size> BruteForceMatcherFixture;
+typedef Size_MatType BruteForceMatcherFixture;
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, Match, OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3))
+OCL_PERF_TEST_P(BruteForceMatcherFixture, Match,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     vector<DMatch> matches;
-    Mat query(srcSize, CV_32FC1), train(srcSize, CV_32FC1);
+    Mat query(srcSize, type), train(srcSize, type);
     declare.in(query, train);
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
@@ -82,12 +87,16 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, Match, OCL_PERF_ENUM(OCL_SIZE_1, OCL_S
         OCL_PERF_ELSE
 }
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch, OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3))
+OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     vector<vector<DMatch> > matches(2);
-    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    Mat query(srcSize, type), train(srcSize, type);
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
 
@@ -121,13 +130,17 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, KnnMatch, OCL_PERF_ENUM(OCL_SIZE_1, OC
         OCL_PERF_ELSE
 }
 
-OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch, OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3))
+OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch,
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_PERF_ENUM(MatType(CV_32FC1))))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
     const float max_distance = 2.0f;
     vector<vector<DMatch> > matches(2);
-    Mat query(srcSize, CV_32FC1), train(srcSize, CV_32FC1);
+    Mat query(srcSize, type), train(srcSize, type);
     declare.in(query, train);
 
     randu(query, 0.0f, 1.0f);

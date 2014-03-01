@@ -133,8 +133,7 @@ OCL_PERF_TEST_P(CornerMinEigenValFixture, CornerMinEigenVal,
     const int blockSize = 7, apertureSize = 1 + 2 * 3;
 
     Mat src(srcSize, type), dst(srcSize, CV_32FC1);
-    declare.in(src, WARMUP_RNG).out(dst)
-            .time(srcSize == OCL_SIZE_4000 ? 20 : srcSize == OCL_SIZE_2000 ? 5 : 3);
+    declare.in(src, WARMUP_RNG).out(dst);
 
     const int depth = CV_MAT_DEPTH(type);
     const ERROR_TYPE errorType = depth == CV_8U ? ERROR_ABSOLUTE : ERROR_RELATIVE;
@@ -172,8 +171,7 @@ OCL_PERF_TEST_P(CornerHarrisFixture, CornerHarris,
 
     Mat src(srcSize, type), dst(srcSize, CV_32FC1);
     randu(src, 0, 1);
-    declare.in(src).out(dst)
-            .time(srcSize == OCL_SIZE_4000 ? 20 : srcSize == OCL_SIZE_2000 ? 5 : 3);
+    declare.in(src).out(dst);
 
     if (RUN_OCL_IMPL)
     {
@@ -469,9 +467,7 @@ PERF_TEST_P(MeanShiftFilteringFixture, MeanShiftFiltering,
     cv::TermCriteria crit(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1);
 
     Mat src(srcSize, CV_8UC4), dst(srcSize, CV_8UC4);
-    declare.in(src, WARMUP_RNG).out(dst)
-            .time(srcSize == OCL_SIZE_4000 ?
-                      56 : srcSize == OCL_SIZE_2000 ? 15 : 3.8);
+    declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_PLAIN_IMPL)
     {
@@ -562,9 +558,7 @@ PERF_TEST_P(MeanShiftProcFixture, MeanShiftProc,
 
     Mat src(srcSize, CV_8UC4), dst1(srcSize, CV_8UC4),
             dst2(srcSize, CV_16SC2);
-    declare.in(src, WARMUP_RNG).out(dst1, dst2)
-            .time(srcSize == OCL_SIZE_4000 ?
-                      56 : srcSize == OCL_SIZE_2000 ? 15 : 3.8);;
+    declare.in(src, WARMUP_RNG).out(dst1, dst2);
 
     if (RUN_PLAIN_IMPL)
     {
@@ -602,9 +596,6 @@ OCL_PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TEST_SIZES)
     Mat src(srcSize, CV_8UC1), dst;
     const double clipLimit = 40.0;
     declare.in(src, WARMUP_RNG);
-
-    if (srcSize == OCL_SIZE_4000)
-        declare.time(11);
 
     if (RUN_OCL_IMPL)
     {
@@ -648,9 +639,6 @@ PERF_TEST_P(ColumnSumFixture, ColumnSum, OCL_TYPICAL_MAT_SIZES)
 
     Mat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
-
-    if (srcSize == OCL_SIZE_4000)
-        declare.time(5);
 
     if (RUN_OCL_IMPL)
     {
