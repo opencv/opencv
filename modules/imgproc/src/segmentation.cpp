@@ -144,10 +144,11 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         assert( 0 <= diff && diff <= 255 );  \
     }
 
-    CV_Assert( src.type() == CV_8UC3 && dst.type() == CV_32SC1 );
+    CV_Assert( (src.type() == CV_8UC3 || src.type() == CV_8UC1) && dst.type() == CV_32SC1 );
     CV_Assert( src.size() == dst.size() );
 
     const uchar* img = src.data;
+    int ichan = src.channels();
     int istep = int(src.step/sizeof(img[0]));
     int* mask = dst.ptr<int>();
     int mstep = int(dst.step / sizeof(mask[0]));
@@ -174,13 +175,13 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
             if( m[0] < 0 ) m[0] = 0;
             if( m[0] == 0 && (m[-1] > 0 || m[1] > 0 || m[-mstep] > 0 || m[mstep] > 0) )
             {
-                const uchar* ptr = img + j*3;
+                const uchar* ptr = img + j*ichan;
                 int idx = 256, t;
                 if( m[-1] > 0 )
-                    c_diff( ptr, ptr - 3, idx );
+                    c_diff( ptr, ptr - ichan, idx );
                 if( m[1] > 0 )
                 {
-                    c_diff( ptr, ptr + 3, t );
+                    c_diff( ptr, ptr + ichan, t );
                     idx = ws_min( idx, t );
                 }
                 if( m[-mstep] > 0 )
@@ -194,7 +195,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
                     idx = ws_min( idx, t );
                 }
                 assert( 0 <= idx && idx <= 255 );
-                ws_push( idx, i*mstep + j, i*istep + j*3 );
+                ws_push( idx, i*mstep + j, i*istep + j*ichan );
                 m[0] = IN_QUEUE;
             }
         }
@@ -262,15 +263,15 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
 
         if( m[-1] == 0 )
         {
-            c_diff( ptr, ptr - 3, t );
-            ws_push( t, mofs - 1, iofs - 3 );
+            c_diff( ptr, ptr - ichan, t );
+            ws_push( t, mofs - 1, iofs - ichan );
             active_queue = ws_min( active_queue, t );
             m[-1] = IN_QUEUE;
         }
         if( m[1] == 0 )
         {
-            c_diff( ptr, ptr + 3, t );
-            ws_push( t, mofs + 1, iofs + 3 );
+            c_diff( ptr, ptr + ichan, t );
+            ws_push( t, mofs + 1, iofs + ichan );
             active_queue = ws_min( active_queue, t );
             m[1] = IN_QUEUE;
         }
