@@ -81,7 +81,7 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 
    + An IDE of choice (preferably), or just a C\C++ compiler that will actually make the binary files. Here we will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. However, you can use any other IDE that has a valid C\C++ compiler.
 
-   + |CMake|_, which is a neat tool to make the project files (for your choosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
+   + |CMake|_, which is a neat tool to make the project files (for your chosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
 
    + Git to acquire the OpenCV source files. A good tool for this is |TortoiseGit|_. Alternatively, you can just download an archived version of the source files from our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
 

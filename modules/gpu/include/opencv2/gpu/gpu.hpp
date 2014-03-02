@@ -733,11 +733,11 @@ CV_EXPORTS void cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, Gp
     int borderType=BORDER_REFLECT101, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
 
 //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
