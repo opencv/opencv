@@ -481,14 +481,13 @@ enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    CV_Assert(flipCode >= - 1 && flipCode <= 1);
+    int type = _src.type(), cn = CV_MAT_CN(type), flipType;
 
     if (cn > 4 || cn == 3)
         return false;
 
     const char * kernelName;
-    int flipType;
-
     if (flipCode == 0)
         kernelName = "arithm_flip_rows", flipType = FLIP_ROWS;
     else if (flipCode > 0)
@@ -514,11 +513,16 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     _dst.create(size, type);
     UMat src = _src.getUMat(), dst = _dst.getUMat();
 
-    cols = flipType == FLIP_COLS ? ((cols+1)/2) : cols;
-    rows = flipType & FLIP_ROWS ? ((rows+1)/2) : rows;
+    cols = flipType == FLIP_COLS ? (cols + 1) >> 1 : cols;
+    rows = flipType & FLIP_ROWS ? (rows + 1) >> 1 : rows;
 
-    size_t globalsize[2] = { cols, rows };
-    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), rows, cols).run(2, globalsize, NULL, false);
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src),
+           ocl::KernelArg::WriteOnly(dst), rows, cols);
+
+    size_t maxWorkGroupSize = ocl::Device::getDefault().maxWorkGroupSize();
+    CV_Assert(maxWorkGroupSize % 4 == 0);
+    size_t globalsize[2] = { cols, rows }, localsize[2] = { maxWorkGroupSize / 4, 4 };
+    return k.run(2, globalsize, flipType == FLIP_COLS ? localsize : NULL, false);
 }
 
 #endif
