@@ -338,11 +338,11 @@ CV_EXPORTS void gemm(InputArray src1, InputArray src2, double alpha,
                      InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null());
 
 //! performs per-element multiplication of two full (not packed) Fourier spectrums
-//! supports 32FC2 matrixes only (interleaved format)
+//! supports 32FC2 matrices only (interleaved format)
 CV_EXPORTS void mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null());
 
 //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
