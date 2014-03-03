@@ -396,7 +396,13 @@ TEST(Highgui_Jpeg, encode_empty)
 #define int64 int64_hack_
 #include "tiff.h"
 
+#ifdef ANDROID
+// Test disabled as it uses a lot of memory.
+// It is killed with SIGKILL by out of memory killer.
+TEST(Highgui_Tiff, DISABLED_decode_tile16384x16384)
+#else
 TEST(Highgui_Tiff, decode_tile16384x16384)
+#endif
 {
     // see issue #2161
     cv::Mat big(16384, 16384, CV_8UC1, cv::Scalar::all(0));

@@ -1180,7 +1180,7 @@ icvSingularValueDecomposition( int M,
         }                       /* for */
     }                           /* if */
 
-    /*  Iterations QR-algorithm for bidiagonal matrixes
+    /*  Iterations QR-algorithm for bidiagonal matrices
        W[i] - is the main diagonal
        rv1[i] - is the top diagonal, rv1[0]=0.
      */

@@ -22,6 +22,7 @@ public class NativeCameraView extends CameraBridgeViewBase {
     private Thread mThread;
 
     protected VideoCapture mCamera;
+    protected NativeCameraFrame mFrame;
 
     public NativeCameraView(Context context, int cameraId) {
         super(context, cameraId);
@@ -97,6 +98,8 @@ public class NativeCameraView extends CameraBridgeViewBase {
             if (mCamera.isOpened() == false)
                 return false;
 
+            mFrame = new NativeCameraFrame(mCamera);
+
             java.util.List<Size> sizes = mCamera.getSupportedPreviewSizes();
 
             /* Select the size that fits surface considering maximum size allowed */
@@ -127,9 +130,8 @@ public class NativeCameraView extends CameraBridgeViewBase {
 
     private void releaseCamera() {
         synchronized (this) {
-            if (mCamera != null) {
-                mCamera.release();
-            }
+            if (mFrame != null) mFrame.release();
+            if (mCamera != null) mCamera.release();
         }
     }
 
@@ -153,6 +155,11 @@ public class NativeCameraView extends CameraBridgeViewBase {
             mRgba = new Mat();
         }
 
+        public void release() {
+            if (mGray != null) mGray.release();
+            if (mRgba != null) mRgba.release();
+        }
+
         private VideoCapture mCapture;
         private Mat mRgba;
         private Mat mGray;
@@ -167,7 +174,7 @@ public class NativeCameraView extends CameraBridgeViewBase {
                     break;
                 }
 
-                deliverAndDrawFrame(new NativeCameraFrame(mCamera));
+                deliverAndDrawFrame(mFrame);
 
             } while (!mStopThread);
         }

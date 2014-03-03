@@ -480,7 +480,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         values_read = fscanf(file,"%lf",goodDistortion+2); CV_Assert(values_read == 1);
         values_read = fscanf(file,"%lf",goodDistortion+3); CV_Assert(values_read == 1);
 
-        /* Read good Rot matrixes */
+        /* Read good Rot matrices */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
