@@ -398,10 +398,13 @@ CV_EXPORTS_W void GaussianBlur( InputArray src,
 CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
                                    double sigmaColor, double sigmaSpace,
                                    int borderType=BORDER_DEFAULT );
+
 //! smooths the image using adaptive bilateral filter
-CV_EXPORTS_W void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize,
+CV_EXPORTS_W CV_DEPRECATED("The function is low quality and not recommended for use")
+void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize,
                                            double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1),
                                            int borderType=BORDER_DEFAULT );
+
 //! smooths the image using the box filter. Each pixel is processed in O(1) time
 CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
                              Size ksize, Point anchor=Point(-1,-1),

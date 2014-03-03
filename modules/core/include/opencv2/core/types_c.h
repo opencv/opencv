@@ -61,6 +61,18 @@
 #  include <stdint.h>
 #endif
 
+#ifdef __OPENCV_BUILD
+#define CV_DEPRECATED(message)
+#else
+#ifdef __GNUC__
+#define CV_DEPRECATED(message) __attribute__((deprecated(message)))
+#elif defined(_MSC_VER)
+#define CV_DEPRECATED(message) __declspec(deprecated(message))
+#else
+#define CV_DEPRECATED(message)
+#endif
+#endif
+
 #if defined __ICL
 #  define CV_ICC   __ICL
 #elif defined __ICC

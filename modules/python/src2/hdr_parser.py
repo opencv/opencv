@@ -40,6 +40,23 @@ class CppHeaderParser(object):
             s = s.replace(before, after)
         return s
 
+    def batch_replace_with_parenthesis(self, s, pairs):
+        for before, after in pairs:
+            index = s.find(before)
+            if index >= 0:
+                stack, current_index, length = 0, index, len(s)
+                while current_index < length:
+                    if s[current_index] == '(':
+                        stack += 1
+                    elif s[current_index] == ')':
+                        stack -= 1
+                        if stack <= 0:
+                            break
+                    current_index += 1
+
+                s = s[:index] + after + s[current_index + 1:]
+        return s
+
     def get_macro_arg(self, arg_str, npos):
         npos2 = npos3 = arg_str.find("(", npos)
         if npos2 < 0:
@@ -364,7 +381,7 @@ class CppHeaderParser(object):
     def parse_func_decl(self, decl_str):
         """
         Parses the function or method declaration in the form:
-        [([CV_EXPORTS] <rettype>) | CVAPI(rettype)]
+        [([CV_EXPORTS] <rettype>) | CVAPI(rettype)] [CV_DEPRECATED(message)]
             [~]<function_name>
             (<arg_type1> <arg_name1>[=<default_value1>] [, <arg_type2> <arg_name2>[=<default_value2>] ...])
             [const] {; | <function_body>}
@@ -399,6 +416,7 @@ class CppHeaderParser(object):
         # filter off some common prefixes, which are meaningless for Python wrappers.
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
+        decl_str = self.batch_replace_with_parenthesis(decl_str, [("CV_DEPRECATED", "")]).strip()
         decl_str = self.batch_replace(decl_str, [("virtual", ""), ("static inline", ""), ("inline", ""),\
             ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""), ("CV_WRAP ", " "), ("static CV_INLINE", ""), ("CV_INLINE", "")]).strip()
 
