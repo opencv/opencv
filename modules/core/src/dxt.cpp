@@ -1500,7 +1500,8 @@ class PlanCache
     {
         FftPlan(const Size & _dft_size, int _src_step, int _dst_step, bool _doubleFP, bool _inplace, int _flags, FftType _fftType) :
             dft_size(_dft_size), src_step(_src_step), dst_step(_dst_step),
-            doubleFP(_doubleFP), inplace(_inplace), flags(_flags), fftType(_fftType), plHandle(0)
+            doubleFP(_doubleFP), inplace(_inplace), flags(_flags), fftType(_fftType),
+            context((cl_context)ocl::Context::getDefault().ptr()), plHandle(0)
         {
             bool dft_inverse = (flags & DFT_INVERSE) != 0;
             bool dft_scale = (flags & DFT_SCALE) != 0;
@@ -1544,7 +1545,6 @@ class PlanCache
             clStridesIn[2] = dft_rows ? clStridesIn[1] : dft_size.width * clStridesIn[1];
             clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-            // TODO remove all plans if context changed
             CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
 
             // setting plan properties
@@ -1595,9 +1595,10 @@ public:
     {
         cl_context currentContext = (cl_context)ocl::Context::getDefault().ptr();
 
-        for (size_t i = 0, size = planStorage.size(); i < size; i ++)
+        for (size_t i = 0, size = planStorage.size(); i < size; ++i)
         {
             const FftPlan * const plan = planStorage[i];
+
             if (plan->dft_size == dft_size &&
                 plan->flags == flags &&
                 plan->src_step == src_step &&
