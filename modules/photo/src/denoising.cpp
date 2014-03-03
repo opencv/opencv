@@ -133,7 +133,7 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
     {
         CV_Error(Error::StsBadArg,
             "imgToDenoiseIndex and temporalWindowSize "
-            "should be choosen corresponding srcImgs size!");
+            "should be chosen corresponding srcImgs size!");
     }
 
     for (int i = 1; i < src_imgs_size; i++) {
