@@ -3621,7 +3621,7 @@ int cvComputeEpipolesFromFundMatrix(CvMatr32f fundMatr,
     CvMat* matrV = cvCreateMat(3,3,CV_MAT32F);
 
     /* From svd we need just last vector of U and V or last row from U' and V' */
-    /* We get transposed matrixes U and V */
+    /* We get transposed matrices U and V */
     cvSVD(&fundMatrC,matrW,matrU,matrV,CV_SVD_V_T|CV_SVD_U_T);
 
     /* Get last row from U' and compute epipole1 */
