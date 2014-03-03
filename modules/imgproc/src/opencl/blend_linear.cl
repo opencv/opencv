@@ -78,11 +78,16 @@ __kernel void blendLinear(__global const uchar * src1ptr, int src1_step, int src
         __global const T * src2 = (__global const T *)(src2ptr + src2_index);
         __global T * dst = (__global T *)(dstptr + dst_index);
 
+#if cn == 1
+        WT num = (WT)(w1) * convertToWT(src1[0]) + (WT)(w2) * convertToWT(src2[0]);
+        dst[0] = convertToT(num / den);
+#else
         #pragma unroll
         for (int i = 0; i < cn; ++i)
         {
             float num = w1 * convert_float(src1[i]) + w2 * convert_float(src2[i]);
             dst[i] = convertToT(num / den);
         }
+#endif
     }
 }

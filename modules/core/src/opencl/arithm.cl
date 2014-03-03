@@ -237,13 +237,15 @@
 #elif defined OP_PHASE_RADIANS
 #define PROCESS_ELEM \
         workT tmp = atan2(srcelem2, srcelem1); \
-        if(tmp < 0) tmp += 6.283185307179586232f; \
+        if (tmp < 0) \
+            tmp += 6.283185307179586232f; \
         storedst(tmp)
 
 #elif defined OP_PHASE_DEGREES
     #define PROCESS_ELEM \
     workT tmp = atan2(srcelem2, srcelem1)*57.29577951308232286465f; \
-    if(tmp < 0) tmp += 360; \
+    if (tmp < 0) \
+        tmp += 360; \
     storedst(tmp)
 
 #elif defined OP_EXP
@@ -273,14 +275,14 @@
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha, workT beta
+#define EXTRA_PARAMS , workT1 alpha, workT1 beta
 #define PROCESS_ELEM \
     workT value = srcelem1 * alpha + beta; \
     storedst(convertToDT(value >= 0 ? value : -value))
 
 #elif defined OP_SCALE_ADD
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha
+#define EXTRA_PARAMS , workT1 alpha
 #define PROCESS_ELEM storedst(convertToDT(srcelem1 * alpha + srcelem2))
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
@@ -320,7 +322,7 @@
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , int val
 #define PROCESS_ELEM \
-    if (( srcelem1 & 0x7fffffff) > 0x7f800000 ) \
+    if ((srcelem1 & 0x7fffffff) > 0x7f800000) \
         storedst(val)
 
 #else

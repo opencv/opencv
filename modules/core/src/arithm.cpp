@@ -1313,8 +1313,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
-    int kercn = haveMask || haveScalar ? cn : 1;
-    int scalarcn = kercn == 3 ? 4 : kercn;
+    int kercn = (cn > 4 || cn == 3) && !(haveMask || haveScalar) ? 1 : cn, scalarcn = kercn == 3 ? 4 : kercn;
 
     char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
