@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include <iostream>
 #include <stdlib.h>
 
 #include "seamless_cloning.hpp"
@@ -93,11 +92,7 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int minyd = p.x - leny/2;
     int maxyd = p.x + leny/2;
 
-    if(minxd < 0 || minyd < 0 || maxxd > dest.size().height || maxyd > dest.size().width)
-    {
-        cout << "Index out of range" << endl;
-        exit(0);
-    }
+    CV_Assert(minxd >= 0 && minyd >= 0 && maxxd <= dest.rows && maxyd <= dest.cols);
 
     Rect roi_d(minyd,minxd,leny,lenx);
     Rect roi_s(miny,minx,leny,lenx);
