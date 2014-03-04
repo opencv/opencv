@@ -10,7 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -222,7 +222,7 @@ struct RectCoords
 #endif
 
 
-inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global TYPE *src, const unsigned int srcStepBytes, const struct RectCoords srcCoords
+INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global TYPE *src, const unsigned int srcStepBytes, const struct RectCoords srcCoords
 #ifdef BORDER_CONSTANT
                , SCALAR_TYPE borderValue
 #endif

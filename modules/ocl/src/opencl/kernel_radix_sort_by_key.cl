@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -64,7 +64,7 @@
 
 // from Thrust::b40c, link:
 // https://github.com/thrust/thrust/blob/master/thrust/system/cuda/detail/detail/b40c/radixsort_key_conversion.h
-__inline uint convertKey(uint converted_key)
+uint convertKey(uint converted_key)
 {
 #ifdef K_FLT
     unsigned int mask = (converted_key & 0x80000000) ? 0xffffffff : 0x80000000;

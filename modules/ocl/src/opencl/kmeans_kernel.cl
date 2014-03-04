@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -44,7 +44,7 @@
 //
 //M*/
 
-inline float distance_(__global const float * center, __global const float * src, int feature_length)
+float distance_(__global const float * center, __global const float * src, int feature_length)
 {
     float res = 0;
     float4 v0, v1, v2;
