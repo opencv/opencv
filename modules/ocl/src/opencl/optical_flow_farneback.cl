@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -123,32 +123,32 @@ __kernel void polynomialExpansion(__global float * dst,
     }
 }
 
-inline int idx_row_low(const int y, const int last_row)
+int idx_row_low(const int y, const int last_row)
 {
     return abs(y) % (last_row + 1);
 }
 
-inline int idx_row_high(const int y, const int last_row)
+int idx_row_high(const int y, const int last_row)
 {
     return abs(last_row - abs(last_row - y)) % (last_row + 1);
 }
 
-inline int idx_row(const int y, const int last_row)
+int idx_row(const int y, const int last_row)
 {
     return idx_row_low(idx_row_high(y, last_row), last_row);
 }
 
-inline int idx_col_low(const int x, const int last_col)
+int idx_col_low(const int x, const int last_col)
 {
     return abs(x) % (last_col + 1);
 }
 
-inline int idx_col_high(const int x, const int last_col)
+int idx_col_high(const int x, const int last_col)
 {
     return abs(last_col - abs(last_col - x)) % (last_col + 1);
 }
 
-inline int idx_col(const int x, const int last_col)
+int idx_col(const int x, const int last_col)
 {
     return idx_col_low(idx_col_high(x, last_col), last_col);
 }

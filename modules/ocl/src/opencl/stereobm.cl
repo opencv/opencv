@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -56,7 +56,7 @@
 #define radius 64
 #endif
 
-inline unsigned int CalcSSD(__local unsigned int *col_ssd)
+unsigned int CalcSSD(__local unsigned int *col_ssd)
 {
     unsigned int cache = col_ssd[0];
 
@@ -67,7 +67,7 @@ inline unsigned int CalcSSD(__local unsigned int *col_ssd)
     return cache;
 }
 
-inline uint2 MinSSD(__local unsigned int *col_ssd)
+uint2 MinSSD(__local unsigned int *col_ssd)
 {
     unsigned int ssd[N_DISPARITIES];
     const int win_size = (radius << 1);
@@ -95,7 +95,7 @@ inline uint2 MinSSD(__local unsigned int *col_ssd)
     return (uint2)(mssd, bestIdx);
 }
 
-inline void StepDown(int idx1, int idx2, __global unsigned char* imageL,
+void StepDown(int idx1, int idx2, __global unsigned char* imageL,
               __global unsigned char* imageR, int d,   __local unsigned int *col_ssd)
 {
     uint8 imgR1 = convert_uint8(vload8(0, imageR + (idx1 - d - 7)));
@@ -114,7 +114,7 @@ inline void StepDown(int idx1, int idx2, __global unsigned char* imageL,
     col_ssd[7 * (BLOCK_W + win_size)] += res.s0;
 }
 
-inline void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
+void InitColSSD(int x_tex, int y_tex, int im_pitch, __global unsigned char* imageL,
                 __global unsigned char* imageR, int d,
                  __local unsigned int *col_ssd)
 {
@@ -241,7 +241,7 @@ __kernel void prefilter_xsobel(__global unsigned char *input, __global unsigned 
 /////////////////////////////////// Textureness filtering ////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-inline float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
+float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
 {
     float conv = 0;
     int y1 = y==0? 0 : y-1;
@@ -256,7 +256,7 @@ inline float sobel(__global unsigned char *input, int x, int y, int rows, int co
     return fabs(conv);
 }
 
-inline float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
+float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
 {
     unsigned int cache = cols[0];
 

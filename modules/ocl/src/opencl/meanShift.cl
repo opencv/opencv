@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
@@ -46,7 +46,7 @@
 //
 //M*/
 
-inline short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
+short2 do_mean_shift(int x0, int y0, __global uchar4* out,int out_step,
                __global uchar4* in, int in_step, int dst_off, int src_off,
                int cols, int rows, int sp, int sr, int maxIter, float eps)
 {

@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -44,12 +44,12 @@
 //M*/
 
 #ifdef L2GRAD
-inline float calc(int x, int y)
+float calc(int x, int y)
 {
     return sqrt((float)(x * x + y * y));
 }
 #else
-inline float calc(int x, int y)
+float calc(int x, int y)
 {
     return (float)abs(x) + abs(y);
 }
@@ -381,8 +381,8 @@ struct PtrStepSz {
     int step;
     int rows, cols;
 };
-inline int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))); }
-inline void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))) = value; }
+int get(struct PtrStepSz data, int y, int x) { return *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))); }
+void set(struct PtrStepSz data, int y, int x, int value) { *((__global int *)((__global char*)data.ptr + data.step * (y + 1) + sizeof(int) * (x + 1))) = value; }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // do Hysteresis for pixel whose edge type is 1
