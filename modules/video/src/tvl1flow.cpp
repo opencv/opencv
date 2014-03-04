@@ -197,11 +197,6 @@ namespace cv_ocl_tvl1flow
 
 bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
 {
-#ifdef ANDROID
-    size_t localsize[2] = { 32, 4 };
-#else
-    size_t localsize[2] = { 32, 8 };
-#endif
     size_t globalsize[2] = { src.cols, src.rows };
 
     ocl::Kernel kernel;
@@ -216,19 +211,13 @@ bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dx));//res mat dx
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dy));//res mat dy
     idxArg = kernel.set(idxArg, (int)(dx.step/dx.elemSize()));//res mat step
-    return kernel.run(2, globalsize, localsize, false);
-
+    return kernel.run(2, globalsize, NULL, false);
 }
 
 bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UMat &I1y,
     UMat &u1, UMat &u2, UMat &I1w, UMat &I1wx, UMat &I1wy,
     UMat &grad, UMat &rho)
 {
-#ifdef ANDROID
-    size_t localsize[2] = { 32, 4 };
-#else
-    size_t localsize[2] = { 32, 8 };
-#endif
     size_t globalsize[2] = { I0.cols, I0.rows };
 
     ocl::Kernel kernel;
@@ -266,8 +255,7 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
     idxArg = kernel.set(idxArg, (int)u2_offset_x);//u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step));//u2_offset_y
 
-    return kernel.run(2, globalsize, localsize, false);
-
+    return kernel.run(2, globalsize, NULL, false);
 }
 
 bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
@@ -275,11 +263,6 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     UMat &p21, UMat &p22, UMat &u1,
     UMat &u2, UMat &error, float l_t, float theta, char calc_error)
 {
-#ifdef ANDROID
-    size_t localsize[2] = { 32, 4 };
-#else
-    size_t localsize[2] = { 32, 8 };
-#endif
     size_t globalsize[2] = { I1wx.cols, I1wx.rows };
 
     ocl::Kernel kernel;
@@ -316,17 +299,12 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
     idxArg = kernel.set(idxArg, (char)calc_error);    //char calc_error
 
-    return kernel.run(2, globalsize, localsize, false);
+    return kernel.run(2, globalsize, NULL, false);
 }
 
 bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     UMat &p11, UMat &p12, UMat &p21, UMat &p22, float taut)
 {
-#ifdef ANDROID
-    size_t localsize[2] = { 32, 4 };
-#else
-    size_t localsize[2] = { 32, 8 };
-#endif
     size_t globalsize[2] = { u1.cols, u1.rows };
 
     ocl::Kernel kernel;
@@ -355,7 +333,7 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     idxArg = kernel.set(idxArg, u2_offset_x); //int u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
 
-    return kernel.run(2, globalsize, localsize, false);
+    return kernel.run(2, globalsize, NULL, false);
 
 }
 
