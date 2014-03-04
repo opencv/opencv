@@ -53,19 +53,19 @@
 
 __kernel void convertTo(__global const uchar * srcptr, int src_step, int src_offset,
                         __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                        float alpha, float beta )
+                        WT alpha, WT beta)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (x < dst_cols && y < dst_rows)
     {
-        int src_index = mad24(y, src_step, src_offset + x * (int)sizeof(srcT) );
-        int dst_index = mad24(y, dst_step, dst_offset + x * (int)sizeof(dstT) );
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT), src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT), dst_offset));
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
         __global dstT * dst = (__global dstT *)(dstptr + dst_index);
 
-        dst[0] = convertToDT( src[0] * alpha + beta );
+        dst[0] = convertToDT(mad(convertToWT(src[0]), alpha, beta));
     }
 }

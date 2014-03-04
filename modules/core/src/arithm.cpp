@@ -1318,7 +1318,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
     char cvtstr[4][32], opts[1024];
     sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
-            "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D convertToWT1=%s "
+            "-D dstT=%s -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             oclop2str[oclop], ocl::typeToStr(CV_MAKETYPE(depth1, kercn)),
@@ -1329,7 +1329,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl::typeToStr(CV_MAKETYPE(ddepth, 1)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
-            ocl::typeToStr(CV_MAKETYPE(wdepth, 1)),
+            ocl::typeToStr(CV_MAKETYPE(wdepth, 1)), wdepth,
             ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
             ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
             ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
