@@ -115,6 +115,14 @@ Regression& Regression::add(TestBase* test, const std::string& name, cv::InputAr
     return instance()(name, array, eps, err);
 }
 
+Regression& Regression::addMoments(TestBase* test, const std::string& name, const cv::Moments& array, double eps, ERROR_TYPE err)
+{
+    int len = (int)sizeof(cv::Moments) / sizeof(double);
+    cv::Mat m(1, len, CV_64F, (void*)&array);
+
+    return Regression::add(test, name, m, eps, err);
+}
+
 Regression& Regression::addKeypoints(TestBase* test, const std::string& name, const std::vector<cv::KeyPoint>& array, double eps, ERROR_TYPE err)
 {
     int len = (int)array.size();
@@ -268,7 +276,8 @@ std::string Regression::getCurrentTestNodeName()
 
 bool Regression::isVector(cv::InputArray a)
 {
-    return a.kind() == cv::_InputArray::STD_VECTOR_MAT || a.kind() == cv::_InputArray::STD_VECTOR_VECTOR;
+    return a.kind() == cv::_InputArray::STD_VECTOR_MAT || a.kind() == cv::_InputArray::STD_VECTOR_VECTOR ||
+           a.kind() == cv::_InputArray::STD_VECTOR_UMAT;
 }
 
 double Regression::getElem(cv::Mat& m, int y, int x, int cn)
@@ -846,6 +855,9 @@ int64 TestBase::_calibrate()
 #endif
 TestBase::TestBase(): testStrategy(PERF_STRATEGY_DEFAULT), declare(this)
 {
+    lastTime = totalTime = timeLimit = 0;
+    nIters = currentIter = runsPerIteration = 0;
+    verified = false;
 }
 #ifdef _MSC_VER
 # pragma warning(pop)
@@ -866,17 +878,29 @@ void TestBase::declareArray(SizeVector& sizes, cv::InputOutputArray a, WarmUpTyp
 void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
 {
     if (a.empty())
-    {
         return;
-    }
     else if (a.isUMat())
     {
-        return; // TODO current warmup_impl is not useful for GPU-based data
+        if (wtype == WARMUP_RNG || wtype == WARMUP_WRITE)
+        {
+            int depth = a.depth();
+            if (depth == CV_8U)
+                cv::randu(a, 0, 256);
+            else if (depth == CV_8S)
+                cv::randu(a, -128, 128);
+            else if (depth == CV_16U)
+                cv::randu(a, 0, 1024);
+            else if (depth == CV_32F || depth == CV_64F)
+                cv::randu(a, -1.0, 1.0);
+            else if (depth == CV_16S || depth == CV_32S)
+                cv::randu(a, -4096, 4096);
+            else
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format");
+        }
+        return;
     }
     else if (a.kind() != cv::_InputArray::STD_VECTOR_MAT && a.kind() != cv::_InputArray::STD_VECTOR_VECTOR)
-    {
         warmup_impl(a.getMat(), wtype);
-    }
     else
     {
         size_t total = a.total();
@@ -1180,7 +1204,7 @@ void TestBase::validateMetrics()
         double mean = metrics.mean * 1000.0f / metrics.frequency;
         double stddev = metrics.stddev * 1000.0f / metrics.frequency;
         double percents = stddev / mean * 100.f;
-        printf("    samples = %d, mean = %.2f, stddev = %.2f (%.1f%%)\n", (int)metrics.samples, mean, stddev, percents);
+        printf("[ PERFSTAT ]    (samples = %d, mean = %.2f, stddev = %.2f (%.1f%%))\n", (int)metrics.samples, mean, stddev, percents);
     }
     else
     {
@@ -1591,6 +1615,11 @@ void PrintTo(const MatType& t, ::std::ostream* os)
 *                                  ::cv::PrintTo
 \*****************************************************************************************/
 namespace cv {
+
+void PrintTo(const String& str, ::std::ostream* os)
+{
+    *os << str;
+}
 
 void PrintTo(const Size& sz, ::std::ostream* os)
 {

@@ -41,6 +41,8 @@ static String get_type_name(int type)
 {
     if( type == Param::INT )
         return "int";
+    if( type == Param::BOOLEAN )
+        return "bool";
     if( type == Param::UNSIGNED_INT )
         return "unsigned";
     if( type == Param::UINT64 )
@@ -59,6 +61,12 @@ static void from_str(const String& str, int type, void* dst)
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
         ss >> *(int*)dst;
+    else if( type == Param::BOOLEAN )
+    {
+        std::string temp;
+        ss >> temp;
+        *(bool*) dst = temp == "true";
+    }
     else if( type == Param::UNSIGNED_INT )
         ss >> *(unsigned*)dst;
     else if( type == Param::UINT64 )
@@ -229,6 +237,11 @@ CommandLineParser::CommandLineParser(int argc, const char* const argv[], const S
     impl->sort_params();
 }
 
+CommandLineParser::~CommandLineParser()
+{
+    if (CV_XADD(&impl->refcount, -1) == 1)
+        delete impl;
+}
 
 CommandLineParser::CommandLineParser(const CommandLineParser& parser)
 {

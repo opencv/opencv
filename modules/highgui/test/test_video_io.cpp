@@ -332,9 +332,7 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
         }
     }
 
-    printf("Before saved release for %s\n", tmp_name.c_str());
     cvReleaseCapture( &saved );
-    printf("After release\n");
 
     ts->printf(ts->LOG, "end test function : ImagesVideo \n");
 }

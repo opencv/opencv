@@ -1245,7 +1245,6 @@ const float* CvSVM::get_support_vector(int i) const
     return sv && (unsigned)i < (unsigned)sv_total ? sv[i] : 0;
 }
 
-
 bool CvSVM::set_params( const CvSVMParams& _params )
 {
     bool ok = false;
@@ -2195,18 +2194,20 @@ float CvSVM::predict( const CvMat* sample, bool returnDFVal ) const
 }
 
 struct predict_body_svm : ParallelLoopBody {
-    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results)
+    predict_body_svm(const CvSVM* _pointer, float* _result, const CvMat* _samples, CvMat* _results, bool _returnDFVal)
     {
         pointer = _pointer;
         result = _result;
         samples = _samples;
         results = _results;
+        returnDFVal = _returnDFVal;
     }
 
     const CvSVM* pointer;
     float* result;
     const CvMat* samples;
     CvMat* results;
+    bool returnDFVal;
 
     void operator()( const cv::Range& range ) const
     {
@@ -2214,7 +2215,7 @@ struct predict_body_svm : ParallelLoopBody {
         {
             CvMat sample;
             cvGetRow( samples, &sample, i );
-            int r = (int)pointer->predict(&sample);
+            int r = (int)pointer->predict(&sample, returnDFVal);
             if (results)
                 results->data.fl[i] = (float)r;
             if (i == 0)
@@ -2223,11 +2224,11 @@ struct predict_body_svm : ParallelLoopBody {
     }
 };
 
-float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results) const
+float CvSVM::predict(const CvMat* samples, CV_OUT CvMat* results, bool returnDFVal) const
 {
     float result = 0;
     cv::parallel_for_(cv::Range(0, samples->rows),
-             predict_body_svm(this, &result, samples, results)
+             predict_body_svm(this, &result, samples, results, returnDFVal)
     );
     return result;
 }
@@ -2347,14 +2348,24 @@ void CvSVM::write_params( CvFileStorage* fs ) const
 }
 
 
+static bool isSvmModelApplicable(int sv_total, int var_all, int var_count, int class_count)
+{
+    return (sv_total > 0 && var_count > 0 && var_count <= var_all && class_count >= 0);
+}
+
+
 void CvSVM::write( CvFileStorage* fs, const char* name ) const
 {
     CV_FUNCNAME( "CvSVM::write" );
 
     __BEGIN__;
 
-    int i, var_count = get_var_count(), df_count, class_count;
+    int i, var_count = get_var_count(), df_count;
+    int class_count = class_labels ? class_labels->cols :
+                      params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
     const CvSVMDecisionFunc* df = decision_func;
+    if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
+        CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
     cvStartWriteStruct( fs, name, CV_NODE_MAP, CV_TYPE_NAME_ML_SVM );
 
@@ -2362,9 +2373,6 @@ void CvSVM::write( CvFileStorage* fs, const char* name ) const
 
     cvWriteInt( fs, "var_all", var_all );
     cvWriteInt( fs, "var_count", var_count );
-
-    class_count = class_labels ? class_labels->cols :
-                  params.svm_type == CvSVM::ONE_CLASS ? 1 : 0;
 
     if( class_count )
     {
@@ -2503,7 +2511,6 @@ void CvSVM::read_params( CvFileStorage* fs, CvFileNode* svm_node )
     __END__;
 }
 
-
 void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
 {
     const double not_found_dbl = DBL_MAX;
@@ -2532,7 +2539,7 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
     var_count = cvReadIntByName( fs, svm_node, "var_count", var_all );
     class_count = cvReadIntByName( fs, svm_node, "class_count", 0 );
 
-    if( sv_total <= 0 || var_all <= 0 || var_count <= 0 || var_count > var_all || class_count < 0 )
+    if( !isSvmModelApplicable(sv_total, var_all, var_count, class_count) )
         CV_ERROR( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
     CV_CALL( class_labels = (CvMat*)cvReadByName( fs, svm_node, "class_labels" ));

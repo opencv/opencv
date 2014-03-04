@@ -290,8 +290,8 @@ int CV_CameraCalibrationTest::compare(double* val, double* ref_val, int len,
 void CV_CameraCalibrationTest::run( int start_from )
 {
     int code = cvtest::TS::OK;
-    char            filepath[200];
-    char            filename[200];
+    cv::String            filepath;
+    cv::String            filename;
 
     CvSize          imageSize;
     CvSize          etalonSize;
@@ -337,12 +337,12 @@ void CV_CameraCalibrationTest::run( int start_from )
     int progress = 0;
     int values_read = -1;
 
-    sprintf( filepath, "%scameracalibration/", ts->get_data_path().c_str() );
-    sprintf( filename, "%sdatafiles.txt", filepath );
-    datafile = fopen( filename, "r" );
+    filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
+    filename = cv::format("%sdatafiles.txt", filepath.c_str() );
+    datafile = fopen( filename.c_str(), "r" );
     if( datafile == 0 )
     {
-        ts->printf( cvtest::TS::LOG, "Could not open file with list of test files: %s\n", filename );
+        ts->printf( cvtest::TS::LOG, "Could not open file with list of test files: %s\n", filename.c_str() );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
         goto _exit_;
     }
@@ -354,15 +354,15 @@ void CV_CameraCalibrationTest::run( int start_from )
     {
         values_read = fscanf(datafile,"%s",i_dat_file);
         CV_Assert(values_read == 1);
-        sprintf(filename, "%s%s", filepath, i_dat_file);
-        file = fopen(filename,"r");
+        filename = cv::format("%s%s", filepath.c_str(), i_dat_file);
+        file = fopen(filename.c_str(),"r");
 
         ts->update_context( this, currTest, true );
 
         if( file == 0 )
         {
             ts->printf( cvtest::TS::LOG,
-                "Can't open current test file: %s\n",filename);
+                "Can't open current test file: %s\n",filename.c_str());
             if( numTests == 1 )
             {
                 code = cvtest::TS::FAIL_MISSING_TEST_DATA;
@@ -480,7 +480,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         values_read = fscanf(file,"%lf",goodDistortion+2); CV_Assert(values_read == 1);
         values_read = fscanf(file,"%lf",goodDistortion+3); CV_Assert(values_read == 1);
 
-        /* Read good Rot matrixes */
+        /* Read good Rot matrices */
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             for( i = 0; i < 3; i++ )
@@ -1382,17 +1382,18 @@ void CV_StereoCalibrationTest::run( int )
 
     for(int testcase = 1; testcase <= ntests; testcase++)
     {
-        char filepath[1000];
+        cv::String filepath;
         char buf[1000];
-        sprintf( filepath, "%sstereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
-        f = fopen(filepath, "rt");
+        filepath = cv::format("%scv/stereo/case%d/stereo_calib.txt", ts->get_data_path().c_str(), testcase );
+        f = fopen(filepath.c_str(), "rt");
         Size patternSize;
         vector<string> imglist;
 
         if( !f || !fgets(buf, sizeof(buf)-3, f) || sscanf(buf, "%d%d", &patternSize.width, &patternSize.height) != 2 )
         {
-            ts->printf( cvtest::TS::LOG, "The file %s can not be opened or has invalid content\n", filepath );
+            ts->printf( cvtest::TS::LOG, "The file %s can not be opened or has invalid content\n", filepath.c_str() );
             ts->set_failed_test_info( f ? cvtest::TS::FAIL_INVALID_TEST_DATA : cvtest::TS::FAIL_MISSING_TEST_DATA );
+            fclose(f);
             return;
         }
 
@@ -1405,7 +1406,7 @@ void CV_StereoCalibrationTest::run( int )
                 buf[--len] = '\0';
             if( buf[0] == '#')
                 continue;
-            sprintf(filepath, "%sstereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
+            filepath = cv::format("%scv/stereo/case%d/%s", ts->get_data_path().c_str(), testcase, buf );
             imglist.push_back(string(filepath));
         }
         fclose(f);
@@ -1733,7 +1734,7 @@ double CV_StereoCalibrationTest_C::calibrateStereoCamera( const vector<vector<Po
 
     return cvStereoCalibrate(&_objPt, &_imgPt, &_imgPt2, &_npoints, &_cameraMatrix1,
         &_distCoeffs1, &_cameraMatrix2, &_distCoeffs2, imageSize,
-        &matR, &matT, &matE, &matF, criteria, flags );
+        &matR, &matT, &matE, &matF, flags, criteria );
 }
 
 void CV_StereoCalibrationTest_C::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
@@ -1830,7 +1831,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
 {
     return stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
                     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-                    imageSize, R, T, E, F, criteria, flags );
+                    imageSize, R, T, E, F, flags, criteria );
 }
 
 void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,

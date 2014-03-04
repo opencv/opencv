@@ -102,4 +102,4 @@ Mat linearResponse(int channels)
     return response;
 }
 
-};
+}

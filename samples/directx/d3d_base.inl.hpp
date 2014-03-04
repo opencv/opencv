@@ -134,7 +134,7 @@ static void renderToD3DObject(void)
 
     const float fps = getFps();
 
-    String deviceName = cv::ocl::useOpenCL() ? cv::ocl::Context2::getDefault().device(0).name() : "No OpenCL device";
+    String deviceName = cv::ocl::useOpenCL() ? cv::ocl::Context::getDefault().device(0).name() : "No OpenCL device";
 
     if ((frame % std::max(1, (int)(fps / 25))) == 0)
     {
@@ -360,7 +360,7 @@ static cv::Mat getInputTexture()
     {
         cv::resize(inputMat, inputMat, cv::Size(WIDTH, HEIGHT));
     }
-    String deviceName = cv::ocl::useOpenCL() ? cv::ocl::Context2::getDefault().device(0).name() : "No OpenCL device";
+    String deviceName = cv::ocl::useOpenCL() ? cv::ocl::Context::getDefault().device(0).name() : "No OpenCL device";
     cv::Scalar color(64, 255, 64, 255);
     cv::putText(inputMat,
             cv::format("OpenCL Device name: %s", deviceName.c_str()),
@@ -396,13 +396,13 @@ static int mainLoop()
     if (cv::ocl::haveOpenCL())
     {
 #if defined(USE_D3D9)
-        cv::ocl::Context2& ctx = cv::directx::ocl::initializeContextFromDirect3DDevice9(dev);
+        cv::ocl::Context& ctx = cv::directx::ocl::initializeContextFromDirect3DDevice9(dev);
 #elif defined (USE_D3DEX)
-        cv::ocl::Context2& ctx = cv::directx::ocl::initializeContextFromDirect3DDevice9Ex(dev);
+        cv::ocl::Context& ctx = cv::directx::ocl::initializeContextFromDirect3DDevice9Ex(dev);
 #elif defined(USE_D3D10)
-        cv::ocl::Context2& ctx = cv::directx::ocl::initializeContextFromD3D10Device(dev);
+        cv::ocl::Context& ctx = cv::directx::ocl::initializeContextFromD3D10Device(dev);
 #elif defined(USE_D3D11)
-        cv::ocl::Context2& ctx = cv::directx::ocl::initializeContextFromD3D11Device(dev);
+        cv::ocl::Context& ctx = cv::directx::ocl::initializeContextFromD3D11Device(dev);
 #else
 #error "Invalid USE_D3D value"
 #endif
