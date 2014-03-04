@@ -45,7 +45,6 @@
 #include "math.h"
 #include <vector>
 #include <limits>
-#include <iostream>
 #include "contrast_preserve.hpp"
 
 using namespace std;
@@ -60,16 +59,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
     _color_boost.create(I.size(), CV_8UC3);
     Mat color_boost = _color_boost.getMat();
 
-    if(!I.data )
-    {
-        cout <<  "Could not open or find the image" << endl ;
-        return;
-    }
-    if(I.channels() !=3)
-    {
-        cout << "Input Color Image" << endl;
-        return;
-    }
+    CV_Assert(!I.empty() && (I.channels()==3));
 
     // Parameter Setting
     int maxIter = 15;
