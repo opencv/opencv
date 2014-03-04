@@ -165,11 +165,11 @@ PERF_TEST_P(VideoMOGFixture, MOG,
 ///////////// MOG2 ////////////////////////
 
 typedef tuple<string, int> VideoMOG2ParamType;
-typedef TestBaseWithParam<VideoMOG2ParamType> VideoMOG2Fixture;
+typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_Apply;
 
-PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on buildslave
-            ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-            ::testing::Values(1, 3)))
+OCL_PERF_TEST_P(MOG2_Apply, Mog2,
+                testing::Combine(testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
+                                 testing::Values(1, 3)))
 {
     VideoMOG2ParamType params = GetParam();
 
@@ -195,9 +195,7 @@ PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on b
             foreground.release();
 
             for (int i = 0; i < nFrame; i++)
-            {
                 mog2(frame_buffer[i], foreground);
-            }
         }
         SANITY_CHECK(foreground);
     }
@@ -210,9 +208,7 @@ PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on b
             cv::ocl::MOG2 d_mog2;
             foreground_d.release();
             for (int i = 0; i < nFrame; i++)
-            {
                 d_mog2(frame_buffer_ocl[i], foreground_d);
-            }
         }
         foreground_d.download(foreground);
         SANITY_CHECK(foreground);
@@ -223,11 +219,11 @@ PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on b
 
 ///////////// MOG2_GetBackgroundImage //////////////////
 
-typedef TestBaseWithParam<VideoMOG2ParamType> Video_MOG2GetBackgroundImage;
+typedef TestBaseWithParam<VideoMOG2ParamType> MOG2_GetBackgroundImage;
 
-PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
-            ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-            ::testing::Values(3)))
+OCL_PERF_TEST_P(MOG2_GetBackgroundImage, Mog2,
+                testing::Combine(testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
+                                 testing::Values(3)))
 {
     VideoMOG2ParamType params = GetParam();
 
@@ -248,7 +244,7 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
     cv::ocl::oclMat foreground_d;
     cv::ocl::oclMat background_d;
 
-    if(RUN_PLAIN_IMPL)
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE()
         {
@@ -264,7 +260,7 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
         }
         SANITY_CHECK(background);
     }
-    else if(RUN_OCL_IMPL)
+    else if (RUN_OCL_IMPL)
     {
         prepareData(frame_buffer, frame_buffer_ocl);
         CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);

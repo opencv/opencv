@@ -52,55 +52,27 @@ using std::tr1::get;
 using std::tr1::tuple;
 using std::tr1::make_tuple;
 
-CV_ENUM(LoadMode, IMREAD_GRAYSCALE, IMREAD_COLOR)
+typedef TestBaseWithParam<tuple<int> > PyrLKOpticalFlowFixture;
 
-typedef tuple<int, tuple<string, string, LoadMode> > PyrLKOpticalFlowParamType;
-typedef TestBaseWithParam<PyrLKOpticalFlowParamType> PyrLKOpticalFlowFixture;
-
-PERF_TEST_P(PyrLKOpticalFlowFixture,
-            PyrLKOpticalFlow,
-            ::testing::Combine(
-                ::testing::Values(1000, 2000, 4000),
-                ::testing::Values(
-                    make_tuple<string, string, LoadMode>
-                    (
-                        string("gpu/opticalflow/rubberwhale1.png"),
-                        string("gpu/opticalflow/rubberwhale2.png"),
-                        LoadMode(IMREAD_COLOR)
-                        ),
-                    make_tuple<string, string, LoadMode>
-                    (
-                        string("gpu/stereobm/aloe-L.png"),
-                        string("gpu/stereobm/aloe-R.png"),
-                        LoadMode(IMREAD_GRAYSCALE)
-                        )
-                    )
-                )
-            )
+OCL_PERF_TEST_P(PyrLKOpticalFlowFixture,
+            PyrLKOpticalFlow, ::testing::Values(1000, 2000, 4000))
 {
-    PyrLKOpticalFlowParamType params = GetParam();
-    tuple<string, string, LoadMode> fileParam = get<1>(params);
-    const int pointsCount = get<0>(params);
-    const int openMode = static_cast<int>(get<2>(fileParam));
-    const string fileName0 = get<0>(fileParam), fileName1 = get<1>(fileParam);
-    Mat frame0 = imread(getDataPath(fileName0), openMode);
-    Mat frame1 = imread(getDataPath(fileName1), openMode);
+    const int pointsCount = get<0>(GetParam());
+
+    const string fileName0 = "gpu/opticalflow/rubberwhale1.png",
+        fileName1 = "gpu/opticalflow/rubberwhale2.png";
+    Mat frame0 = imread(getDataPath(fileName0), cv::IMREAD_GRAYSCALE);
+    Mat frame1 = imread(getDataPath(fileName1), cv::IMREAD_GRAYSCALE);
 
     declare.in(frame0, frame1);
 
     ASSERT_FALSE(frame0.empty()) << "can't load " << fileName0;
     ASSERT_FALSE(frame1.empty()) << "can't load " << fileName1;
 
-    Mat grayFrame;
-    if (openMode == IMREAD_COLOR)
-        cvtColor(frame0, grayFrame, COLOR_BGR2GRAY);
-    else
-        grayFrame = frame0;
-
     vector<Point2f> pts, nextPts;
     vector<unsigned char> status;
     vector<float> err;
-    goodFeaturesToTrack(grayFrame, pts, pointsCount, 0.01, 0.0);
+    goodFeaturesToTrack(frame0, pts, pointsCount, 0.01, 0.0);
     Mat ptsMat(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
 
     if (RUN_PLAIN_IMPL)
@@ -136,7 +108,7 @@ PERF_TEST(tvl1flowFixture, tvl1flow)
     const Size srcSize = frame0.size();
     const double eps = 1.2;
     Mat flow(srcSize, CV_32FC2), flow1(srcSize, CV_32FC1), flow2(srcSize, CV_32FC1);
-    declare.in(frame0, frame1).out(flow1, flow2).time(159);
+    declare.in(frame0, frame1).out(flow1, flow2);
 
     if (RUN_PLAIN_IMPL)
     {
@@ -178,12 +150,11 @@ CV_ENUM(farneFlagType, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
 typedef tuple<tuple<int, double>, farneFlagType, bool> FarnebackOpticalFlowParams;
 typedef TestBaseWithParam<FarnebackOpticalFlowParams> FarnebackOpticalFlowFixture;
 
-PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
-            ::testing::Combine(
-                ::testing::Values(make_tuple<int, double>(5, 1.1),
-                                  make_tuple<int, double>(7, 1.5)),
-                farneFlagType::all(),
-                ::testing::Bool()))
+OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
+                ::testing::Combine(
+                    ::testing::Values(make_tuple<int, double>(5, 1.1),
+                                      make_tuple<int, double>(7, 1.5)),
+                    farneFlagType::all(), ::testing::Bool()))
 {
     Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
