@@ -88,6 +88,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
+/* Intel Perceptual Computing SDK library */
+#cmakedefine HAVE_INTELPERC
+
 /* Intel Integrated Performance Primitives */
 #cmakedefine HAVE_IPP
 
@@ -164,6 +167,6 @@
 /* Xine video library */
 #cmakedefine HAVE_XINE
 
-/* Define to 1 if your processor stores words with the most significant byte
+/* Define if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #cmakedefine WORDS_BIGENDIAN

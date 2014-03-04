@@ -144,7 +144,7 @@ TEST(PackageManager, GetPackagePathForMips)
 }
 #endif
 
-// TODO: Enable tests if seporate package will be exists
+// TODO: Enable tests if separate package will be exists
 // TEST(PackageManager, GetPackagePathForTegra2)
 // {
 //     PackageManagerStub pm;

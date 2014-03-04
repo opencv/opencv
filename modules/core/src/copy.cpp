@@ -166,16 +166,16 @@ static void copyMask##suffix(const uchar* src, size_t sstep, const uchar* mask, 
 }
 
 
-DEF_COPY_MASK(8u, uchar);
-DEF_COPY_MASK(16u, ushort);
-DEF_COPY_MASK(8uC3, Vec3b);
-DEF_COPY_MASK(32s, int);
-DEF_COPY_MASK(16uC3, Vec3s);
-DEF_COPY_MASK(32sC2, Vec2i);
-DEF_COPY_MASK(32sC3, Vec3i);
-DEF_COPY_MASK(32sC4, Vec4i);
-DEF_COPY_MASK(32sC6, Vec6i);
-DEF_COPY_MASK(32sC8, Vec8i);
+DEF_COPY_MASK(8u, uchar)
+DEF_COPY_MASK(16u, ushort)
+DEF_COPY_MASK(8uC3, Vec3b)
+DEF_COPY_MASK(32s, int)
+DEF_COPY_MASK(16uC3, Vec3s)
+DEF_COPY_MASK(32sC2, Vec2i)
+DEF_COPY_MASK(32sC3, Vec3i)
+DEF_COPY_MASK(32sC4, Vec4i)
+DEF_COPY_MASK(32sC6, Vec6i)
+DEF_COPY_MASK(32sC8, Vec8i)
 
 BinaryFunc copyMaskTab[] =
 {
@@ -247,10 +247,7 @@ void Mat::copyTo( OutputArray _dst ) const
             const uchar* sptr = data;
             uchar* dptr = dst.data;
 
-            // to handle the copying 1xn matrix => nx1 std vector.
-            Size sz = size() == dst.size() ?
-                getContinuousSize(*this, dst) :
-                getContinuousSize(*this);
+            Size sz = getContinuousSize(*this, dst);
             size_t len = sz.width*elemSize();
 
             for( ; sz.height--; sptr += step, dptr += dst.step )
@@ -301,6 +298,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
     if( dims <= 2 )
     {
+        CV_Assert( size() == mask.size() );
         Size sz = getContinuousSize(*this, dst, mask, mcn);
         copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
@@ -355,7 +353,7 @@ Mat& Mat::operator = (const Scalar& s)
 
 Mat& Mat::setTo(InputArray _value, InputArray _mask)
 {
-    if( !data )
+    if( empty() )
         return *this;
 
     Mat value = _value.getMat(), mask = _mask.getMat();
@@ -477,6 +475,8 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
     }
 }
 
+#ifdef HAVE_OPENCL
+
 enum { FLIP_COLS = 1 << 0, FLIP_ROWS = 1 << 1, FLIP_BOTH = FLIP_ROWS | FLIP_COLS };
 
 static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
@@ -521,13 +521,13 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
     return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst), rows, cols).run(2, globalsize, NULL, false);
 }
 
+#endif
+
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_Assert( _src.dims() <= 2 );
 
-    bool use_opencl = ocl::useOpenCL() && _dst.isUMat();
-    if ( use_opencl && ocl_flip(_src,_dst, flip_mode))
-        return;
+    CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src,_dst, flip_mode))
 
     Mat src = _src.getMat();
     _dst.create( src.size(), src.type() );
@@ -543,6 +543,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.data, dst.step, dst.data, dst.step, dst.size(), esz );
 }
 
+#ifdef HAVE_OPENCL
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
@@ -558,6 +559,8 @@ static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     return true;
 }
 
+#endif
+
 void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
     CV_Assert( _src.dims() <= 2 );
@@ -566,11 +569,8 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
     Size ssize = _src.size();
     _dst.create(ssize.height*ny, ssize.width*nx, _src.type());
 
-    if (ocl::useOpenCL() && _src.isUMat())
-    {
-        CV_Assert(ocl_repeat(_src, ny, nx, _dst));
-        return;
-    }
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_repeat(_src, ny, nx, _dst))
 
     Mat src = _src.getMat(), dst = _dst.getMat();
     Size dsize = dst.size();
@@ -632,6 +632,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
     }
     else if( borderType == BORDER_WRAP )
     {
+        CV_Assert(len > 0);
         if( p < 0 )
             p -= ((p-len+1)/len)*len;
         if( p >= len )
@@ -770,6 +771,8 @@ void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
 
 }
 
+#ifdef HAVE_OPENCL
+
 namespace cv {
 
 static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
@@ -826,14 +829,15 @@ static bool ocl_copyMakeBorder( InputArray _src, OutputArray _dst, int top, int 
 
 }
 
+#endif
+
 void cv::copyMakeBorder( InputArray _src, OutputArray _dst, int top, int bottom,
                          int left, int right, int borderType, const Scalar& value )
 {
     CV_Assert( top >= 0 && bottom >= 0 && left >= 0 && right >= 0 );
 
-    if (ocl::useOpenCL() && _dst.isUMat() && _src.dims() <= 2 &&
-            ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
-        return;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_copyMakeBorder(_src, _dst, top, bottom, left, right, borderType, value))
 
     Mat src = _src.getMat();
 

@@ -2,8 +2,7 @@
 
 from __future__ import print_function
 import os, sys, re, string, fnmatch
-
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "cuda", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl", "softcascade", "superres"]
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "cuda", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "softcascade", "superres"]
 verbose = False
 show_warnings = True
 show_errors = True

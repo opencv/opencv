@@ -13,7 +13,7 @@ viz::makeTransformToGlobal
 --------------------------
 Takes coordinate frame data and builds transform to global coordinate frame.
 
-.. ocv:function:: Affine3f viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0))
+.. ocv:function:: Affine3d viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0))
 
     :param axis_x: X axis vector in global coordinate frame.
     :param axis_y: Y axis vector in global coordinate frame.
@@ -26,7 +26,7 @@ viz::makeCameraPose
 -------------------
 Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation).
 
-.. ocv:function:: Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
+.. ocv:function:: Affine3d makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
 
     :param position: Position of the camera in global coordinate frame.
     :param focal_point: Focal point of the camera in global coordinate frame.
@@ -34,11 +34,11 @@ Constructs camera pose from position, focal_point and up_vector (see gluLookAt()
 
 This function returns pose of the camera in global coordinate frame.
 
-viz::get
---------
+viz::getWindowByName
+--------------------
 Retrieves a window by its name.
 
-.. ocv:function:: Viz3d get(const String &window_name)
+.. ocv:function:: Viz3d getWindowByName(const String &window_name)
 
     :param window_name: Name of the window that is to be retrieved.
 
@@ -51,8 +51,8 @@ This function returns a :ocv:class:`Viz3d` object with the given name.
           .. code-block:: cpp
 
                 /// window and window_2 are the same windows.
-                viz::Viz3d window   = viz::get("myWindow");
-                viz::Viz3d window_2 = viz::get("Viz - myWindow");
+                viz::Viz3d window   = viz::getWindowByName("myWindow");
+                viz::Viz3d window_2 = viz::getWindowByName("Viz - myWindow");
 
 viz::isNan
 ----------
@@ -94,19 +94,21 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         Viz3d& operator=(const Viz3d&);
         ~Viz3d();
 
-        void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+        void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
         void removeWidget(const String &id);
         Widget getWidget(const String &id) const;
         void removeAllWidgets();
 
-        void setWidgetPose(const String &id, const Affine3f &pose);
-        void updateWidgetPose(const String &id, const Affine3f &pose);
-        Affine3f getWidgetPose(const String &id) const;
+        void setWidgetPose(const String &id, const Affine3d &pose);
+        void updateWidgetPose(const String &id, const Affine3d &pose);
+        Affine3d getWidgetPose(const String &id) const;
+
+        void showImage(InputArray image, const Size& window_size = Size(-1, -1));
 
         void setCamera(const Camera &camera);
         Camera getCamera() const;
-        Affine3f getViewerPose();
-        void setViewerPose(const Affine3f &pose);
+        Affine3d getViewerPose();
+        void setViewerPose(const Affine3d &pose);
 
         void resetCameraViewpoint (const String &id);
         void resetCamera();
@@ -132,8 +134,6 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         void setRenderingProperty(const String &id, int property, double value);
         double getRenderingProperty(const String &id, int property);
 
-        void setDesiredUpdateRate(double rate);
-        double getDesiredUpdateRate();
 
         void setRepresentation(int representation);
     private:
@@ -152,7 +152,7 @@ viz::Viz3d::showWidget
 ----------------------
 Shows a widget in the window.
 
-.. ocv:function:: void Viz3d::showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity())
+.. ocv:function:: void Viz3d::showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity())
 
     :param id: A unique id for the widget.
     :param widget: The widget to be displayed in the window.
@@ -182,11 +182,20 @@ Removes all widgets from the window.
 
 .. ocv:function:: void removeAllWidgets()
 
+viz::Viz3d::showImage
+---------------------
+Removed all widgets and displays image scaled to whole window area.
+
+.. ocv:function:: void showImage(InputArray image, const Size& window_size = Size(-1, -1))
+
+    :param image: Image to be displayed.
+    :param size: Size of Viz3d window. Default value means no change.
+
 viz::Viz3d::setWidgetPose
 -------------------------
 Sets pose of a widget in the window.
 
-.. ocv:function:: void setWidgetPose(const String &id, const Affine3f &pose)
+.. ocv:function:: void setWidgetPose(const String &id, const Affine3d &pose)
 
     :param id: The id of the widget whose pose will be set.
     :param pose: The new pose of the widget.
@@ -195,7 +204,7 @@ viz::Viz3d::updateWidgetPose
 ----------------------------
 Updates pose of a widget in the window by pre-multiplying its current pose.
 
-.. ocv:function:: void updateWidgetPose(const String &id, const Affine3f &pose)
+.. ocv:function:: void updateWidgetPose(const String &id, const Affine3d &pose)
 
     :param id: The id of the widget whose pose will be updated.
     :param pose: The pose that the current pose of the widget will be pre-multiplied by.
@@ -204,7 +213,7 @@ viz::Viz3d::getWidgetPose
 -------------------------
 Returns the current pose of a widget in the window.
 
-.. ocv:function:: Affine3f getWidgetPose(const String &id) const
+.. ocv:function:: Affine3d getWidgetPose(const String &id) const
 
     :param id: The id of the widget whose pose will be returned.
 
@@ -226,13 +235,13 @@ viz::Viz3d::getViewerPose
 -------------------------
 Returns the current pose of the viewer.
 
-..ocv:function:: Affine3f getViewerPose()
+..ocv:function:: Affine3d getViewerPose()
 
 viz::Viz3d::setViewerPose
 -------------------------
 Sets pose of the viewer.
 
-.. ocv:function:: void setViewerPose(const Affine3f &pose)
+.. ocv:function:: void setViewerPose(const Affine3d &pose)
 
     :param pose: The new pose of the viewer.
 
@@ -414,20 +423,6 @@ Returns rendering property of a widget.
         * **SHADING_GOURAUD**
         * **SHADING_PHONG**
 
-viz::Viz3d::setDesiredUpdateRate
---------------------------------
-Sets desired update rate of the window.
-
-.. ocv:function:: void setDesiredUpdateRate(double rate)
-
-    :param rate: Desired update rate. The default is 30.
-
-viz::Viz3d::getDesiredUpdateRate
---------------------------------
-Returns desired update rate of the window.
-
-.. ocv:function:: double getDesiredUpdateRate()
-
 viz::Viz3d::setRepresentation
 -----------------------------
 Sets geometry representation of the widgets to surface, wireframe or points.
@@ -468,33 +463,33 @@ This class a represents BGR color. ::
         static Color gray();
     };
 
-viz::Mesh3d
+viz::Mesh
 -----------
-.. ocv:class:: Mesh3d
+.. ocv:class:: Mesh
 
 This class wraps mesh attributes, and it can load a mesh from a ``ply`` file. ::
 
-    class CV_EXPORTS Mesh3d
+    class CV_EXPORTS Mesh
     {
     public:
 
-        Mat cloud, colors;
+        Mat cloud, colors, normals;
+
+        //! Raw integer list of the form: (n,id1,id2,...,idn, n,id1,id2,...,idn, ...)
+        //! where n is the number of points in the poligon, and id is a zero-offset index into an associated cloud.
         Mat polygons;
 
         //! Loads mesh from a given ply file
-        static Mesh3d loadMesh(const String& file);
-
-    private:
-        /* hidden */
+        static Mesh load(const String& file);
     };
 
-viz::Mesh3d::loadMesh
+viz::Mesh::load
 ---------------------
 Loads a mesh from a ``ply`` file.
 
-.. ocv:function:: static Mesh3d loadMesh(const String& file)
+.. ocv:function:: static Mesh load(const String& file)
 
-    :param file: File name.
+    :param file: File name (for no only PLY is supported)
 
 
 viz::KeyboardEvent
@@ -506,40 +501,28 @@ This class represents a keyboard event. ::
     class CV_EXPORTS KeyboardEvent
     {
     public:
-        static const unsigned int Alt   = 1;
-        static const unsigned int Ctrl  = 2;
-        static const unsigned int Shift = 4;
+        enum { ALT = 1, CTRL = 2, SHIFT = 4 };
+        enum Action { KEY_UP = 0, KEY_DOWN = 1 };
 
-        //! Create a keyboard event
-        //! - Note that action is true if key is pressed, false if released
-        KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
+        KeyboardEvent(Action action, const String& symbol, unsigned char code, int modifiers);
 
-        bool isAltPressed () const;
-        bool isCtrlPressed () const;
-        bool isShiftPressed () const;
-
-        unsigned char getKeyCode () const;
-
-        const String& getKeySym () const;
-        bool keyDown () const;
-        bool keyUp () const;
-
-    protected:
-        /* hidden */
+        Action action;
+        String symbol;
+        unsigned char code;
+        int modifiers;
     };
 
 viz::KeyboardEvent::KeyboardEvent
 ---------------------------------
 Constructs a KeyboardEvent.
 
-.. ocv:function:: KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
+.. ocv:function:: KeyboardEvent (Action action, const String& symbol, unsigned char code, Modifiers modifiers)
 
-    :param action: If true, key is pressed. If false, key is released.
-    :param key_sym: Name of the key.
-    :param key: Code of the key.
-    :param alt: If true, ``alt`` is pressed.
-    :param ctrl: If true, ``ctrl`` is pressed.
-    :param shift: If true, ``shift`` is pressed.
+    :param action: Signals if key is pressed or released.
+    :param symbol: Name of the key.
+    :param code: Code of the key.
+    :param modifiers: Signals if ``alt``, ``ctrl`` or ``shift`` are pressed or their combination.
+
 
 viz::MouseEvent
 ---------------
@@ -553,26 +536,24 @@ This class represents a mouse event. ::
         enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
         enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
 
-        MouseEvent (const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift);
+        MouseEvent(const Type& type, const MouseButton& button, const Point& pointer, int modifiers);
 
         Type type;
         MouseButton button;
         Point pointer;
-        unsigned int key_state;
+        int modifiers;
     };
 
 viz::MouseEvent::MouseEvent
 ---------------------------
 Constructs a MouseEvent.
 
-.. ocv:function:: MouseEvent (const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift)
+.. ocv:function:: MouseEvent (const Type& type, const MouseButton& button, const Point& p, Modifiers modifiers)
 
     :param type: Type of the event. This can be **MouseMove**, **MouseButtonPress**, **MouseButtonRelease**, **MouseScrollDown**, **MouseScrollUp**, **MouseDblClick**.
     :param button: Mouse button. This can be **NoButton**, **LeftButton**, **MiddleButton**, **RightButton**, **VScroll**.
     :param p: Position of the event.
-    :param alt: If true, ``alt`` is pressed.
-    :param ctrl: If true, ``ctrl`` is pressed.
-    :param shift: If true, ``shift`` is pressed.
+    :param modifiers: Signals if ``alt``, ``ctrl`` or ``shift`` are pressed or their combination.
 
 viz::Camera
 -----------
@@ -585,24 +566,24 @@ that can extract the intrinsic parameters from ``field of view``, ``intrinsic ma
     class CV_EXPORTS Camera
     {
     public:
-        Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-        Camera(const Vec2f &fov, const Size &window_size);
-        Camera(const cv::Matx33f &K, const Size &window_size);
-        Camera(const cv::Matx44f &proj, const Size &window_size);
+        Camera(double f_x, double f_y, double c_x, double c_y, const Size &window_size);
+        Camera(const Vec2d &fov, const Size &window_size);
+        Camera(const Matx33d &K, const Size &window_size);
+        Camera(const Matx44d &proj, const Size &window_size);
 
-        inline const Vec2d & getClip() const { return clip_; }
-        inline void setClip(const Vec2d &clip) { clip_ = clip; }
+        inline const Vec2d & getClip() const;
+        inline void setClip(const Vec2d &clip);
 
-        inline const Size & getWindowSize() const { return window_size_; }
+        inline const Size & getWindowSize() const;
         void setWindowSize(const Size &window_size);
 
-        inline const Vec2f & getFov() const { return fov_; }
-        inline void setFov(const Vec2f & fov) { fov_ = fov; }
+        inline const Vec2d & getFov() const;
+        inline void setFov(const Vec2d & fov);
 
-        inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
-        inline const Vec2f & getFocalLength() const { return focal_; }
+        inline const Vec2d & getPrincipalPoint() const;
+        inline const Vec2d & getFocalLength() const;
 
-        void computeProjectionMatrix(Matx44f &proj) const;
+        void computeProjectionMatrix(Matx44d &proj) const;
 
         static Camera KinectCamera(const Size &window_size);
 
@@ -614,7 +595,7 @@ viz::Camera::Camera
 -------------------
 Constructs a Camera.
 
-.. ocv:function:: Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+.. ocv:function:: Camera(double f_x, double f_y, double c_x, double c_y, const Size &window_size)
 
     :param f_x: Horizontal focal length.
     :param f_y: Vertical focal length.
@@ -622,19 +603,19 @@ Constructs a Camera.
     :param c_y: y coordinate of the principal point.
     :param window_size: Size of the window. This together with focal length and principal point determines the field of view.
 
-.. ocv:function:: Camera(const Vec2f &fov, const Size &window_size)
+.. ocv:function:: Camera(const Vec2d &fov, const Size &window_size)
 
     :param fov: Field of view (horizontal, vertical)
     :param window_size: Size of the window.
 
     Principal point is at the center of the window by default.
 
-.. ocv:function:: Camera(const cv::Matx33f &K, const Size &window_size)
+.. ocv:function:: Camera(const Matx33d &K, const Size &window_size)
 
     :param K: Intrinsic matrix of the camera.
     :param window_size: Size of the window. This together with intrinsic matrix determines the field of view.
 
-.. ocv:function:: Camera(const cv::Matx44f &proj, const Size &window_size)
+.. ocv:function:: Camera(const Matx44d &proj, const Size &window_size)
 
     :param proj: Projection matrix of the camera.
     :param window_size: Size of the window. This together with projection matrix determines the field of view.
@@ -643,7 +624,7 @@ viz::Camera::computeProjectionMatrix
 ------------------------------------
 Computes projection matrix using intrinsic parameters of the camera.
 
-.. ocv:function:: void computeProjectionMatrix(Matx44f &proj) const
+.. ocv:function:: void computeProjectionMatrix(Matx44d &proj) const
 
     :param proj: Output projection matrix.
 

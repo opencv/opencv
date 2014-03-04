@@ -97,16 +97,16 @@ class CvBlobTrackerAuto1: public CvBlobTrackerAuto
 public:
     CvBlobTrackerAuto1(CvBlobTrackerAutoParam1* param);
     ~CvBlobTrackerAuto1();
-    CvBlob* GetBlob(int index){return m_BlobList.GetBlob(index);};
-    CvBlob* GetBlobByID(int ID){return m_BlobList.GetBlobByID(ID);};
-    int     GetBlobNum(){return m_BlobList.GetBlobNum();};
-    virtual IplImage* GetFGMask(){return m_pFGMask;};
-    float   GetState(int BlobID){return m_pBTA?m_pBTA->GetState(BlobID):0;};
-    const char*   GetStateDesc(int BlobID){return m_pBTA?m_pBTA->GetStateDesc(BlobID):NULL;};
+    CvBlob* GetBlob(int index){return m_BlobList.GetBlob(index);}
+    CvBlob* GetBlobByID(int ID){return m_BlobList.GetBlobByID(ID);}
+    int     GetBlobNum(){return m_BlobList.GetBlobNum();}
+    virtual IplImage* GetFGMask(){return m_pFGMask;}
+    float   GetState(int BlobID){return m_pBTA?m_pBTA->GetState(BlobID):0;}
+    const char*   GetStateDesc(int BlobID){return m_pBTA?m_pBTA->GetStateDesc(BlobID):NULL;}
     /* Return 0 if trajectory is normal;
        return >0 if trajectory abnormal. */
     void Process(IplImage* pImg, IplImage* pMask = NULL);
-    void Release(){delete this;};
+    void Release(){delete this;}
 
 private:
     IplImage*               m_pFGMask;

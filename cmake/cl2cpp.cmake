@@ -29,6 +29,7 @@ ${nested_namespace_start}
 set(STR_HPP "// This file is auto-generated. Do not edit!
 
 #include \"opencv2/core/ocl_genbase.hpp\"
+#include \"opencv2/core/opencl/ocl_defs.hpp\"
 
 namespace cv
 {
@@ -64,8 +65,8 @@ foreach(cl ${cl_list})
   set(STR_CPP_DECL "const struct ProgramEntry ${cl_filename}={\"${cl_filename}\",\n\"${lines}, \"${hash}\"};\n")
   set(STR_HPP_DECL "extern const struct ProgramEntry ${cl_filename};\n")
   if(new_mode)
-    set(STR_CPP_DECL "${STR_CPP_DECL}ProgramSource2 ${cl_filename}_oclsrc(${cl_filename}.programStr);\n")
-    set(STR_HPP_DECL "${STR_HPP_DECL}extern ProgramSource2 ${cl_filename}_oclsrc;\n")
+    set(STR_CPP_DECL "${STR_CPP_DECL}ProgramSource ${cl_filename}_oclsrc(${cl_filename}.programStr);\n")
+    set(STR_HPP_DECL "${STR_HPP_DECL}extern ProgramSource ${cl_filename}_oclsrc;\n")
   endif()
 
   set(STR_CPP "${STR_CPP}${STR_CPP_DECL}")

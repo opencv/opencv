@@ -229,9 +229,9 @@ void FREAK::buildPattern()
     }
 }
 
-void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
+void FREAK::computeImpl( InputArray _image, std::vector<KeyPoint>& keypoints, OutputArray _descriptors ) const
 {
-
+    Mat image = _image.getMat();
     if( image.empty() )
         return;
     if( keypoints.empty() )
@@ -297,7 +297,9 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     if( !extAll )
     {
         // extract the best comparisons only
-        descriptors = cv::Mat::zeros((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
+        _descriptors.create((int)keypoints.size(), FREAK_NB_PAIRS/8, CV_8U);
+        _descriptors.setTo(Scalar::all(0));
+        Mat descriptors = _descriptors.getMat();
 #if CV_SSE2
         __m128i* ptr= (__m128i*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 #else
@@ -415,7 +417,9 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
     }
     else // extract all possible comparisons for selection
     {
-        descriptors = cv::Mat::zeros((int)keypoints.size(), 128, CV_8U);
+        _descriptors.create((int)keypoints.size(), 128, CV_8U);
+        _descriptors.setTo(Scalar::all(0));
+        Mat descriptors = _descriptors.getMat();
         std::bitset<1024>* ptr = (std::bitset<1024>*) (descriptors.data+(keypoints.size()-1)*descriptors.step[0]);
 
         for( size_t k = keypoints.size(); k--; )
@@ -474,13 +478,14 @@ void FREAK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat
 }
 
 // simply take average on a square patch, not even gaussian approx
-uchar FREAK::meanIntensity( const cv::Mat& image, const cv::Mat& integral,
+uchar FREAK::meanIntensity( InputArray _image, InputArray _integral,
                             const float kp_x,
                             const float kp_y,
                             const unsigned int scale,
                             const unsigned int rot,
                             const unsigned int point) const
 {
+    Mat image = _image.getMat(), integral = _integral.getMat();
     // get point position in image
     const PatternPoint& FreakPoint = patternLookup[scale*FREAK_NB_ORIENTATION*FREAK_NB_POINTS + rot*FREAK_NB_POINTS + point];
     const float xf = FreakPoint.x+kp_x;

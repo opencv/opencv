@@ -394,7 +394,9 @@ template<typename _Tp> static inline _Tp randu()
   return (_Tp)theRNG();
 }
 
+///////////////////////////////// Formatted string generation /////////////////////////////////
 
+CV_EXPORTS String format( const char* fmt, ... );
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
@@ -419,6 +421,12 @@ static inline
 int print(const Mat& mtx, FILE* stream = stdout)
 {
     return print(Formatter::get()->format(mtx), stream);
+}
+
+static inline
+int print(const UMat& mtx, FILE* stream = stdout)
+{
+    return print(Formatter::get()->format(mtx.getMat(ACCESS_READ)), stream);
 }
 
 template<typename _Tp> static inline

@@ -124,6 +124,12 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   if(ENABLE_SSE2)
     add_extra_compiler_option(-msse2)
   endif()
+  if (ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=neon")
+  endif()
+  if (ENABLE_VFPV3 AND NOT ENABLE_NEON)
+    add_extra_compiler_option("-mfpu=vfpv3")
+  endif()
 
   # SSE3 and further should be disabled under MingW because it generates compiler errors
   if(NOT MINGW)
@@ -177,6 +183,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   elseif(NOT APPLE AND NOT ANDROID)
     # Remove unreferenced functions: function level linking
     add_extra_compiler_option(-ffunction-sections)
+  endif()
+
+  if(ENABLE_COVERAGE)
+    set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} --coverage")
+    set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} --coverage")
   endif()
 
   set(OPENCV_EXTRA_FLAGS_RELEASE "${OPENCV_EXTRA_FLAGS_RELEASE} -DNDEBUG")

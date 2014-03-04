@@ -81,7 +81,7 @@ Building the OpenCV library from scratch requires a couple of tools installed be
 
    + An IDE of choice (preferably), or just a C\C++ compiler that will actually make the binary files. Here we will use the `Microsoft Visual Studio <https://www.microsoft.com/visualstudio/en-us>`_. However, you can use any other IDE that has a valid C\C++ compiler.
 
-   + |CMake|_, which is a neat tool to make the project files (for your choosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
+   + |CMake|_, which is a neat tool to make the project files (for your chosen IDE) from the OpenCV source files. It will also allow an easy configuration of the OpenCV build files, in order to make binary files that fits exactly to your needs.
 
    + Git to acquire the OpenCV source files. A good tool for this is |TortoiseGit|_. Alternatively, you can just download an archived version of the source files from our `page on Sourceforge <http://sourceforge.net/projects/opencvlibrary/files/opencv-win/>`_
 
@@ -320,7 +320,7 @@ First we set an enviroment variable to make easier our work. This will hold the 
 
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value. Inside this you should have two folders called *lib* and *bin*. The -m should be added if you wish to make the settings computer wise, instead of user wise.
 
-If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path. This is cause you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this he needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
+If you built static libraries then you are done. Otherwise, you need to add the *bin* folders path to the systems path. This is because you will use the OpenCV library in form of *\"Dynamic-link libraries\"* (also known as **DLL**). Inside these are stored all the algorithms and information the OpenCV library contains. The operating system will load them only on demand, during runtime. However, to do this the operating system needs to know where they are. The systems **PATH** contains a list of folders where DLLs can be found. Add the OpenCV library path to this and the OS will know where to look if he ever needs the OpenCV binaries. Otherwise, you will need to copy the used DLLs right beside the applications executable file (*exe*) for the OS to find it, which is highly unpleasent if you work on many projects. To do this start up again the |PathEditor|_ and add the following new entry (right click in the application to bring up the menu):
 
 ::
 

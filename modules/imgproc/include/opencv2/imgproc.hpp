@@ -203,7 +203,8 @@ enum { HISTCMP_CORREL        = 0,
        HISTCMP_CHISQR        = 1,
        HISTCMP_INTERSECT     = 2,
        HISTCMP_BHATTACHARYYA = 3,
-       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA
+       HISTCMP_HELLINGER     = HISTCMP_BHATTACHARYYA,
+       HISTCMP_CHISQR_ALT    = 4
      };
 
 //! the color conversion code
@@ -952,7 +953,7 @@ public:
  */
     CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
 
-    virtual ~LineSegmentDetector() {};
+    virtual ~LineSegmentDetector() { }
 };
 
 //! Returns a pointer to a LineSegmentDetector class.
@@ -1065,11 +1066,6 @@ CV_EXPORTS_W void bilateralFilter( InputArray src, OutputArray dst, int d,
                                    double sigmaColor, double sigmaSpace,
                                    int borderType = BORDER_DEFAULT );
 
-//! smooths the image using adaptive bilateral filter
-CV_EXPORTS_W void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize,
-                                           double sigmaSpace, double maxSigmaColor = 20.0, Point anchor=Point(-1, -1),
-                                           int borderType=BORDER_DEFAULT );
-
 //! smooths the image using the box filter. Each pixel is processed in O(1) time
 CV_EXPORTS_W void boxFilter( InputArray src, OutputArray dst, int ddepth,
                              Size ksize, Point anchor = Point(-1,-1),
@@ -1151,7 +1147,8 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
 //! finds lines in the black-n-white image using the standard or pyramid Hough transform
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
-                              double srn = 0, double stn = 0 );
+                              double srn = 0, double stn = 0,
+                              double min_theta = 0, double max_theta = CV_PI );
 
 //! finds line segments in the black-n-white image using probabilistic Hough transform
 CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,

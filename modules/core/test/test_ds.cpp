@@ -1355,7 +1355,7 @@ int  Core_SetTest::test_set_ops( int iters )
                                   (cvset->total == 0 || cvset->total >= prev_total),
                                   "The total number of cvset elements is not correct" );
 
-        // CvSet and simple set do not neccessary have the same "total" (active & free) number,
+        // CvSet and simple set do not necessary have the same "total" (active & free) number,
         // so pass "set->total" to skip that check
         test_seq_block_consistence( struct_idx, (CvSeq*)cvset, cvset->total );
         update_progressbar();
@@ -1777,7 +1777,7 @@ int  Core_GraphTest::test_graph_ops( int iters )
                                   (graph->edges->total == 0 || graph->edges->total >= prev_edge_total),
                                   "The total number of graph vertices is not correct" );
 
-        // CvGraph and simple graph do not neccessary have the same "total" (active & free) number,
+        // CvGraph and simple graph do not necessary have the same "total" (active & free) number,
         // so pass "graph->total" (or "graph->edges->total") to skip that check
         test_seq_block_consistence( struct_idx, (CvSeq*)graph, graph->total );
         test_seq_block_consistence( struct_idx, (CvSeq*)graph->edges, graph->edges->total );

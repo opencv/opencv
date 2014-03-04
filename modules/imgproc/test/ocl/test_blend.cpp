@@ -75,7 +75,7 @@ PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
         const int type = CV_MAKE_TYPE(depth, channels);
         const double upValue = 256;
 
-        Size roiSize = randomSize(1, 20);
+        Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(src1, src1_roi, roiSize, src1Border, type, -upValue, upValue);
 
@@ -104,8 +104,7 @@ PARAM_TEST_CASE(BlendLinear, MatDepth, Channels, bool)
 
     void Near(double eps = 0.0)
     {
-        EXPECT_MAT_NEAR(dst, udst, eps);
-        EXPECT_MAT_NEAR(dst_roi, udst_roi, eps);
+        OCL_EXPECT_MATS_NEAR(dst, eps)
     }
 };
 

@@ -42,10 +42,7 @@
 #ifndef __OPENCV_TS_OCL_TEST_HPP__
 #define __OPENCV_TS_OCL_TEST_HPP__
 
-#include "cvconfig.h" // to get definition of HAVE_OPENCL
 #include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCL
 
 #include "opencv2/ts.hpp"
 
@@ -60,54 +57,29 @@ namespace ocl {
 using namespace cv;
 using namespace testing;
 
-namespace traits {
-
-template <typename T>
-struct GetMatForRead
-{
-};
-template <>
-struct GetMatForRead<Mat>
-{
-    static const Mat get(const Mat& m) { return m; }
-};
-template <>
-struct GetMatForRead<UMat>
-{
-    static const Mat get(const UMat& m) { return m.getMat(ACCESS_READ); }
-};
-
-} // namespace traits
-
-template <typename T>
-const Mat getMatForRead(const T& mat)
-{
-    return traits::GetMatForRead<T>::get(mat);
-}
-
 extern int test_loop_times;
 
 #define MAX_VALUE 357
 
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
-    EXPECT_LE(checkNorm(mat), eps) \
+    EXPECT_LE(TestUtils::checkNorm(mat), eps) \
 }
 
 #define EXPECT_MAT_NEAR(mat1, mat2, eps) \
 { \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNorm(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(TestUtils::checkNorm(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
 { \
-   ASSERT_EQ(mat1.type(), mat2.type()); \
-   ASSERT_EQ(mat1.size(), mat2.size()); \
-   EXPECT_LE(checkNormRelative(mat1, mat2), eps) \
-       << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    ASSERT_EQ(mat1.type(), mat2.type()); \
+    ASSERT_EQ(mat1.size(), mat2.size()); \
+    EXPECT_LE(TestUtils::checkNormRelative(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
@@ -134,8 +106,8 @@ extern int test_loop_times;
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkSimilarity(mat1, mat2), eps); \
-        << cv::format("Size: %d x %d", mat1.size().width, mat1.size().height) << std::endl; \
+    EXPECT_LE(checkSimilarity(mat1, mat2), eps) \
+        << "Size: " << mat1.size() << std::endl; \
 }
 
 using perf::MatDepth;
@@ -227,54 +199,22 @@ struct CV_EXPORTS TestUtils
     // If the two vectors are not equal, it will return the difference in vector size
     // Else it will return (total diff of each 1 and 2 rects covered pixels)/(total 1 rects covered pixels)
     // The smaller, the better matched
-    static double checkRectSimilarity(cv::Size sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
+    static double checkRectSimilarity(const cv::Size & sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
 
     //! read image from testdata folder.
-
     static cv::Mat readImage(const String &fileName, int flags = cv::IMREAD_COLOR);
     static cv::Mat readImageType(const String &fname, int type);
 
-    static double checkNorm(const cv::Mat &m);
-    static double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
-    static double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
-    static inline double checkNormRelative(const Mat &m1, const Mat &m2)
+    static double checkNorm(InputArray m);
+    static double checkNorm(InputArray m1, InputArray m2);
+    static double checkSimilarity(InputArray m1, InputArray m2);
+    static void showDiff(InputArray _src, InputArray _gold, InputArray _actual, double eps, bool alwaysShow);
+
+    static inline double checkNormRelative(InputArray m1, InputArray m2)
     {
-        return cv::norm(m1, m2, cv::NORM_INF) /
+        return cv::norm(m1.getMat(), m2.getMat(), cv::NORM_INF) /
                 std::max((double)std::numeric_limits<float>::epsilon(),
-                         (double)std::max(cv::norm(m1, cv::NORM_INF), norm(m2, cv::NORM_INF)));
-    }
-    static void showDiff(const Mat& src, const Mat& gold, const Mat& actual, double eps, bool alwaysShow = false);
-
-    template <typename T1>
-    static double checkNorm(const T1& m)
-    {
-        return checkNorm(getMatForRead(m));
-    }
-    template <typename T1, typename T2>
-    static double checkNorm(const T1& m1, const T2& m2)
-    {
-        return checkNorm(getMatForRead(m1), getMatForRead(m2));
-    }
-    template <typename T1, typename T2>
-    static double checkSimilarity(const T1& m1, const T2& m2)
-    {
-        return checkSimilarity(getMatForRead(m1), getMatForRead(m2));
-    }
-    template <typename T1, typename T2>
-    static inline double checkNormRelative(const T1& m1, const T2& m2)
-    {
-        const Mat _m1 = getMatForRead(m1);
-        const Mat _m2 = getMatForRead(m2);
-        return checkNormRelative(_m1, _m2);
-    }
-
-    template <typename T1, typename T2, typename T3>
-    static void showDiff(const T1& src, const T2& gold, const T3& actual, double eps, bool alwaysShow = false)
-    {
-        const Mat _src = getMatForRead(src);
-        const Mat _gold = getMatForRead(gold);
-        const Mat _actual = getMatForRead(actual);
-        showDiff(_src, _gold, _actual, eps, alwaysShow);
+                         (double)std::max(cv::norm(m1.getMat(), cv::NORM_INF), norm(m2.getMat(), cv::NORM_INF)));
     }
 };
 
@@ -318,6 +258,8 @@ IMPLEMENT_PARAM_CLASS(Channels, int)
 #endif // IMPLEMENT_PARAM_CLASS
 
 #define OCL_TEST_P TEST_P
+#define OCL_TEST_F(name, ...) typedef name OCL_##name; TEST_F(OCL_##name, __VA_ARGS__)
+#define OCL_TEST(name, ...) TEST(OCL_##name, __VA_ARGS__)
 
 #define OCL_OFF(fn) cv::ocl::setUseOpenCL(false); fn
 #define OCL_ON(fn) cv::ocl::setUseOpenCL(true); fn
@@ -332,8 +274,6 @@ CV_ENUM(BorderType, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WR
 #define OCL_INSTANTIATE_TEST_CASE_P(prefix, test_case_name, generator) \
     INSTANTIATE_TEST_CASE_P(OCL_ ## prefix, test_case_name, generator)
 
-}} // namespace cvtest::ocl
-
-#endif // HAVE_OPENCL
+} } // namespace cvtest::ocl
 
 #endif // __OPENCV_TS_OCL_TEST_HPP__

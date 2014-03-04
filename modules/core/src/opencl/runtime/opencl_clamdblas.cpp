@@ -67,7 +67,7 @@
     #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
 #endif // _WIN32
 
-#if defined(linux)
+#if defined(__linux__)
     #include <dlfcn.h>
     #include <stdio.h>
 
@@ -87,6 +87,11 @@
 #endif
 
 #ifndef CV_CL_GET_PROC_ADDRESS
+#ifdef __GNUC__
+#warning("OPENCV: OpenCL BLAS dynamic library loader: check configuration")
+#else
+#pragma message("WARNING: OPENCV: OpenCL BLAS dynamic library loader: check configuration")
+#endif
 #define CV_CL_GET_PROC_ADDRESS(name) NULL
 #endif
 
@@ -100,8 +105,6 @@ static void* openclamdblas_check_fn(int ID);
 
 #define CUSTOM_FUNCTION_ID 1000
 
-#undef ADDITIONAL_FN_DEFINITIONS
-
 //
 // END OF CUSTOM FUNCTIONS HERE
 //
@@ -110,13 +113,14 @@ static void* openclamdblas_check_fn(int ID);
 
 static void* openclamdblas_check_fn(int ID)
 {
-    ID = (ID <= CUSTOM_FUNCTION_ID) ? ID : ID - CUSTOM_FUNCTION_ID;
     assert(ID >= 0 && ID < (int)(sizeof(openclamdblas_fn)/sizeof(openclamdblas_fn[0])));
     const struct DynamicFnEntry* e = openclamdblas_fn[ID];
     void* func = CV_CL_GET_PROC_ADDRESS(e->fnName);
     if (!func)
     {
-        CV_Error(cv::Error::OpenCLApiCallError, cv::format("OpenCL AMD BLAS function is not available: [%s]", e->fnName));
+        throw cv::Exception(cv::Error::OpenCLApiCallError,
+                cv::format("OpenCL AMD BLAS function is not available: [%s]", e->fnName),
+                CV_Func, __FILE__, __LINE__);
     }
     *(e->ppFn) = func;
     return func;
