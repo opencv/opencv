@@ -739,7 +739,8 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {//printf("opt\n");
     int ndisp = state->numDisparities;
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", ndisp*ndisp, 2*ndisp, state->SADWindowSize) );
+    int wsz = state->SADWindowSize;
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", wsz*ndisp, ndisp, wsz) );
     if(k.empty())
         return false;
 
@@ -747,8 +748,8 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     _disp.create(_left.size(), CV_16S);
     UMat disp = _disp.getUMat();
 
-    size_t globalThreads[3] = { left.cols, (left.rows-left.rows%32 + 32)/32, ndisp};
-    size_t localThreads[3] = {1, 2, ndisp};
+    size_t globalThreads[3] = { left.cols, (left.rows-left.rows%wsz + wsz), ndisp};
+    size_t localThreads[3] = {1, wsz, ndisp};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
@@ -797,7 +798,7 @@ static bool ocl_stereo(InputArray _left, InputArray _right,
     if(ocl::Device::getDefault().localMemSize() > state->numDisparities * state->numDisparities * sizeof(short) )
         return ocl_stereobm_opt(_left, _right, _disp, state);
     else
-        return false;//ocl_stereobm_bf(_left, _right, _disp, state);
+        return ocl_stereobm_bf(_left, _right, _disp, state);
 }
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
