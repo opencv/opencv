@@ -56,7 +56,7 @@ void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRat
     __local short * cost;
     cost = &costFunc[0];
     #pragma unroll
-    for(int i = 0; i < tsize/2; i++)
+    for(int i = 0; i < tsize; i++)
     {
         short c = cost[0];
         best_cost = (c < best_cost) ? c : best_cost;
@@ -67,14 +67,14 @@ void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRat
     cost = &costFunc[0];
     int thresh = best_cost + (best_cost * uniquenessRatio/100);
     #pragma unroll
-    for(int i = 0; (i < tsize/2) && (uniquenessRatio > 0); i++)
+    for(int i = 0; (i < tsize) && (uniquenessRatio > 0); i++)
     {
         best_disp = ( (cost[0] <= thresh) && (i < (ndisp - best_disp - 2) || i > (ndisp - best_disp) ) ) ?
             FILTERED : best_disp;
         cost++;
     }
 
-    best_disp = (textsum < textureTreshold) ? FILTERED : best_disp;
+//    best_disp = (textsum < textureTreshold) ? FILTERED : best_disp;
 
     if( best_disp != FILTERED )
     {
@@ -92,104 +92,73 @@ __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar 
                        int preFilterCap, int textureTreshold, int uniquenessRatio)
 {
     int x = get_global_id(0);
-    int ly = get_local_id(1);
-    int y = get_global_id(1)*32;
+    int total_y = get_global_id(1);
     int d = get_local_id(2);
+    int ly = get_local_id(1);
+    int gy = get_group_id(1), y = gy*wsz;
     int wsz2 = wsz/2;
     short FILTERED = (mindisp - 1)<<4;
-    __local short costFunc[tsize];
-    __local short bestdisp[tsize];
+    __local short costFunc[csize];
     short textsum;
-    __local short * cost = &costFunc[0] + d +ly*ndisp;
-    __global uchar * left, * right;
-    int dispIdx = mad24(y, disp_step, disp_offset + x*(int)sizeof(short) );
+    __local short * cost = costFunc + d;
+
+    __global const uchar * left, * right;
+    int dispIdx = mad24(total_y, disp_step, disp_offset + x*(int)sizeof(short) );
     __global short * disp = (__global short*)(dispptr + dispIdx);
 
     short best_cost = MAX_VAL-1, best_disp = FILTERED;
     short costbuf[wsz];
-    short textbuf[wsz];
-    int head = 0;
 
-    int endy = y+32;
-
-    cost[0] = 0;
-    bestdisp[d + ly*ndisp] = d;
-    textsum = 0;
-
-    for(; y < wsz2; y++)
-    {
-        disp[0] = FILTERED;
-        disp += cols;
-    }
-    if( x < cols && y < rows)
+    if( x < cols && total_y < rows)
     {
         disp[0] = FILTERED;
     }
 
     if( (x > ndisp+mindisp+wsz2-2) && (x < cols - wsz2 - mindisp) )
     {
-        for(int i = -wsz2; (i < wsz2+1) && (y < rows-wsz2); i++)
-        {
-            left = leftptr + mad24(y+i, cols, x-wsz2);
-            right = rightptr + mad24(y+i, cols, x-wsz2-d-mindisp);
+        cost[ly*ndisp] = 0;
+        cost += (y < wsz2) ? ndisp*wsz2 : 0;
+        y = (y<wsz2) ? wsz2 : y;
 
-            int costdiff = 0, textdiff = 0;
-            #pragma unroll
-            for(int j = 0; j < wsz; j++)
-            {
-                costdiff += abs( left[0] - right[0] );
-                textdiff += abs( left[0] - preFilterCap );
-                left++; right++;
-            }
-            cost[0] += costdiff;
-            textsum += textdiff;
-            costbuf[head] = costdiff;
-            textbuf[head] = textdiff;
-            head++;
+        short costdiff = 0;
+        for(int i = 0; (i < wsz) && (y < rows-wsz2); i++)
+        {
+            left = leftptr + mad24(y-wsz2+i, cols, x-wsz2+ly);
+            right = rightptr + mad24(y-wsz2+i, cols, x-wsz2-d-mindisp+ly);
+            costbuf[i] = abs(left[0] - right[0]);
+            costdiff += costbuf[i];
+        }
+        for( int i = 0; i < wsz; i++)
+        {
+            if(ly == i)
+                cost[0] += costdiff;
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-
-        if( (y < rows-wsz2) && (y >= wsz2) )
+        y++;
+        for(; (y < gy*wsz + wsz) && (y < rows-wsz2); y++)
         {
-            calcDisp(&costFunc[ly*ndisp], &disp[0], uniquenessRatio, textureTreshold, textsum, mindisp, ndisp);
+            cost += ndisp;
+            left += cols;
+            right += cols;
+            costdiff += abs(left[0] - right[0]) - abs(left[(-wsz2-1)*cols] - right[(-wsz2-1)*cols]);//costbuf[(y-1)%wsz];
+            for( int i = 0; i < wsz; i++)
+            {
+                if(ly == i)
+                    cost[0] += costdiff;
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
         }
         barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
-    y++;
-    cost = &costFunc[0] + d+ly*ndisp;
-
-    for(; (y < endy) && (y<rows); y++)
-    {
-        disp+=cols;
-        disp[0] = FILTERED;
-        if(y < rows - wsz2 && y > wsz2 && (x > ndisp+mindisp+wsz2-2) && (x < cols - wsz2 - mindisp) )
+/*
+        if(total_y >= wsz2 && total_y < rows - wsz2 && d == 0)
         {
-            head = head%wsz;
-            left = leftptr + mad24(y-wsz2-1, cols, x - wsz2);
-            right = rightptr + mad24(y-wsz2-1, cols, x - wsz2 - d - mindisp);
+             cost = costFunc + ly*ndisp;
+             disp[0] = cost[wsz-1];
+        }*/
 
-            int costdiff = 0, textdiff = 0;
-            #pragma unroll
-            for(int i = 0; i < wsz; i++)
-            {
-                costdiff +=
-                    abs( left[wsz*cols] - right[wsz*cols] );
-                textdiff += abs( left[wsz*cols] - preFilterCap );
-                left++; right++;
-            }
-            cost[0] += costdiff - costbuf[head];
-            textsum += textdiff - textbuf[head];
-            costbuf[head] = costdiff;
-            textbuf[head] = textdiff;
-            head++;
-            barrier(CLK_LOCAL_MEM_FENCE);
-
-            if(d == 0)
-            {
-                calcDisp(&costFunc[ly*ndisp], &disp[0], uniquenessRatio, textureTreshold, textsum, mindisp, ndisp);
-            }
-            barrier(CLK_LOCAL_MEM_FENCE);
+        if(total_y >= wsz2 && total_y < rows - wsz2 && d == 0)
+        {
+            calcDisp(&(costFunc + ly*ndisp)[0], disp,  uniquenessRatio, textureTreshold, textsum, mindisp, ndisp);
         }
     }
 }
