@@ -49,9 +49,9 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // FAST
 
-DEF_PARAM_TEST(Image_Threshold_NonMaxSupression, string, int, bool);
+DEF_PARAM_TEST(Image_Threshold_NonMaxSuppression, string, int, bool);
 
-PERF_TEST_P(Image_Threshold_NonMaxSupression, Features2D_FAST,
+PERF_TEST_P(Image_Threshold_NonMaxSuppression, Features2D_FAST,
             Combine(Values<string>("gpu/perf/aloe.png"),
                     Values(20),
                     Bool()))

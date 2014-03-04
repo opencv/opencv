@@ -357,27 +357,27 @@ namespace cv
 
             for (unsigned int i=0;i<this->size();++i)
             {
-                double curentValue=(double)*(bufferPTR++);
+                double currentValue=(double)*(bufferPTR++);
 
                 // updating "closest to the high threshold" pixel value
-                double highValueTest=maxThreshold-curentValue;
+                double highValueTest=maxThreshold-currentValue;
                 if (highValueTest>0)
                 {
                     if (deltaH>highValueTest)
                     {
                         deltaH=highValueTest;
-                        updatedHighValue=curentValue;
+                        updatedHighValue=currentValue;
                     }
                 }
 
                 // updating "closest to the low threshold" pixel value
-                double lowValueTest=curentValue-minThreshold;
+                double lowValueTest=currentValue-minThreshold;
                 if (lowValueTest>0)
                 {
                     if (deltaL>lowValueTest)
                     {
                         deltaL=lowValueTest;
-                        updatedLowValue=curentValue;
+                        updatedLowValue=currentValue;
                     }
                 }
             }

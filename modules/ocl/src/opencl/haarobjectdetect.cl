@@ -217,7 +217,7 @@ __kernel void gpuRunHaarClassifierCascadePacked(
                 (SumL[M0(n0.x)+lcl_off] - SumL[M1(n0.x)+lcl_off] - SumL[M0(n0.y)+lcl_off] + SumL[M1(n0.y)+lcl_off]) * as_float(n1.z) +
                 (SumL[M0(n0.z)+lcl_off] - SumL[M1(n0.z)+lcl_off] - SumL[M0(n0.w)+lcl_off] + SumL[M1(n0.w)+lcl_off]) * as_float(n1.w) +
                 (SumL[M0(n1.x)+lcl_off] - SumL[M1(n1.x)+lcl_off] - SumL[M0(n1.y)+lcl_off] + SumL[M1(n1.y)+lcl_off]) * as_float(n2.x);
-            //accumulate stage responce
+            //accumulate stage response
             stage_sum += (classsum >= nodethreshold) ? as_float(n2.w) : as_float(n2.z);
         }
         result = (stage_sum >= stagethreshold);
