@@ -46,7 +46,7 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_CLAMDBLAS
+//#ifdef HAVE_CLAMDBLAS
 
 using namespace perf;
 using namespace std;
@@ -100,4 +100,4 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
     SANITY_CHECK(statePre_);
 }
 
-#endif // HAVE_CLAMDBLAS
+//#endif // HAVE_CLAMDBLAS

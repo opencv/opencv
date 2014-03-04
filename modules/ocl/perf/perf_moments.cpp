@@ -55,22 +55,19 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-
 ///////////// Moments ////////////////////////
-//*! performance of image
-typedef tuple<Size, MatType, bool> MomentsParamType;
-typedef TestBaseWithParam<MomentsParamType> MomentsFixture;
 
-PERF_TEST_P(MomentsFixture, Moments,
-    ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                       OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1), ::testing::Bool()))
+typedef tuple<Size, bool> MomentsParams;
+typedef TestBaseWithParam<MomentsParams> MomentsFixture;
+
+OCL_PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TEST_SIZES, ::testing::Bool()))
 {
-    const MomentsParamType params = GetParam();
+    const MomentsParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-    const bool binaryImage = get<2>(params);
+    const bool binaryImage = get<1>(params);
 
-    Mat  src(srcSize, type), dst(7, 1, CV_64F);
+    Mat src(srcSize, CV_8UC1), dst(7, 1, CV_64F);
     randu(src, 0, 255);
 
     cv::Moments mom;
@@ -85,6 +82,7 @@ PERF_TEST_P(MomentsFixture, Moments,
     }
     else
         OCL_PERF_ELSE
+
     cv::HuMoments(mom, dst);
     SANITY_CHECK(dst, 2e-1);
 }
