@@ -98,7 +98,7 @@ __kernel void reduce(__global const uchar * srcptr, int src_step, int src_offset
     int x = get_global_id(0);
     if (x < cols)
     {
-        int src_index = x * (int)sizeof(srcT) * cn + src_offset;
+        int src_index = mad24(x, (int)sizeof(srcT) * cn, src_offset);
         __global dstT * dst = (__global dstT *)(dstptr + dst_offset) + x * cn;
         dstT tmp[cn] = { INIT_VALUE };
 

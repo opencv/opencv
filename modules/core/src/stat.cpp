@@ -494,8 +494,8 @@ static bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
     char cvt[40];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
-                  format("-D srcT=%s -D dstT=%s -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
-                         ocl::typeToStr(type), ocl::typeToStr(dtype), ocl::convertTypeStr(depth, ddepth, cn, cvt),
+                  format("-D srcT=%s -D dstT=%s -D ddepth=%d -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
+                         ocl::typeToStr(type), ocl::typeToStr(dtype), ddepth, ocl::convertTypeStr(depth, ddepth, cn, cvt),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          haveMask ? " -D HAVE_MASK" : ""));

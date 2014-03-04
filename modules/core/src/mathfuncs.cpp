@@ -508,9 +508,9 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D OP_CTP_%s%s",
+                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D OP_CTP_%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         angleInDegrees ? "AD" : "AR",
+                         depth, angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -695,8 +695,8 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D BINARY_OP -D OP_PTC_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                  format("-D dstT=%s -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())

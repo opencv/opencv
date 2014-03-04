@@ -46,9 +46,9 @@
 #define DECLARE_OUTPUT_MAT(i) \
     __global uchar * dst##i##ptr, int dst##i##_step, int dst##i##_offset,
 #define PROCESS_ELEM(i) \
-    int src##i##_index = mad24(src##i##_step, y, x * (int)sizeof(T) * scn##i + src##i##_offset); \
+    int src##i##_index = mad24(src##i##_step, y, mad24(x, (int)sizeof(T) * scn##i, src##i##_offset)); \
     __global const T * src##i = (__global const T *)(src##i##ptr + src##i##_index); \
-    int dst##i##_index = mad24(dst##i##_step, y, x * (int)sizeof(T) * dcn##i + dst##i##_offset); \
+    int dst##i##_index = mad24(dst##i##_step, y, mad24(x, (int)sizeof(T) * dcn##i, dst##i##_offset)); \
     __global T * dst##i = (__global T *)(dst##i##ptr + dst##i##_index); \
     dst##i[0] = src##i[0];
 
