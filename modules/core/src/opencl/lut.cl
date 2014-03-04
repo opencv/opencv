@@ -34,14 +34,6 @@
 //
 //
 
-#ifdef DOUBLE_SUPPORT
-#ifdef cl_amd_fp64
-#pragma OPENCL EXTENSION cl_amd_fp64:enable
-#elif defined (cl_khr_fp64)
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
-#endif
-#endif
-
 __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
                   __global const uchar * lutptr, int lut_step, int lut_offset,
                   __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols)
@@ -51,8 +43,8 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
 
     if (x < cols && y < rows)
     {
-        int src_index = mad24(y, src_step, src_offset + x * (int)sizeof(srcT) * dcn);
-        int dst_index = mad24(y, dst_step, dst_offset + x * (int)sizeof(dstT) * dcn);
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(srcT) * dcn, src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
         __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
@@ -65,7 +57,7 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
 #else
         #pragma unroll
         for (int cn = 0; cn < dcn; ++cn)
-            dst[cn] = lut[src[cn] * dcn + cn];
+            dst[cn] = lut[mad24(src[cn], dcn, cn)];
 #endif
     }
 }

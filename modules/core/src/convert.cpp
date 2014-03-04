@@ -1320,8 +1320,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     int wdepth = std::max(depth, CV_32F);
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                   format("-D OP_CONVERT_SCALE_ABS -D UNARY_OP -D dstT=uchar -D srcT1=%s"
-                         " -D workT=%s -D convertToWT1=%s -D convertToDT=%s%s",
-                         ocl::typeToStr(depth), ocl::typeToStr(wdepth),
+                         " -D workT=%s -D wdepth=%d -D convertToWT1=%s -D convertToDT=%s%s",
+                         ocl::typeToStr(depth), ocl::typeToStr(wdepth), wdepth,
                          ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
                          ocl::convertTypeStr(wdepth, CV_8U, 1, cvt[1]),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
@@ -1492,19 +1492,14 @@ static LUTFunc lutTab[] =
 static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 {
     int dtype = _dst.type(), lcn = _lut.channels(), dcn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-
-    if (_src.dims() > 2 || (!doubleSupport && ddepth == CV_64F))
-        return false;
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
     _dst.create(src.size(), dtype);
     UMat dst = _dst.getUMat();
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::typeToStr(ddepth),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
+                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
     if (k.empty())
         return false;
 
@@ -1528,7 +1523,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         _lut.total() == 256 && _lut.isContinuous() &&
         (depth == CV_8U || depth == CV_8S) );
 
-    CV_OCL_RUN(_dst.isUMat(),
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();

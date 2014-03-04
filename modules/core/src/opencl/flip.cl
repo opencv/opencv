@@ -50,11 +50,11 @@ __kernel void arithm_flip_rows(__global const uchar* srcptr, int srcstep, int sr
 
     if (x < cols && y < thread_rows)
     {
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, srcoffset + x * sizeoftype));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, srcoffset + x * sizeoftype));
+        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
+        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, mad24(x, sizeoftype, srcoffset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, dstoffset + x  * sizeoftype));
-        __global type* dst1 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, dstoffset + x  * sizeoftype));
+        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
+        __global type* dst1 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, mad24(x, sizeoftype, dstoffset)));
 
         dst0[0] = src1[0];
         dst1[0] = src0[0];
@@ -70,11 +70,12 @@ __kernel void arithm_flip_rows_cols(__global const uchar* srcptr, int srcstep, i
 
     if (x < cols && y < thread_rows)
     {
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, x*sizeoftype + srcoffset));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, (cols - x - 1)*sizeoftype + srcoffset));
+        int x1 = cols - x - 1;
+        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
+        __global const type* src1 = (__global const type*)(srcptr + mad24(rows - y - 1, srcstep, mad24(x1, sizeoftype, srcoffset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, (cols - x - 1)*sizeoftype + dstoffset));
-        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, x * sizeoftype + dstoffset));
+        __global type* dst0 = (__global type*)(dstptr + mad24(rows - y - 1, dststep, mad24(x1, sizeoftype, dstoffset)));
+        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
 
         dst0[0] = src0[0];
         dst1[0] = src1[0];
@@ -90,11 +91,12 @@ __kernel void arithm_flip_cols(__global const uchar* srcptr, int srcstep, int sr
 
     if (x < thread_cols && y < rows)
     {
-        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, x * sizeoftype + srcoffset));
-        __global const type* src1 = (__global const type*)(srcptr + mad24(y, srcstep, (cols - x - 1)*sizeoftype + srcoffset));
+        int x1 = cols - x - 1;
+        __global const type* src0 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x, sizeoftype, srcoffset)));
+        __global const type* src1 = (__global const type*)(srcptr + mad24(y, srcstep, mad24(x1, sizeoftype, srcoffset)));
 
-        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, (cols - x - 1)*sizeoftype + dstoffset));
-        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, x * sizeoftype + dstoffset));
+        __global type* dst0 = (__global type*)(dstptr + mad24(y, dststep, mad24(x1, sizeoftype, dstoffset)));
+        __global type* dst1 = (__global type*)(dstptr + mad24(y, dststep, mad24(x, sizeoftype, dstoffset)));
 
         dst1[0] = src1[0];
         dst0[0] = src0[0];

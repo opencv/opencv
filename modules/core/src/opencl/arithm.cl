@@ -63,11 +63,12 @@
 #elif defined cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 #endif
-#define CV_EPSILON DBL_EPSILON
-#define CV_PI M_PI
-#else
-#define CV_EPSILON FLT_EPSILON
+#endif
+
+#if depth <= 5
 #define CV_PI M_PI_F
+#else
+#define CV_PI M_PI
 #endif
 
 #ifndef cn
@@ -84,11 +85,11 @@
 #endif
 
 #if cn != 3
-    #define storedst(val) *(__global dstT*)(dstptr + dst_index) = val
-    #define storedst2(val) *(__global dstT*)(dstptr2 + dst_index2) = val
+    #define storedst(val) *(__global dstT *)(dstptr + dst_index) = val
+    #define storedst2(val) *(__global dstT *)(dstptr2 + dst_index2) = val
 #else
-    #define storedst(val) vstore3(val, 0, (__global dstT_C1*)(dstptr + dst_index))
-    #define storedst2(val) vstore3(val, 0, (__global dstT_C1*)(dstptr2 + dst_index2))
+    #define storedst(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr + dst_index))
+    #define storedst2(val) vstore3(val, 0, (__global dstT_C1 *)(dstptr2 + dst_index2))
 #endif
 
 #define noconvert
@@ -97,19 +98,27 @@
 
     #ifndef srcT1
     #define srcT1 dstT
+    #endif
+
+    #ifndef srcT1_C1
     #define srcT1_C1 dstT_C1
     #endif
+
     #ifndef srcT2
     #define srcT2 dstT
+    #endif
+
+    #ifndef srcT2_C1
     #define srcT2_C1 dstT_C1
     #endif
+
     #define workT dstT
     #if cn != 3
-        #define srcelem1 *(__global srcT1*)(srcptr1 + src1_index)
-        #define srcelem2 *(__global srcT2*)(srcptr2 + src2_index)
+        #define srcelem1 *(__global srcT1 *)(srcptr1 + src1_index)
+        #define srcelem2 *(__global srcT2 *)(srcptr2 + src2_index)
     #else
-        #define srcelem1 vload3(0, (__global srcT1_C1*)(srcptr1 + src1_index))
-        #define srcelem2 vload3(0, (__global srcT2_C1*)(srcptr2 + src2_index))
+        #define srcelem1 vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index))
+        #define srcelem2 vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index))
     #endif
     #ifndef convertToDT
     #define convertToDT noconvert
@@ -121,11 +130,11 @@
     #define convertToWT2 convertToWT1
     #endif
     #if cn != 3
-        #define srcelem1 convertToWT1(*(__global srcT1*)(srcptr1 + src1_index))
-        #define srcelem2 convertToWT2(*(__global srcT2*)(srcptr2 + src2_index))
+        #define srcelem1 convertToWT1(*(__global srcT1 *)(srcptr1 + src1_index))
+        #define srcelem2 convertToWT2(*(__global srcT2 *)(srcptr2 + src2_index))
     #else
-        #define srcelem1 convertToWT1(vload3(0, (__global srcT1_C1*)(srcptr1 + src1_index)))
-        #define srcelem2 convertToWT2(vload3(0, (__global srcT2_C1*)(srcptr2 + src2_index)))
+        #define srcelem1 convertToWT1(vload3(0, (__global srcT1_C1 *)(srcptr1 + src1_index)))
+        #define srcelem2 convertToWT2(vload3(0, (__global srcT2_C1 *)(srcptr2 + src2_index)))
     #endif
 
 #endif
@@ -224,7 +233,11 @@
 #elif defined OP_ADDW
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , scaleT alpha, scaleT beta, scaleT gamma
-#define PROCESS_ELEM storedst(convertToDT(srcelem1*alpha + srcelem2*beta + gamma))
+#if wdepth <= 4
+#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, mad24(srcelem2, beta, gamma))))
+#else
+#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, alpha, mad(srcelem2, beta, gamma))))
+#endif
 
 #elif defined OP_MAG
 #define PROCESS_ELEM storedst(hypot(srcelem1, srcelem2))
@@ -274,16 +287,31 @@
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , workT alpha, workT beta
+#if wdepth <= 4
 #define PROCESS_ELEM \
-    workT value = srcelem1 * alpha + beta; \
+    workT value = mad24(srcelem1, alpha, beta); \
     storedst(convertToDT(value >= 0 ? value : -value))
+#else
+#define PROCESS_ELEM \
+    workT value = mad(srcelem1, alpha, beta); \
+    storedst(convertToDT(value >= 0 ? value : -value))
+#endif
 
 #elif defined OP_SCALE_ADD
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , workT alpha
-#define PROCESS_ELEM storedst(convertToDT(srcelem1 * alpha + srcelem2))
+#if wdepth <= 4
+#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, srcelem2)))
+#else
+#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, alpha, srcelem2)))
+#endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR
+#if depth <= 5
+#define CV_EPSILON FLT_EPSILON
+#else
+#define CV_EPSILON DBL_EPSILON
+#endif
 #ifdef OP_CTP_AD
 #define TO_DEGREE cartToPolar *= (180 / CV_PI);
 #elif defined OP_CTP_AR
@@ -296,7 +324,7 @@
     dstT tmp = y >= 0 ? 0 : CV_PI * 2; \
     tmp = x < 0 ? CV_PI : tmp; \
     dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
-    dstT cartToPolar = y2 <= x2 ? x * y / (x2 + 0.28f * y2 + CV_EPSILON) + tmp : (tmp1 - x * y / (y2 + 0.28f * x2 + CV_EPSILON)); \
+    dstT cartToPolar = y2 <= x2 ? x * y / mad((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp : (tmp1 - x * y / mad((dstT)(0.28f), x2, y2 + CV_EPSILON)); \
     TO_DEGREE \
     storedst(magnitude); \
     storedst2(cartToPolar)
@@ -331,7 +359,7 @@
     #undef EXTRA_PARAMS
     #define EXTRA_PARAMS , __global uchar* dstptr2, int dststep2, int dstoffset2
     #undef EXTRA_INDEX
-    #define EXTRA_INDEX int dst_index2 = mad24(y, dststep2, x*(int)sizeof(dstT_C1)*cn + dstoffset2)
+    #define EXTRA_INDEX int dst_index2 = mad24(y, dststep2, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset2))
 #endif
 
 #if defined UNARY_OP || defined MASK_UNARY_OP
@@ -355,9 +383,9 @@
 
 #if defined BINARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * srcptr2, int srcstep2, int srcoffset2,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
@@ -365,11 +393,11 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1_C1)*cn + srcoffset1);
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
 #if !(defined(OP_RECIP_SCALE) || defined(OP_NOT))
-        int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2_C1)*cn + srcoffset2);
+        int src2_index = mad24(y, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
 #endif
-        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT_C1)*cn + dstoffset);
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
         EXTRA_INDEX;
 
         PROCESS_ELEM;
@@ -378,10 +406,10 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
 #elif defined MASK_BINARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* srcptr2, int srcstep2, int srcoffset2,
-                 __global const uchar* mask, int maskstep, int maskoffset,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * srcptr2, int srcstep2, int srcoffset2,
+                 __global const uchar * mask, int maskstep, int maskoffset,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
@@ -392,9 +420,9 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int mask_index = mad24(y, maskstep, x + maskoffset);
         if( mask[mask_index] )
         {
-            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1_C1)*cn + srcoffset1);
-            int src2_index = mad24(y, srcstep2, x*(int)sizeof(srcT2_C1)*cn + srcoffset2);
-            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT_C1)*cn + dstoffset);
+            int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+            int src2_index = mad24(y, srcstep2, mad24(x, (int)sizeof(srcT2_C1) * cn, srcoffset2));
+            int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
             PROCESS_ELEM;
         }
@@ -403,8 +431,8 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
 #elif defined UNARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
@@ -412,8 +440,8 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1_C1)*cn + srcoffset1);
-        int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT_C1)*cn + dstoffset);
+        int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+        int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
         PROCESS_ELEM;
     }
@@ -421,9 +449,9 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
 
 #elif defined MASK_UNARY_OP
 
-__kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
-                 __global const uchar* mask, int maskstep, int maskoffset,
-                 __global uchar* dstptr, int dststep, int dstoffset,
+__kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
+                 __global const uchar * mask, int maskstep, int maskoffset,
+                 __global uchar * dstptr, int dststep, int dstoffset,
                  int rows, int cols EXTRA_PARAMS )
 {
     int x = get_global_id(0);
@@ -434,8 +462,8 @@ __kernel void KF(__global const uchar* srcptr1, int srcstep1, int srcoffset1,
         int mask_index = mad24(y, maskstep, x + maskoffset);
         if( mask[mask_index] )
         {
-            int src1_index = mad24(y, srcstep1, x*(int)sizeof(srcT1_C1)*cn + srcoffset1);
-            int dst_index  = mad24(y, dststep, x*(int)sizeof(dstT_C1)*cn + dstoffset);
+            int src1_index = mad24(y, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
+            int dst_index  = mad24(y, dststep, mad24(x, (int)sizeof(dstT_C1) * cn, dstoffset));
 
             PROCESS_ELEM;
         }

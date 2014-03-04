@@ -64,23 +64,22 @@ __kernel void inrange(__global const uchar * src1ptr, int src1_step, int src1_of
 
     if (x < dst_cols && y < dst_rows)
     {
-        int src1_index = mad24(y, src1_step, x*(int)sizeof(T)*cn + src1_offset);
+        int src1_index = mad24(y, src1_step, mad24(x, (int)sizeof(T) * cn, src1_offset));
         int dst_index = mad24(y, dst_step, x + dst_offset);
         __global const T * src1 = (__global const T *)(src1ptr + src1_index);
         __global uchar * dst = dstptr + dst_index;
 
 #ifndef HAVE_SCALAR
-        int src2_index = mad24(y, src2_step, x*(int)sizeof(T)*cn + src2_offset);
-        int src3_index = mad24(y, src3_step, x*(int)sizeof(T)*cn + src3_offset);
+        int src2_index = mad24(y, src2_step, mad24(x, (int)sizeof(T) * cn, src2_offset));
+        int src3_index = mad24(y, src3_step, mad24(x, (int)sizeof(T) * cn, src3_offset));
         __global const T * src2 = (__global const T *)(src2ptr + src2_index);
         __global const T * src3 = (__global const T *)(src3ptr + src3_index);
 #endif
 
         dst[0] = 255;
 
-        #pragma unroll
         for (int c = 0; c < cn; ++c)
-            if ( src2[c] > src1[c] || src3[c] < src1[c] )
+            if (src2[c] > src1[c] || src3[c] < src1[c])
             {
                 dst[0] = 0;
                 break;
