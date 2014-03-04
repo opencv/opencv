@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -208,7 +208,7 @@ __kernel void normalize_hists_36_kernel(__global float* block_hists,
 //-------------------------------------------------------------
 //  Normalization of histograms via L2Hys_norm
 //
-inline float reduce_smem(volatile __local float* smem, int size)
+float reduce_smem(volatile __local float* smem, int size)
 {
     unsigned int tid = get_local_id(0);
     float sum = smem[tid];

@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010,2014, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -47,7 +47,7 @@
 #define WAVE_SIZE 1
 #endif
 
-inline int calc_lut(__local int* smem, int val, int tid)
+int calc_lut(__local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -61,7 +61,7 @@ inline int calc_lut(__local int* smem, int val, int tid)
 }
 
 #ifdef CPU
-inline void reduce(volatile __local int* smem, int val, int tid)
+void reduce(volatile __local int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -101,7 +101,7 @@ inline void reduce(volatile __local int* smem, int val, int tid)
 
 #else
 
-inline void reduce(__local volatile int* smem, int val, int tid)
+void reduce(__local volatile int* smem, int val, int tid)
 {
     smem[tid] = val;
     barrier(CLK_LOCAL_MEM_FENCE);
