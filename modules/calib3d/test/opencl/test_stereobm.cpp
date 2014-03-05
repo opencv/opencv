@@ -80,7 +80,7 @@ PARAM_TEST_CASE(StereoBMFixture, int, int)
 OCL_TEST_P(StereoBMFixture, StereoBM)
 {
     Ptr<StereoBM> bm = createStereoBM( n_disp, winSize);
-    bm->setPreFilterType(bm->PREFILTER_XSOBEL);
+    bm->setPreFilterType(bm->PREFILTER_NORMALIZED_RESPONSE);
 //    bm->setMinDisparity(15);
 
     long t1 = clock();

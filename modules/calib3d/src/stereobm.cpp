@@ -88,7 +88,7 @@ struct StereoBMParams
 
 static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
 {
-    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc);
+    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc, cv::format("-D wsz=%d", winsize).c_str());
     if(k.empty())
         return false;
 
@@ -102,7 +102,7 @@ static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsi
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
 
     k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
-        prefilterCap, winsize, scale_g, scale_s);
+        prefilterCap, scale_g, scale_s);
 
     return k.run(2, globalThreads, NULL, false);
 }
@@ -738,7 +738,7 @@ struct PrefilterInvoker : public ParallelLoopBody
 
 static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
-{//printf("opt\n");
+{
     int ndisp = state->numDisparities;
     ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", ndisp*ndisp, ndisp, state->SADWindowSize) );
     if(k.empty())
@@ -764,34 +764,6 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
 
     return k.run(3, globalThreads, localThreads, false);
-}
-
-static bool ocl_stereobm_bf(InputArray _left, InputArray _right,
-                       OutputArray _disp, StereoBMParams* state)
-{
-    ocl::Kernel k("stereoBM_BF", ocl::calib3d::stereobm_oclsrc, cv::format("-D SIZE=%d", state->numDisparities ) );
-    if(k.empty())
-        return false;
-
-    UMat left = _left.getUMat(), right = _right.getUMat();
-    _disp.create(_left.size(), CV_16S);
-    UMat disp = _disp.getUMat();
-
-    size_t globalThreads[3] = { left.cols, left.rows, 1 };
-
-    int idx = 0;
-    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
-    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(right));
-    idx = k.set(idx, ocl::KernelArg::WriteOnly(disp));
-    idx = k.set(idx, state->minDisparity);
-    idx = k.set(idx, state->numDisparities);
-    idx = k.set(idx, state->preFilterCap);
-    idx = k.set(idx, state->SADWindowSize);
-    idx = k.set(idx, state->textureThreshold);
-    idx = k.set(idx, state->uniquenessRatio);
-
-    return k.run(2, globalThreads, NULL, false);
-    return false;
 }
 
 static bool ocl_stereo(InputArray _left, InputArray _right,
