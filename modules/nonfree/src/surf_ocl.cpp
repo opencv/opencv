@@ -283,9 +283,9 @@ private:
 cv::ocl::SURF_OCL::SURF_OCL()
 {
     hessianThreshold = 100.0f;
-    extended = true;
+    extended = false;
     nOctaves = 4;
-    nOctaveLayers = 2;
+    nOctaveLayers = 3;
     keypointsRatio = 0.01f;
     upright = false;
 }
