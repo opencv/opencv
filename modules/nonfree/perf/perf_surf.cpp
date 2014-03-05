@@ -12,6 +12,12 @@ typedef perf::TestBaseWithParam<std::string> surf;
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
     "stitching/a3.png"
 
+#ifdef HAVE_OPENCV_OCL
+typedef ocl::SURF_OCL surf_class;
+#else
+typdef SURF surf_class;
+#endif
+
 PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 {
     String filename = getDataPath(GetParam());
@@ -22,7 +28,7 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 
     Mat mask;
     declare.in(frame).time(90);
-    SURF detector;
+    surf_class detector;
     vector<KeyPoint> points;
 
     TEST_CYCLE() detector(frame, mask, points);
@@ -41,7 +47,7 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
     Mat mask;
     declare.in(frame).time(90);
 
-    SURF detector;
+    surf_class detector;
     vector<KeyPoint> points;
     vector<float> descriptors;
     detector(frame, mask, points);
@@ -61,7 +67,7 @@ PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
 
     Mat mask;
     declare.in(frame).time(90);
-    SURF detector;
+    surf_class detector;
     vector<KeyPoint> points;
     vector<float> descriptors;
 
