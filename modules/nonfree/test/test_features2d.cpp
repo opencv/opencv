@@ -50,6 +50,12 @@ const string DETECTOR_DIR = FEATURES2D_DIR + "/feature_detectors";
 const string DESCRIPTOR_DIR = FEATURES2D_DIR + "/descriptor_extractors";
 const string IMAGE_FILENAME = "tsukuba.png";
 
+#ifdef HAVE_OPENCV_OCL
+#define SURF_NAME "SURF_OCL"
+#else
+#define SURF_NAME "SURF"
+#endif
+
 /****************************************************************************************\
 *            Regression tests for feature detectors comparing keypoints.                 *
 \****************************************************************************************/
@@ -978,7 +984,7 @@ TEST( Features2d_Detector_SIFT, regression )
 
 TEST( Features2d_Detector_SURF, regression )
 {
-    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create("SURF") );
+    CV_FeatureDetectorTest test( "detector-surf", FeatureDetector::create(SURF_NAME) );
     test.safe_run();
 }
 
@@ -995,7 +1001,7 @@ TEST( Features2d_DescriptorExtractor_SIFT, regression )
 TEST( Features2d_DescriptorExtractor_SURF, regression )
 {
     CV_DescriptorExtractorTest<L2<float> > test( "descriptor-surf",  0.05f,
-                                                 DescriptorExtractor::create("SURF") );
+                                                 DescriptorExtractor::create(SURF_NAME) );
     test.safe_run();
 }
 
@@ -1036,10 +1042,10 @@ TEST(Features2d_BruteForceDescriptorMatcher_knnMatch, regression)
     const int sz = 100;
     const int k = 3;
 
-    Ptr<DescriptorExtractor> ext = DescriptorExtractor::create("SURF");
+    Ptr<DescriptorExtractor> ext = DescriptorExtractor::create(SURF_NAME);
     ASSERT_TRUE(ext != NULL);
 
-    Ptr<FeatureDetector> det = FeatureDetector::create("SURF");
+    Ptr<FeatureDetector> det = FeatureDetector::create(SURF_NAME);
     //"%YAML:1.0\nhessianThreshold: 8000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n"
     ASSERT_TRUE(det != NULL);
 
@@ -1144,7 +1150,7 @@ protected:
 };
 
 TEST(Features2d_SIFTHomographyTest, regression) { CV_DetectPlanarTest test("SIFT", 80); test.safe_run(); }
-TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
+TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test(SURF_NAME, 80); test.safe_run(); }
 
 class FeatureDetectorUsingMaskTest : public cvtest::BaseTest
 {
