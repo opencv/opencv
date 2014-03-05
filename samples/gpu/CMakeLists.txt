@@ -41,7 +41,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
-    if(HAVE_CUDA)
+    if(HAVE_CUDA AND NOT ANDROID)
       target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
     endif()
 
