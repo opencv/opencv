@@ -13,9 +13,19 @@ typedef perf::TestBaseWithParam<std::string> surf;
     "stitching/a3.png"
 
 #ifdef HAVE_OPENCV_OCL
-typedef ocl::SURF_OCL surf_class;
+static Ptr<Feature2D> getSURF()
+{
+    ocl::PlatformsInfo p;
+    if(ocl::getOpenCLPlatforms(p) > 0)
+        return new ocl::SURF_OCL;
+    else
+        return new SURF;
+}
 #else
-typdef SURF surf_class;
+static Ptr<Feature2D> getSURF()
+{
+    return new SURF;
+}
 #endif
 
 PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
@@ -28,10 +38,11 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 
     Mat mask;
     declare.in(frame).time(90);
-    surf_class detector;
+    Ptr<Feature2D> detector = getSURF();
+
     vector<KeyPoint> points;
 
-    TEST_CYCLE() detector(frame, mask, points);
+    TEST_CYCLE() detector->operator()(frame, mask, points, noArray());
 
     SANITY_CHECK_KEYPOINTS(points, 1e-3);
 }
@@ -47,12 +58,12 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
     Mat mask;
     declare.in(frame).time(90);
 
-    surf_class detector;
+    Ptr<Feature2D> detector = getSURF();
     vector<KeyPoint> points;
     vector<float> descriptors;
-    detector(frame, mask, points);
+    detector->operator()(frame, mask, points, noArray());
 
-    TEST_CYCLE() detector(frame, mask, points, descriptors, true);
+    TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, true);
 
     SANITY_CHECK(descriptors, 1e-4);
 }
@@ -67,11 +78,11 @@ PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
 
     Mat mask;
     declare.in(frame).time(90);
-    surf_class detector;
+    Ptr<Feature2D> detector = getSURF();
     vector<KeyPoint> points;
     vector<float> descriptors;
 
-    TEST_CYCLE() detector(frame, mask, points, descriptors, false);
+    TEST_CYCLE() detector->operator()(frame, mask, points, descriptors, false);
 
     SANITY_CHECK_KEYPOINTS(points, 1e-3);
     SANITY_CHECK(descriptors, 1e-4);

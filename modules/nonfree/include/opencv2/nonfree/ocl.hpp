@@ -114,7 +114,7 @@ namespace cv
                             CV_OUT vector<KeyPoint>& keypoints,
                             OutputArray descriptors,
                             bool useProvidedKeypoints=false) const;
-            
+
             AlgorithmInfo* info() const;
 
             void releaseMemory();
