@@ -1712,6 +1712,17 @@ struct Device::Impl
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+
+        vendorName = getStrProp(CL_DEVICE_VENDOR);
+        if (vendorName == "Advanced Micro Devices, Inc." ||
+            vendorName == "AMD")
+            vendor_ = AMD;
+        else if (vendorName == "Intel(R) Corporation")
+            vendor_ = INTEL;
+        else if (vendorName == "NVIDIA Corporation")
+            vendor_ = NVIDIA;
+        else
+            vendor_ = UNKNOWN_VENDOR;
     }
 
     template<typename _TpCL, typename _TpOut>
@@ -1754,6 +1765,8 @@ struct Device::Impl
     int deviceVersionMajor_;
     int deviceVersionMinor_;
     String driverVersion_;
+    String vendorName;
+    int vendor_;
 };
 
 
@@ -1814,7 +1827,7 @@ String Device::version() const
 { return p ? p->version_ : String(); }
 
 String Device::vendor() const
-{ return p ? p->getStrProp(CL_DEVICE_VENDOR) : String(); }
+{ return p ? p->vendorName : String(); }
 
 String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
@@ -1924,6 +1937,21 @@ size_t Device::imageMaxArraySize() const
 #else
 { CV_REQUIRE_OPENCL_1_2_ERROR; }
 #endif
+
+bool Device::isAMD() const
+{
+  return p->vendor_ == AMD;
+}
+
+bool Device::isIntel() const
+{
+  return p->vendor_ == INTEL;
+}
+
+bool Device::isNvidia() const
+{
+  return p->vendor_ == NVIDIA;
+}
 
 int Device::maxClockFrequency() const
 { return p ? p->getProp<cl_uint, int>(CL_DEVICE_MAX_CLOCK_FREQUENCY) : 0; }

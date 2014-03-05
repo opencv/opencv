@@ -583,9 +583,7 @@ bool HaarEvaluator::read(const FileNode& node, Size _origWinSize)
     localSize = lbufSize = Size(0, 0);
     if (ocl::haveOpenCL())
     {
-        String vname = ocl::Device::getDefault().vendor();
-        if (vname == "Advanced Micro Devices, Inc." ||
-            vname == "AMD")
+        if (ocl::Device::getDefault().isAMD())
         {
             localSize = Size(8, 8);
             lbufSize = Size(origWinSize.width + localSize.width,
@@ -769,9 +767,7 @@ bool LBPEvaluator::read( const FileNode& node, Size _origWinSize )
     if (ocl::haveOpenCL())
     {
         const ocl::Device& device = ocl::Device::getDefault();
-        String vname = device.vendor();
-        if ((vname == "Advanced Micro Devices, Inc." ||
-            vname == "AMD") && !device.hostUnifiedMemory())
+        if (device.isAMD() && !device.hostUnifiedMemory())
             localSize = Size(8, 8);
     }
     return true;
