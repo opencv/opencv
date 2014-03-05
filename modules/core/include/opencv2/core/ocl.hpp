@@ -161,6 +161,18 @@ public:
     size_t imageMaxBufferSize() const;
     size_t imageMaxArraySize() const;
 
+    enum
+    {
+        UNKNOWN_VENDOR=0,
+        AMD=1,
+        INTEL=2,
+        NVIDIA=3
+    };
+
+    bool isAMD() const;
+    bool isIntel() const;
+    bool isNvidia() const;
+
     int maxClockFrequency() const;
     int maxComputeUnits() const;
     int maxConstantArgs() const;
