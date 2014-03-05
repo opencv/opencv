@@ -240,7 +240,7 @@ The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers 
 
 ocl::SURF_OCL
 -------------
-.. ocv:class:: ocl::SURF_OCL
+.. ocv:class:: ocl::SURF_OCL : public Feature2D
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
