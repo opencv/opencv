@@ -27,7 +27,8 @@
 # The verbose template for OpenCV module:
 #
 #   ocv_add_module(modname <dependencies>)
-#   ocv_glob_module_sources() or glob them manually and ocv_set_module_sources(...)
+#   ocv_glob_module_sources(([EXCLUDE_CUDA] <extra sources&headers>)
+#                          or glob them manually and ocv_set_module_sources(...)
 #   ocv_module_include_directories(<extra include directories>)
 #   ocv_create_module()
 #   <add extra link dependencies, compiler options, etc>
@@ -478,14 +479,20 @@ endmacro()
 
 # finds and sets headers and sources for the standard OpenCV module
 # Usage:
-# ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
-macro(ocv_glob_module_sources EXCLUDE_CUDA EXCLUDE_OPENCL)
+# ocv_glob_module_sources([EXCLUDE_CUDA] <extra sources&headers in the same format as used in ocv_set_module_sources>)
+macro(ocv_glob_module_sources)
+  set(_argn ${ARGN})
+  list(FIND _argn "EXCLUDE_CUDA" exclude_cuda)
+  if(NOT exclude_cuda EQUAL -1)
+    list(REMOVE_AT _argn ${exclude_cuda})
+  endif()
+
   file(GLOB_RECURSE lib_srcs "src/*.cpp")
   file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
-  if (NOT ${EXCLUDE_CUDA})
+  if (exclude_cuda EQUAL -1)
     file(GLOB lib_cuda_srcs "src/cuda/*.cu")
     set(cuda_objs "")
     set(lib_cuda_hdrs "")
@@ -504,26 +511,22 @@ macro(ocv_glob_module_sources EXCLUDE_CUDA EXCLUDE_OPENCL)
 
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
 
-  if (NOT ${EXCLUDE_OPENCL})
-    file(GLOB cl_kernels "src/opencl/*.cl")
-    if(HAVE_opencv_ocl AND cl_kernels)
-      ocv_include_directories(${OPENCL_INCLUDE_DIRS})
-      add_custom_command(
-        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
-        COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
-        DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
-      source_group("OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
-      list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
-    endif()
+  file(GLOB cl_kernels "src/opencl/*.cl")
+  if(HAVE_opencv_ocl AND cl_kernels)
+    ocv_include_directories(${OPENCL_INCLUDE_DIRS})
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp"
+      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+      DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
+    source_group("OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
+    list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
   endif()
 
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 
-  message(":${EXCLUDE_CUDA}: ${lib_cuda_srcs}")
-
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+  ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -622,27 +625,20 @@ endmacro()
 # short command for adding simple OpenCV module
 # see ocv_add_module for argument details
 # Usage:
-# ocv_define_module(module_name  [INTERNAL] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
+# ocv_define_module(module_name  [INTERNAL] [EXCLUDE_CUDA] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 macro(ocv_define_module module_name)
-  set(_tmp_argn ${ARGN})
-  set(exclude_cuda 0)
-  set(exclude_opencl 0)
-  set(argv0 ${ARGV1})
-  set(argv1 ${ARGV2})
-  set(argv2 ${ARGV3})
-  foreach(i RANGE 0 2)
-    if("${argv${i}}" STREQUAL "EXCLUDE_CUDA")
-      set(exclude_cuda 1)
-      list(REMOVE_AT _tmp_argn ${i})
-    elseif ("${argv${i}}" STREQUAL "EXCLUDE_OPENCL")
-      set(exclude_opencl 1)
-      list(REMOVE_AT _tmp_argn ${i})
+  set(_argn ${ARGN})
+  set(exclude_cuda "")
+  foreach(arg ${_argn})
+    if("${arg}" STREQUAL "EXCLUDE_CUDA")
+      set(exclude_cuda "${arg}")
+      list(REMOVE_ITEM _argn ${arg})
     endif()
   endforeach()
 
-  ocv_add_module(${module_name} ${_tmp_argn})
+  ocv_add_module(${module_name} ${_argn})
   ocv_module_include_directories()
-  ocv_glob_module_sources(${exclude_cuda} ${exclude_opencl})
+  ocv_glob_module_sources(${exclude_cuda})
   ocv_create_module()
   ocv_add_precompiled_headers(${the_module})
 
