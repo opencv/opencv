@@ -786,4 +786,13 @@ TEST(UMat, setOpenCL)
     cv::ocl::setUseOpenCL(useOCL);
 }
 
+TEST(UMat, ReadBufferRect)
+{
+    UMat m(1, 10000, CV_32FC2, Scalar::all(-1));
+    Mat t(1, 9000, CV_32FC2, Scalar::all(-200)), t2(1, 9000, CV_32FC2, Scalar::all(-1));
+    m.colRange(0, 9000).copyTo(t);
+
+    EXPECT_MAT_NEAR(t, t2, 0);
+}
+
 } } // namespace cvtest::ocl
