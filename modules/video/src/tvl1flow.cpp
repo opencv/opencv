@@ -204,6 +204,7 @@ bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
         return false;
 
     int idxArg = 0;
+#if 0
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));//src mat
     idxArg = kernel.set(idxArg, (int)(src.cols));//src mat col
     idxArg = kernel.set(idxArg, (int)(src.rows));//src mat rows
@@ -211,6 +212,15 @@ bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dx));//res mat dx
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dy));//res mat dy
     idxArg = kernel.set(idxArg, (int)(dx.step/dx.elemSize()));//res mat step
+#else
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(src));
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(src.cols));
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(src.rows));
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(src.step / src.elemSize()));
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(dx));
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(dy));
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(dx.step / dx.elemSize()));
+#endif
     return kernel.run(2, globalsize, NULL, false);
 }
 
@@ -225,6 +235,7 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
         return false;
 
     int idxArg = 0;
+#if 0
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(I0));//I0 mat
     int I0_step = (int)(I0.step / I0.elemSize());
     idxArg = kernel.set(idxArg, I0_step);//I0_step
@@ -254,7 +265,37 @@ bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UM
     u2_offset_x = (int) (u2_offset_x / u2.elemSize());
     idxArg = kernel.set(idxArg, (int)u2_offset_x);//u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step));//u2_offset_y
-
+#else
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(I0));//I0 mat
+    int I0_step = (int)(I0.step / I0.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, I0_step);//I0_step
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I0.cols));//I0_col
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I0.rows));//I0_row
+    ocl::Image2D imageI1(I1);
+    ocl::Image2D imageI1x(I1x);
+    ocl::Image2D imageI1y(I1y);
+    SAFE_KERNEL_SET_ARG(idxArg, imageI1);//image2d_t tex_I1
+    SAFE_KERNEL_SET_ARG(idxArg, imageI1x);//image2d_t tex_I1x
+    SAFE_KERNEL_SET_ARG(idxArg, imageI1y);//image2d_t tex_I1y
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(u1));//const float* u1
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.step / u1.elemSize()));//int u1_step
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(u2));//const float* u2
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(I1w));///float* I1w
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(I1wx));//float* I1wx
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(I1wy));//float* I1wy
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(grad));//float* grad
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(rho));//float* rho
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I1w.step / I1w.elemSize()));//I1w_step
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u2.step / u2.elemSize()));//u2_step
+    int u1_offset_x = (int)((u1.offset) % (u1.step));
+    u1_offset_x = (int)(u1_offset_x / u1.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, (int)u1_offset_x);//u1_offset_x
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.offset / u1.step));//u1_offset_y
+    int u2_offset_x = (int)((u2.offset) % (u2.step));
+    u2_offset_x = (int)(u2_offset_x / u2.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, (int)u2_offset_x);//u2_offset_x
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u2.offset / u2.step));//u2_offset_y
+#endif
     return kernel.run(2, globalsize, NULL, false);
 }
 
@@ -270,7 +311,7 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
         return false;
 
     int idxArg = 0;
-
+#if 0
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(I1wx)); //const float* I1wx
     idxArg = kernel.set(idxArg, (int)(I1wx.cols)); //int I1wx_col
     idxArg = kernel.set(idxArg, (int)(I1wx.rows)); //int I1wx_row
@@ -298,7 +339,35 @@ bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
     idxArg = kernel.set(idxArg, (int)u2_offset_x ); //int u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
     idxArg = kernel.set(idxArg, (char)calc_error);    //char calc_error
-
+#else
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(I1wx)); //const float* I1wx
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I1wx.cols)); //int I1wx_col
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I1wx.rows)); //int I1wx_row
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(I1wx.step / I1wx.elemSize())); //int I1wx_step
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(I1wy)); //const float* I1wy
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(grad)); //const float* grad
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(rho_c)); //const float* rho_c
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(p11)); //const float* p11
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(p12)); //const float* p12
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(p21)); //const float* p21
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(p22)); //const float* p22
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(u1)); //float* u1
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.step / u1.elemSize())); //int u1_step
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(u2)); //float* u2
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrWriteOnly(error)); //float* error
+    SAFE_KERNEL_SET_ARG(idxArg, (float)l_t); //float l_t
+    SAFE_KERNEL_SET_ARG(idxArg, (float)theta); //float theta
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u2.step / u2.elemSize()));//int u2_step
+    int u1_offset_x = (int)(u1.offset % u1.step);
+    u1_offset_x = (int)(u1_offset_x / u1.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, (int)u1_offset_x); //int u1_offset_x
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.offset / u1.step)); //int u1_offset_y
+    int u2_offset_x = (int)(u2.offset % u2.step);
+    u2_offset_x = (int)(u2_offset_x / u2.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, (int)u2_offset_x); //int u2_offset_x
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
+    SAFE_KERNEL_SET_ARG(idxArg, (char)calc_error);    //char calc_error
+#endif
     return kernel.run(2, globalsize, NULL, false);
 }
 
@@ -312,6 +381,7 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
         return false;
 
     int idxArg = 0;
+#if 0
     idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(u1));// const float* u1
     idxArg = kernel.set(idxArg, (int)(u1.cols)); //int u1_col
     idxArg = kernel.set(idxArg, (int)(u1.rows)); //int u1_row
@@ -332,7 +402,28 @@ bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
     u2_offset_x = (int)(u2_offset_x / u2.elemSize());
     idxArg = kernel.set(idxArg, u2_offset_x); //int u2_offset_x
     idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
-
+#else
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(u1));// const float* u1
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.cols)); //int u1_col
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.rows)); //int u1_row
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.step / u1.elemSize())); //int u1_step
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(u2)); // const float* u2
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(p11)); // float* p11
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(p11.step / p11.elemSize())); //int p11_step
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(p12)); // float* p12
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(p21)); // float* p21
+    SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(p22)); // float* p22
+    SAFE_KERNEL_SET_ARG(idxArg, (float)(taut));    //float taut
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u2.step / u2.elemSize())); //int u2_step
+    int u1_offset_x = (int)(u1.offset % u1.step);
+    u1_offset_x = (int)(u1_offset_x / u1.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, u1_offset_x); //int u1_offset_x
+    SAFE_KERNEL_SET_ARG(idxArg, (int)(u1.offset / u1.step)); //int u1_offset_y
+    int u2_offset_x = (int)(u2.offset % u2.step);
+    u2_offset_x = (int)(u2_offset_x / u2.elemSize());
+    SAFE_KERNEL_SET_ARG(idxArg, u2_offset_x); //int u2_offset_x
+    idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
+#endif
     return kernel.run(2, globalsize, NULL, false);
 
 }
