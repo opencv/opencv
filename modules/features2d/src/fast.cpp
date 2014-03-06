@@ -43,6 +43,7 @@ The references are:
 
 #include "precomp.hpp"
 #include "fast_score.hpp"
+#include "opencl_kernels.hpp"
 
 #if defined _MSC_VER
 # pragma warning( disable : 4127)
@@ -249,8 +250,85 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
     }
 }
 
+
+static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
+                     int threshold, bool nonmax_suppression, int maxKeypoints )
+{
+    UMat img = _img.getUMat();
+    if( img.cols < 7 || img.rows < 7 )
+        return false;
+    size_t globalsize[] = { img.cols-6, img.rows-6 };
+
+    ocl::Kernel fastKptKernel("FAST_findKeypoints", ocl::features2d::fast_oclsrc);
+    if (fastKptKernel.empty())
+        return false;
+
+    UMat kp1(1, maxKeypoints*2+1, CV_32S), score;
+
+    UMat utemp(kp1, Rect(0,0,1,1));
+    utemp.setTo(Scalar::all(0));
+
+    if( nonmax_suppression )
+    {
+        score.create(img.size(), CV_8U);
+        score.setTo(Scalar::all(0));
+    }
+    else
+        score = img; // initialize score with some non-empty value
+
+    if( !fastKptKernel.args(ocl::KernelArg::ReadOnly(img),
+                            ocl::KernelArg::WriteOnlyNoSize(score),
+                            ocl::KernelArg::PtrReadWrite(kp1),
+                            nonmax_suppression ? 1 : 0,
+                            maxKeypoints, threshold).run(2, globalsize, 0, true))
+        return false;
+
+    Mat mcounter;
+    utemp.copyTo(mcounter);
+    int i, counter = mcounter.at<int>(0);
+
+    keypoints.clear();
+    if( !nonmax_suppression )
+    {
+        Mat m;
+        kp1(Rect(0, 0, counter*2+1, 1)).copyTo(m);
+        const Point* pt = (const Point*)(m.ptr<int>() + 1);
+        for( i = 0; i < counter; i++ )
+            keypoints.push_back(KeyPoint((float)pt[i].x, (float)pt[i].y, 7.f, -1, 1.f));
+    }
+    else
+    {
+        UMat kp2(1, maxKeypoints*3+1, CV_32S);
+        utemp = kp2(Rect(0,0,1,1));
+        utemp.setTo(Scalar::all(0));
+
+        ocl::Kernel fastNMSKernel("FAST_nonmaxSupression", ocl::features2d::fast_oclsrc);
+        if (fastNMSKernel.empty())
+            return false;
+
+        if( !fastNMSKernel.args(ocl::KernelArg::PtrReadOnly(kp1),
+                                ocl::KernelArg::PtrReadWrite(kp2),
+                                ocl::KernelArg::ReadOnlyNoSize(score),
+                                counter, maxKeypoints).run(2, globalsize, 0, true))
+            return false;
+
+        Mat m;
+        kp2(Rect(0, 0, counter*3+1, 1)).copyTo(m);
+        const Point3i* pt = (const Point3i*)(m.ptr<int>() + 1);
+        for( i = 0; i < counter; i++ )
+            keypoints.push_back(KeyPoint((float)pt[i].x, (float)pt[i].y, 7.f, -1, (float)pt[i].z));
+    }
+    
+    return true;
+}
+
+
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
+  if( ocl::useOpenCL() && /*_img.isUMat() &&*/ type == FastFeatureDetector::TYPE_9_16 &&
+      ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
+      return;
+
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:
       FAST_t<8>(_img, keypoints, threshold, nonmax_suppression);
@@ -267,6 +345,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       break;
   }
 }
+
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
