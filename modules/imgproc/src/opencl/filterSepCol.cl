@@ -47,6 +47,8 @@
 #define READ_TIMES_ROW ((2*(RADIUS+LSIZE0)-1)/LSIZE0)
 #endif
 
+#define noconvert
+
 /**********************************************************************************
 These kernels are written for separable filters such as Sobel, Scharr, GaussianBlur.
 Now(6/29/2011) the kernels only support 8U data type and the anchor of the convovle
