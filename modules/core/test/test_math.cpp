@@ -617,6 +617,7 @@ Core_GEMMTest::Core_GEMMTest() : Core_MatrixTest( 5, 1, false, false, 2 )
 {
     test_case_count = 100;
     max_log_array_size = 10;
+    tabc_flag = 0;
     alpha = beta = 0;
 }
 
@@ -821,6 +822,8 @@ protected:
 
 Core_TransformTest::Core_TransformTest() : Core_MatrixTest( 3, 1, true, false, 4 )
 {
+    scale = 1;
+    diagMtx = false;
 }
 
 
@@ -1154,7 +1157,7 @@ protected:
 
 
 Core_CovarMatrixTest::Core_CovarMatrixTest() : Core_MatrixTest( 1, 1, true, false, 1 ),
-flags(0), t_flag(0), are_images(false)
+    flags(0), t_flag(0), len(0), count(0), are_images(false)
 {
     test_case_count = 100;
     test_array[INPUT_OUTPUT].push_back(NULL);
@@ -2485,16 +2488,14 @@ TYPED_TEST_P(Core_CheckRange, Negative)
     double min_bound = 4.5;
     double max_bound = 16.0;
 
-    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    TypeParam data[] = {5, 10, 15, 4, 10, 2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);
+    cv::Point bad_pt(0, 0);
 
-    ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
-    ASSERT_EQ(bad_pt->x,0);
-    ASSERT_EQ(bad_pt->y,1);
-
-    delete bad_pt;
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt.x, 0);
+    ASSERT_EQ(bad_pt.y, 1);
 }
 
 TYPED_TEST_P(Core_CheckRange, Positive)
@@ -2502,16 +2503,14 @@ TYPED_TEST_P(Core_CheckRange, Positive)
     double min_bound = -1;
     double max_bound = 16.0;
 
-    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    TypeParam data[] = {5, 10, 15, 4, 10, 2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);
+    cv::Point bad_pt(0, 0);
 
-    ASSERT_TRUE(checkRange(src, true, bad_pt, min_bound, max_bound));
-    ASSERT_EQ(bad_pt->x,0);
-    ASSERT_EQ(bad_pt->y,0);
-
-    delete bad_pt;
+    ASSERT_TRUE(checkRange(src, true, &bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt.x, 0);
+    ASSERT_EQ(bad_pt.y, 0);
 }
 
 TYPED_TEST_P(Core_CheckRange, Bounds)
@@ -2519,16 +2518,14 @@ TYPED_TEST_P(Core_CheckRange, Bounds)
     double min_bound = 24.5;
     double max_bound = 1.0;
 
-    TypeParam data[] = {5, 10, 15, 4, 10 ,2, 8, 12, 14};
+    TypeParam data[] = {5, 10, 15, 4, 10, 2, 8, 12, 14};
     cv::Mat src = cv::Mat(3,3, cv::DataDepth<TypeParam>::value, data);
 
-    cv::Point* bad_pt = new cv::Point(0, 0);
+    cv::Point bad_pt(0, 0);
 
-    ASSERT_FALSE(checkRange(src, true, bad_pt, min_bound, max_bound));
-    ASSERT_EQ(bad_pt->x,0);
-    ASSERT_EQ(bad_pt->y,0);
-
-    delete bad_pt;
+    ASSERT_FALSE(checkRange(src, true, &bad_pt, min_bound, max_bound));
+    ASSERT_EQ(bad_pt.x, 0);
+    ASSERT_EQ(bad_pt.y, 0);
 }
 
 TYPED_TEST_P(Core_CheckRange, Zero)

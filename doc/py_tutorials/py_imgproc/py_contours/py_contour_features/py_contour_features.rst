@@ -119,7 +119,7 @@ Let (x,y) be the top-left coordinate of the rectangle and (w,h) be its width and
 ::
 
     x,y,w,h = cv2.boundingRect(cnt)
-    img = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+    cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 
 7.b. Rotated Rectangle
 -----------------------
@@ -129,7 +129,7 @@ Here, bounding rectangle is drawn with minimum area, so it considers the rotatio
     rect = cv2.minAreaRect(cnt)
     box = cv2.boxPoints(rect)
     box = np.int0(box)
-    im = cv2.drawContours(im,[box],0,(0,0,255),2)
+    cv2.drawContours(img,[box],0,(0,0,255),2)
 
 Both the rectangles are shown in a single image. Green rectangle shows the normal bounding rect. Red rectangle is the rotated rect.
 
@@ -145,7 +145,7 @@ Next we find the circumcircle of an object using the function **cv2.minEnclosing
     (x,y),radius = cv2.minEnclosingCircle(cnt)
     center = (int(x),int(y))
     radius = int(radius)
-    img = cv2.circle(img,center,radius,(0,255,0),2)
+    cv2.circle(img,center,radius,(0,255,0),2)
 
 .. image:: images/circumcircle.png
         :alt: Minimum Enclosing Circle
@@ -158,7 +158,7 @@ Next one is to fit an ellipse to an object. It returns the rotated rectangle in 
 ::
 
     ellipse = cv2.fitEllipse(cnt)
-    im = cv2.ellipse(im,ellipse,(0,255,0),2)
+    cv2.ellipse(img,ellipse,(0,255,0),2)
 
 .. image:: images/fitellipse.png
         :alt: Fitting an Ellipse
@@ -175,7 +175,7 @@ Similarly we can fit a line to a set of points. Below image contains a set of wh
     [vx,vy,x,y] = cv2.fitLine(cnt, cv2.DIST_L2,0,0.01,0.01)
     lefty = int((-x*vy/vx) + y)
     righty = int(((cols-x)*vy/vx)+y)
-    img = cv2.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
+    cv2.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
 
 .. image:: images/fitline.jpg
         :alt: Fitting a Line

@@ -209,7 +209,7 @@ public:
     CvBlobDetectorSimple();
    ~CvBlobDetectorSimple();
     int DetectNewBlob(IplImage* pImg, IplImage* pFGMask, CvBlobSeq* pNewBlobList, CvBlobSeq* pOldBlobList);
-    void Release(){delete this;};
+    void Release(){delete this;}
 
 protected:
     IplImage*       m_pMaskBlobNew;
@@ -219,7 +219,7 @@ protected:
 };
 
 /* Blob detector creator (sole interface function for this file) */
-CvBlobDetector* cvCreateBlobDetectorSimple(){return new CvBlobDetectorSimple;};
+CvBlobDetector* cvCreateBlobDetectorSimple(){return new CvBlobDetectorSimple;}
 
 /* Constructor of BlobDetector: */
 CvBlobDetectorSimple::CvBlobDetectorSimple()
@@ -544,7 +544,7 @@ public:
     CvBlobDetectorCC();
    ~CvBlobDetectorCC();
     int DetectNewBlob(IplImage* pImg, IplImage* pFGMask, CvBlobSeq* pNewBlobList, CvBlobSeq* pOldBlobList);
-    void Release(){delete this;};
+    void Release(){delete this;}
 
     virtual void ParamUpdate()
     {

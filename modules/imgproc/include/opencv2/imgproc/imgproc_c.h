@@ -364,7 +364,7 @@ CV_INLINE double cvContourPerimeter( const void* contour )
 }
 
 
-/* Calculates contour boundning rectangle (update=1) or
+/* Calculates contour bounding rectangle (update=1) or
    just retrieves pre-calculated rectangle (update=0) */
 CVAPI(CvRect)  cvBoundingRect( CvArr* points, int update CV_DEFAULT(0) );
 
@@ -601,7 +601,8 @@ CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
    param1 ~ srn, param2 ~ stn - for multi-scale */
 CVAPI(CvSeq*)  cvHoughLines2( CvArr* image, void* line_storage, int method,
                               double rho, double theta, int threshold,
-                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0));
+                              double param1 CV_DEFAULT(0), double param2 CV_DEFAULT(0),
+                              double min_theta CV_DEFAULT(0), double max_theta CV_DEFAULT(CV_PI));
 
 /* Finds circles in the image */
 CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,

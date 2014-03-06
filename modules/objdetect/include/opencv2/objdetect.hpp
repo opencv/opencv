@@ -111,35 +111,15 @@ public:
 };
 
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps = 0.2);
-CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights, int groupThreshold, double eps = 0.2);
-CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
+CV_EXPORTS_W void groupRectangles(CV_IN_OUT std::vector<Rect>& rectList, CV_OUT std::vector<int>& weights,
+                                  int groupThreshold, double eps = 0.2);
+CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, int groupThreshold,
+                                  double eps, std::vector<int>* weights, std::vector<double>* levelWeights );
 CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, std::vector<int>& rejectLevels,
                                   std::vector<double>& levelWeights, int groupThreshold, double eps = 0.2);
-CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights, std::vector<double>& foundScales,
-                                          double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
-
-class CV_EXPORTS FeatureEvaluator
-{
-public:
-    enum { HAAR = 0,
-           LBP  = 1,
-           HOG  = 2
-         };
-
-    virtual ~FeatureEvaluator();
-
-    virtual bool read(const FileNode& node);
-    virtual Ptr<FeatureEvaluator> clone() const;
-    virtual int getFeatureType() const;
-
-    virtual bool setImage(const Mat& img, Size origWinSize);
-    virtual bool setWindow(Point p);
-
-    virtual double calcOrd(int featureIdx) const;
-    virtual int calcCat(int featureIdx) const;
-
-    static Ptr<FeatureEvaluator> create(int type);
-};
+CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
+                                            std::vector<double>& foundScales,
+                                            double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
 
 template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
@@ -187,7 +167,7 @@ public:
     public:
         virtual ~MaskGenerator() {}
         virtual Mat generateMask(const Mat& src)=0;
-        virtual void initializeMask(const Mat& /*src*/) {};
+        virtual void initializeMask(const Mat& /*src*/) { }
     };
     virtual void setMaskGenerator(const Ptr<MaskGenerator>& maskGenerator) = 0;
     virtual Ptr<MaskGenerator> getMaskGenerator() = 0;
@@ -232,6 +212,8 @@ public:
     CV_WRAP int getFeatureType() const;
     void* getOldCascade();
 
+    CV_WRAP static bool convert(const String& oldcascade, const String& newcascade);
+
     void setMaskGenerator(const Ptr<BaseCascadeClassifier::MaskGenerator>& maskGenerator);
     Ptr<BaseCascadeClassifier::MaskGenerator> getMaskGenerator();
 
@@ -264,7 +246,7 @@ public:
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
         cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
         histogramNormType(HOGDescriptor::L2Hys), L2HysThreshold(0.2), gammaCorrection(true),
-        nlevels(HOGDescriptor::DEFAULT_NLEVELS)
+        free_coef(-1.f), nlevels(HOGDescriptor::DEFAULT_NLEVELS)
     {}
 
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
@@ -275,7 +257,7 @@ public:
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
     nbins(_nbins), derivAperture(_derivAperture), winSigma(_winSigma),
     histogramNormType(_histogramNormType), L2HysThreshold(_L2HysThreshold),
-    gammaCorrection(_gammaCorrection), nlevels(_nlevels)
+    gammaCorrection(_gammaCorrection), free_coef(-1.f), nlevels(_nlevels)
     {}
 
     CV_WRAP HOGDescriptor(const String& filename)
@@ -303,10 +285,11 @@ public:
     CV_WRAP virtual void save(const String& filename, const String& objname = String()) const;
     virtual void copyTo(HOGDescriptor& c) const;
 
-    CV_WRAP virtual void compute(const Mat& img,
+    CV_WRAP virtual void compute(InputArray img,
                          CV_OUT std::vector<float>& descriptors,
                          Size winStride = Size(), Size padding = Size(),
                          const std::vector<Point>& locations = std::vector<Point>()) const;
+
     //with found weights output
     CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
@@ -318,13 +301,14 @@ public:
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
+
     //with result weights output
-    CV_WRAP virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   CV_OUT std::vector<double>& foundWeights, double hitThreshold = 0,
                                   Size winStride = Size(), Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0,bool useMeanshiftGrouping = false) const;
     //without found weights output
-    virtual void detectMultiScale(const Mat& img, CV_OUT std::vector<Rect>& foundLocations,
+    virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold = 0, Size winStride = Size(),
                                   Size padding = Size(), double scale = 1.05,
                                   double finalThreshold = 2.0, bool useMeanshiftGrouping = false) const;
@@ -346,25 +330,27 @@ public:
     CV_PROP double L2HysThreshold;
     CV_PROP bool gammaCorrection;
     CV_PROP std::vector<float> svmDetector;
+    UMat oclSvmDetector;
+    float free_coef;
     CV_PROP int nlevels;
 
 
-   // evaluate specified ROI and return confidence value for each location
-   virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
+    // evaluate specified ROI and return confidence value for each location
+    virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                    CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                    double hitThreshold = 0, cv::Size winStride = Size(),
                                    cv::Size padding = Size()) const;
 
-   // evaluate specified ROI and return confidence value for each location in multiple scales
-   virtual void detectMultiScaleROI(const cv::Mat& img,
+    // evaluate specified ROI and return confidence value for each location in multiple scales
+    virtual void detectMultiScaleROI(const cv::Mat& img,
                                                        CV_OUT std::vector<cv::Rect>& foundLocations,
                                                        std::vector<DetectionROI>& locations,
                                                        double hitThreshold = 0,
                                                        int groupThreshold = 0) const;
 
-   // read/parse Dalal's alt model file
-   void readALTModel(String modelfile);
-   void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
+    // read/parse Dalal's alt model file
+    void readALTModel(String modelfile);
+    void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
 
 

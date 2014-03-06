@@ -59,11 +59,11 @@ class BaseImageDecoder
 {
 public:
     BaseImageDecoder();
-    virtual ~BaseImageDecoder() {};
+    virtual ~BaseImageDecoder() {}
 
-    int width() const { return m_width; };
-    int height() const { return m_height; };
-    virtual int type() const { return m_type; };
+    int width() const { return m_width; }
+    int height() const { return m_height; }
+    virtual int type() const { return m_type; }
 
     virtual bool setSource( const String& filename );
     virtual bool setSource( const Mat& buf );
@@ -90,7 +90,7 @@ class BaseImageEncoder
 {
 public:
     BaseImageEncoder();
-    virtual ~BaseImageEncoder() {};
+    virtual ~BaseImageEncoder() {}
     virtual bool isFormatSupported( int depth ) const;
 
     virtual bool setDestination( const String& filename );

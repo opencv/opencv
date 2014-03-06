@@ -48,19 +48,20 @@
 
 #include "precomp.hpp"
 
+
+namespace cv { namespace viz
+{
+    vtkStandardNewMacro(InteractorStyle)
+}}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::Initialize()
 {
-    modifier_ = cv::viz::InteractorStyle::KB_MOD_ALT;
     // Set windows size (width, height) to unknown (-1)
     win_size_ = Vec2i(-1, -1);
     win_pos_ = Vec2i(0, 0);
     max_win_size_ = Vec2i(-1, -1);
-
-    // Create the image filter and PNG writer objects
-    wif_ = vtkSmartPointer<vtkWindowToImageFilter>::New();
-    snapshot_writer_ = vtkSmartPointer<vtkPNGWriter>::New();
-    snapshot_writer_->SetInputConnection(wif_->GetOutputPort());
 
     init_ = true;
     stereo_anaglyph_mask_default_ = true;
@@ -78,11 +79,37 @@ void cv::viz::InteractorStyle::Initialize()
 void cv::viz::InteractorStyle::saveScreenshot(const String &file)
 {
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
-    wif_->SetInput(Interactor->GetRenderWindow());
-    wif_->Modified(); // Update the WindowToImageFilter
-    snapshot_writer_->Modified();
-    snapshot_writer_->SetFileName(file.c_str());
-    snapshot_writer_->Write();
+
+    vtkSmartPointer<vtkWindowToImageFilter> wif = vtkSmartPointer<vtkWindowToImageFilter>::New();
+    wif->SetInput(Interactor->GetRenderWindow());
+
+    vtkSmartPointer<vtkPNGWriter> snapshot_writer = vtkSmartPointer<vtkPNGWriter>::New();
+    snapshot_writer->SetInputConnection(wif->GetOutputPort());
+    snapshot_writer->SetFileName(file.c_str());
+    snapshot_writer->Write();
+
+    cout << "Screenshot successfully captured (" << file.c_str() << ")" << endl;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::InteractorStyle::exportScene(const String &file)
+{
+    vtkSmartPointer<vtkExporter> exporter;
+    if (file.size() > 5 && file.substr(file.size() - 5) == ".vrml")
+    {
+        exporter = vtkSmartPointer<vtkVRMLExporter>::New();
+        vtkVRMLExporter::SafeDownCast(exporter)->SetFileName(file.c_str());
+    }
+    else
+    {
+        exporter = vtkSmartPointer<vtkOBJExporter>::New();
+        vtkOBJExporter::SafeDownCast(exporter)->SetFilePrefix(file.c_str());
+    }
+
+    exporter->SetInput(Interactor->GetRenderWindow());
+    exporter->Write();
+
+    cout << "Scene successfully exported (" << file.c_str() << ")" << endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,13 +148,7 @@ void cv::viz::InteractorStyle::OnChar()
     else if (key.find("XF86ZoomOut") != String::npos)
         zoomOut();
 
-    int keymod = false;
-    switch (modifier_)
-    {
-    case KB_MOD_ALT:   keymod = Interactor->GetAltKey(); break;
-    case KB_MOD_CTRL:  keymod = Interactor->GetControlKey(); break;
-    case KB_MOD_SHIFT: keymod = Interactor->GetShiftKey(); break;
-    }
+    int keymod = Interactor->GetAltKey();
 
     switch (Interactor->GetKeyCode())
     {
@@ -180,43 +201,32 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::InteractorStyle::getAltKey() { return Interactor->GetAltKey() != 0; }
-bool cv::viz::InteractorStyle::getShiftKey() { return Interactor->GetShiftKey()!= 0; }
-bool cv::viz::InteractorStyle::getControlKey() { return Interactor->GetControlKey()!= 0; }
+int cv::viz::InteractorStyle::getModifiers()
+{
+    int modifiers = KeyboardEvent::NONE;
+
+    if (Interactor->GetAltKey())
+        modifiers |= KeyboardEvent::ALT;
+
+    if (Interactor->GetControlKey())
+        modifiers |= KeyboardEvent::CTRL;
+
+    if (Interactor->GetShiftKey())
+        modifiers |= KeyboardEvent::SHIFT;
+    return modifiers;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void
-cv::viz::InteractorStyle::OnKeyDown()
+void cv::viz::InteractorStyle::OnKeyDown()
 {
     CV_Assert("Interactor style not initialized. Please call Initialize() before continuing" && init_);
-    CV_Assert("No renderer given! Use SetRendererCollection() before continuing." && renderer_);
-
     FindPokedRenderer(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1]);
-
-    if (wif_->GetInput() == NULL)
-    {
-        wif_->SetInput(Interactor->GetRenderWindow());
-        wif_->Modified();
-        snapshot_writer_->Modified();
-    }
 
     // Save the initial windows width/height
     if (win_size_[0] == -1 || win_size_[1] == -1)
         win_size_ = Vec2i(Interactor->GetRenderWindow()->GetSize());
 
-
-    // Get the status of special keys (Cltr+Alt+Shift)
-    bool shift = getShiftKey();
-    bool ctrl  = getControlKey();
-    bool alt   = getAltKey();
-
-    bool keymod = false;
-    switch (modifier_)
-    {
-    case KB_MOD_ALT:   keymod = alt;   break;
-    case KB_MOD_CTRL:  keymod = ctrl;  break;
-    case KB_MOD_SHIFT: keymod = shift; break;
-    }
+    bool alt = Interactor->GetAltKey() != 0;
 
     std::string key(Interactor->GetKeySym());
     if (key.find("XF86ZoomIn") != std::string::npos)
@@ -235,8 +245,10 @@ cv::viz::InteractorStyle::OnKeyDown()
                      "          s, S   : switch to a surface-based representation (where available)\n"
                      "\n"
                      "          j, J   : take a .PNG snapshot of the current window view\n"
+                     "          k, K   : export scene to Wavefront .obj format\n"
+                     "    ALT + k, K   : export scene to VRML format\n"
                      "          c, C   : display current camera/window parameters\n"
-                     "          f, F   : fly to point mode\n"
+                     "          f, F   : fly to point mode, hold the key and move mouse where to fly\n"
                      "\n"
                      "          e, E   : exit the interactor\n"
                      "          q, Q   : stop and call VTK's TerminateApp\n"
@@ -249,7 +261,7 @@ cv::viz::InteractorStyle::OnKeyDown()
                      "    ALT + s, S   : turn stereo mode on/off\n"
                      "    ALT + f, F   : switch between maximized window mode and original size\n"
                      "\n"
-                     << std::endl;
+                  << std::endl;
         break;
     }
 
@@ -261,66 +273,41 @@ cv::viz::InteractorStyle::OnKeyDown()
         for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
             for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
             {
-                vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
+                vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                 apart->GetProperty()->SetRepresentationToPoints();
             }
         break;
     }
-        // Save a PNG snapshot with the current screen
+
+        // Save a PNG snapshot
     case 'j': case 'J':
+        saveScreenshot(cv::format("screenshot-%d.png", (unsigned int)time(0))); break;
+
+        // Export scene as in obj or vrml format
+    case 'k': case 'K':
     {
-        unsigned int t = static_cast<unsigned int>(time(0));
-        String png_file = cv::format("screenshot-%d.png", t);
-        String cam_file = cv::format("screenshot-%d.cam", t);
-
-        vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
-        Vec2d clip;
-        Vec3d focal, pos, view;
-        cam->GetClippingRange(clip.val);
-        cam->GetFocalPoint(focal.val);
-        cam->GetPosition(pos.val);
-        cam->GetViewUp(view.val);
-        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
-        Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
-        double angle = cam->GetViewAngle() / 180.0 * CV_PI;
-
-        String data = cv::format("%f,%f/%f,%f,%f/%f,%f,%f/%f,%f,%f/%f/%d,%d/%d,%d", clip[0],clip[1], focal[0],focal[1],focal[2],
-                 pos[0],pos[1],pos[2], view[0],view[1], view[2], angle , win_size[0],win_size[1], win_pos[0], win_pos[1]);
-
-        saveScreenshot(png_file);
-        ofstream ofs_cam(cam_file.c_str());
-        ofs_cam << data.c_str() << endl;
-        ofs_cam.close();
-
-        cout << "Screenshot (" << png_file.c_str() << ") and camera information (" << cam_file.c_str() << ") successfully captured." << endl;
+        String format = alt ? "scene-%d.vrml" : "scene-%d";
+        exportScene(cv::format(format.c_str(), (unsigned int)time(0)));
         break;
     }
+
         // display current camera settings/parameters
     case 'c': case 'C':
     {
         vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
 
-        Vec2d clip;
-        Vec3d focal, pose, view;
-        cam->GetClippingRange(clip.val);
-        cam->GetFocalPoint(focal.val);
-        cam->GetPosition(pose.val);
-        cam->GetViewUp(view.val);
+        Vec2d clip(cam->GetClippingRange());
+        Vec3d focal(cam->GetFocalPoint()), pos(cam->GetPosition()), view(cam->GetViewUp());
         Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
         Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
+        double angle = cam->GetViewAngle () / 180.0 * CV_PI;
 
-        cv::print(Mat(clip, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(focal, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(pose, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(view, false).reshape(1, 1));
-        std::cout << "/" << cam->GetViewAngle () / 180.0 * CV_PI;
-        cv::print(Mat(win_size, false).reshape(1, 1));
-        std::cout << "/";
-        cv::print(Mat(win_pos, false).reshape(1, 1));
-        std::cout << std::endl;
+        String data = cv::format("clip(%f,%f) focal(%f,%f,%f) pos(%f,%f,%f) view(%f,%f,%f) angle(%f) winsz(%d,%d) winpos(%d,%d)",
+                                 clip[0], clip[1], focal[0], focal[1], focal[2], pos[0], pos[1], pos[2], view[0], view[1], view[2],
+                                 angle, win_size[0], win_size[1], win_pos[0], win_pos[1]);
+
+        std::cout << data.c_str() << std::endl;
+
         break;
     }
     case '=':
@@ -339,7 +326,7 @@ cv::viz::InteractorStyle::OnKeyDown()
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
-                    vtkActor* apart = reinterpret_cast <vtkActor*>(path->GetLastNode()->GetViewProp());
+                    vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                     float psize = apart->GetProperty()->GetPointSize();
                     if (psize < 63.0f)
                         apart->GetProperty()->SetPointSize(psize + 1.0f);
@@ -358,7 +345,7 @@ cv::viz::InteractorStyle::OnKeyDown()
             for (ac->InitTraversal(ait); vtkActor* actor = ac->GetNextActor(ait); )
                 for (actor->InitPathTraversal(); vtkAssemblyPath* path = actor->GetNextPath(); )
                 {
-                    vtkActor* apart = static_cast<vtkActor*>(path->GetLastNode()->GetViewProp());
+                    vtkActor* apart = vtkActor::SafeDownCast(path->GetLastNode()->GetViewProp());
                     float psize = apart->GetProperty()->GetPointSize();
                     if (psize > 1.0f)
                         apart->GetProperty()->SetPointSize(psize - 1.0f);
@@ -369,7 +356,7 @@ cv::viz::InteractorStyle::OnKeyDown()
         // Switch between maximize and original window size
     case 'f': case 'F':
     {
-        if (keymod)
+        if (alt)
         {
             Vec2i screen_size(Interactor->GetRenderWindow()->GetScreenSize());
             Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
@@ -397,13 +384,11 @@ cv::viz::InteractorStyle::OnKeyDown()
         else
         {
             AnimState = VTKIS_ANIM_ON;
-            vtkAssemblyPath *path = NULL;
             Interactor->GetPicker()->Pick(Interactor->GetEventPosition()[0], Interactor->GetEventPosition()[1], 0.0, CurrentRenderer);
-            vtkAbstractPropPicker *picker;
-            if ((picker = vtkAbstractPropPicker::SafeDownCast(Interactor->GetPicker())))
-                path = picker->GetPath();
-            if (path != NULL)
-                Interactor->FlyTo(CurrentRenderer, picker->GetPickPosition());
+            vtkSmartPointer<vtkAbstractPropPicker> picker = vtkAbstractPropPicker::SafeDownCast(Interactor->GetPicker());
+            if (picker)
+                if (picker->GetPath())
+                    Interactor->FlyTo(CurrentRenderer, picker->GetPickPosition());
             AnimState = VTKIS_ANIM_OFF;
         }
         break;
@@ -411,24 +396,16 @@ cv::viz::InteractorStyle::OnKeyDown()
         // 's'/'S' w/out ALT
     case 's': case 'S':
     {
-        if (keymod)
+        if (alt)
         {
-            int stereo_render = Interactor->GetRenderWindow()->GetStereoRender();
-            if (!stereo_render)
+            vtkSmartPointer<vtkRenderWindow> window = Interactor->GetRenderWindow();
+            if (!window->GetStereoRender())
             {
-                if (stereo_anaglyph_mask_default_)
-                {
-                    Interactor->GetRenderWindow()->SetAnaglyphColorMask(4, 3);
-                    stereo_anaglyph_mask_default_ = false;
-                }
-                else
-                {
-                    Interactor->GetRenderWindow()->SetAnaglyphColorMask(2, 5);
-                    stereo_anaglyph_mask_default_ = true;
-                }
+                static Vec2i red_blue(4, 3), magenta_green(2, 5);
+                window->SetAnaglyphColorMask (stereo_anaglyph_mask_default_ ? red_blue.val : magenta_green.val);
+                stereo_anaglyph_mask_default_ = !stereo_anaglyph_mask_default_;
             }
-            Interactor->GetRenderWindow()->SetStereoRender(!stereo_render);
-            Interactor->GetRenderWindow()->Render();
+            window->SetStereoRender(!window->GetStereoRender());
             Interactor->Render();
         }
         else
@@ -440,43 +417,34 @@ cv::viz::InteractorStyle::OnKeyDown()
     {
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
         cam->SetParallelProjection(!cam->GetParallelProjection());
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->Render();
         break;
     }
 
-    // Overwrite the camera reset
+        // Overwrite the camera reset
     case 'r': case 'R':
     {
-        if (!keymod)
+        if (!alt)
         {
             Superclass::OnKeyDown();
             break;
         }
 
-        vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
-
-        static WidgetActorMap::iterator it = widget_actor_map_->begin();
+        WidgetActorMap::iterator it = widget_actor_map_->begin();
         // it might be that some actors don't have a valid transformation set -> we skip them to avoid a seg fault.
-        bool found_transformation = false;
-
-        for (size_t idx = 0; idx < widget_actor_map_->size(); ++idx, ++it)
+        for (; it != widget_actor_map_->end();  ++it)
         {
-            if (it == widget_actor_map_->end())
-                it = widget_actor_map_->begin();
-
             vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
             if (actor && actor->GetUserMatrix())
-            {
-                found_transformation = true;
                 break;
-            }
         }
 
+        vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera();
+
         // if a valid transformation was found, use it otherwise fall back to default view point.
-        if (found_transformation)
+        if (it != widget_actor_map_->end())
         {
-            const vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
+            vtkMatrix4x4* m = vtkProp3D::SafeDownCast(it->second)->GetUserMatrix();
 
             cam->SetFocalPoint(m->GetElement(0, 3) - m->GetElement(0, 2),
                                m->GetElement(1, 3) - m->GetElement(1, 2),
@@ -516,23 +484,18 @@ cv::viz::InteractorStyle::OnKeyDown()
     }
     }
 
-    KeyboardEvent event(true, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
-    // Check if there is a keyboard callback registered
+    KeyboardEvent event(KeyboardEvent::KEY_DOWN, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     if (keyboardCallback_)
-      keyboardCallback_(event, keyboard_callback_cookie_);
-
-    renderer_->Render();
+        keyboardCallback_(event, keyboard_callback_cookie_);
     Interactor->Render();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnKeyUp()
 {
-    KeyboardEvent event(false, Interactor->GetKeySym(), Interactor->GetKeyCode(), getAltKey(), getControlKey(), getShiftKey());
-    // Check if there is a keyboard callback registered
+    KeyboardEvent event(KeyboardEvent::KEY_UP, Interactor->GetKeySym(), Interactor->GetKeyCode(), getModifiers());
     if (keyboardCallback_)
-      keyboardCallback_(event, keyboard_callback_cookie_);
-
+        keyboardCallback_(event, keyboard_callback_cookie_);
     Superclass::OnKeyUp();
 }
 
@@ -540,9 +503,9 @@ void cv::viz::InteractorStyle::OnKeyUp()
 void cv::viz::InteractorStyle::OnMouseMove()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseMove, MouseEvent::NoButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMouseMove();
 }
 
@@ -551,9 +514,9 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonDown();
 }
 
@@ -561,9 +524,9 @@ void cv::viz::InteractorStyle::OnLeftButtonDown()
 void cv::viz::InteractorStyle::OnLeftButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnLeftButtonUp();
 }
 
@@ -571,11 +534,10 @@ void cv::viz::InteractorStyle::OnLeftButtonUp()
 void cv::viz::InteractorStyle::OnMiddleButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
-
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonDown();
 }
 
@@ -583,9 +545,9 @@ void cv::viz::InteractorStyle::OnMiddleButtonDown()
 void cv::viz::InteractorStyle::OnMiddleButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnMiddleButtonUp();
 }
 
@@ -593,11 +555,10 @@ void cv::viz::InteractorStyle::OnMiddleButtonUp()
 void cv::viz::InteractorStyle::OnRightButtonDown()
 {
     Vec2i p(Interactor->GetEventPosition());
-
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
-    MouseEvent event(type, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(type, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonDown();
 }
 
@@ -605,9 +566,9 @@ void cv::viz::InteractorStyle::OnRightButtonDown()
 void cv::viz::InteractorStyle::OnRightButtonUp()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getAltKey(), getControlKey(), getShiftKey());
+    MouseEvent event(MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     Superclass::OnRightButtonUp();
 }
 
@@ -615,12 +576,11 @@ void cv::viz::InteractorStyle::OnRightButtonUp()
 void cv::viz::InteractorStyle::OnMouseWheelForward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
-    // If a mouse callback registered, call it!
+    MouseEvent event(MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
     if (Interactor->GetRepeatCount() && mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetAltKey())
     {
@@ -632,11 +592,9 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 
         cam->SetViewAngle(opening_angle);
         cam->Modified();
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
         CurrentRenderer->Render();
-        renderer_->Render();
         Interactor->Render();
     }
     else
@@ -647,13 +605,12 @@ void cv::viz::InteractorStyle::OnMouseWheelForward()
 void cv::viz::InteractorStyle::OnMouseWheelBackward()
 {
     Vec2i p(Interactor->GetEventPosition());
-    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getAltKey(), getControlKey(), getShiftKey());
-    // If a mouse callback registered, call it!
+    MouseEvent event(MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, getModifiers());
     if (mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetRepeatCount() && mouseCallback_)
-      mouseCallback_(event, mouse_callback_cookie_);
+        mouseCallback_(event, mouse_callback_cookie_);
 
     if (Interactor->GetAltKey())
     {
@@ -665,11 +622,9 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
 
         cam->SetViewAngle(opening_angle);
         cam->Modified();
-        CurrentRenderer->SetActiveCamera(cam);
         CurrentRenderer->ResetCameraClippingRange();
         CurrentRenderer->Modified();
         CurrentRenderer->Render();
-        renderer_->Render();
         Interactor->Render();
     }
     else
@@ -680,13 +635,5 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
 void cv::viz::InteractorStyle::OnTimer()
 {
     CV_Assert("Interactor style not initialized." && init_);
-    CV_Assert("Renderer has not been set." && renderer_);
-    renderer_->Render();
     Interactor->Render();
 }
-
-namespace cv { namespace viz
-{
-    //Standard VTK macro for *New()
-    vtkStandardNewMacro(InteractorStyle)
-}}

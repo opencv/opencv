@@ -706,6 +706,8 @@ private:
     int thresholdType;
 };
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, double maxval, int thresh_type )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), ktype = CV_MAKE_TYPE(depth, 1);
@@ -739,13 +741,14 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 }
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
-    if (ocl::useOpenCL() && _src.dims() <= 2 && _dst.isUMat() &&
-            ocl_threshold(_src, _dst, thresh, maxval, type))
-        return thresh;
+    CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
+                ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
     Mat src = _src.getMat();
     bool use_otsu = (type & THRESH_OTSU) != 0;

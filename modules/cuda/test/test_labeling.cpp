@@ -62,7 +62,7 @@ namespace
 
         struct InInterval
         {
-            InInterval(const int& _lo, const int& _hi) : lo(-_lo), hi(_hi) {};
+            InInterval(const int& _lo, const int& _hi) : lo(-_lo), hi(_hi) {}
             const int lo, hi;
 
             bool operator() (const unsigned char a, const unsigned char b) const

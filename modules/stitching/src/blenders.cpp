@@ -512,6 +512,7 @@ void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
     (void)img;
     (void)num_levels;
     (void)pyr;
+    CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }
 
@@ -549,6 +550,7 @@ void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
     gpu_pyr[0].download(pyr[0]);
 #else
     (void)pyr;
+    CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
 #endif
 }
 

@@ -80,7 +80,7 @@ namespace cv
 class LMSolverImpl : public LMSolver
 {
 public:
-    LMSolverImpl() : maxIters(100) { init(); };
+    LMSolverImpl() : maxIters(100) { init(); }
     LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters) : cb(_cb), maxIters(_maxIters) { init(); }
 
     void init()
@@ -215,7 +215,7 @@ CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
                   obj.info()->addParam(obj, "epsx", obj.epsx);
                   obj.info()->addParam(obj, "epsf", obj.epsf);
                   obj.info()->addParam(obj, "maxIters", obj.maxIters);
-                  obj.info()->addParam(obj, "printInterval", obj.printInterval));
+                  obj.info()->addParam(obj, "printInterval", obj.printInterval))
 
 Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {

@@ -87,7 +87,7 @@ int main( int argc, char** argv ) {
 
     // DESCRIPTOR
     // Our proposed FREAK descriptor
-    // (roation invariance, scale invariance, pattern radius corresponding to SMALLEST_KP_SIZE,
+    // (rotation invariance, scale invariance, pattern radius corresponding to SMALLEST_KP_SIZE,
     // number of octaves, optional vector containing the selected pairs)
     // FREAK extractor(true, true, 22, 4, std::vector<int>());
     FREAK extractor;
@@ -96,7 +96,7 @@ int main( int argc, char** argv ) {
     // The standard Hamming distance can be used such as
     // BFMatcher matcher(NORM_HAMMING);
     // or the proposed cascade of hamming distance using SSSE3
-    BFMatcher matcher(NORM_HAMMING);
+    BFMatcher matcher(extractor.defaultNorm());
 
     // detect
     double t = (double)getTickCount();

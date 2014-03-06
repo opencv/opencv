@@ -472,7 +472,7 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
 #endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if(dx < 2 && dy < 2 && src.channels() == 1 && borderType == 1)
+    if(dx < 2 && dy < 2 && _src.channels() == 1 && borderType == 1)
     {
         Mat src = _src.getMat(), dst = _dst.getMat();
         if(IPPDerivScharr(src, dst, ddepth, dx, dy, scale))
@@ -540,8 +540,6 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         int wtype = CV_MAKETYPE(wdepth, src.channels());
         Mat kd, ks;
         getSobelKernels( kd, ks, 2, 0, ksize, false, ktype );
-        if( ddepth < 0 )
-            ddepth = src.depth();
         int dtype = CV_MAKETYPE(ddepth, src.channels());
 
         int dy0 = std::min(std::max((int)(STRIPE_SIZE/(getElemSize(src.type())*src.cols)), 1), src.rows);

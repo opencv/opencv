@@ -79,61 +79,34 @@ class Cloning
 
 void Cloning::getGradientx( const Mat &img, Mat &gx)
 {
-    int w = img.size().width;
-    int h = img.size().height;
-    int channel = img.channels();
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;++c)
-            {
-                gx.at<float>(i,j*channel+c) =
-                    (float)img.at<uchar>(i,(j+1)*channel+c) - (float)img.at<uchar>(i,j*channel+c);
-            }
-
+    Mat kernel = Mat::zeros(1, 3, CV_8S);
+    kernel.at<char>(0,2) = 1;
+    kernel.at<char>(0,1) = -1;
+    filter2D(img, gx, CV_32F, kernel);
 }
 
 void Cloning::getGradienty( const Mat &img, Mat &gy)
 {
-    int w = img.size().width;
-    int h = img.size().height;
-    int channel = img.channels();
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;++c)
-            {
-                gy.at<float>(i,j*channel+c) =
-                    (float)img.at<uchar>((i+1),j*channel+c) - (float)img.at<uchar>(i,j*channel+c);
-
-            }
+    Mat kernel = Mat::zeros(3, 1, CV_8S);
+    kernel.at<char>(2,0) = 1;
+    kernel.at<char>(1,0) = -1;
+    filter2D(img, gy, CV_32F, kernel);
 }
 
 void Cloning::lapx( const Mat &img, Mat &gxx)
 {
-    int w = img.size().width;
-    int h = img.size().height;
-    int channel = img.channels();
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w-1;j++)
-            for(int c=0;c<channel;++c)
-            {
-                gxx.at<float>(i,(j+1)*channel+c) =
-                    (float)img.at<float>(i,(j+1)*channel+c) - (float)img.at<float>(i,j*channel+c);
-            }
+    Mat kernel = Mat::zeros(1, 3, CV_8S);
+    kernel.at<char>(0,0) = -1;
+    kernel.at<char>(0,1) = 1;
+    filter2D(img, gxx, CV_32F, kernel);
 }
 
 void Cloning::lapy( const Mat &img, Mat &gyy)
 {
-    int w = img.size().width;
-    int h = img.size().height;
-    int channel = img.channels();
-    for(int i=0;i<h-1;i++)
-        for(int j=0;j<w;j++)
-            for(int c=0;c<channel;++c)
-            {
-                gyy.at<float>(i+1,j*channel+c) =
-                    (float)img.at<float>((i+1),j*channel+c) - (float)img.at<float>(i,j*channel+c);
-
-            }
+    Mat kernel = Mat::zeros(3, 1, CV_8S);
+    kernel.at<char>(0,0) = -1;
+    kernel.at<char>(1,0) = 1;
+    filter2D(img, gyy, CV_32F, kernel);
 }
 
 void Cloning::dst(double *mod_diff, double *sineTransform,int h,int w)
