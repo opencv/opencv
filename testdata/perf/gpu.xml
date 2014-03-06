@@ -68450,7 +68450,7 @@
       <x>2</x>
       <y>0</y>
       <val>738.</val></rng2></gpu_positions></Method_Sz_ImgProc_GeneralizedHough--ImgProc_GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1920x1080->
-<Image_Threshold_NonMaxSupression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--false->
+<Image_Threshold_NonMaxSuppression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--false->
   <gpu_keypoints-pt>
     <kind>65536</kind>
     <type>13</type>
@@ -68553,8 +68553,8 @@
     <rng2>
       <x>0</x>
       <y>36078</y>
-      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSupression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--false->
-<Image_Threshold_NonMaxSupression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--true->
+      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSuppression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--false->
+<Image_Threshold_NonMaxSuppression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--true->
   <gpu_keypoints-pt>
     <kind>65536</kind>
     <type>13</type>
@@ -68658,7 +68658,7 @@
     <rng2>
       <x>0</x>
       <y>1910</y>
-      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSupression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--true->
+      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSuppression_Features2D_FAST--Features2D_FAST----gpu-perf-aloe-png---20--true->
 <DescSize_Norm_Features2D_BFMatch--Features2D_BFMatch---64--NORM_L1->
   <gpu_matches-queryIdx>
     <kind>65536</kind>
