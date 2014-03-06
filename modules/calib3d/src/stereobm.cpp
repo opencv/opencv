@@ -681,7 +681,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                 sad[ndisp] = sad[ndisp-2];
                 int p = sad[mind+1], n = sad[mind-1];
                 d = p + n - 2*sad[mind] + std::abs(p - n);
-                dptr[y*dstep] = (short)mind;//(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
+                dptr[y*dstep] = (short)(((ndisp - mind - 1 + mindisp)*256 + (d != 0 ? (p-n)*256/d : 0) + 15) >> 4);
                 costptr[y*coststep] = sad[mind];
             }
         }
@@ -739,27 +739,43 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {//printf("opt\n");
     int ndisp = state->numDisparities;
+    int mindisp = state->minDisparity;
     int wsz = state->SADWindowSize;
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", wsz*ndisp, ndisp, wsz) );
+    int wsz2 = wsz/2;
+
+    int sizeX = 9, sizeY = sizeX-1, N = ndisp*2;
+
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", (2*sizeY)*ndisp, 2*ndisp, wsz) );
     if(k.empty())
         return false;
 
     UMat left = _left.getUMat(), right = _right.getUMat();
-    _disp.create(_left.size(), CV_16S);
-    UMat disp = _disp.getUMat();
+    int cols = left.cols, rows = left.rows;
 
-    size_t globalThreads[3] = { left.cols, (left.rows-left.rows%wsz + wsz), ndisp};
-    size_t localThreads[3] = {1, wsz, ndisp};
+    _disp.create(_left.size(), CV_16S);
+    _disp.setTo((mindisp - 1)<<4);
+    Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-1-wsz2-mindisp, rows-1-wsz2) );
+    UMat disp = (_disp.getUMat())(roi);
+
+    int globalX = disp.cols/sizeX, globalY = disp.rows/sizeY;
+    globalX += (disp.cols%sizeX) > 0 ? 1 : 0;
+    globalY += (disp.rows%sizeY) > 0 ? 1 : 0;
+    size_t globalThreads[3] = { globalX, globalY, N};
+    size_t localThreads[3] = {1, 1, N};
 
     int idx = 0;
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
     idx = k.set(idx, ocl::KernelArg::PtrReadOnly(right));
-    idx = k.set(idx, ocl::KernelArg::WriteOnly(disp));
-    idx = k.set(idx, state->minDisparity);
+    idx = k.set(idx, ocl::KernelArg::WriteOnlyNoSize(disp));
+    idx = k.set(idx, rows);
+    idx = k.set(idx, cols);
+    idx = k.set(idx, mindisp);
     idx = k.set(idx, ndisp);
     idx = k.set(idx, state->preFilterCap);
     idx = k.set(idx, state->textureThreshold);
     idx = k.set(idx, state->uniquenessRatio);
+    idx = k.set(idx, sizeX);
+    idx = k.set(idx, sizeY);
 
     return k.run(3, globalThreads, localThreads, false);
 }
@@ -789,16 +805,15 @@ static bool ocl_stereobm_bf(InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
 
     return k.run(2, globalThreads, NULL, false);
-    return false;
 }
 
 static bool ocl_stereo(InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
 {
-    if(ocl::Device::getDefault().localMemSize() > state->numDisparities * state->numDisparities * sizeof(short) )
+    //if(ocl::Device::getDefault().localMemSize() > state->numDisparities * state->numDisparities * sizeof(short) )
         return ocl_stereobm_opt(_left, _right, _disp, state);
-    else
-        return ocl_stereobm_bf(_left, _right, _disp, state);
+    //else
+      //  return ocl_stereobm_bf(_left, _right, _disp, state);
 }
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
@@ -992,7 +1007,7 @@ public:
             bufSize2 = width*height*(sizeof(Point_<short>) + sizeof(int) + sizeof(uchar));
 
 #if CV_SSE2
-        bool useShorts = false;//params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
+        bool useShorts = params.preFilterCap <= 31 && params.SADWindowSize <= 21 && checkHardwareSupport(CV_CPU_SSE2);
 #else
         const bool useShorts = false;
 #endif
