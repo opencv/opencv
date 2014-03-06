@@ -1618,7 +1618,7 @@ namespace cv {
 
 void PrintTo(const String& str, ::std::ostream* os)
 {
-    *os << str;
+    *os << "\"" << str << "\"";
 }
 
 void PrintTo(const Size& sz, ::std::ostream* os)
