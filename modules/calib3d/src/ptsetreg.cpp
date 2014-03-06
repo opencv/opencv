@@ -260,7 +260,6 @@ public:
 
     Ptr<PointSetRegistrator::Callback> cb;
     int modelPoints;
-    int maxBasicSolutions;
     bool checkPartialSubsets;
     double threshold;
     double confidence;
@@ -386,11 +385,11 @@ public:
 CV_INIT_ALGORITHM(RANSACPointSetRegistrator, "PointSetRegistrator.RANSAC",
                   obj.info()->addParam(obj, "threshold", obj.threshold);
                   obj.info()->addParam(obj, "confidence", obj.confidence);
-                  obj.info()->addParam(obj, "maxIters", obj.maxIters));
+                  obj.info()->addParam(obj, "maxIters", obj.maxIters))
 
 CV_INIT_ALGORITHM(LMeDSPointSetRegistrator, "PointSetRegistrator.LMeDS",
                   obj.info()->addParam(obj, "confidence", obj.confidence);
-                  obj.info()->addParam(obj, "maxIters", obj.maxIters));
+                  obj.info()->addParam(obj, "maxIters", obj.maxIters))
 
 Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
                                                          int _modelPoints, double _threshold,

@@ -74,7 +74,6 @@ class epnp {
   int number_of_correspondences;
 
   double cws[4][3], ccs[4][3];
-  double cws_determinant;
   int max_nr;
   double * A1, * A2;
 };

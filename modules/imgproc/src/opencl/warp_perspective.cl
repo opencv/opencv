@@ -64,11 +64,31 @@
 
 #define noconvert
 
+#ifndef ST
+#define ST T
+#endif
+
+#if cn != 3
+#define loadpix(addr)  *(__global const T*)(addr)
+#define storepix(val, addr)  *(__global T*)(addr) = val
+#define scalar scalar_
+#define pixsize (int)sizeof(T)
+#else
+#define loadpix(addr)  vload3(0, (__global const T1*)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global T1*)(addr))
+#ifdef INTER_NEAREST
+#define scalar (T)(scalar_.x, scalar_.y, scalar_.z)
+#else
+#define scalar (WT)(scalar_.x, scalar_.y, scalar_.z)
+#endif
+#define pixsize ((int)sizeof(T1)*3)
+#endif
+
 #ifdef INTER_NEAREST
 
 __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __constant CT * M, T scalar)
+                              __constant CT * M, ST scalar_)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
@@ -82,17 +102,15 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         short sx = convert_short_sat_rte(X0*W);
         short sy = convert_short_sat_rte(Y0*W);
 
-        int dst_index = mad24(dy, dst_step, dx * (int)sizeof(T) + dst_offset);
-        __global T * dst = (__global T *)(dstptr + dst_index);
+        int dst_index = mad24(dy, dst_step, dx * pixsize + dst_offset);
 
         if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows)
         {
-            int src_index = mad24(sy, src_step, sx * (int)sizeof(T) + src_offset);
-            __global const T * src = (__global const T *)(srcptr + src_index);
-            dst[0] = src[0];
+            int src_index = mad24(sy, src_step, sx * pixsize + src_offset);
+            storepix(loadpix(srcptr + src_index), dstptr + dst_index);
         }
         else
-            dst[0] = scalar;
+            storepix(scalar, dstptr + dst_index);
     }
 }
 
@@ -100,7 +118,7 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
 
 __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __constant CT * M, WT scalar)
+                              __constant CT * M, ST scalar_)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
@@ -119,19 +137,18 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         short ax = (short)(X & (INTER_TAB_SIZE - 1));
 
         WT v0 = (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) ?
-            convertToWT(*(__global const T *)(srcptr + mad24(sy, src_step, src_offset + sx * (int)sizeof(T)))) : scalar;
+            convertToWT(loadpix(srcptr + mad24(sy, src_step, src_offset + sx * pixsize))) : scalar;
         WT v1 = (sx+1 >= 0 && sx+1 < src_cols && sy >= 0 && sy < src_rows) ?
-            convertToWT(*(__global const T *)(srcptr + mad24(sy, src_step, src_offset + (sx+1) * (int)sizeof(T)))) : scalar;
+            convertToWT(loadpix(srcptr + mad24(sy, src_step, src_offset + (sx+1) * pixsize))) : scalar;
         WT v2 = (sx >= 0 && sx < src_cols && sy+1 >= 0 && sy+1 < src_rows) ?
-            convertToWT(*(__global const T *)(srcptr + mad24(sy+1, src_step, src_offset + sx * (int)sizeof(T)))) : scalar;
+            convertToWT(loadpix(srcptr + mad24(sy+1, src_step, src_offset + sx * pixsize))) : scalar;
         WT v3 = (sx+1 >= 0 && sx+1 < src_cols && sy+1 >= 0 && sy+1 < src_rows) ?
-            convertToWT(*(__global const T *)(srcptr + mad24(sy+1, src_step, src_offset + (sx+1) * (int)sizeof(T)))) : scalar;
+            convertToWT(loadpix(srcptr + mad24(sy+1, src_step, src_offset + (sx+1) * pixsize))) : scalar;
 
         float taby = 1.f/INTER_TAB_SIZE*ay;
         float tabx = 1.f/INTER_TAB_SIZE*ax;
 
-        int dst_index = mad24(dy, dst_step, dst_offset + dx * (int)sizeof(T));
-        __global T * dst = (__global T *)(dstptr + dst_index);
+        int dst_index = mad24(dy, dst_step, dst_offset + dx * pixsize);
 
 #if depth <= 4
         int itab0 = convert_short_sat_rte( (1.0f-taby)*(1.0f-tabx) * INTER_REMAP_COEF_SCALE );
@@ -140,11 +157,11 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         int itab3 = convert_short_sat_rte( taby*tabx * INTER_REMAP_COEF_SCALE );
 
         WT val = v0 * itab0 +  v1 * itab1 + v2 * itab2 + v3 * itab3;
-        dst[0] = convertToT((val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS);
+        storepix(convertToT((val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS), dstptr + dst_index);
 #else
         float tabx2 = 1.0f - tabx, taby2 = 1.0f - taby;
         WT val = v0 * tabx2 * taby2 +  v1 * tabx * taby2 + v2 * tabx2 * taby + v3 * tabx * taby;
-        dst[0] = convertToT(val);
+        storepix(convertToT(val), dstptr + dst_index);
 #endif
     }
 }
@@ -163,7 +180,7 @@ inline void interpolateCubic( float x, float* coeffs )
 
 __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
                               __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
-                              __constant CT * M, WT scalar)
+                              __constant CT * M, ST scalar_)
 {
     int dx = get_global_id(0);
     int dy = get_global_id(1);
@@ -187,7 +204,7 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
             #pragma unroll
             for (int x = 0; x < 4; x++)
                 v[mad24(y, 4, x)] = (sx+x >= 0 && sx+x < src_cols && sy+y >= 0 && sy+y < src_rows) ?
-                    convertToWT(*(__global const T *)(srcptr + mad24(sy+y, src_step, src_offset + (sx+x) * (int)sizeof(T)))) : scalar;
+                    convertToWT(loadpix(srcptr + mad24(sy+y, src_step, src_offset + (sx+x) * pixsize))) : scalar;
 
         float tab1y[4], tab1x[4];
 
@@ -196,8 +213,7 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         interpolateCubic(ayy, tab1y);
         interpolateCubic(axx, tab1x);
 
-        int dst_index = mad24(dy, dst_step, dst_offset + dx * (int)sizeof(T));
-        __global T * dst = (__global T *)(dstptr + dst_index);
+        int dst_index = mad24(dy, dst_step, dst_offset + dx * pixsize);
 
         WT sum = (WT)(0);
 #if depth <= 4
@@ -210,12 +226,12 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         #pragma unroll
         for (int i = 0; i < 16; i++)
             sum += v[i] * itab[i];
-        dst[0] = convertToT( (sum + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS );
+        storepix(convertToT( (sum + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS ), dstptr + dst_index);
 #else
         #pragma unroll
         for (int i = 0; i < 16; i++)
             sum += v[i] * tab1y[(i>>2)] * tab1x[(i&3)];
-        dst[0] = convertToT( sum );
+        storepix(convertToT( sum ), dstptr + dst_index);
 #endif
     }
 }

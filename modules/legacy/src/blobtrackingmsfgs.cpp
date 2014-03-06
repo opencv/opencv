@@ -210,7 +210,7 @@ private:
 
         if(pHistVolume)pHistVolume[0] = Volume;
 
-    }; /* calcHist */
+    } /* calcHist */
 
     double calcBhattacharyya()
     {
@@ -440,9 +440,9 @@ public:
 
         return &m_Blob;
 
-    };  /* Process */
+    }  /* Process */
 
-    virtual void Release(){delete this;};
+    virtual void Release(){delete this;}
 }; /*CvBlobTrackerOneMSFGS*/
 
 static CvBlobTrackerOne* cvCreateBlobTrackerOneMSFGS()

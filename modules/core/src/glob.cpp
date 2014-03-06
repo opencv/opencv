@@ -64,7 +64,7 @@ namespace
         HANDLE handle;
         dirent ent;
 #ifdef HAVE_WINRT
-        DIR() {};
+        DIR() { }
         ~DIR()
         {
             if (ent.d_name)

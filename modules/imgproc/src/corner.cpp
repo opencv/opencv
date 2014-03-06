@@ -41,14 +41,12 @@
 //M*/
 
 #include "precomp.hpp"
-#include <stdio.h>
-
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
 
-static void
-calcMinEigenVal( const Mat& _cov, Mat& _dst )
+static void calcMinEigenVal( const Mat& _cov, Mat& _dst )
 {
     int i, j;
     Size size = _cov.size();
@@ -104,8 +102,7 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
 }
 
 
-static void
-calcHarris( const Mat& _cov, Mat& _dst, double k )
+static void calcHarris( const Mat& _cov, Mat& _dst, double k )
 {
     int i, j;
     Size size = _cov.size();
@@ -219,8 +216,7 @@ static void eigen2x2( const float* cov, float* dst, int n )
     }
 }
 
-static void
-calcEigenValsVecs( const Mat& _cov, Mat& _dst )
+static void calcEigenValsVecs( const Mat& _cov, Mat& _dst )
 {
     Size size = _cov.size();
     if( _cov.isContinuous() && _dst.isContinuous() )
@@ -306,12 +302,110 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
         calcEigenValsVecs( cov, eigenv );
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
+                                      int aperture_size, double k, int borderType, int op_type)
+{
+    CV_Assert(op_type == HARRIS || op_type == MINEIGENVAL);
+
+    if ( !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
+           borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101) )
+        return false;
+
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    if( aperture_size < 0 )
+        scale *= 2.0;
+    if( depth == CV_8U )
+        scale *= 255.0;
+    scale = 1.0 / scale;
+
+    if ( !(type == CV_8UC1 || type == CV_32FC1) )
+        return false;
+
+    UMat Dx, Dy;
+    if (aperture_size > 0)
+    {
+        Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
+        Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
+    }
+    else
+    {
+        Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
+        Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
+    }
+
+    const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                         0, "BORDER_REFLECT101" };
+    const char * const cornerType[] = { "CORNER_MINEIGENVAL", "CORNER_HARRIS", 0 };
+
+    ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
+                             format("-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s -D %s",
+                                    block_size / 2, block_size / 2, block_size, block_size,
+                                    borderTypes[borderType], cornerType[op_type]));
+    if (cornelKernel.empty())
+        return false;
+
+    _dst.createSameSize(_src, CV_32FC1);
+    UMat dst = _dst.getUMat();
+
+    cornelKernel.args(ocl::KernelArg::ReadOnly(Dx), ocl::KernelArg::ReadOnly(Dy),
+                      ocl::KernelArg::WriteOnly(dst), (float)k);
+
+    size_t blockSizeX = 256, blockSizeY = 1;
+    size_t gSize = blockSizeX - block_size / 2 * 2;
+    size_t globalSizeX = (Dx.cols) % gSize == 0 ? Dx.cols / gSize * blockSizeX : (Dx.cols / gSize + 1) * blockSizeX;
+    size_t rows_per_thread = 2;
+    size_t globalSizeY = ((Dx.rows + rows_per_thread - 1) / rows_per_thread) % blockSizeY == 0 ?
+                         ((Dx.rows + rows_per_thread - 1) / rows_per_thread) :
+                         (((Dx.rows + rows_per_thread - 1) / rows_per_thread) / blockSizeY + 1) * blockSizeY;
+
+    size_t globalsize[2] = { globalSizeX, globalSizeY }, localsize[2] = { blockSizeX, blockSizeY };
+    return cornelKernel.run(2, globalsize, localsize, false);
+}
+
+static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType, int depth )
+{
+    UMat Dx, Dy, D2x, D2y, Dxy;
+
+    Sobel( _src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
+    Sobel( _src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
+    Sobel( _src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
+    Sobel( _src, D2y, CV_32F, 0, 2, ksize, 1, 0, borderType );
+    Sobel( _src, Dxy, CV_32F, 1, 1, ksize, 1, 0, borderType );
+
+    _dst.create( _src.size(), CV_32FC1 );
+    UMat dst = _dst.getUMat();
+
+    double factor = 1 << (ksize - 1);
+    if( depth == CV_8U )
+        factor *= 255;
+    factor = 1./(factor * factor * factor);
+
+    ocl::Kernel k("preCornerDetect", ocl::imgproc::precornerdetect_oclsrc);
+    if (k.empty())
+        return false;
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(Dx), ocl::KernelArg::ReadOnlyNoSize(Dy),
+           ocl::KernelArg::ReadOnlyNoSize(D2x), ocl::KernelArg::ReadOnlyNoSize(D2y),
+           ocl::KernelArg::ReadOnlyNoSize(Dxy), ocl::KernelArg::WriteOnly(dst), (float)factor);
+
+    size_t globalsize[2] = { dst.cols, dst.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
+
 }
 
 void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, int ksize, int borderType )
 {
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, 0.0, borderType, MINEIGENVAL))
+
     Mat src = _src.getMat();
-    _dst.create( src.size(), CV_32F );
+    _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
     cornerEigenValsVecs( src, dst, blockSize, ksize, MINEIGENVAL, 0, borderType );
 }
@@ -319,8 +413,11 @@ void cv::cornerMinEigenVal( InputArray _src, OutputArray _dst, int blockSize, in
 
 void cv::cornerHarris( InputArray _src, OutputArray _dst, int blockSize, int ksize, double k, int borderType )
 {
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_cornerMinEigenValVecs(_src, _dst, blockSize, ksize, k, borderType, HARRIS))
+
     Mat src = _src.getMat();
-    _dst.create( src.size(), CV_32F );
+    _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
     cornerEigenValsVecs( src, dst, blockSize, ksize, HARRIS, k, borderType );
 }
@@ -341,10 +438,14 @@ void cv::cornerEigenValsAndVecs( InputArray _src, OutputArray _dst, int blockSiz
 
 void cv::preCornerDetect( InputArray _src, OutputArray _dst, int ksize, int borderType )
 {
-    Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
+    int type = _src.type();
+    CV_Assert( type == CV_8UC1 || type == CV_32FC1 );
 
-    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
-    _dst.create( src.size(), CV_32F );
+    CV_OCL_RUN( _src.dims() <= 2 && _dst.isUMat(),
+                ocl_preCornerDetect(_src, _dst, ksize, borderType, CV_MAT_DEPTH(type)))
+
+    Mat Dx, Dy, D2x, D2y, Dxy, src = _src.getMat();
+    _dst.create( src.size(), CV_32FC1 );
     Mat dst = _dst.getMat();
 
     Sobel( src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );

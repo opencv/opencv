@@ -85,7 +85,7 @@ template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 public:
     typedef _Tp value_type;
 
-    //! the default contructor
+    //! the default constructor
     AutoBuffer();
     //! constructor taking the real buffer size
     AutoBuffer(size_t _size);
@@ -305,6 +305,32 @@ private:
     AutoLock& operator = (const AutoLock&);
 };
 
+class CV_EXPORTS TLSDataContainer
+{
+private:
+    int key_;
+protected:
+    TLSDataContainer();
+    virtual ~TLSDataContainer();
+public:
+    virtual void* createDataInstance() const = 0;
+    virtual void deleteDataInstance(void* data) const = 0;
+
+    void* getData() const;
+};
+
+template <typename T>
+class TLSData : protected TLSDataContainer
+{
+public:
+    inline TLSData() {}
+    inline ~TLSData() {}
+    inline T* get() const { return (T*)getData(); }
+private:
+    virtual void* createDataInstance() const { return new T; }
+    virtual void deleteDataInstance(void* data) const { delete (T*)data; }
+};
+
 // The CommandLineParser class is designed for command line arguments parsing
 
 class CV_EXPORTS CommandLineParser
@@ -313,6 +339,8 @@ class CV_EXPORTS CommandLineParser
     CommandLineParser(int argc, const char* const argv[], const String& keys);
     CommandLineParser(const CommandLineParser& parser);
     CommandLineParser& operator = (const CommandLineParser& parser);
+
+    ~CommandLineParser();
 
     String getPathToApplication() const;
 

@@ -48,15 +48,19 @@ namespace cv { namespace ocl {
 
 CV_EXPORTS bool haveOpenCL();
 CV_EXPORTS bool useOpenCL();
+CV_EXPORTS bool haveAmdBlas();
+CV_EXPORTS bool haveAmdFft();
 CV_EXPORTS void setUseOpenCL(bool flag);
-CV_EXPORTS void finish2();
+CV_EXPORTS void finish();
 
-class CV_EXPORTS Context2;
+class CV_EXPORTS Context;
 class CV_EXPORTS Device;
 class CV_EXPORTS Kernel;
 class CV_EXPORTS Program;
-class CV_EXPORTS ProgramSource2;
+class CV_EXPORTS ProgramSource;
 class CV_EXPORTS Queue;
+class CV_EXPORTS PlatformInfo;
+class CV_EXPORTS Image2D;
 
 class CV_EXPORTS Device
 {
@@ -82,9 +86,12 @@ public:
 
     String name() const;
     String extensions() const;
+    String version() const;
     String vendor() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
+    int deviceVersionMajor() const;
+    int deviceVersionMinor() const;
     String driverVersion() const;
     void* ptr() const;
 
@@ -199,39 +206,61 @@ protected:
 };
 
 
-class CV_EXPORTS Context2
+class CV_EXPORTS Context
 {
 public:
-    Context2();
-    explicit Context2(int dtype);
-    ~Context2();
-    Context2(const Context2& c);
-    Context2& operator = (const Context2& c);
+    Context();
+    explicit Context(int dtype);
+    ~Context();
+    Context(const Context& c);
+    Context& operator = (const Context& c);
 
+    bool create();
     bool create(int dtype);
     size_t ndevices() const;
     const Device& device(size_t idx) const;
-    Program getProg(const ProgramSource2& prog,
+    Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
 
-    static Context2& getDefault();
+    static Context& getDefault(bool initialize = true);
     void* ptr() const;
+
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 protected:
     struct Impl;
     Impl* p;
 };
 
+class CV_EXPORTS Platform
+{
+public:
+    Platform();
+    ~Platform();
+    Platform(const Platform& p);
+    Platform& operator = (const Platform& p);
+
+    void* ptr() const;
+    static Platform& getDefault();
+
+    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+// TODO Move to internal header
+void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
 public:
     Queue();
-    explicit Queue(const Context2& c, const Device& d=Device());
+    explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
 
-    bool create(const Context2& c=Context2(), const Device& d=Device());
+    bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
     void* ptr() const;
     static Queue& getDefault();
@@ -285,7 +314,7 @@ class CV_EXPORTS Kernel
 public:
     Kernel();
     Kernel(const char* kname, const Program& prog);
-    Kernel(const char* kname, const ProgramSource2& prog,
+    Kernel(const char* kname, const ProgramSource& prog,
            const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
@@ -293,10 +322,11 @@ public:
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
-    bool create(const char* kname, const ProgramSource2& prog,
+    bool create(const char* kname, const ProgramSource& prog,
                 const String& buildopts, String* errmsg=0);
 
     int set(int i, const void* value, size_t sz);
+    int set(int i, const Image2D& image2D);
     int set(int i, const UMat& m);
     int set(int i, const KernelArg& arg);
     template<typename _Tp> int set(int i, const _Tp& value)
@@ -403,11 +433,67 @@ public:
         i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
     }
 
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        set(i, a12); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); set(i, a13); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13, typename _Tp14>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); i = set(i, a13); set(i, a14); return *this;
+    }
+
+    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
+             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
+             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
+             typename _Tp13, typename _Tp14, typename _Tp15>
+    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
+                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
+                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
+                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14, const _Tp15& a15)
+    {
+        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
+        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
+        i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
+    }
+
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
     bool runTask(bool sync, const Queue& q=Queue());
 
     size_t workGroupSize() const;
+    size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
     size_t localMemSize() const;
 
@@ -422,7 +508,7 @@ class CV_EXPORTS Program
 {
 public:
     Program();
-    Program(const ProgramSource2& src,
+    Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     explicit Program(const String& buf);
     Program(const Program& prog);
@@ -430,12 +516,12 @@ public:
     Program& operator = (const Program& prog);
     ~Program();
 
-    bool create(const ProgramSource2& src,
+    bool create(const ProgramSource& src,
                 const String& buildflags, String& errmsg);
     bool read(const String& buf, const String& buildflags);
     bool write(String& buf) const;
 
-    const ProgramSource2& source() const;
+    const ProgramSource& source() const;
     void* ptr() const;
 
     String getPrefix() const;
@@ -447,17 +533,17 @@ protected:
 };
 
 
-class CV_EXPORTS ProgramSource2
+class CV_EXPORTS ProgramSource
 {
 public:
     typedef uint64 hash_t;
 
-    ProgramSource2();
-    explicit ProgramSource2(const String& prog);
-    explicit ProgramSource2(const char* prog);
-    ~ProgramSource2();
-    ProgramSource2(const ProgramSource2& prog);
-    ProgramSource2& operator = (const ProgramSource2& prog);
+    ProgramSource();
+    explicit ProgramSource(const String& prog);
+    explicit ProgramSource(const char* prog);
+    ~ProgramSource();
+    ProgramSource(const ProgramSource& prog);
+    ProgramSource& operator = (const ProgramSource& prog);
 
     const String& source() const;
     hash_t hash() const;
@@ -467,9 +553,51 @@ protected:
     Impl* p;
 };
 
+class CV_EXPORTS PlatformInfo
+{
+public:
+    PlatformInfo();
+    explicit PlatformInfo(void* id);
+    ~PlatformInfo();
+
+    PlatformInfo(const PlatformInfo& i);
+    PlatformInfo& operator =(const PlatformInfo& i);
+
+    String name() const;
+    String vendor() const;
+    String version() const;
+    int deviceNumber() const;
+    void getDevice(Device& device, int d) const;
+
+protected:
+    struct Impl;
+    Impl* p;
+};
+
 CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
+CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
+CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+
+class CV_EXPORTS Image2D
+{
+public:
+    Image2D();
+    explicit Image2D(const UMat &src);
+    Image2D(const Image2D & i);
+    ~Image2D();
+
+    Image2D & operator = (const Image2D & i);
+
+    void* ptr() const;
+protected:
+    struct Impl;
+    Impl* p;
+};
+
+
+CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
 }}
 

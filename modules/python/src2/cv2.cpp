@@ -1,3 +1,8 @@
+#if defined(_MSC_VER) && (_MSC_VER >= 1800)
+// eliminating duplicated round() declaration
+#define HAVE_ROUND
+#endif
+
 #include <Python.h>
 
 #define MODULESTR "cv2"
@@ -184,7 +189,6 @@ public:
     UMatData* allocate(PyObject* o, int dims, const int* sizes, int type, size_t* step) const
     {
         UMatData* u = new UMatData(this);
-        u->refcount = 1;
         u->data = u->origdata = (uchar*)PyArray_DATA((PyArrayObject*) o);
         npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
         for( int i = 0; i < dims - 1; i++ )
@@ -195,13 +199,13 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags) const
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
     {
         if( data != 0 )
         {
             CV_Error(Error::StsAssert, "The data should normally be NULL!");
             // probably this is safe to do in such extreme case
-            return stdAllocator->allocate(dims0, sizes, type, data, step, flags);
+            return stdAllocator->allocate(dims0, sizes, type, data, step, flags, usageFlags);
         }
         PyEnsureGIL gil;
 
@@ -224,9 +228,9 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags) const
+    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
     {
-        return stdAllocator->allocate(u, accessFlags);
+        return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
 
     void deallocate(UMatData* u) const
@@ -411,6 +415,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.addref();
 
     if( !needcopy )
     {

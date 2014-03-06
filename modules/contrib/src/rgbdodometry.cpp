@@ -114,7 +114,7 @@ void computeProjectiveMatrix( const Mat& ksi, Mat& Rt )
 {
     CV_Assert( ksi.size() == Size(1,6) && ksi.type() == CV_64FC1 );
 
-#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
+#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3 && (!defined _MSC_VER || !defined _M_X64 || _MSC_VER > 1500)
     const double* ksi_ptr = reinterpret_cast<const double*>(ksi.ptr(0));
     Eigen::Matrix<double,4,4> twist, g;
     twist << 0.,          -ksi_ptr[2], ksi_ptr[1],  ksi_ptr[3],

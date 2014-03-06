@@ -29,7 +29,7 @@
 # arguments to mex. e.g.
 # prepend("-I" OUT /path/to/include/dir) --> -I/path/to/include/dir
 macro(PREPEND TOKEN OUT IN)
-    foreach(VAR ${IN})
+    foreach(VAR ${IN} ${ARGN})
         list(APPEND ${OUT} "${TOKEN}${VAR}")
     endforeach()
 endmacro()
@@ -104,7 +104,7 @@ set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$<CONFIGURATION>)
+prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR} )
 set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)
@@ -236,7 +236,7 @@ add_custom_command(
             --jinja2 ${JINJA2_PATH}
             --opts="${MEX_OPTS}"
             --include_dirs="${MEX_INCLUDE_DIRS}"
-            --lib_dir=${MEX_LIB_DIR}
+            --lib_dir="${MEX_LIB_DIR}"
             --libs="${MEX_LIBS}"
             --flags  ${MEX_CXXFLAGS}
             --outdir ${CMAKE_CURRENT_BINARY_DIR}
@@ -256,7 +256,7 @@ add_custom_command(
                              -DMEX_OPTS=${MEX_OPTS}
                              -DMEX_CXXFLAGS=${MEX_CXX_FLAGS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
-                             -DMEX_LIB_DIR=${MEX_LIB_DIR}
+                             -DMEX_LIB_DIR="${MEX_LIB_DIR}"
                              -DCONFIGURATION="$<CONFIGURATION>"
                              -DMEX_LIBS="${MEX_LIBS}"
                              -DMEX_DEBUG_LIBS="${MEX_DEBUG_LIBS}"

@@ -51,6 +51,7 @@
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/types.hpp"
 
+#include "opencv2/core/bufferpool.hpp"
 
 namespace cv
 {
@@ -84,10 +85,8 @@ public:
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
         CUDA_MEM          = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT,
-        OCL_MAT           =10 << KIND_SHIFT,
-        UMAT              =11 << KIND_SHIFT,
-        STD_VECTOR_UMAT   =12 << KIND_SHIFT,
-        UEXPR             =13 << KIND_SHIFT
+        UMAT              =10 << KIND_SHIFT,
+        STD_VECTOR_UMAT   =11 << KIND_SHIFT
     };
 
     _InputArray();
@@ -108,11 +107,11 @@ public:
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
     _InputArray(const UMat& um);
     _InputArray(const std::vector<UMat>& umv);
-    _InputArray(const UMatExpr& uexpr);
 
     virtual Mat getMat(int idx=-1) const;
     virtual UMat getUMat(int idx=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
+    virtual void getUMatVector(std::vector<UMat>& umv) const;
     virtual cuda::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
     void* getObj() const;
@@ -127,13 +126,14 @@ public:
     virtual int depth(int i=-1) const;
     virtual int channels(int i=-1) const;
     virtual bool isContinuous(int i=-1) const;
+    virtual bool isSubmatrix(int i=-1) const;
     virtual bool empty() const;
     virtual void copyTo(const _OutputArray& arr) const;
     virtual size_t offset(int i=-1) const;
     virtual size_t step(int i=-1) const;
     bool isMat() const;
     bool isUMat() const;
-    bool isMatVectot() const;
+    bool isMatVector() const;
     bool isUMatVector() const;
     bool isMatx();
 
@@ -205,6 +205,7 @@ public:
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
+    virtual UMat& getUMatRef(int i=-1) const;
     virtual cuda::GpuMat& getGpuMatRef() const;
     virtual ogl::Buffer& getOGlBufferRef() const;
     virtual cuda::CudaMem& getCudaMemRef() const;
@@ -214,7 +215,7 @@ public:
     virtual void createSameSize(const _InputArray& arr, int mtype) const;
     virtual void release() const;
     virtual void clear() const;
-    virtual void setTo(const _InputArray& value) const;
+    virtual void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
 };
 
 
@@ -265,6 +266,18 @@ CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
+//! Usage flags for allocator
+enum UMatUsageFlags
+{
+    USAGE_DEFAULT = 0,
+
+    // default allocation policy is platform and usage specific
+    USAGE_ALLOCATE_HOST_MEMORY = 1 << 0,
+    USAGE_ALLOCATE_DEVICE_MEMORY = 1 << 1,
+
+    __UMAT_USAGE_FLAGS_32BIT = 0x7fffffff // Binary compatibility hint
+};
+
 struct CV_EXPORTS UMatData;
 
 /*!
@@ -282,8 +295,8 @@ public:
     //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
     //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
     virtual UMatData* allocate(int dims, const int* sizes, int type,
-                               void* data, size_t* step, int flags) const = 0;
-    virtual bool allocate(UMatData* data, int accessflags) const = 0;
+                               void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const = 0;
+    virtual bool allocate(UMatData* data, int accessflags, UMatUsageFlags usageFlags) const = 0;
     virtual void deallocate(UMatData* data) const = 0;
     virtual void map(UMatData* data, int accessflags) const;
     virtual void unmap(UMatData* data) const;
@@ -296,6 +309,9 @@ public:
     virtual void copy(UMatData* srcdata, UMatData* dstdata, int dims, const size_t sz[],
                       const size_t srcofs[], const size_t srcstep[],
                       const size_t dstofs[], const size_t dststep[], bool sync) const;
+
+    // default implementation returns DummyBufferPoolController
+    virtual BufferPoolController* getBufferPoolController() const;
 };
 
 
@@ -360,11 +376,12 @@ struct CV_EXPORTS UMatData
     int refcount;
     uchar* data;
     uchar* origdata;
-    size_t size;
+    size_t size, capacity;
 
     int flags;
     void* handle;
     void* userdata;
+    int allocatorFlags_;
 };
 
 
@@ -667,7 +684,7 @@ public:
     Mat& operator = (const MatExpr& expr);
 
     //! retrieve UMat from Mat
-    UMat getUMat(int accessFlags) const;
+    UMat getUMat(int accessFlags, UMatUsageFlags usageFlags = USAGE_DEFAULT) const;
 
     //! returns a new matrix header for the specified row
     Mat row(int y) const;
@@ -1128,25 +1145,22 @@ typedef Mat_<Vec2d> Mat2d;
 typedef Mat_<Vec3d> Mat3d;
 typedef Mat_<Vec4d> Mat4d;
 
-
-class CV_EXPORTS UMatExpr;
-
 class CV_EXPORTS UMat
 {
 public:
     //! default constructor
-    UMat();
+    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
-    UMat(int rows, int cols, int type);
-    UMat(Size size, int type);
+    UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     //! constucts 2D matrix and fills it with the specified value _s.
-    UMat(int rows, int cols, int type, const Scalar& s);
-    UMat(Size size, int type, const Scalar& s);
+    UMat(int rows, int cols, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(Size size, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! constructs n-dimensional matrix
-    UMat(int ndims, const int* sizes, int type);
-    UMat(int ndims, const int* sizes, int type, const Scalar& s);
+    UMat(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(int ndims, const int* sizes, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! copy constructor
     UMat(const UMat& m);
@@ -1172,7 +1186,6 @@ public:
     ~UMat();
     //! assignment operators
     UMat& operator = (const UMat& m);
-    UMat& operator = (const UMatExpr& expr);
 
     Mat getMat(int flags) const;
 
@@ -1216,32 +1229,30 @@ public:
     UMat reshape(int cn, int newndims, const int* newsz) const;
 
     //! matrix transposition by means of matrix expressions
-    UMatExpr t() const;
+    UMat t() const;
     //! matrix inversion by means of matrix expressions
-    UMatExpr inv(int method=DECOMP_LU) const;
+    UMat inv(int method=DECOMP_LU) const;
     //! per-element matrix multiplication by means of matrix expressions
-    UMatExpr mul(InputArray m, double scale=1) const;
+    UMat mul(InputArray m, double scale=1) const;
 
-    //! computes cross-product of 2 3D vectors
-    UMat cross(InputArray m) const;
     //! computes dot-product
     double dot(InputArray m) const;
 
     //! Matlab-style matrix initialization
-    static UMatExpr zeros(int rows, int cols, int type);
-    static UMatExpr zeros(Size size, int type);
-    static UMatExpr zeros(int ndims, const int* sz, int type);
-    static UMatExpr ones(int rows, int cols, int type);
-    static UMatExpr ones(Size size, int type);
-    static UMatExpr ones(int ndims, const int* sz, int type);
-    static UMatExpr eye(int rows, int cols, int type);
-    static UMatExpr eye(Size size, int type);
+    static UMat zeros(int rows, int cols, int type);
+    static UMat zeros(Size size, int type);
+    static UMat zeros(int ndims, const int* sz, int type);
+    static UMat ones(int rows, int cols, int type);
+    static UMat ones(Size size, int type);
+    static UMat ones(int ndims, const int* sz, int type);
+    static UMat eye(int rows, int cols, int type);
+    static UMat eye(Size size, int type);
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // previous data is unreferenced if needed.
-    void create(int rows, int cols, int type);
-    void create(Size size, int type);
-    void create(int ndims, const int* sizes, int type);
+    void create(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -1313,6 +1324,7 @@ public:
 
     //! custom allocator
     MatAllocator* allocator;
+    UMatUsageFlags usageFlags; // usage flags for allocator
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
 

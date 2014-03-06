@@ -55,12 +55,16 @@ static IppStatus sts = ippInit();
 
 namespace cv
 {
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
+    typedef IppStatus (CV_STDCALL* ippiResizeFunc)(const void*, int, const void*, int, IppiPoint, IppiSize, IppiBorderType, void*, void*, Ipp8u*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetBufferSize)(void*, IppiSize, Ipp32u, int*);
+    typedef IppStatus (CV_STDCALL* ippiResizeGetSrcOffset)(void*, IppiPoint, IppiPoint*);
+#endif
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
     typedef IppStatus (CV_STDCALL* ippiWarpPerspectiveBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [3][3], int);
     typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
-    typedef IppStatus (CV_STDCALL* ippiResizeSqrPixelFunc)(const void*, IppiSize, int, IppiRect, void*, int, IppiRect, double, double, double, double, int, Ipp8u *);
 
     template <int channels, typename Type>
     bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
@@ -1216,8 +1220,13 @@ public:
         alpha(_alpha), _beta(__beta), ssize(_ssize), dsize(_dsize),
         ksize(_ksize), xmin(_xmin), xmax(_xmax)
     {
+        CV_Assert(ksize <= MAX_ESIZE);
     }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
     virtual void operator() (const Range& range) const
     {
         int dy, cn = src.channels();
@@ -1266,6 +1275,9 @@ public:
             vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
         }
     }
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic pop
+#endif
 
 private:
     Mat src;
@@ -1273,7 +1285,9 @@ private:
     const int* xofs, *yofs;
     const AT* alpha, *_beta;
     Size ssize, dsize;
-    int ksize, xmin, xmax;
+    const int ksize, xmin, xmax;
+
+    resizeGeneric_Invoker& operator = (const resizeGeneric_Invoker&);
 };
 
 template<class HResize, class VResize>
@@ -1862,30 +1876,107 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
     return k;
 }
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#define CHECK_IPP_FUNC(FUNC) if( FUNC==0 ) { *ok = false; return;}
+#define CHECK_IPP_STATUS(STATUS) if( STATUS!=ippStsNoErr ) { *ok = false; return;}
+
+#define SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN) \
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    specBuf.allocate(specSize);\
+    pSpec = (uchar*)specBuf;\
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_32f*)pSpec));
+
+#define SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(TYPE, CN) \
+    if (mode==(int)ippCubic) { *ok = false; return;}\
+    func = (ippiResizeFunc)ippiResizeLinear_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    specBuf.allocate(specSize);\
+    pSpec = (uchar*)specBuf;\
+    CHECK_IPP_STATUS(ippiResizeLinearInit_##TYPE(srcSize, dstSize, (IppiResizeSpec_64f*)pSpec));\
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset) ippiResizeGetBufferSize_##TYPE;
+
+#define SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN) \
+    func = (ippiResizeFunc)ippiResizeCubic_##TYPE##_##CN##R; CHECK_IPP_FUNC(func);\
+    CHECK_IPP_STATUS(ippiResizeGetSize_##TYPE(srcSize, dstSize, (IppiInterpolationType)mode, 0, &specSize, &initSize));\
+    specBuf.allocate(specSize);\
+    pSpec = (uchar*)specBuf;\
+    AutoBuffer<uchar> buf(initSize);\
+    uchar* pInit = (uchar*)buf;\
+    CHECK_IPP_STATUS(ippiResizeCubicInit_##TYPE(srcSize, dstSize,  0.f, 0.75f, (IppiResizeSpec_32f*)pSpec, pInit));
+
+#define SET_IPP_RESIZE_PTR(TYPE, CN) \
+    if (mode == (int)ippLinear)     { SET_IPP_RESIZE_LINEAR_FUNC_PTR(TYPE, CN);}\
+    else if (mode == (int)ippCubic) { SET_IPP_RESIZE_CUBIC_FUNC_PTR(TYPE, CN);}\
+    else { *ok = false; return;}\
+    getBufferSizeFunc = (ippiResizeGetBufferSize)ippiResizeGetBufferSize_##TYPE;\
+    getSrcOffsetFunc =  (ippiResizeGetSrcOffset)ippiResizeGetSrcOffset_##TYPE;
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
 class IPPresizeInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPresizeInvoker(Mat &_src, Mat &_dst, double &_inv_scale_x, double &_inv_scale_y, int _mode, ippiResizeSqrPixelFunc _func, bool *_ok) :
-      ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), func(_func), ok(_ok)
+    IPPresizeInvoker(Mat &_src, Mat &_dst, double _inv_scale_x, double _inv_scale_y, int _mode, bool *_ok) :
+      ParallelLoopBody(), src(_src), dst(_dst), inv_scale_x(_inv_scale_x), inv_scale_y(_inv_scale_y), mode(_mode), ok(_ok)
       {
           *ok = true;
+          IppiSize srcSize, dstSize;
+          int type = src.type();
+          int specSize = 0, initSize = 0;
+          srcSize.width  = src.cols;
+          srcSize.height = src.rows;
+          dstSize.width  = dst.cols;
+          dstSize.height = dst.rows;
+
+          switch (type)
+          {
+          case CV_8UC1:  SET_IPP_RESIZE_PTR(8u,C1);  break;
+          case CV_8UC3:  SET_IPP_RESIZE_PTR(8u,C3);  break;
+          case CV_8UC4:  SET_IPP_RESIZE_PTR(8u,C4);  break;
+          case CV_16UC1: SET_IPP_RESIZE_PTR(16u,C1); break;
+          case CV_16UC3: SET_IPP_RESIZE_PTR(16u,C3); break;
+          case CV_16UC4: SET_IPP_RESIZE_PTR(16u,C4); break;
+          case CV_16SC1: SET_IPP_RESIZE_PTR(16s,C1); break;
+          case CV_16SC3: SET_IPP_RESIZE_PTR(16s,C3); break;
+          case CV_16SC4: SET_IPP_RESIZE_PTR(16s,C4); break;
+          case CV_32FC1: SET_IPP_RESIZE_PTR(32f,C1); break;
+          case CV_32FC3: SET_IPP_RESIZE_PTR(32f,C3); break;
+          case CV_32FC4: SET_IPP_RESIZE_PTR(32f,C4); break;
+          case CV_64FC1: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C1); break;
+          case CV_64FC3: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C3); break;
+          case CV_64FC4: SET_IPP_RESIZE_LINEAR_FUNC_64_PTR(64f,C4); break;
+          default: { *ok = false; return;} break;
+          }
+      }
+
+      ~IPPresizeInvoker()
+      {
       }
 
       virtual void operator() (const Range& range) const
       {
+          if (*ok == false) return;
+
           int cn = src.channels();
-          IppiRect srcroi = { 0, range.start, src.cols, range.end - range.start };
-          int dsty = CV_IMIN(cvRound(range.start * inv_scale_y), dst.rows);
-          int dstwidth = CV_IMIN(cvRound(src.cols * inv_scale_x), dst.cols);
-          int dstheight = CV_IMIN(cvRound(range.end * inv_scale_y), dst.rows);
-          IppiRect dstroi = { 0, dsty, dstwidth, dstheight - dsty };
-          int bufsize;
-          ippiResizeGetBufSize( srcroi, dstroi, cn, mode, &bufsize );
+          int dsty = min(cvRound(range.start * inv_scale_y), dst.rows);
+          int dstwidth  = min(cvRound(src.cols * inv_scale_x), dst.cols);
+          int dstheight = min(cvRound(range.end * inv_scale_y), dst.rows);
+
+          IppiPoint dstOffset = { 0, dsty }, srcOffset = {0, 0};
+          IppiSize  dstSize   = { dstwidth, dstheight - dsty };
+          int bufsize = 0, itemSize = (int)src.elemSize1();
+
+          CHECK_IPP_STATUS(getBufferSizeFunc(pSpec, dstSize, cn, &bufsize));
+          CHECK_IPP_STATUS(getSrcOffsetFunc(pSpec, dstOffset, &srcOffset));
+
+          Ipp8u* pSrc = (Ipp8u*)src.data + (int)src.step[0] * srcOffset.y + srcOffset.x * cn * itemSize;
+          Ipp8u* pDst = (Ipp8u*)dst.data + (int)dst.step[0] * dstOffset.y + dstOffset.x * cn * itemSize;
+
           AutoBuffer<uchar> buf(bufsize + 64);
           uchar* bufptr = alignPtr((uchar*)buf, 32);
-          if( func( src.data, ippiSize(src.cols, src.rows), (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, inv_scale_x, inv_scale_y, 0, 0, mode, bufptr ) < 0 )
+
+          if( func( pSrc, (int)src.step[0], pDst, (int)dst.step[0], dstOffset, dstSize, ippBorderRepl, 0, pSpec, bufptr ) < 0 )
               *ok = false;
       }
 private:
@@ -1893,12 +1984,18 @@ private:
     Mat &dst;
     double inv_scale_x;
     double inv_scale_y;
+    void *pSpec;
+    AutoBuffer<uchar>   specBuf;
     int mode;
-    ippiResizeSqrPixelFunc func;
+    ippiResizeFunc func;
+    ippiResizeGetBufferSize getBufferSizeFunc;
+    ippiResizeGetSrcOffset getSrcOffsetFunc;
     bool *ok;
     const IPPresizeInvoker& operator= (const IPPresizeInvoker&);
 };
 #endif
+
+#ifdef HAVE_OPENCL
 
 static void ocl_computeResizeAreaTabs(int ssize, int dsize, double scale, int * const map_tab,
                                           float * const alpha_tab, int * const ofs_tab)
@@ -1955,7 +2052,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     double inv_fx = 1. / fx, inv_fy = 1. / fy;
     float inv_fxf = (float)inv_fx, inv_fyf = (float)inv_fy;
 
-    if( cn == 3 || !(cn <= 4 &&
+    if( !(cn <= 4 &&
            (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR ||
             (interpolation == INTER_AREA && inv_fx >= 1 && inv_fy >= 1) )) )
         return false;
@@ -1973,15 +2070,18 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKETYPE(wdepth, cn);
         char buf[2][32];
         k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s",
-                        depth, ocl::typeToStr(type), ocl::typeToStr(wtype),
+                 format("-D INTER_LINEAR -D depth=%d -D PIXTYPE=%s -D PIXTYPE1=%s "
+                        "-D WORKTYPE=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d",
+                        depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                         ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                        ocl::convertTypeStr(wdepth, depth, cn, buf[1])));
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                        cn));
     }
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D PIXTYPE=%s -D cn", ocl::memopTypeToStr(type), cn));
+                 format("-D INTER_NEAREST -D PIXTYPE=%s -D PIXTYPE1=%s -D cn=%d",
+                        ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth), cn));
     }
     else if (interpolation == INTER_AREA)
     {
@@ -1993,9 +2093,9 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][40];
-        String buildOption = format("-D INTER_AREA -D T=%s -D WTV=%s -D convertToWTV=%s",
-                                    ocl::typeToStr(type), ocl::typeToStr(wtype),
-                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]));
+        String buildOption = format("-D INTER_AREA -D PIXTYPE=%s -D PIXTYPE1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
+                                    ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
+                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);
 
         UMat alphaOcl, tabofsOcl, mapOcl;
         UMat dmap, smap;
@@ -2003,8 +2103,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (is_area_fast)
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
-            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
-                                               " -D XSCALE=%d -D YSCALE=%d -D SCALE=%f",
+            buildOption = buildOption + format(" -D convertToPIXTYPE=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+                                               " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
                                   iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
@@ -2026,7 +2126,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            buildOption = buildOption + format(" -D convertToPIXTYPE=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
@@ -2068,6 +2168,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     return k.run(2, globalsize, 0, false);
 }
+
+#endif
 
 }
 
@@ -2196,9 +2298,8 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         inv_scale_y = (double)dsize.height/ssize.height;
     }
 
-    if( ocl::useOpenCL() && _dst.kind() == _InputArray::UMAT &&
-            ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
 
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());
@@ -2213,32 +2314,37 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
 
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
-    int type = src.type();
-    ippiResizeSqrPixelFunc ippFunc =
-        type == CV_8UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C1R :
-        type == CV_8UC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C3R :
-        type == CV_8UC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C4R :
-        type == CV_16UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C1R :
-        type == CV_16UC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C3R :
-        type == CV_16UC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C4R :
-        type == CV_16SC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C1R :
-        type == CV_16SC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C3R :
-        type == CV_16SC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C4R :
-        type == CV_32FC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C1R :
-        type == CV_32FC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C3R :
-        type == CV_32FC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C4R :
-        0;
-    if( ippFunc && mode != 0 )
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701)
+#define IPP_RESIZE_EPS    1.e-10
+
+    double ex = fabs((double)dsize.width/src.cols  - inv_scale_x)/inv_scale_x;
+    double ey = fabs((double)dsize.height/src.rows - inv_scale_y)/inv_scale_y;
+
+    if ((ex < IPP_RESIZE_EPS && ey < IPP_RESIZE_EPS && depth != CV_64F) ||
+        (ex == 0 && ey == 0 && depth == CV_64F))
     {
-        bool ok;
-        Range range(0, src.rows);
-        IPPresizeInvoker invoker(src, dst, inv_scale_x, inv_scale_y, mode, ippFunc, &ok);
-        parallel_for_(range, invoker, dst.total()/(double)(1<<16));
-        if( ok )
-            return;
+        int mode = 0;
+        if (interpolation == INTER_LINEAR && src.rows >= 2 && src.cols >= 2)
+        {
+            mode = ippLinear;
+        }
+        else if (interpolation == INTER_CUBIC && src.rows >= 4 && src.cols >= 4)
+        {
+            mode = ippCubic;
+        }
+        if( mode != 0 && (cn == 1 || cn ==3 || cn == 4) &&
+            (depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F ||
+            (depth == CV_64F && mode == ippLinear)))
+        {
+            bool ok = true;
+            Range range(0, src.rows);
+            IPPresizeInvoker invoker(src, dst, inv_scale_x, inv_scale_y, mode, &ok);
+            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+            if( ok )
+                return;
+        }
     }
+#undef IPP_RESIZE_EPS
 #endif
 
     if( interpolation == INTER_NEAREST )
@@ -2360,14 +2466,14 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         if( sx < ksize2-1 )
         {
             xmin = dx+1;
-            if( sx < 0 )
+            if( sx < 0 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
                 fx = 0, sx = 0;
         }
 
         if( sx + ksize2 >= ssize.width )
         {
             xmax = std::min( xmax, dx );
-            if( sx >= ssize.width-1 )
+            if( sx >= ssize.width-1 && (interpolation != INTER_CUBIC && interpolation != INTER_LANCZOS4))
                 fx = 0, sx = ssize.width-1;
         }
 
@@ -2565,15 +2671,15 @@ struct RemapVec_8u
     int operator()( const Mat& _src, void* _dst, const short* XY,
                     const ushort* FXY, const void* _wtab, int width ) const
     {
-        int cn = _src.channels();
+        int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) )
+        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) ||
+            sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.data, *S1 = _src.data + _src.step;
         const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
-        int x = 0, sstep = (int)_src.step;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
         __m128i xy2ofs = _mm_set1_epi32(cn + (sstep << 16));
         __m128i z = _mm_setzero_si128();
@@ -3299,7 +3405,10 @@ public:
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
-                        bufa = (*m2)(Rect(x, y, bcols, brows));
+
+                        const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                        for( x1 = 0; x1 < bcols; x1++ )
+                            A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
@@ -3387,6 +3496,8 @@ private:
     const void *ctab;
 };
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
                       int interpolation, int borderType, const Scalar& borderValue)
 {
@@ -3459,6 +3570,8 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
+#endif
+
 }
 
 void cv::remap( InputArray _src, OutputArray _dst,
@@ -3501,8 +3614,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( _map1.size().area() > 0 );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
 
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue))
 
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
@@ -3680,7 +3793,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1) : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst2f[x] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3689,7 +3802,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1): 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst1f[x*2+1] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3867,6 +3980,8 @@ private:
 };
 #endif
 
+#ifdef HAVE_OPENCL
+
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
 
 static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
@@ -3875,7 +3990,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert(op_type == OCL_OP_AFFINE || op_type == OCL_OP_PERSPECTIVE);
 
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = depth;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     double doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     int interpolation = flags & INTER_MAX;
@@ -3884,35 +3999,47 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
     if ( !(borderType == cv::BORDER_CONSTANT &&
            (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)) ||
-         (!doubleSupport && depth == CV_64F) || cn > 4 || cn == 3)
+         (!doubleSupport && depth == CV_64F) || cn > 4)
         return false;
 
     const char * const interpolationMap[3] = { "NEAREST", "LINEAR", "CUBIC" };
-    ocl::ProgramSource2 program = op_type == OCL_OP_AFFINE ?
+    ocl::ProgramSource program = op_type == OCL_OP_AFFINE ?
                 ocl::imgproc::warp_affine_oclsrc : ocl::imgproc::warp_perspective_oclsrc;
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 
+    int scalarcn = cn == 3 ? 4 : cn;
+    int wdepth = interpolation == INTER_NEAREST ? depth : std::max(CV_32S, depth);
+    int sctype = CV_MAKETYPE(wdepth, scalarcn);
+
     ocl::Kernel k;
+    String opts;
     if (interpolation == INTER_NEAREST)
     {
-        k.create(kernelName, program,
-                 format("-D INTER_NEAREST -D T=%s%s", ocl::typeToStr(type),
-                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        opts = format("-D INTER_NEAREST -D T=%s%s -D T1=%s -D ST=%s -D cn=%d", ocl::typeToStr(type),
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                      ocl::typeToStr(CV_MAT_DEPTH(type)),
+                      ocl::typeToStr(sctype),
+                      cn);
     }
     else
     {
         char cvt[2][50];
-        wdepth = std::max(CV_32S, depth);
-        k.create(kernelName, program,
-                  format("-D INTER_%s -D T=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s",
-                         interpolationMap[interpolation], ocl::typeToStr(type),
-                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D depth=%d -D convertToWT=%s -D convertToT=%s%s -D cn=%d",
+                      interpolationMap[interpolation], ocl::typeToStr(type),
+                      ocl::typeToStr(CV_MAT_DEPTH(type)),
+                      ocl::typeToStr(sctype),
+                      ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
+                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
+                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", cn);
     }
+
+    k.create(kernelName, program, opts);
     if (k.empty())
         return false;
+
+    double borderBuf[] = {0, 0, 0, 0};
+    scalarToRawData(borderValue, borderBuf, sctype);
 
     UMat src = _src.getUMat(), M0;
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
@@ -3944,11 +4071,13 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
-           ocl::KernelArg::Constant(Mat(1, 1, CV_MAKE_TYPE(wdepth, cn), borderValue)));
+           ocl::KernelArg(0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { dst.cols, dst.rows };
     return k.run(2, globalThreads, NULL, false);
 }
+
+#endif
 
 }
 
@@ -3957,10 +4086,9 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
                      int flags, int borderType, const Scalar& borderValue )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-        ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
-                                            borderValue, OCL_OP_AFFINE))
-        return;
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType,
+                                 borderValue, OCL_OP_AFFINE))
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
@@ -4000,7 +4128,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4044,7 +4172,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         }
     }
 #endif
-
+*/
     for( x = 0; x < dst.cols; x++ )
     {
         adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
@@ -4203,10 +4331,9 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 {
     CV_Assert( _src.total() > 0 );
 
-    if (ocl::useOpenCL() && _dst.isUMat() &&
-            ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
+    CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
+               ocl_warpTransform(_src, _dst, _M0, dsize, flags, borderType, borderValue,
                               OCL_OP_PERSPECTIVE))
-        return;
 
     Mat src = _src.getMat(), M0 = _M0.getMat();
     _dst.create( dsize.area() == 0 ? src.size() : dsize, src.type() );
@@ -4231,7 +4358,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -4275,7 +4402,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         }
     }
 #endif
-
+*/
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));

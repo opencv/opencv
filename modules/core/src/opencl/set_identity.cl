@@ -51,7 +51,7 @@ __kernel void setIdentity(__global uchar * srcptr, int src_step, int src_offset,
 
     if (x < cols && y < rows)
     {
-        int src_index = mad24(y, src_step, src_offset + x * (int)sizeof(T));
+        int src_index = mad24(y, src_step, mad24(x, (int)sizeof(T), src_offset));
         __global T * src = (__global T *)(srcptr + src_index);
 
         src[0] = x == y ? scalar : (T)(0);

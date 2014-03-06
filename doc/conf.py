@@ -54,7 +54,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenCV'
-copyright = u'2011-2013, opencv dev team'
+copyright = u'2011-2014, opencv dev team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

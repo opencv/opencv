@@ -336,7 +336,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
             out->isStumpBased &= node_count == 1;
         }
     }
-
+/*
 #ifdef HAVE_IPP
     int can_use_ipp = !out->has_tilted_features && !out->is_tree && out->isStumpBased;
 
@@ -392,7 +392,7 @@ icvCreateHidHaarClassifierCascade( CvHaarClassifierCascade* cascade )
         }
     }
 #endif
-
+*/
     cascade->hid_cascade = out;
     assert( (char*)haar_node_ptr - (char*)out <= datasize );
 

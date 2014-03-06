@@ -54,6 +54,7 @@ static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
 static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
 static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
 
+#ifdef HAVE_OPENCL
 
 enum { OCL_OP_LOG=0, OCL_OP_EXP=1, OCL_OP_MAG=2, OCL_OP_PHASE_DEGREES=3, OCL_OP_PHASE_RADIANS=4 };
 
@@ -97,6 +98,8 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     return k.run(2, globalsize, 0, false);
 }
+
+#endif
 
 float fastAtan2( float y, float x )
 {
@@ -401,11 +404,8 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
-    bool use_opencl = dst.isUMat() && ocl::useOpenCL()
-        && src1.dims() <= 2 && src2.dims() <= 2;
-
-    if(use_opencl && ocl_math_op(src1, src2, dst, OCL_OP_MAG) )
-        return;
+    CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
+               ocl_math_op(src1, src2, dst, OCL_OP_MAG))
 
     Mat X = src1.getMat(), Y = src2.getMat();
     dst.create(X.dims, X.size, X.type());
@@ -439,11 +439,8 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     int type = src1.type(), depth = src1.depth(), cn = src1.channels();
     CV_Assert( src1.size() == src2.size() && type == src2.type() && (depth == CV_32F || depth == CV_64F));
 
-    bool use_opencl = dst.isUMat() && ocl::useOpenCL()
-        && src1.dims() <= 2 && src2.dims() <= 2;
-
-    if(use_opencl && ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS) )
-        return;
+    CV_OCL_RUN(dst.isUMat() && src1.dims() <= 2 && src2.dims() <= 2,
+               ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS))
 
     Mat X = src1.getMat(), Y = src2.getMat();
     dst.create( X.dims, X.size, type );
@@ -497,6 +494,8 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
     }
 }
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
                              OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
 {
@@ -509,9 +508,9 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D OP_CTP_%s%s",
+                  format("-D BINARY_OP -D dstT=%s -D depth=%d -D OP_CTP_%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         angleInDegrees ? "AD" : "AR",
+                         depth, angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -533,12 +532,13 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 void cartToPolar( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
-    if (ocl::useOpenCL() && dst1.isUMat() && dst2.isUMat() &&
+    CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
-        return;
 
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
@@ -683,6 +683,8 @@ static void SinCos_32f( const float *angle, float *sinval, float* cosval,
 }
 
 
+#ifdef HAVE_OPENCL
+
 static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
                              OutputArray _dst1, OutputArray _dst2, bool angleInDegrees )
 {
@@ -693,8 +695,8 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D BINARY_OP -D OP_PTC_%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                  format("-D dstT=%s -D depth=%d -D BINARY_OP -D OP_PTC_%s%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          angleInDegrees ? "AD" : "AR",
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
@@ -715,15 +717,16 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
 
-    if (ocl::useOpenCL() && !src1.empty() && src2.dims() <= 2 && dst1.isUMat() && dst2.isUMat() &&
-            ocl_polarToCart(src1, src2, dst1, dst2, angleInDegrees))
-        return;
+    CV_OCL_RUN(!src1.empty() && src2.dims() <= 2 && dst1.isUMat() && dst2.isUMat(),
+               ocl_polarToCart(src1, src2, dst1, dst2, angleInDegrees))
 
     Mat Mag = src1.getMat(), Angle = src2.getMat();
     CV_Assert( Mag.empty() || Angle.size == Mag.size);
@@ -1289,10 +1292,8 @@ void exp( InputArray _src, OutputArray _dst )
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    bool use_opencl = _dst.isUMat() && ocl::useOpenCL() && _src.dims() <= 2;
-
-    if(use_opencl && ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP) )
-        return;
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP))
 
     Mat src = _src.getMat();
     _dst.create( src.dims, src.size, type );
@@ -1938,10 +1939,8 @@ void log( InputArray _src, OutputArray _dst )
     int type = _src.type(), depth = _src.depth(), cn = _src.channels();
     CV_Assert( depth == CV_32F || depth == CV_64F );
 
-    bool use_opencl = _dst.isUMat() && ocl::useOpenCL() && _src.dims() <= 2;
-
-    if(use_opencl && ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG) )
-        return;
+    CV_OCL_RUN( _dst.isUMat() && _src.dims() <= 2,
+                ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG))
 
     Mat src = _src.getMat();
     _dst.create( src.dims, src.size, type );
@@ -2032,18 +2031,23 @@ static IPowFunc ipowTab[] =
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
 };
 
-static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
+#ifdef HAVE_OPENCL
+
+static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
+                    bool is_ipower, int ipower)
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
-    if ( !(_src.dims() <= 2 && (depth == CV_32F || depth == CV_64F)) ||
-         (depth == CV_64F && !doubleSupport) )
+    if (depth == CV_64F && !doubleSupport)
         return false;
 
+    bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
+    const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
+
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D OP_POW -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D dstT=%s -D %s -D UNARY_OP%s", ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+                         op, doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
@@ -2054,50 +2058,55 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst)
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
             dstarg = ocl::KernelArg::WriteOnly(dst, cn);
 
-    if (depth == CV_32F)
-        k.args(srcarg, dstarg, (float)power);
+    if (issqrt)
+        k.args(srcarg, dstarg);
+    else if (is_ipower)
+        k.args(srcarg, dstarg, ipower);
     else
-        k.args(srcarg, dstarg, power);
+    {
+        if (depth == CV_32F)
+            k.args(srcarg, dstarg, (float)power);
+        else
+            k.args(srcarg, dstarg, power);
+    }
 
     size_t globalsize[2] = { dst.cols *  cn, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
+#endif
+
 void pow( InputArray _src, double power, OutputArray _dst )
 {
-    if (ocl::useOpenCL() && _dst.isUMat() && ocl_pow(_src, power, _dst))
-        return;
-
-    Mat src = _src.getMat();
-    int type = src.type(), depth = src.depth(), cn = src.channels();
-
-    _dst.create( src.dims, src.size, type );
-    Mat dst = _dst.getMat();
-
-    int ipower = cvRound(power);
-    bool is_ipower = false;
+    bool is_ipower = false, same = false;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type),
+            cn = CV_MAT_CN(type), ipower = cvRound(power);
 
     if( fabs(ipower - power) < DBL_EPSILON )
     {
         if( ipower < 0 )
         {
-            divide( 1., src, dst );
+            divide( 1., _src, _dst );
             if( ipower == -1 )
                 return;
             ipower = -ipower;
-            src = dst;
+            same = true;
         }
 
         switch( ipower )
         {
         case 0:
-            dst = Scalar::all(1);
+            _dst.createSameSize(_src, type);
+            _dst.setTo(Scalar::all(1));
             return;
         case 1:
-            src.copyTo(dst);
+            _src.copyTo(_dst);
             return;
         case 2:
-            multiply(src, src, dst);
+            if (same)
+                multiply(_dst, _dst, _dst);
+            else
+                multiply(_src, _src, _dst);
             return;
         default:
             is_ipower = true;
@@ -2105,6 +2114,22 @@ void pow( InputArray _src, double power, OutputArray _dst )
     }
     else
         CV_Assert( depth == CV_32F || depth == CV_64F );
+
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
+               ocl_pow(same ? _dst : _src, power, _dst, is_ipower, ipower))
+
+    Mat src, dst;
+    if (same)
+    {
+        dst = _dst.getMat();
+        src = dst;
+    }
+    else
+    {
+        src = _src.getMat();
+        _dst.create( src.dims, src.size, type );
+        dst = _dst.getMat();
+    }
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2];
@@ -2361,12 +2386,35 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     return badPt.x < 0;
 }
 
+#ifdef HAVE_OPENCL
+
+static bool ocl_patchNaNs( InputOutputArray _a, float value )
+{
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=int"));
+    if (k.empty())
+        return false;
+
+    UMat a = _a.getUMat();
+    int cn = a.channels();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+           ocl::KernelArg::WriteOnly(a, cn), (float)value);
+
+    size_t globalsize[2] = { a.cols * cn, a.rows };
+    return k.run(2, globalsize, NULL, false);
+}
+
+#endif
 
 void patchNaNs( InputOutputArray _a, double _val )
 {
-    Mat a = _a.getMat();
-    CV_Assert( a.depth() == CV_32F );
+    CV_Assert( _a.depth() == CV_32F );
 
+    CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
+               ocl_patchNaNs(_a, (float)_val))
+
+    Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1];
     NAryMatIterator it(arrays, (uchar**)ptrs);

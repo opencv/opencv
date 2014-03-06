@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 
 class AllignedFrameSource : public cv::superres::FrameSource
 {
@@ -52,6 +53,7 @@ public:
 
 private:
     cv::Ptr<cv::superres::FrameSource> base_;
+
     cv::Mat origFrame_;
     int scale_;
 };
@@ -67,9 +69,7 @@ void AllignedFrameSource::nextFrame(cv::OutputArray frame)
     base_->nextFrame(origFrame_);
 
     if (origFrame_.rows % scale_ == 0 && origFrame_.cols % scale_ == 0)
-    {
         cv::superres::arrCopy(origFrame_, frame);
-    }
     else
     {
         cv::Rect ROI(0, 0, (origFrame_.cols / scale_) * scale_, (origFrame_.rows / scale_) * scale_);
@@ -92,6 +92,7 @@ public:
 
 private:
     cv::Ptr<cv::superres::FrameSource> base_;
+
     cv::Mat origFrame_;
     cv::Mat blurred_;
     cv::Mat deg_;
@@ -104,28 +105,25 @@ DegradeFrameSource::DegradeFrameSource(const cv::Ptr<cv::superres::FrameSource>&
     CV_Assert( base_ );
 }
 
-void addGaussNoise(cv::Mat& image, double sigma)
+static void addGaussNoise(cv::OutputArray _image, double sigma)
 {
-    cv::Mat noise(image.size(), CV_32FC(image.channels()));
+    int type = _image.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    cv::Mat noise(_image.size(), CV_32FC(cn));
     cvtest::TS::ptr()->get_rng().fill(noise, cv::RNG::NORMAL, 0.0, sigma);
 
-    cv::addWeighted(image, 1.0, noise, 1.0, 0.0, image, image.depth());
+    cv::addWeighted(_image, 1.0, noise, 1.0, 0.0, _image, depth);
 }
 
-void addSpikeNoise(cv::Mat& image, int frequency)
+static void addSpikeNoise(cv::OutputArray _image, int frequency)
 {
-    cv::Mat_<uchar> mask(image.size(), 0);
+    cv::Mat_<uchar> mask(_image.size(), 0);
 
     for (int y = 0; y < mask.rows; ++y)
-    {
         for (int x = 0; x < mask.cols; ++x)
-        {
             if (cvtest::TS::ptr()->get_rng().uniform(0, frequency) < 1)
                 mask(y, x) = 255;
-        }
-    }
 
-    image.setTo(cv::Scalar::all(255), mask);
+    _image.setTo(cv::Scalar::all(255), mask);
 }
 
 void DegradeFrameSource::nextFrame(cv::OutputArray frame)
@@ -146,7 +144,7 @@ void DegradeFrameSource::reset()
     base_->reset();
 }
 
-double MSSIM(const cv::Mat& i1, const cv::Mat& i2)
+double MSSIM(cv::InputArray _i1, cv::InputArray _i2)
 {
     const double C1 = 6.5025;
     const double C2 = 58.5225;
@@ -154,8 +152,8 @@ double MSSIM(const cv::Mat& i1, const cv::Mat& i2)
     const int depth = CV_32F;
 
     cv::Mat I1, I2;
-    i1.convertTo(I1, depth);
-    i2.convertTo(I2, depth);
+    _i1.getMat().convertTo(I1, depth);
+    _i2.getMat().convertTo(I2, depth);
 
     cv::Mat I2_2  = I2.mul(I2); // I2^2
     cv::Mat I1_2  = I1.mul(I1); // I1^2
@@ -201,7 +199,7 @@ double MSSIM(const cv::Mat& i1, const cv::Mat& i2)
     // mssim = average of ssim map
     cv::Scalar mssim = cv::mean(ssim_map);
 
-    if (i1.channels() == 1)
+    if (_i1.channels() == 1)
         return mssim[0];
 
     return (mssim[0] + mssim[1] + mssim[3]) / 3;
@@ -210,9 +208,11 @@ double MSSIM(const cv::Mat& i1, const cv::Mat& i2)
 class SuperResolution : public testing::Test
 {
 public:
+    template <typename T>
     void RunTest(cv::Ptr<cv::superres::SuperResolution> superRes);
 };
 
+template <typename T>
 void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
 {
     const std::string inputVideoName = cvtest::TS::ptr()->get_data_path() + "car.avi";
@@ -245,7 +245,8 @@ void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
     double srAvgMSSIM = 0.0;
     const int count = 10;
 
-    cv::Mat goldFrame, superResFrame;
+    cv::Mat goldFrame;
+    T superResFrame;
     for (int i = 0; i < count; ++i)
     {
         goldSource->nextFrame(goldFrame);
@@ -266,23 +267,28 @@ void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
 
 TEST_F(SuperResolution, BTVL1)
 {
-    RunTest(cv::superres::createSuperResolution_BTVL1());
+    RunTest<cv::Mat>(cv::superres::createSuperResolution_BTVL1());
 }
 
 #if defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING) && defined(HAVE_OPENCV_CUDAFILTERS)
 
 TEST_F(SuperResolution, BTVL1_CUDA)
 {
-    RunTest(cv::superres::createSuperResolution_BTVL1_CUDA());
+    RunTest<cv::Mat>(cv::superres::createSuperResolution_BTVL1_CUDA());
 }
 
 #endif
 
-#if defined(HAVE_OPENCV_OCL) && defined(HAVE_OPENCL)
+#ifdef HAVE_OPENCL
 
-TEST_F(SuperResolution, BTVL1_OCL)
+namespace cvtest {
+namespace ocl {
+
+OCL_TEST_F(SuperResolution, BTVL1)
 {
-    RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
+    RunTest<cv::UMat>(cv::superres::createSuperResolution_BTVL1());
 }
+
+} } // namespace cvtest::ocl
 
 #endif

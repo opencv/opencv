@@ -18,6 +18,8 @@ class_ignore_list = (
 const_ignore_list = (
     "CV_CAP_OPENNI",
     "CV_CAP_PROP_OPENNI_",
+    "CV_CAP_INTELPERC",
+    "CV_CAP_PROP_INTELPERC_"
     "WINDOW_AUTOSIZE",
     "CV_WND_PROP_",
     "CV_WINDOW_",
@@ -396,7 +398,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1minMaxLocManual
 
     return result;
 
-    } catch(cv::Exception e) {
+    } catch(const cv::Exception& e) {
         LOGD("Core::n_1minMaxLoc() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");
@@ -469,7 +471,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
         return result;
 
-    } catch(cv::Exception e) {
+    } catch(const cv::Exception& e) {
         LOGD("Core::n_1getTextSize() catched cv::Exception: %s", e.what());
         jclass je = env->FindClass("org/opencv/core/CvException");
         if(!je) je = env->FindClass("java/lang/Exception");

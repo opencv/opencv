@@ -110,23 +110,23 @@ public:
             pM->Release();
         }
         SetParam("SizeVar",0);
-    };
+    }
 
     ~CvBlobTrackerCCCR()
     {
         if(m_pMem)cvReleaseMemStorage(&m_pMem);
-    };
+    }
 
     /* Blob functions: */
-    virtual int     GetBlobNum() {return m_BlobList.GetBlobNum();};
-    virtual CvBlob* GetBlob(int BlobIndex){return m_BlobList.GetBlob(BlobIndex);};
+    virtual int     GetBlobNum() {return m_BlobList.GetBlobNum();}
+    virtual CvBlob* GetBlob(int BlobIndex){return m_BlobList.GetBlob(BlobIndex);}
     virtual void    SetBlob(int BlobIndex, CvBlob* pBlob)
     {
         CvBlob* pB = m_BlobList.GetBlob(BlobIndex);
         if(pB) pB[0] = pBlob[0];
-    };
+    }
 
-    virtual CvBlob* GetBlobByID(int BlobID){return m_BlobList.GetBlobByID(BlobID);};
+    virtual CvBlob* GetBlobByID(int BlobID){return m_BlobList.GetBlobByID(BlobID);}
     virtual void    DelBlob(int BlobIndex)
     {
         DefBlobTrackerCR* pBT = (DefBlobTrackerCR*)m_BlobList.GetBlob(BlobIndex);
@@ -134,7 +134,7 @@ public:
         if(pBT->pPredictor)pBT->pPredictor->Release();
         delete pBT->pBlobHyp;
         m_BlobList.DelBlob(BlobIndex);
-    };
+    }
 
     virtual void    DelBlobByID(int BlobID)
     {
@@ -143,9 +143,9 @@ public:
         if(pBT->pPredictor)pBT->pPredictor->Release();
         delete pBT->pBlobHyp;
         m_BlobList.DelBlobByID(BlobID);
-    };
+    }
 
-    virtual void    Release(){delete this;};
+    virtual void    Release(){delete this;}
 
     /* Add new blob to track it and assign to this blob personal ID */
     /* pBlob - pinter to structure with blob parameters (ID is ignored)*/
@@ -169,7 +169,7 @@ public:
         }
         m_BlobList.AddBlob((CvBlob*)&NewB);
         return m_BlobList.GetBlob(m_BlobList.GetBlobNum()-1);
-    };
+    }
 
     virtual void    Process(IplImage* pImg, IplImage* pImgFG = NULL)
     {
@@ -480,7 +480,7 @@ public:
         }   /* Read next blob. */
     }   /*  CCwithCR LoadState */
 
-    //void SetCollision(int Collision){m_Collision = Collision;};
+    //void SetCollision(int Collision){m_Collision = Collision;}
 };
 
 CvBlobTrackerOne* cvCreateBlobTrackerOneMSPF();

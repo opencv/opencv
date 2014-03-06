@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     cout << "FOUND " << keypoints2GPU.cols << " keypoints on second image" << endl;
 
     // matching descriptors
-    BFMatcher_CUDA matcher(NORM_L2);
+    BFMatcher_CUDA matcher(surf.defaultNorm());
     GpuMat trainIdx, distance;
     matcher.matchSingle(descriptors1GPU, descriptors2GPU, trainIdx, distance);
 

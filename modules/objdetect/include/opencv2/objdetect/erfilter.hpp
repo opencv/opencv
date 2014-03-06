@@ -67,7 +67,7 @@ public:
     //! Constructor
     explicit ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
     //! Destructor
-    ~ERStat(){};
+    ~ERStat() { }
 
     //! seed point and the threshold (max grey-level value)
     int pixel;
@@ -123,7 +123,7 @@ public:
     class CV_EXPORTS Callback
     {
     public:
-        virtual ~Callback(){};
+        virtual ~Callback() { }
         //! The classifier must return probability measure for the region.
         virtual double eval(const ERStat& stat) = 0; //const = 0; //TODO why cannot use const = 0 here?
     };
