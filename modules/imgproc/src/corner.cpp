@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
 
 namespace cv
@@ -306,16 +305,8 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 #ifdef HAVE_OPENCL
 
 static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
-                           int block_size, int aperture_size, int borderType,
-                           const char * const borderTypeStr)
+                           float scale, int aperture_size, int borderType)
 {
-    float scale = (float)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
-    if (aperture_size < 0)
-        scale *= 2.0f;
-    if (depth == CV_8U)
-        scale *= 255.0f;
-    scale = 1.0f / scale;
-
     UMat src = _src.getUMat();
 
     Size wholeSize;
@@ -333,15 +324,18 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
         Dy.create(src.size(), CV_32FC1);
 
         size_t localsize[2] = { sobel_lsz, sobel_lsz };
-        size_t globalsize[2] = { localsize[0]*(1 + (src.cols - 1) / localsize[0]),
-                                 localsize[1]*(1 + (src.rows - 1) / localsize[1]) };
+        size_t globalsize[2] = { localsize[0] * (1 + (src.cols - 1) / localsize[0]),
+                                 localsize[1] * (1 + (src.rows - 1) / localsize[1]) };
 
-        int src_offset_x = (src.offset % src.step) / src.elemSize();
-        int src_offset_y = src.offset / src.step;
+        int src_offset_x = (int)((src.offset % src.step) / src.elemSize());
+        int src_offset_y = (int)(src.offset / src.step);
+
+        const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                             "BORDER_WRAP", "BORDER_REFLECT101" };
 
         ocl::Kernel k(format("sobel%d", aperture_size).c_str(), ocl::imgproc::covardata_oclsrc,
                       cv::format("-D BLK_X=%d -D BLK_Y=%d -D %s -D SRCTYPE=%s%s",
-                                 (int)localsize[0], (int)localsize[1], borderTypeStr, ocl::typeToStr(depth),
+                                 (int)localsize[0], (int)localsize[1], borderTypes[borderType], ocl::typeToStr(depth),
                                  aperture_size < 0 ? " -D SCHARR" : ""));
         if (k.empty())
             return false;
@@ -350,7 +344,7 @@ static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
                ocl::KernelArg::WriteOnlyNoSize(Dx), ocl::KernelArg::WriteOnly(Dy),
                wholeSize.height, wholeSize.width, scale);
 
-        return k.run(2, globalsize, localsize, NULL);
+        return k.run(2, globalsize, localsize, false);
     }
     else
     {
@@ -386,9 +380,16 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
                                          "BORDER_WRAP", "BORDER_REFLECT101" };
     const char * const cornerType[] = { "CORNER_MINEIGENVAL", "CORNER_HARRIS", 0 };
 
+
+    float scale = (float)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    if (aperture_size < 0)
+        scale *= 2.0f;
+    if (depth == CV_8U)
+        scale *= 255.0f;
+    scale = 1.0f / scale;
+
     UMat Dx, Dy;
-    if (!extractCovData(_src, Dx, Dy, depth, block_size, aperture_size,
-                        borderType, borderTypes[borderType]))
+    if (!extractCovData(_src, Dx, Dy, depth, scale, aperture_size, borderType))
         return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
@@ -420,8 +421,9 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 {
     UMat Dx, Dy, D2x, D2y, Dxy;
 
-    Sobel( _src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
-    Sobel( _src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
+    if (!extractCovData(_src, Dx, Dy, depth, 1, ksize, borderType))
+        return false;
+
     Sobel( _src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
     Sobel( _src, D2y, CV_32F, 0, 2, ksize, 1, 0, borderType );
     Sobel( _src, Dxy, CV_32F, 1, 1, ksize, 1, 0, borderType );
