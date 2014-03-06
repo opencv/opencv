@@ -706,16 +706,6 @@ namespace cv
             block.z = patch.z = 1;
         }
 
-        #define SAFE_KERNEL_SET_ARG(idx, arg) \
-        {\
-            int idxNew = kernel.set(idx, arg);\
-            if (-1 == idxNew)\
-            {\
-                printf("lkSparse_run can't setup argument index = %d to kernel\n", idx);\
-                return false;\
-            }\
-            idx = idxNew;\
-        }
         bool lkSparse_run(UMat &I, UMat &J, const UMat &prevPts, UMat &nextPts, UMat &status, UMat& err,
             int ptcount, int level)
         {

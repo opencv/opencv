@@ -599,6 +599,17 @@ protected:
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
+#define SAFE_KERNEL_SET_ARG(idx, arg) \
+{\
+    int idxNew = kernel.set(idx, arg); \
+if (-1 == idxNew)\
+{\
+    printf("algorithm can't setup argument index = %d to kernel\n", idx); \
+    return false; \
+}\
+    idx = idxNew; \
+}
+
 }}
 
 #endif
