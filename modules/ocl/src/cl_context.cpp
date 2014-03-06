@@ -598,7 +598,7 @@ protected:
 #ifdef CL_VERSION_1_2
 #ifdef WIN32
         // if process is on termination stage (ExitProcess was called and other threads were terminated)
-        // then disable command queue release because it may cause program hang
+        // then disable device release because it may cause program hang
         if (!__termination)
 #endif
         {
@@ -624,7 +624,7 @@ protected:
 
 #ifdef WIN32
         // if process is on termination stage (ExitProcess was called and other threads were terminated)
-        // then disable command queue release because it may cause program hang
+        // then disable context release because it may cause program hang
         if (!__termination)
 #endif
         {
