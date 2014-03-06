@@ -298,7 +298,7 @@ OCL_PERF_TEST_P(ScharrFixture, Scharr,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 3e-3);
+        SANITY_CHECK(dst, 1e-2);
     }
     else if (RUN_PLAIN_IMPL)
     {
