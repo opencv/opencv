@@ -2796,7 +2796,8 @@ int Kernel::set(int i, const void* value, size_t sz)
 {
     if (!p || !p->handle)
         return -1;
-    CV_Assert(i >= 0);
+    if (i < 0)
+        return i;
     if( i == 0 )
         p->cleanupUMats();
 
@@ -2822,7 +2823,8 @@ int Kernel::set(int i, const KernelArg& arg)
 {
     if( !p || !p->handle )
         return -1;
-    CV_Assert( i >= 0 );
+    if (i < 0)
+        return i;
     if( i == 0 )
         p->cleanupUMats();
     if( arg.m )
