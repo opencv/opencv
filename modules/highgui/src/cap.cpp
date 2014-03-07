@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "cap_intelperc.hpp"
 
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
@@ -345,14 +346,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break; // CV_CAP_GIGANETIX
 #endif
-
-#ifdef HAVE_INTELPERC
-        case CV_CAP_INTELPERC:
-            capture = cvCreateCameraCapture_IntelPerC(index);
-            if (capture)
-                return capture;
-        break; // CV_CAP_INTEL_PERC
-#endif
         }
     }
 
@@ -497,6 +490,7 @@ VideoCapture::VideoCapture(int device)
 
 VideoCapture::~VideoCapture()
 {
+    icap.release();
     cap.release();
 }
 
@@ -510,24 +504,36 @@ bool VideoCapture::open(const String& filename)
 bool VideoCapture::open(int device)
 {
     if (isOpened()) release();
+    icap = createCameraCapture(device);
+    if (!icap.empty())
+        return true;
     cap.reset(cvCreateCameraCapture(device));
     return isOpened();
 }
 
-bool VideoCapture::isOpened() const { return !cap.empty(); }
+bool VideoCapture::isOpened() const
+{
+    return (!cap.empty() || !icap.empty());
+}
 
 void VideoCapture::release()
 {
+    icap.release();
     cap.release();
 }
 
 bool VideoCapture::grab()
 {
+    if (!icap.empty())
+        return icap->grabFrame();
     return cvGrabFrame(cap) != 0;
 }
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
+    if (!icap.empty())
+        return icap->retrieveFrame(channel, image);
+
     IplImage* _img = cvRetrieveFrame(cap, channel);
     if( !_img )
     {
@@ -567,13 +573,61 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 
 bool VideoCapture::set(int propId, double value)
 {
+    if (!icap.empty())
+        return icap->setProperty(propId, value);
     return cvSetCaptureProperty(cap, propId, value) != 0;
 }
 
 double VideoCapture::get(int propId)
 {
+    if (!icap.empty())
+        return icap->getProperty(propId);
     return cvGetCaptureProperty(cap, propId);
 }
+
+Ptr<IVideoCapture> VideoCapture::createCameraCapture(int index)
+{
+    int  domains[] =
+    {
+#ifdef HAVE_INTELPERC
+        CV_CAP_INTELPERC,
+#endif
+        -1, -1
+    };
+
+    // interpret preferred interface (0 = autodetect)
+    int pref = (index / 100) * 100;
+    if (pref)
+    {
+        domains[0]=pref;
+        index %= 100;
+        domains[1]=-1;
+    }
+
+    // try every possibly installed camera API
+    for (int i = 0; domains[i] >= 0; i++)
+    {
+#if defined(HAVE_INTELPERC)    || \
+    (0)
+        Ptr<IVideoCapture> capture;
+
+        switch (domains[i])
+        {
+#ifdef HAVE_INTELPERC
+        case CV_CAP_INTELPERC:
+            capture = Ptr<IVideoCapture>(new cv::VideoCapture_IntelPerC());
+            if (capture)
+                return capture;
+        break; // CV_CAP_INTEL_PERC
+#endif
+        }
+#endif
+    }
+
+    // failed open a camera
+    return Ptr<IVideoCapture>();
+}
+
 
 VideoWriter::VideoWriter()
 {}
