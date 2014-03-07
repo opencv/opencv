@@ -169,8 +169,8 @@ public:
         VENDOR_NVIDIA=3
     };
     int vendorID() const;
-    inline bool isAMD() const { return vendorID() == VENDOR_AMD; };
-    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; };
+    inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
+    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;
@@ -286,7 +286,7 @@ class CV_EXPORTS KernelArg
 {
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
-    KernelArg(int _flags, UMat* _m, int wscale=1, const void* _obj=0, size_t _sz=0);
+    KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
     KernelArg();
 
     static KernelArg Local() { return KernelArg(LOCAL, 0); }
@@ -296,27 +296,27 @@ public:
     { return KernelArg(PTR_ONLY+READ_ONLY, (UMat*)&m); }
     static KernelArg PtrReadWrite(const UMat& m)
     { return KernelArg(PTR_ONLY+READ_WRITE, (UMat*)&m); }
-    static KernelArg ReadWrite(const UMat& m, int wscale=1)
-    { return KernelArg(READ_WRITE, (UMat*)&m, wscale); }
-    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale); }
-    static KernelArg ReadOnly(const UMat& m, int wscale=1)
-    { return KernelArg(READ_ONLY, (UMat*)&m, wscale); }
-    static KernelArg WriteOnly(const UMat& m, int wscale=1)
-    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale); }
-    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale); }
-    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1)
-    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale); }
+    static KernelArg ReadWrite(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadWriteNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_WRITE+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnly(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY, (UMat*)&m, wscale, iwscale); }
+    static KernelArg ReadOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(READ_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
+    static KernelArg WriteOnlyNoSize(const UMat& m, int wscale=1, int iwscale=1)
+    { return KernelArg(WRITE_ONLY+NO_SIZE, (UMat*)&m, wscale, iwscale); }
     static KernelArg Constant(const Mat& m);
     template<typename _Tp> static KernelArg Constant(const _Tp* arr, size_t n)
-    { return KernelArg(CONSTANT, 0, 1, (void*)arr, n); }
+    { return KernelArg(CONSTANT, 0, 1, 1, (void*)arr, n); }
 
     int flags;
     UMat* m;
     const void* obj;
     size_t sz;
-    int wscale;
+    int wscale, iwscale;
 };
 
 
@@ -590,6 +590,9 @@ CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS String kernelToStr(InputArray _kernel, int ddepth = -1);
 CV_EXPORTS void getPlatfomsInfo(std::vector<PlatformInfo>& platform_info);
+CV_EXPORTS int predictOptimalVectorWidth(InputArray src1, InputArray src2 = noArray(), InputArray src3 = noArray(),
+                                         InputArray src4 = noArray(), InputArray src5 = noArray(), InputArray src6 = noArray(),
+                                         InputArray src7 = noArray(), InputArray src8 = noArray(), InputArray src9 = noArray());
 
 class CV_EXPORTS Image2D
 {
