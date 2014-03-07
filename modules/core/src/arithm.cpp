@@ -933,17 +933,16 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int cn = CV_MAT_CN(srctype);
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
             (!doubleSupport && srcdepth == CV_64F && !bitwise))
         return false;
 
     char opts[1024];
-    int kercn = haveMask || haveScalar ? cn : 1;
+    int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn;
 
     sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d",
-            (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"), oclop2str[oclop],
+            haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
                 ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, 1)) :
@@ -953,16 +952,15 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             kercn);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
-    if( k.empty() )
+    if (k.empty())
         return false;
 
     UMat src1 = _src1.getUMat(), src2;
     UMat dst = _dst.getUMat(), mask = _mask.getUMat();
 
-    int cscale = cn/kercn;
-    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cscale);
-    ocl::KernelArg dstarg = haveMask ? ocl::KernelArg::ReadWrite(dst, cscale) :
-                                       ocl::KernelArg::WriteOnly(dst, cscale);
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn);
+    ocl::KernelArg dstarg = haveMask ? ocl::KernelArg::ReadWrite(dst, cn, kercn) :
+                                       ocl::KernelArg::WriteOnly(dst, cn, kercn);
     ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask, 1);
 
     if( haveScalar )
@@ -976,7 +974,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             convertAndUnrollScalar(src2sc, srctype, (uchar*)buf, 1);
         }
 
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
 
         if( !haveMask )
             k.args(src1arg, dstarg, scalararg);
@@ -986,7 +984,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         src2 = _src2.getUMat();
-        ocl::KernelArg src2arg = ocl::KernelArg::ReadOnlyNoSize(src2, cscale);
+        ocl::KernelArg src2arg = ocl::KernelArg::ReadOnlyNoSize(src2, cn, kercn);
 
         if( !haveMask )
             k.args(src1arg, src2arg, dstarg);
@@ -994,7 +992,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols*(cn/kercn), src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -1313,7 +1311,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if (!doubleSupport && (depth2 == CV_64F || depth1 == CV_64F))
         return false;
 
-    int kercn = haveMask || haveScalar ? cn : 1;
+    int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn;
 
     char cvtstr[4][32], opts[1024];
@@ -1355,11 +1353,9 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     UMat src1 = _src1.getUMat(), src2;
     UMat dst = _dst.getUMat(), mask = _mask.getUMat();
 
-    int cscale = cn/kercn;
-
-    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cscale);
-    ocl::KernelArg dstarg = haveMask ? ocl::KernelArg::ReadWrite(dst, cscale) :
-                                       ocl::KernelArg::WriteOnly(dst, cscale);
+    ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn);
+    ocl::KernelArg dstarg = haveMask ? ocl::KernelArg::ReadWrite(dst, cn, kercn) :
+                                       ocl::KernelArg::WriteOnly(dst, cn, kercn);
     ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask, 1);
 
     if( haveScalar )
@@ -1370,7 +1366,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         if( !src2sc.empty() )
             convertAndUnrollScalar(src2sc, wtype, (uchar*)buf, 1);
-        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, buf, esz);
+        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
 
         if( !haveMask )
         {
@@ -1378,7 +1374,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, dstarg, scalararg);
             else if(n == 1)
                 k.args(src1arg, dstarg, scalararg,
-                       ocl::KernelArg(0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -1388,7 +1384,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     else
     {
         src2 = _src2.getUMat();
-        ocl::KernelArg src2arg = ocl::KernelArg::ReadOnlyNoSize(src2, cscale);
+        ocl::KernelArg src2arg = ocl::KernelArg::ReadOnlyNoSize(src2, cn, kercn);
 
         if( !haveMask )
         {
@@ -1396,12 +1392,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 k.args(src1arg, src2arg, dstarg);
             else if(n == 1)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, usrdata_p, usrdata_esz));
+                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz));
             else if(n == 3)
                 k.args(src1arg, src2arg, dstarg,
-                       ocl::KernelArg(0, 0, 0, usrdata_p, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
-                       ocl::KernelArg(0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
+                       ocl::KernelArg(0, 0, 0, 0, usrdata_p, usrdata_esz),
+                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz, usrdata_esz),
+                       ocl::KernelArg(0, 0, 0, 0, usrdata_p + usrdata_esz*2, usrdata_esz));
             else
                 CV_Error(Error::StsNotImplemented, "unsupported number of extra parameters");
         }
@@ -1409,7 +1405,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             k.args(src1arg, src2arg, maskarg, dstarg);
     }
 
-    size_t globalsize[] = { src1.cols * cscale, src1.rows };
+    size_t globalsize[] = { src1.cols * cn / kercn, src1.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

@@ -4077,7 +4077,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     matM.convertTo(M0, doubleSupport ? CV_64F : CV_32F);
 
     k.args(ocl::KernelArg::ReadOnly(src), ocl::KernelArg::WriteOnly(dst), ocl::KernelArg::PtrReadOnly(M0),
-           ocl::KernelArg(0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
+           ocl::KernelArg(0, 0, 0, 0, borderBuf, CV_ELEM_SIZE(sctype)));
 
     size_t globalThreads[2] = { dst.cols, dst.rows };
     return k.run(2, globalThreads, NULL, false);
