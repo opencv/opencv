@@ -114,6 +114,7 @@ OCL_TEST_P(GoodFeaturesToTrack, Accuracy)
         for (size_t i = 0; i < pts.size(); ++i)
         {
             Point2i a = upts[i], b = pts[i];
+
             bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
 
             if (!eq)
