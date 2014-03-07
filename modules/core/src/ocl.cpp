@@ -1712,6 +1712,17 @@ struct Device::Impl
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
         parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+
+        vendorName_ = getStrProp(CL_DEVICE_VENDOR);
+        if (vendorName_ == "Advanced Micro Devices, Inc." ||
+            vendorName_ == "AMD")
+            vendorID_ = VENDOR_AMD;
+        else if (vendorName_ == "Intel(R) Corporation")
+            vendorID_ = VENDOR_INTEL;
+        else if (vendorName_ == "NVIDIA Corporation")
+            vendorID_ = VENDOR_NVIDIA;
+        else
+            vendorID_ = UNKNOWN_VENDOR;
     }
 
     template<typename _TpCL, typename _TpOut>
@@ -1754,6 +1765,8 @@ struct Device::Impl
     int deviceVersionMajor_;
     int deviceVersionMinor_;
     String driverVersion_;
+    String vendorName_;
+    int vendorID_;
 };
 
 
@@ -1813,8 +1826,11 @@ String Device::extensions() const
 String Device::version() const
 { return p ? p->version_ : String(); }
 
-String Device::vendor() const
-{ return p ? p->getStrProp(CL_DEVICE_VENDOR) : String(); }
+String Device::vendorName() const
+{ return p ? p->vendorName_ : String(); }
+
+int Device::vendorID() const
+{ return p ? p->vendorID_ : 0; }
 
 String Device::OpenCL_C_Version() const
 { return p ? p->getStrProp(CL_DEVICE_OPENCL_C_VERSION) : String(); }
@@ -3008,6 +3024,12 @@ struct Program::Impl
             void** deviceList = deviceListBuf;
             for( i = 0; i < n; i++ )
                 deviceList[i] = ctx.device(i).ptr();
+
+            Device device = Device::getDefault();
+            if (device.isAMD())
+                buildflags += " -D AMD_DEVICE";
+            else if (device.isIntel())
+                buildflags += " -D INTEL_DEVICE";
 
             retval = clBuildProgram(handle, n,
                                     (const cl_device_id*)deviceList,
