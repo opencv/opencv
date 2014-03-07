@@ -1,9 +1,9 @@
 // OpenCL port of the FAST corner detector.
 // Copyright (C) 2014, Itseez Inc. See the license at http://opencv.org
 
-inline int cornerScore(__global const uchar* img, int step, int threshold)
+inline int cornerScore(__global const uchar* img, int step)
 {
-    int k, tofs, v = img[0], a0 = threshold, b0;
+    int k, tofs, v = img[0], a0 = 0, b0;
     int d[16];
     #define LOAD2(idx, ofs) \
         tofs = ofs; d[idx] = (short)(v - img[tofs]); d[idx+8] = (short)(v - img[-tofs])
@@ -53,8 +53,7 @@ __kernel
 void FAST_findKeypoints(
     __global const uchar * _img, int step, int img_offset,
     int img_rows, int img_cols,
-    __global uchar * score, int score_step, int score_offset,
-    volatile __global int* kp_loc, int calc_score,
+    volatile __global int* kp_loc,
     int max_keypoints, int threshold )
 {
     int j = get_global_id(0) + 3;
@@ -118,8 +117,6 @@ void FAST_findKeypoints(
                 kp_loc[1 + 2*idx] = j;
                 kp_loc[2 + 2*idx] = i;
             }
-            if(calc_score)
-                score[mad24(i, score_step, score_offset+j)] = cornerScore(img, step, threshold);
         }
     }
 }
@@ -130,8 +127,8 @@ void FAST_findKeypoints(
 __kernel
 void FAST_nonmaxSupression(
     __global const int* kp_in, volatile __global int* kp_out,
-    __global const uchar * _score, int step, int score_offset,
-    int counter, int max_keypoints)
+    __global const uchar * _img, int step, int img_offset,
+    int rows, int cols, int counter, int max_keypoints)
 {
     const int idx = get_global_id(0);
 
@@ -139,14 +136,19 @@ void FAST_nonmaxSupression(
     {
         int x = kp_in[1 + 2*idx];
         int y = kp_in[2 + 2*idx];
+        __global const uchar* img = _img + mad24(y, step, x + img_offset);
 
-        __global const uchar* score = _score + mad24(y, step, x + score_offset);
-        int s = score[0];
+        int s = cornerScore(img, step);
 
-        if( (s > (int)score[1]) + (s > (int)score[-1]) +
-            (s > (int)score[-step]) + (s > (int)score[step]) +
-            (s > (int)score[-step-1]) + (s > (int)score[-step+1]) +
-            (s > (int)score[step-1]) + (s > (int)score[step+1]) == 8 )
+        if( (x < 4 || s > cornerScore(img-1, step)) +
+            (y < 4 || s > cornerScore(img-step, step)) != 2 )
+            return;
+        if( (x >= cols - 4 || s > cornerScore(img+1, step)) +
+            (y >= rows - 4 || s > cornerScore(img+step, step)) +
+            (x < 4 || y < 4 || s > cornerScore(img-step-1, step)) +
+            (x >= cols - 4 || y < 4 || s > cornerScore(img-step+1, step)) +
+            (x < 4 || y >= rows - 4 || s > cornerScore(img+step-1, step)) +
+            (x >= cols - 4 || y >= rows - 4 || s > cornerScore(img+step+1, step)) == 6)
         {
             int new_idx = atomic_inc(kp_out);
             if( new_idx < max_keypoints )
