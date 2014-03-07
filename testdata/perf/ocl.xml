@@ -35680,4 +35680,78 @@
       <dt>d</dt>
       <data>
         0.</data></val></value></OCL_PyrLKOpticalFlowFixture_PyrLKOpticalFlow--PyrLKOpticalFlow---4000->
+ <!-- resumed -->
+
+<OCL_CalcHistFixture_CalcHist--CalcHist--640x480>
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>1091.</min>
+    <max>1294.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>1179.</val></last>
+    <rng1>
+      <x>89</x>
+      <y>0</y>
+      <val>1201.</val></rng1>
+    <rng2>
+      <x>65</x>
+      <y>0</y>
+      <val>1216.</val></rng2></dst></OCL_CalcHistFixture_CalcHist--CalcHist--640x480>
+<OCL_CalcHistFixture_CalcHist--CalcHist--1280x720>
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>3462.</min>
+    <max>3754.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>3545.</val></last>
+    <rng1>
+      <x>128</x>
+      <y>0</y>
+      <val>3604.</val></rng1>
+    <rng2>
+      <x>180</x>
+      <y>0</y>
+      <val>3650.</val></rng2></dst></OCL_CalcHistFixture_CalcHist--CalcHist--1280x720>
+<OCL_CalcHistFixture_CalcHist--CalcHist--1920x1080>
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>7862.</min>
+    <max>8328.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>7932.</val></last>
+    <rng1>
+      <x>225</x>
+      <y>0</y>
+      <val>7999.</val></rng1>
+    <rng2>
+      <x>169</x>
+      <y>0</y>
+      <val>8081.</val></rng2></dst></OCL_CalcHistFixture_CalcHist--CalcHist--1920x1080>
+<OCL_CalcHistFixture_CalcHist--CalcHist--3840x2160>
+  <dst>
+    <kind>65536</kind>
+    <type>4</type>
+    <min>31848.</min>
+    <max>32919.</max>
+    <last>
+      <x>255</x>
+      <y>0</y>
+      <val>32193.</val></last>
+    <rng1>
+      <x>235</x>
+      <y>0</y>
+      <val>32533.</val></rng1>
+    <rng2>
+      <x>81</x>
+      <y>0</y>
+      <val>32438.</val></rng2></dst></OCL_CalcHistFixture_CalcHist--CalcHist--3840x2160>
 </opencv_storage>
