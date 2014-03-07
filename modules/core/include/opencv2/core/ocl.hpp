@@ -87,7 +87,7 @@ public:
     String name() const;
     String extensions() const;
     String version() const;
-    String vendor() const;
+    String vendorName() const;
     String OpenCL_C_Version() const;
     String OpenCLVersion() const;
     int deviceVersionMajor() const;
@@ -160,6 +160,17 @@ public:
 
     size_t imageMaxBufferSize() const;
     size_t imageMaxArraySize() const;
+
+    enum
+    {
+        UNKNOWN_VENDOR=0,
+        VENDOR_AMD=1,
+        VENDOR_INTEL=2,
+        VENDOR_NVIDIA=3
+    };
+    int vendorID() const;
+    inline bool isAMD() const { return vendorID() == VENDOR_AMD; };
+    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; };
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;
