@@ -304,6 +304,65 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 
 #ifdef HAVE_OPENCL
 
+static bool extractCovData(InputArray _src, UMat & Dx, UMat & Dy, int depth,
+                           float scale, int aperture_size, int borderType)
+{
+    UMat src = _src.getUMat();
+
+    Size wholeSize;
+    Point ofs;
+    src.locateROI(wholeSize, ofs);
+
+    const int sobel_lsz = 16;
+    if ((aperture_size == 3 || aperture_size == 5 || aperture_size == 7 || aperture_size == -1) &&
+        wholeSize.height > sobel_lsz + (aperture_size >> 1) &&
+        wholeSize.width > sobel_lsz + (aperture_size >> 1))
+    {
+        CV_Assert(depth == CV_8U || depth == CV_32F);
+
+        Dx.create(src.size(), CV_32FC1);
+        Dy.create(src.size(), CV_32FC1);
+
+        size_t localsize[2] = { sobel_lsz, sobel_lsz };
+        size_t globalsize[2] = { localsize[0] * (1 + (src.cols - 1) / localsize[0]),
+                                 localsize[1] * (1 + (src.rows - 1) / localsize[1]) };
+
+        int src_offset_x = (int)((src.offset % src.step) / src.elemSize());
+        int src_offset_y = (int)(src.offset / src.step);
+
+        const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
+                                             "BORDER_WRAP", "BORDER_REFLECT101" };
+
+        ocl::Kernel k(format("sobel%d", aperture_size).c_str(), ocl::imgproc::covardata_oclsrc,
+                      cv::format("-D BLK_X=%d -D BLK_Y=%d -D %s -D SRCTYPE=%s%s",
+                                 (int)localsize[0], (int)localsize[1], borderTypes[borderType], ocl::typeToStr(depth),
+                                 aperture_size < 0 ? " -D SCHARR" : ""));
+        if (k.empty())
+            return false;
+
+        k.args(ocl::KernelArg::PtrReadOnly(src), (int)src.step, src_offset_x, src_offset_y,
+               ocl::KernelArg::WriteOnlyNoSize(Dx), ocl::KernelArg::WriteOnly(Dy),
+               wholeSize.height, wholeSize.width, scale);
+
+        return k.run(2, globalsize, localsize, false);
+    }
+    else
+    {
+        if (aperture_size > 0)
+        {
+            Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
+            Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
+        }
+        else
+        {
+            Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
+            Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
+        }
+    }
+
+    return true;
+}
+
 static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int block_size,
                                       int aperture_size, double k, int borderType, int op_type)
 {
@@ -314,31 +373,24 @@ static bool ocl_cornerMinEigenValVecs(InputArray _src, OutputArray _dst, int blo
         return false;
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
-    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
-    if( aperture_size < 0 )
-        scale *= 2.0;
-    if( depth == CV_8U )
-        scale *= 255.0;
-    scale = 1.0 / scale;
-
     if ( !(type == CV_8UC1 || type == CV_32FC1) )
         return false;
 
-    UMat Dx, Dy;
-    if (aperture_size > 0)
-    {
-        Sobel(_src, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType);
-        Sobel(_src, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType);
-    }
-    else
-    {
-        Scharr(_src, Dx, CV_32F, 1, 0, scale, 0, borderType);
-        Scharr(_src, Dy, CV_32F, 0, 1, scale, 0, borderType);
-    }
-
     const char * const borderTypes[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT",
-                                         0, "BORDER_REFLECT101" };
+                                         "BORDER_WRAP", "BORDER_REFLECT101" };
     const char * const cornerType[] = { "CORNER_MINEIGENVAL", "CORNER_HARRIS", 0 };
+
+
+    float scale = (float)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    if (aperture_size < 0)
+        scale *= 2.0f;
+    if (depth == CV_8U)
+        scale *= 255.0f;
+    scale = 1.0f / scale;
+
+    UMat Dx, Dy;
+    if (!extractCovData(_src, Dx, Dy, depth, scale, aperture_size, borderType))
+        return false;
 
     ocl::Kernel cornelKernel("corner", ocl::imgproc::corner_oclsrc,
                              format("-D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s -D %s",
@@ -369,8 +421,9 @@ static bool ocl_preCornerDetect( InputArray _src, OutputArray _dst, int ksize, i
 {
     UMat Dx, Dy, D2x, D2y, Dxy;
 
-    Sobel( _src, Dx, CV_32F, 1, 0, ksize, 1, 0, borderType );
-    Sobel( _src, Dy, CV_32F, 0, 1, ksize, 1, 0, borderType );
+    if (!extractCovData(_src, Dx, Dy, depth, 1, ksize, borderType))
+        return false;
+
     Sobel( _src, D2x, CV_32F, 2, 0, ksize, 1, 0, borderType );
     Sobel( _src, D2y, CV_32F, 0, 2, ksize, 1, 0, borderType );
     Sobel( _src, Dxy, CV_32F, 1, 1, ksize, 1, 0, borderType );
