@@ -3419,7 +3419,7 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
     return kernelRow.run(2, globalsize, localsize, sync);
 }
 
-static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, bool sync)
+static bool ocl_sepColFilter2D(const UMat &buf, UMat &dst, Mat &kernelY, int anchor, bool sync)
 {
 #ifdef ANDROID
     size_t localsize[2] = {16, 10};
@@ -3428,62 +3428,20 @@ static bool ocl_sepColFilter2D(UMat &buf, UMat &dst, Mat &kernelY, int anchor, b
 #endif
     size_t globalsize[2] = {0, 0};
 
-    int type = dst.type();
-    int cn = CV_MAT_CN(type);
-    int ddepth = CV_MAT_DEPTH(type);
+    int dtype = dst.type(), cn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
     Size sz = dst.size();
 
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
 
-    cv::String build_options;
-    if (CV_8U == ddepth)
-    {
-        switch (cn)
-        {
-        case 1:
-            globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float", "uchar", "convert_uchar_sat");
-            break;
-        case 2:
-            globalsize[0] = DIVUP((sz.width + 1) / 2, localsize[0]) * localsize[0];
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float2", "uchar2", "convert_uchar2_sat");
-            break;
-        case 3:
-        case 4:
-            globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "uchar4", "convert_uchar4_sat");
-            break;
-        }
-    }
+    if (dtype == CV_8UC2)
+        globalsize[0] = DIVUP((sz.width + 1) / 2, localsize[0]) * localsize[0];
     else
-    {
         globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
-        switch (dst.type())
-        {
-        case CV_32SC1:
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float", "int", "convert_int_sat");
-            break;
-        case CV_32SC3:
-        case CV_32SC4:
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "int4", "convert_int4_sat");
-            break;
-        case CV_32FC1:
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float", "float", "");
-            break;
-        case CV_32FC3:
-        case CV_32FC4:
-            build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
-                    anchor, (int)localsize[0], (int)localsize[1], cn, "float4", "float4", "");
-            break;
-        }
-    }
 
+    char cvt[40];
+    cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D GENTYPE_SRC=%s -D GENTYPE_DST=%s -D convert_to_DST=%s",
+                    anchor, (int)localsize[0], (int)localsize[1], cn, ocl::typeToStr(buf.type()),
+                                          ocl::typeToStr(dtype), ocl::convertTypeStr(CV_32F, ddepth, cn, cvt));
     build_options += ocl::kernelToStr(kernelY, CV_32F);
 
     ocl::Kernel kernelCol;
@@ -3513,8 +3471,8 @@ static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
         return false;
 
     int type = _src.type();
-    if ( !( (CV_8UC1 == type || CV_8UC4 == type || CV_32FC1 == type || CV_32FC4 == type) &&
-            (ddepth == CV_32F || ddepth == CV_8U || ddepth < 0) ) )
+    if ( !( (type == CV_8UC1 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC4) &&
+            (ddepth == CV_32F || ddepth == CV_16S || ddepth == CV_8U || ddepth < 0) ) )
         return false;
 
     int cn = CV_MAT_CN(type);
