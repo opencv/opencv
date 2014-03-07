@@ -268,23 +268,13 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
     if (fastKptKernel.empty())
         return false;
 
-    UMat kp1(1, maxKeypoints*2+1, CV_32S), score;
+    UMat kp1(1, maxKeypoints*2+1, CV_32S);
 
     UMat ucounter1(kp1, Rect(0,0,1,1));
     ucounter1.setTo(Scalar::all(0));
 
-    if( nonmax_suppression )
-    {
-        score.create(img.size(), CV_8U);
-        score.setTo(Scalar::all(0));
-    }
-    else
-        score = img; // initialize score with some non-empty value
-
     if( !fastKptKernel.args(ocl::KernelArg::ReadOnly(img),
-                            ocl::KernelArg::WriteOnlyNoSize(score),
                             ocl::KernelArg::PtrReadWrite(kp1),
-                            nonmax_suppression ? 1 : 0,
                             maxKeypoints, threshold).run(2, globalsize, 0, true))
         return false;
 
@@ -319,7 +309,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
         size_t globalsize_nms[] = { counter };
         if( !fastNMSKernel.args(ocl::KernelArg::PtrReadOnly(kp1),
                                 ocl::KernelArg::PtrReadWrite(kp2),
-                                ocl::KernelArg::ReadOnlyNoSize(score),
+                                ocl::KernelArg::ReadOnly(img),
                                 counter, counter).run(1, globalsize_nms, 0, true))
             return false;
 
@@ -340,9 +330,10 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
-  if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
+  double t = (double)getTickCount();
+  if( ocl::useOpenCL() && /*_img.isUMat() &&*/ type == FastFeatureDetector::TYPE_9_16 &&
       ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
-      return;
+      ;
 
   switch(type) {
     case FastFeatureDetector::TYPE_5_8:
@@ -359,6 +350,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
       break;
   }
+  printf("time=%.2fms\n", ((double)getTickCount() - t)*1000./getTickFrequency());
 }
 
 
