@@ -57,6 +57,8 @@ struct greaterThanPtr :
     { return *a > *b; }
 };
 
+#ifdef HAVE_OPENCL
+
 struct Corner
 {
     float val;
@@ -67,23 +69,16 @@ struct Corner
     {  return val > c.val; }
 };
 
-#ifdef HAVE_OPENCL
-
 static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                                      int maxCorners, double qualityLevel, double minDistance,
                                      InputArray _mask, int blockSize,
                                      bool useHarrisDetector, double harrisK )
 {
-    UMat eig, tmp;
+    UMat eig, maxEigenValue;
     if( useHarrisDetector )
         cornerHarris( _image, eig, blockSize, 3, harrisK );
     else
         cornerMinEigenVal( _image, eig, blockSize, 3 );
-
-    double maxVal = 0;
-    minMaxLoc( eig, NULL, &maxVal, NULL, NULL, _mask );
-    threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO );
-    dilate( eig, tmp, Mat());
 
     Size imgsize = _image.size();
     std::vector<Corner> tmpCorners;
@@ -91,43 +86,91 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             std::max(1024, static_cast<int>(imgsize.area() * 0.1));
     bool haveMask = !_mask.empty();
 
+    // find threshold
+    {
+        CV_Assert(eig.type() == CV_32FC1);
+        int dbsize = ocl::Device::getDefault().maxComputeUnits();
+        size_t wgs = ocl::Device::getDefault().maxWorkGroupSize();
+
+        int wgs2_aligned = 1;
+        while (wgs2_aligned < (int)wgs)
+            wgs2_aligned <<= 1;
+        wgs2_aligned >>= 1;
+
+        ocl::Kernel k("maxEigenVal", ocl::imgproc::gftt_oclsrc,
+                      format("-D OP_MAX_EIGEN_VAL -D WGS=%d -D groupnum=%d -D WGS2_ALIGNED=%d%s",
+                             (int)wgs, dbsize, wgs2_aligned, haveMask ? " -D HAVE_MASK" : ""));
+        if (k.empty())
+            return false;
+
+        UMat mask = _mask.getUMat();
+        maxEigenValue.create(1, dbsize, CV_32FC1);
+
+        ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
+                dbarg = ocl::KernelArg::PtrWriteOnly(maxEigenValue),
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask);
+
+        if (haveMask)
+            k.args(eigarg, eig.cols, (int)eig.total(), dbarg, maskarg);
+        else
+            k.args(eigarg, eig.cols, (int)eig.total(), dbarg);
+
+        size_t globalsize = dbsize * wgs;
+        if (!k.run(1, &globalsize, &wgs, false))
+            return false;
+
+        ocl::Kernel k2("maxEigenValTask", ocl::imgproc::gftt_oclsrc,
+                       format("-D OP_MAX_EIGEN_VAL -D WGS=%d -D WGS2_ALIGNED=%d -D groupnum=%d",
+                              wgs, wgs2_aligned, dbsize));
+        if (k2.empty())
+            return false;
+
+        k2.args(dbarg, (float)qualityLevel);
+
+        if (!k2.runTask(false))
+            return false;
+    }
+
     // collect list of pointers to features - put them into temporary image
     {
         ocl::Kernel k("findCorners", ocl::imgproc::gftt_oclsrc,
-                      format(haveMask ? "-D HAVE_MASK" : ""));
+                      format("-D OP_FIND_CORNERS%s", haveMask ? " -D HAVE_MASK" : ""));
         if (k.empty())
             return false;
 
         UMat counter(1, 1, CV_32SC1, Scalar::all(0)),
-                corners(1, (int)(possibleCornersCount * sizeof(Corner)), CV_8UC1);
+            corners(1, (int)possibleCornersCount, CV_32FC2, Scalar::all(-1));
+        CV_Assert(sizeof(Corner) == corners.elemSize());
+
         ocl::KernelArg eigarg = ocl::KernelArg::ReadOnlyNoSize(eig),
-                tmparg = ocl::KernelArg::ReadOnlyNoSize(tmp),
                 cornersarg = ocl::KernelArg::PtrWriteOnly(corners),
-                counterarg = ocl::KernelArg::PtrReadWrite(counter);
+                counterarg = ocl::KernelArg::PtrReadWrite(counter),
+                thresholdarg = ocl::KernelArg::PtrReadOnly(maxEigenValue);
 
         if (!haveMask)
-            k.args(eigarg, tmparg, cornersarg, counterarg,
-                   imgsize.height - 2, imgsize.width - 2);
+            k.args(eigarg, cornersarg, counterarg,
+                   eig.rows - 2, eig.cols - 2, thresholdarg,
+                   (int)possibleCornersCount);
         else
         {
             UMat mask = _mask.getUMat();
-            k.args(eigarg, ocl::KernelArg::ReadOnlyNoSize(mask), tmparg,
-                   cornersarg, counterarg, imgsize.height - 2, imgsize.width - 2);
+            k.args(eigarg, ocl::KernelArg::ReadOnlyNoSize(mask),
+                   cornersarg, counterarg, eig.rows - 2, eig.cols - 2,
+                   thresholdarg, (int)possibleCornersCount);
         }
 
-        size_t globalsize[2] = { imgsize.width - 2, imgsize.height - 2 };
+        size_t globalsize[2] = { eig.cols - 2, eig.rows - 2 };
         if (!k.run(2, globalsize, NULL, false))
             return false;
 
-        total = counter.getMat(ACCESS_READ).at<int>(0, 0);
-        int totalb = (int)(sizeof(Corner) * total);
-
+        total = std::min<size_t>(counter.getMat(ACCESS_READ).at<int>(0, 0), possibleCornersCount);
         tmpCorners.resize(total);
-        Mat mcorners(1, totalb, CV_8UC1, &tmpCorners[0]);
-        corners.colRange(0, totalb).copyTo(mcorners);
-    }
 
-    std::sort( tmpCorners.begin(), tmpCorners.end() );
+        Mat mcorners(1, (int)total, CV_32FC2, &tmpCorners[0]);
+        corners.colRange(0, (int)total).copyTo(mcorners);
+    }
+    std::sort(tmpCorners.begin(), tmpCorners.end());
+
     std::vector<Point2f> corners;
     corners.reserve(total);
 
@@ -159,13 +202,13 @@ static bool ocl_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             // boundary check
             x1 = std::max(0, x1);
             y1 = std::max(0, y1);
-            x2 = std::min(grid_width-1, x2);
-            y2 = std::min(grid_height-1, y2);
+            x2 = std::min(grid_width - 1, x2);
+            y2 = std::min(grid_height - 1, y2);
 
             for( int yy = y1; yy <= y2; yy++ )
                 for( int xx = x1; xx <= x2; xx++ )
                 {
-                    std::vector<Point2f> &m = grid[yy*grid_width + xx];
+                    std::vector<Point2f> &m = grid[yy * grid_width + xx];
 
                     if( m.size() )
                     {
@@ -259,8 +302,8 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                 tmpCorners.push_back(eig_data + x);
         }
     }
-
     std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
+
     std::vector<Point2f> corners;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
