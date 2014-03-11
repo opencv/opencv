@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<Image_Threshold_NonMaxSupression_FAST--FAST----gpu-perf-aloe-png---20--false->
+<Image_Threshold_NonMaxSuppression_FAST--FAST----gpu-perf-aloe-png---20--false->
   <gpu_keypoints-pt>
     <kind>65536</kind>
     <type>13</type>
@@ -103,8 +103,8 @@
     <rng2>
       <x>0</x>
       <y>48633</y>
-      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSupression_FAST--FAST----gpu-perf-aloe-png---20--false->
-<Image_Threshold_NonMaxSupression_FAST--FAST----gpu-perf-aloe-png---20--true->
+      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSuppression_FAST--FAST----gpu-perf-aloe-png---20--false->
+<Image_Threshold_NonMaxSuppression_FAST--FAST----gpu-perf-aloe-png---20--true->
   <gpu_keypoints-pt>
     <kind>65536</kind>
     <type>13</type>
@@ -208,7 +208,7 @@
     <rng2>
       <x>0</x>
       <y>1535</y>
-      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSupression_FAST--FAST----gpu-perf-aloe-png---20--true->
+      <val>-1.</val></rng2></gpu_keypoints-class_id></Image_Threshold_NonMaxSuppression_FAST--FAST----gpu-perf-aloe-png---20--true->
 <Image_NFeatures_ORB--ORB----gpu-perf-aloe-png---4000->
   <gpu_keypoints-pt>
     <kind>65536</kind>
