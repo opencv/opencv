@@ -398,7 +398,7 @@ This 3D Widget defines a cone. ::
     {
     public:
         //! create default cone, oriented along x-axis with center of its base located at origin
-        WCone(double lenght, double radius, int resolution = 6.0, const Color &color = Color::white());
+        WCone(double length, double radius, int resolution = 6.0, const Color &color = Color::white());
 
         //! creates repositioned cone
         WCone(double radius, const Point3d& center, const Point3d& tip, int resolution = 6.0, const Color &color = Color::white());
