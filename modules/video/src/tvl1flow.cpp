@@ -73,7 +73,14 @@
 */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 #include <limits>
+#include <iomanip>
+#include <iostream>
+#include "opencv2/core/opencl/ocl_defs.hpp"
+
+
 
 using namespace cv;
 
@@ -105,40 +112,228 @@ protected:
 private:
     void procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2);
 
-    std::vector<Mat_<float> > I0s;
-    std::vector<Mat_<float> > I1s;
-    std::vector<Mat_<float> > u1s;
-    std::vector<Mat_<float> > u2s;
+    bool procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2);
 
-    Mat_<float> I1x_buf;
-    Mat_<float> I1y_buf;
+    bool calc_ocl(InputArray I0, InputArray I1, InputOutputArray flow);
+    struct dataMat
+    {
+        std::vector<Mat_<float> > I0s;
+        std::vector<Mat_<float> > I1s;
+        std::vector<Mat_<float> > u1s;
+        std::vector<Mat_<float> > u2s;
 
-    Mat_<float> flowMap1_buf;
-    Mat_<float> flowMap2_buf;
+        Mat_<float> I1x_buf;
+        Mat_<float> I1y_buf;
 
-    Mat_<float> I1w_buf;
-    Mat_<float> I1wx_buf;
-    Mat_<float> I1wy_buf;
+        Mat_<float> flowMap1_buf;
+        Mat_<float> flowMap2_buf;
 
-    Mat_<float> grad_buf;
-    Mat_<float> rho_c_buf;
+        Mat_<float> I1w_buf;
+        Mat_<float> I1wx_buf;
+        Mat_<float> I1wy_buf;
 
-    Mat_<float> v1_buf;
-    Mat_<float> v2_buf;
+        Mat_<float> grad_buf;
+        Mat_<float> rho_c_buf;
 
-    Mat_<float> p11_buf;
-    Mat_<float> p12_buf;
-    Mat_<float> p21_buf;
-    Mat_<float> p22_buf;
+        Mat_<float> v1_buf;
+        Mat_<float> v2_buf;
 
-    Mat_<float> div_p1_buf;
-    Mat_<float> div_p2_buf;
+        Mat_<float> p11_buf;
+        Mat_<float> p12_buf;
+        Mat_<float> p21_buf;
+        Mat_<float> p22_buf;
 
-    Mat_<float> u1x_buf;
-    Mat_<float> u1y_buf;
-    Mat_<float> u2x_buf;
-    Mat_<float> u2y_buf;
+        Mat_<float> div_p1_buf;
+        Mat_<float> div_p2_buf;
+
+        Mat_<float> u1x_buf;
+        Mat_<float> u1y_buf;
+        Mat_<float> u2x_buf;
+        Mat_<float> u2y_buf;
+    } dm;
+    struct dataUMat
+    {
+        std::vector<UMat> I0s;
+        std::vector<UMat> I1s;
+        std::vector<UMat> u1s;
+        std::vector<UMat> u2s;
+
+        UMat I1x_buf;
+        UMat I1y_buf;
+
+        UMat I1w_buf;
+        UMat I1wx_buf;
+        UMat I1wy_buf;
+
+        UMat grad_buf;
+        UMat rho_c_buf;
+
+        UMat p11_buf;
+        UMat p12_buf;
+        UMat p21_buf;
+        UMat p22_buf;
+
+        UMat diff_buf;
+        UMat norm_buf;
+    } dum;
 };
+
+namespace cv_ocl_tvl1flow
+{
+    bool centeredGradient(const UMat &src, UMat &dx, UMat &dy);
+
+    bool warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UMat &I1y,
+        UMat &u1, UMat &u2, UMat &I1w, UMat &I1wx, UMat &I1wy,
+        UMat &grad, UMat &rho);
+
+    bool estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
+        UMat &rho_c, UMat &p11, UMat &p12,
+        UMat &p21, UMat &p22, UMat &u1,
+        UMat &u2, UMat &error, float l_t, float theta, char calc_error);
+
+    bool estimateDualVariables(UMat &u1, UMat &u2,
+        UMat &p11, UMat &p12, UMat &p21, UMat &p22, float taut);
+}
+
+bool cv_ocl_tvl1flow::centeredGradient(const UMat &src, UMat &dx, UMat &dy)
+{
+    size_t globalsize[2] = { src.cols, src.rows };
+
+    ocl::Kernel kernel;
+    if (!kernel.create("centeredGradientKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
+        return false;
+
+    int idxArg = 0;
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(src));//src mat
+    idxArg = kernel.set(idxArg, (int)(src.cols));//src mat col
+    idxArg = kernel.set(idxArg, (int)(src.rows));//src mat rows
+    idxArg = kernel.set(idxArg, (int)(src.step / src.elemSize()));//src mat step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dx));//res mat dx
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(dy));//res mat dy
+    idxArg = kernel.set(idxArg, (int)(dx.step/dx.elemSize()));//res mat step
+    return kernel.run(2, globalsize, NULL, false);
+}
+
+bool cv_ocl_tvl1flow::warpBackward(const UMat &I0, const UMat &I1, UMat &I1x, UMat &I1y,
+    UMat &u1, UMat &u2, UMat &I1w, UMat &I1wx, UMat &I1wy,
+    UMat &grad, UMat &rho)
+{
+    size_t globalsize[2] = { I0.cols, I0.rows };
+
+    ocl::Kernel kernel;
+    if (!kernel.create("warpBackwardKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
+        return false;
+
+    int idxArg = 0;
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(I0));//I0 mat
+    int I0_step = (int)(I0.step / I0.elemSize());
+    idxArg = kernel.set(idxArg, I0_step);//I0_step
+    idxArg = kernel.set(idxArg, (int)(I0.cols));//I0_col
+    idxArg = kernel.set(idxArg, (int)(I0.rows));//I0_row
+    ocl::Image2D imageI1(I1);
+    ocl::Image2D imageI1x(I1x);
+    ocl::Image2D imageI1y(I1y);
+    idxArg = kernel.set(idxArg, imageI1);//image2d_t tex_I1
+    idxArg = kernel.set(idxArg, imageI1x);//image2d_t tex_I1x
+    idxArg = kernel.set(idxArg, imageI1y);//image2d_t tex_I1y
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(u1));//const float* u1
+    idxArg = kernel.set(idxArg, (int)(u1.step / u1.elemSize()));//int u1_step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(u2));//const float* u2
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(I1w));///float* I1w
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(I1wx));//float* I1wx
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(I1wy));//float* I1wy
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(grad));//float* grad
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(rho));//float* rho
+    idxArg = kernel.set(idxArg, (int)(I1w.step / I1w.elemSize()));//I1w_step
+    idxArg = kernel.set(idxArg, (int)(u2.step / u2.elemSize()));//u2_step
+    int u1_offset_x = (int)((u1.offset) % (u1.step));
+    u1_offset_x = (int)(u1_offset_x / u1.elemSize());
+    idxArg = kernel.set(idxArg, (int)u1_offset_x );//u1_offset_x
+    idxArg = kernel.set(idxArg, (int)(u1.offset/u1.step));//u1_offset_y
+    int u2_offset_x = (int)((u2.offset) % (u2.step));
+    u2_offset_x = (int) (u2_offset_x / u2.elemSize());
+    idxArg = kernel.set(idxArg, (int)u2_offset_x);//u2_offset_x
+    idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step));//u2_offset_y
+    return kernel.run(2, globalsize, NULL, false);
+}
+
+bool cv_ocl_tvl1flow::estimateU(UMat &I1wx, UMat &I1wy, UMat &grad,
+    UMat &rho_c, UMat &p11, UMat &p12,
+    UMat &p21, UMat &p22, UMat &u1,
+    UMat &u2, UMat &error, float l_t, float theta, char calc_error)
+{
+    size_t globalsize[2] = { I1wx.cols, I1wx.rows };
+
+    ocl::Kernel kernel;
+    if (!kernel.create("estimateUKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
+        return false;
+
+    int idxArg = 0;
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(I1wx)); //const float* I1wx
+    idxArg = kernel.set(idxArg, (int)(I1wx.cols)); //int I1wx_col
+    idxArg = kernel.set(idxArg, (int)(I1wx.rows)); //int I1wx_row
+    idxArg = kernel.set(idxArg, (int)(I1wx.step/I1wx.elemSize())); //int I1wx_step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(I1wy)); //const float* I1wy
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(grad)); //const float* grad
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(rho_c)); //const float* rho_c
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(p11)); //const float* p11
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(p12)); //const float* p12
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(p21)); //const float* p21
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(p22)); //const float* p22
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(u1)); //float* u1
+    idxArg = kernel.set(idxArg, (int)(u1.step / u1.elemSize())); //int u1_step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(u2)); //float* u2
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrWriteOnly(error)); //float* error
+    idxArg = kernel.set(idxArg, (float)l_t); //float l_t
+    idxArg = kernel.set(idxArg, (float)theta); //float theta
+    idxArg = kernel.set(idxArg, (int)(u2.step / u2.elemSize()));//int u2_step
+    int u1_offset_x = (int)(u1.offset % u1.step);
+    u1_offset_x = (int) (u1_offset_x  / u1.elemSize());
+    idxArg = kernel.set(idxArg, (int)u1_offset_x); //int u1_offset_x
+    idxArg = kernel.set(idxArg, (int)(u1.offset/u1.step)); //int u1_offset_y
+    int u2_offset_x = (int)(u2.offset % u2.step);
+    u2_offset_x = (int)(u2_offset_x / u2.elemSize());
+    idxArg = kernel.set(idxArg, (int)u2_offset_x ); //int u2_offset_x
+    idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
+    idxArg = kernel.set(idxArg, (char)calc_error);    //char calc_error
+
+    return kernel.run(2, globalsize, NULL, false);
+}
+
+bool cv_ocl_tvl1flow::estimateDualVariables(UMat &u1, UMat &u2,
+    UMat &p11, UMat &p12, UMat &p21, UMat &p22, float taut)
+{
+    size_t globalsize[2] = { u1.cols, u1.rows };
+
+    ocl::Kernel kernel;
+    if (!kernel.create("estimateDualVariablesKernel", cv::ocl::video::optical_flow_tvl1_oclsrc, ""))
+        return false;
+
+    int idxArg = 0;
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(u1));// const float* u1
+    idxArg = kernel.set(idxArg, (int)(u1.cols)); //int u1_col
+    idxArg = kernel.set(idxArg, (int)(u1.rows)); //int u1_row
+    idxArg = kernel.set(idxArg, (int)(u1.step/u1.elemSize())); //int u1_step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(u2)); // const float* u2
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(p11)); // float* p11
+    idxArg = kernel.set(idxArg, (int)(p11.step/p11.elemSize())); //int p11_step
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(p12)); // float* p12
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(p21)); // float* p21
+    idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(p22)); // float* p22
+    idxArg = kernel.set(idxArg, (float)(taut));    //float taut
+    idxArg = kernel.set(idxArg, (int)(u2.step/u2.elemSize())); //int u2_step
+    int u1_offset_x = (int)(u1.offset % u1.step);
+    u1_offset_x = (int)(u1_offset_x / u1.elemSize());
+    idxArg = kernel.set(idxArg, u1_offset_x); //int u1_offset_x
+    idxArg = kernel.set(idxArg, (int)(u1.offset / u1.step)); //int u1_offset_y
+    int u2_offset_x = (int)(u2.offset % u2.step);
+    u2_offset_x = (int)(u2_offset_x / u2.elemSize());
+    idxArg = kernel.set(idxArg, u2_offset_x); //int u2_offset_x
+    idxArg = kernel.set(idxArg, (int)(u2.offset / u2.step)); //int u2_offset_y
+
+    return kernel.run(2, globalsize, NULL, false);
+
+}
 
 OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 {
@@ -157,6 +352,8 @@ OpticalFlowDual_TVL1::OpticalFlowDual_TVL1()
 
 void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray _flow)
 {
+    CV_OCL_RUN(_flow.isUMat(), calc_ocl(_I0, _I1, _flow))
+
     Mat I0 = _I0.getMat();
     Mat I1 = _I1.getMat();
 
@@ -167,59 +364,59 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
     CV_Assert( nscales > 0 );
 
     // allocate memory for the pyramid structure
-    I0s.resize(nscales);
-    I1s.resize(nscales);
-    u1s.resize(nscales);
-    u2s.resize(nscales);
+    dm.I0s.resize(nscales);
+    dm.I1s.resize(nscales);
+    dm.u1s.resize(nscales);
+    dm.u2s.resize(nscales);
 
-    I0.convertTo(I0s[0], I0s[0].depth(), I0.depth() == CV_8U ? 1.0 : 255.0);
-    I1.convertTo(I1s[0], I1s[0].depth(), I1.depth() == CV_8U ? 1.0 : 255.0);
+    I0.convertTo(dm.I0s[0], dm.I0s[0].depth(), I0.depth() == CV_8U ? 1.0 : 255.0);
+    I1.convertTo(dm.I1s[0], dm.I1s[0].depth(), I1.depth() == CV_8U ? 1.0 : 255.0);
 
-    u1s[0].create(I0.size());
-    u2s[0].create(I0.size());
+    dm.u1s[0].create(I0.size());
+    dm.u2s[0].create(I0.size());
 
     if (useInitialFlow)
     {
-        Mat_<float> mv[] = {u1s[0], u2s[0]};
+        Mat_<float> mv[] = { dm.u1s[0], dm.u2s[0] };
         split(_flow.getMat(), mv);
     }
 
-    I1x_buf.create(I0.size());
-    I1y_buf.create(I0.size());
+    dm.I1x_buf.create(I0.size());
+    dm.I1y_buf.create(I0.size());
 
-    flowMap1_buf.create(I0.size());
-    flowMap2_buf.create(I0.size());
+    dm.flowMap1_buf.create(I0.size());
+    dm.flowMap2_buf.create(I0.size());
 
-    I1w_buf.create(I0.size());
-    I1wx_buf.create(I0.size());
-    I1wy_buf.create(I0.size());
+    dm.I1w_buf.create(I0.size());
+    dm.I1wx_buf.create(I0.size());
+    dm.I1wy_buf.create(I0.size());
 
-    grad_buf.create(I0.size());
-    rho_c_buf.create(I0.size());
+    dm.grad_buf.create(I0.size());
+    dm.rho_c_buf.create(I0.size());
 
-    v1_buf.create(I0.size());
-    v2_buf.create(I0.size());
+    dm.v1_buf.create(I0.size());
+    dm.v2_buf.create(I0.size());
 
-    p11_buf.create(I0.size());
-    p12_buf.create(I0.size());
-    p21_buf.create(I0.size());
-    p22_buf.create(I0.size());
+    dm.p11_buf.create(I0.size());
+    dm.p12_buf.create(I0.size());
+    dm.p21_buf.create(I0.size());
+    dm.p22_buf.create(I0.size());
 
-    div_p1_buf.create(I0.size());
-    div_p2_buf.create(I0.size());
+    dm.div_p1_buf.create(I0.size());
+    dm.div_p2_buf.create(I0.size());
 
-    u1x_buf.create(I0.size());
-    u1y_buf.create(I0.size());
-    u2x_buf.create(I0.size());
-    u2y_buf.create(I0.size());
+    dm.u1x_buf.create(I0.size());
+    dm.u1y_buf.create(I0.size());
+    dm.u2x_buf.create(I0.size());
+    dm.u2y_buf.create(I0.size());
 
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
-        resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
+        resize(dm.I0s[s - 1], dm.I0s[s], Size(), scaleStep, scaleStep);
+        resize(dm.I1s[s - 1], dm.I1s[s], Size(), scaleStep, scaleStep);
 
-        if (I0s[s].cols < 16 || I0s[s].rows < 16)
+        if (dm.I0s[s].cols < 16 || dm.I0s[s].rows < 16)
         {
             nscales = s;
             break;
@@ -227,30 +424,30 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
 
         if (useInitialFlow)
         {
-            resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
-            resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
+            resize(dm.u1s[s - 1], dm.u1s[s], Size(), scaleStep, scaleStep);
+            resize(dm.u2s[s - 1], dm.u2s[s], Size(), scaleStep, scaleStep);
 
-            multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
-            multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
+            multiply(dm.u1s[s], Scalar::all(scaleStep), dm.u1s[s]);
+            multiply(dm.u2s[s], Scalar::all(scaleStep), dm.u2s[s]);
         }
         else
         {
-            u1s[s].create(I0s[s].size());
-            u2s[s].create(I0s[s].size());
+            dm.u1s[s].create(dm.I0s[s].size());
+            dm.u2s[s].create(dm.I0s[s].size());
         }
     }
 
     if (!useInitialFlow)
     {
-        u1s[nscales-1].setTo(Scalar::all(0));
-        u2s[nscales-1].setTo(Scalar::all(0));
+        dm.u1s[nscales - 1].setTo(Scalar::all(0));
+        dm.u2s[nscales - 1].setTo(Scalar::all(0));
     }
 
     // pyramidal structure for computing the optical flow
     for (int s = nscales - 1; s >= 0; --s)
     {
         // compute the optical flow at the current scale
-        procOneScale(I0s[s], I1s[s], u1s[s], u2s[s]);
+        procOneScale(dm.I0s[s], dm.I1s[s], dm.u1s[s], dm.u2s[s]);
 
         // if this was the last scale, finish now
         if (s == 0)
@@ -259,16 +456,116 @@ void OpticalFlowDual_TVL1::calc(InputArray _I0, InputArray _I1, InputOutputArray
         // otherwise, upsample the optical flow
 
         // zoom the optical flow for the next finer scale
-        resize(u1s[s], u1s[s - 1], I0s[s - 1].size());
-        resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
+        resize(dm.u1s[s], dm.u1s[s - 1], dm.I0s[s - 1].size());
+        resize(dm.u2s[s], dm.u2s[s - 1], dm.I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
-        multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
-        multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
+        multiply(dm.u1s[s - 1], Scalar::all(1 / scaleStep), dm.u1s[s - 1]);
+        multiply(dm.u2s[s - 1], Scalar::all(1 / scaleStep), dm.u2s[s - 1]);
     }
 
-    Mat uxy[] = {u1s[0], u2s[0]};
+    Mat uxy[] = { dm.u1s[0], dm.u2s[0] };
     merge(uxy, 2, _flow);
+}
+
+bool OpticalFlowDual_TVL1::calc_ocl(InputArray _I0, InputArray _I1, InputOutputArray _flow)
+{
+    UMat I0 = _I0.getUMat();
+    UMat I1 = _I1.getUMat();
+
+    CV_Assert(I0.type() == CV_8UC1 || I0.type() == CV_32FC1);
+    CV_Assert(I0.size() == I1.size());
+    CV_Assert(I0.type() == I1.type());
+    CV_Assert(!useInitialFlow || (_flow.size() == I0.size() && _flow.type() == CV_32FC2));
+    CV_Assert(nscales > 0);
+
+    // allocate memory for the pyramid structure
+    dum.I0s.resize(nscales);
+    dum.I1s.resize(nscales);
+    dum.u1s.resize(nscales);
+    dum.u2s.resize(nscales);
+    //I0s_step == I1s_step
+    double alpha = I0.depth() == CV_8U ? 1.0 : 255.0;
+
+    I0.convertTo(dum.I0s[0], CV_32F, alpha);
+    I1.convertTo(dum.I1s[0], CV_32F, I1.depth() == CV_8U ? 1.0 : 255.0);
+
+    dum.u1s[0].create(I0.size(), CV_32FC1);
+    dum.u2s[0].create(I0.size(), CV_32FC1);
+
+    if (useInitialFlow)
+    {
+        std::vector<UMat> umv;
+        umv.push_back(dum.u1s[0]);
+        umv.push_back(dum.u2s[0]);
+        cv::split(_flow,umv);
+    }
+
+    dum.I1x_buf.create(I0.size(), CV_32FC1);
+    dum.I1y_buf.create(I0.size(), CV_32FC1);
+
+    dum.I1w_buf.create(I0.size(), CV_32FC1);
+    dum.I1wx_buf.create(I0.size(), CV_32FC1);
+    dum.I1wy_buf.create(I0.size(), CV_32FC1);
+
+    dum.grad_buf.create(I0.size(), CV_32FC1);
+    dum.rho_c_buf.create(I0.size(), CV_32FC1);
+
+    dum.p11_buf.create(I0.size(), CV_32FC1);
+    dum.p12_buf.create(I0.size(), CV_32FC1);
+    dum.p21_buf.create(I0.size(), CV_32FC1);
+    dum.p22_buf.create(I0.size(), CV_32FC1);
+
+    dum.diff_buf.create(I0.size(), CV_32FC1);
+
+    // create the scales
+    for (int s = 1; s < nscales; ++s)
+    {
+        resize(dum.I0s[s - 1], dum.I0s[s], Size(), scaleStep, scaleStep);
+        resize(dum.I1s[s - 1], dum.I1s[s], Size(), scaleStep, scaleStep);
+
+        if (dum.I0s[s].cols < 16 || dum.I0s[s].rows < 16)
+        {
+            nscales = s;
+            break;
+        }
+
+        if (useInitialFlow)
+        {
+            resize(dum.u1s[s - 1], dum.u1s[s], Size(), scaleStep, scaleStep);
+            resize(dum.u2s[s - 1], dum.u2s[s], Size(), scaleStep, scaleStep);
+
+            //scale by scale factor
+            multiply(dum.u1s[s], Scalar::all(scaleStep), dum.u1s[s]);
+            multiply(dum.u2s[s], Scalar::all(scaleStep), dum.u2s[s]);
+        }
+    }
+
+    // pyramidal structure for computing the optical flow
+    for (int s = nscales - 1; s >= 0; --s)
+    {
+        // compute the optical flow at the current scale
+        if (!OpticalFlowDual_TVL1::procOneScale_ocl(dum.I0s[s], dum.I1s[s], dum.u1s[s], dum.u2s[s]))
+            return false;
+
+        // if this was the last scale, finish now
+        if (s == 0)
+            break;
+
+        // zoom the optical flow for the next finer scale
+        resize(dum.u1s[s], dum.u1s[s - 1], dum.I0s[s - 1].size());
+        resize(dum.u2s[s], dum.u2s[s - 1], dum.I0s[s - 1].size());
+
+        // scale the optical flow with the appropriate zoom factor
+        multiply(dum.u1s[s - 1], Scalar::all(1 / scaleStep), dum.u1s[s - 1]);
+        multiply(dum.u2s[s - 1], Scalar::all(1 / scaleStep), dum.u2s[s - 1]);
+    }
+
+    std::vector<UMat> uxy;
+    uxy.push_back(dum.u1s[0]);
+    uxy.push_back(dum.u2s[0]);
+    merge(uxy, _flow);
+    return true;
 }
 
 ////////////////////////////////////////////////////////////
@@ -803,6 +1100,94 @@ void estimateDualVariables(const Mat_<float>& u1x, const Mat_<float>& u1y, const
     parallel_for_(Range(0, u1x.rows), body);
 }
 
+bool OpticalFlowDual_TVL1::procOneScale_ocl(const UMat& I0, const UMat& I1, UMat& u1, UMat& u2)
+{
+    using namespace cv_ocl_tvl1flow;
+
+    const double scaledEpsilon = epsilon * epsilon * I0.size().area();
+
+    CV_DbgAssert(I1.size() == I0.size());
+    CV_DbgAssert(I1.type() == I0.type());
+    CV_DbgAssert(u1.empty() || u1.size() == I0.size());
+    CV_DbgAssert(u2.size() == u1.size());
+
+    if (u1.empty())
+    {
+        u1.create(I0.size(), CV_32FC1);
+        u1.setTo(Scalar::all(0));
+
+        u2.create(I0.size(), CV_32FC1);
+        u2.setTo(Scalar::all(0));
+    }
+
+    UMat I1x = dum.I1x_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat I1y = dum.I1y_buf(Rect(0, 0, I0.cols, I0.rows));
+
+    if (!centeredGradient(I1, I1x, I1y))
+        return false;
+
+    UMat I1w = dum.I1w_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat I1wx = dum.I1wx_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat I1wy = dum.I1wy_buf(Rect(0, 0, I0.cols, I0.rows));
+
+    UMat grad = dum.grad_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat rho_c = dum.rho_c_buf(Rect(0, 0, I0.cols, I0.rows));
+
+    UMat p11 = dum.p11_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat p12 = dum.p12_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat p21 = dum.p21_buf(Rect(0, 0, I0.cols, I0.rows));
+    UMat p22 = dum.p22_buf(Rect(0, 0, I0.cols, I0.rows));
+    p11.setTo(Scalar::all(0));
+    p12.setTo(Scalar::all(0));
+    p21.setTo(Scalar::all(0));
+    p22.setTo(Scalar::all(0));
+
+    UMat diff = dum.diff_buf(Rect(0, 0, I0.cols, I0.rows));
+
+    const float l_t = static_cast<float>(lambda * theta);
+    const float taut = static_cast<float>(tau / theta);
+    int n;
+
+    for (int warpings = 0; warpings < warps; ++warpings)
+    {
+        if (!warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c))
+            return false;
+
+        double error = std::numeric_limits<double>::max();
+        double prev_error = 0;
+
+        for (int n_outer = 0; error > scaledEpsilon && n_outer < outerIterations; ++n_outer)
+        {
+            if (medianFiltering > 1) {
+                cv::medianBlur(u1, u1, medianFiltering);
+                cv::medianBlur(u2, u2, medianFiltering);
+            }
+            for (int n_inner = 0; error > scaledEpsilon && n_inner < innerIterations; ++n_inner)
+            {
+                // some tweaks to make sum operation less frequently
+                n = n_inner + n_outer*innerIterations;
+                char calc_error = (n & 0x1) && (prev_error < scaledEpsilon);
+                if (!estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22,
+                    u1, u2, diff, l_t, static_cast<float>(theta), calc_error))
+                    return false;
+                if (calc_error)
+                {
+                    error = cv::sum(diff)[0];
+                    prev_error = error;
+                }
+                else
+                {
+                    error = std::numeric_limits<double>::max();
+                    prev_error -= scaledEpsilon;
+                }
+                if (!estimateDualVariables(u1, u2, p11, p12, p21, p22, taut))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
 void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>& I1, Mat_<float>& u1, Mat_<float>& u2)
 {
     const float scaledEpsilon = static_cast<float>(epsilon * epsilon * I0.size().area());
@@ -812,39 +1197,39 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
     CV_DbgAssert( u1.size() == I0.size() );
     CV_DbgAssert( u2.size() == u1.size() );
 
-    Mat_<float> I1x = I1x_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> I1y = I1y_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> I1x = dm.I1x_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> I1y = dm.I1y_buf(Rect(0, 0, I0.cols, I0.rows));
     centeredGradient(I1, I1x, I1y);
 
-    Mat_<float> flowMap1 = flowMap1_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> flowMap2 = flowMap2_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> flowMap1 = dm.flowMap1_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> flowMap2 = dm.flowMap2_buf(Rect(0, 0, I0.cols, I0.rows));
 
-    Mat_<float> I1w = I1w_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> I1wx = I1wx_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> I1wy = I1wy_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> I1w = dm.I1w_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> I1wx = dm.I1wx_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> I1wy = dm.I1wy_buf(Rect(0, 0, I0.cols, I0.rows));
 
-    Mat_<float> grad = grad_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> rho_c = rho_c_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> grad = dm.grad_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> rho_c = dm.rho_c_buf(Rect(0, 0, I0.cols, I0.rows));
 
-    Mat_<float> v1 = v1_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> v2 = v2_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> v1 = dm.v1_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> v2 = dm.v2_buf(Rect(0, 0, I0.cols, I0.rows));
 
-    Mat_<float> p11 = p11_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> p12 = p12_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> p21 = p21_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> p22 = p22_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p11 = dm.p11_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p12 = dm.p12_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p21 = dm.p21_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> p22 = dm.p22_buf(Rect(0, 0, I0.cols, I0.rows));
     p11.setTo(Scalar::all(0));
     p12.setTo(Scalar::all(0));
     p21.setTo(Scalar::all(0));
     p22.setTo(Scalar::all(0));
 
-    Mat_<float> div_p1 = div_p1_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> div_p2 = div_p2_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> div_p1 = dm.div_p1_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> div_p2 = dm.div_p2_buf(Rect(0, 0, I0.cols, I0.rows));
 
-    Mat_<float> u1x = u1x_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> u1y = u1y_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> u2x = u2x_buf(Rect(0, 0, I0.cols, I0.rows));
-    Mat_<float> u2y = u2y_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u1x = dm.u1x_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u1y = dm.u1y_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u2x = dm.u2x_buf(Rect(0, 0, I0.cols, I0.rows));
+    Mat_<float> u2y = dm.u2y_buf(Rect(0, 0, I0.cols, I0.rows));
 
     const float l_t = static_cast<float>(lambda * theta);
     const float taut = static_cast<float>(tau / theta);
@@ -891,40 +1276,66 @@ void OpticalFlowDual_TVL1::procOneScale(const Mat_<float>& I0, const Mat_<float>
 
 void OpticalFlowDual_TVL1::collectGarbage()
 {
-    I0s.clear();
-    I1s.clear();
-    u1s.clear();
-    u2s.clear();
+    //dataMat structure dm
+    dm.I0s.clear();
+    dm.I1s.clear();
+    dm.u1s.clear();
+    dm.u2s.clear();
 
-    I1x_buf.release();
-    I1y_buf.release();
+    dm.I1x_buf.release();
+    dm.I1y_buf.release();
 
-    flowMap1_buf.release();
-    flowMap2_buf.release();
+    dm.flowMap1_buf.release();
+    dm.flowMap2_buf.release();
 
-    I1w_buf.release();
-    I1wx_buf.release();
-    I1wy_buf.release();
+    dm.I1w_buf.release();
+    dm.I1wx_buf.release();
+    dm.I1wy_buf.release();
 
-    grad_buf.release();
-    rho_c_buf.release();
+    dm.grad_buf.release();
+    dm.rho_c_buf.release();
 
-    v1_buf.release();
-    v2_buf.release();
+    dm.v1_buf.release();
+    dm.v2_buf.release();
 
-    p11_buf.release();
-    p12_buf.release();
-    p21_buf.release();
-    p22_buf.release();
+    dm.p11_buf.release();
+    dm.p12_buf.release();
+    dm.p21_buf.release();
+    dm.p22_buf.release();
 
-    div_p1_buf.release();
-    div_p2_buf.release();
+    dm.div_p1_buf.release();
+    dm.div_p2_buf.release();
 
-    u1x_buf.release();
-    u1y_buf.release();
-    u2x_buf.release();
-    u2y_buf.release();
+    dm.u1x_buf.release();
+    dm.u1y_buf.release();
+    dm.u2x_buf.release();
+    dm.u2y_buf.release();
+
+    //dataUMat structure dum
+    dum.I0s.clear();
+    dum.I1s.clear();
+    dum.u1s.clear();
+    dum.u2s.clear();
+
+    dum.I1x_buf.release();
+    dum.I1y_buf.release();
+
+    dum.I1w_buf.release();
+    dum.I1wx_buf.release();
+    dum.I1wy_buf.release();
+
+    dum.grad_buf.release();
+    dum.rho_c_buf.release();
+
+    dum.p11_buf.release();
+    dum.p12_buf.release();
+    dum.p21_buf.release();
+    dum.p22_buf.release();
+
+    dum.diff_buf.release();
+    dum.norm_buf.release();
 }
+
 
 CV_INIT_ALGORITHM(OpticalFlowDual_TVL1, "DenseOpticalFlow.DualTVL1",
                   obj.info()->addParam(obj, "tau", obj.tau, false, 0, 0,

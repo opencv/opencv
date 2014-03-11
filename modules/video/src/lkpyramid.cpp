@@ -952,16 +952,6 @@ namespace cv
             block.z = patch.z = 1;
         }
 
-        #define SAFE_KERNEL_SET_ARG(idx, arg) \
-        {\
-            int idxNew = kernel.set(idx, arg);\
-            if (-1 == idxNew)\
-            {\
-                printf("lkSparse_run can't setup argument index = %d to kernel\n", idx);\
-                return false;\
-            }\
-            idx = idxNew;\
-        }
         bool lkSparse_run(UMat &I, UMat &J, const UMat &prevPts, UMat &nextPts, UMat &status, UMat& err,
             int ptcount, int level)
         {
@@ -982,7 +972,6 @@ namespace cv
             ocl::Image2D imageI(I);
             ocl::Image2D imageJ(J);
             int idxArg = 0;
-#if 0
             idxArg = kernel.set(idxArg, imageI); //image2d_t I
             idxArg = kernel.set(idxArg, imageJ); //image2d_t J
             idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(prevPts)); // __global const float2* prevPts
@@ -1000,26 +989,6 @@ namespace cv
             idxArg = kernel.set(idxArg, (int)winSize.height); // int c_winSize_y
             idxArg = kernel.set(idxArg, (int)iters); // int c_iters
             idxArg = kernel.set(idxArg, (char)calcErr); //char calcErr
-#else
-            SAFE_KERNEL_SET_ARG(idxArg, imageI); //image2d_t I
-            SAFE_KERNEL_SET_ARG(idxArg, imageJ); //image2d_t J
-            SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadOnly(prevPts)); // __global const float2* prevPts
-            SAFE_KERNEL_SET_ARG(idxArg, (int)prevPts.step); // int prevPtsStep
-            SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(nextPts)); // __global const float2* nextPts
-            SAFE_KERNEL_SET_ARG(idxArg, (int)nextPts.step); //  int nextPtsStep
-            SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(status)); // __global uchar* status
-            SAFE_KERNEL_SET_ARG(idxArg, ocl::KernelArg::PtrReadWrite(err)); // __global float* err
-            SAFE_KERNEL_SET_ARG(idxArg, (int)level); // const int level
-            SAFE_KERNEL_SET_ARG(idxArg, (int)I.rows); // const int rows
-            SAFE_KERNEL_SET_ARG(idxArg, (int)I.cols); // const int cols
-            SAFE_KERNEL_SET_ARG(idxArg, (int)patch.x); // int PATCH_X
-            SAFE_KERNEL_SET_ARG(idxArg, (int)patch.y); // int PATCH_Y
-            SAFE_KERNEL_SET_ARG(idxArg, (int)winSize.width); // int c_winSize_x
-            SAFE_KERNEL_SET_ARG(idxArg, (int)winSize.height); // int c_winSize_y
-            SAFE_KERNEL_SET_ARG(idxArg, (int)iters); // int c_iters
-            SAFE_KERNEL_SET_ARG(idxArg, (char)calcErr); //char calcErr
-#endif
-
             return kernel.run(2, globalThreads, localThreads, true);
         }
     private:
