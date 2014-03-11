@@ -517,10 +517,10 @@ protected:
 
 //! detects corners using FAST algorithm by E. Rosten
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSupression=true );
+                      int threshold, bool nonmaxSuppression=true );
 
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSupression, int type );
+                      int threshold, bool nonmaxSuppression, int type );
 
 class CV_EXPORTS_W FastFeatureDetector : public FeatureDetector
 {

@@ -24,7 +24,7 @@ Class used for corner detection using the FAST algorithm. ::
         // all features have same size
         static const int FEATURE_SIZE = 7;
 
-        explicit FAST_CUDA(int threshold, bool nonmaxSupression = true,
+        explicit FAST_CUDA(int threshold, bool nonmaxSuppression = true,
                           double keypointsRatio = 0.05);
 
         void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
@@ -39,7 +39,7 @@ Class used for corner detection using the FAST algorithm. ::
 
         void release();
 
-        bool nonmaxSupression;
+        bool nonmaxSuppression;
 
         int threshold;
 
@@ -61,11 +61,11 @@ cuda::FAST_CUDA::FAST_CUDA
 --------------------------
 Constructor.
 
-.. ocv:function:: cuda::FAST_CUDA::FAST_CUDA(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05)
+.. ocv:function:: cuda::FAST_CUDA::FAST_CUDA(int threshold, bool nonmaxSuppression = true, double keypointsRatio = 0.05)
 
     :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel.
 
-    :param nonmaxSupression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
+    :param nonmaxSuppression: If it is true, non-maximum suppression is applied to detected corners (keypoints).
 
     :param keypointsRatio: Inner buffer size for keypoints store is determined as (keypointsRatio * image_width * image_height).
 
@@ -115,7 +115,7 @@ Releases inner buffer memory.
 
 cuda::FAST_CUDA::calcKeyPointsLocation
 --------------------------------------
-Find keypoints and compute it's response if ``nonmaxSupression`` is true.
+Find keypoints and compute it's response if ``nonmaxSuppression`` is true.
 
 .. ocv:function:: int cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
 
@@ -185,7 +185,7 @@ Class for extracting ORB features and descriptors from an image. ::
         int descriptorSize() const;
 
         void setParams(size_t n_features, const ORB::CommonParams& detector_params);
-        void setFastParams(int threshold, bool nonmaxSupression = true);
+        void setFastParams(int threshold, bool nonmaxSuppression = true);
 
         void release();
 

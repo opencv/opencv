@@ -139,7 +139,7 @@ PERF_TEST_P(Image, HoughLinesP,
     const float rho = 1.0f;
     const float theta = static_cast<float>(CV_PI / 180.0);
     const int threshold = 100;
-    const int minLineLenght = 50;
+    const int minLineLength = 50;
     const int maxLineGap = 5;
 
     const cv::Mat image = cv::imread(fileName, cv::IMREAD_GRAYSCALE);
@@ -153,7 +153,7 @@ PERF_TEST_P(Image, HoughLinesP,
         const cv::cuda::GpuMat d_mask(mask);
         cv::cuda::GpuMat d_lines;
 
-        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, minLineLength, maxLineGap);
 
         TEST_CYCLE() hough->detect(d_mask, d_lines);
 
@@ -167,7 +167,7 @@ PERF_TEST_P(Image, HoughLinesP,
     {
         std::vector<cv::Vec4i> cpu_lines;
 
-        TEST_CYCLE() cv::HoughLinesP(mask, cpu_lines, rho, theta, threshold, minLineLenght, maxLineGap);
+        TEST_CYCLE() cv::HoughLinesP(mask, cpu_lines, rho, theta, threshold, minLineLength, maxLineGap);
 
         SANITY_CHECK(cpu_lines);
     }
