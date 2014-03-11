@@ -44,6 +44,7 @@ if __name__ == "__main__":
     parser.add_option("", "--match", dest="match", default=None)
     parser.add_option("", "--match-replace", dest="match_replace", default="")
     parser.add_option("", "--regressions-only", dest="regressionsOnly", default=None, metavar="X-FACTOR", help="show only tests with performance regressions not")
+    parser.add_option("", "--intersect-logs", dest="intersect_logs", default=False, help="show only tests present in all log files")
     (options, args) = parser.parse_args()
 
     options.generateHtml = detectHtmlOutputType(options.format)
@@ -162,6 +163,10 @@ if __name__ == "__main__":
         for i in range(setsCount):
             case = cases[i]
             if case is None:
+                if options.intersect_logs:
+                    needNewRow = False
+                    break
+
                 tbl.newCell(str(i), "-")
                 if options.calc_relatives and i > 0:
                     tbl.newCell(str(i) + "%", "-")
