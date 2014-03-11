@@ -22,14 +22,6 @@ enum
     CTA_SIZE = 256
 };
 
-static inline int getNearestPowerOf2OpenCL(int value)
-{
-    int p = 0;
-    while (1 << p < value)
-        ++p;
-    return p;
-}
-
 static int divUp(int a, int b)
 {
     return (a + b - 1) / b;
@@ -51,7 +43,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
     // additional optimization of precalced weights to replace division(averaging) by binary shift
     CV_Assert(templateWindowSize <= 46340); // sqrt(INT_MAX)
     int templateWindowSizeSq = templateWindowSize * templateWindowSize;
-    almostTemplateWindowSizeSqBinShift = getNearestPowerOf2OpenCL(templateWindowSizeSq);
+    almostTemplateWindowSizeSqBinShift = getNearestPowerOf2(templateWindowSizeSq);
     FT almostDist2ActualDistMultiplier = (FT)(1 << almostTemplateWindowSizeSqBinShift) / templateWindowSizeSq;
 
     const FT WEIGHT_THRESHOLD = 1e-3f;
@@ -77,10 +69,10 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight, int searchWindow
 static bool ocl_fastNlMeansDenoising(InputArray _src, OutputArray _dst, float h,
                                      int templateWindowSize, int searchWindowSize)
 {
-    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), cn = CV_MAT_CN(type);
     Size size = _src.size();
 
-    if ( !(depth == CV_8U && cn <= 4 && cn != 3) )
+    if ( type != CV_8UC1 || type != CV_8UC2 || type != CV_8UC4 )
         return false;
 
     int templateWindowHalfWize = templateWindowSize / 2;

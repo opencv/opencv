@@ -34,11 +34,20 @@ PARAM_TEST_CASE(FastNlMeansDenoisingTestBase, Channels, bool)
 
     virtual void generateTestData()
     {
+        Mat image;
+        if (cn == 1)
+        {
+            image = readImage("denoising/lena_noised_gaussian_sigma=10.png", IMREAD_GRAYSCALE);
+            ASSERT_FALSE(image.empty());
+        }
+
         const int type = CV_8UC(cn);
 
-        Size roiSize = randomSize(1, MAX_VALUE);
+        Size roiSize = cn == 1 ? image.size() : randomSize(1, MAX_VALUE);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(src, src_roi, roiSize, srcBorder, type, 0, 255);
+        if (cn == 1)
+            image.copyTo(src_roi);
 
         Border dstBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, roiSize, dstBorder, type, 0, 255);
