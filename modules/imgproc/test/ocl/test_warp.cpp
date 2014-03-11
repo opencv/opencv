@@ -342,7 +342,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarpResizeArea, Resize, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
-                            Values(1, 4),
+                            Values(1, 3, 4),
                             Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType)),
@@ -355,7 +355,7 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_LINEAR, Combine(
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                             Values(CV_8U, CV_16U, CV_32F),
-                            Values(1, 4),
+                            Values(1, 3, 4),
                             Values(std::pair<MatType, MatType>((MatType)CV_32FC1, (MatType)CV_32FC1),
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
