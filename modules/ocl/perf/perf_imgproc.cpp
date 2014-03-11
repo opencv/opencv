@@ -81,6 +81,45 @@ OCL_PERF_TEST_P(EqualizeHistFixture, EqualizeHist, OCL_TEST_SIZES)
         OCL_PERF_ELSE
 }
 
+///////////// CalcHist ////////////////////////
+
+typedef TestBaseWithParam<Size> CalcHistFixture;
+
+OCL_PERF_TEST_P(CalcHistFixture, CalcHist, OCL_TEST_SIZES)
+{
+    const Size srcSize = GetParam();
+    const std::vector<int> channels(1, 0);
+    std::vector<float> ranges(2);
+    std::vector<int> histSize(1, 256);
+    ranges[0] = 0;
+    ranges[1] = 256;
+
+    Mat src(srcSize, CV_8UC1), dst(srcSize, CV_32FC1);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32SC1);
+
+        OCL_TEST_CYCLE() cv::ocl::calcHist(oclSrc, oclDst);
+
+        oclDst.download(dst);
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::calcHist(std::vector<Mat>(1, src), channels,
+                                  noArray(), dst, histSize, ranges, false);
+
+        dst.convertTo(dst, CV_32S);
+        dst = dst.reshape(1, 1);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
 /////////// CopyMakeBorder //////////////////////
 
 CV_ENUM(Border, BORDER_CONSTANT, BORDER_REPLICATE, BORDER_REFLECT, BORDER_WRAP, BORDER_REFLECT_101)
