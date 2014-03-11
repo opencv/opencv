@@ -279,10 +279,9 @@
     storedst(v > (dstT)(0) ? log(v) : log(-v))
 
 #elif defined OP_CMP
-#define dstT uchar
 #define srcT2 srcT1
 #define convertToWT1
-#define PROCESS_ELEM storedst(convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0))
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0)))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS

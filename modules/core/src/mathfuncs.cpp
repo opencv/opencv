@@ -63,7 +63,7 @@ static const char* oclop2str[] = { "OP_LOG", "OP_EXP", "OP_MAG", "OP_PHASE_DEGRE
 static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, int oclop)
 {
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    int kercn = cn == 3 || cn > 4 || oclop == OCL_OP_PHASE_DEGREES ||
+    int kercn = oclop == OCL_OP_PHASE_DEGREES ||
             oclop == OCL_OP_PHASE_RADIANS ? 1 : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
 
     bool double_support = ocl::Device::getDefault().doubleFPConfig() > 0;

@@ -2624,16 +2624,23 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), type2 = _src2.type();
-    if (!doubleSupport && (depth == CV_64F || _src2.depth() == CV_64F))
+    if ( (!doubleSupport && (depth == CV_64F || _src2.depth() == CV_64F)) ||
+        !_src1.sameSize(_src2) || type != type2)
         return false;
 
+    int kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
+    char cvt[40];
+
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D srcT1=%s -D workT=srcT1 -D cn=1"
-                         " -D OP_CMP -D CMP_OPERATOR=%s%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
-                         operationMap[op],
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                  format("-D BINARY_OP -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
+                         " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s%s -D srcT1_C1=%s"
+                         " -D srcT2_C1=%s -D dstT_C1=%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(CV_8UC(kercn)), kercn,
+                         ocl::convertTypeStr(depth, CV_8U, kercn, cvt),
+                         operationMap[op], doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), ocl::typeToStr(CV_8U)));
     if (k.empty())
         return false;
 
@@ -2647,9 +2654,9 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
            ocl::KernelArg::ReadOnlyNoSize(src2),
-           ocl::KernelArg::WriteOnly(dst, cn));
+           ocl::KernelArg::WriteOnly(dst, cn, kercn));
 
-    size_t globalsize[2] = { dst.cols * cn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 

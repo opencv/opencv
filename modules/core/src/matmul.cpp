@@ -2158,7 +2158,7 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
-            kercn = cn == 3 || cn > 4 ? 1 : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     Size size = _src1.size();
 
