@@ -596,9 +596,16 @@ protected:
         CV_Assert(this != currentContext);
 
 #ifdef CL_VERSION_1_2
-        if (supportsFeature(FEATURE_CL_VER_1_2))
+#ifdef WIN32
+        // if process is on termination stage (ExitProcess was called and other threads were terminated)
+        // then disable device release because it may cause program hang
+        if (!__termination)
+#endif
         {
-            openCLSafeCall(clReleaseDevice(clDeviceID));
+            if (supportsFeature(FEATURE_CL_VER_1_2))
+            {
+                openCLSafeCall(clReleaseDevice(clDeviceID));
+            }
         }
 #endif
         if (deviceInfoImpl._id < 0) // not in the global registry, so we should cleanup it
@@ -617,7 +624,7 @@ protected:
 
 #ifdef WIN32
         // if process is on termination stage (ExitProcess was called and other threads were terminated)
-        // then disable command queue release because it may cause program hang
+        // then disable context release because it may cause program hang
         if (!__termination)
 #endif
         {
