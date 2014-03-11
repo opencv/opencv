@@ -2893,10 +2893,7 @@ static inline int divUp(int a, int b)
 static bool ocl_transpose( InputArray _src, OutputArray _dst )
 {
     const int TILE_DIM = 32, BLOCK_ROWS = 8;
-    int type = _src.type(), cn = CV_MAT_CN(type);
-
-    if (cn == 3)
-        return false;
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
 
     UMat src = _src.getUMat();
     _dst.create(src.cols, src.rows, type);
@@ -2912,8 +2909,9 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
     }
 
     ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
-                  format("-D T=%s -D TILE_DIM=%d -D BLOCK_ROWS=%d",
-                         ocl::memopTypeToStr(type), TILE_DIM, BLOCK_ROWS));
+                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d",
+                         ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth),
+                         cn, TILE_DIM, BLOCK_ROWS));
     if (k.empty())
         return false;
 
