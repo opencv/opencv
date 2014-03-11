@@ -1311,7 +1311,7 @@ static BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
 static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, double beta )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
-            kercn = cn > 4 || cn == 3 ? 1 : ocl::predictOptimalVectorWidth(_src, _dst);
+        kercn = ocl::predictOptimalVectorWidth(_src, _dst);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if (!doubleSupport && depth == CV_64F)
