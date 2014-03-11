@@ -935,7 +935,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
 
     if( oclop < 0 || ((haveMask || haveScalar) && cn > 4) ||
-            (!doubleSupport && srcdepth == CV_64F))
+            (!doubleSupport && srcdepth == CV_64F && !bitwise))
         return false;
 
     char opts[1024];
@@ -945,11 +945,11 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     sprintf(opts, "-D %s%s -D %s -D dstT=%s%s -D dstT_C1=%s -D workST=%s -D cn=%d",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"), oclop2str[oclop],
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, kercn)) :
-            ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                ocl::typeToStr(CV_MAKETYPE(srcdepth, kercn)), doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, 1)) :
-            ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
+                ocl::typeToStr(CV_MAKETYPE(srcdepth, 1)),
             bitwise ? ocl::memopTypeToStr(CV_MAKETYPE(srcdepth, scalarcn)) :
-            ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
+                ocl::typeToStr(CV_MAKETYPE(srcdepth, scalarcn)),
             kercn);
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, opts);
