@@ -1489,17 +1489,16 @@ static LUTFunc lutTab[] =
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
+static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst,
+                    int dcn, int lcn, int depth, int ldepth)
 {
-    int dtype = _dst.type(), lcn = _lut.channels(), dcn = CV_MAT_CN(dtype), ddepth = CV_MAT_DEPTH(dtype);
-
     UMat src = _src.getUMat(), lut = _lut.getUMat();
-    _dst.create(src.size(), dtype);
+    _dst.create(src.size(), CV_MAKE_TYPE(ldepth, dcn));
     UMat dst = _dst.getUMat();
 
     ocl::Kernel k("LUT", ocl::core::lut_oclsrc,
-                  format("-D dcn=%d -D lcn=%d -D srcT=%s -D dstT=%s", dcn, lcn,
-                         ocl::typeToStr(src.depth()), ocl::memopTypeToStr(ddepth)));
+                  format("-D dcn=%d -D lcn=%d -D lmem_size=%d -D srcT=%s -D dstT=%s",
+                         dcn, lcn, lcn << 8, ocl::typeToStr(depth), ocl::memopTypeToStr(ldepth)));
     if (k.empty())
         return false;
 
@@ -1516,18 +1515,18 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
-    int cn = _src.channels(), depth = _src.depth();
-    int lutcn = _lut.channels();
+    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
+            ltype = _lut.type(), ldepth = CV_MAT_DEPTH(ltype), lutcn = CV_MAT_CN(ltype);
 
     CV_Assert( (lutcn == cn || lutcn == 1) &&
         _lut.total() == 256 && _lut.isContinuous() &&
         (depth == CV_8U || depth == CV_8S) );
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
-               ocl_LUT(_src, _lut, _dst))
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && _lut.size() == Size(256, 1),
+               ocl_LUT(_src, _lut, _dst, cn, lutcn, depth, ldepth))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
-    _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
+    _dst.create(src.dims, src.size, CV_MAKETYPE(ldepth, cn));
     Mat dst = _dst.getMat();
 
     LUTFunc func = lutTab[lut.depth()];

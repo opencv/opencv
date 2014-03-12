@@ -40,6 +40,14 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+    int lid = mad24(get_local_id(1), get_local_size(0), get_local_id(0));
+    int grain = get_local_size(0) * get_local_size(1);
+
+    __local dstT lut[lmem_size];
+
+    for (int i = lid; i < lmem_size; i += grain)
+        lut[i] = *(__global const dstT *)(lutptr + mad24(i, (int)sizeof(dstT), lut_offset));
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if (x < cols && y < rows)
     {
@@ -47,7 +55,6 @@ __kernel void LUT(__global const uchar * srcptr, int src_step, int src_offset,
         int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(dstT) * dcn, dst_offset));
 
         __global const srcT * src = (__global const srcT *)(srcptr + src_index);
-        __global const dstT * lut = (__global const dstT *)(lutptr + lut_offset);
         __global dstT * dst = (__global dstT *)(dstptr + dst_index);
 
 #if lcn == 1
