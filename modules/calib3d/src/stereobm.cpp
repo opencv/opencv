@@ -743,9 +743,9 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     int wsz = state->SADWindowSize;
     int wsz2 = wsz/2;
 
-    int sizeX = 9, sizeY = sizeX-1, N = ndisp*2;
+    int sizeX = 13, sizeY = sizeX-1, N = ndisp*2;
 
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d", (2*sizeY)*ndisp, 2*ndisp, wsz) );
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d -D iters=%d", (2*sizeY)*ndisp, 2*ndisp, wsz, sizeX*sizeY/2) );
     if(k.empty())
         return false;
 
@@ -754,7 +754,7 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
 
     _disp.create(_left.size(), CV_16S);
     _disp.setTo((mindisp - 1)<<4);
-    Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-1-wsz2-mindisp, rows-1-wsz2) );
+    Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-wsz2-mindisp, rows-wsz2) );
     UMat disp = (_disp.getUMat())(roi);
 
     int globalX = disp.cols/sizeX, globalY = disp.rows/sizeY;
@@ -776,6 +776,7 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     idx = k.set(idx, state->uniquenessRatio);
     idx = k.set(idx, sizeX);
     idx = k.set(idx, sizeY);
+    idx = k.set(idx, wsz);
 
     return k.run(3, globalThreads, localThreads, false);
 }
