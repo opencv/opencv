@@ -376,7 +376,7 @@ public:
         // processing time (in this case there should be possibility to interrupt such a function
         FAIL_HANG=-13,
 
-        // unexpected responce on passing bad arguments to the tested function
+        // unexpected response on passing bad arguments to the tested function
         // (the function crashed, proceed succesfully (while it should not), or returned
         // error code that is different from what is expected)
         FAIL_BAD_ARG_CHECK=-14,

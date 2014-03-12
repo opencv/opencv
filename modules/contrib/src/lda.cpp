@@ -224,7 +224,7 @@ Mat subspaceReconstruct(InputArray _W, InputArray _mean, InputArray _src)
         String error_message = format("Wrong mean shape for the given eigenvector matrix. Expected %d, but was %d.", W.cols, mean.total());
         CV_Error(Error::StsBadArg, error_message);
     }
-    // initalize temporary matrices
+    // initialize temporary matrices
     Mat X, Y;
     // copy data & make sure we are using the correct type
     src.convertTo(Y, W.type());
