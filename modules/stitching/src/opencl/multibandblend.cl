@@ -222,7 +222,7 @@
 
 #define workType TYPE(weight_T1, src_CN)
 #define convertSrcToWorkType CONVERT_TO(workType)
-#define convertWorkTypeToDstType CONVERT(workType, dst_T)
+#define convertToDstType CONVERT_TO(dst_T) // sat_rte provides incompatible results with CPU path
 
 __kernel void feed(
         DECLARE_MAT_ARG(src), DECLARE_MAT_ARG(weight),
@@ -241,7 +241,7 @@ __kernel void feed(
 
         weight_T w = LOAD_MAT_AT(weight, weight_byteOffset);
         workType src_value = convertSrcToWorkType(LOAD_MAT_AT(src, src_byteOffset));
-        STORE_MAT_AT(dst, dst_byteOffset, LOAD_MAT_AT(dst, dst_byteOffset) + convertWorkTypeToDstType(src_value * w));
+        STORE_MAT_AT(dst, dst_byteOffset, LOAD_MAT_AT(dst, dst_byteOffset) + convertToDstType(src_value * w));
         STORE_MAT_AT(dstWeight, dstWeight_byteOffset, LOAD_MAT_AT(dstWeight, dstWeight_byteOffset) + w);
     }
 }
@@ -252,7 +252,7 @@ __kernel void feed(
 
 #define workType TYPE(weight_T1, mat_CN)
 #define convertSrcToWorkType CONVERT_TO(workType)
-#define convertWorkTypeToDstType CONVERT(workType, mat_T)
+#define convertToDstType CONVERT_TO(mat_T) // sat_rte provides incompatible results with CPU path
 
 #if weight_DEPTH >= CV_32F
 #define WEIGHT_EPS 1e-5f
@@ -275,7 +275,7 @@ __kernel void normalizeUsingWeightMap(
         weight_T w = LOAD_MAT_AT(weight, weight_byteOffset);
         workType value = convertSrcToWorkType(LOAD_MAT_AT(mat, mat_byteOffset));
         value = value / (w + WEIGHT_EPS);
-        STORE_MAT_AT(mat, mat_byteOffset, convertWorkTypeToDstType(value));
+        STORE_MAT_AT(mat, mat_byteOffset, convertToDstType(value));
     }
 }
 
