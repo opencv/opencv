@@ -309,9 +309,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
     // so convert it to avoid user confusing
-    result.convertTo(pano_, CV_8U);
-
-    pano.assign(pano_);
+    result.convertTo(pano, CV_8U);
 
     return OK;
 }
@@ -456,7 +454,7 @@ Stitcher::Status Stitcher::estimateCameraParams()
         Mat R;
         cameras_[i].R.convertTo(R, CV_32F);
         cameras_[i].R = R;
-        LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
+        //LOGLN("Initial intrinsic parameters #" << indices_[i] + 1 << ":\n " << cameras_[i].K());
     }
 
     bundle_adjuster_->setConfThresh(conf_thresh_);
@@ -467,7 +465,7 @@ Stitcher::Status Stitcher::estimateCameraParams()
     std::vector<double> focals;
     for (size_t i = 0; i < cameras_.size(); ++i)
     {
-        LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
+        //LOGLN("Camera #" << indices_[i] + 1 << ":\n" << cameras_[i].K());
         focals.push_back(cameras_[i].focal);
     }
 
