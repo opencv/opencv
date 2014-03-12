@@ -119,9 +119,8 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
         const uchar* curr = sptr + srcstep*y;
         const uchar* next = sptr + srcstep*MIN(y+1,size.height-1);
         uchar* dptr = dst.ptr<uchar>(y);
-        x = 0;
 
-        for( ; x < size.width; x++ )
+        for( x = 0; x < size.width; x++ )
             vsum[x] = (ushort)(vsum[x] + bottom[x] - top[x]);
 
         for( x = 0; x <= wsz2; x++ )
