@@ -1232,6 +1232,13 @@ void FlannBasedMatcher::train()
 {
     if( !flannIndex || mergedDescriptors.size() < addedDescCount )
     {
+        // FIXIT: Workaround for 'utrainDescCollection' issue (PR #2142)
+        if (!utrainDescCollection.empty())
+        {
+            CV_Assert(trainDescCollection.size() == 0);
+            for (size_t i = 0; i < utrainDescCollection.size(); ++i)
+                trainDescCollection.push_back(utrainDescCollection[i].getMat(ACCESS_READ));
+        }
         mergedDescriptors.set( trainDescCollection );
         flannIndex = makePtr<flann::Index>( mergedDescriptors.getDescriptors(), *indexParams );
     }
