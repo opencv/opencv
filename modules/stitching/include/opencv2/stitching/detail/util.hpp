@@ -71,6 +71,7 @@
 #define LOG_(_level, _msg)                     \
     for(;;)                                    \
     {                                          \
+        using namespace std;                   \
         if ((_level) >= ::cv::detail::stitchingLogLevel()) \
         {                                      \
             LOG_STITCHING_MSG(_msg);           \
