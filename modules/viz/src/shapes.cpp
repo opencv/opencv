@@ -54,14 +54,16 @@ cv::viz::WLine::WLine(const Point3d &pt1, const Point3d &pt2, const Color &color
     line->SetPoint2(pt2.x, pt2.y, pt2.z);
     line->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = line->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, line->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WLine cv::viz::Widget::cast<cv::viz::WLine>()
@@ -83,14 +85,16 @@ cv::viz::WSphere::WSphere(const Point3d &center, double radius, int sphere_resol
     sphere->LatLongTessellationOff();
     sphere->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = sphere->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, sphere->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WSphere cv::viz::Widget::cast<cv::viz::WSphere>()
@@ -110,15 +114,17 @@ cv::viz::WPlane::WPlane(const Size2d& size, const Color &color)
     plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
     plane->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = plane->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, plane->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
     actor->GetProperty()->LightingOff();
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WPlane::WPlane(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis, const Size2d& size, const Color &color)
@@ -161,6 +167,7 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     Affine3d transform_with_scale(R * length, start_point);
 
     vtkSmartPointer<vtkPolyData> polydata = VtkUtils::TransformPolydata(arrow_source->GetOutputPort(), transform_with_scale);
+    VtkUtils::FillScalars(polydata, color);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
@@ -169,7 +176,6 @@ cv::viz::WArrow::WArrow(const Point3d& pt1, const Point3d& pt2, double thickness
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WArrow cv::viz::Widget::cast<cv::viz::WArrow>()
@@ -189,16 +195,17 @@ cv::viz::WCircle::WCircle(double radius, double thickness, const Color &color)
     disk->SetOuterRadius(radius + thickness);
     disk->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = disk->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, disk->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->GetProperty()->LightingOff();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
-
 }
 
 cv::viz::WCircle::WCircle(double radius, const Point3d& center, const Vec3d& normal, double thickness, const Color &color)
@@ -231,14 +238,16 @@ cv::viz::WCone::WCone(double length, double radius, int resolution, const Color 
     cone_source->SetResolution(resolution);
     cone_source->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = cone_source->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, cone_source->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WCone::WCone(double radius, const Point3d& center, const Point3d& tip, int resolution, const Color &color)
@@ -274,14 +283,16 @@ cv::viz::WCylinder::WCylinder(const Point3d& axis_point1, const Point3d& axis_po
     tuber->SetRadius(radius);
     tuber->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = tuber->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, tuber->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WCylinder cv::viz::Widget::cast<cv::viz::WCylinder>()
@@ -315,15 +326,16 @@ cv::viz::WCube::WCube(const Point3d& min_point, const Point3d& max_point, bool w
         vtkCubeSource::SafeDownCast(cube)->SetBounds(bounds);
     }
     cube->Update();
+    vtkSmartPointer<vtkPolyData> polydata =cube->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, cube->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WCube cv::viz::Widget::cast<cv::viz::WCube>()
@@ -379,40 +391,21 @@ template<> cv::viz::WCoordinateSystem cv::viz::Widget::cast<cv::viz::WCoordinate
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// polyline widget implementation
 
-cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
+cv::viz::WPolyLine::WPolyLine(InputArray points, InputArray colors)
 {
-    CV_Assert(_points.type() == CV_32FC3 || _points.type() == CV_32FC4 || _points.type() == CV_64FC3 || _points.type() == CV_64FC4);
+    vtkSmartPointer<vtkCloudMatSource> cloud_source = vtkSmartPointer<vtkCloudMatSource>::New();
+    cloud_source->SetColorCloud(points, colors);
+    cloud_source->Update();
 
-    const float *fpoints = _points.getMat().ptr<float>();
-    const double *dpoints = _points.getMat().ptr<double>();
-    size_t total = _points.total();
-    int s_chs = _points.channels();
-
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    points->SetDataType(_points.depth() == CV_32F ? VTK_FLOAT : VTK_DOUBLE);
-    points->SetNumberOfPoints(total);
-
-    if (_points.depth() == CV_32F)
-        for(size_t i = 0; i < total; ++i, fpoints += s_chs)
-            points->SetPoint(i, fpoints);
-
-    if (_points.depth() == CV_64F)
-        for(size_t i = 0; i < total; ++i, dpoints += s_chs)
-            points->SetPoint(i, dpoints);
+    vtkSmartPointer<vtkPolyData> polydata = cloud_source->GetOutput();
 
     vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
-    cell_array->Allocate(cell_array->EstimateSize(1, total));
-    cell_array->InsertNextCell(total);
-    for(size_t i = 0; i < total; ++i)
+    cell_array->Allocate(cell_array->EstimateSize(1, polydata->GetNumberOfPoints()));
+    cell_array->InsertNextCell(polydata->GetNumberOfPoints());
+    for(vtkIdType i = 0; i < polydata->GetNumberOfPoints(); ++i)
         cell_array->InsertCellPoint(i);
 
-    vtkSmartPointer<vtkUnsignedCharArray> scalars =  VtkUtils::FillScalars(total, color);
-
-    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints(points);
     polydata->SetLines(cell_array);
-    polydata->GetPointData()->SetScalars(scalars);
-
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
     mapper->SetScalarRange(0, 255);
@@ -421,6 +414,12 @@ cv::viz::WPolyLine::WPolyLine(InputArray _points, const Color &color)
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
+}
+
+cv::viz::WPolyLine::WPolyLine(InputArray points, const Color &color)
+{
+    WPolyLine polyline(points, Mat(points.size(), CV_8UC3, color));
+    *this = polyline;
 }
 
 template<> cv::viz::WPolyLine cv::viz::Widget::cast<cv::viz::WPolyLine>()
@@ -450,14 +449,16 @@ cv::viz::WGrid::WGrid(const Vec2i &cells, const Vec2d &cells_spacing, const Colo
     VtkUtils::SetInputData(extract_edges, grid_data);
     extract_edges->Update();
 
+    vtkSmartPointer<vtkPolyData> polydata = extract_edges->GetOutput();
+    VtkUtils::FillScalars(polydata, color);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    VtkUtils::SetInputData(mapper, extract_edges->GetOutput());
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WGrid::WGrid(const Point3d& center, const Vec3d& normal, const Vec3d& new_yaxis, const Vec2i &cells, const Vec2d &cells_spacing, const Color &color)
@@ -807,6 +808,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const 
     double aspect_ratio = f_y / f_x;
 
     vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
+    VtkUtils::FillScalars(polydata, color);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
@@ -815,7 +817,6 @@ cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, double scale, const 
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const Color &color)
@@ -824,6 +825,7 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
     double fovy = fov[1] * 180 / CV_PI;
 
     vtkSmartPointer<vtkPolyData> polydata = CameraPositionUtils::createFrustum(aspect_ratio, fovy, scale);
+    VtkUtils::FillScalars(polydata, color);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     VtkUtils::SetInputData(mapper, polydata);
@@ -832,7 +834,6 @@ cv::viz::WCameraPosition::WCameraPosition(const Vec2d &fov, double scale, const 
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WCameraPosition::WCameraPosition(const Matx33d &K, InputArray _image, double scale, const Color &color)
@@ -967,6 +968,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Matx33
     source->SetTrajectory(_path);
 
     vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCameraPosition(K, scale));
+    VtkUtils::FillScalars(glyph, color);
 
     vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
     tensor_glyph->SetInputConnection(source->GetOutputPort());
@@ -984,7 +986,6 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Matx33
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d &fov, double scale, const Color &color)
@@ -993,6 +994,7 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d 
     source->SetTrajectory(_path);
 
     vtkSmartPointer<vtkPolyData> glyph = getPolyData(WCameraPosition(fov, scale));
+    VtkUtils::FillScalars(glyph, color);
 
     vtkSmartPointer<vtkTensorGlyph> tensor_glyph = vtkSmartPointer<vtkTensorGlyph>::New();
     tensor_glyph->SetInputConnection(source->GetOutputPort());
@@ -1010,7 +1012,6 @@ cv::viz::WTrajectoryFrustums::WTrajectoryFrustums(InputArray _path, const Vec2d 
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WTrajectoryFrustums cv::viz::Widget::cast<cv::viz::WTrajectoryFrustums>()

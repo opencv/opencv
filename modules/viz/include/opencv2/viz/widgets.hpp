@@ -201,6 +201,7 @@ namespace cv
         class CV_EXPORTS WPolyLine : public Widget3D
         {
         public:
+            WPolyLine(InputArray points, InputArray colors);
             WPolyLine(InputArray points, const Color &color = Color::white());
         };
 
@@ -345,6 +346,8 @@ namespace cv
             void addCloud(InputArray cloud, InputArray colors, const Affine3d &pose = Affine3d::Identity());
             //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3d &pose = Affine3d::Identity());
+            //! Repacks internal structure to single cloud
+            void finalize();
         };
 
         class CV_EXPORTS WCloudNormals : public Widget3D
@@ -358,6 +361,18 @@ namespace cv
         public:
             WMesh(const Mesh &mesh);
             WMesh(InputArray cloud, InputArray polygons, InputArray colors = noArray(), InputArray normals = noArray());
+        };
+
+        class CV_EXPORTS WWidgetMerger : public Widget3D
+        {
+        public:
+            WWidgetMerger();
+
+            //! Add widget to merge with optional position change
+            void addWidget(const Widget3D& widget, const Affine3d &pose = Affine3d::Identity());
+
+            //! Repacks internal structure to single widget
+            void finalize();
         };
 
         /////////////////////////////////////////////////////////////////////////////
@@ -389,6 +404,7 @@ namespace cv
         template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
         template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
         template<> CV_EXPORTS WMesh Widget::cast<WMesh>();
+        template<> CV_EXPORTS WWidgetMerger Widget::cast<WWidgetMerger>();
 
     } /* namespace viz */
 } /* namespace cv */

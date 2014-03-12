@@ -38,75 +38,70 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 // Authors:
-//  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#include "precomp.hpp"
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#include <opencv2/core/version.hpp>
-#include <opencv2/viz/vizcore.hpp>
-
-namespace cv
+namespace cv { namespace viz
 {
-    Mat imread(const String& filename, int flags = 1);
+    vtkStandardNewMacro(vtkXYZReader);
+}}
+
+
+cv::viz::vtkXYZReader::vtkXYZReader()
+{
+    this->FileName = 0;
+    this->SetNumberOfInputPorts(0);
 }
 
-#if CV_MAJOR_VERSION < 3
-    #include "opencv2/ts/ts.hpp"
-#else
-    #include "opencv2/ts.hpp"
-#endif
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <limits>
-
-namespace cv
+cv::viz::vtkXYZReader::~vtkXYZReader()
 {
-    struct Path
-    {
-        static String combine(const String& item1, const String& item2);
-        static String combine(const String& item1, const String& item2, const String& item3);
-        static String change_extension(const String& file, const String& ext);
-    };
-
-    inline cv::String get_dragon_ply_file_path()
-    {
-        return Path::combine(cvtest::TS::ptr()->get_data_path(), "dragon.ply");
-    }
-
-    template<typename _Tp>
-    inline std::vector< Affine3<_Tp> > generate_test_trajectory()
-    {
-        std::vector< Affine3<_Tp> > result;
-
-        for (int i = 0, j = 0; i <= 270; i += 3, j += 10)
-        {
-            double x = 2 * cos(i * 3 * CV_PI/180.0) * (1.0 + 0.5 * cos(1.2 + i * 1.2 * CV_PI/180.0));
-            double y = 0.25 + i/270.0 + sin(j * CV_PI/180.0) * 0.2 * sin(0.6 + j * 1.5 * CV_PI/180.0);
-            double z = 2 * sin(i * 3 * CV_PI/180.0) * (1.0 + 0.5 * cos(1.2 + i * CV_PI/180.0));
-            result.push_back(viz::makeCameraPose(Vec3d(x, y, z), Vec3d::all(0.0), Vec3d(0.0, 1.0, 0.0)));
-        }
-        return result;
-    }
-
-    inline Mat make_gray(const Mat& image)
-    {
-        Mat chs[3]; split(image, chs);
-        return 0.114 * chs[0] + 0.58 * chs[1] + 0.3 * chs[2];
-    }
+    this->SetFileName(0);
 }
 
-#endif
+void cv::viz::vtkXYZReader::PrintSelf(ostream& os, vtkIndent indent)
+{
+    this->Superclass::PrintSelf(os,indent);
+    os << indent << "FileName: " << (this->FileName ? this->FileName : "(none)") << "\n";
+}
+
+int cv::viz::vtkXYZReader::RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector* outputVector)
+{
+    // Make sure we have a file to read.
+    if(!this->FileName)
+    {
+        vtkErrorMacro("A FileName must be specified.");
+        return 0;
+    }
+
+    // Open the input file.
+    ifstream fin(this->FileName);
+    if(!fin)
+    {
+        vtkErrorMacro("Error opening file " << this->FileName);
+        return 0;
+    }
+
+    // Allocate objects to hold points and vertex cells.
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> verts = vtkSmartPointer<vtkCellArray>::New();
+
+    // Read points from the file.
+    vtkDebugMacro("Reading points from file " << this->FileName);
+    double x[3];
+    while(fin >> x[0] >> x[1] >> x[2])
+    {
+        vtkIdType id = points->InsertNextPoint(x);
+        verts->InsertNextCell(1, &id);
+    }
+    vtkDebugMacro("Read " << points->GetNumberOfPoints() << " points.");
+
+    // Store the points and cells in the output data object.
+    vtkPolyData* output = vtkPolyData::GetData(outputVector);
+    output->SetPoints(points);
+    output->SetVerts(verts);
+
+    return 1;
+}
