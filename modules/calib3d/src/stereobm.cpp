@@ -122,7 +122,7 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
         
         for( x = 0; x < size.width; x++ )
             vsum[x] = (ushort)(vsum[x] + bottom[x] - top[x]);
-
+            
         for( x = 0; x <= wsz2; x++ )
         {
             vsum[-x-1] = vsum[0];
