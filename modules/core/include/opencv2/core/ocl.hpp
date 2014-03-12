@@ -169,8 +169,8 @@ public:
         VENDOR_NVIDIA=3
     };
     int vendorID() const;
-    inline bool isAMD() const { return vendorID() == VENDOR_AMD; };
-    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; };
+    inline bool isAMD() const { return vendorID() == VENDOR_AMD; }
+    inline bool isIntel() const { return vendorID() == VENDOR_INTEL; }
 
     int maxClockFrequency() const;
     int maxComputeUnits() const;
