@@ -484,6 +484,10 @@ macro(ocv_glob_module_sources)
   file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
+  file(GLOB_RECURSE lib_srcs_apple "src/*.mm")
+  if (APPLE)
+    list(APPEND lib_srcs ${lib_srcs_apple})
+  endif()
 
   file(GLOB lib_cuda_srcs "src/cuda/*.cu")
   set(cuda_objs "")
@@ -744,8 +748,8 @@ function(ocv_add_accuracy_tests)
       endif()
 
       get_native_precompiled_header(${the_target} test_precomp.hpp)
-
       add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
+
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
