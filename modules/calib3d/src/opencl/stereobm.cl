@@ -51,7 +51,7 @@
 #define MAX_VAL 32767
 
 void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRatio/*, int textureTreshold, short textsum*/,
-              int mindisp, int ndisp, int w, __local short * dispbuf, int d)
+              int mindisp, int ndisp, int w, __local short * dispbuf, int d, int x, int y, int cols, int rows, int wsz2)
 {
     short FILTERED = (mindisp - 1)<<4;
     short best_disp = FILTERED, best_cost = MAX_VAL-1;
@@ -73,6 +73,7 @@ void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRat
     }
     best_disp = ndisp - dispbuf[0] - 1;
     best_cost = costFunc[(ndisp-best_disp-1)*w];
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     int thresh = best_cost + (best_cost * uniquenessRatio/100);
     dispbuf[d] = ( (cost[d*w] <= thresh) && (d < (ndisp - best_disp - 2) || d > (ndisp - best_disp) ) ) ? FILTERED : best_disp;
@@ -90,7 +91,7 @@ void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRat
 
 //    best_disp = (textsum < textureTreshold) ? FILTERED : best_disp;
 
-    if( dispbuf[0] != FILTERED )
+    if( dispbuf[0] != FILTERED && x < cols-wsz2-mindisp && y < rows-wsz2)
     {
         cost = &costFunc[0] + (ndisp - best_disp - 1)*w;
         int y3 = ((ndisp - best_disp - 1) > 0) ? cost[-w] : cost[w],
@@ -179,68 +180,71 @@ __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar 
     cost = costFunc + costIdx;
 
     short tempcost = 0;
-    for(int i = 0; i < wsz; i++)
+    if(x < cols-wsz2-mindisp && y < rows-wsz2)
     {
-        int idx = mad24(y-wsz2+i*nthread, cols, x-wsz2+i*(1-nthread));
-        left = leftptr + idx;
-        right = rightptr + (idx - d);
-        short costdiff = 0;
+        for(int i = 0; i < wsz; i++)
+        {
+            int idx = mad24(y-wsz2+i*nthread, cols, x-wsz2+i*(1-nthread));
+            left = leftptr + idx;
+            right = rightptr + (idx - d);
+            short costdiff = 0;
 
-        for(int j = 0; j < wsz; j++)
-        {
-            costdiff += abs( left[0] - right[0] );
-            left += 1*nthread + cols*(1-nthread);
-            right += 1*nthread + cols*(1-nthread);// maybe use ? operator
+            for(int j = 0; j < wsz; j++)
+            {
+                costdiff += abs( left[0] - right[0] );
+                left += 1*nthread + cols*(1-nthread);
+                right += 1*nthread + cols*(1-nthread);// maybe use ? operator
+            }
+            if(nthread==1)
+            {
+                tempcost += costdiff;
+            }
+            costbuf[head] = costdiff;
+            head++;
         }
-        if(nthread==1)
-        {
-            tempcost += costdiff;
-        }
-        costbuf[head] = costdiff;
-        head++;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     cost[0] = tempcost;
 
-    if(x < cols-wsz2-mindisp && y < rows-wsz2 && nthread == 1)
-    {
-        int dispIdx = mad24(gy, disp_step, disp_offset + gx*(int)sizeof(short));
-        disp = (__global short *)(dispptr + dispIdx);
-        calcDisp(&costFunc[sizeY - 1 + lx - ly], disp, uniquenessRatio, /*textureTreshold, textsum,*/
-            mindisp, ndisp, 2*sizeY, &dispbuf[nthread*tsize/2], d);
-    }
+    int dispIdx = mad24(gy, disp_step, disp_offset + gx*(int)sizeof(short));
+    disp = (__global short *)(dispptr + dispIdx);
+    calcDisp(&costFunc[sizeY - 1 + lx - ly], disp, uniquenessRatio, /*textureTreshold, textsum,*/
+        mindisp, ndisp, 2*sizeY, &dispbuf[nthread*tsize/2], d, x, y, cols, rows, wsz2);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     lx = 1 - nthread;
     ly = nthread;
 
-    while(lx < sizeX && ly < sizeY )
+    while(lx < sizeX || ly < sizeY )
     {
-        x = gx + shiftX + lx;
-        y = gy + shiftY + ly;
+        x = (lx < sizeX) ? gx + shiftX + lx : cols;
+        y = (ly < sizeY) ? gy + shiftY + ly : rows;
 
         costIdx = calcLocalIdx(lx, ly, d, sizeY);
         cost = costFunc + costIdx;
-        cost[0] = ( ly*(1-nthread) + lx*nthread == 0 ) ?
-            calcCostBorder(leftptr, rightptr, x, y, nthread, wsz2, costbuf, &head, cols, d,
-                costFunc[calcLocalIdx(lx-1*(1-nthread), ly-1*nthread, d, sizeY)]) :
-            calcCostInside(leftptr, rightptr, x, y, wsz2, cols, d,
-                costFunc[calcLocalIdx(lx-1, ly-1, d, sizeY)],
-                costFunc[calcLocalIdx(lx, ly-1, d, sizeY)],
-                costFunc[calcLocalIdx(lx-1, ly, d, sizeY)]);
+        if(x < cols-wsz2-mindisp && y < rows-wsz2 )
+        {
+            cost[0] = ( ly*(1-nthread) + lx*nthread == 0 ) ?
+                calcCostBorder(leftptr, rightptr, x, y, nthread, wsz2, costbuf, &head, cols, d,
+                    costFunc[calcLocalIdx(lx-1*(1-nthread), ly-1*nthread, d, sizeY)]) :
+                calcCostInside(leftptr, rightptr, x, y, wsz2, cols, d,
+                    costFunc[calcLocalIdx(lx-1, ly-1, d, sizeY)],
+                    costFunc[calcLocalIdx(lx, ly-1, d, sizeY)],
+                    costFunc[calcLocalIdx(lx-1, ly, d, sizeY)]);
+        }
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        if(x < cols-mindisp-wsz2 && y < rows-wsz2)
-        {
-            int dispIdx = mad24(gy+ly, disp_step, disp_offset + (gx+lx)*(int)sizeof(short));
-            disp = (__global short *)(dispptr + dispIdx);
-            calcDisp(&costFunc[sizeY - 1 - ly + lx], disp, uniquenessRatio, //textureTreshold, textsum,
-                mindisp, ndisp, 2*sizeY, &dispbuf[nthread*tsize/2], d);
-        }
+        int dispIdx = mad24(gy+ly, disp_step, disp_offset + (gx+lx)*(int)sizeof(short));
+        disp = (__global short *)(dispptr + dispIdx);
+        calcDisp(&costFunc[sizeY - 1 - ly + lx], disp, uniquenessRatio, //textureTreshold, textsum,
+            mindisp, ndisp, 2*sizeY, &dispbuf[nthread*tsize/2], d, x, y, cols, rows, wsz2);
         barrier(CLK_LOCAL_MEM_FENCE);
 
         calcNewCoordinates(&lx, &ly, nthread);
     }
+
+
+
 }
 
 #endif
