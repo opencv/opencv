@@ -50,14 +50,12 @@
 
 #define MAX_VAL 32767
 
-void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRatio/*, int textureTreshold, short textsum*/,
+void calcDisp(__local short * cost, __global short * disp, int uniquenessRatio/*, int textureTreshold, short textsum*/,
               int mindisp, int ndisp, int w, __local short * dispbuf, int d, int x, int y, int cols, int rows, int wsz2)
 {
     short FILTERED = (mindisp - 1)<<4;
-    short best_disp = FILTERED, best_cost = MAX_VAL-1;
-    __local short * cost;
+    short best_disp, best_cost;
 
-    cost = &costFunc[0];
     dispbuf[d] = d;
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -72,28 +70,23 @@ void calcDisp(__local short * costFunc, __global short * disp, int uniquenessRat
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     best_disp = ndisp - dispbuf[0] - 1;
-    best_cost = costFunc[(ndisp-best_disp-1)*w];
+    best_cost = cost[(ndisp-best_disp-1)*w];
     barrier(CLK_LOCAL_MEM_FENCE);
 
     int thresh = best_cost + (best_cost * uniquenessRatio/100);
-    dispbuf[d] = ( (cost[d*w] <= thresh) && (d < (ndisp - best_disp - 2) || d > (ndisp - best_disp) ) ) ? FILTERED : best_disp;
+
+    bool notUniq = ( (cost[d*w] <= thresh) && (d < (ndisp - best_disp - 2) || d > (ndisp - best_disp) ) );
+
+    if(notUniq)
+        dispbuf[0] = FILTERED;
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for(int lsize = tsize/2 >> 1; lsize > 0; lsize >>= 1)
-    {
-        short val1 = dispbuf[d], val2 = dispbuf[d+lsize];
-        if (d < lsize)
-        {
-           dispbuf[d] = min(val1, val2);
-        }
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
 
 //    best_disp = (textsum < textureTreshold) ? FILTERED : best_disp;
 
     if( dispbuf[0] != FILTERED && x < cols-wsz2-mindisp && y < rows-wsz2)
     {
-        cost = &costFunc[0] + (ndisp - best_disp - 1)*w;
+        cost = &cost[0] + (ndisp - best_disp - 1)*w;
         int y3 = ((ndisp - best_disp - 1) > 0) ? cost[-w] : cost[w],
             y2 = cost[0],
             y1 = ((ndisp - best_disp - 1) < ndisp-1) ? cost[w] : cost[-w];
@@ -115,7 +108,7 @@ void calcNewCoordinates(int * x, int * y, int nthread)
 }
 
 short calcCostBorder(__global const uchar * leftptr, __global const uchar * rightptr, int x, int y, int nthread,
-                     int wsz2, short * costbuf, int * h, int cols, int d, short cost)
+                     int wsz2, short * costbuf, int * h, int cols, int d, short cost, int winsize)
 {
     int head = (*h)%wsz;
     __global const uchar * left, * right;
@@ -124,11 +117,12 @@ short calcCostBorder(__global const uchar * leftptr, __global const uchar * righ
     right = rightptr + (idx - d);
 
     short costdiff = 0;
-    for(int i = 0; i < wsz; i++)
+    for(int i = 0; i < winsize; i++)
     {
-            costdiff += abs( left[0] - right[0] );
-            left += 1*nthread + cols*(1-nthread);
-            right += 1*nthread + cols*(1-nthread);// maybe use ? operator
+        int shift = 1*nthread + cols*(1-nthread);
+        costdiff += abs( left[0] - right[0] );
+        left += shift;
+        right += shift;
     }
     cost += costdiff - costbuf[head];
     costbuf[head] = costdiff;
@@ -144,21 +138,25 @@ short calcCostInside(__global const uchar * leftptr, __global const uchar * righ
     left = leftptr + idx;
     right = rightptr + (idx - d);
 
-    return cost_up + cost_left - cost_up_left + abs(left[0] - right[0]) -
-        abs(left[wsz] - right[wsz]) - abs(left[(wsz)*cols] - right[(wsz)*cols]) +
-        abs(left[(wsz)*cols + wsz] - right[(wsz)*cols + wsz]);
+    uchar corrner1 = abs(left[0] - right[0]),
+          corrner2 = abs(left[wsz] - right[wsz]),
+          corrner3 = abs(left[(wsz)*cols] - right[(wsz)*cols]),
+          corrner4 = abs(left[(wsz)*cols + wsz] - right[(wsz)*cols + wsz]);
+
+    return cost_up + cost_left - cost_up_left + corrner1 -
+        corrner2 - corrner3 + corrner4;
 }
 
 __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar * rightptr, __global uchar * dispptr,
                        int disp_step, int disp_offset, int rows, int cols, int mindisp, int ndisp,
-                       int preFilterCap, int textureTreshold, int uniquenessRatio, int sizeX, int sizeY)
+                       int preFilterCap, int textureTreshold, int uniquenessRatio, int sizeX, int sizeY, int winsize)
 {
     int gx = get_global_id(0)*sizeX;
     int gy = get_global_id(1)*sizeY;
     int lz = get_local_id(2);
 
-    int nthread = lz/32;// only 0 or 1
-    int d = lz%32;// 1 .. 32
+    int nthread = lz/ndisp;// only 0 or 1
+    int d = lz%ndisp;// 1 .. ndisp
     int wsz2 = wsz/2;
 
     __global short * disp;
@@ -203,19 +201,22 @@ __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar 
             head++;
         }
     }
-    barrier(CLK_LOCAL_MEM_FENCE);
+    if(nthread==1)
+    {
     cost[0] = tempcost;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     int dispIdx = mad24(gy, disp_step, disp_offset + gx*(int)sizeof(short));
     disp = (__global short *)(dispptr + dispIdx);
-    calcDisp(&costFunc[sizeY - 1 + lx - ly], disp, uniquenessRatio, /*textureTreshold, textsum,*/
+    calcDisp(&costFunc[sizeY - 1 + lx - ly], disp, uniquenessRatio, //textureTreshold, textsum,
         mindisp, ndisp, 2*sizeY, &dispbuf[nthread*tsize/2], d, x, y, cols, rows, wsz2);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     lx = 1 - nthread;
     ly = nthread;
 
-    while(lx < sizeX || ly < sizeY )
+    for(int i = 0; i < iters; i++)
     {
         x = (lx < sizeX) ? gx + shiftX + lx : cols;
         y = (ly < sizeY) ? gy + shiftY + ly : rows;
@@ -226,7 +227,7 @@ __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar 
         {
             cost[0] = ( ly*(1-nthread) + lx*nthread == 0 ) ?
                 calcCostBorder(leftptr, rightptr, x, y, nthread, wsz2, costbuf, &head, cols, d,
-                    costFunc[calcLocalIdx(lx-1*(1-nthread), ly-1*nthread, d, sizeY)]) :
+                    costFunc[calcLocalIdx(lx-1*(1-nthread), ly-1*nthread, d, sizeY)], winsize) :
                 calcCostInside(leftptr, rightptr, x, y, wsz2, cols, d,
                     costFunc[calcLocalIdx(lx-1, ly-1, d, sizeY)],
                     costFunc[calcLocalIdx(lx, ly-1, d, sizeY)],
@@ -242,9 +243,6 @@ __kernel void stereoBM_opt(__global const uchar * leftptr, __global const uchar 
 
         calcNewCoordinates(&lx, &ly, nthread);
     }
-
-
-
 }
 
 #endif

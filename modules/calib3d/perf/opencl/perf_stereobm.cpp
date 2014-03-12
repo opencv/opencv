@@ -51,7 +51,7 @@ namespace ocl {
 typedef std::tr1::tuple<int, int> StereoBMFixture_t;
 typedef TestBaseWithParam<StereoBMFixture_t> StereoBMFixture;
 
-OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 64), OCL_PERF_ENUM(11,21) ) )
+OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 64, 128), OCL_PERF_ENUM(11,21) ) )
 {
     const int n_disp = get<0>(GetParam()), winSize = get<1>(GetParam());
     UMat left, right, disp;
