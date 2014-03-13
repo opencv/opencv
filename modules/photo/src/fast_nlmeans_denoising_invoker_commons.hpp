@@ -46,29 +46,35 @@ using namespace cv;
 
 template <typename T> static inline int calcDist(const T a, const T b);
 
-template <> inline int calcDist(const uchar a, const uchar b) {
+template <> inline int calcDist(const uchar a, const uchar b)
+{
     return (a-b) * (a-b);
 }
 
-template <> inline int calcDist(const Vec2b a, const Vec2b b) {
+template <> inline int calcDist(const Vec2b a, const Vec2b b)
+{
     return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]);
 }
 
-template <> inline int calcDist(const Vec3b a, const Vec3b b) {
+template <> inline int calcDist(const Vec3b a, const Vec3b b)
+{
     return (a[0]-b[0])*(a[0]-b[0]) + (a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]);
 }
 
-template <typename T> static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2) {
+template <typename T> static inline int calcDist(const Mat& m, int i1, int j1, int i2, int j2)
+{
     const T a = m.at<T>(i1, j1);
     const T b = m.at<T>(i2, j2);
     return calcDist<T>(a,b);
 }
 
-template <typename T> static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down) {
-    return calcDist(a_down,b_down) - calcDist(a_up, b_up);
+template <typename T> static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
+{
+    return calcDist(a_down, b_down) - calcDist(a_up, b_up);
 }
 
-template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uchar b_down) {
+template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uchar b_down)
+{
     int A = a_down - b_down;
     int B = a_up - b_up;
     return (A-B)*(A+B);
@@ -76,16 +82,37 @@ template <> inline int calcUpDownDist(uchar a_up, uchar a_down, uchar  b_up, uch
 
 template <typename T> static inline void incWithWeight(int* estimation, int weight, T p);
 
-template <> inline void incWithWeight(int* estimation, int weight, uchar p) {
+template <> inline void incWithWeight(int* estimation, int weight, uchar p)
+{
     estimation[0] += weight * p;
 }
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec2b p) {
+template <> inline void incWithWeight(int* estimation, int weight, Vec2b p)
+{
     estimation[0] += weight * p[0];
     estimation[1] += weight * p[1];
 }
 
-template <> inline void incWithWeight(int* estimation, int weight, Vec3b p) {
+template <> inline void incWithWeight(int* estimation, int weight, Vec3b p)
+{
+    estimation[0] += weight * p[0];
+    estimation[1] += weight * p[1];
+    estimation[2] += weight * p[2];
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, int p)
+{
+    estimation[0] += weight * p;
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, Vec2i p)
+{
+    estimation[0] += weight * p[0];
+    estimation[1] += weight * p[1];
+}
+
+template <> inline void incWithWeight(int* estimation, int weight, Vec3i p)
+{
     estimation[0] += weight * p[0];
     estimation[1] += weight * p[1];
     estimation[2] += weight * p[2];
@@ -93,23 +120,42 @@ template <> inline void incWithWeight(int* estimation, int weight, Vec3b p) {
 
 template <typename T> static inline T saturateCastFromArray(int* estimation);
 
-template <> inline uchar saturateCastFromArray(int* estimation) {
+template <> inline uchar saturateCastFromArray(int* estimation)
+{
     return saturate_cast<uchar>(estimation[0]);
 }
 
-template <> inline Vec2b saturateCastFromArray(int* estimation) {
+template <> inline Vec2b saturateCastFromArray(int* estimation)
+{
     Vec2b res;
     res[0] = saturate_cast<uchar>(estimation[0]);
     res[1] = saturate_cast<uchar>(estimation[1]);
     return res;
 }
 
-template <> inline Vec3b saturateCastFromArray(int* estimation) {
+template <> inline Vec3b saturateCastFromArray(int* estimation)
+{
     Vec3b res;
     res[0] = saturate_cast<uchar>(estimation[0]);
     res[1] = saturate_cast<uchar>(estimation[1]);
     res[2] = saturate_cast<uchar>(estimation[2]);
     return res;
+}
+
+template <> inline int saturateCastFromArray(int* estimation)
+{
+    return estimation[0];
+}
+
+template <> inline Vec2i saturateCastFromArray(int* estimation)
+{
+    estimation[1] = 0;
+    return Vec2i(estimation);
+}
+
+template <> inline Vec3i saturateCastFromArray(int* estimation)
+{
+    return Vec3i(estimation);
 }
 
 #endif
