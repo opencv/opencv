@@ -279,31 +279,30 @@
     storedst(v > (dstT)(0) ? log(v) : log(-v))
 
 #elif defined OP_CMP
-#define dstT uchar
 #define srcT2 srcT1
 #define convertToWT1
-#define PROCESS_ELEM storedst(convert_uchar(srcelem1 CMP_OPERATOR srcelem2 ? 255 : 0))
+#define PROCESS_ELEM storedst(convertToDT(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0)))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha, workT beta
+#define EXTRA_PARAMS , workT1 alpha, workT1 beta
 #if wdepth <= 4
 #define PROCESS_ELEM \
-    workT value = mad24(srcelem1, alpha, beta); \
+    workT value = mad24(srcelem1, (workT)(alpha), (workT)(beta)); \
     storedst(convertToDT(value >= 0 ? value : -value))
 #else
 #define PROCESS_ELEM \
-    workT value = mad(srcelem1, alpha, beta); \
+    workT value = mad(srcelem1, (workT)(alpha), (workT)(beta)); \
     storedst(convertToDT(value >= 0 ? value : -value))
 #endif
 
 #elif defined OP_SCALE_ADD
 #undef EXTRA_PARAMS
-#define EXTRA_PARAMS , workT alpha
+#define EXTRA_PARAMS , workT1 alpha
 #if wdepth <= 4
-#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, alpha, srcelem2)))
+#define PROCESS_ELEM storedst(convertToDT(mad24(srcelem1, (workT)(alpha), srcelem2)))
 #else
-#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, alpha, srcelem2)))
+#define PROCESS_ELEM storedst(convertToDT(mad(srcelem1, (workT)(alpha), srcelem2)))
 #endif
 
 #elif defined OP_CTP_AD || defined OP_CTP_AR

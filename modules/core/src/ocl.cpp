@@ -2640,19 +2640,19 @@ static cl_command_queue getQueue(const Queue& q)
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
 KernelArg::KernelArg()
-    : flags(0), m(0), obj(0), sz(0), wscale(1)
+    : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
 
-KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, const void* _obj, size_t _sz)
-    : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale)
+KernelArg::KernelArg(int _flags, UMat* _m, int _wscale, int _iwscale, const void* _obj, size_t _sz)
+    : flags(_flags), m(_m), obj(_obj), sz(_sz), wscale(_wscale), iwscale(_iwscale)
 {
 }
 
 KernelArg KernelArg::Constant(const Mat& m)
 {
     CV_Assert(m.isContinuous());
-    return KernelArg(CONSTANT, 0, 1, m.data, m.total()*m.elemSize());
+    return KernelArg(CONSTANT, 0, 0, 0, m.data, m.total()*m.elemSize());
 }
 
 /////////////////////////////////////////// Kernel /////////////////////////////////////////////
@@ -2871,7 +2871,7 @@ int Kernel::set(int i, const KernelArg& arg)
 
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
-                int cols = u2d.cols*arg.wscale;
+                int cols = u2d.cols*arg.wscale/arg.iwscale;
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u2d.rows), &u2d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(cols), &cols) == CL_SUCCESS);
                 i += 2;
@@ -2887,7 +2887,7 @@ int Kernel::set(int i, const KernelArg& arg)
             i += 4;
             if( !(arg.flags & KernelArg::NO_SIZE) )
             {
-                int cols = u3d.cols*arg.wscale;
+                int cols = u3d.cols*arg.wscale/arg.iwscale;
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)i, sizeof(u3d.slices), &u3d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+1), sizeof(u3d.rows), &u3d.rows) == CL_SUCCESS);
                 CV_OclDbgAssert(clSetKernelArg(p->handle, (cl_uint)(i+2), sizeof(u3d.cols), &cols) == CL_SUCCESS);
@@ -2915,7 +2915,7 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
     for (int i = 0; i < dims; i++)
     {
         size_t val = _localsize ? _localsize[i] :
-            dims == 1 ? 64 : dims == 2 ? (16>>i) : dims == 3 ? (8>>(int)(i>0)) : 1;
+            dims == 1 ? 64 : dims == 2 ? (i == 0 ? 256 : 8) : dims == 3 ? (8>>(int)(i>0)) : 1;
         CV_Assert( val > 0 );
         total *= _globalsize[i];
         globalsize[i] = ((_globalsize[i] + val - 1)/val)*val;
@@ -4219,34 +4219,34 @@ const char* typeToStr(int type)
 {
     static const char* tab[]=
     {
-        "uchar", "uchar2", "uchar3", "uchar4",
-        "char", "char2", "char3", "char4",
-        "ushort", "ushort2", "ushort3", "ushort4",
-        "short", "short2", "short3", "short4",
-        "int", "int2", "int3", "int4",
-        "float", "float2", "float3", "float4",
-        "double", "double2", "double3", "double4",
-        "?", "?", "?", "?"
+        "uchar", "uchar2", "uchar3", "uchar4", 0, 0, 0, "uchar8", 0, 0, 0, 0, 0, 0, 0, "uchar16",
+        "char", "char2", "char3", "char4", 0, 0, 0, "char8", 0, 0, 0, 0, 0, 0, 0, "char16",
+        "ushort", "ushort2", "ushort3", "ushort4",0, 0, 0, "ushort8", 0, 0, 0, 0, 0, 0, 0, "ushort16",
+        "short", "short2", "short3", "short4", 0, 0, 0, "short8", 0, 0, 0, 0, 0, 0, 0, "short16",
+        "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
+        "float", "float2", "float3", "float4", 0, 0, 0, "float8", 0, 0, 0, 0, 0, 0, 0, "float16",
+        "double", "double2", "double3", "double4", 0, 0, 0, "double8", 0, 0, 0, 0, 0, 0, 0, "double16",
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
-    return cn > 4 ? "?" : tab[depth*4 + cn-1];
+    return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
 const char* memopTypeToStr(int type)
 {
     static const char* tab[] =
     {
-        "uchar", "uchar2", "uchar3", "uchar4",
-        "uchar", "uchar2", "uchar3", "uchar4",
-        "ushort", "ushort2", "ushort3", "ushort4",
-        "ushort", "ushort2", "ushort3", "ushort4",
-        "int", "int2", "int3", "int4",
-        "int", "int2", "int3", "int4",
-        "ulong", "ulong2", "ulong3", "ulong4",
-        "?", "?", "?", "?"
+        "uchar", "uchar2", "uchar3", "uchar4", 0, 0, 0, "uchar8", 0, 0, 0, 0, 0, 0, 0, "uchar16",
+        "char", "char2", "char3", "char4", 0, 0, 0, "char8", 0, 0, 0, 0, 0, 0, 0, "char16",
+        "ushort", "ushort2", "ushort3", "ushort4",0, 0, 0, "ushort8", 0, 0, 0, 0, 0, 0, 0, "ushort16",
+        "short", "short2", "short3", "short4", 0, 0, 0, "short8", 0, 0, 0, 0, 0, 0, 0, "short16",
+        "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
+        "int", "int2", "int3", "int4", 0, 0, 0, "int8", 0, 0, 0, 0, 0, 0, 0, "int16",
+        "ulong", "ulong2", "ulong3", "ulong4", 0, 0, 0, "ulong8", 0, 0, 0, 0, 0, 0, 0, "ulong16",
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"
     };
     int cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
-    return cn > 4 ? "?" : tab[depth*4 + cn-1];
+    return cn > 16 ? "?" : tab[depth*16 + cn-1];
 }
 
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
@@ -4320,6 +4320,74 @@ String kernelToStr(InputArray _kernel, int ddepth)
 
     return cv::format(" -D COEFF=%s", func(kernel).c_str());
 }
+
+#define PROCESS_SRC(src) \
+    do \
+    { \
+        if (!src.empty()) \
+        { \
+            CV_Assert(src.isMat() || src.isUMat()); \
+            int ctype = src.type(), ccn = CV_MAT_CN(ctype); \
+            Size csize = src.size(); \
+            cols.push_back(ccn * src.size().width); \
+            if (ctype != type || csize != ssize) \
+                return 1; \
+            offsets.push_back(src.offset()); \
+            steps.push_back(src.step()); \
+        } \
+    } \
+    while ((void)0, 0)
+
+int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
+                              InputArray src4, InputArray src5, InputArray src6,
+                              InputArray src7, InputArray src8, InputArray src9)
+{
+    int type = src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    Size ssize = src1.size();
+    const ocl::Device & d = ocl::Device::getDefault();
+
+    int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
+        d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
+        d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
+        d.preferredVectorWidthDouble(), -1 }, width = vectorWidths[depth];
+    CV_Assert(width >= 0);
+
+    if (ssize.width * cn < width)
+        return 1;
+
+    std::vector<size_t> offsets, steps, cols;
+    PROCESS_SRC(src1);
+    PROCESS_SRC(src2);
+    PROCESS_SRC(src3);
+    PROCESS_SRC(src4);
+    PROCESS_SRC(src5);
+    PROCESS_SRC(src6);
+    PROCESS_SRC(src7);
+    PROCESS_SRC(src8);
+    PROCESS_SRC(src9);
+
+    size_t size = offsets.size();
+    std::vector<int> dividers(size, width);
+
+    for (size_t i = 0; i < size; ++i)
+        while (offsets[i] % dividers[i] != 0 || steps[i] % dividers[i] != 0 || cols[i] % dividers[i] != 0)
+            dividers[i] >>= 1;
+
+    // default strategy
+    for (size_t i = 0; i < size; ++i)
+        if (dividers[i] != width)
+        {
+            width = 1;
+            break;
+        }
+
+    // another strategy
+//    width = *std::min_element(dividers.begin(), dividers.end());
+
+    return width;
+}
+
+#undef PROCESS_SRC
 
 /////////////////////////////////////////// Image2D ////////////////////////////////////////////////////
 
