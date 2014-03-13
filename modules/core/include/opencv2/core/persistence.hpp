@@ -697,10 +697,10 @@ void write(FileStorage& fs, const String& name, const Range& r )
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
-    internal::WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
+    fs << (DataType<_Tp>::fmt != 0 ? "[:" : "[");
     write(fs, vec);
+    fs << "]";
 }
-
 
 static inline
 void read(const FileNode& node, bool& value, bool default_value)
