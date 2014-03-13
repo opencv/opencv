@@ -123,7 +123,7 @@ OCL_PERF_TEST_P(BruteForceMatcherFixture, RadiusMatch, ::testing::Combine(OCL_PE
     SANITY_CHECK_MATCHES(matches1, 1e-3);
 }
 
-}//ocl
-}//cvtest
+} // ocl
+} // cvtest
 
-#endif //HAVE_OPENCL
+#endif // HAVE_OPENCL
