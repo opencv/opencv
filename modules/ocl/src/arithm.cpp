@@ -313,32 +313,28 @@ void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int 
 
 enum { SUM = 0, ABS_SUM, SQR_SUM };
 
-static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupnum, int type, int ddepth)
+static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupnum, int type, int ddepth, int vlen)
 {
-    int ochannels = src.oclchannels();
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / src.elemSize();
+    int vElemSize = vlen * src.elemSize();
+    int src_offset = src.offset / vElemSize, src_step = src.step / vElemSize;
+    int src_cols = src.cols / vlen, total = src.size().area() / vlen;
+
+    vlen *= src.oclchannels();
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
     const char * const funcMap[] = { "FUNC_SUM", "FUNC_ABS_SUM", "FUNC_SQR_SUM" };
-    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4", "", "", "", "8" };
     string buildOptions = format("-D srcT=%s%s -D dstT=%s%s -D convertToDstT=convert_%s%s -D %s",
-                                 typeMap[src.depth()], channelMap[ochannels],
-                                 typeMap[ddepth], channelMap[ochannels],
-                                 typeMap[ddepth], channelMap[ochannels],
-                                 funcMap[type]);
+                                 typeMap[src.depth()], channelMap[vlen], typeMap[ddepth],
+                                 channelMap[vlen], typeMap[ddepth], channelMap[vlen], funcMap[type]);
 
     vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&total ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
     size_t globalThreads[3] = { groupnum * 256, 1, 1 };
 
@@ -360,7 +356,11 @@ Scalar arithmetic_sum(const oclMat &src, int type, int ddepth)
     size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
 
-    int dbsize = groupnum * src.oclchannels();
+    int vlen = 8 / src.channels(), vElemSize = vlen * src.elemSize1();
+    while (src.offset % vElemSize != 0 || src.step % vElemSize != 0 || src.cols % vlen != 0)
+        vlen >>= 1, vElemSize >>= 1;
+
+    int dbsize = groupnum * src.oclchannels() * vlen;
     Context *clCxt = src.clCxt;
 
     AutoBuffer<T> _buf(dbsize);
@@ -368,12 +368,12 @@ Scalar arithmetic_sum(const oclMat &src, int type, int ddepth)
     memset(p, 0, dbsize * sizeof(T));
 
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
-    arithmetic_sum_buffer_run(src, dstBuffer, groupnum, type, ddepth);
+    arithmetic_sum_buffer_run(src, dstBuffer, groupnum, type, ddepth, vlen);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(T));
     openCLFree(dstBuffer);
 
     Scalar s = Scalar::all(0.0);
-    for (int i = 0; i < dbsize;)
+    for (int i = 0; i < dbsize; )
          for (int j = 0; j < src.oclchannels(); j++, i++)
             s.val[j] += p[i];
 
