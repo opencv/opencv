@@ -146,34 +146,33 @@ static void minMaxEig_caller(const oclMat &src, oclMat &dst, oclMat & tozero)
     CV_Assert(groupnum != 0);
 
     int dbsize = groupnum * 2 * src.elemSize();
-
     ensureSizeIsEnough(1, dbsize, CV_8UC1, dst);
 
     cl_mem dst_data = reinterpret_cast<cl_mem>(dst.data);
 
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;
-    int offset = src.offset / src.elemSize();
+    int vElemSize = src.elemSize1();
+    int src_step = src.step / vElemSize, src_offset = src.offset / vElemSize;
+    int total = src.size().area();
 
-    {// first parallel pass
+    {
+        // first parallel pass
         vector<pair<size_t , const void *> > args;
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_data ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&total));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_data ));
         size_t globalThreads[3] = {groupnum * 256, 1, 1};
         size_t localThreads[3] = {256, 1, 1};
         openCLExecuteKernel(src.clCxt, &arithm_minMax, "arithm_op_minMax", globalThreads, localThreads,
-                            args, -1, -1, "-D T=float -D DEPTH_5");
+                            args, -1, -1, "-D T=float -D DEPTH_5 -D vlen=1");
     }
 
-    {// run final "serial" kernel to find accumulate results from threads and reset corner counter
+    {
+        // run final "serial" kernel to find accumulate results from threads and reset corner counter
         vector<pair<size_t , const void *> > args;
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst_data ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
