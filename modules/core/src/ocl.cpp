@@ -2476,23 +2476,23 @@ const Device& Context::device(size_t idx) const
 
 Context& Context::getDefault(bool initialize)
 {
-    static Context ctx;
-    if(!ctx.p && haveOpenCL())
+    static Context* ctx = new Context();
+    if(!ctx->p && haveOpenCL())
     {
-        if (!ctx.p)
-            ctx.p = new Impl();
+        if (!ctx->p)
+            ctx->p = new Impl();
         if (initialize)
         {
             // do not create new Context right away.
             // First, try to retrieve existing context of the same type.
             // In its turn, Platform::getContext() may call Context::create()
             // if there is no such context.
-            if (ctx.p->handle == NULL)
-                ctx.p->setDefault();
+            if (ctx->p->handle == NULL)
+                ctx->p->setDefault();
         }
     }
 
-    return ctx;
+    return *ctx;
 }
 
 Program Context::getProg(const ProgramSource& prog,
@@ -3122,7 +3122,12 @@ struct Program::Impl
     {
         if( handle )
         {
-            clReleaseProgram(handle);
+#ifdef _WIN32
+            if (!cv::__termination)
+#endif
+            {
+                clReleaseProgram(handle);
+            }
             handle = NULL;
         }
     }
