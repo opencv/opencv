@@ -52830,4 +52830,156 @@
       <y>822</y>
       <cn>3</cn>
       <val>0.</val></rng2></dst></OCL_ConvertToFixture_ConvertTo--ConvertTo---3840x2160--32FC4->
+ <!-- resumed -->
+
+<OCL_TransposeFixture_Transpose--Transpose---640x480--8UC3->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>479</x>
+      <y>639</y>
+      <val>242.</val></last>
+    <rng1>
+      <x>50</x>
+      <y>141</y>
+      <val>222.</val></rng1>
+    <rng2>
+      <x>79</x>
+      <y>611</y>
+      <val>243.</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---640x480--8UC3->
+<OCL_TransposeFixture_Transpose--Transpose---640x480--32FC3->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-9.9999803304672241e-01</min>
+    <max>9.9999505281448364e-01</max>
+    <last>
+      <x>479</x>
+      <y>639</y>
+      <val>-1.2874162197113037e-01</val></last>
+    <rng1>
+      <x>120</x>
+      <y>435</y>
+      <val>-6.6518865525722504e-02</val></rng1>
+    <rng2>
+      <x>357</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>6.2842726707458496e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---640x480--32FC3->
+<OCL_TransposeFixture_Transpose--Transpose---1280x720--8UC3->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>719</x>
+      <y>1279</y>
+      <val>114.</val></last>
+    <rng1>
+      <x>404</x>
+      <y>188</y>
+      <val>23.</val></rng1>
+    <rng2>
+      <x>648</x>
+      <y>797</y>
+      <val>214.</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---1280x720--8UC3->
+<OCL_TransposeFixture_Transpose--Transpose---1280x720--32FC3->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-9.9999940395355225e-01</min>
+    <max>9.9999970197677612e-01</max>
+    <last>
+      <x>719</x>
+      <y>1279</y>
+      <val>-6.8391388654708862e-01</val></last>
+    <rng1>
+      <x>372</x>
+      <y>829</y>
+      <cn>1</cn>
+      <val>-1.4428436756134033e-01</val></rng1>
+    <rng2>
+      <x>541</x>
+      <y>573</y>
+      <cn>1</cn>
+      <val>-3.8022053241729736e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---1280x720--32FC3->
+<OCL_TransposeFixture_Transpose--Transpose---1920x1080--8UC3->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1079</x>
+      <y>1919</y>
+      <val>134.</val></last>
+    <rng1>
+      <x>468</x>
+      <y>825</y>
+      <cn>2</cn>
+      <val>68.</val></rng1>
+    <rng2>
+      <x>898</x>
+      <y>1050</y>
+      <val>228.</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---1920x1080--8UC3->
+<OCL_TransposeFixture_Transpose--Transpose---1920x1080--32FC3->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-9.9999964237213135e-01</min>
+    <max>9.9999970197677612e-01</max>
+    <last>
+      <x>1079</x>
+      <y>1919</y>
+      <val>5.5513906478881836e-01</val></last>
+    <rng1>
+      <x>193</x>
+      <y>1276</y>
+      <cn>1</cn>
+      <val>-3.4250614047050476e-01</val></rng1>
+    <rng2>
+      <x>578</x>
+      <y>690</y>
+      <val>-7.7901887893676758e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---1920x1080--32FC3->
+<OCL_TransposeFixture_Transpose--Transpose---3840x2160--8UC3->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>2159</x>
+      <y>3839</y>
+      <val>59.</val></last>
+    <rng1>
+      <x>1587</x>
+      <y>1180</y>
+      <val>83.</val></rng1>
+    <rng2>
+      <x>1068</x>
+      <y>3097</y>
+      <val>73.</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---3840x2160--8UC3->
+<OCL_TransposeFixture_Transpose--Transpose---3840x2160--32FC3->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-1.</min>
+    <max>9.9999988079071045e-01</max>
+    <last>
+      <x>2159</x>
+      <y>3839</y>
+      <val>3.0203309655189514e-01</val></last>
+    <rng1>
+      <x>562</x>
+      <y>239</y>
+      <val>-7.6386463642120361e-01</val></rng1>
+    <rng2>
+      <x>1511</x>
+      <y>3569</y>
+      <cn>1</cn>
+      <val>-8.3581203222274780e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---3840x2160--32FC3->
 </opencv_storage>
