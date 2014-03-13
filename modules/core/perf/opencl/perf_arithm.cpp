@@ -344,7 +344,7 @@ OCL_PERF_TEST_P(FlipFixture, Flip,
 typedef Size_MatType MinMaxLocFixture;
 
 OCL_PERF_TEST_P(MinMaxLocFixture, MinMaxLoc,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -380,7 +380,7 @@ typedef Size_MatType SumFixture;
 
 OCL_PERF_TEST_P(SumFixture, Sum,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES))
+                               OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -447,7 +447,7 @@ OCL_PERF_TEST_P(PhaseFixture, Phase, ::testing::Combine(
     SANITY_CHECK(dst, 1e-2);
 }
 
-///////////// bitwise_and////////////////////////
+///////////// bitwise_and ////////////////////////
 
 typedef Size_MatType BitwiseAndFixture;
 
@@ -531,7 +531,7 @@ OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
     SANITY_CHECK(dst);
 }
 
-///////////// compare////////////////////////
+///////////// compare ////////////////////////
 
 CV_ENUM(CmpCode, CMP_LT, CMP_LE, CMP_EQ, CMP_NE, CMP_GE, CMP_GT)
 
@@ -652,7 +652,8 @@ OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
 typedef Size_MatType MeanStdDevFixture;
 
 OCL_PERF_TEST_P(MeanStdDevFixture, MeanStdDev,
-                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -688,7 +689,8 @@ typedef std::tr1::tuple<Size, MatType, NormType> NormParams;
 typedef TestBaseWithParam<NormParams> NormFixture;
 
 OCL_PERF_TEST_P(NormFixture, Norm,
-                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES, NormType::all()))
+                ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                                   OCL_TEST_TYPES_134, NormType::all()))
 {
     const NormParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -711,7 +713,8 @@ OCL_PERF_TEST_P(NormFixture, Norm,
 typedef Size_MatType UMatDotFixture;
 
 OCL_PERF_TEST_P(UMatDotFixture, UMatDot,
-            ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3), OCL_TEST_TYPES))
+            ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                               OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -820,7 +823,8 @@ typedef tuple<Size, MatType, NormalizeModes> NormalizeParams;
 typedef TestBaseWithParam<NormalizeParams> NormalizeFixture;
 
 OCL_PERF_TEST_P(NormalizeFixture, Normalize,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, NormalizeModes::all()))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134,
+                                   NormalizeModes::all()))
 {
     const NormalizeParams params = GetParam();
     const Size srcSize = get<0>(params);
