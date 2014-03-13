@@ -94,8 +94,8 @@ OCL_TEST_P(StereoBMFixture, StereoBM)
     Mat t; absdiff(disp, udisp, t);
     for(int i = 0; i<t.rows; i++)
         for(int j = 0; j< t.cols; j++)
-           if(t.at<short>(i,j) > 0)
-         //  if(i == 5 && j == 68)
+        //   if(t.at<short>(i,j) > 0)
+           if(i == 5 && j == 36)
                 printf("%d  %d  cv: %d    ocl: %d\n", i, j, disp.at<short>(i,j), udisp.getMat(ACCESS_READ).at<short>(i,j) );
 /*    imshow("diff.png", t*100);
     imshow("cv.png", disp*100);
