@@ -323,7 +323,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
         for( i = 0; i < newcounter; i++ )
             keypoints.push_back(KeyPoint((float)pt2[i].x, (float)pt2[i].y, 7.f, -1, (float)pt2[i].z));
     }
-    
+
     return true;
 }
 
