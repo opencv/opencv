@@ -1263,38 +1263,35 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 ///////////////////////////// countNonZero ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int groupnum, string kernelName)
+static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int groupnum, int vlen)
 {
-    int ochannels = src.oclchannels();
-    int all_cols = src.step / src.elemSize();
-    int pre_cols = (src.offset % src.step) / src.elemSize();
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
-    int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / src.elemSize();
+    int vElemSize = vlen * src.elemSize1();
+    int src_step = src.step / vElemSize, src_offset = src.offset / vElemSize;
+    int src_cols = src.cols / vlen, total = src.size().area() / vlen;
 
     const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
-    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
-    string buildOptions = format("-D srcT=%s%s -D dstT=int%s", typeMap[src.depth()], channelMap[ochannels],
-                                 channelMap[ochannels]);
+    const char * const channelMap[] = { "", "", "2", "4", "4", "", "", "", "8" };
+    string buildOptions = format("-D srcT=%s%s -D dstT=int%s -D convertToDstT=convert_int%s",
+                                 typeMap[src.depth()], channelMap[vlen],
+                                 channelMap[vlen], channelMap[vlen]);
 
     vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&src_cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&total ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
 
     size_t globalThreads[3] = { groupnum * 256, 1, 1 };
 
 #ifdef ANDROID
-    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, globalThreads, NULL,
+    openCLExecuteKernel(src.clCxt, &arithm_nonzero, "arithm_op_nonzero", globalThreads, NULL,
                         args, -1, -1, buildOptions.c_str());
 #else
     size_t localThreads[3] = { 256, 1, 1 };
-    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, globalThreads, localThreads,
+    openCLExecuteKernel(src.clCxt, &arithm_nonzero, "arithm_op_nonzero", globalThreads, localThreads,
                         args, -1, -1, buildOptions.c_str());
 #endif
 }
@@ -1311,18 +1308,20 @@ int cv::ocl::countNonZero(const oclMat &src)
         return -1;
     }
 
+    int vlen = 8, vElemSize = src.elemSize1() * vlen;
+    while (src.offset % vElemSize != 0 || src.step % vElemSize != 0 || src.cols % vlen != 0)
+        vlen >>= 1, vElemSize >>= 1;
+
     size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
-    int dbsize = groupnum;
-
-    string kernelName = "arithm_op_nonzero";
+    int dbsize = groupnum * vlen;
 
     AutoBuffer<int> _buf(dbsize);
     int *p = (int*)_buf, nonzero = 0;
     memset(p, 0, dbsize * sizeof(int));
 
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
-    arithmetic_countNonZero_run(src, dstBuffer, groupnum, kernelName);
+    arithmetic_countNonZero_run(src, dstBuffer, groupnum, vlen);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(int));
 
     for (int i = 0; i < dbsize; i++)
