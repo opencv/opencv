@@ -330,8 +330,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
 void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
-  double t = (double)getTickCount();
-  if( ocl::useOpenCL() && /*_img.isUMat() &&*/ type == FastFeatureDetector::TYPE_9_16 &&
+  if( ocl::useOpenCL() && _img.isUMat() && type == FastFeatureDetector::TYPE_9_16 &&
       ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000))
       ;
 
@@ -350,7 +349,6 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
       FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
       break;
   }
-  printf("time=%.2fms\n", ((double)getTickCount() - t)*1000./getTickFrequency());
 }
 
 
@@ -371,10 +369,16 @@ FastFeatureDetector::FastFeatureDetector( int _threshold, bool _nonmaxSuppressio
 
 void FastFeatureDetector::detectImpl( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) const
 {
-    Mat image = _image.getMat(), mask = _mask.getMat(), grayImage = image;
-    if( image.type() != CV_8U )
-        cvtColor( image, grayImage, COLOR_BGR2GRAY );
-    FAST( grayImage, keypoints, threshold, nonmaxSuppression, type );
+    Mat mask = _mask.getMat(), grayImage;
+    UMat ugrayImage;
+    _InputArray gray = _image;
+    if( _image.type() != CV_8U )
+    {
+        _OutputArray ogray = _image.isUMat() ? _OutputArray(ugrayImage) : _OutputArray(grayImage);
+        cvtColor( _image, ogray, COLOR_BGR2GRAY );
+        gray = ogray;
+    }
+    FAST( gray, keypoints, threshold, nonmaxSuppression, type );
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
