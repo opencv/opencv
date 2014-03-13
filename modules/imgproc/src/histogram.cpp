@@ -2035,6 +2035,10 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
     Size size = images[0].size();
     int depth = images[0].depth();
 
+    //kernels are valid for this type only
+    if (depth != CV_8U)
+        return false;
+
     for (size_t i = 1; i < nimages; ++i)
     {
         const UMat & m = images[i];
