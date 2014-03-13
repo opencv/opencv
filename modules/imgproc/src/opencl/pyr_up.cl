@@ -58,6 +58,16 @@
 #endif
 #endif
 
+#if cn != 3
+#define loadpix(addr)  *(__global const T*)(addr)
+#define storepix(val, addr)  *(__global T*)(addr) = (val)
+#define PIXSIZE ((int)sizeof(T))
+#else
+#define loadpix(addr)  vload3(0, (__global const T1*)(addr))
+#define storepix(val, addr) vstore3((val), 0, (__global T1*)(addr))
+#define PIXSIZE ((int)sizeof(T1)*3)
+#endif
+
 #define noconvert
 
 
@@ -76,8 +86,8 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
     __local FT s_srcPatch[10][10];
     __local FT s_dstPatch[20][16];
 
-    __global T * dstData = (__global T *)(dst + dst_offset);
-    __global const T * srcData = (__global const T *)(src + src_offset);
+    __global uchar * dstData = dst + dst_offset;
+    __global const uchar * srcData = src + src_offset;
 
     if( tidx < 10 && tidy < 10 )
     {
@@ -90,7 +100,7 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
         srcy = abs(srcy);
         srcy = min(src_rows - 1, srcy);
 
-        s_srcPatch[tidy][tidx] = convertToFT(srcData[srcx + srcy * src_step / (int) sizeof(T)]);
+        s_srcPatch[tidy][tidx] = convertToFT(loadpix(srcData + srcy * src_step + srcx * PIXSIZE));
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -155,5 +165,5 @@ __kernel void pyrUp(__global const uchar * src, int src_step, int src_offset, in
     sum = sum + co3 * s_dstPatch[2 + tidy + 2][tidx];
 
     if ((x < dst_cols) && (y < dst_rows))
-        dstData[x + y * dst_step / (int)sizeof(T)] = convertToT(4.0f * sum);
+        storepix(convertToT(4.0f * sum), dstData + y * dst_step + x * PIXSIZE);
 }

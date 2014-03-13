@@ -108,7 +108,7 @@ OCL_TEST_P(PyrDown, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrDown, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                            Values(1, 2, 4),
+                            Values(1, 2, 3, 4),
                             Bool()
                             ));
 
@@ -133,7 +133,7 @@ OCL_TEST_P(PyrUp, Mat)
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocPyr, PyrUp, Combine(
                             Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                            Values(1, 2, 4),
+                            Values(1, 2, 3, 4),
                             Bool()
                             ));
 

@@ -51,6 +51,16 @@
 #endif
 #endif
 
+#if cn != 3
+#define loadpix(addr)  *(__global const T*)(addr)
+#define storepix(val, addr)  *(__global T*)(addr) = (val)
+#define PIXSIZE ((int)sizeof(T))
+#else
+#define loadpix(addr)  vload3(0, (__global const T1*)(addr))
+#define storepix(val, addr) vstore3((val), 0, (__global T1*)(addr))
+#define PIXSIZE ((int)sizeof(T1)*3)
+#endif
+
 #define noconvert
 
 inline int idx_row_low(int y, int last_row)
@@ -90,8 +100,8 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     const int y = get_group_id(1);
 
     __local FT smem[256 + 4];
-    __global T * dstData = (__global T *)(dst + dst_offset);
-    __global const uchar * srcData = (__global const uchar*)(src + src_offset);
+    __global uchar * dstData = dst + dst_offset;
+    __global const uchar * srcData = src + src_offset;
 
     FT sum;
     FT co1 = 0.375f;
@@ -104,11 +114,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
     if (src_y >= 2 && src_y < src_rows - 2 && x >= 2 && x < src_cols - 2)
     {
-        sum =       co3 * convertToFT(((__global T*)(srcData + (src_y - 2) * src_step))[x]);
-        sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y - 1) * src_step))[x]);
-        sum = sum + co1 * convertToFT(((__global T*)(srcData + (src_y    ) * src_step))[x]);
-        sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y + 1) * src_step))[x]);
-        sum = sum + co3 * convertToFT(((__global T*)(srcData + (src_y + 2) * src_step))[x]);
+        sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + x * PIXSIZE));
+        sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + x * PIXSIZE));
+        sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + x * PIXSIZE));
+        sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + x * PIXSIZE));
+        sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + x * PIXSIZE));
 
         smem[2 + get_local_id(0)] = sum;
 
@@ -116,11 +126,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             const int left_x = x - 2;
 
-            sum =       co3 * convertToFT(((__global T*)(srcData + (src_y - 2) * src_step))[left_x]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y - 1) * src_step))[left_x]);
-            sum = sum + co1 * convertToFT(((__global T*)(srcData + (src_y    ) * src_step))[left_x]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y + 1) * src_step))[left_x]);
-            sum = sum + co3 * convertToFT(((__global T*)(srcData + (src_y + 2) * src_step))[left_x]);
+            sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + left_x * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + left_x * PIXSIZE));
+            sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + left_x * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + left_x * PIXSIZE));
+            sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + left_x * PIXSIZE));
 
             smem[get_local_id(0)] = sum;
         }
@@ -129,11 +139,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         {
             const int right_x = x + 2;
 
-            sum =       co3 * convertToFT(((__global T*)(srcData + (src_y - 2) * src_step))[right_x]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y - 1) * src_step))[right_x]);
-            sum = sum + co1 * convertToFT(((__global T*)(srcData + (src_y    ) * src_step))[right_x]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + (src_y + 1) * src_step))[right_x]);
-            sum = sum + co3 * convertToFT(((__global T*)(srcData + (src_y + 2) * src_step))[right_x]);
+            sum =       co3 * convertToFT(loadpix(srcData + (src_y - 2) * src_step + right_x * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y - 1) * src_step + right_x * PIXSIZE));
+            sum = sum + co1 * convertToFT(loadpix(srcData + (src_y    ) * src_step + right_x * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + (src_y + 1) * src_step + right_x * PIXSIZE));
+            sum = sum + co3 * convertToFT(loadpix(srcData + (src_y + 2) * src_step + right_x * PIXSIZE));
 
             smem[4 + get_local_id(0)] = sum;
         }
@@ -142,11 +152,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
     {
         int col = idx_col(x, last_col);
 
-        sum =       co3 * convertToFT(((__global T*)(srcData + idx_row(src_y - 2, last_row) * src_step))[col]);
-        sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y - 1, last_row) * src_step))[col]);
-        sum = sum + co1 * convertToFT(((__global T*)(srcData + idx_row(src_y    , last_row) * src_step))[col]);
-        sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y + 1, last_row) * src_step))[col]);
-        sum = sum + co3 * convertToFT(((__global T*)(srcData + idx_row(src_y + 2, last_row) * src_step))[col]);
+        sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
+        sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
+        sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
+        sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
+        sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
 
         smem[2 + get_local_id(0)] = sum;
 
@@ -156,11 +166,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
             col = idx_col(left_x, last_col);
 
-            sum =       co3 * convertToFT(((__global T*)(srcData + idx_row(src_y - 2, last_row) * src_step))[col]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y - 1, last_row) * src_step))[col]);
-            sum = sum + co1 * convertToFT(((__global T*)(srcData + idx_row(src_y    , last_row) * src_step))[col]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y + 1, last_row) * src_step))[col]);
-            sum = sum + co3 * convertToFT(((__global T*)(srcData + idx_row(src_y + 2, last_row) * src_step))[col]);
+            sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
 
             smem[get_local_id(0)] = sum;
         }
@@ -171,11 +181,11 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
 
             col = idx_col(right_x, last_col);
 
-            sum =       co3 * convertToFT(((__global T*)(srcData + idx_row(src_y - 2, last_row) * src_step))[col]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y - 1, last_row) * src_step))[col]);
-            sum = sum + co1 * convertToFT(((__global T*)(srcData + idx_row(src_y    , last_row) * src_step))[col]);
-            sum = sum + co2 * convertToFT(((__global T*)(srcData + idx_row(src_y + 1, last_row) * src_step))[col]);
-            sum = sum + co3 * convertToFT(((__global T*)(srcData + idx_row(src_y + 2, last_row) * src_step))[col]);
+            sum =       co3 * convertToFT(loadpix(srcData + idx_row(src_y - 2, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y - 1, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co1 * convertToFT(loadpix(srcData + idx_row(src_y    , last_row) * src_step + col * PIXSIZE));
+            sum = sum + co2 * convertToFT(loadpix(srcData + idx_row(src_y + 1, last_row) * src_step + col * PIXSIZE));
+            sum = sum + co3 * convertToFT(loadpix(srcData + idx_row(src_y + 2, last_row) * src_step + col * PIXSIZE));
 
             smem[4 + get_local_id(0)] = sum;
         }
@@ -196,7 +206,7 @@ __kernel void pyrDown(__global const uchar * src, int src_step, int src_offset, 
         const int dst_x = (get_group_id(0) * get_local_size(0) + tid2) / 2;
 
         if (dst_x < dst_cols)
-            dstData[y * dst_step / ((int)sizeof(T)) + dst_x] = convertToT(sum);
+            storepix(convertToT(sum), dstData + y * dst_step + dst_x * PIXSIZE);
     }
 
 }
