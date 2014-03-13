@@ -119,6 +119,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
     int cn;
     bool use_roi;
     cv::Scalar val;
+    cv::Scalar val_in_range;
 
     TEST_DECLARE_INPUT_PARAMETER(src1)
     TEST_DECLARE_INPUT_PARAMETER(src2)
@@ -137,12 +138,15 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
+        double minV = getMinVal(type);
+        double maxV = getMaxVal(type);
+
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, src1Border, type, 2, 11);
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, minV, maxV);
 
         Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src2, src2_roi, roiSize, src2Border, type, -1540, 1740);
+        randomSubMat(src2, src2_roi, roiSize, src2Border, type, std::max(-1540., minV), std::min(1740., maxV));
 
         Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst1, dst1_roi, roiSize, dst1Border, type, 5, 16);
@@ -156,6 +160,9 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
         val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+
+        val_in_range = cv::Scalar(rng.uniform(minV, maxV), rng.uniform(minV, maxV),
+                                  rng.uniform(minV, maxV), rng.uniform(minV, maxV));
 
         UMAT_UPLOAD_INPUT_PARAMETER(src1)
         UMAT_UPLOAD_INPUT_PARAMETER(src2)
@@ -750,12 +757,15 @@ OCL_TEST_P(Bitwise_not, Mat)
 
 typedef ArithmTestBase Compare;
 
+static const int cmp_codes[] = { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE };
+static const char* cmp_strs[] = { "CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE" };
+static const int cmp_num = sizeof(cmp_codes) / sizeof(int);
+
 OCL_TEST_P(Compare, Mat)
 {
-    int cmp_codes[] = { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE };
-    int cmp_num = sizeof(cmp_codes) / sizeof(int);
-
     for (int i = 0; i < cmp_num; ++i)
+    {
+        SCOPED_TRACE(cmp_strs[i]);
         for (int j = 0; j < test_loop_times; j++)
         {
             generateTestData();
@@ -765,6 +775,41 @@ OCL_TEST_P(Compare, Mat)
 
             Near(0);
         }
+    }
+}
+
+OCL_TEST_P(Compare, Scalar)
+{
+    for (int i = 0; i < cmp_num; ++i)
+    {
+        SCOPED_TRACE(cmp_strs[i]);
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            OCL_OFF(cv::compare(src1_roi, val_in_range, dst1_roi, cmp_codes[i]));
+            OCL_ON(cv::compare(usrc1_roi, val_in_range, udst1_roi, cmp_codes[i]));
+
+            Near(0);
+        }
+    }
+}
+
+OCL_TEST_P(Compare, Scalar2)
+{
+    for (int i = 0; i < cmp_num; ++i)
+    {
+        SCOPED_TRACE(cmp_strs[i]);
+        for (int j = 0; j < test_loop_times; j++)
+        {
+            generateTestData();
+
+            OCL_OFF(cv::compare(val_in_range, src1_roi, dst1_roi, cmp_codes[i]));
+            OCL_ON(cv::compare(val_in_range, usrc1_roi, udst1_roi, cmp_codes[i]));
+
+            Near(0);
+        }
+    }
 }
 
 //////////////////////////////// Pow /////////////////////////////////////////////////
