@@ -517,7 +517,7 @@ static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem
     size_t globalThreads[3] = { groupnum * 256, 1, 1 };
     size_t localThreads[3] = { 256, 1, 1 };
 
-    // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
+    // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
     openCLExecuteKernel(src.clCxt, &arithm_minMax, "arithm_op_minMax", globalThreads, localThreads,
                         args, -1, -1, buildOptions.c_str());
 }
@@ -1140,7 +1140,7 @@ static void arithmetic_minMaxLoc_run(const oclMat &src, cl_mem &dst, int vlen , 
     sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
     size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
 
-    // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
+    // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
     openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc, "arithm_op_minMaxLoc", gt, lt, args, -1, -1, build_options);
 }
 
@@ -1170,7 +1170,7 @@ static void arithmetic_minMaxLoc_mask_run(const oclMat &src, const oclMat &mask,
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
 
-        // kernel use fixed grid size, replace lt on NULL is imposible without kernel changes
+        // kernel use fixed grid size, replace lt on NULL is impossible without kernel changes
         openCLExecuteKernel(src.clCxt, &arithm_minMaxLoc_mask, "arithm_op_minMaxLoc_mask", gt, lt, args, -1, -1, build_options);
     }
 }
