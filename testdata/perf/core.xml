@@ -52982,4 +52982,1836 @@
       <y>3569</y>
       <cn>1</cn>
       <val>-8.3581203222274780e-01</val></rng2></dst></OCL_TransposeFixture_Transpose--Transpose---3840x2160--32FC3->
+ <!-- resumed -->
+
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---640x480--8UC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---640x480--8UC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---640x480--32FC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -9.9999803304672241e-01</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999505281448364e-01</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---640x480--32FC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1280x720--8UC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1280x720--8UC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1280x720--32FC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -9.9999940395355225e-01</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999970197677612e-01</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1280x720--32FC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1920x1080--8UC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1920x1080--8UC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1920x1080--32FC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -9.9999964237213135e-01</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999970197677612e-01</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---1920x1080--32FC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---3840x2160--8UC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---3840x2160--8UC3->
+<OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---3840x2160--32FC3->
+  <min_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.</data></val></min_val>
+  <max_val>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.9999988079071045e-01</data></val></max_val>
+  <min_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_x>
+  <min_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></min_loc_y>
+  <max_loc_x>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_x>
+  <max_loc_y>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></max_loc_y></OCL_MinMaxLocFixture_MinMaxLoc--MinMaxLoc---3840x2160--32FC3->
+ <!-- resumed -->
+
+<OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        78756974.</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.0044699012912234e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--8UC3--NORM_L2->
+<OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9981801509857178e+00</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.1430782329988945e+05</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.8362281722749788e+02</data></val></res></OCL_NormFixture_Norm--Norm---640x480--32FC3--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        235833694.</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.7370345757065402e+05</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--8UC3--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9986518621444702e+00</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.8443565273132296e+06</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.3582163344529583e+03</data></val></res></OCL_NormFixture_Norm--Norm---1280x720--32FC3--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        530776566.</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.6064224911552615e+05</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--8UC3--NORM_L2->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_INF->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.9990291595458984e+00</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_INF->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_L1->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.1476766057303650e+06</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_L1->
+<OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_L2->
+  <res>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.0367974241010154e+03</data></val></res></OCL_NormFixture_Norm--Norm---1920x1080--32FC3--NORM_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>105.</val></last>
+    <rng1>
+      <x>142</x>
+      <y>20</y>
+      <cn>2</cn>
+      <val>102.</val></rng1>
+    <rng2>
+      <x>315</x>
+      <y>76</y>
+      <cn>1</cn>
+      <val>85.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>351</x>
+      <y>140</y>
+      <cn>2</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>284</x>
+      <y>186</y>
+      <cn>2</cn>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>74</x>
+      <y>182</y>
+      <cn>2</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>502</x>
+      <y>65</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>10.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>9.</val></last>
+    <rng1>
+      <x>336</x>
+      <y>123</y>
+      <val>4.</val></rng1>
+    <rng2>
+      <x>105</x>
+      <y>327</y>
+      <cn>2</cn>
+      <val>7.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--8UC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>1.0000003814697266e+01</min>
+    <max>110.</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>5.3562973022460938e+01</val></last>
+    <rng1>
+      <x>596</x>
+      <y>424</y>
+      <val>1.0881068420410156e+02</val></rng1>
+    <rng2>
+      <x>403</x>
+      <y>412</y>
+      <cn>1</cn>
+      <val>1.0379788970947266e+02</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-1.8049350008368492e-02</min>
+    <max>1.8049295991659164e-02</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.3237071000039577e-03</val></last>
+    <rng1>
+      <x>55</x>
+      <y>135</y>
+      <cn>1</cn>
+      <val>-3.8898023776710033e-03</val></rng1>
+    <rng2>
+      <x>404</x>
+      <y>146</y>
+      <cn>2</cn>
+      <val>5.0779813900589943e-03</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-2.1714398826588877e-05</min>
+    <max>2.1714333342970349e-05</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-2.7955522909905994e-06</val></last>
+    <rng1>
+      <x>314</x>
+      <y>153</y>
+      <cn>1</cn>
+      <val>1.0396295692771673e-05</val></rng1>
+    <rng2>
+      <x>302</x>
+      <y>441</y>
+      <cn>1</cn>
+      <val>3.4464405871403869e-06</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-10.</min>
+    <max>9.9999704360961914e+00</max>
+    <last>
+      <x>639</x>
+      <y>479</y>
+      <val>-1.2874188423156738e+00</val></last>
+    <rng1>
+      <x>347</x>
+      <y>56</y>
+      <cn>1</cn>
+      <val>5.6188023090362549e-01</val></rng1>
+    <rng2>
+      <x>431</x>
+      <y>294</y>
+      <cn>2</cn>
+      <val>7.4491448402404785e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---640x480--32FC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>55.</val></last>
+    <rng1>
+      <x>1219</x>
+      <y>699</y>
+      <cn>1</cn>
+      <val>90.</val></rng1>
+    <rng2>
+      <x>328</x>
+      <y>174</y>
+      <cn>2</cn>
+      <val>95.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1145</x>
+      <y>657</y>
+      <cn>2</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>241</x>
+      <y>437</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>691</x>
+      <y>421</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>692</x>
+      <y>328</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>10.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>4.</val></last>
+    <rng1>
+      <x>36</x>
+      <y>574</y>
+      <cn>1</cn>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>271</x>
+      <y>646</y>
+      <cn>2</cn>
+      <val>7.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--8UC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>2.5804283142089844e+01</val></last>
+    <rng1>
+      <x>730</x>
+      <y>10</y>
+      <cn>2</cn>
+      <val>8.3727233886718750e+01</val></rng1>
+    <rng2>
+      <x>798</x>
+      <y>521</y>
+      <val>5.2990692138671875e+01</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-1.0420099832117558e-02</min>
+    <max>1.0420103557407856e-02</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-7.1264556609094143e-03</val></last>
+    <rng1>
+      <x>459</x>
+      <y>519</y>
+      <cn>2</cn>
+      <val>-7.3881284333765507e-03</val></rng1>
+    <rng2>
+      <x>248</x>
+      <y>487</y>
+      <cn>2</cn>
+      <val>7.9770246520638466e-03</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-7.2363682193099521e-06</min>
+    <max>7.2363700382993557e-06</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-4.9490554374642670e-06</val></last>
+    <rng1>
+      <x>1212</x>
+      <y>445</y>
+      <cn>1</cn>
+      <val>5.2992882046964951e-06</val></rng1>
+    <rng2>
+      <x>783</x>
+      <y>322</y>
+      <cn>1</cn>
+      <val>4.4365074245433789e-06</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-9.9999971389770508e+00</min>
+    <max>10.</max>
+    <last>
+      <x>1279</x>
+      <y>719</y>
+      <val>-6.8391408920288086e+00</val></last>
+    <rng1>
+      <x>812</x>
+      <y>63</y>
+      <cn>2</cn>
+      <val>-3.6644179821014404e+00</val></rng1>
+    <rng2>
+      <x>623</x>
+      <y>373</y>
+      <cn>2</cn>
+      <val>-9.9650955200195312e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1280x720--32FC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>63.</val></last>
+    <rng1>
+      <x>1517</x>
+      <y>892</y>
+      <cn>1</cn>
+      <val>74.</val></rng1>
+    <rng2>
+      <x>625</x>
+      <y>316</y>
+      <val>90.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>580</x>
+      <y>884</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>191</x>
+      <y>506</y>
+      <cn>1</cn>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>1915</x>
+      <y>293</y>
+      <cn>1</cn>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>1304</x>
+      <y>1051</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>10.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>5.</val></last>
+    <rng1>
+      <x>1200</x>
+      <y>369</y>
+      <cn>1</cn>
+      <val>3.</val></rng1>
+    <rng2>
+      <x>1845</x>
+      <y>311</y>
+      <cn>2</cn>
+      <val>7.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--8UC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>1.0000003814697266e+01</min>
+    <max>110.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>8.7756958007812500e+01</val></last>
+    <rng1>
+      <x>1560</x>
+      <y>429</y>
+      <cn>1</cn>
+      <val>9.3942092895507812e+01</val></rng1>
+    <rng2>
+      <x>385</x>
+      <y>907</y>
+      <cn>2</cn>
+      <val>1.0521084594726562e+02</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-6.9452449679374695e-03</min>
+    <max>6.9452454335987568e-03</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>3.8555781356990337e-03</val></last>
+    <rng1>
+      <x>1620</x>
+      <y>814</y>
+      <cn>1</cn>
+      <val>-3.9741052314639091e-03</val></rng1>
+    <rng2>
+      <x>1293</x>
+      <y>582</y>
+      <cn>2</cn>
+      <val>3.1299360562115908e-03</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-3.2152756830328144e-06</min>
+    <max>3.2152759104064899e-06</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>1.7849257574198418e-06</val></last>
+    <rng1>
+      <x>565</x>
+      <y>67</y>
+      <cn>1</cn>
+      <val>2.4467740331601817e-06</val></rng1>
+    <rng2>
+      <x>1899</x>
+      <y>659</y>
+      <cn>2</cn>
+      <val>2.7225030407862505e-06</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-9.9999990463256836e+00</min>
+    <max>10.</max>
+    <last>
+      <x>1919</x>
+      <y>1079</y>
+      <val>5.5513920783996582e+00</val></last>
+    <rng1>
+      <x>1261</x>
+      <y>715</y>
+      <val>7.8135304450988770e+00</val></rng1>
+    <rng2>
+      <x>1911</x>
+      <y>635</y>
+      <cn>2</cn>
+      <val>6.6408638954162598e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---1920x1080--32FC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>33.</val></last>
+    <rng1>
+      <x>3185</x>
+      <y>1264</y>
+      <cn>2</cn>
+      <val>33.</val></rng1>
+    <rng2>
+      <x>1453</x>
+      <y>444</y>
+      <val>15.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>2189</x>
+      <y>1542</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>775</x>
+      <y>133</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>0.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>538</x>
+      <y>920</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>811</x>
+      <y>726</y>
+      <val>0.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>16</type>
+    <min>0.</min>
+    <max>10.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>2.</val></last>
+    <rng1>
+      <x>1820</x>
+      <y>2078</y>
+      <val>5.</val></rng1>
+    <rng2>
+      <x>3621</x>
+      <y>443</y>
+      <cn>1</cn>
+      <val>3.</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--8UC3--CV_C->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_MINMAX->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>10.</min>
+    <max>110.</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>7.5101661682128906e+01</val></last>
+    <rng1>
+      <x>564</x>
+      <y>1519</y>
+      <val>7.0731422424316406e+01</val></rng1>
+    <rng2>
+      <x>2103</x>
+      <y>841</y>
+      <val>2.9231380462646484e+01</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_MINMAX->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_L2->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-3.4720983821898699e-03</min>
+    <max>3.4720979165285826e-03</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>1.0486886603757739e-03</val></last>
+    <rng1>
+      <x>3483</x>
+      <y>314</y>
+      <val>1.5159919857978821e-03</val></rng1>
+    <rng2>
+      <x>1721</x>
+      <y>1404</y>
+      <cn>1</cn>
+      <val>-1.2116431025788188e-03</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_L2->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_L1->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-8.0371847843707656e-07</min>
+    <max>8.0371836475023883e-07</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>2.4274959287140518e-07</val></last>
+    <rng1>
+      <x>26</x>
+      <y>1111</y>
+      <cn>2</cn>
+      <val>2.2011846567693283e-07</val></rng1>
+    <rng2>
+      <x>1186</x>
+      <y>897</y>
+      <val>-4.6948770204835455e-07</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_L1->
+<OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_C->
+  <dst>
+    <kind>655360</kind>
+    <type>21</type>
+    <min>-10.</min>
+    <max>9.9999990463256836e+00</max>
+    <last>
+      <x>3839</x>
+      <y>2159</y>
+      <val>3.0203309059143066e+00</val></last>
+    <rng1>
+      <x>826</x>
+      <y>1234</y>
+      <cn>1</cn>
+      <val>-1.7788277864456177e+00</val></rng1>
+    <rng2>
+      <x>411</x>
+      <y>1591</y>
+      <val>8.4030303955078125e+00</val></rng2></dst></OCL_NormalizeFixture_Normalize--Normalize---3840x2160--32FC3--CV_C->
+ <!-- resumed -->
+
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.4947114425000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--8UC3->
+<OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.1556854393840847e+01</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---640x480--32FC3->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        4.4927854559000000e+10</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--8UC3->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.0107585234568455e+03</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1280x720--32FC3->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.0105411132300000e+11</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--8UC3->
+<OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC3->
+  <r>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -7.5759086910812789e+02</data></val></r></OCL_UMatDotFixture_UMatDot--UMatDot---1920x1080--32FC3->
+ <!-- resumed -->
+
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2737559244791667e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2718500000000000e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2766400716145834e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3882983727511544e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3887423960585124e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3992391149395601e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--8UC3->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.7006429885517112e-03</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -9.7401896076462443e-04</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -6.8914213016341825e-04</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7743826427684664e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7694638824477018e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7697236691600806e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---640x480--32FC3->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2743274088541666e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2734777886284722e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2748585177951389e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3895578502495340e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3873049473637067e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3910287280505699e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--8UC3->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.6324905473249798e-04</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -1.7896061419732075e-04</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -3.7703746611593186e-04</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7720180044681568e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7706029220148558e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7721646949298899e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1280x720--32FC3->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2749871238425926e+02</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2742139419367284e+02</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        1.2754971691743827e+02</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3894913387967321e+01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3858651973870167e+01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        7.3902782843312707e+01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--8UC3->
+<OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC3->
+  <mean0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        3.4408765385694691e-04</data></val></mean0>
+  <mean1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        -6.5272345371879595e-04</data></val></mean1>
+  <mean2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.4177691326079597e-05</data></val></mean2>
+  <mean3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></mean3>
+  <stddev0>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7728708190006672e-01</data></val></stddev0>
+  <stddev1>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7713002672506319e-01</data></val></stddev1>
+  <stddev2>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        5.7743301307055117e-01</data></val></stddev2>
+  <stddev3>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        0.</data></val></stddev3></OCL_MeanStdDevFixture_MeanStdDev--MeanStdDev---1920x1080--32FC3->
+ <!-- resumed -->
+
+<OCL_SumFixture_Sum--Sum---640x480--8UC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9065323. 9059216. 9064847. 0.</data></val></result></OCL_SumFixture_Sum--Sum---640x480--8UC3->
+<OCL_SumFixture_Sum--Sum---640x480--32FC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        9.2316731254291534e+06 9.2070234409999847e+06
+        9.2096488657283783e+06 0.</data></val></result></OCL_SumFixture_Sum--Sum---640x480--32FC3->
+<OCL_SumFixture_Sum--Sum---1280x720--8UC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        27195917. 27197887. 27208109. 0.</data></val></result></OCL_SumFixture_Sum--Sum---1280x720--8UC3->
+<OCL_SumFixture_Sum--Sum---1280x720--32FC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.7663572708987236e+07 2.7643052097875595e+07
+        2.7637575669067383e+07 0.</data></val></result></OCL_SumFixture_Sum--Sum---1280x720--32FC3->
+<OCL_SumFixture_Sum--Sum---1920x1080--8UC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        61173968. 61204547. 61189959. 0.</data></val></result></OCL_SumFixture_Sum--Sum---1920x1080--8UC3->
+<OCL_SumFixture_Sum--Sum---1920x1080--32FC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        6.2229405003705025e+07 6.2167395379288673e+07
+        6.2213858606499672e+07 0.</data></val></result></OCL_SumFixture_Sum--Sum---1920x1080--32FC3->
+<OCL_SumFixture_Sum--Sum---3840x2160--8UC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        244617394. 244671078. 244638600. 0.</data></val></result></OCL_SumFixture_Sum--Sum---3840x2160--8UC3->
+<OCL_SumFixture_Sum--Sum---3840x2160--32FC3->
+  <result>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>4</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        2.4892061187539387e+08 2.4883541214280701e+08
+        2.4887278291827202e+08 0.</data></val></result></OCL_SumFixture_Sum--Sum---3840x2160--32FC3->
 </opencv_storage>
