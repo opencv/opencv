@@ -174,6 +174,25 @@ void dumpOpenCLDevice()
         const char* haveAmdFftStr = haveAmdFft() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Has AMD Fft = "<< haveAmdFftStr);
         DUMP_PROPERTY_XML("cv_ocl_current_AmdFft", haveAmdFft());
+
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width char = "<< device.preferredVectorWidthChar());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthChar", device.preferredVectorWidthChar());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width short = "<< device.preferredVectorWidthShort());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthShort", device.preferredVectorWidthShort());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width int = "<< device.preferredVectorWidthInt());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthInt", device.preferredVectorWidthInt());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width long = "<< device.preferredVectorWidthLong());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthLong", device.preferredVectorWidthLong());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width float = "<< device.preferredVectorWidthFloat());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthFloat", device.preferredVectorWidthFloat());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width double = "<< device.preferredVectorWidthDouble());
+        DUMP_PROPERTY_XML("cv_ocl_current_preferredVectorWidthDouble", device.preferredVectorWidthDouble());
     }
     catch (...)
     {
