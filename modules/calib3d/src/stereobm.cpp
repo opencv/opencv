@@ -743,9 +743,9 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     int wsz = state->SADWindowSize;
     int wsz2 = wsz/2;
 
-    int sizeX = 13, sizeY = sizeX-1, N = ndisp*2;
+    int sizeX = std::max(11, 27 - ocl::Device::getDefault().maxComputeUnits() ), sizeY = sizeX-1, N = ndisp*2;
 
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D tsize=%d -D wsz=%d -D iters=%d", (2*sizeY)*ndisp, 2*ndisp, wsz, sizeX*sizeY/2) );
+    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
     if(k.empty())
         return false;
 
