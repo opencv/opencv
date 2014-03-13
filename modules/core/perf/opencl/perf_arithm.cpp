@@ -540,7 +540,7 @@ typedef TestBaseWithParam<CompareParams> CompareFixture;
 
 OCL_PERF_TEST_P(CompareFixture, Compare,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES, CmpCode::all()))
+                               OCL_TEST_TYPES_134, CmpCode::all()))
 {
     const CompareParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -549,10 +549,29 @@ OCL_PERF_TEST_P(CompareFixture, Compare,
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
-    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, CV_8UC1);
+    UMat src1(srcSize, type), src2(srcSize, type), dst(srcSize, CV_8UC(CV_MAT_CN(type)));
     declare.in(src1, src2, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::compare(src1, src2, dst, cmpCode);
+
+    SANITY_CHECK(dst);
+}
+
+OCL_PERF_TEST_P(CompareFixture, CompareScalar,
+            ::testing::Combine(OCL_TEST_SIZES,
+                               OCL_TEST_TYPES_134, CmpCode::all()))
+{
+    const CompareParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const int cmpCode = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src1(srcSize, type), dst(srcSize, CV_8UC(CV_MAT_CN(type)));
+    declare.in(src1, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::compare(src1, 32, dst, cmpCode);
 
     SANITY_CHECK(dst);
 }

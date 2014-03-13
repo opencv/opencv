@@ -135,7 +135,7 @@ public:
     bool isUMat() const;
     bool isMatVector() const;
     bool isUMatVector() const;
-    bool isMatx();
+    bool isMatx() const;
 
     virtual ~_InputArray();
 
