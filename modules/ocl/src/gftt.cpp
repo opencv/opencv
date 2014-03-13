@@ -158,8 +158,8 @@ static void minMaxEig_caller(const oclMat &src, oclMat &dst, oclMat & tozero)
         // first parallel pass
         vector<pair<size_t , const void *> > args;
         args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&src_step));
+        args.push_back( make_pair( sizeof(cl_int) , (void *)&src_offset));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&total));
