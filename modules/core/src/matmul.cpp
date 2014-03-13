@@ -2157,7 +2157,8 @@ typedef void (*ScaleAddFunc)(const uchar* src1, const uchar* src2, uchar* dst, i
 
 static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, OutputArray _dst, int type )
 {
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F);
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), wdepth = std::max(depth, CV_32F),
+            kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
     Size size = _src1.size();
 
@@ -2166,27 +2167,31 @@ static bool ocl_scaleAdd( InputArray _src1, double alpha, InputArray _src2, Outp
 
     char cvt[2][50];
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D wdepth=%d -D convertToWT1=%s"
-                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s%s", ocl::typeToStr(depth),
-                         ocl::typeToStr(wdepth), wdepth, ocl::convertTypeStr(depth, wdepth, 1, cvt[0]),
-                         ocl::convertTypeStr(wdepth, depth, 1, cvt[1]),
+                  format("-D OP_SCALE_ADD -D BINARY_OP -D dstT=%s -D workT=%s -D convertToWT1=%s"
+                         " -D srcT1=dstT -D srcT2=dstT -D convertToDT=%s -D workT1=%s -D wdepth=%d%s",
+                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
+                         ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
+                         ocl::convertTypeStr(wdepth, depth, kercn, cvt[1]),
+                         ocl::typeToStr(wdepth), wdepth,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
 
+    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
     _dst.create(size, type);
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat(), dst = _dst.getUMat();
+    UMat dst = _dst.getUMat();
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
             src2arg = ocl::KernelArg::ReadOnlyNoSize(src2),
-            dstarg = ocl::KernelArg::WriteOnly(dst, cn);
+            dstarg = ocl::KernelArg::WriteOnly(dst, cn, kercn);
 
     if (wdepth == CV_32F)
         k.args(src1arg, src2arg, dstarg, (float)alpha);
     else
         k.args(src1arg, src2arg, dstarg, alpha);
 
-    size_t globalsize[2] = { dst.cols * cn, dst.rows };
+    size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
     return k.run(2, globalsize, NULL, false);
 }
 
