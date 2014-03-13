@@ -57,7 +57,7 @@ namespace ocl {
 typedef Size_MatType PyrDownFixture;
 
 OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -81,7 +81,7 @@ OCL_PERF_TEST_P(PyrDownFixture, PyrDown,
 typedef Size_MatType PyrUpFixture;
 
 OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -105,7 +105,7 @@ OCL_PERF_TEST_P(PyrUpFixture, PyrUp,
 typedef Size_MatType BuildPyramidFixture;
 
 OCL_PERF_TEST_P(BuildPyramidFixture, BuildPyramid,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
