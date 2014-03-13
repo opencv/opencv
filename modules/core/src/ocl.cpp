@@ -3798,11 +3798,16 @@ public:
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
 
-        if( u->refcount == 0 )
+        // FIXIT Workaround for UMat synchronization issue
+        // if( u->refcount == 0 )
         {
             if( !u->copyOnMap() )
             {
-                CV_Assert(u->data == 0);
+                if (u->data) // FIXIT Workaround for UMat synchronization issue
+                {
+                    //CV_Assert(u->hostCopyObsolete() == false);
+                    return;
+                }
                 // because there can be other map requests for the same UMat with different access flags,
                 // we use the universal (read-write) access mode.
                 cl_int retval = 0;
@@ -3843,6 +3848,10 @@ public:
         CV_Assert(u->handle != 0);
 
         UMatDataAutoLock autolock(u);
+
+        // FIXIT Workaround for UMat synchronization issue
+        if(u->refcount > 0)
+            return;
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
         cl_int retval = 0;
