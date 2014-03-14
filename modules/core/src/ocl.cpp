@@ -4355,9 +4355,8 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
         d.preferredVectorWidthDouble(), -1 }, width = vectorWidths[depth];
-    CV_Assert(width >= 0);
 
-    if (ssize.width * cn < width)
+    if (ssize.width * cn < width || width <= 0)
         return 1;
 
     std::vector<size_t> offsets, steps, cols;
