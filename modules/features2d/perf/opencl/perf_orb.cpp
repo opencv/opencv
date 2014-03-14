@@ -27,7 +27,7 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Detect, ORB_IMAGES)
 
     OCL_TEST_CYCLE() detector(frame, mask, points);
 
-    sort(points.begin(), points.end(), comparators::KeypointGreater());
+    std::sort(points.begin(), points.end(), comparators::KeypointGreater());
     SANITY_CHECK_KEYPOINTS(points, 1e-5);
 }
 
@@ -47,7 +47,7 @@ OCL_PERF_TEST_P(ORBFixture, ORB_Extract, ORB_IMAGES)
     ORB detector(1500, 1.3f, 1);
     vector<KeyPoint> points;
     detector(frame, mask, points);
-    sort(points.begin(), points.end(), comparators::KeypointGreater());
+    std::sort(points.begin(), points.end(), comparators::KeypointGreater());
 
     UMat descriptors;
 
