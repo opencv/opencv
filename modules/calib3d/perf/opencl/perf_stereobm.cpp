@@ -65,10 +65,11 @@ OCL_PERF_TEST_P(StereoBMFixture, StereoBM, ::testing::Combine(OCL_PERF_ENUM(32, 
 
     Ptr<StereoBM> bm = createStereoBM( n_disp, winSize );
     bm->setPreFilterType(bm->PREFILTER_XSOBEL);
+    bm->setTextureThreshold(0);
 
     OCL_TEST_CYCLE() bm->compute(left, right, disp);
 
-    SANITY_CHECK_NOTHING();//(disp, 1e-3, ERROR_RELATIVE);
+    SANITY_CHECK(disp, 1e-3, ERROR_RELATIVE);
 }
 
 }//ocl

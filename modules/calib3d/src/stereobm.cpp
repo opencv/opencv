@@ -735,9 +735,9 @@ struct PrefilterInvoker : public ParallelLoopBody
     StereoBMParams* state;
 };
 
-static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
+static bool ocl_stereobm( InputArray _left, InputArray _right,
                        OutputArray _disp, StereoBMParams* state)
-{//printf("opt\n");
+{
     int ndisp = state->numDisparities;
     int mindisp = state->minDisparity;
     int wsz = state->SADWindowSize;
@@ -745,7 +745,7 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
 
     int sizeX = std::max(11, 27 - ocl::Device::getDefault().maxComputeUnits() ), sizeY = sizeX-1, N = ndisp*2;
 
-    ocl::Kernel k("stereoBM_opt", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
+    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
     if(k.empty())
         return false;
 
@@ -779,42 +779,6 @@ static bool ocl_stereobm_opt( InputArray _left, InputArray _right,
     idx = k.set(idx, wsz);
 
     return k.run(3, globalThreads, localThreads, false);
-}
-
-static bool ocl_stereobm_bf(InputArray _left, InputArray _right,
-                       OutputArray _disp, StereoBMParams* state)
-{
-    ocl::Kernel k("stereoBM_BF", ocl::calib3d::stereobm_oclsrc, cv::format("-D SIZE=%d", state->numDisparities ) );
-    if(k.empty())
-        return false;
-
-    UMat left = _left.getUMat(), right = _right.getUMat();
-    _disp.create(_left.size(), CV_16S);
-    UMat disp = _disp.getUMat();
-
-    size_t globalThreads[3] = { left.cols, left.rows, 1 };
-
-    int idx = 0;
-    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
-    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(right));
-    idx = k.set(idx, ocl::KernelArg::WriteOnly(disp));
-    idx = k.set(idx, state->minDisparity);
-    idx = k.set(idx, state->numDisparities);
-    idx = k.set(idx, state->preFilterCap);
-    idx = k.set(idx, state->SADWindowSize);
-    idx = k.set(idx, state->textureThreshold);
-    idx = k.set(idx, state->uniquenessRatio);
-
-    return k.run(2, globalThreads, NULL, false);
-}
-
-static bool ocl_stereo(InputArray _left, InputArray _right,
-                       OutputArray _disp, StereoBMParams* state)
-{
-    //if(ocl::Device::getDefault().localMemSize() > state->numDisparities * state->numDisparities * sizeof(short) )
-        return ocl_stereobm_opt(_left, _right, _disp, state);
-    //else
-      //  return ocl_stereobm_bf(_left, _right, _disp, state);
 }
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
@@ -950,18 +914,20 @@ public:
 
         int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
 
-        if(ocl::useOpenCL() && disparr.isUMat())
+        if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
         {
             UMat left, right;
-            CV_Assert(ocl_prefiltering(leftarr, rightarr, left, right, &params));
-            CV_Assert(ocl_stereo(left, right, disparr, &params));
-
-            if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
-                filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
-
-            if (dtype == CV_32F)
-                disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
-            return;
+            if(ocl_prefiltering(leftarr, rightarr, left, right, &params))
+            {
+                if(ocl_stereobm(left, right, disparr, &params))
+                {
+                    if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
+                        filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
+                    if (dtype == CV_32F)
+                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                    return;
+                }
+            }
         }
 
         Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
