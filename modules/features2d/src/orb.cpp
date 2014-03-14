@@ -35,6 +35,7 @@
 /** Authors: Ethan Rublee, Vincent Rabaud, Gary Bradski */
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 #include <iterator>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -43,14 +44,86 @@ namespace cv
 {
 
 const float HARRIS_K = 0.04f;
-const int DESCRIPTOR_SIZE = 32;
+
+template<typename _Tp> inline void copyVectorToUMat(const std::vector<_Tp>& v, OutputArray um)
+{
+    if(v.empty())
+        um.release();
+    Mat(1, (int)(v.size()*sizeof(v[0])), CV_8U, (void*)&v[0]).copyTo(um);
+}
+
+static bool
+ocl_HarrisResponses(const UMat& imgbuf,
+                    const UMat& layerinfo,
+                    const UMat& keypoints,
+                    UMat& responses,
+                    int nkeypoints, int blockSize, float harris_k)
+{
+    size_t globalSize[] = {nkeypoints};
+
+    float scale = 1.f/((1 << 2) * blockSize * 255.f);
+    float scale_sq_sq = scale * scale * scale * scale;
+
+    ocl::Kernel hr_ker("ORB_HarrisResponses", ocl::features2d::orb_oclsrc,
+                format("-D ORB_RESPONSES -D blockSize=%d -D scale_sq_sq=%.12ef -D HARRIS_K=%.12ff", blockSize, scale_sq_sq, harris_k));
+    if( hr_ker.empty() )
+        return false;
+
+    return hr_ker.args(ocl::KernelArg::ReadOnlyNoSize(imgbuf),
+                ocl::KernelArg::PtrReadOnly(layerinfo),
+                ocl::KernelArg::PtrReadOnly(keypoints),
+                ocl::KernelArg::PtrWriteOnly(responses),
+                nkeypoints).run(1, globalSize, 0, true);
+}
+
+static bool
+ocl_ICAngles(const UMat& imgbuf, const UMat& layerinfo,
+             const UMat& keypoints, UMat& responses,
+             const UMat& umax, int nkeypoints, int half_k)
+{
+    size_t globalSize[] = {nkeypoints};
+
+    ocl::Kernel icangle_ker("ORB_ICAngle", ocl::features2d::orb_oclsrc, "-D ORB_ANGLES");
+    if( icangle_ker.empty() )
+        return false;
+
+    return icangle_ker.args(ocl::KernelArg::ReadOnlyNoSize(imgbuf),
+                ocl::KernelArg::PtrReadOnly(layerinfo),
+                ocl::KernelArg::PtrReadOnly(keypoints),
+                ocl::KernelArg::PtrWriteOnly(responses),
+                ocl::KernelArg::PtrReadOnly(umax),
+                nkeypoints, half_k).run(1, globalSize, 0, true);
+}
+
+
+static bool
+ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
+                          const UMat& keypoints, UMat& desc, const UMat& pattern,
+                          int nkeypoints, int dsize, int WTA_K)
+{
+    size_t globalSize[] = {nkeypoints};
+
+    ocl::Kernel desc_ker("ORB_computeDescriptor", ocl::features2d::orb_oclsrc,
+                         format("-D ORB_DESCRIPTORS -D WTA_K=%d", WTA_K));
+    if( desc_ker.empty() )
+        return false;
+
+    return desc_ker.args(ocl::KernelArg::ReadOnlyNoSize(imgbuf),
+                         ocl::KernelArg::PtrReadOnly(layerInfo),
+                         ocl::KernelArg::PtrReadOnly(keypoints),
+                         ocl::KernelArg::PtrWriteOnly(desc),
+                         ocl::KernelArg::PtrReadOnly(pattern),
+                         nkeypoints, dsize).run(1, globalSize, 0, true);
+}
+
 
 /**
  * Function that computes the Harris responses in a
- * blockSize x blockSize patch at given points in an image
+ * blockSize x blockSize patch at given points in the image
  */
 static void
-HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float harris_k)
+HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
+                std::vector<KeyPoint>& pts, int blockSize, float harris_k)
 {
     CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
 
@@ -60,8 +133,7 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
     int step = (int)(img.step/img.elemSize1());
     int r = blockSize/2;
 
-    float scale = (1 << 2) * blockSize * 255.0f;
-    scale = 1.0f / scale;
+    float scale = 1.f/((1 << 2) * blockSize * 255.f);
     float scale_sq_sq = scale * scale * scale * scale;
 
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
@@ -72,10 +144,11 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
 
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
-        int x0 = cvRound(pts[ptidx].pt.x - r);
-        int y0 = cvRound(pts[ptidx].pt.y - r);
+        int x0 = cvRound(pts[ptidx].pt.x);
+        int y0 = cvRound(pts[ptidx].pt.y);
+        int z = pts[ptidx].octave;
 
-        const uchar* ptr0 = ptr00 + y0*step + x0;
+        const uchar* ptr0 = ptr00 + (y0 - r + layerinfo[z].y)*step + x0 - r + layerinfo[z].x;
         int a = 0, b = 0, c = 0;
 
         for( int k = 0; k < blockSize*blockSize; k++ )
@@ -94,158 +167,175 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static float IC_Angle(const Mat& image, const int half_k, Point2f pt,
-                      const std::vector<int> & u_max)
+static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
+                     std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
 {
-    int m_01 = 0, m_10 = 0;
+    int step = (int)img.step1();
+    size_t ptidx, ptsize = pts.size();
 
-    const uchar* center = &image.at<uchar> (cvRound(pt.y), cvRound(pt.x));
-
-    // Treat the center line differently, v=0
-    for (int u = -half_k; u <= half_k; ++u)
-        m_10 += u * center[u];
-
-    // Go line by line in the circular patch
-    int step = (int)image.step1();
-    for (int v = 1; v <= half_k; ++v)
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
-        // Proceed over the two lines
-        int v_sum = 0;
-        int d = u_max[v];
-        for (int u = -d; u <= d; ++u)
-        {
-            int val_plus = center[u + v*step], val_minus = center[u - v*step];
-            v_sum += (val_plus - val_minus);
-            m_10 += u * (val_plus + val_minus);
-        }
-        m_01 += v * v_sum;
-    }
+        const Rect& layer = layerinfo[pts[ptidx].octave];
+        const uchar* center = &img.at<uchar>(cvRound(pts[ptidx].pt.y) + layer.y, cvRound(pts[ptidx].pt.x) + layer.x);
 
-    return fastAtan2((float)m_01, (float)m_10);
+        int m_01 = 0, m_10 = 0;
+
+        // Treat the center line differently, v=0
+        for (int u = -half_k; u <= half_k; ++u)
+            m_10 += u * center[u];
+
+        // Go line by line in the circular patch
+        for (int v = 1; v <= half_k; ++v)
+        {
+            // Proceed over the two lines
+            int v_sum = 0;
+            int d = u_max[v];
+            for (int u = -d; u <= d; ++u)
+            {
+                int val_plus = center[u + v*step], val_minus = center[u - v*step];
+                v_sum += (val_plus - val_minus);
+                m_10 += u * (val_plus + val_minus);
+            }
+            m_01 += v * v_sum;
+        }
+
+        pts[ptidx].angle = fastAtan2((float)m_01, (float)m_10);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void computeOrbDescriptor(const KeyPoint& kpt,
-                                 const Mat& img, const Point* pattern,
-                                 uchar* desc, int dsize, int WTA_K)
+static void
+computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo,
+                       const std::vector<float>& layerScale, std::vector<KeyPoint>& keypoints,
+                       Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int WTA_K )
 {
-    float angle = kpt.angle;
-    //angle = cvFloor(angle/12)*12.f;
-    angle *= (float)(CV_PI/180.f);
-    float a = (float)cos(angle), b = (float)sin(angle);
+    int step = (int)imagePyramid.step;
+    int j, i, nkeypoints = (int)keypoints.size();
 
-    const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
-    int step = (int)img.step;
+    for( j = 0; j < nkeypoints; j++ )
+    {
+        const KeyPoint& kpt = keypoints[j];
+        const Rect& layer = layerInfo[kpt.octave];
+        float scale = 1.f/layerScale[kpt.octave];
+        float angle = kpt.angle;
 
-    float x, y;
-    int ix, iy;
-#if 1
-    #define GET_VALUE(idx) \
-           (x = pattern[idx].x*a - pattern[idx].y*b, \
+        angle *= (float)(CV_PI/180.f);
+        float a = (float)cos(angle), b = (float)sin(angle);
+
+        const uchar* center = &imagePyramid.at<uchar>(cvRound(kpt.pt.y*scale) + layer.y,
+                                                      cvRound(kpt.pt.x*scale) + layer.x);
+        float x, y;
+        int ix, iy;
+        const Point* pattern = &_pattern[0];
+        uchar* desc = descriptors.ptr<uchar>(j);
+
+    #if 1
+        #define GET_VALUE(idx) \
+               (x = pattern[idx].x*a - pattern[idx].y*b, \
+                y = pattern[idx].x*b + pattern[idx].y*a, \
+                ix = cvRound(x), \
+                iy = cvRound(y), \
+                *(center + iy*step + ix) )
+    #else
+        #define GET_VALUE(idx) \
+            (x = pattern[idx].x*a - pattern[idx].y*b, \
             y = pattern[idx].x*b + pattern[idx].y*a, \
-            ix = cvRound(x), \
-            iy = cvRound(y), \
-            *(center + iy*step + ix) )
-#else
-    #define GET_VALUE(idx) \
-        (x = pattern[idx].x*a - pattern[idx].y*b, \
-        y = pattern[idx].x*b + pattern[idx].y*a, \
-        ix = cvFloor(x), iy = cvFloor(y), \
-        x -= ix, y -= iy, \
-        cvRound(center[iy*step + ix]*(1-x)*(1-y) + center[(iy+1)*step + ix]*(1-x)*y + \
-                center[iy*step + ix+1]*x*(1-y) + center[(iy+1)*step + ix+1]*x*y))
-#endif
+            ix = cvFloor(x), iy = cvFloor(y), \
+            x -= ix, y -= iy, \
+            cvRound(center[iy*step + ix]*(1-x)*(1-y) + center[(iy+1)*step + ix]*(1-x)*y + \
+                    center[iy*step + ix+1]*x*(1-y) + center[(iy+1)*step + ix+1]*x*y))
+    #endif
 
-    if( WTA_K == 2 )
-    {
-        for (int i = 0; i < dsize; ++i, pattern += 16)
+        if( WTA_K == 2 )
         {
-            int t0, t1, val;
-            t0 = GET_VALUE(0); t1 = GET_VALUE(1);
-            val = t0 < t1;
-            t0 = GET_VALUE(2); t1 = GET_VALUE(3);
-            val |= (t0 < t1) << 1;
-            t0 = GET_VALUE(4); t1 = GET_VALUE(5);
-            val |= (t0 < t1) << 2;
-            t0 = GET_VALUE(6); t1 = GET_VALUE(7);
-            val |= (t0 < t1) << 3;
-            t0 = GET_VALUE(8); t1 = GET_VALUE(9);
-            val |= (t0 < t1) << 4;
-            t0 = GET_VALUE(10); t1 = GET_VALUE(11);
-            val |= (t0 < t1) << 5;
-            t0 = GET_VALUE(12); t1 = GET_VALUE(13);
-            val |= (t0 < t1) << 6;
-            t0 = GET_VALUE(14); t1 = GET_VALUE(15);
-            val |= (t0 < t1) << 7;
+            for (i = 0; i < dsize; ++i, pattern += 16)
+            {
+                int t0, t1, val;
+                t0 = GET_VALUE(0); t1 = GET_VALUE(1);
+                val = t0 < t1;
+                t0 = GET_VALUE(2); t1 = GET_VALUE(3);
+                val |= (t0 < t1) << 1;
+                t0 = GET_VALUE(4); t1 = GET_VALUE(5);
+                val |= (t0 < t1) << 2;
+                t0 = GET_VALUE(6); t1 = GET_VALUE(7);
+                val |= (t0 < t1) << 3;
+                t0 = GET_VALUE(8); t1 = GET_VALUE(9);
+                val |= (t0 < t1) << 4;
+                t0 = GET_VALUE(10); t1 = GET_VALUE(11);
+                val |= (t0 < t1) << 5;
+                t0 = GET_VALUE(12); t1 = GET_VALUE(13);
+                val |= (t0 < t1) << 6;
+                t0 = GET_VALUE(14); t1 = GET_VALUE(15);
+                val |= (t0 < t1) << 7;
 
-            desc[i] = (uchar)val;
+                desc[i] = (uchar)val;
+            }
         }
-    }
-    else if( WTA_K == 3 )
-    {
-        for (int i = 0; i < dsize; ++i, pattern += 12)
+        else if( WTA_K == 3 )
         {
-            int t0, t1, t2, val;
-            t0 = GET_VALUE(0); t1 = GET_VALUE(1); t2 = GET_VALUE(2);
-            val = t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0);
+            for (i = 0; i < dsize; ++i, pattern += 12)
+            {
+                int t0, t1, t2, val;
+                t0 = GET_VALUE(0); t1 = GET_VALUE(1); t2 = GET_VALUE(2);
+                val = t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0);
 
-            t0 = GET_VALUE(3); t1 = GET_VALUE(4); t2 = GET_VALUE(5);
-            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 2;
+                t0 = GET_VALUE(3); t1 = GET_VALUE(4); t2 = GET_VALUE(5);
+                val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 2;
 
-            t0 = GET_VALUE(6); t1 = GET_VALUE(7); t2 = GET_VALUE(8);
-            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 4;
+                t0 = GET_VALUE(6); t1 = GET_VALUE(7); t2 = GET_VALUE(8);
+                val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 4;
 
-            t0 = GET_VALUE(9); t1 = GET_VALUE(10); t2 = GET_VALUE(11);
-            val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 6;
+                t0 = GET_VALUE(9); t1 = GET_VALUE(10); t2 = GET_VALUE(11);
+                val |= (t2 > t1 ? (t2 > t0 ? 2 : 0) : (t1 > t0)) << 6;
 
-            desc[i] = (uchar)val;
+                desc[i] = (uchar)val;
+            }
         }
-    }
-    else if( WTA_K == 4 )
-    {
-        for (int i = 0; i < dsize; ++i, pattern += 16)
+        else if( WTA_K == 4 )
         {
-            int t0, t1, t2, t3, u, v, k, val;
-            t0 = GET_VALUE(0); t1 = GET_VALUE(1);
-            t2 = GET_VALUE(2); t3 = GET_VALUE(3);
-            u = 0, v = 2;
-            if( t1 > t0 ) t0 = t1, u = 1;
-            if( t3 > t2 ) t2 = t3, v = 3;
-            k = t0 > t2 ? u : v;
-            val = k;
+            for (i = 0; i < dsize; ++i, pattern += 16)
+            {
+                int t0, t1, t2, t3, u, v, k, val;
+                t0 = GET_VALUE(0); t1 = GET_VALUE(1);
+                t2 = GET_VALUE(2); t3 = GET_VALUE(3);
+                u = 0, v = 2;
+                if( t1 > t0 ) t0 = t1, u = 1;
+                if( t3 > t2 ) t2 = t3, v = 3;
+                k = t0 > t2 ? u : v;
+                val = k;
 
-            t0 = GET_VALUE(4); t1 = GET_VALUE(5);
-            t2 = GET_VALUE(6); t3 = GET_VALUE(7);
-            u = 0, v = 2;
-            if( t1 > t0 ) t0 = t1, u = 1;
-            if( t3 > t2 ) t2 = t3, v = 3;
-            k = t0 > t2 ? u : v;
-            val |= k << 2;
+                t0 = GET_VALUE(4); t1 = GET_VALUE(5);
+                t2 = GET_VALUE(6); t3 = GET_VALUE(7);
+                u = 0, v = 2;
+                if( t1 > t0 ) t0 = t1, u = 1;
+                if( t3 > t2 ) t2 = t3, v = 3;
+                k = t0 > t2 ? u : v;
+                val |= k << 2;
 
-            t0 = GET_VALUE(8); t1 = GET_VALUE(9);
-            t2 = GET_VALUE(10); t3 = GET_VALUE(11);
-            u = 0, v = 2;
-            if( t1 > t0 ) t0 = t1, u = 1;
-            if( t3 > t2 ) t2 = t3, v = 3;
-            k = t0 > t2 ? u : v;
-            val |= k << 4;
+                t0 = GET_VALUE(8); t1 = GET_VALUE(9);
+                t2 = GET_VALUE(10); t3 = GET_VALUE(11);
+                u = 0, v = 2;
+                if( t1 > t0 ) t0 = t1, u = 1;
+                if( t3 > t2 ) t2 = t3, v = 3;
+                k = t0 > t2 ? u : v;
+                val |= k << 4;
 
-            t0 = GET_VALUE(12); t1 = GET_VALUE(13);
-            t2 = GET_VALUE(14); t3 = GET_VALUE(15);
-            u = 0, v = 2;
-            if( t1 > t0 ) t0 = t1, u = 1;
-            if( t3 > t2 ) t2 = t3, v = 3;
-            k = t0 > t2 ? u : v;
-            val |= k << 6;
+                t0 = GET_VALUE(12); t1 = GET_VALUE(13);
+                t2 = GET_VALUE(14); t3 = GET_VALUE(15);
+                u = 0, v = 2;
+                if( t1 > t0 ) t0 = t1, u = 1;
+                if( t3 > t2 ) t2 = t3, v = 3;
+                k = t0 > t2 ? u : v;
+                val |= k << 6;
 
-            desc[i] = (uchar)val;
+                desc[i] = (uchar)val;
+            }
         }
+        else
+            CV_Error( Error::StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
+        #undef GET_VALUE
     }
-    else
-        CV_Error( Error::StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
-
-    #undef GET_VALUE
 }
 
 
@@ -591,21 +681,37 @@ void ORB::operator()(InputArray image, InputArray mask, std::vector<KeyPoint>& k
 }
 
 
-/** Compute the ORB keypoint orientations
- * @param image the image to compute the features and descriptors on
- * @param integral_image the integral image of the iamge (can be empty, but the computation will be slower)
- * @param scale the scale at which we compute the orientation
- * @param keypoints the resulting keypoints
- */
-static void computeOrientation(const Mat& image, std::vector<KeyPoint>& keypoints,
-                               int halfPatchSize, const std::vector<int>& umax)
+static void uploadORBKeypoints(const std::vector<KeyPoint>& src, std::vector<Vec3i>& buf, OutputArray dst)
 {
-    // Process each keypoint
-    for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
-         keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
+    size_t i, n = src.size();
+    buf.resize(std::max(buf.size(), n));
+    for( i = 0; i < n; i++ )
+        buf[i] = Vec3i(cvRound(src[i].pt.x), cvRound(src[i].pt.y), src[i].octave);
+    copyVectorToUMat(buf, dst);
+}
+
+typedef union if32_t
+{
+    int i;
+    float f;
+}
+if32_t;
+
+static void uploadORBKeypoints(const std::vector<KeyPoint>& src,
+                               const std::vector<float>& layerScale,
+                               std::vector<Vec4i>& buf, OutputArray dst)
+{
+    size_t i, n = src.size();
+    buf.resize(std::max(buf.size(), n));
+    for( i = 0; i < n; i++ )
     {
-        keypoint->angle = IC_Angle(image, halfPatchSize, keypoint->pt, umax);
+        int z = src[i].octave;
+        float scale = 1.f/layerScale[z];
+        if32_t angle;
+        angle.f = src[i].angle;
+        buf[i] = Vec4i(cvRound(src[i].pt.x*scale), cvRound(src[i].pt.y*scale), z, angle.i);
     }
+    copyVectorToUMat(buf, dst);
 }
 
 
@@ -614,13 +720,18 @@ static void computeOrientation(const Mat& image, std::vector<KeyPoint>& keypoint
  * @param mask_pyramid the masks to apply at every level
  * @param keypoints the resulting keypoints, clustered per level
  */
-static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
-                             const std::vector<Mat>& maskPyramid,
-                             std::vector<std::vector<KeyPoint> >& allKeypoints,
-                             int nfeatures, int firstLevel, double scaleFactor,
-                             int edgeThreshold, int patchSize, int scoreType )
+static void computeKeyPoints(const Mat& imagePyramid,
+                             const UMat& uimagePyramid,
+                             const Mat& maskPyramid,
+                             const std::vector<Rect>& layerInfo,
+                             const UMat& ulayerInfo,
+                             const std::vector<float>& layerScale,
+                             std::vector<KeyPoint>& allKeypoints,
+                             int nfeatures, double scaleFactor,
+                             int edgeThreshold, int patchSize, int scoreType,
+                             bool useOCL )
 {
-    int nlevels = (int)imagePyramid.size();
+    int i, nkeypoints, level, nlevels = (int)layerInfo.size();
     std::vector<int> nfeaturesPerLevel(nlevels);
 
     // fill the extractors and descriptors for the corresponding scales
@@ -628,7 +739,7 @@ static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
     float ndesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)std::pow((double)factor, (double)nlevels));
 
     int sumFeatures = 0;
-    for( int level = 0; level < nlevels-1; level++ )
+    for( level = 0; level < nlevels-1; level++ )
     {
         nfeaturesPerLevel[level] = cvRound(ndesiredFeaturesPerScale);
         sumFeatures += nfeaturesPerLevel[level];
@@ -657,66 +768,116 @@ static void computeKeyPoints(const std::vector<Mat>& imagePyramid,
         ++v0;
     }
 
-    allKeypoints.resize(nlevels);
+    allKeypoints.clear();
+    std::vector<KeyPoint> keypoints;
+    std::vector<int> counters(nlevels);
+    keypoints.reserve(nfeaturesPerLevel[0]*2);
 
-    for (int level = 0; level < nlevels; ++level)
+    for( level = 0; level < nlevels; level++ )
     {
         int featuresNum = nfeaturesPerLevel[level];
-        allKeypoints[level].reserve(featuresNum*2);
-
-        std::vector<KeyPoint> & keypoints = allKeypoints[level];
+        Mat img = imagePyramid(layerInfo[level]);
+        Mat mask = maskPyramid.empty() ? Mat() : maskPyramid(layerInfo[level]);
 
         // Detect FAST features, 20 is a good threshold
         FastFeatureDetector fd(20, true);
-        fd.detect(imagePyramid[level], keypoints, maskPyramid[level]);
+        fd.detect(img, keypoints, mask);
 
         // Remove keypoints very close to the border
-        KeyPointsFilter::runByImageBorder(keypoints, imagePyramid[level].size(), edgeThreshold);
+        KeyPointsFilter::runByImageBorder(keypoints, img.size(), edgeThreshold);
 
-        if( scoreType == ORB::HARRIS_SCORE )
+        // Keep more points than necessary as FAST does not give amazing corners
+        KeyPointsFilter::retainBest(keypoints, scoreType == ORB::HARRIS_SCORE ? 2 * featuresNum : featuresNum);
+
+        nkeypoints = (int)keypoints.size();
+        counters[level] = nkeypoints;
+
+        float sf = layerScale[level];
+        for( i = 0; i < nkeypoints; i++ )
         {
-            // Keep more points than necessary as FAST does not give amazing corners
-            KeyPointsFilter::retainBest(keypoints, 2 * featuresNum);
-
-            // Compute the Harris cornerness (better scoring than FAST)
-            HarrisResponses(imagePyramid[level], keypoints, 7, HARRIS_K);
+            keypoints[i].octave = level;
+            keypoints[i].size = patchSize*sf;
         }
 
-        //cull to the final desired level, using the new Harris scores or the original FAST scores.
-        KeyPointsFilter::retainBest(keypoints, featuresNum);
-
-        float sf = getScale(level, firstLevel, scaleFactor);
-
-        // Set the level of the coordinates
-        for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
-             keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
-        {
-            keypoint->octave = level;
-            keypoint->size = patchSize*sf;
-        }
-
-        computeOrientation(imagePyramid[level], keypoints, halfPatchSize, umax);
+        std::copy(keypoints.begin(), keypoints.end(), std::back_inserter(allKeypoints));
     }
-}
 
+    std::vector<Vec3i> ukeypoints_buf;
 
-/** Compute the ORB decriptors
- * @param image the image to compute the features and descriptors on
- * @param integral_image the integral image of the image (can be empty, but the computation will be slower)
- * @param level the scale at which we compute the orientation
- * @param keypoints the keypoints to use
- * @param descriptors the resulting descriptors
- */
-static void computeDescriptors(const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors,
-                               const std::vector<Point>& pattern, int dsize, int WTA_K)
-{
-    //convert to grayscale if more than one color
-    CV_Assert(image.type() == CV_8UC1);
-    //create the descriptor mat, keypoints.size() rows, BYTES cols
-    descriptors = Mat::zeros((int)keypoints.size(), dsize, CV_8UC1);
+    nkeypoints = (int)allKeypoints.size();
+    Mat responses;
+    UMat ukeypoints, uresponses(1, nkeypoints, CV_32F);
 
-    for (size_t i = 0; i < keypoints.size(); i++)
-        computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i), dsize, WTA_K);
+    // Select best features using the Harris cornerness (better scoring than FAST)
+    if( scoreType == ORB::HARRIS_SCORE )
+    {
+        if( useOCL )
+        {
+            uploadORBKeypoints(allKeypoints, ukeypoints_buf, ukeypoints);
+            useOCL = ocl_HarrisResponses( uimagePyramid, ulayerInfo, ukeypoints,
+                                          uresponses, nkeypoints, 7, HARRIS_K );
+            if( useOCL )
+            {
+                uresponses.copyTo(responses);
+                for( i = 0; i < nkeypoints; i++ )
+                    allKeypoints[i].response = responses.at<float>(i);
+            }
+        }
+
+        if( !useOCL )
+            HarrisResponses(imagePyramid, layerInfo, allKeypoints, 7, HARRIS_K);
+
+        std::vector<KeyPoint> newAllKeypoints;
+        newAllKeypoints.reserve(nfeaturesPerLevel[0]*nlevels);
+
+        int offset = 0;
+        for( level = 0; level < nlevels; level++ )
+        {
+            int featuresNum = nfeaturesPerLevel[level];
+            nkeypoints = counters[level];
+            keypoints.resize(nkeypoints);
+            std::copy(allKeypoints.begin() + offset,
+                      allKeypoints.begin() + offset + nkeypoints,
+                      keypoints.begin());
+            offset += nkeypoints;
+
+            //cull to the final desired level, using the new Harris scores.
+            KeyPointsFilter::retainBest(keypoints, featuresNum);
+
+            std::copy(keypoints.begin(), keypoints.end(), std::back_inserter(newAllKeypoints));
+        }
+        std::swap(allKeypoints, newAllKeypoints);
+    }
+
+    nkeypoints = (int)allKeypoints.size();
+    if( useOCL )
+    {
+        UMat uumax;
+        if( useOCL )
+            copyVectorToUMat(umax, uumax);
+
+        uploadORBKeypoints(allKeypoints, ukeypoints_buf, ukeypoints);
+        useOCL = ocl_ICAngles(uimagePyramid, ulayerInfo, ukeypoints, uresponses, uumax,
+                              nkeypoints, halfPatchSize);
+
+        if( useOCL )
+        {
+            uresponses.copyTo(responses);
+            for( i = 0; i < nkeypoints; i++ )
+                allKeypoints[i].angle = responses.at<float>(i);
+        }
+    }
+
+    if( !useOCL )
+    {
+        ICAngles(imagePyramid, layerInfo, allKeypoints, umax, halfPatchSize);
+    }
+
+    for( i = 0; i < nkeypoints; i++ )
+    {
+        float scale = layerScale[allKeypoints[i].octave];
+        allKeypoints[i].pt *= scale;
+    }
 }
 
 
@@ -728,8 +889,8 @@ static void computeDescriptors(const Mat& image, std::vector<KeyPoint>& keypoint
  * @param do_keypoints if true, the keypoints are computed, otherwise used as an input
  * @param do_descriptors if true, also computes the descriptors
  */
-void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& _keypoints,
-                      OutputArray _descriptors, bool useProvidedKeypoints) const
+void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+                      OutputArray _descriptors, bool useProvidedKeypoints ) const
 {
     CV_Assert(patchSize >= 2);
 
@@ -744,11 +905,14 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
     int halfPatchSize = patchSize / 2;
     int border = std::max(edgeThreshold, std::max(halfPatchSize, HARRIS_BLOCK_SIZE/2))+1;
 
+    bool useOCL = ocl::useOpenCL();
+
     Mat image = _image.getMat(), mask = _mask.getMat();
     if( image.type() != CV_8UC1 )
         cvtColor(_image, image, COLOR_BGR2GRAY);
 
-    int levelsNum = this->nlevels;
+    int i, level, nLevels = this->nlevels, nkeypoints = (int)keypoints.size();
+    bool sortedByLevel = true;
 
     if( !do_keypoints )
     {
@@ -761,128 +925,144 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
         //
         // In short, ultimately the descriptor should
         // ignore octave parameter and deal only with the keypoint size.
-        levelsNum = 0;
-        for( size_t i = 0; i < _keypoints.size(); i++ )
-            levelsNum = std::max(levelsNum, std::max(_keypoints[i].octave, 0));
-        levelsNum++;
+        nLevels = 0;
+        for( i = 0; i < nkeypoints; i++ )
+        {
+            level = keypoints[i].octave;
+            CV_Assert(level >= 0);
+            if( i > 0 && level < keypoints[i-1].octave )
+                sortedByLevel = false;
+            nLevels = std::max(nLevels, level);
+        }
+        nLevels++;
     }
 
-    // Pre-compute the scale pyramids
-    std::vector<Mat> imagePyramid(levelsNum), maskPyramid(levelsNum);
-    for (int level = 0; level < levelsNum; ++level)
+    std::vector<Rect> layerInfo(nLevels);
+    std::vector<int> layerOfs(nLevels);
+    std::vector<float> layerScale(nLevels);
+    Mat imagePyramid, maskPyramid;
+    UMat uimagePyramid, ulayerInfo;
+
+    int level_dy = image.rows + border*2;
+    Point level_ofs(0,0);
+    Size bufSize((image.cols + border*2 + 15) & -16, 0);
+
+    for( level = 0; level < nLevels; level++ )
     {
-        float scale = 1/getScale(level, firstLevel, scaleFactor);
-        Size sz(cvRound(image.cols*scale), cvRound(image.rows*scale));
+        float scale = getScale(level, firstLevel, scaleFactor);
+        layerScale[level] = scale;
+        Size sz(cvRound(image.cols/scale), cvRound(image.rows/scale));
         Size wholeSize(sz.width + border*2, sz.height + border*2);
-        Mat temp(wholeSize, image.type()), masktemp;
-        imagePyramid[level] = temp(Rect(border, border, sz.width, sz.height));
+        if( level_ofs.x + wholeSize.width > bufSize.width )
+        {
+            level_ofs = Point(0, level_ofs.y + level_dy);
+            level_dy = wholeSize.height;
+        }
+
+        Rect linfo(level_ofs.x + border, level_ofs.y + border, sz.width, sz.height);
+        layerInfo[level] = linfo;
+        layerOfs[level] = linfo.y*bufSize.width + linfo.x;
+        level_ofs.x += wholeSize.width;
+    }
+    bufSize.height = level_ofs.y + level_dy;
+
+    imagePyramid.create(bufSize, CV_8U);
+    if( !mask.empty() )
+        maskPyramid.create(bufSize, CV_8U);
+
+    Mat prevImg = image, prevMask = mask;
+
+    // Pre-compute the scale pyramids
+    for (level = 0; level < nLevels; ++level)
+    {
+        Rect linfo = layerInfo[level];
+        Size sz(linfo.width, linfo.height);
+        Size wholeSize(sz.width + border*2, sz.height + border*2);
+        Rect wholeLinfo = Rect(linfo.x - border, linfo.y - border, wholeSize.width, wholeSize.height);
+        Mat extImg = imagePyramid(wholeLinfo), extMask;
+        Mat currImg = extImg(Rect(border, border, sz.width, sz.height)), currMask;
 
         if( !mask.empty() )
         {
-            masktemp = Mat(wholeSize, mask.type());
-            maskPyramid[level] = masktemp(Rect(border, border, sz.width, sz.height));
+            extMask = maskPyramid(wholeLinfo);
+            currMask = extMask(Rect(border, border, sz.width, sz.height));
         }
 
         // Compute the resized image
         if( level != firstLevel )
         {
-            if( level < firstLevel )
+            resize(prevImg, currImg, sz, 0, 0, INTER_LINEAR);
+            if( !mask.empty() )
             {
-                resize(image, imagePyramid[level], sz, 0, 0, INTER_LINEAR);
-                if (!mask.empty())
-                    resize(mask, maskPyramid[level], sz, 0, 0, INTER_LINEAR);
-            }
-            else
-            {
-                resize(imagePyramid[level-1], imagePyramid[level], sz, 0, 0, INTER_LINEAR);
-                if (!mask.empty())
-                {
-                    resize(maskPyramid[level-1], maskPyramid[level], sz, 0, 0, INTER_LINEAR);
-                    threshold(maskPyramid[level], maskPyramid[level], 254, 0, THRESH_TOZERO);
-                }
+                resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR);
+                if( level > firstLevel )
+                    threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
 
-            copyMakeBorder(imagePyramid[level], temp, border, border, border, border,
+            copyMakeBorder(currImg, extImg, border, border, border, border,
                            BORDER_REFLECT_101+BORDER_ISOLATED);
             if (!mask.empty())
-                copyMakeBorder(maskPyramid[level], masktemp, border, border, border, border,
+                copyMakeBorder(currMask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
         }
         else
         {
-            copyMakeBorder(image, temp, border, border, border, border,
+            copyMakeBorder(image, extImg, border, border, border, border,
                            BORDER_REFLECT_101);
             if( !mask.empty() )
-                copyMakeBorder(mask, masktemp, border, border, border, border,
+                copyMakeBorder(mask, extMask, border, border, border, border,
                                BORDER_CONSTANT+BORDER_ISOLATED);
         }
+        prevImg = currImg;
+        prevMask = currMask;
     }
 
-    // Pre-compute the keypoints (we keep the best over all scales, so this has to be done beforehand
-    std::vector < std::vector<KeyPoint> > allKeypoints;
+    if( useOCL )
+        copyVectorToUMat(layerOfs, ulayerInfo);
+
     if( do_keypoints )
     {
+        if( useOCL )
+            imagePyramid.copyTo(uimagePyramid);
+
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
-        computeKeyPoints(imagePyramid, maskPyramid, allKeypoints,
-                         nfeatures, firstLevel, scaleFactor,
-                         edgeThreshold, patchSize, scoreType);
-
-        // make sure we have the right number of keypoints keypoints
-        /*std::vector<KeyPoint> temp;
-
-        for (int level = 0; level < n_levels; ++level)
-        {
-            std::vector<KeyPoint>& keypoints = all_keypoints[level];
-            temp.insert(temp.end(), keypoints.begin(), keypoints.end());
-            keypoints.clear();
-        }
-
-        KeyPoint::retainBest(temp, n_features_);
-
-        for (std::vector<KeyPoint>::iterator keypoint = temp.begin(),
-             keypoint_end = temp.end(); keypoint != keypoint_end; ++keypoint)
-            all_keypoints[keypoint->octave].push_back(*keypoint);*/
+        computeKeyPoints(imagePyramid, uimagePyramid, maskPyramid,
+                         layerInfo, ulayerInfo, layerScale, keypoints,
+                         nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL);
     }
     else
     {
-        // Remove keypoints very close to the border
-        KeyPointsFilter::runByImageBorder(_keypoints, image.size(), edgeThreshold);
+        KeyPointsFilter::runByImageBorder(keypoints, image.size(), edgeThreshold);
 
-        // Cluster the input keypoints depending on the level they were computed at
-        allKeypoints.resize(levelsNum);
-        for (std::vector<KeyPoint>::iterator keypoint = _keypoints.begin(),
-             keypointEnd = _keypoints.end(); keypoint != keypointEnd; ++keypoint)
-            allKeypoints[keypoint->octave].push_back(*keypoint);
-
-        // Make sure we rescale the coordinates
-        for (int level = 0; level < levelsNum; ++level)
+        if( !sortedByLevel )
         {
-            if (level == firstLevel)
-                continue;
-
-            std::vector<KeyPoint> & keypoints = allKeypoints[level];
-            float scale = 1/getScale(level, firstLevel, scaleFactor);
-            for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
-                 keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
-                keypoint->pt *= scale;
+            std::vector<std::vector<KeyPoint> > allKeypoints(nLevels);
+            nkeypoints = (int)keypoints.size();
+            for( i = 0; i < nkeypoints; i++ )
+            {
+                level = keypoints[i].octave;
+                CV_Assert(0 <= level);
+                allKeypoints[level].push_back(keypoints[i]);
+            }
+            keypoints.clear();
+            for( level = 0; level < nLevels; level++ )
+                std::copy(allKeypoints[level].begin(), allKeypoints[level].end(), std::back_inserter(keypoints));
         }
     }
 
-    Mat descriptors;
-    std::vector<Point> pattern;
-
     if( do_descriptors )
     {
-        int nkeypoints = 0;
-        for (int level = 0; level < levelsNum; ++level)
-            nkeypoints += (int)allKeypoints[level].size();
+        int dsize = descriptorSize();
+
+        nkeypoints = (int)keypoints.size();
         if( nkeypoints == 0 )
-            _descriptors.release();
-        else
         {
-            _descriptors.create(nkeypoints, descriptorSize(), CV_8U);
-            descriptors = _descriptors.getMat();
+            _descriptors.release();
+            return;
         }
+
+        _descriptors.create(nkeypoints, dsize, CV_8U);
+        std::vector<Point> pattern;
 
         const int npoints = 512;
         Point patternbuf[npoints];
@@ -903,43 +1083,36 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
             int ntuples = descriptorSize()*4;
             initializeOrbPattern(pattern0, pattern, ntuples, WTA_K, npoints);
         }
-    }
 
-    _keypoints.clear();
-    int offset = 0;
-    for (int level = 0; level < levelsNum; ++level)
-    {
-        // Get the features and compute their orientation
-        std::vector<KeyPoint>& keypoints = allKeypoints[level];
-        int nkeypoints = (int)keypoints.size();
-
-        // Compute the descriptors
-        if (do_descriptors)
+        for( level = 0; level < nLevels; level++ )
         {
-            Mat desc;
-            if (!descriptors.empty())
-            {
-                desc = descriptors.rowRange(offset, offset + nkeypoints);
-            }
-
-            offset += nkeypoints;
             // preprocess the resized image
-            Mat& workingMat = imagePyramid[level];
+            Mat workingMat = imagePyramid(layerInfo[level]);
+
             //boxFilter(working_mat, working_mat, working_mat.depth(), Size(5,5), Point(-1,-1), true, BORDER_REFLECT_101);
             GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
-            computeDescriptors(workingMat, keypoints, desc, pattern, descriptorSize(), WTA_K);
         }
 
-        // Copy to the output data
-        if (level != firstLevel)
+        if( useOCL )
         {
-            float scale = getScale(level, firstLevel, scaleFactor);
-            for (std::vector<KeyPoint>::iterator keypoint = keypoints.begin(),
-                 keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
-                keypoint->pt *= scale;
+            imagePyramid.copyTo(uimagePyramid);
+            std::vector<Vec4i> kptbuf;
+            UMat ukeypoints, upattern;
+            copyVectorToUMat(pattern, upattern);
+            uploadORBKeypoints(keypoints, layerScale, kptbuf, ukeypoints);
+
+            UMat udescriptors = _descriptors.getUMat();
+            useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
+                                               ukeypoints, udescriptors, upattern,
+                                               nkeypoints, dsize, WTA_K);
         }
-        // And add the keypoints to the output
-        _keypoints.insert(_keypoints.end(), keypoints.begin(), keypoints.end());
+
+        if( !useOCL )
+        {
+            Mat descriptors = _descriptors.getMat();
+            computeOrbDescriptors(imagePyramid, layerInfo, layerScale,
+                                  keypoints, descriptors, pattern, dsize, WTA_K);
+        }
     }
 }
 
