@@ -2619,7 +2619,8 @@ static double getMaxVal(int depth)
 
 static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op, bool haveScalar)
 {
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const ocl::Device& dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0;
     int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     int type2 = _src2.type();
 
@@ -2639,6 +2640,14 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
         return false;
 
     int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+    // Workaround for bug with "?:" operator in AMD OpenCL compiler
+    bool workaroundForAMD = /*dev.isAMD() &&*/
+            (
+                (depth1 != CV_8U && depth1 != CV_8S)
+            );
+    if (workaroundForAMD)
+        kercn = 1;
+
     int scalarcn = kercn == 3 ? 4 : kercn;
 
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
@@ -2646,13 +2655,13 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     String buildOptions = format(
             "-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
-            " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s%s -D srcT1_C1=%s"
+            " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
             " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
             (haveScalar ? "UNARY_OP" : "BINARY_OP"),
             ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
             ocl::typeToStr(CV_8UC(kercn)), kercn,
             ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
-            operationMap[op], doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+            operationMap[op],
             ocl::typeToStr(depth1), ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
             ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
             doubleSupport ? " -D DOUBLE_SUPPORT" : ""
@@ -2687,8 +2696,6 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
         CV_DbgAssert(type1 == type2);
         UMat src2 = _src2.getUMat();
         CV_DbgAssert(size == src2.size());
-
-        _dst.create(size, CV_8UC(cn));
 
         k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
                ocl::KernelArg::ReadOnlyNoSize(src2),
