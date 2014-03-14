@@ -5,7 +5,7 @@ static const char * impls[] = {
 #ifdef HAVE_CUDA
     "cuda",
 #endif
-#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCV_OCL
     "ocl",
 #endif
     "plain"
