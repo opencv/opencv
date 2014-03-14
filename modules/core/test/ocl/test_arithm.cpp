@@ -134,7 +134,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    virtual void generateTestData()
+    virtual void generateTestData(bool with_val_in_range = false)
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
@@ -161,8 +161,11 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
                          rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
 
-        val_in_range = cv::Scalar(rng.uniform(minV, maxV), rng.uniform(minV, maxV),
-                                  rng.uniform(minV, maxV), rng.uniform(minV, maxV));
+        if (with_val_in_range)
+        {
+            val_in_range = cv::Scalar(rng.uniform(minV, maxV), rng.uniform(minV, maxV),
+                                      rng.uniform(minV, maxV), rng.uniform(minV, maxV));
+        }
 
         UMAT_UPLOAD_INPUT_PARAMETER(src1)
         UMAT_UPLOAD_INPUT_PARAMETER(src2)
@@ -785,7 +788,7 @@ OCL_TEST_P(Compare, Scalar)
         SCOPED_TRACE(cmp_strs[i]);
         for (int j = 0; j < test_loop_times; j++)
         {
-            generateTestData();
+            generateTestData(true);
 
             OCL_OFF(cv::compare(src1_roi, val_in_range, dst1_roi, cmp_codes[i]));
             OCL_ON(cv::compare(usrc1_roi, val_in_range, udst1_roi, cmp_codes[i]));
@@ -802,7 +805,7 @@ OCL_TEST_P(Compare, Scalar2)
         SCOPED_TRACE(cmp_strs[i]);
         for (int j = 0; j < test_loop_times; j++)
         {
-            generateTestData();
+            generateTestData(true);
 
             OCL_OFF(cv::compare(val_in_range, src1_roi, dst1_roi, cmp_codes[i]));
             OCL_ON(cv::compare(val_in_range, usrc1_roi, udst1_roi, cmp_codes[i]));
@@ -828,7 +831,7 @@ OCL_TEST_P(Pow, Mat)
             OCL_OFF(cv::pow(src1_roi, pows[k], dst1_roi));
             OCL_ON(cv::pow(usrc1_roi, pows[k], udst1_roi));
 
-            Near(1);
+            Near(1); // FIXIT: Relative error check!
         }
 }
 
