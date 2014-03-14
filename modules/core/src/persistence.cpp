@@ -4893,7 +4893,7 @@ cvUnregisterType( const char* type_name )
         if( !CvType::first || !CvType::last )
             CvType::first = CvType::last = 0;
 
-        cvFree( info );
+        cvFree( &info );
     }
 }
 
