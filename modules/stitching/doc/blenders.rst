@@ -43,7 +43,7 @@ detail::Blender::feed
 
 Processes the image.
 
-.. ocv:function:: void detail::Blender::feed(const Mat &img, const Mat &mask, Point tl)
+.. ocv:function:: void detail::Blender::feed(InputArray img, InputArray mask, Point tl)
 
     :param img: Source image
 
@@ -56,7 +56,7 @@ detail::Blender::blend
 
 Blends and returns the final pano.
 
-.. ocv:function:: void detail::Blender::blend(Mat &dst, Mat &dst_mask)
+.. ocv:function:: void detail::Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 
     :param dst: Final pano
 
