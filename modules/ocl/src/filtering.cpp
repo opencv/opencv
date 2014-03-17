@@ -774,12 +774,12 @@ static void sepFilter2D_SinglePass(const oclMat &src, oclMat &dst,
 
     option += " -D KERNEL_MATRIX_X=";
     for(int i=0; i<row_kernel.rows; i++)
-        option += cv::format("0x%x,", *reinterpret_cast<const unsigned int*>( &row_kernel.at<float>(i) ) );
+        option += cv::format("DIG(0x%x)", *reinterpret_cast<const unsigned int*>( &row_kernel.at<float>(i) ) );
     option += "0x0";
 
     option += " -D KERNEL_MATRIX_Y=";
     for(int i=0; i<col_kernel.rows; i++)
-        option += cv::format("0x%x,", *reinterpret_cast<const unsigned int*>( &col_kernel.at<float>(i) ) );
+        option += cv::format("DIG(0x%x)", *reinterpret_cast<const unsigned int*>( &col_kernel.at<float>(i) ) );
     option += "0x0";
 
     switch(src.type())
@@ -1410,7 +1410,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int 
     //if image size is non-degenerate and large enough
     //and if filter support is reasonable to satisfy larger local memory requirements,
     //then we can use single pass routine to avoid extra runtime calls overhead
-    if( clCxt && clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE) &&
+    if( clCxt &&
         rowKernel.rows <= 21 && columnKernel.rows <= 21 &&
         (rowKernel.rows & 1) == 1 && (columnKernel.rows & 1) == 1 &&
         imgSize.width > optimizedSepFilterLocalSize + (rowKernel.rows>>1) &&
