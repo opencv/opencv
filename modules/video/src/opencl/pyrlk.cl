@@ -262,50 +262,9 @@ inline void GetError(image2d_t J, const float x, const float y, const float* Pch
     *errval += fabs(diff);
 }
 
-inline void SetPatch4(image2d_t I, const float x, const float y,
-               float4* Pch, float4* Dx, float4* Dy,
-               float* A11, float* A12, float* A22)
-{
-    *Pch = read_imagef(I, sampler, (float2)(x, y));
-
-    float4 dIdx = 3.0f * read_imagef(I, sampler, (float2)(x + 1, y - 1)) + 10.0f * read_imagef(I, sampler, (float2)(x + 1, y)) + 3.0f * read_imagef(I, sampler, (float2)(x + 1, y + 1)) -
-                  (3.0f * read_imagef(I, sampler, (float2)(x - 1, y - 1)) + 10.0f * read_imagef(I, sampler, (float2)(x - 1, y)) + 3.0f * read_imagef(I, sampler, (float2)(x - 1, y + 1)));
-
-    float4 dIdy = 3.0f * read_imagef(I, sampler, (float2)(x - 1, y + 1)) + 10.0f * read_imagef(I, sampler, (float2)(x, y + 1)) + 3.0f * read_imagef(I, sampler, (float2)(x + 1, y + 1)) -
-                  (3.0f * read_imagef(I, sampler, (float2)(x - 1, y - 1)) + 10.0f * read_imagef(I, sampler, (float2)(x, y - 1)) + 3.0f * read_imagef(I, sampler, (float2)(x + 1, y - 1)));
-
-
-    *Dx = dIdx;
-    *Dy = dIdy;
-    float4 sqIdx = dIdx * dIdx;
-    *A11 += sqIdx.x + sqIdx.y + sqIdx.z;
-    sqIdx = dIdx * dIdy;
-    *A12 += sqIdx.x + sqIdx.y + sqIdx.z;
-    sqIdx = dIdy * dIdy;
-    *A22 += sqIdx.x + sqIdx.y + sqIdx.z;
-}
-
-inline void GetPatch4(image2d_t J, const float x, const float y,
-               const float4* Pch, const float4* Dx, const float4* Dy,
-               float* b1, float* b2)
-{
-    float4 J_val = read_imagef(J, sampler, (float2)(x, y));
-    float4 diff = (J_val - *Pch) * 32.0f;
-    float4 xdiff = diff* *Dx;
-    *b1 += xdiff.x + xdiff.y + xdiff.z;
-    xdiff = diff* *Dy;
-    *b2 += xdiff.x + xdiff.y + xdiff.z;
-}
-
-inline void GetError4(image2d_t J, const float x, const float y, const float4* Pch, float* errval)
-{
-    float4 diff = read_imagef(J, sampler, (float2)(x,y))-*Pch;
-    *errval += fabs(diff.x) + fabs(diff.y) + fabs(diff.z);
-}
-
 #define	GRIDSIZE	3
 __kernel void lkSparse(image2d_t I, image2d_t J,
-                       __global const float2* prevPts, int prevPtsStep, __global float2* nextPts, int nextPtsStep, __global uchar* status, __global float* err,
+                       __global const float2* prevPts, __global float2* nextPts, __global uchar* status, __global float* err,
                        const int level, const int rows, const int cols, int PATCH_X, int PATCH_Y, int c_winSize_x, int c_winSize_y, int c_iters, char calcErr)
 {
     __local float smem1[BUFFER];
@@ -434,9 +393,8 @@ __kernel void lkSparse(image2d_t I, image2d_t J,
         {
             if (tid == 0 && level == 0)
                 status[gid] = 0;
-            return;
+            break;
         }
-
         float b1 = 0;
         float b2 = 0;
 
