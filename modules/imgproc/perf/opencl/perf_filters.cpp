@@ -211,7 +211,7 @@ OCL_PERF_TEST_P(SobelFixture, Sobel,
 
     OCL_TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
 
-    SANITY_CHECK(dst);
+    SANITY_CHECK(dst, 1e-6);
 }
 
 ///////////// Scharr ////////////////////////
