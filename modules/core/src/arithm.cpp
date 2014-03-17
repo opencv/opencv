@@ -2617,44 +2617,90 @@ static double getMaxVal(int depth)
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
+static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op, bool haveScalar)
 {
-    if ( !((_src1.isMat() || _src1.isUMat()) && (_src2.isMat() || _src2.isUMat())) )
+    const ocl::Device& dev = ocl::Device::getDefault();
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    int type1 = _src1.type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
+    int type2 = _src2.type();
+
+    if (!haveScalar)
+    {
+        if ( (!doubleSupport && (depth1 == CV_64F || _src2.depth() == CV_64F)) ||
+            !_src1.sameSize(_src2) || type1 != type2)
+            return false;
+    }
+    else
+    {
+        if (cn > 1 || depth1 <= CV_32S) // FIXIT: if (cn > 4): Need to clear CPU-based compare behavior
+            return false;
+    }
+
+    if (!doubleSupport && depth1 == CV_64F)
         return false;
 
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type), type2 = _src2.type();
-    if ( (!doubleSupport && (depth == CV_64F || _src2.depth() == CV_64F)) ||
-        !_src1.sameSize(_src2) || type != type2)
-        return false;
+    int kercn = haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+    // Workaround for bug with "?:" operator in AMD OpenCL compiler
+    bool workaroundForAMD = /*dev.isAMD() &&*/
+            (
+                (depth1 != CV_8U && depth1 != CV_8S)
+            );
+    if (workaroundForAMD)
+        kercn = 1;
 
-    int kercn = ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
+    int scalarcn = kercn == 3 ? 4 : kercn;
+
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
     char cvt[40];
 
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
-                         " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s%s -D srcT1_C1=%s"
-                         " -D srcT2_C1=%s -D dstT_C1=%s",
-                         ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
-                         ocl::typeToStr(CV_8UC(kercn)), kercn,
-                         ocl::convertTypeStr(depth, CV_8U, kercn, cvt),
-                         operationMap[op], doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                         ocl::typeToStr(depth), ocl::typeToStr(depth), ocl::typeToStr(CV_8U)));
+    String buildOptions = format(
+            "-D %s -D srcT1=%s -D dstT=%s -D workT=srcT1 -D cn=%d"
+            " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
+            " -D srcT2_C1=%s -D dstT_C1=%s -D workST=%s%s",
+            (haveScalar ? "UNARY_OP" : "BINARY_OP"),
+            ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
+            ocl::typeToStr(CV_8UC(kercn)), kercn,
+            ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
+            operationMap[op],
+            ocl::typeToStr(depth1), ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
+            ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)),
+            doubleSupport ? " -D DOUBLE_SUPPORT" : ""
+            );
+
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc, buildOptions);
     if (k.empty())
         return false;
 
-    CV_Assert(type == type2);
-    UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
+    UMat src1 = _src1.getUMat();
     Size size = src1.size();
-    CV_Assert(size == src2.size());
-
     _dst.create(size, CV_8UC(cn));
     UMat dst = _dst.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
-           ocl::KernelArg::ReadOnlyNoSize(src2),
-           ocl::KernelArg::WriteOnly(dst, cn, kercn));
+    if (haveScalar)
+    {
+        size_t esz = CV_ELEM_SIZE1(type1)*scalarcn;
+        double buf[4]={0,0,0,0};
+        Mat src2sc = _src2.getMat();
+
+        if (!src2sc.empty())
+            convertAndUnrollScalar(src2sc, type1, (uchar*)buf, 1);
+
+        ocl::KernelArg scalararg = ocl::KernelArg(0, 0, 0, 0, buf, esz);
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src1, cn, kercn),
+               ocl::KernelArg::WriteOnly(dst, cn, kercn),
+               scalararg);
+    }
+    else
+    {
+        CV_DbgAssert(type1 == type2);
+        UMat src2 = _src2.getUMat();
+        CV_DbgAssert(size == src2.size());
+
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
+               ocl::KernelArg::ReadOnlyNoSize(src2),
+               ocl::KernelArg::WriteOnly(dst, cn, kercn));
+    }
 
     size_t globalsize[2] = { dst.cols * cn / kercn, dst.rows };
     return k.run(2, globalsize, NULL, false);
@@ -2669,8 +2715,29 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_Assert( op == CMP_LT || op == CMP_LE || op == CMP_EQ ||
                op == CMP_NE || op == CMP_GE || op == CMP_GT );
 
+    bool haveScalar = false;
+
+    if ((_src1.isMatx() + _src2.isMatx()) == 1
+            || !_src1.sameSize(_src2)
+            || _src1.type() != _src2.type())
+    {
+        if (checkScalar(_src1, _src2.type(), _src1.kind(), _src2.kind()))
+        {
+            op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
+                op == CMP_GE ? CMP_LE : op == CMP_GT ? CMP_LT : op;
+            // src1 is a scalar; swap it with src2
+            compare(_src2, _src1, _dst, op);
+            return;
+        }
+        else if( !checkScalar(_src2, _src1.type(), _src2.kind(), _src1.kind()) )
+            CV_Error( CV_StsUnmatchedSizes,
+                     "The operation is neither 'array op array' (where arrays have the same size and the same type), "
+                     "nor 'array op scalar', nor 'scalar op array'" );
+        haveScalar = true;
+    }
+
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
-               ocl_compare(_src1, _src2, _dst, op))
+               ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
     int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
@@ -2684,26 +2751,6 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         getCmpFunc(src1.depth())(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
         return;
     }
-
-    bool haveScalar = false;
-
-    if( (kind1 == _InputArray::MATX) + (kind2 == _InputArray::MATX) == 1 ||
-        src1.size != src2.size || src1.type() != src2.type() )
-    {
-        if( checkScalar(src1, src2.type(), kind1, kind2) )
-        {
-            // src1 is a scalar; swap it with src2
-            swap(src1, src2);
-            op = op == CMP_LT ? CMP_GT : op == CMP_LE ? CMP_GE :
-                op == CMP_GE ? CMP_LE : op == CMP_GT ? CMP_LT : op;
-        }
-        else if( !checkScalar(src2, src1.type(), kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
-                     "The operation is neither 'array op array' (where arrays have the same size and the same type), "
-                     "nor 'array op scalar', nor 'scalar op array'" );
-        haveScalar = true;
-    }
-
 
     int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
 

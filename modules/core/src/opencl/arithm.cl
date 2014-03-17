@@ -280,8 +280,13 @@
 
 #elif defined OP_CMP
 #define srcT2 srcT1
+#ifndef convertToWT1
 #define convertToWT1
-#define PROCESS_ELEM storedst(convertToDT(srcelem1 CMP_OPERATOR srcelem2 ? (dstT)(255) : (dstT)(0)))
+#endif
+#define PROCESS_ELEM \
+    workT __s1 = srcelem1; \
+    workT __s2 = srcelem2; \
+    storedst(((__s1 CMP_OPERATOR __s2) ? (dstT)(255) : (dstT)(0)))
 
 #elif defined OP_CONVERT_SCALE_ABS
 #undef EXTRA_PARAMS
