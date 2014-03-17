@@ -427,12 +427,12 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3d &pose)
 
     // Rotate the view vector
     cv::Matx33d rotation = pose.rotation();
-    cv::Vec3d y_axis(0.0, 1.0, 0.0);
+    cv::Vec3d y_axis(0.0, -1.0, 0.0); // In Computer Vision Camera Y-axis is oriented down
     cv::Vec3d up_vec(rotation * y_axis);
 
     // Compute the new focal point
     cv::Vec3d z_axis(0.0, 0.0, 1.0);
-    cv::Vec3d focal_vec = pos_vec + rotation * z_axis;
+    cv::Vec3d focal_vec = pose * z_axis;
 
     camera.SetPosition(pos_vec.val);
     camera.SetFocalPoint(focal_vec.val);
@@ -450,7 +450,7 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getViewerPose()
     Vec3d view_up(camera.GetViewUp());
     Vec3d focal(camera.GetFocalPoint());
 
-    Vec3d y_axis = normalized(view_up);
+    Vec3d y_axis = normalized(-view_up); // In Computer Vision Camera Y-axis is oriented down
     Vec3d z_axis = normalized(focal - pos);
     Vec3d x_axis = normalized(y_axis.cross(z_axis));
 
