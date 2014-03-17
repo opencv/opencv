@@ -559,7 +559,8 @@ OCL_PERF_TEST_P(CompareFixture, Compare,
 
 OCL_PERF_TEST_P(CompareFixture, CompareScalar,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES_134, CmpCode::all()))
+                               OCL_PERF_ENUM((MatType)CV_32FC1), // TODO: OCL_TEST_TYPES_134
+                               CmpCode::all()))
 {
     const CompareParams params = GetParam();
     const Size srcSize = get<0>(params);
