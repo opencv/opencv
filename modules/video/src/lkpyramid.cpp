@@ -975,9 +975,7 @@ namespace cv
             idxArg = kernel.set(idxArg, imageI); //image2d_t I
             idxArg = kernel.set(idxArg, imageJ); //image2d_t J
             idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadOnly(prevPts)); // __global const float2* prevPts
-            idxArg = kernel.set(idxArg, (int)prevPts.step); // int prevPtsStep
             idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(nextPts)); // __global const float2* nextPts
-            idxArg = kernel.set(idxArg, (int)nextPts.step); //  int nextPtsStep
             idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(status)); // __global uchar* status
             idxArg = kernel.set(idxArg, ocl::KernelArg::PtrReadWrite(err)); // __global float* err
             idxArg = kernel.set(idxArg, (int)level); // const int level
