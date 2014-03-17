@@ -103,7 +103,7 @@ typedef tuple<Size, MatType, Border> CopyMakeBorderParamType;
 typedef TestBaseWithParam<CopyMakeBorderParamType> CopyMakeBorderFixture;
 
 OCL_PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, Border::all()))
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134, Border::all()))
 {
     const CopyMakeBorderParamType params = GetParam();
     const Size srcSize = get<0>(params);
