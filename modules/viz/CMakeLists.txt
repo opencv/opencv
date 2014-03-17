@@ -9,3 +9,7 @@ ocv_define_module(viz opencv_core ${VTK_LIBRARIES})
 if(APPLE AND BUILD_opencv_viz)
   target_link_libraries(opencv_viz "-framework Cocoa")
 endif()
+
+if(TARGET opencv_test_viz)
+  set_target_properties(opencv_test_viz PROPERTIES MACOSX_BUNDLE TRUE)
+endif()
