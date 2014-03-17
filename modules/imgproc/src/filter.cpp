@@ -3350,27 +3350,8 @@ static bool ocl_sepRowFilter2D( UMat &src, UMat &buf, Mat &kernelX, int anchor, 
     int radiusY = (int)((buf.rows - src.rows) >> 1);
 
     bool isIsolatedBorder = (borderType & BORDER_ISOLATED) != 0;
-    const char* btype = NULL;
-    switch (borderType & ~BORDER_ISOLATED)
-    {
-    case BORDER_CONSTANT:
-        btype = "BORDER_CONSTANT";
-        break;
-    case BORDER_REPLICATE:
-        btype = "BORDER_REPLICATE";
-        break;
-    case BORDER_REFLECT:
-        btype = "BORDER_REFLECT";
-        break;
-    case BORDER_WRAP:
-        btype = "BORDER_WRAP";
-        break;
-    case BORDER_REFLECT101:
-        btype = "BORDER_REFLECT_101";
-        break;
-    default:
-        return false;
-    }
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101" },
+        * const btype = borderMap[borderType & ~BORDER_ISOLATED];
 
     bool extra_extrapolation = src.rows < (int)((-radiusY + globalsize[1]) >> 1) + 1;
     extra_extrapolation |= src.rows < radiusY;
@@ -3463,35 +3444,95 @@ static bool ocl_sepColFilter2D(const UMat &buf, UMat &dst, Mat &kernelY, int anc
     return kernelCol.run(2, globalsize, localsize, sync);
 }
 
+const int optimizedSepFilterLocalSize = 16;
+
+static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
+                                       InputArray _row_kernel, InputArray _col_kernel,
+                                       int borderType, int ddepth)
+{
+    Size size = _src.size(), wholeSize;
+    Point origin;
+    int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+            esz = CV_ELEM_SIZE(stype), wdepth = std::max(std::max(sdepth, ddepth), CV_32F),
+            dtype = CV_MAKE_TYPE(ddepth, cn);
+    size_t src_step = _src.step(), src_offset = _src.offset();
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+
+    if ((src_offset % src_step) % esz != 0 || (!doubleSupport && sdepth == CV_64F) ||
+            !(borderType == BORDER_CONSTANT || borderType == BORDER_REPLICATE ||
+              borderType == BORDER_REFLECT || borderType == BORDER_WRAP ||
+              borderType == BORDER_REFLECT_101))
+        return false;
+
+    size_t lt2[2] = { optimizedSepFilterLocalSize, optimizedSepFilterLocalSize };
+    size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] * (1 + (size.height - 1) / lt2[1]) };
+
+    char cvt[2][40];
+    const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
+                                       "BORDER_REFLECT_101" };
+
+    String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUSX=%d -D RADIUSY=%d%s%s"
+                             " -D srcT=%s -D convertToWT=%s -D WT=%s -D dstT=%s -D convertToDstT=%s"
+                             " -D %s", (int)lt2[0], (int)lt2[1], _row_kernel.size().height / 2, _col_kernel.size().height / 2,
+                             ocl::kernelToStr(_row_kernel, CV_32F, "KERNEL_MATRIX_X").c_str(),
+                             ocl::kernelToStr(_col_kernel, CV_32F, "KERNEL_MATRIX_Y").c_str(),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType]);
+
+    ocl::Kernel k("sep_filter", ocl::imgproc::filterSep_singlePass_oclsrc, opts);
+    if (k.empty())
+        return false;
+
+    UMat src = _src.getUMat();
+    _dst.create(size, dtype);
+    UMat dst = _dst.getUMat();
+
+    int src_offset_x = static_cast<int>((src_offset % src_step) / esz);
+    int src_offset_y = static_cast<int>(src_offset / src_step);
+
+    src.locateROI(wholeSize, origin);
+
+    k.args(ocl::KernelArg::PtrReadOnly(src), (int)src_step, src_offset_x, src_offset_y,
+           wholeSize.height, wholeSize.width, ocl::KernelArg::WriteOnly(dst));
+
+    return k.run(2, gt2, lt2, false);
+}
+
 static bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
                       InputArray _kernelX, InputArray _kernelY, Point anchor,
                       double delta, int borderType )
 {
+    Size imgSize = _src.size();
+
     if (abs(delta)> FLT_MIN)
         return false;
 
-    int type = _src.type();
+    int type = _src.type(), cn = CV_MAT_CN(type);
     if ( !( (type == CV_8UC1 || type == CV_8UC4 || type == CV_32FC1 || type == CV_32FC4) &&
             (ddepth == CV_32F || ddepth == CV_16S || ddepth == CV_8U || ddepth < 0) ) )
         return false;
 
-    int cn = CV_MAT_CN(type);
-
     Mat kernelX = _kernelX.getMat().reshape(1, 1);
-    if (1 != (kernelX.cols % 2))
+    if (kernelX.cols % 2 != 1)
         return false;
     Mat kernelY = _kernelY.getMat().reshape(1, 1);
-    if (1 != (kernelY.cols % 2))
+    if (kernelY.cols % 2 != 1)
         return false;
 
     int sdepth = CV_MAT_DEPTH(type);
-    if( anchor.x < 0 )
+    if (anchor.x < 0)
         anchor.x = kernelX.cols >> 1;
-    if( anchor.y < 0 )
+    if (anchor.y < 0)
         anchor.y = kernelY.cols >> 1;
 
-    if( ddepth < 0 )
+    if (ddepth < 0)
         ddepth = sdepth;
+
+    CV_OCL_RUN_(kernelY.rows <= 21 && kernelX.rows <= 21 &&
+        imgSize.width > optimizedSepFilterLocalSize + (kernelX.rows >> 1) &&
+        imgSize.height > optimizedSepFilterLocalSize + (kernelY.rows >> 1),
+        ocl_sepFilter2D_SinglePass(_src, _dst, _kernelX, _kernelY, borderType, ddepth), true)
 
     UMat src = _src.getUMat();
     Size srcWholeSize; Point srcOffset;

@@ -4306,7 +4306,7 @@ static std::string kerToStr(const Mat & k)
     return stream.str();
 }
 
-String kernelToStr(InputArray _kernel, int ddepth)
+String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 {
     Mat kernel = _kernel.getMat().reshape(1, 1);
 
@@ -4323,7 +4323,7 @@ String kernelToStr(InputArray _kernel, int ddepth)
     const func_t func = funcs[depth];
     CV_Assert(func != 0);
 
-    return cv::format(" -D COEFF=%s", func(kernel).c_str());
+    return cv::format(" -D %s=%s", name ? name : "COEFF", func(kernel).c_str());
 }
 
 #define PROCESS_SRC(src) \
