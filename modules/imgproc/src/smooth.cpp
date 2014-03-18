@@ -1904,35 +1904,27 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_medianFilter ( InputArray _src, OutputArray _dst, int m)
+static bool ocl_medianFilter(InputArray _src, OutputArray _dst, int m)
 {
-    int type = _src.type();
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    if (!((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && (cn != 3 && cn <= 4)))
+    if ( !((depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F) && cn <= 4 && (m == 3 || m == 5)) )
         return false;
 
-    const char * kernelName;
-
-    if (m == 3)
-        kernelName = "medianFilter3";
-    else if (m == 5)
-        kernelName = "medianFilter5";
-    else
-        return false;
-
-    ocl::Kernel k(kernelName,ocl::imgproc::medianFilter_oclsrc,format("-D type=%s",ocl::typeToStr(type)));
+    ocl::Kernel k(format("medianFilter%d", m).c_str(), ocl::imgproc::medianFilter_oclsrc,
+                  format("-D T=%s -D T1=%s -D cn=%d", ocl::typeToStr(type),
+                         ocl::typeToStr(depth), cn));
     if (k.empty())
         return false;
 
     UMat src = _src.getUMat();
-    _dst.create(_src.size(),type);
+    _dst.create(src.size(), type);
     UMat dst = _dst.getUMat();
 
-    size_t globalsize[2] = {(src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16};
-    size_t localsize[2] = {16, 16};
+    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst));
 
-    return k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst)).run(2,globalsize,localsize,false);
+    size_t globalsize[2] = { (src.cols + 18) / 16 * 16, (src.rows + 15) / 16 * 16}, localsize[2] = { 16, 16 };
+    return k.run(2, globalsize, localsize, false);
 }
 
 #endif
