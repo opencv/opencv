@@ -77,7 +77,7 @@ We'll use the plain C [] operator to access pixels. Because we need to access mu
 
 .. code-block:: cpp
 
-   for(int j = 1 ; j < myImage.rows-1; ++j)
+   for(int j = 1; j < myImage.rows-1; ++j)
    {
        const uchar* previous = myImage.ptr<uchar>(j - 1);
        const uchar* current  = myImage.ptr<uchar>(j    );
@@ -85,14 +85,14 @@ We'll use the plain C [] operator to access pixels. Because we need to access mu
 
        uchar* output = Result.ptr<uchar>(j);
 
-       for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
+       for(int i= nChannels; i < nChannels*(myImage.cols-1); ++i)
        {
            *output++ = saturate_cast<uchar>(5*current[i]
                         -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
        }
    }
 
-On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to not apply the mask in these points and, for example, set the pixels on the borders to zeros:
+On the borders of the image the upper notation results inexistent pixel locations (like minus one - minus one). In these points our formula is undefined. A simple solution is to apply the mask in these points and, for example, set the pixels on the borders to zeros:
 
 .. code-block:: cpp
 
