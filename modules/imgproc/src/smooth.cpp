@@ -2210,10 +2210,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
                                    double sigma_color, double sigma_space,
                                    int borderType)
 {
-    int type = _src.type(), cn = CV_MAT_CN(type);
+    int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     int i, j, maxk, radius;
 
-    if ( type != CV_8UC1 )
+    if (depth != CV_8U || cn > 4)
         return false;
 
     if (sigma_color <= 0)
@@ -2240,9 +2240,9 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     std::vector<float> _color_weight(cn * 256);
     std::vector<float> _space_weight(d * d);
     std::vector<int> _space_ofs(d * d);
-    float *color_weight = &_color_weight[0];
-    float *space_weight = &_space_weight[0];
-    int *space_ofs = &_space_ofs[0];
+    float * const color_weight = &_color_weight[0];
+    float * const space_weight = &_space_weight[0];
+    int * const space_ofs = &_space_ofs[0];
 
     // initialize color-related bilateral filter coefficients
     for( i = 0; i < 256 * cn; i++ )
@@ -2256,11 +2256,19 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             if ( r > radius )
                 continue;
             space_weight[maxk] = (float)std::exp(r * r * gauss_space_coeff);
-            space_ofs[maxk++] = (int)(i * temp.step + j);
+            space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
+    char cvt[3][40];
+    String cnstr = cn > 1 ? format("%d", cn) : "";
     ocl::Kernel k("bilateral", ocl::imgproc::bilateral_oclsrc,
-                  format("-D radius=%d -D maxk=%d", radius, maxk));
+                  format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
+                         " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s",
+                         radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
+                         ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+                         ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
+                         ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
+                         ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2])));
     if (k.empty())
         return false;
 
