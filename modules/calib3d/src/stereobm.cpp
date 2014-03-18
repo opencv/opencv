@@ -48,6 +48,7 @@
 #include "precomp.hpp"
 #include <stdio.h>
 #include <limits>
+#include "opencl_kernels.hpp"
 
 namespace cv
 {
@@ -85,6 +86,26 @@ struct StereoBMParams
     int dispType;
 };
 
+static bool ocl_prefilter_norm(InputArray _input, OutputArray _output, int winsize, int prefilterCap)
+{
+    ocl::Kernel k("prefilter_norm", ocl::calib3d::stereobm_oclsrc);
+    if(k.empty())
+        return false;
+
+    int scale_g = winsize*winsize/8, scale_s = (1024 + scale_g)/(scale_g*2);
+    scale_g *= scale_s;
+
+    UMat input = _input.getUMat(), output;
+    _output.create(input.size(), input.type());
+    output = _output.getUMat();
+
+    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+
+    k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols,
+        prefilterCap, winsize, scale_g, scale_s);
+
+    return k.run(2, globalThreads, NULL, false);
+}
 
 static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uchar* buf )
 {
@@ -149,6 +170,22 @@ static void prefilterNorm( const Mat& src, Mat& dst, int winsize, int ftzero, uc
     }
 }
 
+static bool ocl_prefilter_xsobel(InputArray _input, OutputArray _output, int prefilterCap)
+{
+    ocl::Kernel k("prefilter_xsobel", ocl::calib3d::stereobm_oclsrc);
+    if(k.empty())
+        return false;
+
+    UMat input = _input.getUMat(), output;
+    _output.create(input.size(), input.type());
+    output = _output.getUMat();
+
+    size_t globalThreads[3] = { input.cols, input.rows, 1 };
+
+    k.args(ocl::KernelArg::PtrReadOnly(input), ocl::KernelArg::PtrWriteOnly(output), input.rows, input.cols, prefilterCap);
+
+    return k.run(2, globalThreads, NULL, false);
+}
 
 static void
 prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
@@ -534,7 +571,6 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         hsad = hsad0 - dy0*ndisp; cbuf = cbuf0 + (x + wsz2 + 1)*cstep - dy0*ndisp;
         lptr = lptr0 + std::min(std::max(x, -lofs), width-lofs-1) - dy0*sstep;
         rptr = rptr0 + std::min(std::max(x, -rofs), width-rofs-1) - dy0*sstep;
-
         for( y = -dy0; y < height + dy1; y++, hsad += ndisp, cbuf += ndisp, lptr += sstep, rptr += sstep )
         {
             int lval = lptr[0];
@@ -617,6 +653,7 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     mind = d;
                 }
             }
+
             tsum += htext[y + wsz2] - htext[y - wsz2 - 1];
             if( tsum < textureThreshold )
             {
@@ -651,6 +688,25 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     }
 }
 
+static bool ocl_prefiltering(InputArray left0, InputArray right0, OutputArray left, OutputArray right, StereoBMParams* state)
+{
+    if( state->preFilterType == StereoBM::PREFILTER_NORMALIZED_RESPONSE )
+    {
+        if(!ocl_prefilter_norm( left0, left, state->preFilterSize, state->preFilterCap))
+            return false;
+        if(!ocl_prefilter_norm( right0, right, state->preFilterSize, state->preFilterCap))
+            return false;
+    }
+    else
+    {
+        if(!ocl_prefilter_xsobel( left0, left, state->preFilterCap ))
+            return false;
+        if(!ocl_prefilter_xsobel( right0, right, state->preFilterCap))
+            return false;
+    }
+    return true;
+}
+
 struct PrefilterInvoker : public ParallelLoopBody
 {
     PrefilterInvoker(const Mat& left0, const Mat& right0, Mat& left, Mat& right,
@@ -679,6 +735,51 @@ struct PrefilterInvoker : public ParallelLoopBody
     StereoBMParams* state;
 };
 
+static bool ocl_stereobm( InputArray _left, InputArray _right,
+                       OutputArray _disp, StereoBMParams* state)
+{
+    int ndisp = state->numDisparities;
+    int mindisp = state->minDisparity;
+    int wsz = state->SADWindowSize;
+    int wsz2 = wsz/2;
+
+    int sizeX = std::max(11, 27 - ocl::Device::getDefault().maxComputeUnits() ), sizeY = sizeX-1, N = ndisp*2;
+
+    ocl::Kernel k("stereoBM", ocl::calib3d::stereobm_oclsrc, cv::format("-D csize=%d -D wsz=%d", (2*sizeY)*ndisp, wsz) );
+    if(k.empty())
+        return false;
+
+    UMat left = _left.getUMat(), right = _right.getUMat();
+    int cols = left.cols, rows = left.rows;
+
+    _disp.create(_left.size(), CV_16S);
+    _disp.setTo((mindisp - 1)<<4);
+    Rect roi = Rect(Point(wsz2 + mindisp + ndisp - 1, wsz2), Point(cols-wsz2-mindisp, rows-wsz2) );
+    UMat disp = (_disp.getUMat())(roi);
+
+    int globalX = disp.cols/sizeX, globalY = disp.rows/sizeY;
+    globalX += (disp.cols%sizeX) > 0 ? 1 : 0;
+    globalY += (disp.rows%sizeY) > 0 ? 1 : 0;
+    size_t globalThreads[3] = { globalX, globalY, N};
+    size_t localThreads[3] = {1, 1, N};
+
+    int idx = 0;
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(left));
+    idx = k.set(idx, ocl::KernelArg::PtrReadOnly(right));
+    idx = k.set(idx, ocl::KernelArg::WriteOnlyNoSize(disp));
+    idx = k.set(idx, rows);
+    idx = k.set(idx, cols);
+    idx = k.set(idx, mindisp);
+    idx = k.set(idx, ndisp);
+    idx = k.set(idx, state->preFilterCap);
+    idx = k.set(idx, state->textureThreshold);
+    idx = k.set(idx, state->uniquenessRatio);
+    idx = k.set(idx, sizeX);
+    idx = k.set(idx, sizeY);
+    idx = k.set(idx, wsz);
+
+    return k.run(3, globalThreads, localThreads, false);
+}
 
 struct FindStereoCorrespInvoker : public ParallelLoopBody
 {
@@ -776,20 +877,17 @@ public:
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr )
     {
-        Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
         int dtype = disparr.fixedType() ? disparr.type() : params.dispType;
+        Size leftsize = leftarr.size();
 
-        if (left0.size() != right0.size())
+        if (leftarr.size() != rightarr.size())
             CV_Error( Error::StsUnmatchedSizes, "All the images must have the same size" );
 
-        if (left0.type() != CV_8UC1 || right0.type() != CV_8UC1)
+        if (leftarr.type() != CV_8UC1 || rightarr.type() != CV_8UC1)
             CV_Error( Error::StsUnsupportedFormat, "Both input images must have CV_8UC1" );
 
         if (dtype != CV_16SC1 && dtype != CV_32FC1)
             CV_Error( Error::StsUnsupportedFormat, "Disparity image must have CV_16SC1 or CV_32FC1 format" );
-
-        disparr.create(left0.size(), dtype);
-        Mat disp0 = disparr.getMat();
 
         if( params.preFilterType != PREFILTER_NORMALIZED_RESPONSE &&
             params.preFilterType != PREFILTER_XSOBEL )
@@ -802,7 +900,7 @@ public:
             CV_Error( Error::StsOutOfRange, "preFilterCap must be within 1..63" );
 
         if( params.SADWindowSize < 5 || params.SADWindowSize > 255 || params.SADWindowSize % 2 == 0 ||
-            params.SADWindowSize >= std::min(left0.cols, left0.rows) )
+            params.SADWindowSize >= std::min(leftsize.width, leftsize.height) )
             CV_Error( Error::StsOutOfRange, "SADWindowSize must be odd, be within 5..255 and be not larger than image width or height" );
 
         if( params.numDisparities <= 0 || params.numDisparities % 16 != 0 )
@@ -813,6 +911,28 @@ public:
 
         if( params.uniquenessRatio < 0 )
             CV_Error( Error::StsOutOfRange, "uniqueness ratio must be non-negative" );
+
+        int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
+
+        if(ocl::useOpenCL() && disparr.isUMat() && params.textureThreshold == 0)
+        {
+            UMat left, right;
+            if(ocl_prefiltering(leftarr, rightarr, left, right, &params))
+            {
+                if(ocl_stereobm(left, right, disparr, &params))
+                {
+                    if( params.speckleRange >= 0 && params.speckleWindowSize > 0 )
+                        filterSpeckles(disparr.getMat(), FILTERED, params.speckleWindowSize, params.speckleRange, slidingSumBuf);
+                    if (dtype == CV_32F)
+                        disparr.getUMat().convertTo(disparr, CV_32FC1, 1./(1 << DISPARITY_SHIFT), 0);
+                    return;
+                }
+            }
+        }
+
+        Mat left0 = leftarr.getMat(), right0 = rightarr.getMat();
+        disparr.create(left0.size(), dtype);
+        Mat disp0 = disparr.getMat();
 
         preFilteredImg0.create( left0.size(), CV_8U );
         preFilteredImg1.create( left0.size(), CV_8U );
@@ -828,7 +948,6 @@ public:
         int lofs = std::max(ndisp - 1 + mindisp, 0);
         int rofs = -std::min(ndisp - 1 + mindisp, 0);
         int width1 = width - rofs - ndisp + 1;
-        int FILTERED = (params.minDisparity - 1) << DISPARITY_SHIFT;
 
         if( lofs >= width || rofs >= width || width1 < 1 )
         {
@@ -870,6 +989,7 @@ public:
             slidingSumBuf.create( 1, bufSize, CV_8U );
 
         uchar *_buf = slidingSumBuf.data;
+
         parallel_for_(Range(0, 2), PrefilterInvoker(left0, right0, left, right, _buf, _buf + bufSize1, &params), 1);
 
         Rect validDisparityRect(0, 0, width, height), R1 = params.roi1, R2 = params.roi2;
