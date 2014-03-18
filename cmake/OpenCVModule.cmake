@@ -135,13 +135,13 @@ macro(ocv_add_module _name)
 
     # parse list of dependencies
     if("${ARGV1}" STREQUAL "INTERNAL" OR "${ARGV1}" STREQUAL "BINDINGS")
-      set(OPENCV_MODULE_${the_module}_CLASS "${ARGV1}" CACHE INTERNAL "The cathegory of the module")
+      set(OPENCV_MODULE_${the_module}_CLASS "${ARGV1}" CACHE INTERNAL "The category of the module")
       set(__ocv_argn__ ${ARGN})
       list(REMOVE_AT __ocv_argn__ 0)
       ocv_add_dependencies(${the_module} ${__ocv_argn__})
       unset(__ocv_argn__)
     else()
-      set(OPENCV_MODULE_${the_module}_CLASS "PUBLIC" CACHE INTERNAL "The cathegory of the module")
+      set(OPENCV_MODULE_${the_module}_CLASS "PUBLIC" CACHE INTERNAL "The category of the module")
       ocv_add_dependencies(${the_module} ${ARGN})
       if(BUILD_${the_module})
         set(OPENCV_MODULES_PUBLIC ${OPENCV_MODULES_PUBLIC} "${the_module}" CACHE INTERNAL "List of OpenCV modules marked for export")
@@ -484,11 +484,15 @@ macro(ocv_glob_module_sources)
   file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
   file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
+  file(GLOB_RECURSE lib_srcs_apple "src/*.mm")
+  if (APPLE)
+    list(APPEND lib_srcs ${lib_srcs_apple})
+  endif()
 
   file(GLOB lib_cuda_srcs "src/cuda/*.cu")
   set(cuda_objs "")
   set(lib_cuda_hdrs "")
-  if(HAVE_CUDA AND lib_cuda_srcs)
+  if(HAVE_CUDA)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
     file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
@@ -537,9 +541,6 @@ macro(ocv_create_module)
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
     target_link_libraries(${the_module} LINK_INTERFACE_LIBRARIES ${OPENCV_MODULE_${the_module}_DEPS})
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
-    if (HAVE_CUDA)
-      target_link_libraries(${the_module} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-    endif()
   endif()
 
   add_dependencies(opencv_modules ${the_module})
@@ -580,9 +581,9 @@ macro(ocv_create_module)
   endif()
 
   ocv_install_target(${the_module} EXPORT OpenCVModules
-    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT main
-    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
-    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT main
+    RUNTIME DESTINATION ${OPENCV_BIN_INSTALL_PATH} COMPONENT libs
+    LIBRARY DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT libs
+    ARCHIVE DESTINATION ${OPENCV_LIB_INSTALL_PATH} COMPONENT dev
     )
 
   # only "public" headers need to be installed
@@ -590,7 +591,7 @@ macro(ocv_create_module)
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
       string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
       if(hdr2 MATCHES "^(opencv2/.*)/[^/]+.h(..)?$")
-        install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT main)
+        install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT dev)
       endif()
     endforeach()
   endif()
@@ -714,6 +715,9 @@ function(ocv_add_perf_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+    if(INSTALL_TESTS)
+      install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+    endif()
   endif()
 endfunction()
 
@@ -744,8 +748,8 @@ function(ocv_add_accuracy_tests)
       endif()
 
       get_native_precompiled_header(${the_target} test_precomp.hpp)
-
       add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
+
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
@@ -767,6 +771,10 @@ function(ocv_add_accuracy_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+
+    if(INSTALL_TESTS)
+      install(TARGETS ${the_target} RUNTIME DESTINATION ${OPENCV_TEST_INSTALL_PATH} COMPONENT tests)
+    endif()
   endif()
 endfunction()
 
@@ -798,7 +806,7 @@ function(ocv_add_samples)
         endif()
 
         if(WIN32)
-          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT main)
+          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT samples)
         endif()
       endforeach()
     endif()
@@ -807,8 +815,8 @@ function(ocv_add_samples)
   if(INSTALL_C_EXAMPLES AND NOT WIN32 AND EXISTS "${samples_path}")
     file(GLOB sample_files "${samples_path}/*")
     install(FILES ${sample_files}
-            DESTINATION share/OpenCV/samples/${module_id}
-            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+            DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/${module_id}
+            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
   endif()
 endfunction()
 

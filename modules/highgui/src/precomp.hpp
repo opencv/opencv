@@ -57,6 +57,14 @@
 #include <assert.h>
 
 #if defined WIN32 || defined WINCE
+    #if !defined _WIN32_WINNT
+        #ifdef HAVE_MSMF
+            #define _WIN32_WINNT 0x0600 // Windows Vista
+        #else
+            #define _WIN32_WINNT 0x0500 // Windows 2000
+        #endif
+    #endif
+
     #include <windows.h>
     #undef small
     #undef min
@@ -127,6 +135,7 @@ CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
 CvCapture* cvCreateCameraCapture_Android( int index );
 CvCapture* cvCreateCameraCapture_XIMEA( int index );
 CvCapture* cvCreateCameraCapture_AVFoundation(int index);
+CvCapture* cvCreateCameraCapture_IntelPerC(int index);
 
 
 CVAPI(int) cvHaveImageReader(const char* filename);

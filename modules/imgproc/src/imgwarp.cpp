@@ -1217,8 +1217,13 @@ public:
         alpha(_alpha), _beta(__beta), ssize(_ssize), dsize(_dsize),
         ksize(_ksize), xmin(_xmin), xmax(_xmax)
     {
+        CV_Assert(ksize <= MAX_ESIZE);
     }
 
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
     virtual void operator() (const Range& range) const
     {
         int dy, cn = src.channels();
@@ -1267,6 +1272,9 @@ public:
             vresize( (const WT**)rows, (T*)(dst.data + dst.step*dy), beta, dsize.width );
         }
     }
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+# pragma GCC diagnostic pop
+#endif
 
 private:
     Mat src;
@@ -1274,7 +1282,9 @@ private:
     const int* xofs, *yofs;
     const AT* alpha, *_beta;
     Size ssize, dsize;
-    int ksize, xmin, xmax;
+    const int ksize, xmin, xmax;
+
+    resizeGeneric_Invoker& operator = (const resizeGeneric_Invoker&);
 };
 
 template<class HResize, class VResize>
@@ -1846,7 +1856,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
     int type = src.type();
@@ -1874,7 +1884,7 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
             return;
     }
 #endif
-
+*/
     if( interpolation == INTER_NEAREST )
     {
         resizeNN( src, dst, inv_scale_x, inv_scale_y );
@@ -2201,15 +2211,15 @@ struct RemapVec_8u
     int operator()( const Mat& _src, void* _dst, const short* XY,
                     const ushort* FXY, const void* _wtab, int width ) const
     {
-        int cn = _src.channels();
+        int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) )
+        if( (cn != 1 && cn != 3 && cn != 4) || !checkHardwareSupport(CV_CPU_SSE2) ||
+                sstep > 0x8000 )
             return 0;
 
         const uchar *S0 = _src.data, *S1 = _src.data + _src.step;
         const short* wtab = cn == 1 ? (const short*)_wtab : &BilinearTab_iC4[0][0][0];
         uchar* D = (uchar*)_dst;
-        int x = 0, sstep = (int)_src.step;
         __m128i delta = _mm_set1_epi32(INTER_REMAP_COEF_SCALE/2);
         __m128i xy2ofs = _mm_set1_epi32(cn + (sstep << 16));
         __m128i z = _mm_setzero_si128();
@@ -2935,7 +2945,10 @@ public:
                     if( m1->type() == CV_16SC2 && (m2->type() == CV_16UC1 || m2->type() == CV_16SC1) )
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
-                        bufa = (*m2)(Rect(x, y, bcols, brows));
+
+                        const ushort* sA = (const ushort*)(m2->data + m2->step*(y+y1)) + x;
+                        for( x1 = 0; x1 < bcols; x1++ )
+                            A[x1] = (ushort)(sA[x1] & (INTER_TAB_SIZE2-1));
                     }
                     else if( planar_input )
                     {
@@ -3242,7 +3255,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1) : 0;
                 dst1f[x] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst2f[x] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3251,7 +3264,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         {
             for( x = 0; x < size.width; x++ )
             {
-                int fxy = src2 ? src2[x] : 0;
+                int fxy = src2 ? src2[x] & (INTER_TAB_SIZE2-1): 0;
                 dst1f[x*2] = src1[x*2] + (fxy & (INTER_TAB_SIZE-1))*scale;
                 dst1f[x*2+1] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
@@ -3474,7 +3487,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
     const int AB_BITS = MAX(10, (int)INTER_BITS);
     const int AB_SCALE = 1 << AB_BITS;
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -3518,7 +3531,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         }
     }
 #endif
-
+*/
     for( x = 0; x < dst.cols; x++ )
     {
         adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
@@ -3699,7 +3712,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
-
+/*
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
@@ -3743,7 +3756,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         }
     }
 #endif
-
+*/
     Range range(0, dst.rows);
     warpPerspectiveInvoker invoker(src, dst, M, interpolation, borderType, borderValue);
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));

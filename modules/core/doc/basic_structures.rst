@@ -1350,12 +1350,12 @@ Copies the matrix to another one.
 
 The method copies the matrix data to another matrix. Before copying the data, the method invokes ::
 
-    m.create(this->size(), this->type);
+    m.create(this->size(), this->type());
 
 
 so that the destination matrix is reallocated if needed. While ``m.copyTo(m);`` works flawlessly, the function does not handle the case of a partial overlap between the source and the destination matrices.
 
-When the operation mask is specified, and the ``Mat::create`` call shown above reallocated the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
+When the operation mask is specified, if the ``Mat::create`` call shown above reallocates the matrix, the newly allocated matrix is initialized with all zeros before copying the data.
 
 .. _Mat::convertTo:
 
@@ -1445,7 +1445,7 @@ Transposes a matrix.
 
 The method performs matrix transposition by means of matrix expressions. It does not perform the actual transposition but returns a temporary matrix transposition object that can be further used as a part of more complex matrix expressions or can be assigned to a matrix: ::
 
-    Mat A1 = A + Mat::eye(A.size(), A.type)*lambda;
+    Mat A1 = A + Mat::eye(A.size(), A.type())*lambda;
     Mat C = A1.t()*A1; // compute (A + lambda*I)^t * (A + lamda*I)
 
 

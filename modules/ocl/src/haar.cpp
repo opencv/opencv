@@ -866,16 +866,17 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
 
         if(gcascade->is_stump_based && gsum.clCxt->supportsFeature(FEATURE_CL_INTEL_DEVICE))
         {
-            //setup local group size
-            localThreads[0] = 8;
-            localThreads[1] = 16;
+            //setup local group size for "pixel step" = 1
+            localThreads[0] = 16;
+            localThreads[1] = 32;
             localThreads[2] = 1;
 
-            //init maximal number of workgroups
+            //calc maximal number of workgroups
             int WGNumX = 1+(sizev[0].width /(localThreads[0]));
             int WGNumY = 1+(sizev[0].height/(localThreads[1]));
             int WGNumZ = loopcount;
-            int WGNum = 0; //accurate number of non -empty workgroups
+            int WGNumTotal = 0; //accurate number of non-empty workgroups
+            int WGNumSampled = 0; //accurate number of workgroups processed only 1/4 part of all pixels. it is made for large images with scale <= 2
             oclMat      oclWGInfo(1,sizeof(cl_int4) * WGNumX*WGNumY*WGNumZ,CV_8U);
             {
                 cl_int4*    pWGInfo = (cl_int4*)clEnqueueMapBuffer(getClCommandQueue(oclWGInfo.clCxt),(cl_mem)oclWGInfo.datastart,true,CL_MAP_WRITE, 0, oclWGInfo.step, 0,0,0,&status);
@@ -887,20 +888,24 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                     for(int y=0;y<WGNumY;++y)
                     {
                         int     gy = y*localThreads[1];
-                        if(gy>=(Height-cascade->orig_window_size.height))
+                        if(gy>=Height)
                             continue; // no data to process
                         for(int x=0;x<WGNumX;++x)
                         {
                             int     gx = x*localThreads[0];
-                            if(gx>=(Width-cascade->orig_window_size.width))
+                            if(gx>=Width)
                                 continue; // no data to process
 
+                            if(scaleinfo[z].factor<=2)
+                            {
+                                WGNumSampled++;
+                            }
                             // save no-empty workgroup info into array
-                            pWGInfo[WGNum].s[0] = scaleinfo[z].width_height;
-                            pWGInfo[WGNum].s[1] = (gx << 16) | gy;
-                            pWGInfo[WGNum].s[2] = scaleinfo[z].imgoff;
-                            memcpy(&(pWGInfo[WGNum].s[3]),&(scaleinfo[z].factor),sizeof(float));
-                            WGNum++;
+                            pWGInfo[WGNumTotal].s[0] = scaleinfo[z].width_height;
+                            pWGInfo[WGNumTotal].s[1] = (gx << 16) | gy;
+                            pWGInfo[WGNumTotal].s[2] = scaleinfo[z].imgoff;
+                            memcpy(&(pWGInfo[WGNumTotal].s[3]),&(scaleinfo[z].factor),sizeof(float));
+                            WGNumTotal++;
                         }
                     }
                 }
@@ -908,13 +913,8 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                 pWGInfo = NULL;
             }
 
-            // setup global sizes to have linear array of workgroups with WGNum size
-            globalThreads[0] = localThreads[0]*WGNum;
-            globalThreads[1] = localThreads[1];
-            globalThreads[2] = 1;
-
 #define NODE_SIZE 12
-            // pack node info to have less memory loads
+            // pack node info to have less memory loads on the device side
             oclMat  oclNodesPK(1,sizeof(cl_int) * NODE_SIZE * nodenum,CV_8U);
             {
                 cl_int  status;
@@ -923,7 +923,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                 //use known local data stride to precalulate indexes
                 int DATA_SIZE_X = (localThreads[0]+cascade->orig_window_size.width);
                 // check that maximal value is less than maximal unsigned short
-                assert(DATA_SIZE_X*cascade->orig_window_size.height+cascade->orig_window_size.width < USHRT_MAX);
+                assert(DATA_SIZE_X*cascade->orig_window_size.height+cascade->orig_window_size.width < (int)USHRT_MAX);
                 for(int i = 0;i<nodenum;++i)
                 {//process each node from classifier
                     struct NodePK
@@ -963,8 +963,6 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             options += format(" -D WND_SIZE_X=%d",cascade->orig_window_size.width);
             options += format(" -D WND_SIZE_Y=%d",cascade->orig_window_size.height);
             options += format(" -D STUMP_BASED=%d",gcascade->is_stump_based);
-            options += format(" -D LSx=%d",localThreads[0]);
-            options += format(" -D LSy=%d",localThreads[1]);
             options += format(" -D SPLITNODE=%d",splitnode);
             options += format(" -D SPLITSTAGE=%d",splitstage);
             options += format(" -D OUTPUTSZ=%d",outputsz);
@@ -972,8 +970,39 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             // init candiate global count by 0
             int pattern = 0;
             openCLSafeCall(clEnqueueWriteBuffer(qu, candidatebuffer, 1, 0, 1 * sizeof(pattern),&pattern, 0, NULL, NULL));
-            // execute face detector
-            openCLExecuteKernel(gsum.clCxt, &haarobjectdetect, "gpuRunHaarClassifierCascadePacked", globalThreads, localThreads, args, -1, -1, options.c_str());
+
+            if(WGNumTotal>WGNumSampled)
+            {// small images and each pixel is processed
+                // setup global sizes to have linear array of workgroups with WGNum size
+                int     pixelstep = 1;
+                size_t  LS[3]={localThreads[0]/pixelstep,localThreads[1]/pixelstep,1};
+                globalThreads[0] = LS[0]*(WGNumTotal-WGNumSampled);
+                globalThreads[1] = LS[1];
+                globalThreads[2] = 1;
+                string options1 = options;
+                options1 += format(" -D PIXEL_STEP=%d",pixelstep);
+                options1 += format(" -D WGSTART=%d",WGNumSampled);
+                options1 += format(" -D LSx=%d",LS[0]);
+                options1 += format(" -D LSy=%d",LS[1]);
+                // execute face detector
+                openCLExecuteKernel(gsum.clCxt, &haarobjectdetect, "gpuRunHaarClassifierCascadePacked", globalThreads, LS, args, -1, -1, options1.c_str());
+            }
+            if(WGNumSampled>0)
+            {// large images each 4th pixel is processed
+                // setup global sizes to have linear array of workgroups with WGNum size
+                int     pixelstep = 2;
+                size_t  LS[3]={localThreads[0]/pixelstep,localThreads[1]/pixelstep,1};
+                globalThreads[0] = LS[0]*WGNumSampled;
+                globalThreads[1] = LS[1];
+                globalThreads[2] = 1;
+                string options2 = options;
+                options2 += format(" -D PIXEL_STEP=%d",pixelstep);
+                options2 += format(" -D WGSTART=%d",0);
+                options2 += format(" -D LSx=%d",LS[0]);
+                options2 += format(" -D LSy=%d",LS[1]);
+                // execute face detector
+                openCLExecuteKernel(gsum.clCxt, &haarobjectdetect, "gpuRunHaarClassifierCascadePacked", globalThreads, LS, args, -1, -1, options2.c_str());
+            }
             //read candidate buffer back and put it into host list
             openCLReadBuffer( gsum.clCxt, candidatebuffer, candidate, 4 * sizeof(int)*outputsz );
             assert(candidate[0]<outputsz);

@@ -18,6 +18,8 @@ class_ignore_list = (
 const_ignore_list = (
     "CV_CAP_OPENNI",
     "CV_CAP_PROP_OPENNI_",
+    "CV_CAP_INTELPERC",
+    "CV_CAP_PROP_INTELPERC_"
     "WINDOW_AUTOSIZE",
     "CV_WND_PROP_",
     "CV_WINDOW_",

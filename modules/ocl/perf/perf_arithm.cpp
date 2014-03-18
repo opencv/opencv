@@ -54,22 +54,20 @@ using std::tr1::tuple;
 
 typedef Size_MatType LUTFixture;
 
-PERF_TEST_P(LUTFixture, LUT,
-          ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                             OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+OCL_PERF_TEST_P(LUTFixture, LUT,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
 {
     // getting params
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type);
 
     // creating src data
-    Mat src(srcSize, type), lut(1, 256, CV_8UC1);
+    Mat src(srcSize, CV_8UC(cn)), lut(1, 256, type);
     int dstType = CV_MAKETYPE(lut.depth(), src.channels());
     Mat dst(srcSize, dstType);
 
-    randu(lut, 0, 2);
-    declare.in(src, WARMUP_RNG).in(lut).out(dst);
+    declare.in(src, lut, WARMUP_RNG).out(dst);
 
     // select implementation
     if (RUN_OCL_IMPL)
@@ -93,16 +91,19 @@ PERF_TEST_P(LUTFixture, LUT,
 
 ///////////// Exp ////////////////////////
 
-typedef TestBaseWithParam<Size> ExpFixture;
+typedef Size_MatType ExpFixture;
 
-PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(ExpFixture, Exp, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
     // getting params
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
     const double eps = 1e-6;
 
     // creating src data
-    Mat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
+    Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src).out(dst);
     randu(src, 5, 16);
 
@@ -125,18 +126,21 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
     SANITY_CHECK(dst, eps, ERROR_RELATIVE);
 }
 
-///////////// LOG ////////////////////////
+///////////// Log ////////////////////////
 
-typedef TestBaseWithParam<Size> LogFixture;
+typedef Size_MatType LogFixture;
 
-PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(LogFixture, Log, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
     // getting params
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
     const double eps = 1e-6;
 
     // creating src data
-    Mat src(srcSize, CV_32F), dst(srcSize, src.type());
+    Mat src(srcSize, type), dst(srcSize, type);
     randu(src, 1, 10);
     declare.in(src).out(dst);
 
@@ -166,9 +170,8 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
 
 typedef Size_MatType AddFixture;
 
-PERF_TEST_P(AddFixture, Add,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+OCL_PERF_TEST_P(AddFixture, Add,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     // getting params
     const Size_MatType_t params = GetParam();
@@ -202,12 +205,51 @@ PERF_TEST_P(AddFixture, Add,
         OCL_PERF_ELSE
 }
 
+///////////// Subtract ////////////////////////
+
+typedef Size_MatType SubtractFixture;
+
+OCL_PERF_TEST_P(SubtractFixture, Subtract,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
+{
+    // getting params
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    // creating src data
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
+    randu(src1, 0, 1);
+    randu(src2, 0, 1);
+    declare.in(src1, src2).out(dst);
+
+    // select implementation
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::subtract(oclSrc1, oclSrc2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::subtract(src1, src2, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+
 ///////////// Mul ////////////////////////
 
 typedef Size_MatType MulFixture;
 
-PERF_TEST_P(MulFixture, Mul, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                                                OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(MulFixture, Multiply, ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     // getting params
     const Size_MatType_t params = GetParam();
@@ -245,9 +287,8 @@ PERF_TEST_P(MulFixture, Mul, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
 
 typedef Size_MatType DivFixture;
 
-PERF_TEST_P(DivFixture, Div,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(DivFixture, Divide,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     // getting params
     const Size_MatType_t params = GetParam();
@@ -260,12 +301,6 @@ PERF_TEST_P(DivFixture, Div,
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
-    if ((srcSize == OCL_SIZE_4000 && type == CV_8UC1) ||
-            (srcSize == OCL_SIZE_2000 && type == CV_8UC4))
-        declare.time(4.2);
-    else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
-        declare.time(16.6);
-
     // select implementation
     if (RUN_OCL_IMPL)
     {
@@ -275,13 +310,13 @@ PERF_TEST_P(DivFixture, Div,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::divide(src1, src2, dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
         OCL_PERF_ELSE
@@ -291,9 +326,8 @@ PERF_TEST_P(DivFixture, Div,
 
 typedef Size_MatType AbsDiffFixture;
 
-PERF_TEST_P(AbsDiffFixture, Absdiff,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(AbsDiffFixture, Absdiff,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -326,15 +360,18 @@ PERF_TEST_P(AbsDiffFixture, Absdiff,
 
 ///////////// CartToPolar ////////////////////////
 
-typedef TestBaseWithParam<Size> CartToPolarFixture;
+typedef Size_MatType CartToPolarFixture;
 
-PERF_TEST_P(CartToPolarFixture, CartToPolar, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(CartToPolarFixture, CartToPolar, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
     const double eps = 8e-3;
 
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            dst1(srcSize, CV_32FC1), dst2(srcSize, CV_32FC1);
+    Mat src1(srcSize, type), src2(srcSize, type),
+            dst1(srcSize, type), dst2(srcSize, type);
     declare.in(src1, src2).out(dst1, dst2);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
@@ -368,14 +405,17 @@ PERF_TEST_P(CartToPolarFixture, CartToPolar, OCL_TYPICAL_MAT_SIZES)
 
 ///////////// PolarToCart ////////////////////////
 
-typedef TestBaseWithParam<Size> PolarToCartFixture;
+typedef Size_MatType PolarToCartFixture;
 
-PERF_TEST_P(PolarToCartFixture, PolarToCart, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(PolarToCartFixture, PolarToCart, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            dst1(srcSize, CV_32FC1), dst2(srcSize, CV_32FC1);
+    Mat src1(srcSize, type), src2(srcSize, type),
+            dst1(srcSize, type), dst2(srcSize, type);
     declare.in(src1, src2).out(dst1, dst2);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
@@ -409,14 +449,17 @@ PERF_TEST_P(PolarToCartFixture, PolarToCart, OCL_TYPICAL_MAT_SIZES)
 
 ///////////// Magnitude ////////////////////////
 
-typedef TestBaseWithParam<Size> MagnitudeFixture;
+typedef Size_MatType MagnitudeFixture;
 
-PERF_TEST_P(MagnitudeFixture, Magnitude, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(MagnitudeFixture, Magnitude, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            dst(srcSize, CV_32FC1);
+    Mat src1(srcSize, type), src2(srcSize, type),
+            dst(srcSize, type);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
     declare.in(src1, src2).out(dst);
@@ -446,9 +489,8 @@ PERF_TEST_P(MagnitudeFixture, Magnitude, OCL_TYPICAL_MAT_SIZES)
 
 typedef Size_MatType TransposeFixture;
 
-PERF_TEST_P(TransposeFixture, Transpose,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+OCL_PERF_TEST_P(TransposeFixture, Transpose, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -479,15 +521,24 @@ PERF_TEST_P(TransposeFixture, Transpose,
 
 ///////////// Flip ////////////////////////
 
-typedef Size_MatType FlipFixture;
-
-PERF_TEST_P(FlipFixture, Flip,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
+enum
 {
-    const Size_MatType_t params = GetParam();
+    FLIP_BOTH = 0, FLIP_ROWS, FLIP_COLS
+};
+
+CV_ENUM(FlipType, FLIP_BOTH, FLIP_ROWS, FLIP_COLS)
+
+typedef std::tr1::tuple<Size, MatType, FlipType> FlipParams;
+typedef TestBaseWithParam<FlipParams> FlipFixture;
+
+OCL_PERF_TEST_P(FlipFixture, Flip,
+            ::testing::Combine(OCL_TEST_SIZES,
+                               OCL_TEST_TYPES, FlipType::all()))
+{
+    const FlipParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+    const int flipType = get<2>(params);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -496,7 +547,7 @@ PERF_TEST_P(FlipFixture, Flip,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        OCL_TEST_CYCLE() cv::ocl::flip(oclSrc, oclDst, 0);
+        OCL_TEST_CYCLE() cv::ocl::flip(oclSrc, oclDst, flipType - 1);
 
         oclDst.download(dst);
 
@@ -504,7 +555,7 @@ PERF_TEST_P(FlipFixture, Flip,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::flip(src, dst, 0);
+        TEST_CYCLE() cv::flip(src, dst, flipType - 1);
 
         SANITY_CHECK(dst);
     }
@@ -512,169 +563,18 @@ PERF_TEST_P(FlipFixture, Flip,
         OCL_PERF_ELSE
 }
 
-///////////// minMax ////////////////////////
-
-typedef Size_MatType minMaxFixture;
-
-PERF_TEST_P(minMaxFixture, minMax,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    declare.in(src, WARMUP_RNG);
-
-    double min_val = std::numeric_limits<double>::max(),
-            max_val = std::numeric_limits<double>::min();
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() cv::ocl::minMax(oclSrc, &min_val, &max_val);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        Point min_loc, max_loc;
-
-        TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// minMaxLoc ////////////////////////
-
-typedef Size_MatType minMaxLocFixture;
-
-PERF_TEST_P(minMaxLocFixture, minMaxLoc,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    randu(src, 0, 1);
-    declare.in(src);
-
-    double min_val = 0.0, max_val = 0.0;
-    Point min_loc, max_loc;
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() cv::ocl::minMaxLoc(oclSrc, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() cv::minMaxLoc(src, &min_val, &max_val, &min_loc, &max_loc);
-
-        ASSERT_GE(max_val, min_val);
-        SANITY_CHECK(min_val);
-        SANITY_CHECK(max_val);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// Sum ////////////////////////
-
-typedef Size_MatType SumFixture;
-
-PERF_TEST_P(SumFixture, Sum,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    Scalar result;
-    randu(src, 0, 60);
-    declare.in(src);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() result = cv::ocl::sum(oclSrc);
-
-        SANITY_CHECK(result);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() result = cv::sum(src);
-
-        SANITY_CHECK(result);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
-///////////// countNonZero ////////////////////////
-
-typedef Size_MatType countNonZeroFixture;
-
-PERF_TEST_P(countNonZeroFixture, countNonZero,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
-{
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
-
-    Mat src(srcSize, type);
-    int result = 0;
-    randu(src, 0, 256);
-    declare.in(src);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() result = cv::ocl::countNonZero(oclSrc);
-
-        SANITY_CHECK(result);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() result = cv::countNonZero(src);
-
-        SANITY_CHECK(result);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
 ///////////// Phase ////////////////////////
 
-typedef TestBaseWithParam<Size> PhaseFixture;
+typedef Size_MatType PhaseFixture;
 
-PERF_TEST_P(PhaseFixture, Phase, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(PhaseFixture, Phase, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            dst(srcSize, CV_32FC1);
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2).out(dst);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
@@ -704,9 +604,8 @@ PERF_TEST_P(PhaseFixture, Phase, OCL_TYPICAL_MAT_SIZES)
 
 typedef Size_MatType BitwiseAndFixture;
 
-PERF_TEST_P(BitwiseAndFixture, bitwise_and,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+OCL_PERF_TEST_P(BitwiseAndFixture, Bitwise_and,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -741,9 +640,8 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_and,
 
 typedef Size_MatType BitwiseXorFixture;
 
-PERF_TEST_P(BitwiseXorFixture, bitwise_xor,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+OCL_PERF_TEST_P(BitwiseXorFixture, Bitwise_xor,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -778,9 +676,8 @@ PERF_TEST_P(BitwiseXorFixture, bitwise_xor,
 
 typedef Size_MatType BitwiseOrFixture;
 
-PERF_TEST_P(BitwiseOrFixture, bitwise_or,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+OCL_PERF_TEST_P(BitwiseOrFixture, Bitwise_or,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -798,26 +695,25 @@ PERF_TEST_P(BitwiseOrFixture, bitwise_or,
         OCL_TEST_CYCLE() cv::ocl::bitwise_or(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
-
-        SANITY_CHECK(dst);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::bitwise_or(src1, src2, dst);
-
-        SANITY_CHECK(dst);
     }
     else
         OCL_PERF_ELSE
+
+    if (CV_MAT_DEPTH(type) >= CV_32F)
+        cv::patchNaNs(dst, 17);
+    SANITY_CHECK(dst);
 }
 
 ///////////// bitwise_not////////////////////////
 
 typedef Size_MatType BitwiseNotFixture;
 
-PERF_TEST_P(BitwiseAndFixture, bitwise_not,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32SC1)))
+OCL_PERF_TEST_P(BitwiseNotFixture, Bitwise_not,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -846,17 +742,56 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_not,
         OCL_PERF_ELSE
 }
 
-///////////// compare////////////////////////
+///////////// SetIdentity ////////////////////////
 
-typedef Size_MatType CompareFixture;
+typedef Size_MatType SetIdentityFixture;
 
-PERF_TEST_P(CompareFixture, compare,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+OCL_PERF_TEST_P(SetIdentityFixture, SetIdentity,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
+
+    Mat src(srcSize, type);
+    Scalar s = Scalar::all(17);
+    declare.in(src, WARMUP_RNG).out(src);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src);
+
+        OCL_TEST_CYCLE() cv::ocl::setIdentity(oclSrc, s);
+
+        oclSrc.download(src);
+
+        SANITY_CHECK(src);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::setIdentity(src, s);
+
+        SANITY_CHECK(src);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// compare////////////////////////
+
+CV_ENUM(CmpCode, CMP_LT, CMP_LE, CMP_EQ, CMP_NE, CMP_GE, CMP_GT)
+
+typedef std::tr1::tuple<Size, MatType, CmpCode> CompareParams;
+typedef TestBaseWithParam<CompareParams> CompareFixture;
+
+OCL_PERF_TEST_P(CompareFixture, Compare,
+            ::testing::Combine(OCL_TEST_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1), CmpCode::all()))
+{
+    const CompareParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const int cmpCode = get<2>(params);
 
     Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, CV_8UC1);
     declare.in(src1, src2, WARMUP_RNG).out(dst);
@@ -865,7 +800,7 @@ PERF_TEST_P(CompareFixture, compare,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, CV_8UC1);
 
-        OCL_TEST_CYCLE() cv::ocl::compare(oclSrc1, oclSrc2, oclDst, CMP_EQ);
+        OCL_TEST_CYCLE() cv::ocl::compare(oclSrc1, oclSrc2, oclDst, cmpCode);
 
         oclDst.download(dst);
 
@@ -873,7 +808,7 @@ PERF_TEST_P(CompareFixture, compare,
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::compare(src1, src2, dst, CMP_EQ);
+        TEST_CYCLE() cv::compare(src1, src2, dst, cmpCode);
 
         SANITY_CHECK(dst);
     }
@@ -883,14 +818,17 @@ PERF_TEST_P(CompareFixture, compare,
 
 ///////////// pow ////////////////////////
 
-typedef TestBaseWithParam<Size> PowFixture;
+typedef Size_MatType PowFixture;
 
-PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
+OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    const Size srcSize = GetParam();
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
     const double eps = 1e-6;
 
-    Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
+    Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (RUN_OCL_IMPL)
@@ -915,9 +853,8 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
 
 typedef Size_MatType AddWeightedFixture;
 
-PERF_TEST_P(AddWeightedFixture, AddWeighted,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+OCL_PERF_TEST_P(AddWeightedFixture, AddWeighted,
+            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES_134))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -951,9 +888,8 @@ PERF_TEST_P(AddWeightedFixture, AddWeighted,
 
 typedef Size_MatType MinFixture;
 
-PERF_TEST_P(MinFixture, Min,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+OCL_PERF_TEST_P(MinFixture, Min,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -986,9 +922,8 @@ PERF_TEST_P(MinFixture, Min,
 
 typedef Size_MatType MaxFixture;
 
-PERF_TEST_P(MaxFixture, Max,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+OCL_PERF_TEST_P(MaxFixture, Max,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -1017,7 +952,7 @@ PERF_TEST_P(MaxFixture, Max,
         OCL_PERF_ELSE
 }
 
-///////////// Max ////////////////////////
+///////////// Abs ////////////////////////
 
 typedef Size_MatType AbsFixture;
 
@@ -1056,9 +991,9 @@ PERF_TEST_P(AbsFixture, Abs,
 
 typedef Size_MatType RepeatFixture;
 
-PERF_TEST_P(RepeatFixture, Repeat,
-            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
+OCL_PERF_TEST_P(RepeatFixture, Repeat,
+            ::testing::Combine(OCL_PERF_ENUM(OCL_SIZE_1, OCL_SIZE_2, OCL_SIZE_3),
+                               OCL_TEST_TYPES))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);

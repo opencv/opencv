@@ -1225,7 +1225,7 @@ CV_FitLineTest::CV_FitLineTest()
     max_noise = 0.05;
 }
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
@@ -1301,7 +1301,7 @@ void CV_FitLineTest::generate_point_set( void* pointsSet )
     }
 }
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic pop
 #endif
 
@@ -1329,7 +1329,7 @@ void CV_FitLineTest::run_func()
         cv::fitLine(cv::cvarrToMat(points), (cv::Vec6f&)line[0], dist_type, 0, reps, aeps);
 }
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
@@ -1412,7 +1412,7 @@ _exit_:
     return code;
 }
 
-#if (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
+#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 8)
 # pragma GCC diagnostic pop
 #endif
 

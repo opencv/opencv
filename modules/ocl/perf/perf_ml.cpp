@@ -55,7 +55,7 @@ static void genData(Mat& trainData, Size size, Mat& trainLabel = Mat().setTo(Sca
     trainData.create(size, CV_32FC1);
     randu(trainData, 1.0, 100.0);
 
-    if(nClasses != 0)
+    if (nClasses != 0)
     {
         trainLabel.create(size.height, 1, CV_8UC1);
         randu(trainLabel, 0, nClasses - 1);
@@ -82,7 +82,7 @@ PERF_TEST_P(KNNFixture, KNN,
     genData(testData, size);
     Mat best_label;
 
-    if(RUN_PLAIN_IMPL)
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE()
         {
@@ -90,7 +90,8 @@ PERF_TEST_P(KNNFixture, KNN,
             knn_cpu.train(trainData, trainLabels);
             knn_cpu.find_nearest(testData, k, &best_label);
         }
-    }else if(RUN_OCL_IMPL)
+    }
+    else if (RUN_OCL_IMPL)
     {
         cv::ocl::oclMat best_label_ocl;
         cv::ocl::oclMat testdata;
@@ -103,7 +104,112 @@ PERF_TEST_P(KNNFixture, KNN,
             knn_ocl.find_nearest(testdata, k, best_label_ocl);
         }
         best_label_ocl.download(best_label);
-    }else
+    }
+    else
         OCL_PERF_ELSE
     SANITY_CHECK(best_label);
+}
+
+
+typedef TestBaseWithParam<tuple<int> > SVMFixture;
+
+// code is based on: samples\cpp\tutorial_code\ml\non_linear_svms\non_linear_svms.cpp
+PERF_TEST_P(SVMFixture, DISABLED_SVM,
+            testing::Values(50, 100))
+{
+
+    const int NTRAINING_SAMPLES = get<0>(GetParam()); // Number of training samples per class
+
+    #define FRAC_LINEAR_SEP     0.9f // Fraction of samples which compose the linear separable part
+
+    const int WIDTH = 512, HEIGHT = 512;
+
+    Mat trainData(2*NTRAINING_SAMPLES, 2, CV_32FC1);
+    Mat labels   (2*NTRAINING_SAMPLES, 1, CV_32FC1);
+
+    RNG rng(100); // Random value generation class
+
+    // Set up the linearly separable part of the training data
+    int nLinearSamples = (int) (FRAC_LINEAR_SEP * NTRAINING_SAMPLES);
+
+    // Generate random points for the class 1
+    Mat trainClass = trainData.rowRange(0, nLinearSamples);
+    // The x coordinate of the points is in [0, 0.4)
+    Mat c = trainClass.colRange(0, 1);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(0.4 * WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+
+    // Generate random points for the class 2
+    trainClass = trainData.rowRange(2*NTRAINING_SAMPLES-nLinearSamples, 2*NTRAINING_SAMPLES);
+    // The x coordinate of the points is in [0.6, 1]
+    c = trainClass.colRange(0 , 1);
+    rng.fill(c, RNG::UNIFORM, Scalar(0.6*WIDTH), Scalar(WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+
+    //------------------ Set up the non-linearly separable part of the training data ---------------
+
+    // Generate random points for the classes 1 and 2
+    trainClass = trainData.rowRange(  nLinearSamples, 2*NTRAINING_SAMPLES-nLinearSamples);
+    // The x coordinate of the points is in [0.4, 0.6)
+    c = trainClass.colRange(0,1);
+    rng.fill(c, RNG::UNIFORM, Scalar(0.4*WIDTH), Scalar(0.6*WIDTH));
+    // The y coordinate of the points is in [0, 1)
+    c = trainClass.colRange(1,2);
+    rng.fill(c, RNG::UNIFORM, Scalar(1), Scalar(HEIGHT));
+
+    //------------------------- Set up the labels for the classes ---------------------------------
+    labels.rowRange(                0,   NTRAINING_SAMPLES).setTo(1);  // Class 1
+    labels.rowRange(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES).setTo(2);  // Class 2
+
+    //------------------------ Set up the support vector machines parameters --------------------
+    CvSVMParams params;
+    params.svm_type    = SVM::C_SVC;
+    params.C           = 0.1;
+    params.kernel_type = SVM::LINEAR;
+    params.term_crit   = TermCriteria(CV_TERMCRIT_ITER, (int)1e7, 1e-6);
+
+    Mat dst = Mat::zeros(HEIGHT, WIDTH, CV_8UC1);
+
+    Mat samples(WIDTH*HEIGHT, 2, CV_32FC1);
+    int k = 0;
+    for (int i = 0; i < HEIGHT; ++i)
+    {
+        for (int j = 0; j < WIDTH; ++j)
+        {
+            samples.at<float>(k, 0) = (float)i;
+            samples.at<float>(k, 0) = (float)j;
+            k++;
+        }
+    }
+    Mat results(WIDTH*HEIGHT, 1, CV_32FC1);
+
+    CvMat samples_ = samples;
+    CvMat results_ = results;
+
+    if (RUN_PLAIN_IMPL)
+    {
+        CvSVM svm;
+        svm.train(trainData, labels, Mat(), Mat(), params);
+        TEST_CYCLE()
+        {
+            svm.predict(&samples_, &results_);
+        }
+    }
+    else if (RUN_OCL_IMPL)
+    {
+        CvSVM_OCL svm;
+        svm.train(trainData, labels, Mat(), Mat(), params);
+        OCL_TEST_CYCLE()
+        {
+            svm.predict(&samples_, &results_);
+        }
+    }
+    else
+        OCL_PERF_ELSE
+
+    SANITY_CHECK_NOTHING();
 }

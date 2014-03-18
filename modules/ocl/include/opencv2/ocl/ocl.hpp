@@ -118,6 +118,7 @@ namespace cv
             const PlatformInfo* platform;
 
             DeviceInfo();
+            ~DeviceInfo();
         };
 
         struct PlatformInfo
@@ -136,6 +137,7 @@ namespace cv
             std::vector<const DeviceInfo*> devices;
 
             PlatformInfo();
+            ~PlatformInfo();
         };
 
         //////////////////////////////// Initialization & Info ////////////////////////
@@ -150,6 +152,10 @@ namespace cv
 
         // set device you want to use
         CV_EXPORTS void setDevice(const DeviceInfo* info);
+
+        // Initialize from OpenCL handles directly.
+        // Argument types is (pointers): cl_platform_id*, cl_context*, cl_device_id*
+        CV_EXPORTS void initializeContext(void* pClPlatform, void* pClContext, void* pClDevice);
 
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
@@ -198,7 +204,7 @@ namespace cv
             CACHE_NONE    = 0,        // do not cache OpenCL binary
             CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode
             CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // cache opencl binary
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE // cache opencl binary
         };
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
@@ -378,14 +384,6 @@ namespace cv
             Size size() const;
             //! returns true if oclMatrix data is NULL
             bool empty() const;
-
-            //! returns pointer to y-th row
-            uchar* ptr(int y = 0);
-            const uchar *ptr(int y = 0) const;
-
-            //! template version of the above method
-            template<typename _Tp> _Tp *ptr(int y = 0);
-            template<typename _Tp> const _Tp *ptr(int y = 0) const;
 
             //! matrix transposition
             oclMat t() const;
@@ -708,17 +706,17 @@ namespace cv
 
         //! returns the separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableLinearFilter_GPU(int srcType, int dstType, const Mat &rowKernel,
-                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT);
+                const Mat &columnKernel, const Point &anchor = Point(-1, -1), double delta = 0.0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns the separable filter engine with the specified filters
         CV_EXPORTS Ptr<FilterEngine_GPU> createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
                 const Ptr<BaseColumnFilter_GPU> &columnFilter);
 
         //! returns the Gaussian filter engine
-        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT);
+        CV_EXPORTS Ptr<FilterEngine_GPU> createGaussianFilter_GPU(int type, Size ksize, double sigma1, double sigma2 = 0, int bordertype = BORDER_DEFAULT, Size imgSize = Size(-1,-1));
 
         //! returns filter engine for the generalized Sobel operator
-        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT );
+        CV_EXPORTS Ptr<FilterEngine_GPU> createDerivFilter_GPU( int srcType, int dstType, int dx, int dy, int ksize, int borderType = BORDER_DEFAULT, Size imgSize = Size(-1,-1) );
 
         //! applies Laplacian operator to the image
         // supports only ksize = 1 and ksize = 3
@@ -871,7 +869,6 @@ namespace cv
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
-
         /////////////////////////////////// ML ///////////////////////////////////////////
 
         //! Compute closest centers for each lines in source and lable it after center's index
@@ -1383,8 +1380,10 @@ namespace cv
             oclMat Dx_;
             oclMat Dy_;
             oclMat eig_;
+            oclMat eig_minmax_;
             oclMat minMaxbuf_;
             oclMat tmpCorners_;
+            oclMat counter_;
         };
 
         inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,

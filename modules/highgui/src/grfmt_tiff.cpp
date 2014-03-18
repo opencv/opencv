@@ -111,18 +111,21 @@ bool TiffDecoder::readHeader()
     bool result = false;
 
     close();
-    TIFF* tif = TIFFOpen( m_filename.c_str(), "rb" );
+    // TIFFOpen() mode flags are different to fopen().  A 'b' in mode "rb" has no effect when reading.
+    // http://www.remotesensing.org/libtiff/man/TIFFOpen.3tiff.html
+    TIFF* tif = TIFFOpen( m_filename.c_str(), "r" );
 
     if( tif )
     {
-        int wdth = 0, hght = 0, photometric = 0;
+        uint32 wdth = 0, hght = 0;
+        uint16 photometric = 0;
         m_tif = tif;
 
         if( TIFFGetField( tif, TIFFTAG_IMAGEWIDTH, &wdth ) &&
             TIFFGetField( tif, TIFFTAG_IMAGELENGTH, &hght ) &&
             TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric ))
         {
-            int bpp=8, ncn = photometric > 1 ? 3 : 1;
+            uint16 bpp=8, ncn = photometric > 1 ? 3 : 1;
             TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
             TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
 
@@ -175,12 +178,12 @@ bool  TiffDecoder::readData( Mat& img )
     if( m_tif && m_width && m_height )
     {
         TIFF* tif = (TIFF*)m_tif;
-        int tile_width0 = m_width, tile_height0 = 0;
+        uint32 tile_width0 = m_width, tile_height0 = 0;
         int x, y, i;
         int is_tiled = TIFFIsTiled(tif);
-        int photometric;
+        uint16 photometric;
         TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
-        int bpp = 8, ncn = photometric > 1 ? 3 : 1;
+        uint16 bpp = 8, ncn = photometric > 1 ? 3 : 1;
         TIFFGetField( tif, TIFFTAG_BITSPERSAMPLE, &bpp );
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
         const int bitsPerByte = 8;
@@ -235,11 +238,15 @@ bool  TiffDecoder::readData( Mat& img )
                     {
                         case 8:
                         {
+                            uchar * bstart = buffer;
                             if( !is_tiled )
                                 ok = TIFFReadRGBAStrip( tif, y, (uint32*)buffer );
                             else
+                            {
                                 ok = TIFFReadRGBATile( tif, x, y, (uint32*)buffer );
-
+                                //Tiles fill the buffer from the bottom up
+                                bstart += (tile_height0 - tile_height) * tile_width0 * 4;
+                            }
                             if( !ok )
                             {
                                 close();
@@ -248,11 +255,11 @@ bool  TiffDecoder::readData( Mat& img )
 
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
-                                    icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                    icvCvt_BGRA2BGR_8u_C4C3R( bstart + i*tile_width0*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1), 2 );
                                 else
-                                    icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
+                                    icvCvt_BGRA2Gray_8u_C4C1R( bstart + i*tile_width0*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
                                                               cvSize(tile_width,1), 2 );
                             break;
@@ -277,19 +284,19 @@ bool  TiffDecoder::readData( Mat& img )
                                 {
                                     if( ncn == 1 )
                                     {
-                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_Gray2BGR_16u_C1C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                   (ushort*)(data + img.step*i) + x*3, 0,
                                                                   cvSize(tile_width,1) );
                                     }
                                     else if( ncn == 3 )
                                     {
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_RGB2BGR_16u_C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1) );
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_BGRA2BGR_16u_C4C3R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x*3, 0,
                                                                cvSize(tile_width,1), 2 );
                                     }
@@ -299,12 +306,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     if( ncn == 1 )
                                     {
                                         memcpy((ushort*)(data + img.step*i)+x,
-                                               buffer16 + i*tile_width*ncn,
+                                               buffer16 + i*tile_width0*ncn,
                                                tile_width*sizeof(buffer16[0]));
                                     }
                                     else
                                     {
-                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width*ncn, 0,
+                                        icvCvt_BGRA2Gray_16u_CnC1R(buffer16 + i*tile_width0*ncn, 0,
                                                                (ushort*)(data + img.step*i) + x, 0,
                                                                cvSize(tile_width,1), ncn, 2 );
                                     }
@@ -332,13 +339,13 @@ bool  TiffDecoder::readData( Mat& img )
                                 if(dst_bpp == 32)
                                 {
                                     memcpy((float*)(data + img.step*i)+x,
-                                           buffer32 + i*tile_width*ncn,
+                                           buffer32 + i*tile_width0*ncn,
                                            tile_width*sizeof(buffer32[0]));
                                 }
                                 else
                                 {
                                     memcpy((double*)(data + img.step*i)+x,
-                                         buffer64 + i*tile_width*ncn,
+                                         buffer64 + i*tile_width0*ncn,
                                          tile_width*sizeof(buffer64[0]));
                                 }
                             }

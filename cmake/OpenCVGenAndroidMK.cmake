@@ -44,6 +44,7 @@ if(ANDROID)
 
   # build the list of opencv libs and dependencies for all modules
   set(OPENCV_MODULES_CONFIGMAKE "")
+  set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "off")
   set(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "")
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE "")
   foreach(m ${OPENCV_MODULES_PUBLIC})
@@ -52,6 +53,29 @@ if(ANDROID)
       list(INSERT OPENCV_EXTRA_COMPONENTS_CONFIGMAKE 0 ${${m}_EXTRA_DEPS_${ocv_optkind}})
     endif()
   endforeach()
+
+  # remove CUDA runtime and NPP from regular deps
+  # it can be added separately if needed.
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libcu")
+  ocv_list_filterout(OPENCV_EXTRA_COMPONENTS_CONFIGMAKE "libnpp")
+
+  if(HAVE_CUDA)
+    # CUDA runtime libraries and are required always
+    set(culibs ${CUDA_LIBRARIES})
+
+    # right now NPP is requared always too
+    list(INSERT culibs 0 ${CUDA_npp_LIBRARY})
+
+    if(HAVE_CUFFT)
+      list(INSERT culibs 0 ${CUDA_cufft_LIBRARY})
+    endif()
+
+    if(HAVE_CUBLAS)
+      list(INSERT culibs 0 ${CUDA_cublas_LIBRARY})
+    endif()
+  endif()
+
+  ocv_convert_to_lib_name(CUDA_RUNTIME_LIBS_CONFIGMAKE ${culibs})
 
   # split 3rdparty libs and modules
   foreach(mod ${OPENCV_MODULES_CONFIGMAKE})
@@ -63,6 +87,18 @@ if(ANDROID)
     list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
   endif()
 
+  if(ENABLE_DYNAMIC_CUDA)
+    set(OPENCV_DYNAMICUDA_MODULE_CONFIGMAKE "dynamicuda")
+  endif()
+
+  # GPU module enabled separately
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_gpu")
+  list(REMOVE_ITEM OPENCV_MODULES_CONFIGMAKE "opencv_dynamicuda")
+
+  if(HAVE_opencv_gpu)
+    set(OPENCV_HAVE_GPU_MODULE_CONFIGMAKE "on")
+  endif()
+
   # convert CMake lists to makefile literals
   foreach(lst OPENCV_MODULES_CONFIGMAKE OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE OPENCV_EXTRA_COMPONENTS_CONFIGMAKE)
     ocv_list_unique(${lst})
@@ -70,6 +106,7 @@ if(ANDROID)
     string(REPLACE ";" " " ${lst} "${${lst}}")
   endforeach()
   string(REPLACE "opencv_" "" OPENCV_MODULES_CONFIGMAKE "${OPENCV_MODULES_CONFIGMAKE}")
+  string(REPLACE ";" " " CUDA_RUNTIME_LIBS_CONFIGMAKE "${CUDA_RUNTIME_LIBS_CONFIGMAKE}")
 
   # prepare 3rd-party component list without TBB for armeabi and mips platforms. TBB is useless there.
   set(OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE_NO_TBB ${OPENCV_3RDPARTY_COMPONENTS_CONFIGMAKE})
@@ -91,7 +128,7 @@ if(ANDROID)
   set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/lib/\$(OPENCV_TARGET_ARCH_ABI)")
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/3rdparty/lib/\$(OPENCV_TARGET_ARCH_ABI)")
 
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" IMMEDIATE @ONLY)
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/OpenCV.mk" @ONLY)
 
   # -------------------------------------------------------------------------------------------
   #  Part 2/2: ${BIN_DIR}/unix-install/OpenCV.mk -> For use with "make install"
@@ -101,6 +138,6 @@ if(ANDROID)
   set(OPENCV_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../libs/\$(OPENCV_TARGET_ARCH_ABI)")
   set(OPENCV_3RDPARTY_LIBS_DIR_CONFIGCMAKE "\$(OPENCV_THIS_DIR)/../3rdparty/libs/\$(OPENCV_TARGET_ARCH_ABI)")
 
-  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" IMMEDIATE @ONLY)
-  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH})
+  configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCV.mk.in" "${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk" @ONLY)
+  install(FILES ${CMAKE_BINARY_DIR}/unix-install/OpenCV.mk DESTINATION ${OPENCV_CONFIG_INSTALL_PATH} COMPONENT dev)
 endif(ANDROID)

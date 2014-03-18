@@ -43,7 +43,9 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
+#include <functional>
 
 using namespace perf;
 
@@ -66,13 +68,13 @@ struct RectLess :
     }
 };
 
-PERF_TEST(HOGFixture, HOG)
+OCL_PERF_TEST(HOGFixture, HOG)
 {
     Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
 
     vector<cv::Rect> found_locations;
-    declare.in(src).time(5);
+    declare.in(src);
 
     if (RUN_PLAIN_IMPL)
     {

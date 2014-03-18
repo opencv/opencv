@@ -90,28 +90,28 @@ public class ManagerActivity extends Activity
         mInstalledPackageView.setAdapter(mInstalledPacksAdapter);
 
         TextView HardwarePlatformView = (TextView)findViewById(R.id.HardwareValue);
-        int Platfrom = HardwareDetector.DetectKnownPlatforms();
+        int Platform = HardwareDetector.DetectKnownPlatforms();
         int CpuId = HardwareDetector.GetCpuID();
 
-        if (HardwareDetector.PLATFORM_UNKNOWN != Platfrom)
+        if (HardwareDetector.PLATFORM_UNKNOWN != Platform)
         {
-            if (HardwareDetector.PLATFORM_TEGRA == Platfrom)
+            if (HardwareDetector.PLATFORM_TEGRA == Platform)
             {
                 HardwarePlatformView.setText("Tegra");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA2 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA2 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 2");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA3 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA3 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 3");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA4i == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA4i == Platform)
             {
                 HardwarePlatformView.setText("Tegra 4i");
             }
-            else if (HardwareDetector.PLATFORM_TEGRA4 == Platfrom)
+            else if (HardwareDetector.PLATFORM_TEGRA4 == Platform)
             {
                 HardwarePlatformView.setText("Tegra 4");
             }
@@ -214,12 +214,12 @@ public class ManagerActivity extends Activity
             }
         });
 
-        mPackageChangeReciever = new BroadcastReceiver() {
+        mPackageChangeReceiver = new BroadcastReceiver() {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.d("OpenCVManager/Reciever", "Bradcast message " + intent.getAction() + " reciever");
-                Log.d("OpenCVManager/Reciever", "Filling package list on broadcast message");
+                Log.d("OpenCVManager/Receiver", "Broadcast message " + intent.getAction() + " receiver");
+                Log.d("OpenCVManager/Receiver", "Filling package list on broadcast message");
                 if (!bindService(new Intent("org.opencv.engine.BIND"), new OpenCVEngineServiceConnection(), Context.BIND_AUTO_CREATE))
                 {
                     TextView EngineVersionView = (TextView)findViewById(R.id.EngineVersionValue);
@@ -235,14 +235,14 @@ public class ManagerActivity extends Activity
         filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
 
-        registerReceiver(mPackageChangeReciever, filter);
+        registerReceiver(mPackageChangeReceiver, filter);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mPackageChangeReciever != null)
-            unregisterReceiver(mPackageChangeReciever);
+        if (mPackageChangeReceiver != null)
+            unregisterReceiver(mPackageChangeReceiver);
     }
 
     @Override
@@ -273,7 +273,7 @@ public class ManagerActivity extends Activity
     protected int ManagerApiLevel = 0;
     protected String ManagerVersion;
 
-    protected BroadcastReceiver mPackageChangeReciever = null;
+    protected BroadcastReceiver mPackageChangeReceiver = null;
 
     protected class OpenCVEngineServiceConnection implements ServiceConnection
     {

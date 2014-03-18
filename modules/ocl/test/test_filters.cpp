@@ -334,7 +334,7 @@ OCL_TEST_P(Bilateral, Mat)
 
 typedef FilterTestBase AdaptiveBilateral;
 
-OCL_TEST_P(AdaptiveBilateral, Mat)
+OCL_TEST_P(AdaptiveBilateral, DISABLED_Mat)
 {
     const Size kernelSize(ksize, ksize);
 

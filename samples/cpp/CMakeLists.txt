@@ -20,6 +20,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   endif()
 
+  if(HAVE_opencv_ocl)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
+  endif()
+
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
@@ -47,6 +51,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
       target_link_libraries(${the_target} opencv_gpu)
     endif()
 
+    if(HAVE_opencv_ocl)
+      target_link_libraries(${the_target} opencv_ocl)
+    endif()
+
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "cpp-${sample_kind}-${name}"
       PROJECT_LABEL "(${sample_KIND}) ${name}")
@@ -60,7 +68,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
       endif()
       install(TARGETS ${the_target}
-              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${sample_subfolder}" COMPONENT main)
+              RUNTIME DESTINATION "${OPENCV_SAMPLES_BIN_INSTALL_PATH}/${sample_subfolder}" COMPONENT samples)
     endif()
   ENDMACRO()
 
@@ -74,6 +82,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
 
+  ocv_list_filterout(cpp_samples "viz")
+
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     OPENCV_DEFINE_CPP_EXAMPLE(${sample}  ${sample_filename})
@@ -83,6 +93,6 @@ endif()
 if (INSTALL_C_EXAMPLES AND NOT WIN32)
   file(GLOB C_SAMPLES *.c *.cpp *.jpg *.png *.data makefile.* build_all.sh *.dsp *.cmd )
   install(FILES ${C_SAMPLES}
-          DESTINATION share/OpenCV/samples/cpp
-          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
+          DESTINATION ${OPENCV_SAMPLES_SRC_INSTALL_PATH}/cpp
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ COMPONENT samples)
 endif()
