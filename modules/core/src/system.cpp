@@ -87,6 +87,7 @@
 
 #ifdef HAVE_WINRT
 #include <wrl/client.h>
+#include <string>
 #ifndef __cplusplus_winrt
 #include <windows.storage.h>
 #pragma comment(lib, "runtimeobject.lib")
@@ -436,14 +437,19 @@ String format( const char* fmt, ... )
 
 String tempfile( const char* suffix )
 {
+    String fname;
+
 #ifdef HAVE_WINRT
     std::wstring temp_dir = L"";
+
+// Note: WinRT does not support _wgetenv
+#if 0
     const wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
     if (opencv_temp_dir)
         temp_dir = std::wstring(opencv_temp_dir);
+#endif
 #else
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-    String fname;
 #endif
 
 #if defined WIN32 || defined _WIN32
@@ -456,7 +462,7 @@ String tempfile( const char* suffix )
     std::wstring temp_file;
     temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
-        return std::string();
+        return String();
 
     temp_file = temp_dir + std::wstring(L"\\") + temp_file;
     DeleteFileW(temp_file.c_str());
@@ -464,7 +470,7 @@ String tempfile( const char* suffix )
     char aname[MAX_PATH];
     size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
     CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    fname = std::string(aname);
+    fname = String(aname);
     RoUninitialize();
 #else
     char temp_dir2[MAX_PATH] = { 0 };
