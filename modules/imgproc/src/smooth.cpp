@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
 
 /*
@@ -642,10 +641,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
 
     if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
-    {
-        printf("!!!!!!!!!!!!!!!!!!!!!!!\n");
         return false;
-    }
 
     if (anchor.x < 0)
         anchor.x = ksize.width / 2;

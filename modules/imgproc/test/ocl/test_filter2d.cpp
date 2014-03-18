@@ -115,11 +115,10 @@ OCL_TEST_P(Filter2D, Mat)
     }
 }
 
-
 OCL_INSTANTIATE_TEST_CASE_P(ImageProc, Filter2D,
                             Combine(
-                                Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),
-                                Values(1, 2, 4),
+                                Values(CV_8U, CV_16U, CV_32F),
+                                OCL_ALL_CHANNELS,
                                 Values((BorderType)BORDER_CONSTANT,
                                        (BorderType)BORDER_REPLICATE,
                                        (BorderType)BORDER_REFLECT,

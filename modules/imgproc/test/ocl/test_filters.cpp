@@ -304,7 +304,7 @@ OCL_TEST_P(MorphologyEx, Mat)
             (int)BORDER_REFLECT|BORDER_ISOLATED, (int)BORDER_WRAP|BORDER_ISOLATED, \
             (int)BORDER_REFLECT_101|BORDER_ISOLATED*/) // WRAP and ISOLATED are not supported by cv:: version
 
-#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4)
+#define FILTER_TYPES Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_16UC3, CV_16UC4, CV_32FC1, CV_32FC3, CV_32FC4)
 
 OCL_INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                             Values(CV_8UC1, CV_8UC3),
