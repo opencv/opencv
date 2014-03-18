@@ -697,9 +697,8 @@ void write(FileStorage& fs, const String& name, const Range& r )
 template<typename _Tp> static inline
 void write( FileStorage& fs, const String& name, const std::vector<_Tp>& vec )
 {
-    fs << (DataType<_Tp>::fmt != 0 ? "[:" : "[");
+    internal::WriteStructContext ws(fs, name, FileNode::SEQ+(DataType<_Tp>::fmt != 0 ? FileNode::FLOW : 0));
     write(fs, vec);
-    fs << "]";
 }
 
 static inline
