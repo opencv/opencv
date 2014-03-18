@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#define CV_OPENCL_RUN_ASSERT
 #include "opencl_kernels.hpp"
 
 /*
@@ -639,9 +640,12 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
     if (ddepth < 0)
         ddepth = sdepth;
 
-    if (!(cn == 1 || cn == 2 || cn == 4) || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
+    if (cn > 4 || (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F)) ||
         _src.offset() % esz != 0 || _src.step() % esz != 0)
+    {
+        printf("!!!!!!!!!!!!!!!!!!!!!!!\n");
         return false;
+    }
 
     if (anchor.x < 0)
         anchor.x = ksize.width / 2;
@@ -687,15 +691,17 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
             return false;
 
         char cvt[2][50];
-        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s "
-                             "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s",
+        String opts = format("-D LOCAL_SIZE_X=%d -D BLOCK_SIZE_Y=%d -D ST=%s -D DT=%s -D WT=%s -D convertToDT=%s -D convertToWT=%s"
+                             " -D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d -D %s%s%s%s%s"
+                             " -D ST1=%s -D DT1=%s -D cn=%d",
                              BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                              ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
                              ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
                              anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                              isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "");
+                             normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), cn);
 
         localsize[0] = BLOCK_SIZE_X;
         globalsize[0] = DIVUP(size.width, BLOCK_SIZE_X - (ksize.width - 1)) * BLOCK_SIZE_X;
