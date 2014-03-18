@@ -1049,7 +1049,7 @@ viz::WWidgetMerger::WWidgetMerger
 ---------------------------------------
 Constructs a WWidgetMerger.
 
-.. ocv:WWidgetMerger:: WWidgetMerger()
+.. ocv:function:: WWidgetMerger()
 
 viz::WWidgetMerger::addCloud
 -------------------------------
