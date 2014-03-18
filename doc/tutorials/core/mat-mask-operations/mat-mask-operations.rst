@@ -39,7 +39,7 @@ Here's a function that will do this:
        Result.create(myImage.size(),myImage.type());
        const int nChannels = myImage.channels();
 
-       for(int j = 1 ; j < myImage.rows-1; ++j)
+       for(int j = 1; j < myImage.rows-1; ++j)
        {
            const uchar* previous = myImage.ptr<uchar>(j - 1);
            const uchar* current  = myImage.ptr<uchar>(j    );
@@ -47,7 +47,7 @@ Here's a function that will do this:
 
            uchar* output = Result.ptr<uchar>(j);
 
-           for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
+           for(int i= nChannels; i < nChannels*(myImage.cols-1); ++i)
            {
                *output++ = saturate_cast<uchar>(5*current[i]
                             -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
