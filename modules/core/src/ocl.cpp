@@ -1410,7 +1410,7 @@ bool useOpenCL()
 {
     CoreTLSData* data = coreTlsData.get();
     if( data->useOpenCL < 0 )
-        data->useOpenCL = (int)haveOpenCL();
+        data->useOpenCL = (int)haveOpenCL() && Device::getDefault().ptr() != NULL;
     return data->useOpenCL > 0;
 }
 
@@ -1419,7 +1419,7 @@ void setUseOpenCL(bool flag)
     if( haveOpenCL() )
     {
         CoreTLSData* data = coreTlsData.get();
-        data->useOpenCL = flag ? 1 : 0;
+        data->useOpenCL = (flag && Device::getDefault().ptr() != NULL) ? 1 : 0;
     }
 }
 
@@ -2245,6 +2245,7 @@ not_found:
         std::cerr << deviceTypes[t] << " ";
 
     std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
+    throw cv::Exception();
     return NULL;
 }
 
