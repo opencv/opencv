@@ -63,8 +63,8 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
     bool useRoi;
     Mat kernel;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -91,8 +91,8 @@ PARAM_TEST_CASE(Filter2D, MatDepth, Channels, BorderType, bool, bool)
         anchor.x = randomInt(-1, ksize.width);
         anchor.y = randomInt(-1, ksize.height);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)

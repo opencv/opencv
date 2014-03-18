@@ -101,7 +101,7 @@ OCL_TEST_P(FarnebackOpticalFlow, Mat)
     OCL_OFF(cv::calcOpticalFlowFarneback(frame0, frame1, flow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags));
     OCL_ON(cv::calcOpticalFlowFarneback(frame0, frame1, uflow, pyrScale, numLevels, winSize, numIters, polyN, polySigma, flags));
 
-    EXPECT_MAT_SIMILAR(flow, uflow, 0.1)
+    EXPECT_MAT_SIMILAR(flow, uflow, 0.1);
 }
 
 
