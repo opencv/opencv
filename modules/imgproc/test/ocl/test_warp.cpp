@@ -73,8 +73,8 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
     Size dsize;
     bool useRoi, mapInverse;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -98,13 +98,13 @@ PARAM_TEST_CASE(WarpTestBase, MatType, Interpolation, bool, bool)
         Border dstBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
         randomSubMat(dst, dst_roi, dsize, dstBorder, type, -MAX_VALUE, MAX_VALUE);
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -164,8 +164,8 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
     double fx, fy;
     bool useRoi;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -202,7 +202,7 @@ PARAM_TEST_CASE(Resize, MatType, double, double, Interpolation, bool)
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
@@ -230,10 +230,10 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
 
     Scalar val;
 
-    TEST_DECLARE_INPUT_PARAMETER(src)
-    TEST_DECLARE_INPUT_PARAMETER(map1)
-    TEST_DECLARE_INPUT_PARAMETER(map2)
-    TEST_DECLARE_OUTPUT_PARAMETER(dst)
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_INPUT_PARAMETER(map1);
+    TEST_DECLARE_INPUT_PARAMETER(map2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
 
     virtual void SetUp()
     {
@@ -269,16 +269,16 @@ PARAM_TEST_CASE(Remap, MatDepth, Channels, std::pair<MatType, MatType>, BorderTy
             randomSubMat(map2, map2_roi, dstROISize, map2Border, map2Type, mapMinValue, mapMaxValue);
         }
 
-        UMAT_UPLOAD_INPUT_PARAMETER(src)
-        UMAT_UPLOAD_INPUT_PARAMETER(map1)
-        UMAT_UPLOAD_OUTPUT_PARAMETER(dst)
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_INPUT_PARAMETER(map1);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(dst);
         if (noType != map2Type)
-            UMAT_UPLOAD_INPUT_PARAMETER(map2)
+            UMAT_UPLOAD_INPUT_PARAMETER(map2);
     }
 
     void Near(double threshold = 0.0)
     {
-        OCL_EXPECT_MATS_NEAR(dst, threshold)
+        OCL_EXPECT_MATS_NEAR(dst, threshold);
     }
 };
 
