@@ -64,19 +64,19 @@ void cv::viz::vtkTrajectorySource::SetTrajectory(InputArray _traj)
 
     points = vtkSmartPointer<vtkPoints>::New();
     points->SetDataType(VTK_DOUBLE);
-    points->SetNumberOfPoints(total);
+    points->SetNumberOfPoints((vtkIdType)total);
 
     tensors = vtkSmartPointer<vtkDoubleArray>::New();
     tensors->SetNumberOfComponents(9);
-    tensors->SetNumberOfTuples(total);
+    tensors->SetNumberOfTuples((vtkIdType)total);
 
     for(size_t i = 0; i < total; ++i, ++dpath)
     {
         Matx33d R = dpath->rotation().t();  // transposed because of
-        tensors->SetTuple(i, R.val);        // column major order
+        tensors->SetTuple((vtkIdType)i, R.val);        // column major order
 
         Vec3d p = dpath->translation();
-        points->SetPoint(i, p.val);
+        points->SetPoint((vtkIdType)i, p.val);
     }
 }
 
@@ -85,7 +85,7 @@ cv::Mat cv::viz::vtkTrajectorySource::ExtractPoints(InputArray _traj)
     CV_Assert(_traj.kind() == _InputArray::STD_VECTOR || _traj.kind() == _InputArray::MAT);
     CV_Assert(_traj.type() == CV_32FC(16) || _traj.type() == CV_64FC(16));
 
-    Mat points(1, _traj.total(), CV_MAKETYPE(_traj.depth(), 3));
+    Mat points(1, (int)_traj.total(), CV_MAKETYPE(_traj.depth(), 3));
     const Affine3d* dpath = _traj.getMat().ptr<Affine3d>();
     const Affine3f* fpath = _traj.getMat().ptr<Affine3f>();
 
