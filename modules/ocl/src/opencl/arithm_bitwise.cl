@@ -44,44 +44,49 @@
 //
 //M*/
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////bitwise_binary////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////// bitwise_binary //////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-__kernel void arithm_bitwise_binary_mask(__global uchar * src1, int src1_step, int src1_offset,
-                                    __global uchar * src2, int src2_step, int src2_offset,
-                                    __global uchar * mask, int mask_step, int mask_offset,
-                                    __global uchar * dst, int dst_step, int dst_offset,
-                                    int cols1, int rows)
+__kernel void arithm_bitwise(__global uchar * src1ptr, int src1_step, int src1_offset,
+#ifdef OP_BINARY
+                             __global uchar * src2ptr, int src2_step, int src2_offset,
+#elif defined HAVE_SCALAR
+                             T scalar,
+#endif
+#ifdef HAVE_MASK
+                             __global uchar * mask, int mask_step, int mask_offset,
+#endif
+                             __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if (x < cols1 && y < rows)
+    if (x < dst_cols && y < dst_rows)
     {
-        int mask_index = mad24(y, mask_step, mask_offset + x);
-
-        if (mask[mask_index])
-        {
-#if elemSize > 1
-                x *= elemSize;
+#ifdef HAVE_MASK
+        mask += mad24(y, mask_step, x + mask_offset);
+        if (mask[0])
 #endif
-            int src1_index = mad24(y, src1_step, x + src1_offset);
-            int src2_index = mad24(y, src2_step, x + src2_offset);
-            int dst_index = mad24(y, dst_step, x + dst_offset);
+        {
+            int src1_index = mad24(y, src1_step, mad24(x, (int)sizeof(T), src1_offset));
+#ifdef OP_BINARY
+            int src2_index = mad24(y, src2_step, mad24(x, (int)sizeof(T), src2_offset));
+#endif
+            int dst_index = mad24(y, dst_step, mad24(x, (int)sizeof(T), dst_offset));
 
-#if elemSize > 1
-            #pragma unroll
-            for (int i = 0; i < elemSize; i += vlen)
-            {
-                ucharv t0 = vloadn(0, src1 + src1_index + i);
-                ucharv t1 = vloadn(0, src2 + src2_index + i);
-                ucharv t2 = t0 Operation t1;
+            __global const T * src1 = (__global const T *)(src1ptr + src1_index);
+#ifdef OP_BINARY
+            __global const T * src2 = (__global const T *)(src2ptr + src2_index);
+#endif
+            __global T * dst = (__global T *)(dstptr + dst_index);
 
-                vstoren(t2, 0, dst + dst_index + i);
-            }
+#ifdef OP_BINARY
+            dst[0] = src1[0] Operation src2[0];
+#elif defined HAVE_SCALAR
+            dst[0] = src1[0] Operation scalar;
 #else
-            dst[dst_index] = src1[src1_index] Operation src2[src2_index];
+            dst[0] = Operation src1[0];
 #endif
         }
     }

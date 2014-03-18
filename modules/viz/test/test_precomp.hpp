@@ -54,11 +54,19 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/ts/ts.hpp"
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/version.hpp>
 #include <opencv2/viz/vizcore.hpp>
+
+namespace cv
+{
+    Mat imread(const String& filename, int flags = 1);
+}
+
+#if CV_MAJOR_VERSION < 3
+    #include "opencv2/ts/ts.hpp"
+#else
+    #include "opencv2/ts.hpp"
+#endif
 
 #include <iostream>
 #include <fstream>
