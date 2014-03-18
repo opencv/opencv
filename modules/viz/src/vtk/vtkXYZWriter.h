@@ -45,29 +45,41 @@
 #ifndef __vtkXYZWriter_h
 #define __vtkXYZWriter_h
 
-#include "vtkPolyDataWriter.h"
+#include "vtkWriter.h"
 
 namespace cv
 {
     namespace viz
     {
-        class vtkXYZWriter : public vtkPolyDataWriter
+        class vtkXYZWriter : public vtkWriter
         {
         public:
             static vtkXYZWriter *New();
-            vtkTypeMacro(vtkXYZWriter,vtkPolyDataWriter)
+            vtkTypeMacro(vtkXYZWriter,vtkWriter)
             void PrintSelf(ostream& os, vtkIndent indent);
 
             vtkGetMacro(DecimalPrecision, int)
             vtkSetMacro(DecimalPrecision, int)
+
+            // Description:
+            // Specify file name of data file to write.
+            vtkSetStringMacro(FileName)
+            vtkGetStringMacro(FileName)
+
+            // Description:
+            // Get the input to this writer.
+            vtkPolyData* GetInput();
+            vtkPolyData* GetInput(int port);
 
         protected:
             vtkXYZWriter();
             ~vtkXYZWriter(){}
 
             void WriteData();
+            int FillInputPortInformation(int port, vtkInformation *info);
 
             int DecimalPrecision;
+            char *FileName;
 
         private:
             vtkXYZWriter(const vtkXYZWriter&);  // Not implemented.

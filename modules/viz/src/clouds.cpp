@@ -193,8 +193,21 @@ template<> cv::viz::WPaintedCloud cv::viz::Widget::cast<cv::viz::WPaintedCloud>(
 
 cv::viz::WCloudCollection::WCloudCollection()
 {
-    // Just create the actor
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(append_filter->GetOutputPort());
+    mapper->SetScalarModeToUsePointData();
+    mapper->ImmediateModeRenderingOff();
+    mapper->SetScalarRange(0, 255);
+    mapper->ScalarVisibilityOn();
+
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+    actor->SetNumberOfCloudPoints(1);
+    actor->GetProperty()->SetInterpolationToFlat();
+    actor->GetProperty()->BackfaceCullingOn();
+    actor->SetMapper(mapper);
+
     WidgetAccessor::setProp(*this, actor);
 }
 
@@ -206,35 +219,11 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
     vtkSmartPointer<vtkPolyData> polydata = VtkUtils::TransformPolydata(source->GetOutputPort(), pose);
 
     vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert("Incompatible widget type." && actor);
+    CV_Assert("Correctness check." && actor);
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
-    if (!mapper)
-    {
-        // This is the first cloud
-        mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-        mapper->SetScalarRange(0, 255);
-        mapper->SetScalarModeToUsePointData();
-        mapper->ScalarVisibilityOn();
-        mapper->ImmediateModeRenderingOff();
-        VtkUtils::SetInputData(mapper, polydata);
-
-        actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, polydata->GetNumberOfPoints()/10));
-        actor->GetProperty()->SetInterpolationToFlat();
-        actor->GetProperty()->BackfaceCullingOn();
-        actor->SetMapper(mapper);
-        return;
-    }
-
-    vtkPolyData *currdata = vtkPolyData::SafeDownCast(mapper->GetInput());
-    CV_Assert("Cloud Widget without data" && currdata);
-
-    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
-    VtkUtils::AddInputData(append_filter, currdata);
+    vtkSmartPointer<vtkAlgorithm> producer = actor->GetMapper()->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
     VtkUtils::AddInputData(append_filter, polydata);
-    append_filter->Update();
-
-    VtkUtils::SetInputData(mapper, append_filter->GetOutput());
 
     actor->SetNumberOfCloudPoints(std::max<vtkIdType>(1, actor->GetNumberOfCloudPoints() + polydata->GetNumberOfPoints()/10));
 }
@@ -242,6 +231,23 @@ void cv::viz::WCloudCollection::addCloud(InputArray cloud, InputArray colors, co
 void cv::viz::WCloudCollection::addCloud(InputArray cloud, const Color &color, const Affine3d &pose)
 {
     addCloud(cloud, Mat(cloud.size(), CV_8UC3, color), pose);
+}
+
+void cv::viz::WCloudCollection::finalize()
+{
+    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert("Incompatible widget type." && actor);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    CV_Assert("Need to add at least one cloud." && mapper);
+
+    vtkSmartPointer<vtkAlgorithm> producer = mapper->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
+    append_filter->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = append_filter->GetOutput();
+    mapper->RemoveInputConnection(0, 0);
+    VtkUtils::SetInputData(mapper, polydata);
 }
 
 template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
@@ -316,20 +322,18 @@ cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, in
         }
     }
 
-    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-    polyData->SetPoints(points);
-    polyData->SetLines(lines);
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+    polydata->SetPoints(points);
+    polydata->SetLines(lines);
+    VtkUtils::FillScalars(polydata, color);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    mapper->SetColorModeToMapScalars();
-    mapper->SetScalarModeToUsePointData();
-    VtkUtils::SetInputData(mapper, polyData);
+    VtkUtils::SetInputData(mapper, polydata);
 
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
 
     WidgetAccessor::setProp(*this, actor);
-    setColor(color);
 }
 
 template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>()
@@ -349,7 +353,7 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     source->SetColorCloudNormalsTCoords(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
     source->Update();
 
-    Mat lookup_buffer(1, mesh.cloud.total(), CV_32SC1);
+    Mat lookup_buffer(1, (int)mesh.cloud.total(), CV_32SC1);
     int *lookup = lookup_buffer.ptr<int>();
     for(int y = 0, index = 0; y < mesh.cloud.rows; ++y)
     {
@@ -438,4 +442,64 @@ template<> CV_EXPORTS cv::viz::WMesh cv::viz::Widget::cast<cv::viz::WMesh>()
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<WMesh&>(widget);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Widget Merger implementation
+
+cv::viz::WWidgetMerger::WWidgetMerger()
+{
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkSmartPointer<vtkAppendPolyData>::New();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(append_filter->GetOutputPort());
+    mapper->SetScalarModeToUsePointData();
+    mapper->ImmediateModeRenderingOff();
+    mapper->SetScalarRange(0, 255);
+    mapper->ScalarVisibilityOn();
+
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->GetProperty()->SetInterpolationToFlat();
+    actor->GetProperty()->BackfaceCullingOn();
+    actor->SetMapper(mapper);
+
+    WidgetAccessor::setProp(*this, actor);
+}
+
+void cv::viz::WWidgetMerger::addWidget(const Widget3D& widget, const Affine3d &pose)
+{
+    vtkActor *widget_actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(widget));
+    CV_Assert("Widget is not 3D actor." && widget_actor);
+
+    vtkSmartPointer<vtkPolyDataMapper> widget_mapper = vtkPolyDataMapper::SafeDownCast(widget_actor->GetMapper());
+    CV_Assert("Widget doesn't have a polydata mapper" && widget_mapper);
+    widget_mapper->Update();
+
+    vtkSmartPointer<vtkActor> actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkSmartPointer<vtkAlgorithm> producer = actor->GetMapper()->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
+    CV_Assert("Correctness check" && append_filter);
+
+    VtkUtils::AddInputData(append_filter, VtkUtils::TransformPolydata(widget_mapper->GetInput(), pose));
+}
+
+void cv::viz::WWidgetMerger::finalize()
+{
+    vtkSmartPointer<vtkActor> actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkSmartPointer<vtkAlgorithm> producer = actor->GetMapper()->GetInputConnection(0, 0)->GetProducer();
+    vtkSmartPointer<vtkAppendPolyData> append_filter = vtkAppendPolyData::SafeDownCast(producer);
+    CV_Assert("Correctness check" && append_filter);
+    append_filter->Update();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    mapper->RemoveInputConnection(0, 0);
+    VtkUtils::SetInputData(mapper, append_filter->GetOutput());
+    mapper->Modified();
+}
+
+template<> CV_EXPORTS cv::viz::WWidgetMerger cv::viz::Widget::cast<cv::viz::WWidgetMerger>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<WWidgetMerger&>(widget);
 }

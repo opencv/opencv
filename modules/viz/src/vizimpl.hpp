@@ -55,7 +55,7 @@ public:
     int ref_counter;
 
     VizImpl(const String &name);
-    virtual ~VizImpl() {}
+    virtual ~VizImpl();
 
     bool wasStopped() const;
     void close();
@@ -128,7 +128,7 @@ private:
     vtkSmartPointer<ExitCallback> exit_callback_;
 
     vtkSmartPointer<vtkRenderer> renderer_;
-    vtkSmartPointer<InteractorStyle> style_;
+    vtkSmartPointer<vtkVizInteractorStyle> style_;
     Ptr<WidgetActorMap> widget_actor_map_;
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
