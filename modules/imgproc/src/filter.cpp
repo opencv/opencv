@@ -3157,10 +3157,9 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     if (abs(delta) > FLT_MIN)
         return false;
 
-    int type = _src.type();
-    int cn = CV_MAT_CN(type);
-    if ((1 != cn) && (2 != cn) && (4 != cn))
-        return false;//TODO
+    int type = _src.type(), cn = CV_MAT_CN(type);
+    if (cn > 4)
+        return false;
 
     int sdepth = CV_MAT_DEPTH(type);
     Size ksize = _kernel.size();
@@ -3298,7 +3297,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     double borderValueDouble[4] = {0, 0, 0, 0};
     if ((borderType & ~BORDER_ISOLATED) == BORDER_CONSTANT)
     {
-        int cnocl = (3 == cn) ? 4 : cn;
+        int cnocl = 3 == cn ? 4 : cn;
         if (useDouble)
             idxArg = kernel.set(idxArg, (void *)&borderValueDouble[0], sizeof(double) * cnocl);
         else

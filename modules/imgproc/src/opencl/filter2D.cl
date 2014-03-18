@@ -203,9 +203,23 @@
 #define VEC_TYPE CAT(BASE_TYPE, VEC_SIZE)
 #define TYPE VEC_TYPE
 
+#if VEC_SIZE == 3
+#define SCALAR_TYPE CAT(FPTYPE, 4)
+#else
 #define SCALAR_TYPE CAT(FPTYPE, VEC_SIZE)
+#endif
 
 #define INTERMEDIATE_TYPE CAT(FPTYPE, VEC_SIZE)
+
+#if DATA_CHAN != 3
+#define loadpix(addr) *(__global const TYPE *)(addr)
+#define storepix(val, addr)  *(__global TYPE *)(addr) = val
+#define TSIZE (int)sizeof(TYPE)
+#else
+#define loadpix(addr) vload3(0, (__global const BASE_TYPE *)(addr))
+#define storepix(val, addr) vstore3(val, 0, (__global BASE_TYPE *)(addr))
+#define TSIZE (int)sizeof(BASE_TYPE)*DATA_CHAN
+#endif
 
 struct RectCoords
 {
@@ -235,13 +249,17 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, in
 #endif
     {
         //__global TYPE* ptr = (__global TYPE*)((__global char*)src + pos.x * sizeof(TYPE) + pos.y * srcStepBytes);
-        __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * sizeof(TYPE));
-        return CONVERT_TO_FPTYPE(*ptr);
+        __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * TSIZE);
+        return CONVERT_TO_FPTYPE(loadpix(ptr));
     }
     else
     {
 #ifdef BORDER_CONSTANT
+#if VEC_SIZE == 3
+        return (INTERMEDIATE_TYPE)(borderValue.x, borderValue.y, borderValue.z);
+#else
         return borderValue;
+#endif
 #else
         int selected_col = pos.x;
         int selected_row = pos.y;
@@ -262,8 +280,8 @@ inline INTERMEDIATE_TYPE readSrcPixel(int2 pos, __global const uchar* srcptr, in
         if(pos.x >= 0 && pos.y >= 0 && pos.x < srcCoords.x2 && pos.y < srcCoords.y2)
         {
             //__global TYPE* ptr = (__global TYPE*)((__global char*)src + pos.x * sizeof(TYPE) + pos.y * srcStepBytes);
-            __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * sizeof(TYPE));
-            return CONVERT_TO_FPTYPE(*ptr);
+            __global TYPE* ptr = (__global TYPE*)(srcptr + pos.y * srcstep + pos.x * TSIZE);
+            return CONVERT_TO_FPTYPE(loadpix(ptr));
         }
         else
         {
@@ -300,7 +318,7 @@ void filter2D(__global const uchar* srcptr, int srcstep, int srcOffsetX, int src
     int2 srcPos = (int2)(srcCoords.x1 + x, srcCoords.y1 + y - ANCHOR_Y);
 
     int2 pos = (int2)(x, y);
-    __global TYPE* dstPtr = (__global TYPE*)((__global char*)dstptr + pos.y * dststep + dstoffset + pos.x * sizeof(TYPE)); // Pointer can be out of bounds!
+    __global TYPE* dstPtr = (__global TYPE*)((__global char*)dstptr + pos.y * dststep + dstoffset + pos.x * TSIZE); // Pointer can be out of bounds!
     bool writeResult = ((local_id >= ANCHOR_X) && (local_id < LOCAL_SIZE - (KERNEL_SIZE_X - 1 - ANCHOR_X)) &&
                         (pos.x >= 0) && (pos.x < cols));
 
@@ -360,7 +378,7 @@ void filter2D(__global const uchar* srcptr, int srcstep, int srcOffsetX, int src
 
         if (writeResult)
         {
-            *dstPtr = CONVERT_TO_TYPE(total_sum);
+            storepix(CONVERT_TO_TYPE(total_sum), dstPtr);
         }
 
 #if BLOCK_SIZE_Y > 1
